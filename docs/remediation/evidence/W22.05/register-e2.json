@@ -1,0 +1,226 @@
+{
+  "before": null,
+  "after": {
+    "id": "W22.05-E2",
+    "task_id": "W22.05",
+    "check_id": "W22.05-K2",
+    "criterion_ids": [
+      "W22.05-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w2205-worker",
+    "run_id": "/root/w2205_worker",
+    "file": {
+      "path": "docs/remediation/evidence/W22.05/worker.json",
+      "sha256": "1518139bc2f1fdb3cf73e2696d64f8fb7e7b1efeddc4a7effa353fc8dbc741b8"
+    },
+    "at": "2026-09-15 13:33:53 UTC",
+    "limitations": "Owned generic tracking occurrence-time preservation only. Not the realtime decision/outcome ledger; no new consumer, downstream experiment eligibility, time authenticity/fraud protection, skew/age policy, buffering, delivery/idempotency, historical reconstruction, live affinity ordering, new retention/reset or customer/SLO/release acceptance. Keep W30.04 exact accepted artifact unchanged. No install/build/commit/push/deploy/provision/cloud/credentials/customer-data/destructive/external operations.",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/routes/tracking.ts src/routes/realtime.sdkContract.test.ts --max-warnings 94 && git diff --check -- src/routes/tracking.ts src/routes/realtime.sdkContract.test.ts docs/api/01-rest-endpoints.md",
+    "runtime": "Full no-emit compiler1536MiB, two-file lint0errors94 unchanged inherited warnings, three-file tracked whitespace.",
+    "workload": "Pre-admission max0 lint exit1 solely94 inherited warnings; max94 with no new signatures. No cleanup/suppression/emitted build.",
+    "result": "pass",
+    "artifact_digest": "f614e13e56b0ece96e278bd6e7240fd9e379d80f11947e8ac5c49929ff7cdaa6",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "b5871d3e160137093f0291862962022418b1949a67e3bd6b0c0521fb1d55cb27",
+      "configuration": "Owned generic tracking occurrence-time preservation only. Not the realtime decision/outcome ledger; no new consumer, downstream experiment eligibility, time authenticity/fraud protection, skew/age policy, buffering, delivery/idempotency, historical reconstruction, live affinity ordering, new retention/reset or customer/SLO/release acceptance. Keep W30.04 exact accepted artifact unchanged. No install/build/commit/push/deploy/provision/cloud/credentials/customer-data/destructive/external operations.",
+      "files": [
+        {
+          "path": "src/routes/tracking.ts",
+          "sha256": "60f4a2b0a31de73fd532da2888478ee0f54887e5af2075495938a50d62b38da0",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "56877df9d654bdaf0c0d596b7146b157f0f83af2bf76d820c618f04cfe5c1559",
+          "role": "output"
+        },
+        {
+          "path": "docs/api/01-rest-endpoints.md",
+          "sha256": "b3d5db0193a0733b583479e8159c76e2f545cc52b1e3816544e64fbb3369db6b",
+          "role": "output"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+          "role": "source"
+        },
+        {
+          "path": "src/types/events.ts",
+          "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "src/services/EventDispatcher.ts",
+          "sha256": "8205adb855e120afe83bb33944114483428a3289401efe8ac89bebb7c8094b1a",
+          "role": "source"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "sha256": "5c87e159b7ca41da139ccef931fbec82cd2013f22f35bb46d0fcec2ffa8823db",
+          "role": "source"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/consentContinuity.ts",
+          "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af",
+          "role": "source"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/objects.ts",
+          "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67",
+          "role": "source"
+        },
+        {
+          "path": "src/middleware/error.ts",
+          "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+          "role": "source"
+        },
+        {
+          "path": "src/utils/context.ts",
+          "sha256": "64969bfb7d22959c072ac2a3425861f20658a502b3590c7205b050cb96231475",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/identity.ts",
+          "sha256": "ba760b40f7939cf96f2d8ca485b3b469f34a60260745f22857e40dccafe2be9c",
+          "role": "source"
+        },
+        {
+          "path": "src/telemetry.boundary.test.ts",
+          "sha256": "287b65e4535b287d904bcdf6c08f8f687828438a74953b454b2250d414131dba",
+          "role": "source"
+        },
+        {
+          "path": "src/index.ts",
+          "sha256": "b161958178f76cf997210fd4c4c139671cc26b1fe87a947f6103199c8834eabf",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.05/worker.json",
+          "sha256": "1518139bc2f1fdb3cf73e2696d64f8fb7e7b1efeddc4a7effa353fc8dbc741b8",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W22.05/plan.md",
+          "sha256": "c50df6aaa4401b8dbc3e100e359c7e87796eb3960caa36a70a73d80376a51818",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W22.05/baseline.json",
+          "sha256": "d555a14b6d77c2b4461b2c4725e66f7d3b441edc5a157c9d5f94a4e22e1de97b",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.05/admission.json",
+          "sha256": "18c1cd96941d5e57809b3700bb18d2182e677c6b43429e330944e2930cb24b8b",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.05/source-freeze.json",
+          "sha256": "9db891ae56e1bdcd014e7365c6022fb6c1a6bdc906a38e4025f741a615a8b290",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.05/source-deltas.json",
+          "sha256": "249c3a99b4640bbf866cb80ae8f218733563a866456c1f748edacdec97a03356",
+          "role": "configuration"
+        }
+      ],
+      "digest": "f614e13e56b0ece96e278bd6e7240fd9e379d80f11947e8ac5c49929ff7cdaa6"
+    }
+  }
+}

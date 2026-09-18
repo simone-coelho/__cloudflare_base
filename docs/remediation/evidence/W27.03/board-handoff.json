@@ -1,0 +1,84 @@
+{
+  "at": "2026-09-12T16:14:53.146Z",
+  "task_id": "W27.03",
+  "artifact_digest": "baaa8c8960c2ab203994f8f8e9a6733b62ba941b9c44ba2b7cc79635eb5a529e",
+  "journal_seq": 1209,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "d3693f",
+        "wall_time_seconds": 1.001120553,
+        "session_id": 36364,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "a5010a",
+        "wall_time_seconds": 5.001231388,
+        "session_id": 36364,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "73bf75",
+        "wall_time_seconds": 5.001435811,
+        "session_id": 36364,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "49ea45",
+        "wall_time_seconds": 30.001314262,
+        "session_id": 36364,
+        "original_token_count": 251,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=24, unscoped=17\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=85, closed=2; evidence records=249\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W27.03 — Next admit W28 unsupported Thompson containment against F23/N25: inspect validator, serving/exploration, UI and kit offers and enforce safe withdrawal consistently without inventing a reward/statistical policy. Preserve historical replay where safe. Remaining W27 same-revision overwrite prevention belongs to W11 publication migration; rollout/retention/history/customer acceptance is not replaced by more replay helper checks. No deployment/customer-policy or external authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 17582\n"
+      },
+      {
+        "chunk_id": "e7f01d",
+        "wall_time_seconds": 1.426071242,
+        "exit_code": 0,
+        "original_token_count": 252,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=24, unscoped=17\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=85, closed=2; evidence records=249\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W27.03 — Next admit W28 unsupported Thompson containment against F23/N25: inspect validator, serving/exploration, UI and kit offers and enforce safe withdrawal consistently without inventing a reward/statistical policy. Preserve historical replay where safe. Remaining W27 same-revision overwrite prevention belongs to W11 publication migration; rollout/retention/history/customer acceptance is not replaced by more replay helper checks. No deployment/customer-policy or external authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 17582\n"
+      }
+    ],
+    "session_id": 36364,
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      17582,
+      17582
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module -e 'import fs from'\\''node:fs'\\'';import assert from'\\''node:assert/strict'\\'';import{gunzipSync}from'\\''node:zlib'\\'';import{applyPatch}from'\\''diff'\\'';import{sha256,artifactDigest,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';const j=p=>JSON.parse(fs.readFileSync(p)),t=j('\\''docs/remediation/tracker.json'\\''),task=t.tasks.find(x=>x.id==='\\''W27.03'\\''),b=j('\\''docs/remediation/design/W27.03/baseline.json'\\''),a=j('\\''docs/remediation/evidence/W27.03/artifact.json'\\''),d=j('\\''docs/remediation/evidence/W27.03/source-deltas.json'\\'');assert.deepEqual(task.artifact,a);assert.equal(a.digest,artifactDigest(a));assert.equal(a.contract_digest,taskContractDigest(task));for(const f of a.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);for(const x of d.deltas){const before=gunzipSync(Buffer.from(b.owned.find(f=>f.path===x.path).content_gzip_base64,'\\''base64'\\'')).toString(),after=fs.readFileSync(x.path,'\\''utf8'\\'');assert.equal(applyPatch(before,x.forward),after,x.path);assert.equal(applyPatch(after,x.reverse),before,x.path);}console.log(JSON.stringify({ok:true,at:new Date().toISOString(),artifact:a.digest,files:a.files.length,source:b.pins.length,protected:b.pins.filter(f=>f.role==='\\''source'\\'').length,deltas:d.deltas.length,contract:a.contract_digest}));'",
+    "chunk_id": "0b04ad",
+    "wall_time_seconds": 0.000002657,
+    "session_id": 97863,
+    "original_token_count": 63,
+    "output": "{\"ok\":true,\"at\":\"2026-09-12T16:03:24.829Z\",\"artifact\":\"baaa8c8960c2ab203994f8f8e9a6733b62ba941b9c44ba2b7cc79635eb5a529e\",\"files\":123,\"source\":117,\"protected\":113,\"deltas\":4,\"contract\":\"dfb704bd384177fadcb26cfe36072c7f0e308090b66fc6af0282e61d52498ecb\"}\n",
+    "drained": true,
+    "exit_code": 0
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_consumed_replay_identity",
+    "package_W27": "open",
+    "finding_F22": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Next admit W28 unsupported Thompson containment against F23/N25: inspect validator, serving/exploration, UI and kit offers and enforce safe withdrawal consistently without inventing a reward/statistical policy. Preserve historical replay where safe. Remaining W27 same-revision overwrite prevention belongs to W11 publication migration; rollout/retention/history/customer acceptance is not replaced by more replay helper checks. No deployment/customer-policy or external authority is inferred."
+  },
+  "next_read_only_inspection": {
+    "command": "rg -n 'thompson' src/content/kinds.ts public/learning.js docs/kit/03-payload-schemas.md",
+    "chunk_id": "e24091",
+    "wall_time_seconds": 0.000006338,
+    "exit_code": 0,
+    "original_token_count": 309,
+    "output": "public/learning.js:390:      dial('Mode', 'Rotation serves the least-observed item on a hashed share of decisions; Thompson samples each item’s rate and ranks by the sample; epsilon is uniform. Every pick is flagged on the receipt.', sel((d.exploration || {}).mode || 'off', [['off', 'off'], ['rotation', 'rotation'], ['thompson', 'thompson'], ['epsilon', 'epsilon']], (v) => { if (v === 'off') delete d.exploration; else d.exploration = { mode: v, share: (d.exploration || {}).share ?? 0.1, floor: (d.exploration || {}).floor ?? 50 }; scheduleCheck(); }, `${base}.exploration.mode`)),\ndocs/kit/03-payload-schemas.md:222:| `slots.{slot}.exploration` | `{ mode: rotation \\| thompson \\| epsilon \\| off, share, floor }` | off |\nsrc/content/kinds.ts:331:          if (!isRecord(e) || !['rotation', 'thompson', 'epsilon', 'off'].includes(String(e.mode)) || !isNum(e.share) || e.share < 0 || e.share > 1 || !isNum(e.floor) || !Number.isInteger(e.floor) || e.floor < 0) errors.push(`slots.${slot}.exploration: mode rotation|thompson|epsilon|off, share 0..1, floor integer ≥ 0`);\nsrc/content/kinds.ts:332:          else dials.exploration = { mode: e.mode as 'rotation' | 'thompson' | 'epsilon' | 'off', share: e.share, floor: e.floor };\n",
+    "drained": true,
+    "scope": "Read-only confirmed remaining W28 offered mode; no W28 implementation admitted."
+  },
+  "limitations": "Replay-local consumed identity containment, not full W27/F22 closure or a new configuration publication protocol. Exact safe-integer tuple/envelope matching cannot detect a different valid body overwritten under the same revision; immutable slots/learn writers remain W11 work. Compiled revision zero, current reader normalization/code version, missing/corrupt legacy archives, mixed-version rollout, operational retention, historical repair and native resource/SLO/customer acceptance remain qualified. Actual authenticated local route uses synthetic bindings, not deployed HTTP/cloud assurance. W27.01 archive-before-live and W27.02 page manifest/choice/pin implementation are retained, not newly deployed. Deterministic replay is not W28/F23 statistical correctness or causal lift. No live serving/schema/choice/attribution/consent change, extra serving I/O, retries/resets/backfill or external/resource/credential/customer-data/deployment/commit/push/destructive/customer-policy authority."
+}

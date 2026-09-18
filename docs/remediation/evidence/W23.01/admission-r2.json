@@ -1,0 +1,38 @@
+{
+  "at": "2026-09-12T04:12:25.998Z",
+  "source_go_at": "2026-09-12T04:12:25.998Z",
+  "actor_id": "w01-lead",
+  "task_id": "W23.01",
+  "contract_digest": "e6cc73fc693932020d5e81e74563a38a03c5eb4349fcef5c99e6aaef09fa10b7",
+  "plan": {
+    "path": "docs/remediation/design/W23.01/plan-r2.md",
+    "sha256": "8a00c0ad8fd77f7efe37eb9c3894c15395ac968949a03d913de8cde34480c477"
+  },
+  "prior_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W23.01/plan.md",
+      "sha256": "7e6b349d0f6ca7d5bc9f093c9a85312747ff4a7f40727f58b6684068eee5be56"
+    },
+    "contract_digest": "0a1ce559f12684b8c8762e22914670eebe900096f24232b1755d06888908397b",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-12T04:09:29.750Z",
+      "plan_sha256": "7e6b349d0f6ca7d5bc9f093c9a85312747ff4a7f40727f58b6684068eee5be56",
+      "rationale": "EntryVALID1103 and actual shared-source/consumer design case support bounded arithmetic correction and fixed13; worker scope challenge agrees."
+    }
+  },
+  "entry_board_ref": "docs/remediation/design/W23.01/baseline.json",
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1116,
+    "protected": 105,
+    "unchanged": true,
+    "prior_source_go": "04:09:57.060Z",
+    "source_work_before_pause": [
+      "src/learn/stats.ts"
+    ],
+    "runtime_executed_before_correction": false
+  },
+  "limitations": "Forward arithmetic/precision correction only, within JavaScript floating-point tolerance. No repair/reset of damaged persisted item or slot counters, old rounded snapshots/archives or previously emitted reports; no historical re-fold, migration/generation marker, automatic replay/idempotency, timestamp/lateness or reward/currency/model-policy choice. Valid future timestamps remain an ingestion-integrity residual; existing caller/config validation is not a customer lateness policy. Full W23/F18 and W22/W24/W30 recovery, trustworthy measurement/customer/deployed SLO/release acceptance remain open. More precise JSON can reach existing byte budgets earlier; capacity guards must remain enforced. Preserve deterministic core, gamma0 and current priors/root-zero/clamps; human prose may round only for presentation. No external/cloud/resource/credential/customer-data/deploy/commit/push/cleanup authority."
+}

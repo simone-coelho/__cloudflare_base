@@ -1,0 +1,164 @@
+{
+  "task_id": "W22.08",
+  "actor_id": "w2205-reviewer",
+  "run_id": "/root/late_hour_next_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15 19:24:27 UTC",
+  "verdict": "PASS",
+  "claim": "local_runtime",
+  "frozen_go_journal": 1869,
+  "identity": {
+    "artifact_digest": "fbd80002f82071ecd1f9a37d3c1b0a95dd146617b5579c3434e85ebb3a91e7d5",
+    "contract_digest": "b4a902e866e064c72950a9b2309659ecaf6a3eb5b93ac5c0cba11d7335736007",
+    "pin_map": {
+      "path": "docs/remediation/evidence/W22.08/register-e2.json",
+      "sha256": "a98450a4021e8cb55d5ca19f0602cb5229b9b07c6b9f69bdadac7a15049dd534",
+      "pointer": "/after/artifact_basis/files"
+    },
+    "artifact_pins": 32,
+    "protected_pins": 24,
+    "canonical_pins": 64,
+    "canonical_source_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+    "worker_sha256": "9ce5473452c69586c65ff6d087eac35b24f00fb4aa469d9270fa0c13cf847924",
+    "source_freeze_sha256": "ff61e82e30e579d1079a4c6064eac595b3c9f582b99446c7321235d717308d9d",
+    "source_deltas_sha256": "396297feb5175a4903bc82c4c793a45c5dad816572ede7dd363ed0ece9a494aa",
+    "accepted_dependency": {
+      "task_id": "W22.07",
+      "pins": 51,
+      "owned_overlaps": [],
+      "review_sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c"
+    }
+  },
+  "source_review": {
+    "result": "PASS",
+    "complete_baseline_delta_capture": "4ec29e",
+    "evidence_read_capture": "1aea10",
+    "basis": "Reused exact plan beddf33de0f0e352368cf503b096ade1967b353cf2d159949c7735d43f0dad05 and actual dependency/source reading. Both final source hashes match the complete prior two-file delta review. Independently read actual final source-freeze, stored deltas, worker raw checks/results and C1-C3. One new-array stable numeric sort/comment and two grouped fixture additions; no other source changes or weakened existing controls.",
+    "findings": []
+  },
+  "pin_snapshots": {
+    "before": {
+      "capture": "b5e30a",
+      "exit_code": 0,
+      "at": "2026-09-15T19:22:45.983Z",
+      "artifact_pin_digest": "1a4dded8aba8ed34356501ca09589b649686daf86efe74fe7a6c7de63d379033",
+      "protected_digest": "0967bc9a375218ddae693fea5cd20e1fd0ada54f22a369f09842d316fc7a8388",
+      "canonical_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+      "w2207_digest": "5f672370eccadb82209f01fc7d1ab985724bef9b830f0f3fed2296ba4369f5fd",
+      "w2207_review_digest": "33dbd9d4c998289b9c60fb3b9e30087d803b553539ca4e988719ca964089e01e",
+      "mismatches": []
+    },
+    "after": {
+      "capture": "73d758",
+      "exit_code": 0,
+      "at": "2026-09-15T19:23:25.461Z",
+      "artifact_pin_digest": "1a4dded8aba8ed34356501ca09589b649686daf86efe74fe7a6c7de63d379033",
+      "protected_digest": "0967bc9a375218ddae693fea5cd20e1fd0ada54f22a369f09842d316fc7a8388",
+      "canonical_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+      "w2207_digest": "5f672370eccadb82209f01fc7d1ab985724bef9b830f0f3fed2296ba4369f5fd",
+      "w2207_review_digest": "33dbd9d4c998289b9c60fb3b9e30087d803b553539ca4e988719ca964089e01e",
+      "mismatches": []
+    },
+    "algorithm": "SHA-256 of JSON.stringify(path.localeCompare-sorted {path,sha256} arrays); pin digests differ from governance artifact digest."
+  },
+  "independent_runtime": {
+    "check_id": "W22.08-K3",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W22[.]08|W26[.]03 atomically|W06[.]06 suppresses old|W10[.]02 bounds actual' --maxWorkers=1 --minWorkers=1",
+    "cwd": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base",
+    "attempts": 1,
+    "initial": {
+      "chunk_id": "6b291b",
+      "wall_time_seconds": 1.0014946,
+      "session_id": 62351,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "b009d9",
+        "wall_time_seconds": 0.000001457,
+        "exit_code": 0,
+        "original_token_count": 124,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (31 tests | 26 skipped) 229ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 26 skipped (31)\n   Start at  15:22:55\n   Duration  7.22s (transform 1.06s, setup 0ms, collect 2.00s, tests 229ms, environment 0ms, prepare 3.07s)\n\n"
+      }
+    ],
+    "exit_code": 0,
+    "session_drained": true,
+    "result": {
+      "passed": 5,
+      "failed": 0,
+      "deliberately_unselected": 26,
+      "total": 31,
+      "test_files": 1,
+      "duration_seconds": 7.22,
+      "test_seconds": 0.229
+    }
+  },
+  "static_reuse": {
+    "check_id": "W22.08-K2",
+    "result": "PASS",
+    "independently_rerun": false,
+    "basis": "Worker static_final and required_warning_comparison actual captures read on identical 64-pin source before/after; independent runtime preserved that basis. Captured per-file rule/message signatures independently matched admitted baseline in 084d05.",
+    "compiler_lint_whitespace": {
+      "captures": [
+        "3e569c",
+        "25d7ff"
+      ],
+      "session_id": 38927,
+      "exit_code": 0,
+      "session_drained": true,
+      "compiler_heap_mb": 1536,
+      "compiler_exit": 0,
+      "lint_errors": 0,
+      "lint_warnings": 3,
+      "whitespace_exit": 0
+    },
+    "warning_comparison": {
+      "captures": [
+        "bbb138",
+        "0c1c60",
+        "be5882"
+      ],
+      "session_id": 78469,
+      "exit_code": 0,
+      "session_drained": true,
+      "new_signatures": [],
+      "new_warning_source": []
+    }
+  },
+  "criteria": {
+    "W22.08-C1": {
+      "verdict": "PASS",
+      "finding": "New combined age-eligible array is stably timestamp-sorted before cap. Independent expected newest-200 payloads survive chronological/reversed/interleaved single/split batches. Equal-time boundary retains old-before-new/input precedence and existing first/last choice; frozen input/cache arrays remain unchanged."
+    },
+    "W22.08-C2": {
+      "verdict": "PASS",
+      "finding": "Real DecisionRing append/recent/outcome after object recreation retains a newer target through three older arrivals and forwards the exact original-time correlated credit. Unchanged selected collision/retry/ambiguous-save, inclusive erasure and request/candidate capacity controls pass. Index order, age/reference clock, counts and commit safeguards remain unchanged."
+    },
+    "W22.08-C3": {
+      "verdict": "PASS",
+      "finding": "Independent fixed five pass; same-byte compiler1536/lint0errors3inheritedwarnings/whitespace reused with no added signatures. Complete actual two-file delta/evidence reviewed; all artifact/protected and accepted W22.07 pins/review match before and after."
+    }
+  },
+  "exceptions": {
+    "failures": [],
+    "source_rework": false,
+    "worker_runtime": "Single final fixed5 passed (044a03→1dfd5e, session30512), all worker sessions drained. No failed or superseded runtime/static attempt."
+  },
+  "limitations": [
+    "Forward retention selection only: no recovery of already evicted decisions, missing history, damaged aggregates or completed reports.",
+    "Equal-time arrival stability preserved; distinct-time permutation parity is not universal tie invariance. Existing seven-day/200-record and 90-day/index limits remain unchanged.",
+    "Actual ring persistence/recreation and credit forwarding observed; downstream stats receipt is synthetic, not durable LearnStats/reconciliation, historical credit completeness or external persistence assurance.",
+    "No new retention, lifecycle/policy, personal retry dedup, SDK/current-interest behavior or full package/finding/customer/SLO/release acceptance. No extra suite/static rerun, deployment or external operation."
+  ],
+  "disposition": {
+    "status": "independent_review_passed_lead_acceptance_pending",
+    "writes": [
+      "docs/remediation/evidence/W22.08/review.json"
+    ],
+    "source_and_evidence_stopped": true,
+    "running_commands": [],
+    "next_action": "Root reads exact review and owns acceptance/handoff/final existing board. STOP."
+  }
+}

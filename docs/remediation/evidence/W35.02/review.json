@@ -1,0 +1,265 @@
+{
+  "task_id": "W35.02",
+  "actor_id": "w2205-reviewer",
+  "run_id": "/root/w3502_recovery_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "artifact_digest": "c4442102d5c844c0bfaef2ea67c92f1ebfafe4e059b2a50ec55f6746c05c160c",
+  "contract_digest": "82863e33a7cdd31c3c6c0eb212ff57c91872675430080e85c98ac4be6c5ea319",
+  "verdict": "PASS",
+  "blockers": [],
+  "independence": "Distinct recovery reviewer; inspected actual frozen source and evidence and ran K3 once. Prior interrupted reviewer has no credited runtime verdict.",
+  "criteria": {
+    "C1": {
+      "verdict": "PASS",
+      "basis": "Actual both-host routes/services and queued decision cells show first-paint entry with unknown cold count, legacy unknowns, stored same-visit entry, enum-valid request override, stable projected return reads and one next live increment. Stored context needs both switches; request-only entry needs tracking. Invalid entry refuses before effects. Signed cold legacy reads use ephemeral data with configuration and post-await capability checks retained; GET emits no refreshed cookies."
+    },
+    "C2": {
+      "verdict": "PASS",
+      "basis": "DO HTTP/socket live writes retain optional visit fields and visitorId. Restart, merge sum/later-start policy, manual/import/alarm preservation and rejected-write recovery pass. Existing staged commit/ambiguous recovery, buffered expiry/owner/context, sort refusal and brand-local fatigue/replay controls pass. Manual session writes preserve activity/count/start/channel via observedLive=false; existing writes and TTL policy remain."
+    },
+    "C3": {
+      "verdict": "PASS",
+      "basis": "Source and both shipped SDKs send bounded host-only referrer entry after readiness, preserve explicit channel and strip entry after readiness withdrawal. Independent fixed12 passes on frozen bytes. Reviewed same-byte final K2 plus warning-signature evidence and relevant unchanged-input K4 equality are reused."
+    }
+  },
+  "pins": {
+    "before": {
+      "at": "2026-09-15T22:16:31.207Z",
+      "capture": "0879ce",
+      "artifact_count": 97,
+      "canonical_count": 119,
+      "protected_count": 74,
+      "mismatches": [],
+      "canonical_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25"
+    },
+    "after": {
+      "capture": "466073",
+      "at": "2026-09-15T22:20:34.281Z",
+      "artifact_digest": "c4442102d5c844c0bfaef2ea67c92f1ebfafe4e059b2a50ec55f6746c05c160c",
+      "contract_digest": "82863e33a7cdd31c3c6c0eb212ff57c91872675430080e85c98ac4be6c5ea319",
+      "artifact": {
+        "count": 97,
+        "mismatches": []
+      },
+      "canonical": {
+        "count": 119,
+        "digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+        "mismatches": []
+      },
+      "protected": {
+        "count": 74,
+        "mismatches": []
+      },
+      "worker_sha256": "543148700c122dd8e464838500cd99ae4c5f5961ae889214697bd729b52811f6",
+      "prior_candidate_digest_checks": [
+        {
+          "expected": "0d7938c2e530448fa63cf56885774f19f504395678076357e8564510801a9230",
+          "actual": "0d7938c2e530448fa63cf56885774f19f504395678076357e8564510801a9230"
+        },
+        {
+          "expected": "7a584c268b2cecfdbbc11be12c1549a46849f9953db3c13a0b561b067eeb5052",
+          "actual": "7a584c268b2cecfdbbc11be12c1549a46849f9953db3c13a0b561b067eeb5052"
+        }
+      ]
+    },
+    "exact_deltas": {
+      "capture": "190556",
+      "count": 17,
+      "baseline_gzip_hashes_match": true,
+      "current_after_hashes_match": true,
+      "forward_patch_reconstructs_all_current_bytes": true,
+      "artifact_and_contract_recomputed": true
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W35.02/worker.json",
+      "sha256": "543148700c122dd8e464838500cd99ae4c5f5961ae889214697bd729b52811f6"
+    },
+    "final": {
+      "capture": "f60f90",
+      "at": "2026-09-15T22:24:21.873Z",
+      "artifact_digest": "c4442102d5c844c0bfaef2ea67c92f1ebfafe4e059b2a50ec55f6746c05c160c",
+      "contract_digest": "82863e33a7cdd31c3c6c0eb212ff57c91872675430080e85c98ac4be6c5ea319",
+      "artifact_count": 97,
+      "artifact_mismatches": [],
+      "canonical_count": 119,
+      "canonical_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+      "canonical_mismatches": [],
+      "protected_count": 74,
+      "protected_mismatches": [],
+      "journal_sequence": 1928
+    }
+  },
+  "runtime": {
+    "check_id": "W35.02-K3",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/services/SessionManager.visit.test.ts src/content/cell.test.ts src/sdk/listen.test.ts src/content/consent.test.ts -t 'W35[.]02|W35[.]01|W22[.]07 (applies age-decayed interest|preserves exact session expiry)|W26[.]04|no entry signals at all|never guesses a channel|acknowledges snapshot refusal before rendered callbacks|is behavior-read-only when cold|hydrates from the snapshot and delivers each slot' --maxWorkers=1 --minWorkers=1",
+    "attempts": 1,
+    "session_id": 26672,
+    "captures": [
+      "6e73d7",
+      "7194eb"
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "result": {
+      "files_passed": 5,
+      "tests_passed": 12,
+      "failed": 0,
+      "deliberately_unselected": 104,
+      "duration_seconds": 21.63
+    },
+    "before_canonical_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+    "after_canonical_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+    "full_output": {
+      "bytes": 48503,
+      "sha256": "158b5fad01883791f69db08411deb74f73ec6cd008253be1ec319a78ed0fbaf3",
+      "gzip_base64": "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",
+      "diagnostics": [
+        "learning_incomplete",
+        "Error processing action event",
+        "ledger_delivery_failed"
+      ],
+      "summary": " Test Files  5 passed (5)\n      Tests  12 passed | 104 skipped (116)\n   Start at  18:18:01\n   Duration  21.63s (transform 4.17s, setup 0ms, collect 8.50s, tests 955ms, environment 1ms, prepare 9.09s)\n\n"
+    },
+    "diagnosis": "Retained mock connector, injected action failure, learning_incomplete and queue_unavailable diagnostics belong to synthetic/negative fixtures; passing cells/receipts are not durable learning or external delivery acceptance."
+  },
+  "reused_checks": {
+    "K2": {
+      "basis": "worker.json K2_attempt2, exact command and complete raw output inspected at e5b63d; compiler1536, scoped14TS lint and whitespace command chain exit0/drained. Before/after119-pin digest equals current. Zero errors,131 inherited warnings.",
+      "captures": [
+        "f4c2a7",
+        "7ff921",
+        "965b3c"
+      ],
+      "session_id": 95356,
+      "exit_code": 0,
+      "drained": true
+    },
+    "warnings": {
+      "basis": "worker.json warning_attempt1 exact signature-multiplicity comparison inspected against admitted baseline rows;0errors131warnings and no additions.",
+      "captures": [
+        "e26e60",
+        "96ed69"
+      ],
+      "session_id": 9811,
+      "exit_code": 0,
+      "drained": true,
+      "independent_raw_comparison": {
+        "capture": "76e041",
+        "warnings": 131,
+        "additions": [],
+        "removed": [],
+        "qualification": "Initial read-only stylish-output parser c80a84 compared stripped CLI periods with API messages and reported formatting differences; corrected parser normalizes terminal periods only. Primary retained worker API-to-API proof needs no normalization and has no additions. No lint or runtime rerun."
+      }
+    },
+    "K4": {
+      "basis": "worker.json K4_attempt1 exact write:false build/options/banner and raw equality results inspected. All build sources/config and both bundles unchanged; intervening canonical change was only the owned route fixture lifecycle. Historical override reconstructs K4 canonical digest exactly.",
+      "capture": "55ede0",
+      "exit_code": 0,
+      "drained": true,
+      "esm": {
+        "bytes": 53116,
+        "sha256": "2e6a442bce4d23fee914c6efaea1a14c3b10fd24104027f72525598d826f772e"
+      },
+      "iife": {
+        "bytes": 55999,
+        "sha256": "9ed7820d555f98d6835940a0dc4f74a7b10f960476c9a84ec690d7b3e5cdfa04"
+      }
+    }
+  },
+  "source_review": {
+    "captures": [
+      "7e01cc",
+      "e2d942",
+      "7fe81e",
+      "c515e5",
+      "190556",
+      "dfb3f3",
+      "2806e9",
+      "da3c43",
+      "b46e4c"
+    ],
+    "complete_baseline_relative_deltas": 17,
+    "findings": "Complete canonical W35 and linked F14/F13/F05/F29/F32 dispositions read with W16 context contract, full task/plan, baseline, freeze and actual worker attempts. Current checkpoint used; lead explicitly directed no unrelated historical sweep.",
+    "conclusion": "No blocking defect in bounded visit/channel wiring. Pure projections add no context-specific I/O or persistence. Live candidate publication still follows accepted storage put and preserves recovery. Optional fields retain old DO record compatibility; invalid persisted supplied visit fields fail closed. Both bundles contain the intended source change. No raw entry is persisted.",
+    "dependencies": "W35.01/W26.04 overlapping exact-byte proofs are qualified with history retained;119-pin audit covers accepted unowned dependencies/reviews. W22.07 buffered lifetime/purpose and W22.09 brand attribution assurance remain; affected runtime controls were exercised."
+  },
+  "retained_failures": [
+    "Worker K1_attempt1 exit1:10pass/2fail. Refusal helper incorrectly compared a prior queued record; the nondefault warm fixture dropped an unknown product. Approved fixture corrections assert no new queue write under refusal and actual accepted warm state using valid line attributes.",
+    "Worker K2_attempt1 exit2:missing ContentPiece.lifecycle; downstream lint/whitespace not run. Added required lifecycle, then final K1_attempt3 and K2_attempt2 pass. K1_attempt2 was intermediate, not final source.",
+    "Prior independent reviewer was interrupted before collecting its runtime result/verdict and is not counted as completed evidence. This distinct review ran the fixed selection once."
+  ],
+  "limitations": [
+    "Bounded local synthetic Node actual-module/storage and SDK VM evidence only; no native workerd durability, deployed/customer/SLO or release acceptance.",
+    "Full W35/F14, identity/link/erase parity, stale writer fencing, production migration/cutover/rollback and exact runtime/customer tails remain open.",
+    "No seeded gamma-zero influence, journey reset or memory/classifier calibration claim; no new privacy/retention/scientific policy or historical visit reconstruction/distinct-visit dedup.",
+    "No blanket no-effects claim: necessary consent restrictions and existing configuration/connector effects remain. Manual non-live writes keep their existing TTL policy.",
+    "Declared97/119 pins are not an exhaustive installed dependency manifest; permitted same-input static/SDK assurance is reused within the admitted contract."
+  ],
+  "disposition": "STOP",
+  "active_commands": [],
+  "next_action": "Lead verifies this independent record, records bounded disposition and durable handoff; no task/package/finding/release promotion by reviewer.",
+  "at": "2026-09-15T22:24:21.873Z",
+  "entry_board": {
+    "plain_attempt": {
+      "commands": [
+        "node scripts/remediation/board.mjs check",
+        "node scripts/remediation/board.mjs status"
+      ],
+      "session_id": 37661,
+      "check_pid": 489677,
+      "initial_capture": "1fcf75",
+      "final_capture": "53d250",
+      "started_at": "2026-09-15T22:15:42.948Z",
+      "ended_at": "2026-09-15T22:22:26.779Z",
+      "status_started": false,
+      "result": "Uncredited timeout; root directed termination after six minutes. Only this reviewer's still-running check PID received SIGTERM.",
+      "signal": "SIGTERM",
+      "wrapper_exit_code": 1,
+      "drained": true,
+      "stdout_bytes": 0
+    },
+    "replacement": {
+      "basis": "Existing bounded-memory fs realpath/stat/read success/failure cache and NOTE filtering from evidence/W22.03/board-handoff.json; checker code unchanged, read-only. Completed before review write.",
+      "command": "node --max-old-space-size=1536 --input-type=module <<'NODE'\nimport fs from 'node:fs';import{syncBuiltinESMExports}from'node:module';import{resolve}from'node:path';import{pathToFileURL}from'node:url';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['realpathSync','statSync']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='string'?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='string'?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['realpathSync','statSync','readFileSync']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\n'),out=lines.filter(line=>{if(line.startsWith('NOTE ')){notes++;return false;}return true;}).join('\\n');return write(out,...args);};\nconst file=resolve('scripts/remediation/board.mjs'),url=pathToFileURL(file);\nfor(const command of ['check','status']){\nprocess.argv=[process.execPath,file,command];const entry=new URL(url);entry.searchParams.set('invocation',command);await import(entry.href);\nwrite('\\nBOARD '+command+' exit_status '+process.exitCode+'; NOTE count '+notes+'\\n');notes=0;if(process.exitCode!==0)break;\n}\nNODE",
+      "session_id": 97252,
+      "captures": [
+        {
+          "chunk_id": "adf30d",
+          "wall_time_seconds": 1.001744962,
+          "session_id": 97252,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b4bd58",
+          "wall_time_seconds": 5.001703597,
+          "session_id": 97252,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "435f00",
+          "wall_time_seconds": 5.000525837,
+          "session_id": 97252,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ee990f",
+          "wall_time_seconds": 1.035494497,
+          "exit_code": 0,
+          "original_token_count": 346,
+          "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=36, unscoped=5\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=132, closed=1, verification=1; evidence records=394\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W35.02 — Distinct W35.02 frozen C1-C3 source and fixed12 once; reuse same-byte compiler/lint/SDK equality; lead disposition/final board. Full authority/cutover remains open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 27607\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=36, unscoped=5\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=132, closed=1, verification=1; evidence records=394\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W35.02 — Distinct W35.02 frozen C1-C3 source and fixed12 once; reuse same-byte compiler/lint/SDK equality; lead disposition/final board. Full authority/cutover remains open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 27607\n"
+        }
+      ],
+      "check_exit_code": 0,
+      "status_exit_code": 0,
+      "exit_code": 0,
+      "drained": true,
+      "notes_each": 27607,
+      "journal_sequence": 1928,
+      "result": "Tracker VALID; consistency only, no product/gate/release acceptance."
+    }
+  }
+}

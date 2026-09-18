@@ -1,0 +1,319 @@
+{
+  "task": "W04.01",
+  "actor": "w0202-reviewer",
+  "model": "gpt-6-astra",
+  "reasoningEffort": "xhigh",
+  "completedAt": "2026-09-07T16:00:13.737Z",
+  "artifactDigest": "a8d7eff3a36ce88b80323c3f53b9efe2f21f4425466ca76be99d6a6571b494cc",
+  "contractDigest": "2225c5d17653e7e75b505eb72bbe4adb27c4557179f4b5070d787e8ddb663019",
+  "verdict": "Accept C1-C3 within the admitted local scope; lead acceptance remains separate.",
+  "pendingProcesses": [],
+  "checks": [
+    {
+      "kind": "w0401-K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/identity/identity.test.ts src/routes/identity.test.ts src/sdk/identify.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T15:55:00.867Z",
+      "completedObservedAt": "2026-09-07T15:55:37.384Z",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (22 tests) 69ms\n ✓ src/sdk/identify.test.ts  (8 tests) 10ms\n ✓ src/identity/identity.test.ts  (16 tests) 9ms\n\n Test Files  3 passed (3)\n      Tests  46 passed (46)\n   Start at  11:55:03\n   Duration  10.78s (transform 1.16s, setup 0ms, collect 3.00s, tests 88ms, environment 0ms, prepare 5.82s)\n\n"
+    },
+    {
+      "kind": "w0401-bundles",
+      "command": "node --input-type=module <<'NODE'\nimport * as esbuild from 'esbuild';\nimport { readFileSync } from 'node:fs';\nimport { join } from 'node:path';\nimport { createHash } from 'node:crypto';\nimport assert from 'node:assert/strict';\nconst ROOT = process.cwd();\nconst sha256 = value => createHash('sha256').update(value).digest('hex');\nconst version = readFileSync(join(ROOT, 'src/sdk/version.ts'), 'utf8').match(/'([^']+)'/)[1];\nconst banner = `/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */`;\nconst common = { bundle: true, platform: 'browser', target: 'es2022', minify: false, sourcemap: false,\n legalComments: 'none', logLevel: 'info', metafile: true, banner: { js: banner }, write: false };\nconst outputs = [];\nfor (const [entry, output, format] of [['src/sdk/index.ts', 'public/sdk/edge-personalization.esm.js', 'esm'], ['src/sdk/browser.ts', 'public/sdk/edge-personalization.js', 'iife']]) {\n const built = await esbuild.build({ ...common, entryPoints: [join(ROOT, entry)], outfile: join(ROOT, output), format });\n const generated = built.outputFiles[0].contents, disk = readFileSync(output);\n assert.equal(sha256(generated), sha256(disk), output);\n outputs.push({ entry, output, format, bytes: generated.length, sha256: sha256(disk), sourceInputs: Object.keys(built.metafile.inputs).sort().map(path => ({path,sha256:sha256(readFileSync(path))})), exactSourceOutputMatch: true });\n}\nconsole.log(JSON.stringify({ startedAndCompletedRuntime: 'Local installed esbuild; exact inspected build-sdk.mjs options plus write:false; no output writes', outputs }, null, 2));\nNODE",
+      "startedAt": "2026-09-07T15:55:28.767Z",
+      "completedObservedAt": "2026-09-07T15:55:37.382Z",
+      "exitCode": 0,
+      "output": "\n  public/sdk/edge-personalization.esm.js  27.7kb\n\n⚡ Done in 65ms\n\n  public/sdk/edge-personalization.js  29.4kb\n\n⚡ Done in 54ms\n{\n  \"startedAndCompletedRuntime\": \"Local installed esbuild; exact inspected build-sdk.mjs options plus write:false; no output writes\",\n  \"outputs\": [\n    {\n      \"entry\": \"src/sdk/index.ts\",\n      \"output\": \"public/sdk/edge-personalization.esm.js\",\n      \"format\": \"esm\",\n      \"bytes\": 28365,\n      \"sha256\": \"dda77438ee56f5f2833cc058857566a62ffae7f66062137b77858e26f478cccb\",\n      \"sourceInputs\": [\n        {\n          \"path\": \"src/sdk/core.ts\",\n          \"sha256\": \"4e00b83659eadf40fd58c80de48667f996a165b2e93f97a76ba604f1e598eb24\"\n        },\n        {\n          \"path\": \"src/sdk/emit.ts\",\n          \"sha256\": \"537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731\"\n        },\n        {\n          \"path\": \"src/sdk/host.ts\",\n          \"sha256\": \"179b975bbdd1d68ef54e4093ab82848113b35f1cad2dd33c0f994bea094c2896\"\n        },\n        {\n          \"path\": \"src/sdk/identify.ts\",\n          \"sha256\": \"3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f\"\n        },\n        {\n          \"path\": \"src/sdk/identity.ts\",\n          \"sha256\": \"3389149258c439a23bfda2138af623e3c0ab7da4f896ef6338095872a1cc4e77\"\n        },\n        {\n          \"path\": \"src/sdk/index.ts\",\n          \"sha256\": \"fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa\"\n        },\n        {\n          \"path\": \"src/sdk/listen.ts\",\n          \"sha256\": \"619c4b51562d85050bd13c0575391040778fb97bedf298797403068106d56007\"\n        },\n        {\n          \"path\": \"src/sdk/memoryHost.ts\",\n          \"sha256\": \"34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1\"\n        },\n        {\n          \"path\": \"src/sdk/version.ts\",\n          \"sha256\": \"64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f\"\n        },\n        {\n          \"path\": \"src/sdk/wire.ts\",\n          \"sha256\": \"91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6\"\n        }\n      ],\n      \"exactSourceOutputMatch\": true\n    },\n    {\n      \"entry\": \"src/sdk/browser.ts\",\n      \"output\": \"public/sdk/edge-personalization.js\",\n      \"format\": \"iife\",\n      \"bytes\": 30062,\n      \"sha256\": \"53a9bcbaf25c8785d1ecab8d341666dd8bd3268898117c2cb168cf359b2b3b1e\",\n      \"sourceInputs\": [\n        {\n          \"path\": \"src/sdk/browser.ts\",\n          \"sha256\": \"52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321\"\n        },\n        {\n          \"path\": \"src/sdk/core.ts\",\n          \"sha256\": \"4e00b83659eadf40fd58c80de48667f996a165b2e93f97a76ba604f1e598eb24\"\n        },\n        {\n          \"path\": \"src/sdk/emit.ts\",\n          \"sha256\": \"537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731\"\n        },\n        {\n          \"path\": \"src/sdk/host.ts\",\n          \"sha256\": \"179b975bbdd1d68ef54e4093ab82848113b35f1cad2dd33c0f994bea094c2896\"\n        },\n        {\n          \"path\": \"src/sdk/identify.ts\",\n          \"sha256\": \"3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f\"\n        },\n        {\n          \"path\": \"src/sdk/identity.ts\",\n          \"sha256\": \"3389149258c439a23bfda2138af623e3c0ab7da4f896ef6338095872a1cc4e77\"\n        },\n        {\n          \"path\": \"src/sdk/index.ts\",\n          \"sha256\": \"fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa\"\n        },\n        {\n          \"path\": \"src/sdk/listen.ts\",\n          \"sha256\": \"619c4b51562d85050bd13c0575391040778fb97bedf298797403068106d56007\"\n        },\n        {\n          \"path\": \"src/sdk/memoryHost.ts\",\n          \"sha256\": \"34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1\"\n        },\n        {\n          \"path\": \"src/sdk/version.ts\",\n          \"sha256\": \"64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f\"\n        },\n        {\n          \"path\": \"src/sdk/wire.ts\",\n          \"sha256\": \"91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6\"\n        }\n      ],\n      \"exactSourceOutputMatch\": true\n    }\n  ]\n}\n"
+    },
+    {
+      "kind": "w0401-identity",
+      "command": "node --input-type=module <<'NODE'\nimport { readFileSync } from 'node:fs';\nimport { createHash } from 'node:crypto';\nimport assert from 'node:assert/strict';\nimport * as esbuild from 'esbuild';\nconst root = 'docs/remediation/evidence/W04.01/';\nconst read = path => JSON.parse(readFileSync(path, 'utf8'));\nconst hash = data => createHash('sha256').update(data).digest('hex');\nconst artifact = read(root+'artifact-v1.json'), graph = read(root+'source-inputs-v1.json'), worker = read(root+'worker-checks.json');\nconst digest = hash(JSON.stringify({contract_digest:artifact.contract_digest,configuration:artifact.configuration,files:artifact.files.map(({path,sha256,role})=>({path,sha256,role})).sort((a,b)=>a.path.localeCompare(b.path))}));\nassert.equal(digest,'a8d7eff3a36ce88b80323c3f53b9efe2f21f4425466ca76be99d6a6571b494cc');\nassert.equal(artifact.digest,digest); assert.equal(artifact.files.length,63);\nconst pins = new Map(artifact.files.map(f=>[f.path,f.sha256])); assert.equal(pins.size,63);\nfor(const f of artifact.files) assert.equal(hash(readFileSync(f.path)),f.sha256,f.path);\nconst entryPoints=['src/identity/identity.test.ts','src/routes/identity.test.ts','src/sdk/identify.test.ts','src/sdk/index.ts','src/sdk/browser.ts'];\nconst options={entryPoints,bundle:true,packages:'external',platform:'node',format:'esm',target:'es2022',write:false,metafile:true,logLevel:'silent',outdir:'/tmp/w0401-graph-unused',outbase:'.'};\nassert.deepEqual(options,graph.graph.options);\nconst result=await esbuild.build(options);\nconst actualGraph=Object.keys(result.metafile.inputs).sort().map(path=>({path,sha256:hash(readFileSync(path))}));\nassert.deepEqual(actualGraph,graph.graph.files); assert.equal(actualGraph.length,41);\nfor(const f of actualGraph) assert.equal(pins.get(f.path),f.sha256,f.path);\nassert.equal(worker.sourceFiles.length,11); for(const f of worker.sourceFiles) assert.equal(pins.get(f.path),f.sha256,f.path);\nconst originals=read(root+'before-sources-v1.json').files;\nassert.equal(originals.length,11); for(const f of originals) assert.equal(hash(f.text),f.sha256,f.path);\nconst oldRoute=originals.find(f=>f.path==='src/routes/identity.test.ts').text, currentRoute=readFileSync('src/routes/identity.test.ts','utf8');\nconst marker=\"describe('erase: the right to be forgotten\";\nassert.ok(oldRoute.includes(marker)); assert.ok(currentRoute.includes(marker));\nassert.equal(currentRoute.slice(currentRoute.indexOf(marker)).replaceAll('await signedCall(','await call('),oldRoute.slice(oldRoute.indexOf(marker)));\nconst oldJwt=oldRoute.split('\\n').find(s=>s.startsWith('const token =')); assert.ok(oldJwt); assert.ok(currentRoute.split('\\n').includes(oldJwt));\nconst prior=read(root+'tracker-before-v1.json').tasks.find(t=>t.id==='W07.04').artifact;\nconst expectedChanges=['src/identity/assertion.ts','src/routes/identity.ts','src/types/env.ts'];\nconst actualChanges=prior.files.filter(f=>hash(readFileSync(f.path))!==f.sha256).map(f=>f.path).sort();\nassert.deepEqual(actualChanges,[...expectedChanges].sort());\nconst entry=read(root+'entry-checks-v1.json');\nconsole.log(JSON.stringify({artifactDigest:digest,manifestFileSha256:hash(readFileSync(root+'artifact-v1.json')),physicalPins:63,mismatches:0,actualGraph,workerOutputs:worker.sourceFiles,originalHashesValidated:11,originalErasureAndJwtAssertionsPreserved:true,protectedPriorPins:prior.files.length-actualChanges.length,declaredPriorChanges:actualChanges,inspectedEvidence:[root+'worker.md',root+'worker-checks.json',root+'baseline.json',root+'baseline-probe.mjs',root+'before-sources-v1.json',root+'source-inputs-v1.json'].map(path=>({path,sha256:hash(readFileSync(path))})),entry:{trustedSequence:entry.trustedSequence,trustedTrackerSha256:entry.trustedTrackerSha256,sourceSha256:entry.sourceSha256,checkExit:entry.check.result.exit_code},limits:'Relevant packages-external local graph and physical identity only; not installed packages, full TypeScript program, deployed/runtime/customer proof or prior-contract reclosure.'},null,2));\nNODE",
+      "startedAt": "2026-09-07T15:59:00.382Z",
+      "completedObservedAt": "2026-09-07T15:59:01.603Z",
+      "exitCode": 0,
+      "output": "{\n  \"artifactDigest\": \"a8d7eff3a36ce88b80323c3f53b9efe2f21f4425466ca76be99d6a6571b494cc\",\n  \"manifestFileSha256\": \"0eeb6f234d2bdf86c384d2805540a39f26bd065531918640666876ca310988f1\",\n  \"physicalPins\": 63,\n  \"mismatches\": 0,\n  \"actualGraph\": [\n    {\n      \"path\": \"src/auth/signingConfig.mjs\",\n      \"sha256\": \"82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084\"\n    },\n    {\n      \"path\": \"src/config/versionedStore.ts\",\n      \"sha256\": \"c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3\"\n    },\n    {\n      \"path\": \"src/data/coach-catalog.json\",\n      \"sha256\": \"43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e\"\n    },\n    {\n      \"path\": \"src/demos/brighthour/catalog.data.json\",\n      \"sha256\": \"a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6\"\n    },\n    {\n      \"path\": \"src/demos/brighthour/catalog.ts\",\n      \"sha256\": \"c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd\"\n    },\n    {\n      \"path\": \"src/demos/brighthour/demoClock.ts\",\n      \"sha256\": \"a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce\"\n    },\n    {\n      \"path\": \"src/demos/brighthour/offerLifecycle.ts\",\n      \"sha256\": \"7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82\"\n    },\n    {\n      \"path\": \"src/demos/brighthour/reflexConfig.ts\",\n      \"sha256\": \"524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf\"\n    },\n    {\n      \"path\": \"src/demos/registry.ts\",\n      \"sha256\": \"18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb\"\n    },\n    {\n      \"path\": \"src/identity/assertion.ts\",\n      \"sha256\": \"46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d\"\n    },\n    {\n      \"path\": \"src/identity/erase.ts\",\n      \"sha256\": \"e2d348577a5295430b5f85cb3f685b7eda8d8a1e7f806508e44aee6ed2e9f802\"\n    },\n    {\n      \"path\": \"src/identity/history.ts\",\n      \"sha256\": \"010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21\"\n    },\n    {\n      \"path\": \"src/identity/identity.test.ts\",\n      \"sha256\": \"452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc\"\n    },\n    {\n      \"path\": \"src/identity/link.ts\",\n      \"sha256\": \"6f1738ef48f3a33dfffa3b4a4d81063b44ba30f613430500c8b6d2f0be6ee0b1\"\n    },\n    {\n      \"path\": \"src/identity/shopperId.ts\",\n      \"sha256\": \"210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3\"\n    },\n    {\n      \"path\": \"src/identity/store.ts\",\n      \"sha256\": \"a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5\"\n    },\n    {\n      \"path\": \"src/ledger/erasure.ts\",\n      \"sha256\": \"410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c\"\n    },\n    {\n      \"path\": \"src/middleware/auth.ts\",\n      \"sha256\": \"9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01\"\n    },\n    {\n      \"path\": \"src/reflex/configStore.ts\",\n      \"sha256\": \"0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2\"\n    },\n    {\n      \"path\": \"src/reflex/core.ts\",\n      \"sha256\": \"287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db\"\n    },\n    {\n      \"path\": \"src/reflex/identityMerge.ts\",\n      \"sha256\": \"c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508\"\n    },\n    {\n      \"path\": \"src/routes/identity.test.ts\",\n      \"sha256\": \"0bcffae8de408ea7ac8a432ff47f5ddf62aa598d6d79f8265d7f8aadff930433\"\n    },\n    {\n      \"path\": \"src/routes/identity.ts\",\n      \"sha256\": \"e93247553313d1bff591a6860e0837c079cb61ea3baddaff991584c15b717305\"\n    },\n    {\n      \"path\": \"src/sdk/browser.ts\",\n      \"sha256\": \"52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321\"\n    },\n    {\n      \"path\": \"src/sdk/core.ts\",\n      \"sha256\": \"4e00b83659eadf40fd58c80de48667f996a165b2e93f97a76ba604f1e598eb24\"\n    },\n    {\n      \"path\": \"src/sdk/emit.ts\",\n      \"sha256\": \"537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731\"\n    },\n    {\n      \"path\": \"src/sdk/host.ts\",\n      \"sha256\": \"179b975bbdd1d68ef54e4093ab82848113b35f1cad2dd33c0f994bea094c2896\"\n    },\n    {\n      \"path\": \"src/sdk/identify.test.ts\",\n      \"sha256\": \"a5116728df0f639f86d50156979aeb41f3ad0516c9e54c3dd029cb93ba421ca3\"\n    },\n    {\n      \"path\": \"src/sdk/identify.ts\",\n      \"sha256\": \"3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f\"\n    },\n    {\n      \"path\": \"src/sdk/identity.ts\",\n      \"sha256\": \"3389149258c439a23bfda2138af623e3c0ab7da4f896ef6338095872a1cc4e77\"\n    },\n    {\n      \"path\": \"src/sdk/index.ts\",\n      \"sha256\": \"fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa\"\n    },\n    {\n      \"path\": \"src/sdk/listen.ts\",\n      \"sha256\": \"619c4b51562d85050bd13c0575391040778fb97bedf298797403068106d56007\"\n    },\n    {\n      \"path\": \"src/sdk/memoryHost.ts\",\n      \"sha256\": \"34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1\"\n    },\n    {\n      \"path\": \"src/sdk/testHost.ts\",\n      \"sha256\": \"1033bc8f2bcd6bd03f9fb615f33a77100d968be1b6ea41e69d8a07f999d845f1\"\n    },\n    {\n      \"path\": \"src/sdk/version.ts\",\n      \"sha256\": \"64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f\"\n    },\n    {\n      \"path\": \"src/sdk/wire.ts\",\n      \"sha256\": \"91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6\"\n    },\n    {\n      \"path\": \"src/services/CatalogService.ts\",\n      \"sha256\": \"da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff\"\n    },\n    {\n      \"path\": \"src/services/SessionManager.ts\",\n      \"sha256\": \"ca33610c0915daf174e28132a846ea7f1178816dc0425979d262c2f48e2680bd\"\n    },\n    {\n      \"path\": \"src/services/visit.ts\",\n      \"sha256\": \"27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d\"\n    },\n    {\n      \"path\": \"src/tenancy/objects.ts\",\n      \"sha256\": \"e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67\"\n    },\n    {\n      \"path\": \"src/tenancy/tenant.ts\",\n      \"sha256\": \"2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072\"\n    }\n  ],\n  \"workerOutputs\": [\n    {\n      \"path\": \"src/identity/assertion.ts\",\n      \"sha256\": \"46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d\"\n    },\n    {\n      \"path\": \"src/sdk/identify.ts\",\n      \"sha256\": \"3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f\"\n    },\n    {\n      \"path\": \"src/routes/identity.ts\",\n      \"sha256\": \"e93247553313d1bff591a6860e0837c079cb61ea3baddaff991584c15b717305\"\n    },\n    {\n      \"path\": \"src/types/env.ts\",\n      \"sha256\": \"7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f\"\n    },\n    {\n      \"path\": \"src/sdk/README.md\",\n      \"sha256\": \"06ab04ca779a78d2359167d941531a000f8a01de8e50c62167ef6ebe49b2383b\"\n    },\n    {\n      \"path\": \"docs/architecture/25-identity-stitching.md\",\n      \"sha256\": \"d8f45c82d1c6c21918aebb52c13ac04db30a6cc0b01ba0b518f3d6089f6607de\"\n    },\n    {\n      \"path\": \"src/identity/identity.test.ts\",\n      \"sha256\": \"452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc\"\n    },\n    {\n      \"path\": \"src/routes/identity.test.ts\",\n      \"sha256\": \"0bcffae8de408ea7ac8a432ff47f5ddf62aa598d6d79f8265d7f8aadff930433\"\n    },\n    {\n      \"path\": \"src/sdk/identify.test.ts\",\n      \"sha256\": \"a5116728df0f639f86d50156979aeb41f3ad0516c9e54c3dd029cb93ba421ca3\"\n    },\n    {\n      \"path\": \"public/sdk/edge-personalization.js\",\n      \"sha256\": \"53a9bcbaf25c8785d1ecab8d341666dd8bd3268898117c2cb168cf359b2b3b1e\"\n    },\n    {\n      \"path\": \"public/sdk/edge-personalization.esm.js\",\n      \"sha256\": \"dda77438ee56f5f2833cc058857566a62ffae7f66062137b77858e26f478cccb\"\n    }\n  ],\n  \"originalHashesValidated\": 11,\n  \"originalErasureAndJwtAssertionsPreserved\": true,\n  \"protectedPriorPins\": 180,\n  \"declaredPriorChanges\": [\n    \"src/identity/assertion.ts\",\n    \"src/routes/identity.ts\",\n    \"src/types/env.ts\"\n  ],\n  \"inspectedEvidence\": [\n    {\n      \"path\": \"docs/remediation/evidence/W04.01/worker.md\",\n      \"sha256\": \"3ff3b9659a55a2f4354889225689e1dfa81710905bc29393d0ad9cf8c83c3d61\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W04.01/worker-checks.json\",\n      \"sha256\": \"9aee21902ebbc3df9abc947d8540c0be164f58d1959e9d73846669174266ff5b\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W04.01/baseline.json\",\n      \"sha256\": \"7f1197e5ca447baf623e3687417f8417e0084c2240da4f892a313d34485f52d3\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W04.01/baseline-probe.mjs\",\n      \"sha256\": \"6a78da0074b110e9e515dc19bd4d89cd9f073201161806f9694a7052ac661c89\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W04.01/before-sources-v1.json\",\n      \"sha256\": \"2e26e2f26543afb8a15a1c0d7bd94c437036ebf8091217e83bcf8d12a3ecd752\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W04.01/source-inputs-v1.json\",\n      \"sha256\": \"32dcfa90c1edc152f79651ca3a5e70fdc82b77dfc6b0814a0eeb327f224a0a14\"\n    }\n  ],\n  \"entry\": {\n    \"trustedSequence\": 177,\n    \"trustedTrackerSha256\": \"922c1a207b8e8d4c7fae6ab3342a0680eb64af04d5eea984d19bcdd2dd5d1cfc\",\n    \"sourceSha256\": \"5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4\",\n    \"checkExit\": 0\n  },\n  \"limits\": \"Relevant packages-external local graph and physical identity only; not installed packages, full TypeScript program, deployed/runtime/customer proof or prior-contract reclosure.\"\n}\n"
+    }
+  ],
+  "identity": {
+    "artifactDigest": "a8d7eff3a36ce88b80323c3f53b9efe2f21f4425466ca76be99d6a6571b494cc",
+    "manifestFileSha256": "0eeb6f234d2bdf86c384d2805540a39f26bd065531918640666876ca310988f1",
+    "physicalPins": 63,
+    "mismatches": 0,
+    "actualGraph": [
+      {
+        "path": "src/auth/signingConfig.mjs",
+        "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3"
+      },
+      {
+        "path": "src/data/coach-catalog.json",
+        "sha256": "43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e"
+      },
+      {
+        "path": "src/demos/brighthour/catalog.data.json",
+        "sha256": "a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6"
+      },
+      {
+        "path": "src/demos/brighthour/catalog.ts",
+        "sha256": "c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd"
+      },
+      {
+        "path": "src/demos/brighthour/demoClock.ts",
+        "sha256": "a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce"
+      },
+      {
+        "path": "src/demos/brighthour/offerLifecycle.ts",
+        "sha256": "7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82"
+      },
+      {
+        "path": "src/demos/brighthour/reflexConfig.ts",
+        "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf"
+      },
+      {
+        "path": "src/demos/registry.ts",
+        "sha256": "18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb"
+      },
+      {
+        "path": "src/identity/assertion.ts",
+        "sha256": "46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d"
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "e2d348577a5295430b5f85cb3f685b7eda8d8a1e7f806508e44aee6ed2e9f802"
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21"
+      },
+      {
+        "path": "src/identity/identity.test.ts",
+        "sha256": "452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc"
+      },
+      {
+        "path": "src/identity/link.ts",
+        "sha256": "6f1738ef48f3a33dfffa3b4a4d81063b44ba30f613430500c8b6d2f0be6ee0b1"
+      },
+      {
+        "path": "src/identity/shopperId.ts",
+        "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+      },
+      {
+        "path": "src/identity/store.ts",
+        "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c"
+      },
+      {
+        "path": "src/middleware/auth.ts",
+        "sha256": "9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01"
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2"
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+      },
+      {
+        "path": "src/reflex/identityMerge.ts",
+        "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "0bcffae8de408ea7ac8a432ff47f5ddf62aa598d6d79f8265d7f8aadff930433"
+      },
+      {
+        "path": "src/routes/identity.ts",
+        "sha256": "e93247553313d1bff591a6860e0837c079cb61ea3baddaff991584c15b717305"
+      },
+      {
+        "path": "src/sdk/browser.ts",
+        "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "4e00b83659eadf40fd58c80de48667f996a165b2e93f97a76ba604f1e598eb24"
+      },
+      {
+        "path": "src/sdk/emit.ts",
+        "sha256": "537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731"
+      },
+      {
+        "path": "src/sdk/host.ts",
+        "sha256": "179b975bbdd1d68ef54e4093ab82848113b35f1cad2dd33c0f994bea094c2896"
+      },
+      {
+        "path": "src/sdk/identify.test.ts",
+        "sha256": "a5116728df0f639f86d50156979aeb41f3ad0516c9e54c3dd029cb93ba421ca3"
+      },
+      {
+        "path": "src/sdk/identify.ts",
+        "sha256": "3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f"
+      },
+      {
+        "path": "src/sdk/identity.ts",
+        "sha256": "3389149258c439a23bfda2138af623e3c0ab7da4f896ef6338095872a1cc4e77"
+      },
+      {
+        "path": "src/sdk/index.ts",
+        "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+      },
+      {
+        "path": "src/sdk/listen.ts",
+        "sha256": "619c4b51562d85050bd13c0575391040778fb97bedf298797403068106d56007"
+      },
+      {
+        "path": "src/sdk/memoryHost.ts",
+        "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+      },
+      {
+        "path": "src/sdk/testHost.ts",
+        "sha256": "1033bc8f2bcd6bd03f9fb615f33a77100d968be1b6ea41e69d8a07f999d845f1"
+      },
+      {
+        "path": "src/sdk/version.ts",
+        "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+      },
+      {
+        "path": "src/sdk/wire.ts",
+        "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+      },
+      {
+        "path": "src/services/CatalogService.ts",
+        "sha256": "da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "ca33610c0915daf174e28132a846ea7f1178816dc0425979d262c2f48e2680bd"
+      },
+      {
+        "path": "src/services/visit.ts",
+        "sha256": "27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d"
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072"
+      }
+    ],
+    "workerOutputs": [
+      {
+        "path": "src/identity/assertion.ts",
+        "sha256": "46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d"
+      },
+      {
+        "path": "src/sdk/identify.ts",
+        "sha256": "3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f"
+      },
+      {
+        "path": "src/routes/identity.ts",
+        "sha256": "e93247553313d1bff591a6860e0837c079cb61ea3baddaff991584c15b717305"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f"
+      },
+      {
+        "path": "src/sdk/README.md",
+        "sha256": "06ab04ca779a78d2359167d941531a000f8a01de8e50c62167ef6ebe49b2383b"
+      },
+      {
+        "path": "docs/architecture/25-identity-stitching.md",
+        "sha256": "d8f45c82d1c6c21918aebb52c13ac04db30a6cc0b01ba0b518f3d6089f6607de"
+      },
+      {
+        "path": "src/identity/identity.test.ts",
+        "sha256": "452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "0bcffae8de408ea7ac8a432ff47f5ddf62aa598d6d79f8265d7f8aadff930433"
+      },
+      {
+        "path": "src/sdk/identify.test.ts",
+        "sha256": "a5116728df0f639f86d50156979aeb41f3ad0516c9e54c3dd029cb93ba421ca3"
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "53a9bcbaf25c8785d1ecab8d341666dd8bd3268898117c2cb168cf359b2b3b1e"
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "dda77438ee56f5f2833cc058857566a62ffae7f66062137b77858e26f478cccb"
+      }
+    ],
+    "originalHashesValidated": 11,
+    "originalErasureAndJwtAssertionsPreserved": true,
+    "protectedPriorPins": 180,
+    "declaredPriorChanges": [
+      "src/identity/assertion.ts",
+      "src/routes/identity.ts",
+      "src/types/env.ts"
+    ],
+    "inspectedEvidence": [
+      {
+        "path": "docs/remediation/evidence/W04.01/worker.md",
+        "sha256": "3ff3b9659a55a2f4354889225689e1dfa81710905bc29393d0ad9cf8c83c3d61"
+      },
+      {
+        "path": "docs/remediation/evidence/W04.01/worker-checks.json",
+        "sha256": "9aee21902ebbc3df9abc947d8540c0be164f58d1959e9d73846669174266ff5b"
+      },
+      {
+        "path": "docs/remediation/evidence/W04.01/baseline.json",
+        "sha256": "7f1197e5ca447baf623e3687417f8417e0084c2240da4f892a313d34485f52d3"
+      },
+      {
+        "path": "docs/remediation/evidence/W04.01/baseline-probe.mjs",
+        "sha256": "6a78da0074b110e9e515dc19bd4d89cd9f073201161806f9694a7052ac661c89"
+      },
+      {
+        "path": "docs/remediation/evidence/W04.01/before-sources-v1.json",
+        "sha256": "2e26e2f26543afb8a15a1c0d7bd94c437036ebf8091217e83bcf8d12a3ecd752"
+      },
+      {
+        "path": "docs/remediation/evidence/W04.01/source-inputs-v1.json",
+        "sha256": "32dcfa90c1edc152f79651ca3a5e70fdc82b77dfc6b0814a0eeb327f224a0a14"
+      }
+    ],
+    "entry": {
+      "trustedSequence": 177,
+      "trustedTrackerSha256": "922c1a207b8e8d4c7fae6ab3342a0680eb64af04d5eea984d19bcdd2dd5d1cfc",
+      "sourceSha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+      "checkExit": 0
+    },
+    "limits": "Relevant packages-external local graph and physical identity only; not installed packages, full TypeScript program, deployed/runtime/customer proof or prior-contract reclosure."
+  },
+  "bundleSourceGraphsCoveredByFrozenGraph": true,
+  "executionIdentityBridge": "K1 and write:false bundle reproduction ran after lead provisional-freeze release, before formal artifact recording. No source change followed except the already-read fixture cast before this run. Final worker output pins and independently rebuilt 41-input graph match current bytes; both earlier 10/11-input bundle graph hashes match the final graph. No second K1 or compiler execution is claimed.",
+  "actualSourceReview": {
+    "baseline": "Personally read actual baseline probe and full outputs: absent/empty/other-tenant config exposed private audiences and wrote sessions/cookies; configured unsigned denied; original signed SDK409 reused old proof and failed401, fresh proof succeeded. Both probe-only failures retained.",
+    "source": "Read actual verifier, route, SDK/core/session/link/store source and admitted-original-to-current diffs. Verifier now refuses unavailable config in all modes before the existing effect boundary. Route400/409 priority, HMAC binding/expiry/rotation/wildcard and historical site-assurance type unchanged. Strict transport/application detach, provider precedence/no fallback, captured visitor and max-one retry match C2.",
+    "fixtures": "Read all three fixtures and actual diffs against before-sources-v1.json, not HEAD. Existing40 cases retained with required positive signed setup/changed assurance or provider retry, plus six groups. 18 denial configurations/claims per host ×2 hosts check zero CACHE/SESSIONS get/put/delete/list, unchanged data, zero DO namespace/fetch and no cookie. Actual SDK/router forwards raw submitted proof and real HMAC verifies fresh visitor; provider failures, static409, strict detach, second409 and pending/caller-continuation guards covered.",
+    "typesAndGuidance": "Read app and separate browser-SDK tsconfigs, Vitest config, SDK/core exposed types, identity/env contracts, narrow README/doc25 changes and full local build script. Current guidance explains mandatory backend integration, static409 behavior and unchanged logout/session residuals.",
+    "workerProof": "Read complete worker.md and worker-checks.json actual outputs. Final46 tests, app noEmit, separate SDK noEmit, SDK build and bundle syntax/scoped diff all pass; no duplicate compile. Both initial TS2352 intentional-fixture-cast failures superseded by only an explicit unknown type boundary and final compiler/K1 passes."
+  },
+  "rework": [
+    "Extra await boundary: attempt() equality check precedes identify() continuation; caller-side guards required before detach and final adoption.",
+    "Actual caller-side guards now present; nested-microtask fixture exercises both initial HTTP200 and409. Scope is equality only, not ABA/generation or ownership.",
+    "Both initial worker compilers failed TS2352 on the intentional malformed-provider cast. Only the fixture cast changed through unknown; assertions and production bytes preserved. Final worker and independent K1 pass.",
+    "Root disclosed journal186 prose says62 pins; actual frozen artifact has63. This review verifies63 and leaves journal correction to the lead; no evidence/manifest change.",
+    "Nonessential read-only displays of large original/entry snapshots were truncated; no passing claim relies on those displays. Selected original fixture diffs, physical original hashes, actual baseline/worker outputs and bounded graph were independently inspected."
+  ],
+  "limits": [
+    "Node/Vitest/WebCrypto with synthetic KV/DO/fetch/browser seams; DO positive control is a synthetic object, not workerd or actual browser/deployed acceptance.",
+    "63 relevant pins/41 packages-external local runtime inputs and selected types/config/build/lock only; not a complete installed dependency or TypeScript-program/native/deployed attestation.",
+    "No trusted session ownership/capabilities, SDK session rotation, logout/forwarding revocation, cross-tab/ABA/in-flight generation, cookie hydration, erasure or F04/F06/N05/W04 closure. Equality guards cannot establish account ownership.",
+    "Old unsigned storefront/scripts fail closed until authenticated backend proof integration. No customer/SSO/provider choice, signing-strength policy, credential provisioning, external/operational/deploy/git changes.",
+    "180 old pins preserved is a scope/history check, not previous task-contract revalidation or customer/SLO/gate/release acceptance."
+  ]
+}

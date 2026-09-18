@@ -1,0 +1,118 @@
+{
+  "task_id": "W09.07",
+  "at": "2026-09-14T19:52:44.018Z",
+  "journal_seq": 1760,
+  "artifact_digest": "2b68f8252cda83e514538f98674cd6535eb3b3ac083237bb4523d5c982cb50ec",
+  "contract_digest": "6d5905c73b4435252feb0b4fafdf09605f952403e4ea5aeea8ce7eb56afd48c6",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W09.07/acceptance.md",
+    "sha256": "d13a118807b3fd2924be742aa25882762c6f0577bdba4d5174d31d175898a602"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W09.07/review.json",
+    "sha256": "4de5bd9620de9852e3a4cdba913a04c59c4662e20525c82afe37eee0d6cdb2bc"
+  },
+  "root_review_capture": "ba4f14",
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "initial": {
+      "chunk_id": "af261b",
+      "wall_time_seconds": 1.001540759,
+      "session_id": 53625,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "4cf717",
+        "wall_time_seconds": 5.001193853,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "d148be",
+        "wall_time_seconds": 5.001295236,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "e60452",
+        "wall_time_seconds": 5.000726587,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "278c57",
+        "wall_time_seconds": 5.000664716,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "21c4fa",
+        "wall_time_seconds": 10.000796704,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "6b3e4b",
+        "wall_time_seconds": 10.00172748,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "39afc8",
+        "wall_time_seconds": 10.000556254,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "8ac4f4",
+        "wall_time_seconds": 10.001248544,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "478dc4",
+        "wall_time_seconds": 10.001323399,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "661989",
+        "wall_time_seconds": 10.001865375,
+        "session_id": 53625,
+        "original_token_count": 327,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=121, closed=1; evidence records=359\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.07 — Continue W22/W30 report-publication recovery: read the complete parent scope and current catchUp/runDayReport plus existing hourly fixtures, then admit a coherent bounded retry fix. Source read bb615b shows catchUp refreshes only dates in built; once all hourly aggregates exist, a failed day publication has no retry trigger despite the comment promising one. Ensure pending day publication retries without refolding successful hours or changing attribution/retention/customer policy. Separate late/mutable-input detection, historical reconstruction, raw outbox/quarantine, cross-call online identity and cloud/DLQ activation remain open; D06/D08/W24 and release authority are not supplied. Do not reopen accepted per-delivery isolation without a concrete defect or rerun unrelated DLQ suites.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 25318\n"
+      },
+      {
+        "chunk_id": "07f4e2",
+        "wall_time_seconds": 10.004618673,
+        "session_id": 53625,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0a978d",
+        "wall_time_seconds": 2.430983016,
+        "exit_code": 0,
+        "original_token_count": 327,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=121, closed=1; evidence records=359\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.07 — Continue W22/W30 report-publication recovery: read the complete parent scope and current catchUp/runDayReport plus existing hourly fixtures, then admit a coherent bounded retry fix. Source read bb615b shows catchUp refreshes only dates in built; once all hourly aggregates exist, a failed day publication has no retry trigger despite the comment promising one. Ensure pending day publication retries without refolding successful hours or changing attribution/retention/customer policy. Separate late/mutable-input detection, historical reconstruction, raw outbox/quarantine, cross-call online identity and cloud/DLQ activation remain open; D06/D08/W24 and release authority are not supplied. Do not reopen accepted per-delivery isolation without a concrete defect or rerun unrelated DLQ suites.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 25318\n"
+      }
+    ],
+    "result": "VALID",
+    "notes_each": 25318,
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;47 exact pins rechecked, no worker/reviewer commands running. Only final handoff metadata/checkpoint updated after validated acceptance state. Tracker consistency is not engine/customer/SLO/release approval.",
+  "next_action": "Continue W22/W30 report-publication recovery: read the complete parent scope and current catchUp/runDayReport plus existing hourly fixtures, then admit a coherent bounded retry fix. Source read bb615b shows catchUp refreshes only dates in built; once all hourly aggregates exist, a failed day publication has no retry trigger despite the comment promising one. Ensure pending day publication retries without refolding successful hours or changing attribution/retention/customer policy. Separate late/mutable-input detection, historical reconstruction, raw outbox/quarantine, cross-call online identity and cloud/DLQ activation remain open; D06/D08/W24 and release authority are not supplied. Do not reopen accepted per-delivery isolation without a concrete defect or rerun unrelated DLQ suites.",
+  "limitations": "Bounded managed per-delivery completion and disjoint delivery/key failure isolation, plus managed/legacy cohort independence only. Shared-key failures may conservatively retry co-resident deliveries; no immutable claim reassignment or per-message object fanout. Legacy partial-write duplication, pre-capture process loss, logical-event/online/export reconciliation, quarantine/outbox, activation/retention/claim lifecycle, atomic erasure fence/ABA/journal/manifest races, historical/fold recovery and full W09/W22/customer/SLO/release scope remain open. Producer flag default-off, existing persisted schema/identifiers and native queue mapping unchanged. D06/D08/W24 boundaries remain. No commit/push/install/emitted build/provision/deploy/cloud/credentials/customer-data/destructive operations. Tracked whitespace does not cover inherited untracked delivery.ts; independent actual source inspection covers its two added subtype/comment lines and unchanged EOF. Frozen worker prose saying three added lines is a factual overcount, corrected by reviewer and root a3c49c; implementation and pass artifacts unchanged."
+}

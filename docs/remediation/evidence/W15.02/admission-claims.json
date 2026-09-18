@@ -1,0 +1,69 @@
+{
+  "task_id": "W15.02",
+  "at": "2026-09-18T15:58:21Z",
+  "before": "258d02e9d4fb6ee488d2dc28c7ff7c9be90a9250523d5a4847c6d5df71e1d92a",
+  "after": "645d46b76fb9a42e9c4366728173b264f06e677868fdcacfbdab4e6442d4cb1d",
+  "scope": "Supported refresh or genuine push through the exact kit; coalescing/stale-response guards, correct absence/default handoff and server-snapshot/no-flash contract. Distinguish read-only polls from actual correlated exposures. Deliver customer browser/operator acceptance, tag-plan/debug artifacts and feed failure cases. Correct objective/symbol/default/acceptance claims; reconcile SSO with customer authority, not unilateral deletion.",
+  "base_plan": {
+    "path": "docs/remediation/evidence/W15.02/admission.json",
+    "sha256": "911b9d6504529d2a02296bcebcfc7994aa3b4a809489ed064bdc3787980b5ca2"
+  },
+  "reason": "Worker found exact published handoff contradictions after original preflight; root read actual clauses. Same full W15 C1/C2/C5/C6/C7/C8/C10 claims, six bounded in-place corrections, no new framework.",
+  "added_outputs": [
+    {
+      "path": "ONBOARDING.md",
+      "exists": true,
+      "bytes": 25453,
+      "sha256": "0879f67995747a0aabea32860e5f9e46972a134ce96dd1c1d0647f7066d3c500"
+    },
+    {
+      "path": "docs/PS-Implementation-Runbook.md",
+      "exists": true,
+      "bytes": 23121,
+      "sha256": "9370349fc00015367954669eced45a6429b240e0718a9795bae4956d6d92a906"
+    },
+    {
+      "path": "docs/Tapestry-BTI-System-Architecture.md",
+      "exists": true,
+      "bytes": 29664,
+      "sha256": "50a8c4a193b6e1594d3ef82d74ad0c6d73eea6054df9f50a1c60f094883c5741"
+    },
+    {
+      "path": "docs/Tapestry-Content-Personalization-Proposal.md",
+      "exists": true,
+      "bytes": 18456,
+      "sha256": "ac29980706fb1dfc65d96f557fa16dd4d490deb5c158023633176d5020a40146"
+    },
+    {
+      "path": "docs/Tapestry-Capability-Breakdown-v2.md",
+      "exists": true,
+      "bytes": 16302,
+      "sha256": "02c2d605992735c22fb1421ca720b5523cbaea52ecb130315208950c80169a9d"
+    },
+    {
+      "path": "docs/Tapestry-CFO-Capability-Doc-Review.md",
+      "exists": true,
+      "bytes": 29556,
+      "sha256": "443f7d108ed66988391a9115c32c5a6dbaf135e307d05446bfc2d6b79fa5a544"
+    }
+  ],
+  "ownership": {
+    "worker": "/root/w1202_implement",
+    "added_paths": [
+      "ONBOARDING.md",
+      "docs/PS-Implementation-Runbook.md",
+      "docs/Tapestry-BTI-System-Architecture.md",
+      "docs/Tapestry-Content-Personalization-Proposal.md",
+      "docs/Tapestry-Capability-Breakdown-v2.md",
+      "docs/Tapestry-CFO-Capability-Doc-Review.md"
+    ],
+    "product_outputs": 94,
+    "reviewer": "/root/w1202_review",
+    "lead": "Records only; no product fixes."
+  },
+  "limits": "Qualify implemented supported refresh versus genuine push, conditional same-grant SSR/default/no-flash, actual exploration defaults and live SSO/performance acceptance. Preserve historical/agreed customer commitments and do not imply an authorized mechanism or contractual amendment. No new chapters, broad document rewrite or extra tracker.",
+  "criteria": "Original admission.json C1–C12, dependencies/design/rollback/measurement/authority unchanged.",
+  "checks": "Original K1–K12 unchanged except K9 exact whitespace targets append these six documents. Full original claims independently reviewed at K11; no extra test suite.",
+  "baseline": "Original88 original/absence and dependency pins remain original admission basis; add these six current exact pins before any new-file edits. Existing user bytes saved by worker. No baseline rerun.",
+  "authority": "Original88 implementation GO already issued after valid board51653/final06ec0f; remains active. Only six added-file edits wait valid amended board27127. Live/customer/external authority unchanged."
+}

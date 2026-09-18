@@ -1,0 +1,391 @@
+{
+  "before": null,
+  "after": {
+    "id": "W34.01-E2",
+    "task_id": "W34.01",
+    "check_id": "W34.01-K2",
+    "criterion_ids": [
+      "W34.01-C2"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0202-reviewer",
+    "run_id": "/root/w0202_review",
+    "command": "Independent frozen W34.01 source/baseline/assertion/evidence review and K1 rerun; inspect actual application noEmit TypeScript, scoped diff/protected-source and relevant artifact identity, retaining exact commands and verdict in review-v1.md.",
+    "runtime": "Independent local source and targeted synthetic Node integration review; application compiler metadata only in a task-temporary directory; no new runtime harness or infrastructure work.",
+    "workload": "All C1-C2 obligations; sole production scoreExternal call removed before input/dependency construction; unavailable receipts and pure historical replay preserved. Exact limitations for preflight graph count, disabled table delivery, prior proof state and full W34/customer/latency remain explicit.",
+    "result": "pass",
+    "limitations": "Independent actual code/baseline/assertion review and four-suite33/33 rerun; all71 pins checked; actual worker app noEmit exit0 inspected without duplicate compile. Only bounded OFF-only C1/C2. Static packages-external/local graph and original baseline graph limits retained; no full W34/F30/customer/deployed/SLO/release or prior-auth automatic reclosure.",
+    "at": "2026-09-07T04:42:56Z",
+    "file": {
+      "path": "docs/remediation/evidence/W34.01/review-v1.md",
+      "sha256": "b0b147a9771128d49424d25e5c7a39673d6375670c5b41e44e8fe185bd065a41"
+    },
+    "artifact_digest": "eba761398a7fc71b7e9e7a05d45ed9ff061ddd14a849b13432b0ca1c95a53b1b",
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "493bc4435de040b1db24f8b58a9aec18bb80e8681d917bd8018a515aadce6dd9",
+      "configuration": "W34.01 OFF-only withdrawal in the actual live content decision service. Pin the four declared Node/Vitest suite local dependency graphs (packages external), changed service/existing fixture, selected type-only files, application/test configuration and lockfiles, immutable actual preflight, worker checks and source graph command/output. Working synthetic KV/DO and intercepted external dependencies; no live network. Application noEmit compilation is supporting evidence, not a fully attested TypeScript program or installed package/runner/native-binary identity. Original baseline reported 52 local inputs without retaining its full graph; current four-suite graph has 60. No baseline reconstruction, prior-auth manifest union, new harness, enabling policy, table publication or deployed/customer/SLO/full W34/F30/release acceptance.",
+      "files": [
+        {
+          "path": "docs/remediation/design/W34.01/plan-v1.md",
+          "sha256": "a89dc247a159a1ede3a07ecd3b66e777d0d47b673ca3958d62c4de00fac58e3f",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W34.01/baseline.json",
+          "sha256": "4b3ff3702bcaa0d59a11b5dbfedb7d85883d4bac7608c873577f7785a91a7d8a",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W34.01/source-inputs-v1.json",
+          "sha256": "51989babcb806f27313ea73962c0475ec98b2ac40c3b0bf078a9dc484e1a08d3",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W34.01/worker-checks.json",
+          "sha256": "f14856ac4ecfc21215970a87f6e8456d597bda1f98d9adbc1632595127f30e17",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W34.01/worker.md",
+          "sha256": "631cc415d7256d20a667602c8d11b30d8be6dcdbdacd28559e362f873622b686",
+          "role": "output"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "configuration"
+        },
+        {
+          "path": "package.json",
+          "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c",
+          "role": "configuration"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "a0f4de159c1e83a5f81fd5c75f54f74662ce6e6d35a0e4b72de6a8d870801081",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/AudienceAuthoring.ts",
+          "sha256": "58757744a3bfbb5d7d9f64ed15a1c0837aac97be57bb7e1906742fa09087ce42",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/AudienceStore.ts",
+          "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/DecisionProvider.ts",
+          "sha256": "8fa9a5c60a8d678d4fc232e6914e4d1e53505b726896d582fdbd57c80eb59106",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/evaluateCondition.ts",
+          "sha256": "55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/index.ts",
+          "sha256": "efa519931607a1319d33fcbb5b1b9c1526a7e164845a99cd9e6e60878d935871",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/SegmentProvider.ts",
+          "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/SignalProvider.ts",
+          "sha256": "81936e5cf88c48ad7e31fddbb631ae24717c1e3d2ef9dab3fd921616a47e2965",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/types.ts",
+          "sha256": "b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3",
+          "role": "source"
+        },
+        {
+          "path": "src/content/cell.ts",
+          "sha256": "b3fc57930c43d36681edda47d040f46691c4a442c5d84d816102dc906a203b6c",
+          "role": "source"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "sha256": "83bd9de816cb610913a80e45df44ca32742f566a8281ad0961e991a073f37b09",
+          "role": "output"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "sha256": "987fca9a029f08e0fbd98fa3e201dac3062a5a0bef562aecabfd724031e0fbad",
+          "role": "source"
+        },
+        {
+          "path": "src/content/decide.test.ts",
+          "sha256": "56946e6ad16abec73520f0dfe79003ec280cc272a062d744b8c766489cb6af6f",
+          "role": "source"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5",
+          "role": "source"
+        },
+        {
+          "path": "src/content/holdout.ts",
+          "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc",
+          "role": "source"
+        },
+        {
+          "path": "src/content/import.ts",
+          "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc",
+          "role": "source"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b",
+          "role": "source"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd",
+          "role": "source"
+        },
+        {
+          "path": "src/content/service.ts",
+          "sha256": "dff26109e9389cacb1f2bfae4db220f926bbaca6b10376023535e46a3b1a2bf8",
+          "role": "output"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06",
+          "role": "source"
+        },
+        {
+          "path": "src/data/coach-catalog.json",
+          "sha256": "43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e",
+          "role": "source"
+        },
+        {
+          "path": "src/data/insights.json",
+          "sha256": "e6b29448440dd4e4712feb38c99ce485e6badee2aaee1f14401f40211caf3bf9",
+          "role": "source"
+        },
+        {
+          "path": "src/data/seed-audiences.ts",
+          "sha256": "3e8e23f7cf778e27c76b67025d3c734624bf801627a6a864830725e6cd449f78",
+          "role": "source"
+        },
+        {
+          "path": "src/data/signals.json",
+          "sha256": "3dfc6d73e161483092232fadecfc66ed5747daeb8aa57147b118a6a5529877c3",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/brighthour/catalog.data.json",
+          "sha256": "a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/brighthour/catalog.ts",
+          "sha256": "c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/brighthour/demoClock.ts",
+          "sha256": "a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/brighthour/offerLifecycle.ts",
+          "sha256": "7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/brighthour/reflexConfig.ts",
+          "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "sha256": "18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "sha256": "90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/external.ts",
+          "sha256": "af5bb4cb5ec6a4080d3aeec190bdf9c1fe67c69b4f1a2a9905618ad330efda0d",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "13d090c8e11c42916b01ec81e4c5b7ccc2cbedc93ee97fe8f4be4d1a25150496",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/holdoutArms.test.ts",
+          "sha256": "2e51773caa54404635f2d420a6a755da80bfe72cf08f20b03ca7f66dd4384a96",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "sha256": "47ce0df0d69faf274ed57118e68fbdf7a166e8d889048c5053a5bc53fb81d1e3",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/priors.ts",
+          "sha256": "bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "sha256": "2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "ace43a542d4f5ef96ecc5d7eb17256cb391390832092c319bd0a0e01c3ab57ff",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "sha256": "fb7ba5e29cc20de154510626f7250632adf62e568cb353a9174d2f8bf1eb592e",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c",
+          "role": "source"
+        },
+        {
+          "path": "src/measure/holdout.ts",
+          "sha256": "cd421bae32093f09b37c2d36e3253d85ce9c4cfad9cb8d5913730e92098ace9b",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/audienceGenerator.ts",
+          "sha256": "663c87b162c7373c138d0c40ce50c16051c0d31ce5e34d2a8e3aa366f2bd8940",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/contentTelemetry.ts",
+          "sha256": "ec6ef52dd9800f7488bcb03d6def18f2fe084208dca0b0f48ca604d9a74c5e41",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/identityMerge.ts",
+          "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/merchandising.ts",
+          "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/regionTrend.ts",
+          "sha256": "94c0fa6e51313f8a361e05088cc20c04563f40a37b8fb5a6a2db9382302d0531",
+          "role": "source"
+        },
+        {
+          "path": "src/services/CatalogService.ts",
+          "sha256": "da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff",
+          "role": "source"
+        },
+        {
+          "path": "src/services/FeatureVariableManager.ts",
+          "sha256": "0460c5e0592fe26814d03e552ba421a953253c0b183a9b3f850ac2a2a34c6ff7",
+          "role": "source"
+        },
+        {
+          "path": "src/services/JourneyStage.ts",
+          "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331",
+          "role": "source"
+        },
+        {
+          "path": "src/services/odpLoop.ts",
+          "sha256": "47853951cfc87d414f2a2659aac38095ba33ba9e08331d6c6fc1c4e8c89b0586",
+          "role": "source"
+        },
+        {
+          "path": "src/services/OptimizelyService.ts",
+          "sha256": "b59fbabf16f2f5bfa093e29d533d4b5f6bfc559378bd2661211a9cce9facab75",
+          "role": "source"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "sha256": "127e5b4fc9af111e5fcf581509fcac6b8ee2485f0a1bc8b2bfbf409718a844c4",
+          "role": "source"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "sha256": "f6b3a28793f20851c71268a9c12c60d074fc1968bca661b1acff334d9f832594",
+          "role": "source"
+        },
+        {
+          "path": "src/services/visit.ts",
+          "sha256": "27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/objects.ts",
+          "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "e44f357958d91affcd4610c62a8e23a36d48431ddfff16f2b6d7440598bf2d50",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "configuration"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "configuration"
+        }
+      ],
+      "digest": "eba761398a7fc71b7e9e7a05d45ed9ff061ddd14a849b13432b0ca1c95a53b1b"
+    },
+    "status": "current",
+    "superseded_by": null
+  }
+}

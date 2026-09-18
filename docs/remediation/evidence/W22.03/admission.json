@@ -1,0 +1,30 @@
+{
+  "task_id": "W22.03",
+  "at": "2026-09-14T14:37:16.331Z",
+  "plan": {
+    "path": "docs/remediation/design/W22.03/plan.md",
+    "sha256": "a892559d38e407510f27b4d6a913e5a424b4380bdc6c914db5eb8284a6c7cff3"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W22.03/baseline.json",
+    "sha256": "827f8cf9cd497533f317635d69f1b5632f91702992a437cac5c2dab5ac85d3de"
+  },
+  "contract_digest": "1baad168e386ad5e3e1d4a93a789c89e78bc321ac1c796fa3563235fe0c72787",
+  "independent_preflight": {
+    "actor_id": "w2203-reviewer",
+    "run_id": "/root/w2203_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "a892559d38e407510f27b4d6a913e5a424b4380bdc6c914db5eb8284a6c7cff3",
+    "scope": "Exact plan only, not implementation acceptance."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-14T14:37:16.331Z",
+    "plan_sha256": "a892559d38e407510f27b4d6a913e5a424b4380bdc6c914db5eb8284a6c7cff3",
+    "rationale": "Root actual-source and complete requirements read; distinct Astra/xhigh exact-plan PASS a892559d. Fixed9 covers shared bounded-body dependency; fresh scopedlint0/0 and owned/dependency pins captured."
+  },
+  "fixed_checks": 9,
+  "limitations": "Bounded local point-lookup/replay input reconciliation only, not durable producer recovery, online statistics or export reconciliation, historical/late-arrival repair, attribution/retention policy or full W22/W09/F16/F22 closure. Candidate discovery depends on truthful range names and the obtained inventory; no snapshot isolation or detection of unlisted/out-of-range hidden rows. Physical read/work budgets may refuse legitimate large histories; text-only adapters materialize before actual-byte checking. Existing erasure races, report basis/attribution/caps, customer policies and served denominators unchanged. No native/SLO/customer/release approval, source-data writes, install/build/commit/push/deploy/cloud/credential/customer-data/destructive/external operation."
+}

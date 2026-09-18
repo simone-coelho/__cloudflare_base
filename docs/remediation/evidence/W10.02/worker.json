@@ -1,0 +1,319 @@
+{
+  "task": "W10.02",
+  "actor": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "source_stopped_pending_independent_review",
+  "authority": {
+    "source_go_at": "2026-09-12T03:11:39.027Z",
+    "journal_seq": 1098,
+    "contract_digest": "4d9a0eec9a42d1724ecd79a1a3d3bca4208e463731e6a8a3ead53950b5a4df7c",
+    "plan": {
+      "path": "docs/remediation/design/W10.02/plan.md",
+      "sha256": "527947aad9ee65cd05f1c1a59ed88c08e19d457f4f154acb44c8de05913b6ce3"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W10.02/baseline.json",
+      "sha256": "05c635eccaa67b04ddc39c495a30b6187446ffad98c36a5dd8b340fa1e420485"
+    },
+    "admission": "docs/remediation/evidence/W10.02/admission.json"
+  },
+  "implemented": [
+    "Bound actual append/outcome request UTF-8 streams at1MiB before JSON parsing; append1000 rows and decision/outcome/index IDs2048 bytes.",
+    "Validate full stored shape,1MiB bytes,200 ring/4096 index entries and carrier/subject/timestamps before caching. Existing invalid/oversized state holds503 without automatic reconstruction.",
+    "Apply existing inclusive cutoff and200-record/7-day/90-day retention, then refuse whole oversized ring candidate before put/cache swap with ring-local413/applied:false.",
+    "Preserve full records, v1 acknowledgement/attribution, save/reset ambiguity reload and downstream waits outside ring serialization; real fan case retains concurrent accepted statistics despite ring refusal.",
+    "Exactly two grouped additions in existing fixture, with cloned application-byte-limited synthetic storage; scoped API limitations updated."
+  ],
+  "failures_and_superseding_validation": [
+    {
+      "attempt": "runtime_candidate_1",
+      "result": "12 passed,7 unselected; exit0/drained",
+      "superseded_by": "runtime_candidate_2",
+      "correction": "Fixture-only full-field readback candidate literals changed from untyped strings to actual typed SlotCandidate objects before final runtime/static. No production correction or failing runtime."
+    },
+    {
+      "attempt": "static_candidate_1",
+      "result": "compiler passed; lint failed1 no-constant-condition error,3 inherited warnings; whitespace not reached; exit1/drained",
+      "correction": "Replace bounded reader while(true) with equivalent for(;;), preserving semantics without disabling lint.",
+      "superseded_by": "runtime_candidate_3 and static_candidate_2"
+    }
+  ],
+  "limitations": [
+    "Application JSON byte/cardinality budgets only; no native/provider encoding/limit, sustained/ordinary traffic capacity,200-full-record capacity or latency proof.",
+    "Full records retained; rich inputs can hit byte ceiling before200 entries. No added projection, eviction, retention change, automatic reset or retry.",
+    "applied:false on413 is ring-local, not global learning rollback: fanDecisions may concurrently acknowledge statistics exposures and reports incomplete.",
+    "Historical oversized/inconsistent-object reconstruction, complete history/fatigue/attribution/learning, non-idempotent retry/reconciliation and full W10/F08 remain open.",
+    "Accepted W06.06/W09.04 behavior retained, not newly claimed privacy/fencing or delivery closure. No native harness, external/cloud/customer/deployment/commit operations."
+  ],
+  "capture_notes": "Command started_at/finished_at are worker invocation/observed drain times; exact tool captures retain session/chunk IDs, output and exit. Vitest Vite deprecation and existing W09.04 config-fallback diagnostics retained. Baseline/entry direct proof reused from lead, not rerun.",
+  "final_results": {
+    "runtime": {
+      "passed": 12,
+      "skipped": 7,
+      "total": 19,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 44457,
+      "chunk_id": "f78fa6",
+      "check": "W10.02-K1"
+    },
+    "compiler": {
+      "passed": true,
+      "exit_code": 0,
+      "drained": true,
+      "command_component": 1,
+      "session_id": 20208
+    },
+    "lint": {
+      "passed": true,
+      "errors": 0,
+      "warnings": 3,
+      "baseline_warnings": 3,
+      "new_warnings": 0,
+      "exit_code": 0,
+      "drained": true,
+      "command_component": 2,
+      "session_id": 20208
+    },
+    "whitespace": {
+      "passed": true,
+      "exit_code": 0,
+      "drained": true,
+      "command_component": 3,
+      "session_id": 20208
+    },
+    "static_aggregate": {
+      "passed": true,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 20208,
+      "chunk_id": "aad25e",
+      "check": "W10.02-K2"
+    },
+    "protected": {
+      "passed": true,
+      "expected": 101,
+      "matched": 101
+    },
+    "independent_review": {
+      "status": "not_performed_by_implementer"
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-12T03:25:16.570Z",
+    "files": [
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "2b42844e924fff2539d8516672601f221a37a5297f3ab392926582b43a9864ab"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "afd994df9ffaf719cd9b938a6432b3346b5ec7a84138b5826110e30833511bd5"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "cd0abf83e8667d9ec45ece5aca2fc5e21ee3e1b283673e121cc259d92bb52535"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 101,
+    "matched": 101,
+    "mismatches": []
+  },
+  "command_captures": [
+    {
+      "label": "runtime_candidate_1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W06.06|the ring keeps the last 200|W09.04|W10.01|W10.02' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T03:16:38.269Z",
+      "captures": [
+        {
+          "chunk_id": "b8946a",
+          "wall_time_seconds": 1.001195464,
+          "session_id": 41705,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "cc18d7",
+          "wall_time_seconds": 5.000948319,
+          "session_id": 41705,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "817b67",
+          "wall_time_seconds": 0.000002616,
+          "exit_code": 0,
+          "original_token_count": 177,
+          "output": "stderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (19 tests | 7 skipped) 395ms\n\n Test Files  1 passed (1)\n      Tests  12 passed | 7 skipped (19)\n   Start at  23:16:45\n   Duration  17.51s (transform 1.59s, setup 0ms, collect 3.71s, tests 395ms, environment 0ms, prepare 9.25s)\n\n"
+        }
+      ],
+      "session_id": 41705,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T03:17:08.780Z"
+    },
+    {
+      "label": "runtime_candidate_2",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W06.06|the ring keeps the last 200|W09.04|W10.01|W10.02' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T03:17:24.372Z",
+      "captures": [
+        {
+          "chunk_id": "839018",
+          "wall_time_seconds": 1.001543982,
+          "session_id": 84755,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fa6499",
+          "wall_time_seconds": 0.000002791,
+          "exit_code": 0,
+          "original_token_count": 237,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (19 tests | 7 skipped) 344ms\n\n Test Files  1 passed (1)\n      Tests  12 passed | 7 skipped (19)\n   Start at  23:17:32\n   Duration  10.92s (transform 1.37s, setup 0ms, collect 3.15s, tests 344ms, environment 0ms, prepare 5.01s)\n\n"
+        }
+      ],
+      "session_id": 84755,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T03:17:54.198Z"
+    },
+    {
+      "label": "static_candidate_1",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/learn.test.ts --max-warnings 3 && git diff --check -- src/durable-objects/DecisionRing.ts src/learn/learn.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T03:17:59.598Z",
+      "captures": [
+        {
+          "chunk_id": "5c9aaa",
+          "wall_time_seconds": 1.00122574,
+          "session_id": 67692,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "12f889",
+          "wall_time_seconds": 5.001312292,
+          "session_id": 67692,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "efbbee",
+          "wall_time_seconds": 5.00104631,
+          "session_id": 67692,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "87e803",
+          "wall_time_seconds": 5.00096408,
+          "session_id": 67692,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2f416f",
+          "wall_time_seconds": 5.010863137,
+          "session_id": 67692,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "1c3852",
+          "wall_time_seconds": 0.000002437,
+          "exit_code": 1,
+          "original_token_count": 144,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/durable-objects/DecisionRing.ts\n  34:12  error  Unexpected constant condition  no-constant-condition\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  259:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  260:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  260:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 4 problems (1 error, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 67692,
+      "exit_code": 1,
+      "drained": true,
+      "finished_at": "2026-09-12T03:21:32.110Z"
+    },
+    {
+      "label": "runtime_candidate_3",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W06.06|the ring keeps the last 200|W09.04|W10.01|W10.02' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T03:21:51.478Z",
+      "captures": [
+        {
+          "chunk_id": "ca00dc",
+          "wall_time_seconds": 1.001256947,
+          "session_id": 44457,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f78fa6",
+          "wall_time_seconds": 0.000002661,
+          "exit_code": 0,
+          "original_token_count": 237,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (19 tests | 7 skipped) 438ms\n\n Test Files  1 passed (1)\n      Tests  12 passed | 7 skipped (19)\n   Start at  23:22:00\n   Duration  14.02s (transform 1.61s, setup 0ms, collect 3.43s, tests 438ms, environment 0ms, prepare 6.81s)\n\n"
+        }
+      ],
+      "session_id": 44457,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T03:22:21.201Z"
+    },
+    {
+      "label": "static_candidate_2",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/learn.test.ts --max-warnings 3 && git diff --check -- src/durable-objects/DecisionRing.ts src/learn/learn.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T03:22:27.353Z",
+      "captures": [
+        {
+          "chunk_id": "f4841c",
+          "wall_time_seconds": 1.0009859,
+          "session_id": 20208,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "166432",
+          "wall_time_seconds": 5.001011468,
+          "session_id": 20208,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6283b7",
+          "wall_time_seconds": 5.000883975,
+          "session_id": 20208,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "aad25e",
+          "wall_time_seconds": 0.000003144,
+          "exit_code": 0,
+          "original_token_count": 100,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  259:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  260:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  260:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 20208,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T03:25:04.671Z"
+    },
+    {
+      "label": "final_source_stop_and_protected_pins",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=path=>createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\");const baseline=\"docs/remediation/design/W10.02/baseline.json\",b=JSON.parse(fs.readFileSync(baseline,\"utf8\")),owned=new Set(b.owned.map(v=>v.path)),protectedPins=b.pins.filter(v=>!owned.has(v.path)),mismatches=protectedPins.filter(v=>hash(v.path)!==v.sha256);const result={final_source_stop:{at:new Date().toISOString(),files:b.owned.map(v=>({path:v.path,sha256:hash(v.path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},baseline:{path:baseline,sha256:hash(baseline)}};console.log(JSON.stringify(result,null,2));if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T03:25:15.314Z",
+      "captures": [
+        {
+          "chunk_id": "d1513f",
+          "wall_time_seconds": 0.993662577,
+          "exit_code": 0,
+          "original_token_count": 202,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T03:25:16.570Z\",\n    \"files\": [\n      {\n        \"path\": \"src/durable-objects/DecisionRing.ts\",\n        \"sha256\": \"2b42844e924fff2539d8516672601f221a37a5297f3ab392926582b43a9864ab\"\n      },\n      {\n        \"path\": \"src/learn/learn.test.ts\",\n        \"sha256\": \"afd994df9ffaf719cd9b938a6432b3346b5ec7a84138b5826110e30833511bd5\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"cd0abf83e8667d9ec45ece5aca2fc5e21ee3e1b283673e121cc259d92bb52535\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 101,\n    \"matched\": 101,\n    \"mismatches\": []\n  },\n  \"baseline\": {\n    \"path\": \"docs/remediation/design/W10.02/baseline.json\",\n    \"sha256\": \"05c635eccaa67b04ddc39c495a30b6187446ffad98c36a5dd8b340fa1e420485\"\n  }\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T03:25:16.624Z"
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "at": "2026-09-13 14:43:40 UTC",
+  "task_id": "W20.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "a9a2e4bca7ca09e11b9dacad296b18ead1d5edfe3faad4600ba694be389c555d",
+  "contract_digest": "f97f18fdacd9181bd32cfd54129f7e8310afce4fbbda92b6e39c23eeb5859d0c",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W20.01-C1",
+      "verdict": "PASS",
+      "evidence": "Actual composer/decide deltas and focused runtime confirm valid live, slot-compatible take1 pins reserve before ranked selection, first valid ownership, invalid pins neither reserve nor receive arbitrary fill, and refusal diagnostics without fake delivery records. Default/no_learning/personalized arms and lifecycle/window/stock gates are covered; retained W38.05 full-output/hook parity preserves the explanation optimization."
+    },
+    {
+      "id": "W20.01-C2",
+      "verdict": "PASS",
+      "evidence": "Independent pin marker and HISTORICAL_PINS semantics preserve marker-absent legacy slot/take/duplicate behavior independently of exploration. Actual replay selects the target prefix plus all page pins, or all pins for a pin target, retaining first-owner context without unused ranked dependencies. Unknown markers refuse; full detached input context and historical/current replay parity pass."
+    },
+    {
+      "id": "W20.01-C3",
+      "verdict": "PASS",
+      "evidence": "Current slot validation rejects per-page duplicate pins and non-take1 pins while validateStored preserves old current/revision reads. Authenticated mounted validate/PUT/rollback, no-write refusals, corrected publication/readback and cross-page reuse pass. Patch validation is exercised through the existing direct store helper, not an HTTP PATCH route. Final fixed21 and reused full compiler/scoped lint/whitespace pass with exactly three inherited warnings; full activation/customer governance is not accepted."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W20.01/plan-v2.md",
+      "sha256": "ac679008361f2f9d29ec8bea25dc82f3b2b734b654b435d1258e887fef8cd6cb"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W20.01/artifact.json",
+      "sha256": "427aea240b3ed2b0f69480a151426dcfbba001afa30eb111d262200a750dd59f"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W20.01/worker.json",
+      "sha256": "ecbe4ea6cc6e07d4c0b4e2ea88dd4470e9d3fd9b71056a0cc6250f05800eb143"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/content/decide.test.ts src/content/inventoryDiversity.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts -t 'W20.01|W38.05 preserves|returns exactly the decisions|records the ranked candidates|honours the candidate limit|emits the delivery contract|the default arm serves the defaults|a piece marked out of stock|at most max per value|relaxes rather than leave|W27.02|W27.03|W28.01|authenticated validation runs|w_ext × score joins' --maxWorkers=1 --minWorkers=1",
+    "session_id": 44778,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "2646ca",
+        "wall_time_seconds": 1.001380766,
+        "session_id": 44778,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "918c69",
+        "wall_time_seconds": 5.001407513,
+        "session_id": 44778,
+        "original_token_count": 738,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/content.test.ts  (25 tests | 22 skipped) 41ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (21 tests | 19 skipped) 56ms\n ✓ src/learn/phase3.test.ts  (16 tests | 10 skipped) 50ms\n"
+      },
+      {
+        "chunk_id": "ab556b",
+        "wall_time_seconds": 0.000002153,
+        "exit_code": 0,
+        "original_token_count": 100,
+        "output": " ✓ src/reflex/contentCompose.test.ts  (6 tests | 1 skipped) 110ms\n ✓ src/content/decide.test.ts  (10 tests | 8 skipped) 4ms\n ✓ src/content/inventoryDiversity.test.ts  (6 tests | 3 skipped) 4ms\n\n Test Files  6 passed (6)\n      Tests  21 passed | 63 skipped (84)\n   Start at  10:42:13\n   Duration  23.26s (transform 4.35s, setup 1ms, collect 8.07s, tests 265ms, environment 1ms, prepare 11.17s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "finished_at": "2026-09-13 14:42:41 UTC",
+    "result": {
+      "passed": 21,
+      "unselected": 63,
+      "total": 84,
+      "files_passed": 6,
+      "duration_seconds": 23.26
+    }
+  },
+  "source_review": {
+    "basis": "Personally read governing instructions, full W20/F28/F26 scope and relevant requirements, original/supplemental plans and baselines, actual production/fixture deltas and dependencies. Reconciled all nine final hashes to the complete pre-freeze reads e42b3b/04542c; read complete frozen artifact/freeze/deltas and worker metadata/captures 760d8b/95b4bf.",
+    "freeze_journal_sequence": 1469,
+    "source_stop_at": "2026-09-13T14:36:39.689Z",
+    "pins": 46,
+    "source_and_output_pins": 34,
+    "protected_pins": 25,
+    "owned_deltas": 9,
+    "pre": {
+      "at": "2026-09-13T14:41:59.417Z",
+      "pin_capture": "2595e2",
+      "contract_capture": "d671a3",
+      "exit_status": 0,
+      "all_pins_match": true,
+      "protected_unchanged": true,
+      "exact_forward_reverse_deltas": 9
+    },
+    "post": {
+      "at": "2026-09-13T14:42:41.689Z",
+      "pin_capture": "99bbdd",
+      "contract_capture": "d30a73",
+      "exit_status": 0,
+      "all_pins_match": true,
+      "protected_unchanged": true,
+      "exact_forward_reverse_deltas": 9
+    },
+    "reconstruction": "All nine retained before contents from baseline.json plus baseline-supplement.json match their before hashes; forward patches exactly reconstruct frozen bytes and reverse patches exactly reconstruct retained before bytes. Artifact digest and current tracker contract match before and after runtime; no drift."
+  },
+  "static_reuse": {
+    "source": "worker.json command_captures.static1",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts src/content/decide.ts src/content/types.ts src/content/kinds.ts src/learn/replay.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts --max-warnings 3 && git diff --check -- src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts src/content/decide.ts src/content/types.ts src/content/kinds.ts src/learn/replay.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts",
+    "session_id": 89800,
+    "started_at": "2026-09-13 14:34:31 UTC",
+    "finished_at": "2026-09-13 14:35:33 UTC",
+    "capture_ids": [
+      "fe2e3f",
+      "04e7c5",
+      "3c573b"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "reruns": 0,
+    "result": "Full compiler, nine-file scoped lint and whitespace pass. Zero errors; exactly three inherited no-unused-vars signatures: decide.ts _share/_s and replay.ts _c, no additions. Root frozen direct whitespace checks for all nine files are also zero."
+  },
+  "retained_history": [
+    "Original worker usage limit occurred before source edits; replacement implementer and independent reviewer remain distinct. Admission-v2 corrected the impossible mixed evidence minimum before implementation; admission-v3 added the exact consent receipt marker expectation and three affected existing controls, without new groups.",
+    "Worker original fixed18 session26397 ca0255/c12636 failed 17/1/45 unselected: new route fixture expected ok:false where validate correctly returns valid:false. Failure and correction remain in worker.json; no production rework for that failure. Final fixed21 session81331 8482de/204d24/6e35fa passed 21/63 and was independently repeated once.",
+    "Four inherited synthetic learning_incomplete diagnostics and the Vite CJS warning remain verbatim in independent captures. They are not successful-ingestion evidence. No new benchmark was run; the W38.05 timing case remains retained but unselected."
+  ],
+  "limitations": [
+    "Bounded valid-pin reservation, publication contradictions, refusal diagnostics and historical replay only. Full W20/F28/F26 activation/reference warnings, exclusions/off-limits, customer fallback/priority/multi-position decisions and actual merchandiser acceptance remain open.",
+    "Legacy invalid documents remain readable; current runtime refuses invalid pins without arbitrary fill, while retained receipts use recorded legacy semantics. No cross-page dedupe, store transaction/propagation, ranking/model, or exploration-policy change is claimed.",
+    "Local synthetic Node checks are not native/deployed, heap/capacity/SLO, whole-ledger, customer or release acceptance. Prior overlapping whole-artifact byte assurance is qualified, not silently reused; unchanged protected dependency assurance is reused. Lead disposition remains separate."
+  ]
+}

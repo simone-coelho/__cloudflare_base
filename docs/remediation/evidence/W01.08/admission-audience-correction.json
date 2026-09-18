@@ -1,0 +1,45 @@
+{
+  "before": "5d9f3adc50133409691bdaa019c193f04b5a7bb0678276ae056fee99821d0d2f",
+  "after": "77e9aab6030d677bf1ed17c88016816e05d1495f8c259cddd0198a2f6aad1c59",
+  "at": "2026-09-16T21:08:13.607Z",
+  "continues": {
+    "path": "docs/remediation/evidence/W01.08/admission-customer-profile.json",
+    "sha256": "b832055e4089a079c394b12d470e2c05305d84655e3770a5851d3428e23bf803"
+  },
+  "reason": "Distinct early source review and lead source inspection found two remaining demo audience paths within the selected W01 boundary. No new W scope or authority.",
+  "baseline": {
+    "src/services/RealtimeSegmentEngine.ts": "7a40ad70357d3e347d3b971969e29a00087cd0ba3b62e8a3eb07b25c05040bfb"
+  },
+  "findings": [
+    "RealtimeSegmentEngine.ensureAudiencesSeeded guards only DEFAULT_TENANT and still seeds/generates demo audiences from retained shopper routes and ShopperReflex, bypassing the operator-only profile guard.",
+    "POST /operator/audiences/suggest has only a working hard-coded Coach INSIGHTS implementation; its live implementation is NotWiredError."
+  ],
+  "implementation": [
+    "Add exclusive worker ownership of RealtimeSegmentEngine.ts solely for explicit-demo gating of shared audience seeding; preserve authored records and demo behavior. Do not modify ShopperReflex or its authority/erasure protocols.",
+    "Withdraw demo-only audience suggestion from strict customer route policy; retain authored list/publish/rename/pin/prune."
+  ],
+  "verification": [
+    {
+      "id": "W01.08-K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "workload": "Existing boundary fixture extended for strict customer routes/methods/upgrades, actual local static dispatch, two-tenant and owned-shopper controls, zero-effect diagnostics/scene refusal, customer Coach audience behavior and CORS; one execution covers both criteria. Includes customer Coach shared shopper seeding refusal and demo-only audience suggestion withdrawal, with authored audiences and explicit demo behavior retained."
+    },
+    {
+      "id": "W01.08-K2",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.ts src/customerBoundary.ts src/types/env.ts src/routes/operator.ts src/services/RealtimeSegmentEngine.ts src/index.api-boundary.test.ts && git diff --check -- src/index.ts src/customerBoundary.ts src/types/env.ts src/routes/operator.ts src/services/RealtimeSegmentEngine.ts wrangler.toml src/index.api-boundary.test.ts",
+      "workload": "Changed source/configuration and installed compiler; inherited warnings distinguished. New-file whitespace inspected too."
+    }
+  ],
+  "review": {
+    "actor_id": "w0108-reviewer",
+    "run_id": "/root/w01_reviewer",
+    "state": "Two source-confirmed early findings, no runtime or acceptance."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T21:08:13.607Z",
+    "scope": "Seven listed product/test/config outputs; same coherent W01 local boundary assignment. Existing admission check/status passed at journal2037; final frozen-artifact check will validate this amendment."
+  },
+  "rollback": "Exact inverse of worker-owned deltas only; preserve pre-existing work.",
+  "limits": "K5 deployed/resource attestation and full W01 acceptance remain open."
+}

@@ -1,0 +1,54 @@
+{
+  "task_id": "W35.08",
+  "actor_id": "w3507-reviewer",
+  "run": "/root/w3507_preflight",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "verdict": "PASS",
+  "artifact_digest": "62326018d1698edbaf892f775a5af65dd1996f519b60a43dc510c9a441844ffb",
+  "contract_digest": "f39c490795446704d631b1b4149df59074997926a9e83235ba777c4fc0346fb7",
+  "identity": {
+    "before_at": "2026-09-16T06:04:15.558Z",
+    "after_at": "2026-09-16T06:06:44.090Z",
+    "result": "Artifact and contract recomputed; all 18 frozen pins matched before and after the runtime. Both retained source/test inverse deltas independently reconstruct exact admission baselines.",
+    "source_sha256": {
+      "src/durable-objects/ShopperReflex.ts": "c498e4a3caebf1162345a71522af7057a5e626f3046034164793079e671dacaa",
+      "src/routes/realtime.sdkContract.test.ts": "d2a494460e1d234789d16649cca592f43db8b0a6e2221bfbcca121defad79839"
+    },
+    "worker_sha256": "73f769e301d398f0f64a5a03605971a8189b6605d4c976c817fc987735e4e6e0",
+    "admission_sha256": "dfe4b65ca1d2c6ebf7fe898db6142cb3f3aee40a16470f12f3b0782179794f74"
+  },
+  "reviewed": [
+    "Current W35.08 contract and admission; stopped worker evidence and complete two-file task delta.",
+    "Actual serialized consent/forward/ingest/absorb guard placement and raw storage-presence helper in ShopperReflex.ts.",
+    "All fixture changes, including six synthetic successor setups, no-effects assertions, delayed adoption schedule and retained signed/operator/refusal compatibility."
+  ],
+  "checks": [
+    {
+      "ids": ["W35.08-K1", "W35.08-K3"],
+      "executions": 1,
+      "actor_id": "w3507-reviewer",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[345678]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "session_id": 50866,
+      "exit_code": 0,
+      "result": "21 passed, 93 skipped; both files passed; 23.40s. One actual final-byte execution supplies the two byte-identical required commands, as explicitly authorized by the lead. Worker pre-type-correction K1 remains historical, not a final-byte worker run.",
+      "diagnostics": "Synthetic queue_unavailable/learning_incomplete diagnostics and Vite CJS notice. One diagnostic output chunk was truncated; final passing summaries and exit code were retained. No external delivery assurance."
+    },
+    {
+      "id": "W35.08-K2",
+      "reused": true,
+      "source": "docs/remediation/evidence/W35.08/worker.json, attempt 2",
+      "session_id": 94593,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+      "exit_code": 0,
+      "result": "Hash-verified exact final-byte compiler/lint/whitespace assurance reused, not rerun. Zero errors, 109 warnings; independently compared all 10 retained path/rule/message/count signatures to admission: identical."
+    }
+  ],
+  "criteria": {
+    "W35.08-C1": "PASS: each of four unsigned mutations checks raw grantAuthority inside serialization before load/consent/config/effects. Only undefined admits legacy; present valid/null/malformed/barrier values and read failures refuse. Per-writer restarted and delayed-adoption schedules pass with unchanged state and no downstream effects.",
+    "W35.08-C2": "PASS: genuine authority absence remains compatible; signed paths, necessary refusal, operator import and registered identity/erasure behavior remain. Successor setup corrections preserve authority/retirement markers and existing erasure assertions. Cold signed grant-only fixtures now assert exact unchanged bytes rather than obsolete emptiness.",
+    "W35.08-C3": "PASS: final-byte focused runtime and reused exact-byte static checks pass without warning-signature growth. Production delta is one helper and four calls; no host toggle, migration or serving-path expansion."
+  },
+  "findings": [],
+  "limitations": "Bounded local prospective DO stale-writer containment only. Node fixtures are not native/deployed/customer acceptance. No proof of nontransactional legacy KV/session-host atomicity, full session/socket parity, retention policy or historical repair; no migration/deployment or full W35/F14/customer/SLO/release closure. Independent review is not lead acceptance."
+}

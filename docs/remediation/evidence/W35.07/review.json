@@ -1,0 +1,79 @@
+{
+  "task_id": "W35.07",
+  "actor_id": "w3507-reviewer",
+  "run_id": "/root/w3507_preflight",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T05:02:56.810Z",
+  "verdict": "REWORK",
+  "artifact_digest": "d7e3e508cc78b318260a4d140aa24496e98037553094abe914240b71e8b3ba4c",
+  "contract_digest": "9a474db5475a06e8f567e8a8554405304a93571da93e16a4415d892061a6db02",
+  "independence": "Distinct from implementer /root/w3507_worker. Inspected actual frozen object/session/controller source and assertions against the approved plan; no source edits, subdelegation or board reruns.",
+  "artifact_verification": {
+    "before": "2026-09-16T05:01:30.168Z",
+    "after": "2026-09-16T05:02:56.810Z",
+    "manifest_pin_count": 27,
+    "mismatches_before": [],
+    "mismatches_after": [],
+    "artifact_and_contract_recomputed": true,
+    "captures": ["ad33e6", "6b3734"],
+    "worker_sha256": "384cba111df5f6250c57184d6266ecf07f36a7d8e96d483c052cc8cbd46f5cee",
+    "source_freeze_sha256": "42f509438291966f9b44b1827f3f4b96753a69dac8c3b60d79ca294c70114b9f"
+  },
+  "checks": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[34567]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "attempts": 1,
+      "session_id": 59813,
+      "session_drained": true,
+      "exit_code": 0,
+      "captures": ["8a827f", "41680e", "dbd750"],
+      "result": "2 files passed; 20 passed, 94 deliberately skipped, 114 total; 20.77s duration, 7.46s tests.",
+      "diagnostics": "Repetitive synthetic queue_unavailable/learning_incomplete diagnostics were tool-truncated; complete final counts and exit0 retained. These are not delivery or deployed-runtime acceptance."
+    },
+    "K2": {
+      "disposition": "Reused hash-verified exact-byte worker K2-attempt-2-final; no rerun.",
+      "session_id": 48149,
+      "exit_code": 0,
+      "result": "Worker records compiler, five-file ESLint and scoped whitespace passing, zero errors and 113 unchanged warning signatures; session drained. No independent static execution claimed."
+    }
+  },
+  "criteria": {
+    "W35.07-C1": {
+      "verdict": "PASS_LOCAL_AUTHORIZATION_BOUNDARY",
+      "basis": "Target/generic witnesses are captured from pre-barrier authority inside the cleanup transaction; exact source witnesses commit with completion, including the retired path. Retention validates/preserves them. The session endpoint requires exact witness/receipt and rejects observable grant or pipeline SID reuse; generic receipts do not backfill eligibility. Actual-object cutoff, ambiguity/restart and negative tests pass. This does not approve the controller continuation identified in R1."
+    },
+    "W35.07-C2": {
+      "verdict": "REWORK",
+      "basis": "One-read raw serialized capture, unknown-field changes, captured userId routing and source-before-session ordering pass at the immediate deletion boundary. But checkpointed completion of a session step permanently skips its authorization on later adjacent cleanup, allowing observable successor state to bypass the fence; see R1."
+    },
+    "W35.07-C3": {
+      "verdict": "PASS_WITHIN_REVIEWED_SCOPE",
+      "basis": "Fresh v6 is explicit. Untagged v5 prefixes compare unique stable step identities; ambiguous current pages refuse before effects, equivalent pages are conditionally tagged before next extra work, and compacted plans do not replay. Selected zero/full/partial/layout-loss/compaction and legacy controls pass; prior historical wire versions are retained rather than relabelled."
+    }
+  },
+  "findings": [
+    {
+      "id": "W35.07-R1",
+      "severity": "blocking_task_acceptance",
+      "confidence": "source_confirmed deterministic schedule; not separately runtime-reproduced",
+      "title": "A consumed session checkpoint bypasses generation authorization for remaining adjacent cleanup",
+      "source": [
+        "src/identity/erase.ts:298-312 authorizes only while executing the session step",
+        "src/identity/erase.ts:321-324 deletes CACHE and remaining KV keys after only compatible()",
+        "src/identity/erase.ts:774-783 resumes extra work from plan.next and checkpoints each step",
+        "src/identity/erase.ts:803-810 resumes base work from job.next without revisiting completed session guards",
+        "src/durable-objects/ShopperReflex.ts:1645-1658 can reject observable same-SID successor authority if called"
+      ],
+      "schedule": "V6 erases an eligible session and durably checkpoints its next cursor, then pauses before remaining pointer/cache/link work. Before retry, the owning DO exposes a successor epoch reusing that SID while captured pointer/link bytes remain the same; the successor KV session/cache may also exist. Retry starts beyond the completed session/object steps. compatible() checks only KV ownership tuples, so no /identity/erase/session call observes the available successor evidence. Remaining adjacent keys are deleted and the job can publish local_complete. This is a deterministic resume bypass of observable DO authority, distinct from the explicitly excluded concurrent/stale KV read-delete race or unseen SID reuse.",
+      "required_rework": "Preserve and revalidate the applicable generation/eligibility guard before remaining adjacent destructive steps and final completion even when their session cleanup was already checkpointed or compacted. Keep exact old-delete retry idempotency and v1-v5 compatibility; do not restart or replay completed destructive work.",
+      "smallest_regression": "Extend an existing grouped actual-controller schedule: pause after a session deletion checkpoint but before adjacent cleanup, expose a same-SID successor epoch, restart/resume, and assert refusal with successor session/pointer/cache/link bytes preserved and no false local completion. Cover the relevant base/extra continuation seam without adding a suite."
+    }
+  ],
+  "limitations": [
+    "Prospective DO-local eligibility and guarded snapshots only; legacy concurrent KV writers/session-host authority and unseen SID reuse remain outside the claim.",
+    "Grantless/legacy cleanup, historical discovery, external/physical erasure, retention/capacity, migration/cutover/deployment, customer/native/browser/SLO/release acceptance and full W35/F06/F14 remain open.",
+    "Review stopped at the concrete blocking continuation defect. Passing focused checks do not establish defect-free implementation or task acceptance."
+  ],
+  "handoff": "Source unchanged and stopped. K3 drained; no running commands. Lead acknowledged C2 REWORK and will assign the bounded correction; reviewer does not accept task/package/finding or alter tracker."
+}

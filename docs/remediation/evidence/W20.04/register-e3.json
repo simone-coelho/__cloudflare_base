@@ -1,0 +1,298 @@
+{
+  "before": null,
+  "after": {
+    "id": "W20.04-E3",
+    "task_id": "W20.04",
+    "check_id": "W20.04-K3",
+    "criterion_ids": [
+      "W20.04-C1",
+      "W20.04-C2",
+      "W20.04-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W20.04/review.json",
+      "sha256": "7cf72f7601add739e4740acb86fdb2f740326dd1666a06a3ac88d61e3c5ba57b"
+    },
+    "at": "2026-09-13 20:59:40 UTC",
+    "limitations": "Bounded customer-neutral pin editing, exact OR tag exclusions and allowed rendering-type constraints only. No customer vocabulary/aliases, lists/default assets, priority/multi-position policy or full W20/F28/F26/customer acceptance. Literal explicit tags are preserved; only absent contentType uses the existing safe render-kind fallback identically on every arm. Rendering types remain distinct from format-affinity tags. Old stored unversioned/v1 parsing and absent/v1 receipt meanings remain; new v2 is explicit. No migration/history rewrite, scoring/model/SDK/service/cache/store/auth change. Existing30-second cache, independent catalog/slot revisions and non-atomic publication remain; catalog-dependent pin feedback advisory with authoritative runtime refusal and no arbitrary fill. Old v1 readers reject v2 documents, but mixed old cached readers remain possible: compatible readers/UI before controlled publication; no immediate rollout/native/SLO/default-rendering proof. W20.03 prior exact-byte evidence is prospectively qualified with implemented controls/history retained; W08.04 unchanged. No deploy/cloud/build/install/provision/seed/credentials/customer-data/destructive/commit/push/external operations. No package/finding/gate/release promotion.",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts -t 'W20.04|W38.05|W20.03|W20.01|W20.02|W18.01|W19.02|W27.02|history shows every document|W03.03 carries named auth context|w_ext × score joins the base score' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct frozen Astra/xhigh actual-source review and same27 once; reuse final static.",
+    "workload": "Inspect exact15 deltas, tag/type constraints/pin workflow/three-era replay and operator criteria; no new suite or customer/release claim.",
+    "result": "pass",
+    "artifact_digest": "88ba2899fbd69de6b41aab43e6e1bdf2c24c9d363d3a932b2302c1fbe46d527f",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "6993984fd93f2165924df7214600c95ca6aa99c762dcbfb32bb9e221959b2c5c",
+      "configuration": "Bounded customer-neutral pin editing, exact OR tag exclusions and allowed rendering-type constraints only. No customer vocabulary/aliases, lists/default assets, priority/multi-position policy or full W20/F28/F26/customer acceptance. Literal explicit tags are preserved; only absent contentType uses the existing safe render-kind fallback identically on every arm. Rendering types remain distinct from format-affinity tags. Old stored unversioned/v1 parsing and absent/v1 receipt meanings remain; new v2 is explicit. No migration/history rewrite, scoring/model/SDK/service/cache/store/auth change. Existing30-second cache, independent catalog/slot revisions and non-atomic publication remain; catalog-dependent pin feedback advisory with authoritative runtime refusal and no arbitrary fill. Old v1 readers reject v2 documents, but mixed old cached readers remain possible: compatible readers/UI before controlled publication; no immediate rollout/native/SLO/default-rendering proof. W20.03 prior exact-byte evidence is prospectively qualified with implemented controls/history retained; W08.04 unchanged. No deploy/cloud/build/install/provision/seed/credentials/customer-data/destructive/commit/push/external operations. No package/finding/gate/release promotion.",
+      "files": [
+        {
+          "path": "src/content/types.ts",
+          "role": "output",
+          "sha256": "1d86a3ec4d09e7478892b644cef6dbecc7f86f7546a2ad1c22023d08eba3347d"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "output",
+          "sha256": "2f606e546811ef9322cc523e96c8830dd22e42849dd2a2e93cb1c4d748db47d3"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "output",
+          "sha256": "ea4f75a1a75178ee0ab6d931437b247cd58bc573ecbb62ade1d5fb411fb5cd7f"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "output",
+          "sha256": "efba476d6c62cacd08ab45c0dfb49b7e1db93cdec997aeb24481b12a279fa26e"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "output",
+          "sha256": "6cf65684c6682823108eb5aceb43f1da6315b01936ce0d23bc028e832f45f977"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "2dbb3ea87ffa67d34e2acb2088e68fe9f7798959226689daa1f8d903353aadcd"
+        },
+        {
+          "path": "src/content/slotDiagnostics.ts",
+          "role": "output",
+          "sha256": "832d402b6cc563fd5386bd2b9c32110a850cd97ed5f5d56d70603dbeb1a3d838"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "role": "output",
+          "sha256": "2c79f995d9da4f38da7f07d2f9c579ab900d644c53e59d2abc68b0133b5b56c5"
+        },
+        {
+          "path": "src/reflex/contentCompose.test.ts",
+          "role": "output",
+          "sha256": "874f1a765a41f0538ca7ae72d9fe67f825a579cd83f9bd3f6cb5e2acec27caa2"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "role": "output",
+          "sha256": "1ce4b6ac2fad5bd011b8a602d0acd7ac0e11e412d851d097cbc7ce303395ab20"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "2f7cbfc20b881633d9005689198fc84affdd595b334ef26fce180cbb570db628"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "role": "output",
+          "sha256": "956b16d617887a4367ddaddeaa9f0e975ce4b488dced201f4ac43e87a968e6f8"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "role": "output",
+          "sha256": "10fc071ad240fce814a1302b8cadd3b289626378f2f6f59ff29329aab7c4293f"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "01062e822bf2ddbe6c197171ed25e89851927385c9a8487d318beab4fb234e56"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "c40022b94e1ac83da03400b926a9d9f2754d1ff072f622f268d4fd2376529e33"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "06c2ea4f18954bf919314afef75c18ec4b5a51c2ed0f8b8023ea0567d72d90fc"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "role": "source",
+          "sha256": "e69b1cbde91aa894f44fe480316340b7317a8aee88c81a52629627e09ad464b3"
+        },
+        {
+          "path": "src/content/catalogDiagnostics.ts",
+          "role": "source",
+          "sha256": "799d71550ae29c10c3947b00da4fd6962b93f04a5eaf699ec789deaa013e4a9d"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/config/input.ts",
+          "role": "source",
+          "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "public/console/shell.js",
+          "role": "source",
+          "sha256": "6ed7abd4a5d20226109d12910f003645fd22620d116d2caead344b9b85d7916e"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F28.md",
+          "role": "source",
+          "sha256": "121a07ed372126d8e1741d374865e8af6eef55357b76a955b4db18fba236da9f"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F26.md",
+          "role": "source",
+          "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+        },
+        {
+          "path": "docs/content-personalization-design-tapestry.html",
+          "role": "source",
+          "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+        },
+        {
+          "path": "docs/architecture/18-content-affinity-engine.md",
+          "role": "source",
+          "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "source",
+          "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "public/console/index.html",
+          "role": "source",
+          "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "role": "source",
+          "sha256": "a52f5d1b39a934c893b2d701076573593aa76017f824c88e44e623c3efeb903f"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+        },
+        {
+          "path": "src/content/typeAffinity.ts",
+          "role": "source",
+          "sha256": "77b15db553d04e72c838fc0844fc72d6fdd862b5986f0557a3d0ff4b6aef79c7"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "docs/Tapestry-Scope-Questions-Answers.md",
+          "role": "source",
+          "sha256": "84db3ca353f907fc2e170ed4ba4307a6a785c9b7c8c77d161eb2a40d8071e844"
+        },
+        {
+          "path": "docs/remediation/design/W38.05/baseline.json",
+          "role": "source",
+          "sha256": "bcc7f9d575cdbb8167ddd6f52e186d0c67c7246b5dcb1f6f1dbb4c6b0a2bcbdd"
+        },
+        {
+          "path": "src/content/slotConstraints.ts",
+          "role": "output",
+          "sha256": "a48b52bfb2ee6f5167ffd52a537de372a4d62d010d7c0aa84e2f0c7005db74c6"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.04/worker.json",
+          "role": "output",
+          "sha256": "8d76081804482e7bc7e07ca85c425e32ef16ed480b8178b49b25f4c8f76161a4"
+        },
+        {
+          "path": "docs/remediation/design/W20.04/plan-v3.md",
+          "role": "configuration",
+          "sha256": "4c666a24a0718ee563a175b39d6b02545a5a82bc7bf47eeaff746069024ea5b5"
+        },
+        {
+          "path": "docs/remediation/design/W20.04/baseline.json",
+          "role": "configuration",
+          "sha256": "0a17c4bf843ae6b043446420a0c6d031d1dc7b6bb55f29ff0a28042002bc27c2"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.04/admission-v3.json",
+          "role": "configuration",
+          "sha256": "c0ce7f363a39e606e245e50ff8ff8d5ebb70683ccb3e16dbf4533ff3ad53fb2a"
+        },
+        {
+          "path": "docs/remediation/design/W20.04/baseline-supplement.json",
+          "role": "configuration",
+          "sha256": "25466791374dd0915ec9b2b61c6bd82a0549af5ffa6de0f4dc196411e0f307fc"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.04/source-freeze.json",
+          "sha256": "12ab466e30e7aa38191d4e08c781e3dd9f4371fc989f6f55892a5ac0260a7aa5",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.04/source-deltas.json",
+          "sha256": "e68063ee9935bd01476dd30e657cf56c902a45820195cff60f755f5a65c6b5aa",
+          "role": "configuration"
+        }
+      ],
+      "digest": "88ba2899fbd69de6b41aab43e6e1bdf2c24c9d363d3a932b2302c1fbe46d527f"
+    }
+  }
+}

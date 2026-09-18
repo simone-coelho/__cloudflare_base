@@ -1,0 +1,666 @@
+{
+  "task_id": "W04.03",
+  "at": "2026-09-17T00:21:12.446Z",
+  "scope": "Require backend account proof, safe provisioning and ownership on all session endpoints; rotate/revoke SDK sessions and forwarding pointers across logout/account change. Regenerate assertions for signed 409 retry. Prove old cookies, stale tabs, in-flight requests and both hosts cannot recover another account. Complete remaining local work under approved existing-ShopperReflex authority, preserving prior remedies; real provisioning/customer/deployed acceptance stays open.",
+  "baseline": {
+    "kind": "Source-confirmed design case, not a new runtime reproduction",
+    "files": [
+      {
+        "path": "src/identity/sessionAuthority.ts",
+        "sha256": null
+      },
+      {
+        "path": "src/identity/sessionCapability.ts",
+        "sha256": "53126644d359f4e19da37bafa419b4e6eef4a919a3d9ae23cf98cfbf8c65c25a"
+      },
+      {
+        "path": "src/identity/consentContinuity.ts",
+        "sha256": "eab155ccb2f012ba77452f55788272b70e87531c25b2a2f73a7f6b7fea15d946"
+      },
+      {
+        "path": "src/identity/link.ts",
+        "sha256": "4ad3941d62d5c7b4fa9ec5f0cae790bc128ba6b6dae0b9ae59b2c7a6d9315938"
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "cfb9ed4630a2a03a34ca2a59e11e59209c11a6338d0bf7049217d917dbe58e6c"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "fe82d1f7c90d5346ec9d9392753617365d8bbdce0334391f6e7292c5e3c58c49"
+      },
+      {
+        "path": "src/services/RealtimeSegmentEngine.ts",
+        "sha256": "1b1101f5fb5cd35da0b3dba0b22eda8fb2e47201f6e67db44d239a01ff758ded"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "5b3906cc83f5a504c9e6a1bd76bba5e9a54b712704767e9b88c8c29f61d4e7fb"
+      },
+      {
+        "path": "src/durable-objects/PersonalizationWebSocket.ts",
+        "sha256": "6e7ab3fc0c6a0204656f2dd718d2c40d40ae9fc45e4b8ccc876718af7f1108d4"
+      },
+      {
+        "path": "src/routes/identity.ts",
+        "sha256": "53b95daf2e07f01e62b65bae59e56610cd1c0b412038bc738c4c6b19c2a2a940"
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "sha256": "f430175073360fef867d57a371d6aa9d5d803efff02cb91be86c352a165679b9"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "874bdc4de63a5af7258718a55b2d45067576d2f2d37fbb1bd1a7b260eb78ee7d"
+      },
+      {
+        "path": "src/routes/sort.ts",
+        "sha256": "f41238f99a40fca924f6e22cb93ea08d6c857af0bfe9b0c933b285517ed9f484"
+      },
+      {
+        "path": "src/routes/tracking.ts",
+        "sha256": "deb10557fe584019956f500f88ea9382a441826bda9aa3e536f8bfa261643772"
+      },
+      {
+        "path": "src/routes/optimizely.ts",
+        "sha256": "a2aee846c17cd744adae9fb82850927fe7f7b0ddc6b261cc7518a417cbe4bac0"
+      },
+      {
+        "path": "src/content/service.ts",
+        "sha256": "902d113611224e8c02af406fd343287d1777b6d94703d5383fce0251395c0a46"
+      },
+      {
+        "path": "src/identity/material.mjs",
+        "sha256": null
+      },
+      {
+        "path": "src/identity/assertion.ts",
+        "sha256": "a7f2bd146835d5962a9b6a43ceb0b5883975f79397d1dfee34a0e5716a666e0a"
+      },
+      {
+        "path": "src/identity/shopperId.ts",
+        "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+      },
+      {
+        "path": "src/routes/health.ts",
+        "sha256": "0ea5b72d026c4964bb8a34fac627a8704c8a0c5f8eed95e3b656b83a8fda3712"
+      },
+      {
+        "path": "src/ops/monitor.ts",
+        "sha256": "ebda4505fbb10ebda0d26e4bb5de1f77ae039361f1d59d70e95ac590f11e095a"
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "f1725913c017fb54fc4dc5ec8008306f9027019f585aa8a9b48fe4dac44cd269"
+      },
+      {
+        "path": "src/sdk/types.ts",
+        "sha256": "d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4"
+      },
+      {
+        "path": "src/sdk/host.ts",
+        "sha256": "f0e8f50d96fbf0108defa76808270c5c2f08a43b5c2d32f0e31d65e39263f92d"
+      },
+      {
+        "path": "src/sdk/listen.ts",
+        "sha256": "41b8e8306ebd04b8994db63412e7ee98023a24b52ceb83f78831d14465bee0b8"
+      },
+      {
+        "path": "src/sdk/testHost.ts",
+        "sha256": "5104d089455694ef802507f8188af6e9fedcfa3604f8a2e5226da6b249ac7842"
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "2e6a442bce4d23fee914c6efaea1a14c3b10fd24104027f72525598d826f772e"
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "9ed7820d555f98d6835940a0dc4f74a7b10f960476c9a84ec690d7b3e5cdfa04"
+      },
+      {
+        "path": "scripts/identity-material.mjs",
+        "sha256": null
+      },
+      {
+        "path": "scripts/identity-material.test.mjs",
+        "sha256": null
+      },
+      {
+        "path": "src/identity/identity.test.ts",
+        "sha256": "dabca12e72af3a12608a40a9c1e8a512404c1bcfba6ea5fa32b5b2e544e61678"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "10737974d970504ee664609f4e90fa354bc9485b5691eb7c1f34517a68867860"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "8b2ebb5e14839c5ee4049eec845737c05b59170d28976ce345aa69009bfdd0db"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "24a339fadd8c0f4563f7ffee6335ed450f2603a93ca51c16c92c14071207c278"
+      },
+      {
+        "path": "src/services/SessionManager.identity.test.ts",
+        "sha256": "a6d5d16b44a6adeb02c9a84cfaafd7676fba5a12a0803cb8645f59fbbec9ef14"
+      },
+      {
+        "path": "src/services/sessionDefer.test.ts",
+        "sha256": "7c61a083b9edd6cfceef5aef4ba8006b8b86359924241230be663fd9aba435a6"
+      },
+      {
+        "path": "src/sdk/core.test.ts",
+        "sha256": "03fabdabb697327c07dff18f32057cc727662285019fd13d5706aa35d77b411f"
+      },
+      {
+        "path": "src/sdk/identify.test.ts",
+        "sha256": "2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333"
+      },
+      {
+        "path": "src/sdk/listen.test.ts",
+        "sha256": "5cbd4a436922aa9682da454acb2c056de2c6e3a892141c2037ca3b4b53416429"
+      },
+      {
+        "path": "src/ops/monitor.test.ts",
+        "sha256": "ce23a8adc7b11f1a00251de1fb34afbefea9b053a2e2ad609817a2e963648dba"
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7"
+      }
+    ],
+    "case": "Current session-host admission is signature-only; detach mints replacement without durable revocation; link publishes KV before recoverable merge; erasure checks owner then later mutates KV. Outer/deferred route effects and relay publication escape owner ordering; principal-less applyImport competes on the same KV. SDK checks local generation only, and safe customer proof/salt readiness/provisioning is missing. Retain exact dirty worktree and existing authority/consent/typed enrichment/erasure/tenant remedies.",
+    "read_dependencies": [
+      {
+        "path": "src/index.ts",
+        "sha256": "b9064c20947828c3a008fe7fd95f604358eb95cf29b6616ca3f806a47c35f31c"
+      },
+      {
+        "path": "src/customerBoundary.ts",
+        "sha256": "df2f6c13559a27ca601c9bc8f2813808ffdfbaf96bb637bf5dcfb709408050c7"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "d5810557734b56f19e18a9393c85777433321c2d22a3b25a8ce8c187900aef97"
+      },
+      {
+        "path": "src/types/events.ts",
+        "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb"
+      },
+      {
+        "path": "src/auth/signingConfig.mjs",
+        "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+      },
+      {
+        "path": "src/auth/accounts.ts",
+        "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+      },
+      {
+        "path": "src/auth/store.ts",
+        "sha256": "14a2009f44b5af8c0ef987faee989b284eb0d279ceae41da00878ebcf870ab66"
+      },
+      {
+        "path": "src/auth/authority.ts",
+        "sha256": "e037a63988db87268a0550833273846ba301217dc016221df089c1f68a3c30fc"
+      },
+      {
+        "path": "src/auth/subjectAudit.ts",
+        "sha256": "a57ef271c50d137f1ca3926f6582e74e89c19e1745641ae6b3e09099d8b0b9a4"
+      },
+      {
+        "path": "src/middleware/auth.ts",
+        "sha256": "e0aa49f688df881c4904394a1d73083ca7c2fcb84a09518f57989dc79bde333f"
+      },
+      {
+        "path": "src/middleware/operatorAuth.ts",
+        "sha256": "fbfdbaed152204793b1b5320d53d1ea8a475267077cadca5ea7b22a136807bd1"
+      },
+      {
+        "path": "src/middleware/edgeAccess.ts",
+        "sha256": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342"
+      },
+      {
+        "path": "src/middleware/error.ts",
+        "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b"
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+      },
+      {
+        "path": "src/tenancy/middleware.ts",
+        "sha256": "baa6107cb0d0304198c43a50b45b9c6c1620dbc31920d065f450aaad14fca521"
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+      },
+      {
+        "path": "src/identity/store.ts",
+        "sha256": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24"
+      },
+      {
+        "path": "src/identity/profileEnrichment.ts",
+        "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5"
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7"
+      },
+      {
+        "path": "src/content/consent.ts",
+        "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f"
+      },
+      {
+        "path": "src/reflex/identityMerge.ts",
+        "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+      },
+      {
+        "path": "src/reflex/bufferedAction.ts",
+        "sha256": "eca32ee073c9eff920f6396bc17ec533f0c12b3a2d05236ecaaa52852b14ae12"
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+      },
+      {
+        "path": "src/reflex/sortCandidates.ts",
+        "sha256": "e7e195583c7e96452a646108e6eca583b2d59a88f77f95721a2607cecf900bbe"
+      },
+      {
+        "path": "src/reflex/searchCandidates.ts",
+        "sha256": "70a1b115d9b733dd7e9c6f0f104001bb2ff4faa0db97106e642048d99313056e"
+      },
+      {
+        "path": "src/demos/registry.ts",
+        "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+      },
+      {
+        "path": "src/config/publication.ts",
+        "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+      },
+      {
+        "path": "src/connectors/config.ts",
+        "sha256": "8fa2f7b6d80e78563e57ae0ea6ffaec74ff6b78ebe4ed6ae8bb642e65a88cf9d"
+      },
+      {
+        "path": "src/connectors/index.ts",
+        "sha256": "c1cbe8a0d3e5a45bdb891647db4db8d11d982524f68b12dda417df92f7cd25f5"
+      },
+      {
+        "path": "src/connectors/DecisionProvider.ts",
+        "sha256": "9ed9bfd0e16d981d5de249d7fb3bd5b4e39f40727562b5cae1bbe2408084f107"
+      },
+      {
+        "path": "src/services/OptimizelyService.ts",
+        "sha256": "502e29ea57a57cbaa116cf54519c0c81292e6ff3f0f4cb99cc259febbaa0337d"
+      },
+      {
+        "path": "src/services/FeatureVariableManager.ts",
+        "sha256": "66e36a0678b8c03e1cfbd0f8bc658b2d90a2af642bca624855a64362d49e7c99"
+      },
+      {
+        "path": "src/services/odpLoop.ts",
+        "sha256": "133ab863b7b0b00a6f88aeb82509ccdb8b59b9d28a7487daade868d13a30ab68"
+      },
+      {
+        "path": "src/services/JourneyStage.ts",
+        "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+      },
+      {
+        "path": "src/services/visit.ts",
+        "sha256": "9bf380f59633c1eb23cabcec60acf6318ff17eb8898172c71a1fa4ecd3b244d6"
+      },
+      {
+        "path": "src/services/EventDispatcher.ts",
+        "sha256": "0ec061525195f86549e52533db06bb2d7ccda1f4629666e3d54475ab028a24b7"
+      },
+      {
+        "path": "src/services/demoEventCapture.ts",
+        "sha256": "eb64be869e76f3db40288e4a1da135f62de84806dc8a0b9dc0de653eb8ff5456"
+      },
+      {
+        "path": "src/ledger/enqueue.ts",
+        "sha256": "831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9"
+      },
+      {
+        "path": "src/ledger/productSort.ts",
+        "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322"
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+      },
+      {
+        "path": "src/ledger/writer.ts",
+        "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d"
+      },
+      {
+        "path": "src/ledger/delivery.ts",
+        "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf"
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0"
+      },
+      {
+        "path": "src/learn/route.ts",
+        "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "fd62f49928ddd8b9176273ea87743231fc6ad75f42b01ca9683fb1bcaa5073b1"
+      },
+      {
+        "path": "src/sdk/identify.ts",
+        "sha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1"
+      },
+      {
+        "path": "src/sdk/identity.ts",
+        "sha256": "a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f"
+      },
+      {
+        "path": "src/sdk/emit.ts",
+        "sha256": "188cb582218166ceac62005e20e32be068cae03f2b8d99195167bafb3de636a5"
+      },
+      {
+        "path": "src/sdk/wire.ts",
+        "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+      },
+      {
+        "path": "src/sdk/memoryHost.ts",
+        "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+      },
+      {
+        "path": "src/sdk/index.ts",
+        "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+      },
+      {
+        "path": "src/sdk/browser.ts",
+        "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+      },
+      {
+        "path": "src/sdk/version.ts",
+        "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+      },
+      {
+        "path": "scripts/build-sdk.mjs",
+        "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79"
+      },
+      {
+        "path": "src/sdk/tsconfig.json",
+        "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360"
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+      },
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+      },
+      {
+        "path": "wrangler.toml",
+        "sha256": "667d7680fec61856abb51e50427a0f341d59280afbc4157a76d0843c48c57a20"
+      }
+    ],
+    "prior": "W03 local PASS artifact 1381f9b8b4eefbb2c8377681723e34dc6e90c4a5e6777fcb02401f537ab849ff; all78pins still match before admission. W03 exact shared proof is qualified prospectively, history/remedies retained. W02/W01 historical local PASS and older remedies remain qualified, not erased."
+  },
+  "exclusive_outputs": [
+    "src/identity/sessionAuthority.ts",
+    "src/identity/sessionCapability.ts",
+    "src/identity/consentContinuity.ts",
+    "src/identity/link.ts",
+    "src/identity/erase.ts",
+    "src/services/SessionManager.ts",
+    "src/services/RealtimeSegmentEngine.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/durable-objects/PersonalizationWebSocket.ts",
+    "src/routes/identity.ts",
+    "src/routes/realtime.ts",
+    "src/routes/decisions.ts",
+    "src/routes/sort.ts",
+    "src/routes/tracking.ts",
+    "src/routes/optimizely.ts",
+    "src/content/service.ts",
+    "src/identity/material.mjs",
+    "src/identity/assertion.ts",
+    "src/identity/shopperId.ts",
+    "src/routes/health.ts",
+    "src/ops/monitor.ts",
+    "src/sdk/core.ts",
+    "src/sdk/types.ts",
+    "src/sdk/host.ts",
+    "src/sdk/listen.ts",
+    "src/sdk/testHost.ts",
+    "public/sdk/edge-personalization.esm.js",
+    "public/sdk/edge-personalization.js",
+    "scripts/identity-material.mjs",
+    "scripts/identity-material.test.mjs",
+    "src/identity/identity.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/index.api-boundary.test.ts",
+    "src/routes/identity.test.ts",
+    "src/services/SessionManager.identity.test.ts",
+    "src/services/sessionDefer.test.ts",
+    "src/sdk/core.test.ts",
+    "src/sdk/identify.test.ts",
+    "src/sdk/listen.test.ts",
+    "src/ops/monitor.test.ts",
+    "src/identity/history.ts"
+  ],
+  "acceptance": [
+    {
+      "id": "W04.03-C1",
+      "description": "Retain mandatory tenant/account/visitor-bound backend proof and fresh visitor-bound signed419 retry; no cookie/pointer/forward/profile promotion. Strict per-tenant signing material and salt validation refuse missing/malformed/unsafe customer configuration before identity effects and at readiness, preserving named current/previous rotation and explicit demo compatibility. Never change actual salt or infer a live identity migration.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W04.03-C2",
+      "description": "Existing per-shopper ShopperReflex is the sole serialized authority for exact current tenant/subject/SID/grant/epoch and actual session-host reads, KV writes, derived responses, connector/ledger/learning effects and both socket hosts. Private owner-held invocation cannot be asserted by HTTP headers/body/env flags; exact method/path/object/selector checks repeat at owner ingress. Started deferred effects drain within ownership; later work requires fresh exact-grant admission. No guard-RPC-then-external-effect gap or owner/relay callback cycle.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W04.03-C3",
+      "description": "Recoverable link/forward and per-grant detach versus owner-wide reset/erasure preserve exact source/target/generation/adoption and raw erasure witnesses, same-site multi-device behavior, consent/refusal continuity and W35 transfer barriers. Legacy/unregistered/conflicting KV cannot be blessed; lost acknowledgements/restarts/retries/stale callers cannot double-fold or resurrect prior account/private state. Include competing authorized principal-less SessionManager import effects, identity/history.ts post-import noteHistory metadata and erasure KV effects under the same owner ordering, with current generation/cutoff/consent admission; retain historical typed-enrichment semantics without new retention policy.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W04.03-C4",
+      "description": "SDK source and both shipped bundles synchronously check shared-storage grant/transition ownership at use and write/clear boundaries; cross-tab/same-document notifications invalidate cached decisions and pending HTTP/proof/socket continuations. Old tabs/completions cannot overwrite or clear a newer grant or deliver another account data. Preserve fresh419, failed-persistence fail-closed behavior, signed logout/account transitions and endpoint/tenant independence.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W04.03-C5",
+      "description": "Functional import-safe identity-material validation and bounded real transport adapter: explicit account/script/environment/base-version/operation targets, secure bounded secret stdin, add-only missing bindings with strict exact-version inheritance, preserved existing salt/secrets/modules/runtime/settings/assets and sanitized diagnostics. Opaque existing values are unverified, not overwritten. Protected operation receipt makes retries read-only reconciliation; pre/post drift, timeout/lost acknowledgement or malformed candidate remains unconfirmed, with no automatic repost/deploy/delete. Synthetic exact transport tests only, no real provisioning/rotation or assertion that provider API supplies CAS/idempotency.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W04.03-C6",
+      "description": "Distinct reviewer inspects frozen task-only dirty-baseline deltas, full original W04/F04/F06/N05, all affected ownership/effect paths and primary evidence. Real-class fixtures do not become native/deployed acceptance; measure native both-host socket behavior in existing boundary fixture and preserve prior W01/W02/W03/W05/W06/W35 remedies.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    },
+    {
+      "id": "W04.03-C7",
+      "description": "Separately authorized selected deployed identity-material/proof provisioning, real backend handoff and customer old-cookie/stale-tab/in-flight/multi-account/session/socket operation across both hosts. Native/deployed selected configuration, migration/cutover and customer/SLO/release acceptance remain open for final authorized batch.",
+      "required_evidence_kinds": [
+        "deployed_test"
+      ],
+      "minimum_claim": "deployed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W04.03-K1",
+      "criterion_ids": [
+        "W04.03-C1",
+        "W04.03-C2",
+        "W04.03-C3"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts src/index.api-boundary.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/identity/identity.test.ts src/ops/monitor.test.ts -t 'W04[.]0[123]|W35[.]0[345678]|W05[.]01|W06[.]0[89]|W03[.]07|cleans both actual bound reset hosts|the assertion|the shopper id|W12[.]01' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd with synthetic bindings and native local socket boundary; no deployed runtime",
+      "workload": "Existing affected groups plus new W04.03: actual both-host current grants, signed419/bootstrap/link/detach/reset/erase/transfer/import concurrency and fault/restart cases; outer deferred/connector/ledger/response effects; both socket hosts including native boundary; identity material readiness. Retain exact foreign-state, denial-before-effects, witness, consent and prior connector oracles; no broad suite.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W04.03-K2",
+      "criterion_ids": [
+        "W04.03-C4",
+        "W04.03-C5"
+      ],
+      "required": true,
+      "command": "node scripts/build-sdk.mjs && node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts --maxWorkers=1 --minWorkers=1 && node --test scripts/identity-material.test.mjs",
+      "runtime": "Installed SDK source and both generated bundles in existing VM/native test hosts; Node synthetic transport only",
+      "workload": "Shared storage two-account source/ESM/IIFE schedule with delayed notifications, same-document writers, stale cached/current callbacks, paused HTTP/proof/socket work, failed persistence and newer-grant protection; retain existing SDK assertions. Synthetic exact-base multipart/inheritance/settings/assets/noop/invalid/drift/ambiguous upload/restart/receipt reconciliation; assert zero deploy/settings/resource writes and no secret output.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W04.03-K3",
+      "criterion_ids": [
+        "W04.03-C1",
+        "W04.03-C2",
+        "W04.03-C3",
+        "W04.03-C4",
+        "W04.03-C5"
+      ],
+      "required": true,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p src/sdk --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/identity/sessionAuthority.ts src/identity/sessionCapability.ts src/identity/consentContinuity.ts src/identity/link.ts src/identity/erase.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/durable-objects/PersonalizationWebSocket.ts src/routes/identity.ts src/routes/realtime.ts src/routes/decisions.ts src/routes/sort.ts src/routes/tracking.ts src/routes/optimizely.ts src/content/service.ts src/identity/material.mjs src/identity/assertion.ts src/identity/shopperId.ts src/routes/health.ts src/ops/monitor.ts src/sdk/core.ts src/sdk/types.ts src/sdk/host.ts src/sdk/listen.ts src/sdk/testHost.ts src/identity/identity.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/routes/identity.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/ops/monitor.test.ts src/identity/history.ts && node --check scripts/identity-material.mjs && node --check scripts/identity-material.test.mjs && node --check src/identity/material.mjs && node --check public/sdk/edge-personalization.esm.js && node --check public/sdk/edge-personalization.js && git diff --check -- src/identity/sessionAuthority.ts src/identity/sessionCapability.ts src/identity/consentContinuity.ts src/identity/link.ts src/identity/erase.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/durable-objects/PersonalizationWebSocket.ts src/routes/identity.ts src/routes/realtime.ts src/routes/decisions.ts src/routes/sort.ts src/routes/tracking.ts src/routes/optimizely.ts src/content/service.ts src/identity/material.mjs src/identity/assertion.ts src/identity/shopperId.ts src/routes/health.ts src/ops/monitor.ts src/sdk/core.ts src/sdk/types.ts src/sdk/host.ts src/sdk/listen.ts src/sdk/testHost.ts public/sdk/edge-personalization.esm.js public/sdk/edge-personalization.js scripts/identity-material.mjs scripts/identity-material.test.mjs src/identity/identity.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/routes/identity.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/ops/monitor.test.ts src/identity/history.ts",
+      "runtime": "Installed server/SDK compilers, scoped lint/syntax/whitespace and existing SDK generator",
+      "workload": "41 owned outputs only; distinguish inherited/new warning signatures and inspect new-file whitespace. Verify both SDK bundle bytes against same generator after a second identical build, retaining before/after hashes; no wider build/CI.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W04.03-K4",
+      "criterion_ids": [
+        "W04.03-C6"
+      ],
+      "required": true,
+      "command": "Independent frozen-artifact and complete original W04 requirement review",
+      "runtime": "Distinct gpt-6-astra/xhigh reviewer",
+      "workload": "Exact source/dependencies/deltas/primary evidence against whole W04, with competing writer and lock-cycle analysis, real side-effect assertions, retained earlier failures and explicit live limits.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W04.03-K5",
+      "criterion_ids": [
+        "W04.03-C1",
+        "W04.03-C2",
+        "W04.03-C3",
+        "W04.03-C4",
+        "W04.03-C5"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts src/index.api-boundary.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/identity/identity.test.ts src/ops/monitor.test.ts src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts -t 'W04[.]03' --maxWorkers=1 --minWorkers=1 && node --test scripts/identity-material.test.mjs",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd with synthetic bindings and native local socket boundary; no deployed runtime",
+      "workload": "One independent new grouped W04.03 execution on frozen bytes, SDK source and both shipped bundles, actual both-host/native socket boundary and synthetic provisioning transport; reuse valid broader worker checks. No extra framework.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W04.03-K6",
+      "criterion_ids": [
+        "W04.03-C7"
+      ],
+      "required": true,
+      "command": "Inspect separately authorized selected-deployment backend proof, identity-material provisioning and real both-host multi-account/session/socket acceptance",
+      "runtime": "Authorized selected deployment/customer/backend/credential owners; not run under local mandate",
+      "workload": "Final live batch only; explicit real targets/material/source and customer operation evidence. No local-to-full-W04/F04/F06 or release promotion.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W03.07",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Independently accepted local canonical connector/tenant/current-role/erasure safeguards, exact shared proof qualified before W04 edits.",
+      "rationale": "Reuse prior local remedies and recheck affected paths; user permits ordered local continuation despite live-only gap."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Explicit bounded local user selection in D03-shopper-authority-direction-approved-2026-09-15.json: existing per-shopper DO single shopper authority, parity before cutover.",
+      "rationale": "Local shopper direction is approved; whole production/configuration authority, migration and deployment remain pending."
+    }
+  ],
+  "implementation": [
+    "Exact allowlisted shopper routes repeat canonical tenant/signed grant/object/subject/SID validation at existing ShopperReflex owner, then execute actual operations under serialize. Private invocation-bound held state, never HTTP/body/env authority or instance-wide busy flag.",
+    "Current epoch/grant and precise legacy/adoption/erasure witnesses cover session KV representation. Recoverable source-to-target transfer/rotation is one-way and idempotent; target never calls back into held source. Competing import, post-import noteHistory metadata and erasure effects enter the same typed owner operation and validate owner-issued expected generation/adoption receipt, exact raw witness, current cutoff and consent. Remove external metadata publication; direct principal-less applyImport enters the same boundary. Retain ambiguous-write intent/receipt so retries cannot publish into a successor generation; no client-supplied epoch grants authority.",
+    "Owner-scoped context drains started waitUntil/afterResponse operations before release; later work re-enters exact-grant owner authority. Public relay checks and strict binding-only owner-held callback-free publication/revocation are separate; no owner-relay cycle. Response/cookie assembly is ordered; already-transmitted bytes cannot be recalled.",
+    "Shared-storage SDK ownership at reads and CAS-like cooperative write/clear boundaries plus cross-tab/same-document notifications; stale work cannot clear/replace a newer grant. Reuse existing three SDK fixtures and regenerate only existing two bundles.",
+    "Pure shared identity-material validation and import-safe add-only exact-base Worker-version staging/reconciliation adapter, synthetic tests only. Explicit target/base/op receipt, strict version-pinned inheritance, preserved salt/secrets/settings/assets and fail-closed unsupported configuration. No provider CAS/idempotency or keep-assets version-pin promise; uncertainty is not success."
+  ],
+  "rollback": "Reverse only task-specific patches against captured dirty baseline; remove only task-created files with lead approval. Do not restore the worktree, undo prior fixes, migrate existing identities or deploy a rollback. Preserve failed/superseding attempts and exact source/build bytes.",
+  "preflight_review": "Distinct Astra/xhigh read-only review found the concrete applyImport/post-return noteHistory competing-writer gap. Lead inspected the actual source and added exactly history.ts before first admission; profile plus metadata must share owner ordering and generation-bound retry. Other proposed full-scope boundaries were sufficient; no new policy decision.",
+  "decisions": "Existing ordered-local/final-live mandate and bounded D03 shopper direction reused. No new business/privacy choice identified. Missing actual target/credential/backend/live inputs remain required final-batch acceptance, not synthetic owner approval.",
+  "approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-17T00:21:12.446Z",
+    "rationale": "Approve one coherent full-remaining-W04 local batch with41 exclusive outputs and existing focused checks; no product edits by lead, live acceptance remains distinct."
+  },
+  "contract_digest": "14fa706f86f97d064ab26bf7d44a929365b6aa733685403648d9e1ab53b64e09"
+}

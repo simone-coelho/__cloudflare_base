@@ -1,0 +1,133 @@
+{
+  "task_id": "W35.08",
+  "issue": "Unsigned ingest checks cleared profile/owner markers but not retained grantAuthority; it can recreate state after erasure. Unsigned consent and internal absorb/forward likewise bypass adopted authority. Current legacy fixture incorrectly deletes audienceOwner but leaves authority and calls it genuinely old. Source-confirmed; no baseline runtime claim.",
+  "scope": "Prevent old unsigned ingest/consent/absorb/forward calls from mutating authority-owned or erased ShopperReflex state; preserve genuinely legacy absence and supported signed/operator protocols.",
+  "baseline": [
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "sha256": "31828b04839833d9e3a4326b1994a338a5e7b602098509d37672bab9d3748ffe"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "sha256": "dda42c2be57a1e7c085eff1685dc6962a64b9d48be19ccbc72126944ee343269"
+    }
+  ],
+  "warning_signatures": [
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "message": "Unexpected any. Specify a different type",
+      "count": 9
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "message": "'_ws' is defined but never used",
+      "count": 2
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "message": "'_code' is defined but never used",
+      "count": 1
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "message": "'_reason' is defined but never used",
+      "count": 1
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "message": "'_wasClean' is defined but never used",
+      "count": 1
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "message": "'error' is defined but never used",
+      "count": 1
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "rule": "@typescript-eslint/no-empty-function",
+      "message": "Unexpected empty method 'passThroughOnException'",
+      "count": 1
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "message": "Unexpected any. Specify a different type",
+      "count": 89
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "rule": "@typescript-eslint/no-empty-function",
+      "message": "Unexpected empty arrow function",
+      "count": 2
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "rule": "@typescript-eslint/no-empty-function",
+      "message": "Unexpected empty method 'set'",
+      "count": 2
+    }
+  ],
+  "design": "Inside each of the four serialized unsigned mutations, check raw storage grantAuthority !== undefined before load/consent/config/effects. Presence includes null/malformed/empty; reads fail closed. Keep signed paths, necessary /consent/refusal, operator /identity/import, registered link/admission/transfer and erasure unchanged.",
+  "checks": [
+    {
+      "id": "W35.08-K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[345678]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "workload": "Extend one existing legacy-authority group; retain W35.03-.07, W06.08-.09 and numeric-cursor controls. No new suite."
+    },
+    {
+      "id": "W35.08-K2",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+      "workload": "Zero errors; no increase from retained109 warnings/path-rule-message multiplicities."
+    },
+    {
+      "id": "W35.08-K3",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[345678]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "workload": "Challenge authority-presence, serialization, no-effects and retained compatibility assertions on the frozen artifact; no broad/native/customer suite."
+    }
+  ],
+  "criteria": [
+    {
+      "id": "W35.08-C1",
+      "description": "Each unsigned ingest/consent/absorb/forward mutation checks raw grantAuthority absence inside serialization before effects; any present value or read failure refuses, including after erasure/restart or a delayed call crossing adoption.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W35.08-C2",
+      "description": "Genuinely absent legacy authority remains compatible; signed paths, necessary refusal, operator history import and registered identity/erasure protocols retain behavior. Correct only obsolete successor fixture setup and retain its existing assertions.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W35.08-C3",
+      "description": "Focused existing regressions and scoped compiler/lint/whitespace pass without new warning signatures; no host toggle, migration or serving-path expansion.",
+      "required_evidence_kinds": [
+        "runtime_test",
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "fixture_correction": "Extend the existing legacy-authority group for absent/adopted/erased/malformed/read-failure/restart/delayed-writer cases. W35.06/.07 successor setup currently uses newly forbidden unsigned absorb after reset: replace only setup with explicit synthetic/authorized successor state, preserving assertions.",
+  "authority": "Reuse D03 local DO direction and current Continue. No migration, deployment, customer-data or external operations.",
+  "independent_preflight": "Distinct /root/w3507_preflight, Astra/xhigh, source-inspected PASS: raw presence check under serialization, before effects; preserve named operator/refusal paths and correct obsolete successor fixture setup.",
+  "rollback": "Reviewed inverse of only these two pinned source/test changes; preserve durable authority/barrier records and unrelated work. No destructive rollback executed.",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T05:47:46.762Z",
+    "contract_digest": "f39c490795446704d631b1b4149df59074997926a9e83235ba777c4fc0346fb7",
+    "result": "Approved bounded implementation and focused existing checks."
+  },
+  "limitations": "No legacy KV atomicity, full session/socket parity, expiry/retention policy, historical repair, host toggle, migration/deployment, customer/external operation or full W35/F14/customer/SLO/release acceptance. Preserve unrelated work; no commit/push or new framework."
+}

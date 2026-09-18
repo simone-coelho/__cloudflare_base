@@ -1,0 +1,192 @@
+{
+  "at": "2026-09-13 23:10:00 UTC",
+  "task_id": "W20.06",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "1530c67c278ce45266980fa56923638510da9b8a5e46452d68affafa59a1ad81",
+  "contract_digest": "e1f9b63bb059079e8608b28ac7202b2f88949467e5e8a2cd9fc251f93e86cbcf",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W20.06-C1",
+      "verdict": "PASS",
+      "evidence": "Actual deliver() clears current/capture before callbacks, preserves requested-page absence separately from never-hydrated state, and notifies slots with [] and set listeners with null. Inspected and independently passed failure/malformed/readiness/deadline/identity, late subscription, successful empty-set and own-timeout-then-late-success assertions. Existing dwell observers and obsolete queued rendered work are cancelled; manual rendering without current remains supported and absence itself emits no impression."
+    },
+    {
+      "id": "W20.06-C2",
+      "verdict": "PASS",
+      "evidence": "Inspected separate request intent and delivery epochs, intent minted before ready(), generation enforcement and callback-boundary/return checks. Independent assertions establish newer same-generation hydrate/apply beats old success/failure/timers, reentrant apply or hydrate stops older fanout/returned sets, expired-grant renewal does not cancel itself, and ready reentry cannot reclaim newer ownership. Actual core consent/readiness controls remain unchanged; no broader identity authority claim."
+    },
+    {
+      "id": "W20.06-C3",
+      "verdict": "PASS",
+      "evidence": "Actual storefront per-slot callbacks, desired versus painted ownership, contentID+payload paint keys and revision-guarded timer/ViewTransition fills preserve initial site defaults, restore only engine-owned defaults and clear default click authority. Selected source/IIFE/ESM clients execute actual class methods on a stateful synthetic DOM, including pending/missing mapping, reversed fills, stale sibling avoidance, actual-paint impressions and clicks. Paired installed esbuild write:false generation exactly matches both pinned outputs. Fixed12 passed; both successful compiler stages and final no-new-diagnostics/whitespace evidence are reused under plan-v2."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W20.06/plan-v2.md",
+      "sha256": "e98cbed63c1e5b48936ce31b0fa392c381d773c57da8c99cd2e1255167467e2d"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W20.06/artifact.json",
+      "sha256": "16080e76d001075b376d86d795ba537f59b31a5c1a496732f2bb31e85abb4bff"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W20.06/worker.json",
+      "sha256": "643902a2bc015fe9c0812bf61072ff2a677302903934f7a10041fba94b7745a1"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W20.06/source-freeze.json",
+      "sha256": "6222ab72b9a2460fe545421e8bb495381ab89ab7bc6a6cab0a34d96d68b9ca2c"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W20.06/source-deltas.json",
+      "sha256": "7581e202d695311bde9113bbe47a3b13a9fdf3f01dadd50a5c5b1ce719d27c25"
+    },
+    "check_amendment": {
+      "path": "docs/remediation/evidence/W20.06/check-amendment.json",
+      "sha256": "860d62ad01ba9342d1a156ce45e998337b8fe7a62d351e4d25b0e59980535595"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/sdk/listen.test.ts --maxWorkers=1 --minWorkers=1",
+    "session_id": 57808,
+    "invocations": 1,
+    "launched_at": "2026-09-13 23:07:25 UTC",
+    "drained_at": "2026-09-13 23:07:52 UTC",
+    "captures": [
+      {
+        "chunk_id": "ce210b",
+        "wall_time_seconds": 1.0011282,
+        "session_id": 57808,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "e014c0",
+        "wall_time_seconds": 0.000002298,
+        "exit_code": 0,
+        "original_token_count": 118,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/sdk/listen.test.ts  (12 tests) 441ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  19:07:35\n   Duration  10.36s (transform 777ms, setup 0ms, collect 1.53s, tests 441ms, environment 0ms, prepare 5.36s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 12,
+      "failed": 0,
+      "unselected": 0,
+      "total": 12,
+      "files_passed": 1,
+      "duration_seconds": 10.36
+    },
+    "qualification": "Complete returned stdout/stderr and terminal status retained. Nine existing controls plus three grouped cases; no additional runtime selection, native run or benchmark."
+  },
+  "source_review": {
+    "method": "Personally read applicable instructions/current checkpoint, complete parent W20/W15 and linked requirements, complete plan-v2/check-amendment, actual seven retained-before/current deltas, full listener and affected adapter code, all fixture assertions and both generated diffs. Frozen hashes reconcile unchanged with provisional reads. Complete worker metadata and every runtime/static capture inspected.",
+    "source_captures": [
+      "e61898",
+      "391781",
+      "e42e1a",
+      "9a9511",
+      "3ad8c0"
+    ],
+    "frozen_evidence_captures": [
+      "77bef8",
+      "3b2977",
+      "25afeb"
+    ],
+    "before": {
+      "at": "2026-09-13T23:07:16.994Z",
+      "capture": "77bef8",
+      "artifact_pins": 42,
+      "mismatches": 0,
+      "exit_status": 0
+    },
+    "after": {
+      "at": "2026-09-13T23:08:42.159Z",
+      "capture": "a721fa",
+      "contract_capture": "edd52b",
+      "artifact_pins": 42,
+      "source_output_pins": 35,
+      "protected_unchanged": 28,
+      "bidirectional_deltas": 7,
+      "mismatches": 0,
+      "exit_status": 0
+    },
+    "source_stop": "2026-09-13T23:04:25.265Z",
+    "freeze_at": "2026-09-13T23:06:21Z",
+    "journal": 1610,
+    "pin_and_delta_command": "node - <<'NODE'\nconst fs=require('fs'),crypto=require('crypto'),zlib=require('zlib');const h=x=>crypto.createHash('sha256').update(x).digest('hex');const base='docs/remediation/evidence/W20.06/';const a=JSON.parse(fs.readFileSync(base+'artifact.json','utf8'));const b=JSON.parse(fs.readFileSync('docs/remediation/design/W20.06/baseline.json','utf8'));const d=JSON.parse(fs.readFileSync(base+'source-deltas.json','utf8'));const bad=a.files.filter(p=>h(fs.readFileSync(p.path))!==p.sha256);const own=new Set(b.owned.map(p=>p.path));const protectedPins=b.pins.filter(p=>!own.has(p.path));const protectedBad=protectedPins.filter(p=>h(fs.readFileSync(p.path))!==p.sha256);\nfunction patch(input,diff){const lines=input?input.replace(/\\n$/,'').split('\\n'):[],out=[];let pos=0;const ds=diff.split('\\n');for(let i=0;i<ds.length;i++){const m=ds[i].match(/^@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@/);if(!m)continue;const start=Number(m[1])-(Number(m[2]??1)===0?0:1);if(start<pos)throw Error('overlap');out.push(...lines.slice(pos,start));pos=start;let old=0,next=0;for(i++;i<ds.length&&!ds[i].startsWith('@@ ');i++){const line=ds[i];if(line==='')break;if(line.startsWith('\\\\'))throw Error('newline marker');if(line[0]===' '||line[0]==='-'){if(lines[pos]!==line.slice(1))throw Error('context mismatch');pos++;old++;}if(line[0]===' '||line[0]==='+'){out.push(line.slice(1));next++;}}if(old!==Number(m[2]??1)||next!==Number(m[4]??1))throw Error('count');i--;}out.push(...lines.slice(pos));return out.length?out.join('\\n')+'\\n':'';}\nconst deltaResults=d.deltas.map(x=>{const original=b.owned.find(p=>p.path===x.path);const old=!original.existed?'':zlib.gunzipSync(Buffer.from(original.content_gzip_base64,'base64')).toString();const current=fs.readFileSync(x.path,'utf8');return{path:x.path,before:!original.existed?x.original_absent===true&&x.before_sha256===null&&original.sha256===null:h(old)===x.before_sha256,after:h(current)===x.after_sha256,forward:patch(old,x.forward)===current,reverse:patch(current,x.reverse)===old};});const digest=h(JSON.stringify({contract_digest:a.contract_digest,configuration:a.configuration,files:a.files.map(({path,sha256,role})=>({path,sha256,role})).sort((x,y)=>x.path.localeCompare(y.path))}));console.log(JSON.stringify({at:new Date().toISOString(),artifact_digest:digest,manifest_sha256:h(fs.readFileSync(base+'artifact.json')),pins:a.files.length,bad,protected_count:protectedPins.length,protected_bad:protectedBad,deltas:deltaResults,basis:['docs/remediation/design/W20.06/plan-v2.md',base+'artifact.json',base+'worker.json'].map(path=>({path,sha256:h(fs.readFileSync(path))}))},null,2));if(bad.length||protectedBad.length||deltaResults.some(x=>!x.before||!x.after||!x.forward||!x.reverse)||digest!=='1530c67c278ce45266980fa56923638510da9b8a5e46452d68affafa59a1ad81')process.exit(1);\nNODE",
+    "contract_command": "node - <<'NODE'\nconst fs=require('fs'),crypto=require('crypto'),h=x=>crypto.createHash('sha256').update(x).digest('hex');const t=JSON.parse(fs.readFileSync('docs/remediation/tracker.json')).tasks.find(t=>t.id==='W20.06');const digest=h(JSON.stringify({id:t.id,package_id:t.package_id,kind:t.kind,scope:t.scope,read_paths:t.read_paths,write_paths:t.write_paths,non_goals:t.non_goals,criteria:t.criteria,checks:t.checks.map(({id,required,criterion_ids,command,runtime,workload})=>({id,required,criterion_ids,command,runtime,workload})),dependencies:t.dependencies,assignments:t.assignments}));console.log(JSON.stringify({at:new Date().toISOString(),task:t.id,state:t.state,contract_digest:digest,artifact_digest:t.artifact.digest}));if(digest!=='e1f9b63bb059079e8608b28ac7202b2f88949467e5e8a2cd9fc251f93e86cbcf'||t.artifact.digest!=='1530c67c278ce45266980fa56923638510da9b8a5e46452d68affafa59a1ad81')process.exit(1);\nNODE",
+    "qualification": "Forward/reverse reconstruction in memory from retained gzip before bytes exactly matches all seven actual outputs. Artifact/contract recomputed and all declared files hashed. W20.05 overlapping listen dependency's prior exact-byte proof remains prospectively qualified with its engine implementation/history retained; W08.04 and protected inputs unchanged. Reused dependency assurance is not a fresh broad execution."
+  },
+  "paired_artifact_parity": {
+    "command": "node --input-type=module <<'NODE'\nimport * as esbuild from 'esbuild';\nimport fs from 'node:fs';\nimport path from 'node:path';\nimport {createHash} from 'node:crypto';\nconst h=x=>createHash('sha256').update(x).digest('hex');\nconst manifest=JSON.parse(fs.readFileSync('docs/remediation/evidence/W20.06/artifact.json'));\nconst worker=JSON.parse(fs.readFileSync('docs/remediation/evidence/W20.06/worker.json'));\nconst version=fs.readFileSync('src/sdk/version.ts','utf8').match(/'([^']+)'/)[1];\nconst banner=`/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */`;\nconst results=[];\nfor(const [entry,out,format] of [['src/sdk/index.ts','public/sdk/edge-personalization.esm.js','esm'],['src/sdk/browser.ts','public/sdk/edge-personalization.js','iife']]){\n const r=await esbuild.build({entryPoints:[path.resolve(entry)],outfile:path.resolve(out),bundle:true,platform:'browser',target:'es2022',minify:false,sourcemap:false,legalComments:'none',logLevel:'silent',metafile:true,banner:{js:banner},format,write:false});\n const generated=r.outputFiles[0].contents,current=fs.readFileSync(out);\n const inputs=Object.keys(r.metafile.inputs).map(p=>({path:p,sha256:h(fs.readFileSync(p))}));\n const unpinned=inputs.filter(x=>!manifest.files.some(y=>x.path===y.path&&x.sha256===y.sha256));\n const w=worker.bundle_generation.artifacts.find(x=>x.path===out);\n results.push({path:out,format,bytes:generated.length,generated_sha256:h(generated),current_sha256:h(current),exact_bytes:Buffer.from(generated).equals(current),worker_hash_matches:w.generated_sha256===h(generated),input_count:inputs.length,unpinned,write:false});\n}\nconsole.log(JSON.stringify({at:new Date().toISOString(),results},null,2));\nif(results.some(x=>!x.exact_bytes||!x.worker_hash_matches||x.unpinned.length))process.exit(1);\nNODE",
+    "captures": [
+      {
+        "chunk_id": "93ea05",
+        "wall_time_seconds": 0.311956588,
+        "exit_code": 0,
+        "original_token_count": 229,
+        "output": "{\n  \"at\": \"2026-09-13T23:08:42.232Z\",\n  \"results\": [\n    {\n      \"path\": \"public/sdk/edge-personalization.esm.js\",\n      \"format\": \"esm\",\n      \"bytes\": 49726,\n      \"generated_sha256\": \"751679ecaf435c876b09419831caeb43362cac57f8b8bb312013f8c5f04f7e30\",\n      \"current_sha256\": \"751679ecaf435c876b09419831caeb43362cac57f8b8bb312013f8c5f04f7e30\",\n      \"exact_bytes\": true,\n      \"worker_hash_matches\": true,\n      \"input_count\": 11,\n      \"unpinned\": [],\n      \"write\": false\n    },\n    {\n      \"path\": \"public/sdk/edge-personalization.js\",\n      \"format\": \"iife\",\n      \"bytes\": 52455,\n      \"generated_sha256\": \"e6125bae3f65ab50b69bfa227fd7bdeb8381c8b22bc4287ceeba1015137e9ddf\",\n      \"current_sha256\": \"e6125bae3f65ab50b69bfa227fd7bdeb8381c8b22bc4287ceeba1015137e9ddf\",\n      \"exact_bytes\": true,\n      \"worker_hash_matches\": true,\n      \"input_count\": 12,\n      \"unpinned\": [],\n      \"write\": false\n    }\n  ]\n}\n"
+      }
+    ],
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "qualification": "Independent installed esbuild write:false only; no build script or generated file write. Both outputs match current bytes and worker generated hashes. All11 ESM/12 IIFE module inputs are pinned. Exact source/artifact parity is not deployed-browser acceptance."
+  },
+  "static_reuse": {
+    "worker_reference": "basis.worker_record / command_captures",
+    "compiler": {
+      "source": "static1",
+      "session_id": 5959,
+      "captures": [
+        "3213ee",
+        "ec7eaa",
+        "4e326b",
+        "2731c0"
+      ],
+      "full_project_stage_exit_status": 0,
+      "sdk_project_stage_exit_status": 0,
+      "whole_command_exit_status": 1,
+      "drained": true,
+      "qualification": "The actual && chain reached ESLint, demonstrating both preceding compiler stages succeeded. Whole static1 failed afterward; whitespace was not reached. Plan-v2 permits reuse on identical source/protected inputs."
+    },
+    "lint_whitespace": {
+      "source": "static2",
+      "session_id": 2261,
+      "captures": [
+        "381f24",
+        "e33616",
+        "62f2b3"
+      ],
+      "exit_status": 0,
+      "drained": true,
+      "errors": 30,
+      "warnings": 12,
+      "new_diagnostics": 0,
+      "unmatched_inherited": 0,
+      "qualification": "No-new-diagnostics acceptance only. Exact file/rule/severity/column/source-line multiplicity is retained; only one terminal message period is normalized on both sides. No rule suppression or clean whole-file lint claim. Root freeze additionally compared all seven owned files directly: no new trailing whitespace."
+    },
+    "independent_static_reruns": 0
+  },
+  "retained_history": [
+    "Source-confirmed baseline design case, not a claimed failing baseline runtime. Pre-runtime authoring corrections addressed generation-intent renewal, pending versus actual ownership and title-only paint identity.",
+    "Worker runtime1/session96334 exited1:11 passed/1 failed. The new expired-grant fixture omitted the consent:false recovery acknowledgment required by unchanged core. Final fixture supplies it. Root also corrected valid-fill fading cleanup and retained the mixed fade/transition assertion within the existing group.",
+    "Worker runtime2/session55565 passed all12 on final bytes (0a7933/4428c6). This remains worker evidence, separate from the independent invocation.",
+    "Worker static1/session5959 reached and passed both compiler stages, then failed because stylish baseline diagnostic messages omit a terminal period present in the ESLint API. Original failure, plan and contract are preserved; plan-v2/check-amendment changes comparison representation only, not source or runtime scope. Corrected static2 passed with all42 inherited diagnostics accounted for."
+  ],
+  "limitations": [
+    "Bounded local default-content handoff only; no complete W20/W15/F28/F29, customer default-map approval, walkthrough or release acceptance.",
+    "Actual emitted SDK code and storefront methods are exercised using Node/VM and stateful synthetic DOM/timers, not JSDOM, a native browser or a customer site. Constructor/DOMContentLoaded/live cloud paths were not executed.",
+    "Initial defaults remain site-owned. Asynchronous hydration can repaint; no no-flash/server-render timing guarantee, new fallback assets or arbitrary engine fill. Server-provided apply payload ownership/embedding remains the integrator's responsibility.",
+    "No new refresh/push/coalescing service, ranking/pin/schema/replay/server/consent authority changes, general exposure policy, deployment/native/SLO/scientific or infrastructure claim.",
+    "Thirty inherited storefront lint errors and twelve combined warnings remain. Passing the admitted diagnostic comparison is not a clean lint result.",
+    "Lead acceptance remains separate; only this review record was written by the reviewer."
+  ]
+}

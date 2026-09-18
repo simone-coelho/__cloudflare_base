@@ -1,0 +1,1031 @@
+{
+  "task_id": "W35.02",
+  "actor_id": "w2206-worker",
+  "run_id": "/root/w2206_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go": {
+    "journal": 1925,
+    "contract_digest": "82863e33a7cdd31c3c6c0eb212ff57c91872675430080e85c98ac4be6c5ea319",
+    "authority": "Lead-admitted local visit/channel parity under recorded existing Durable Object direction; no production host change, migration, governance writes or subdelegation."
+  },
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W35.02/plan.md",
+      "sha256": "e0693da5be43dd28a487f4f1aaab73887be3d68e23060ad5d4635ed269832ebf"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W35.02/baseline.json",
+      "sha256": "1af92fa70ad142fb490ff838e5b1fc399cd5405d0eaf91e7ccebd1c638d47027"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W35.02/admission.json",
+      "sha256": "e15d7f5d1868f4c3ef080a4bb311d4aa2d635f1d150eeec9f91a09db4fbf829b"
+    },
+    "hash_capture": "1371b7"
+  },
+  "pre_edit_verification": {
+    "instruction_reads": [
+      "b80ea1",
+      "d6500f"
+    ],
+    "task_originals_capture": "6a3428",
+    "at": "2026-09-15T21:27:53.081Z",
+    "original_count": 17,
+    "all_original_hashes_matched": true,
+    "original_bytes": "baseline.owned_before contains prior gzip_base64 and hashes; pre-edit check compared actual files to admitted hashes.",
+    "protected_count": 74,
+    "mismatches": [],
+    "accepted_dependencies": [
+      {
+        "task_id": "W22.09",
+        "artifact_digest": "8f7f7273cf73f3b6a3435eccce070634f209d4fb7f11c860e7e539e5354baaf9",
+        "file_count": 32,
+        "owned_overlaps": [],
+        "review": {
+          "path": "docs/remediation/evidence/W22.09/review.json",
+          "sha256": "ee455d4dd1e263d6d83387b9039ca07ce4d52554e07d6b7998d302cc1dbf13f9"
+        }
+      },
+      {
+        "task_id": "W26.04",
+        "artifact_digest": "ffe030e167286f6bad6db2f0b261a396d06ef5143daf90323a107f7ba92bb728",
+        "file_count": 40,
+        "owned_overlaps": [
+          "src/content/service.ts",
+          "src/content/cell.ts"
+        ],
+        "review": {
+          "path": "docs/remediation/evidence/W26.04/review.json",
+          "sha256": "dbdce4a981376c89320b5bc62cee58d7a3f3715fda033795f2969123c03bbf22"
+        }
+      },
+      {
+        "task_id": "W35.01",
+        "artifact_digest": "3cb9e6ae1ddbc63374a95b21b10b9d7c2b3ea6f2a5bfc252ae7f7c363f9c56ee",
+        "file_count": 58,
+        "owned_overlaps": [
+          "src/durable-objects/ShopperReflex.ts",
+          "src/routes/realtime.sdkContract.test.ts",
+          "src/routes/realtime.ts",
+          "src/services/RealtimeSegmentEngine.ts",
+          "src/services/SessionManager.ts",
+          "docs/api/01-rest-endpoints.md",
+          "src/sdk/core.ts",
+          "src/content/service.ts"
+        ],
+        "review": {
+          "path": "docs/remediation/evidence/W35.01/review.json",
+          "sha256": "19235ba8efacef39d789c81943063d72fac955e1f389c99b63164b9df8533848"
+        }
+      }
+    ],
+    "qualified_buffered_dependency": {
+      "task_id": "W22.07",
+      "prior_prospectively_qualified": [
+        "src/durable-objects/ShopperReflex.ts",
+        "src/routes/realtime.sdkContract.test.ts"
+      ],
+      "remaining_pins_and_review_unchanged": true,
+      "basis": {
+        "path": "docs/remediation/design/W35.01/baseline.json",
+        "sha256": "0d5eed2cd53de3dcc5a4bc77040e4d06c01d9a9641ce859eeaf7953e2ab38bf6"
+      }
+    },
+    "canonical": {
+      "capture": "3a6f02",
+      "exit_code": 0,
+      "at": "2026-09-15T21:28:14.658Z",
+      "pin_count": 119,
+      "pin_digest": "0563c66671b9acf8d2d65870381f323c944450dcf681eebfe1f70d95a0e7edbb",
+      "protected_mismatches": []
+    },
+    "entry_board": {
+      "reused": true,
+      "journal": 1912,
+      "check_exit": 0,
+      "status_exit": 0,
+      "session_drained": true,
+      "captures": [
+        "e024be",
+        "a73358",
+        "e68075"
+      ]
+    },
+    "admission_board": {
+      "lead_reported": true,
+      "journal": 1925,
+      "check_exit": 0,
+      "status_exit": 0,
+      "session_drained": true,
+      "captures": [
+        "901d3e",
+        "5a0d51",
+        "9e6e62"
+      ]
+    }
+  },
+  "canonical_source": {
+    "capture": "99c8e3",
+    "at": "2026-09-15T21:47:18.648Z",
+    "algorithm": "sha256(JSON.stringify(files sorted by path.localeCompare)); unique owned + protected + accepted-unowned dependency files/reviews, including qualified W22.07 basis.",
+    "pin_count": 119,
+    "pin_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+    "files": [
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+      },
+      {
+        "path": "docs/api/01-rest-endpoints.md",
+        "sha256": "c6a924ccae1e0fd334019cac0a9f92edc29e189d1f1a5b249f9b489eba454165"
+      },
+      {
+        "path": "docs/architecture/16-edge-affinity-reflex.md",
+        "sha256": "b30b96e1edb2ee468742b180c0dba544d3f21ddb30cb2404f62e12509605de43"
+      },
+      {
+        "path": "docs/architecture/22-outcome-learning-design.md",
+        "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+      },
+      {
+        "path": "docs/architecture/33-adversarial-audit-brief.md",
+        "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+      },
+      {
+        "path": "docs/opticon/Tapestry_Scope_of_Services_v8_tracked.docx",
+        "sha256": "ea44cba968b3d235dda184abbfbfe5e2e396cd8317c787846285623efa44ab47"
+      },
+      {
+        "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+        "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c"
+      },
+      {
+        "path": "docs/remediation/decisions/D06-buffered-action-purpose-approved-2026-09-15.json",
+        "sha256": "469cc9e3c566c9430b855e01d200120e5c5f075ef9b595b0ca99db22e64923db"
+      },
+      {
+        "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+        "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72"
+      },
+      {
+        "path": "docs/remediation/design/W22.07/baseline.json",
+        "sha256": "091a30fd9adedc20b05cde6369ec919cf6aaa2c073f41ad75bbf8db0997fe279"
+      },
+      {
+        "path": "docs/remediation/design/W22.07/plan.md",
+        "sha256": "d57a14dde34afb8d662f54149ba38326a8c380663b0cda5b2a87cd35963c784e"
+      },
+      {
+        "path": "docs/remediation/design/W22.09/baseline.json",
+        "sha256": "bba831f4d34804fda2b2a7602bba992763a8807645110d8fb23af000561f9f70"
+      },
+      {
+        "path": "docs/remediation/design/W22.09/plan.md",
+        "sha256": "784611309ae0c3d2abbbd512db7666167206d6322c7f1bfa457fdbd19703c0f0"
+      },
+      {
+        "path": "docs/remediation/design/W26.04/baseline.json",
+        "sha256": "c36a93b851949e6fa28ef4f10a6a6ba6cd159619ad7fa24062512661208f1f1f"
+      },
+      {
+        "path": "docs/remediation/design/W26.04/plan.md",
+        "sha256": "34a04b5f864fc229f142c30c84fe2a3455e8fa9ecfb528f9b1713a5095e32719"
+      },
+      {
+        "path": "docs/remediation/design/W35.01/baseline.json",
+        "sha256": "0d5eed2cd53de3dcc5a4bc77040e4d06c01d9a9641ce859eeaf7953e2ab38bf6"
+      },
+      {
+        "path": "docs/remediation/design/W35.01/plan.md",
+        "sha256": "8f53f8f0fb4360a445ecbcdcc98922ee971cebda1a966b906931bfc30ca2d5b9"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/admission.json",
+        "sha256": "2098cddce90f455c295ec00d6d2e8f4182aa489b80e8ef41957b9c07a65e799d"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/review.json",
+        "sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/source-deltas.json",
+        "sha256": "06466cded378a347ea2cd6a87a6b565f37bf2ae4f515eed24192c6e8b1ff16b8"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/source-freeze.json",
+        "sha256": "286129cc6e8e91b88537c2a3978c2bae29175d77e705b945b7c2bf94cd8621e2"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/worker.json",
+        "sha256": "f193a97d87069b547b4be5be8c95895239781686b0d5e827fa87bb2a3809b41f"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.09/admission.json",
+        "sha256": "80ec4c17d0ec3558ead06df38a637661d024a171d0ae862561c784e108b9de10"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.09/review.json",
+        "sha256": "ee455d4dd1e263d6d83387b9039ca07ce4d52554e07d6b7998d302cc1dbf13f9"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.09/source-deltas.json",
+        "sha256": "787b7de0ca664a1f1547fadad92de2604db1696bf90428219a079a1bc82a2978"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.09/source-freeze.json",
+        "sha256": "f0f88ee9f07dc192beccf20a7c2ea5524e0a92371790264e9d1ba273f869f6e0"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.09/worker.json",
+        "sha256": "607899a9494f77d42d7f4585d7960bcdf9ddbb64c957151747d4169d9473cd7c"
+      },
+      {
+        "path": "docs/remediation/evidence/W26.04/admission.json",
+        "sha256": "5d0d0097ac3c650ad5007f69f1a628d1f40ca4a72cdf04f4443294dbba90df51"
+      },
+      {
+        "path": "docs/remediation/evidence/W26.04/review.json",
+        "sha256": "dbdce4a981376c89320b5bc62cee58d7a3f3715fda033795f2969123c03bbf22"
+      },
+      {
+        "path": "docs/remediation/evidence/W26.04/source-deltas.json",
+        "sha256": "b809e2b4e4b9c74abcf36cd5e4b5e44d446ffd61dc5343d58456f77f34cc6c9d"
+      },
+      {
+        "path": "docs/remediation/evidence/W26.04/source-freeze.json",
+        "sha256": "11dd85a8952c40720159286702e25c53410dc012619df00800c12537844d7ff9"
+      },
+      {
+        "path": "docs/remediation/evidence/W26.04/worker.json",
+        "sha256": "828679500a72b40ef18abfe84ecb7350d2186875d50e8d5b1d647dda26566c20"
+      },
+      {
+        "path": "docs/remediation/evidence/W35.01/admission.json",
+        "sha256": "2e2fde5cf5be8b30dbc88290dcd26c77ebf9271771507ead8a6c3435b487d850"
+      },
+      {
+        "path": "docs/remediation/evidence/W35.01/review.json",
+        "sha256": "19235ba8efacef39d789c81943063d72fac955e1f389c99b63164b9df8533848"
+      },
+      {
+        "path": "docs/remediation/evidence/W35.01/source-deltas.json",
+        "sha256": "8dc2a751f80dc11b102ac83b7e3d671e25c9a839b5ba41e6c7e8c5a1e0b88143"
+      },
+      {
+        "path": "docs/remediation/evidence/W35.01/source-freeze.json",
+        "sha256": "35725a101e2d55699bca3ec2bcc0cd8cb3a3952db454bfe0c8c436c3b6fbab5c"
+      },
+      {
+        "path": "docs/remediation/evidence/W35.01/worker.json",
+        "sha256": "d18db55e114682154ecbadd4d6dfefd17c6feb000ab35b96bdcc0e20dc947230"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "2e6a442bce4d23fee914c6efaea1a14c3b10fd24104027f72525598d826f772e"
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "9ed7820d555f98d6835940a0dc4f74a7b10f960476c9a84ec690d7b3e5cdfa04"
+      },
+      {
+        "path": "scripts/build-sdk.mjs",
+        "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79"
+      },
+      {
+        "path": "src/config/publication.ts",
+        "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+      },
+      {
+        "path": "src/connectors/AudienceStore.ts",
+        "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf"
+      },
+      {
+        "path": "src/connectors/DecisionProvider.ts",
+        "sha256": "5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f"
+      },
+      {
+        "path": "src/connectors/index.ts",
+        "sha256": "656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67"
+      },
+      {
+        "path": "src/connectors/SegmentProvider.ts",
+        "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359"
+      },
+      {
+        "path": "src/content/cell.test.ts",
+        "sha256": "030934c8fb3b6d5d1c8464806f32c026a1c9253aeb0b92025f6df88be18873e2"
+      },
+      {
+        "path": "src/content/cell.ts",
+        "sha256": "80bc29f98de5e25a17b8d631639c8abfccd247f42582bae808e2f534c783b017"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "ff17cdccdcf2d9b848e353cea035c702ec4a7fddd203d550d3bb6ccb2582f7b2"
+      },
+      {
+        "path": "src/content/consent.ts",
+        "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556"
+      },
+      {
+        "path": "src/content/freshFatigue.test.ts",
+        "sha256": "1babeb8dacb5c7cdf888be5a1db461acb98143969cb93188d00f05eb45fcd01b"
+      },
+      {
+        "path": "src/content/holdout.ts",
+        "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc"
+      },
+      {
+        "path": "src/content/import.ts",
+        "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f"
+      },
+      {
+        "path": "src/content/service.ts",
+        "sha256": "f07bef278a99a54ebbc968cd3e66f0db9482160f1427cab0d0cf4606942042db"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+      },
+      {
+        "path": "src/demos/registry.ts",
+        "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "fd62f49928ddd8b9176273ea87743231fc6ad75f42b01ca9683fb1bcaa5073b1"
+      },
+      {
+        "path": "src/durable-objects/LearnStats.ts",
+        "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974"
+      },
+      {
+        "path": "src/durable-objects/RegionTrend.ts",
+        "sha256": "1244d0bfd4869a0385b7734694ea88c309a584fb597ae0f2e1b7b6d3503dcc0d"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "5845e7ee3c9227eb65adeb80badbfb858376fc5fb233d2a7372061044732022a"
+      },
+      {
+        "path": "src/events/actionTypes.ts",
+        "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3"
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7"
+      },
+      {
+        "path": "src/identity/link.ts",
+        "sha256": "0898b366fe2a07450dd1fb779c0a2688e5476e1ecd7ebe9eb0555d46df50069b"
+      },
+      {
+        "path": "src/identity/profileEnrichment.ts",
+        "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5"
+      },
+      {
+        "path": "src/identity/sessionCapability.ts",
+        "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "7f483bd57927bc47c60b04de406ff49ac0dd5ef641a8f8ffc55fba506f3362aa"
+      },
+      {
+        "path": "src/learn/policy.ts",
+        "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98"
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "d7e830270b1f18962d42555fb6ee8b12c6d446ae5d5fa5937cc579175a1427a4"
+      },
+      {
+        "path": "src/learn/route.ts",
+        "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+      },
+      {
+        "path": "src/learn/stats.ts",
+        "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+      },
+      {
+        "path": "src/ledger/delivery.ts",
+        "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf"
+      },
+      {
+        "path": "src/ledger/enqueue.ts",
+        "sha256": "831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9"
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+      },
+      {
+        "path": "src/ledger/writer.ts",
+        "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d"
+      },
+      {
+        "path": "src/reflex/bufferedAction.ts",
+        "sha256": "272445c8c7518012be0034cc24a96c71ae3c2ca298f8bdef529ef73cba96bb86"
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+      },
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "sha256": "87d88bd5815f18d79a1d53909021edbfe67ceb4039826603ed66310f72ed462e"
+      },
+      {
+        "path": "src/reflex/contentTelemetry.ts",
+        "sha256": "8153296908e6fbca19b20b45d447b635f1d20539b09d79f723ebb283551a770e"
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+      },
+      {
+        "path": "src/reflex/identityMerge.ts",
+        "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+      },
+      {
+        "path": "src/reflex/regionTrend.ts",
+        "sha256": "e5ab4379a4fab720fe04eeb1ed1af55e390db033caad91c3afd7e45e7e6430e0"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "a57afc69cd6296713021a4943f120c86ebb257cd6c6e3c19436a8c412a1fd910"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "c2f0a854674a058bf1f8c9a668565d4c99cf0f5d122b12a8b4dba3be09f67997"
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "sha256": "44461c20846ee114884eac1d96b60bbf384fe15277070b982877e00e1e11c679"
+      },
+      {
+        "path": "src/routes/sort.ts",
+        "sha256": "f41238f99a40fca924f6e22cb93ea08d6c857af0bfe9b0c933b285517ed9f484"
+      },
+      {
+        "path": "src/sdk/browser.ts",
+        "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "f1725913c017fb54fc4dc5ec8008306f9027019f585aa8a9b48fe4dac44cd269"
+      },
+      {
+        "path": "src/sdk/emit.ts",
+        "sha256": "188cb582218166ceac62005e20e32be068cae03f2b8d99195167bafb3de636a5"
+      },
+      {
+        "path": "src/sdk/host.ts",
+        "sha256": "f0e8f50d96fbf0108defa76808270c5c2f08a43b5c2d32f0e31d65e39263f92d"
+      },
+      {
+        "path": "src/sdk/identify.ts",
+        "sha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1"
+      },
+      {
+        "path": "src/sdk/identity.ts",
+        "sha256": "a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f"
+      },
+      {
+        "path": "src/sdk/index.ts",
+        "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+      },
+      {
+        "path": "src/sdk/listen.test.ts",
+        "sha256": "5cbd4a436922aa9682da454acb2c056de2c6e3a892141c2037ca3b4b53416429"
+      },
+      {
+        "path": "src/sdk/listen.ts",
+        "sha256": "41b8e8306ebd04b8994db63412e7ee98023a24b52ceb83f78831d14465bee0b8"
+      },
+      {
+        "path": "src/sdk/testHost.ts",
+        "sha256": "5104d089455694ef802507f8188af6e9fedcfa3604f8a2e5226da6b249ac7842"
+      },
+      {
+        "path": "src/sdk/types.ts",
+        "sha256": "d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4"
+      },
+      {
+        "path": "src/sdk/version.ts",
+        "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+      },
+      {
+        "path": "src/services/demoEventCapture.ts",
+        "sha256": "eb64be869e76f3db40288e4a1da135f62de84806dc8a0b9dc0de653eb8ff5456"
+      },
+      {
+        "path": "src/services/JourneyStage.ts",
+        "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+      },
+      {
+        "path": "src/services/odpLoop.ts",
+        "sha256": "52348b653a209e56384568f0e73f87690ef68316d3f8b4d9b7f7a7d3c72e029e"
+      },
+      {
+        "path": "src/services/RealtimeSegmentEngine.ts",
+        "sha256": "7a40ad70357d3e347d3b971969e29a00087cd0ba3b62e8a3eb07b25c05040bfb"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "19faab942934a61c7ef13db67e62fcb06228346be85abed9d3b71ac00d37d186"
+      },
+      {
+        "path": "src/services/SessionManager.visit.test.ts",
+        "sha256": "daef3b653085556bdcbfd46f8eb5dbcff4d8e1339b33d589dc582a63ff8eceb4"
+      },
+      {
+        "path": "src/services/visit.ts",
+        "sha256": "9bf380f59633c1eb23cabcec60acf6318ff17eb8898172c71a1fa4ecd3b244d6"
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+      },
+      {
+        "path": "wrangler.toml",
+        "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923"
+      }
+    ],
+    "owned_paths": [
+      "src/services/visit.ts",
+      "src/services/SessionManager.ts",
+      "src/services/RealtimeSegmentEngine.ts",
+      "src/durable-objects/ShopperReflex.ts",
+      "src/content/service.ts",
+      "src/content/cell.ts",
+      "src/routes/decisions.ts",
+      "src/routes/realtime.ts",
+      "src/sdk/core.ts",
+      "src/sdk/listen.ts",
+      "src/routes/realtime.sdkContract.test.ts",
+      "src/services/SessionManager.visit.test.ts",
+      "src/content/cell.test.ts",
+      "src/sdk/listen.test.ts",
+      "public/sdk/edge-personalization.esm.js",
+      "public/sdk/edge-personalization.js",
+      "docs/api/01-rest-endpoints.md"
+    ],
+    "protected_mismatches": [],
+    "snapshot_command": "node - <<'NODE'\nconst fs=require('fs'),c=require('crypto'),hash=x=>c.createHash('sha256').update(x).digest('hex'),pin=p=>({path:p.path,sha256:hash(fs.readFileSync(p.path))});\nconst b=JSON.parse(fs.readFileSync('docs/remediation/design/W35.02/baseline.json')),owned=new Set(b.owned_before.map(p=>p.path)),q=JSON.parse(fs.readFileSync(b.qualified_buffered_dependency.basis.path)).accepted_dependencies.find(d=>d.task_id==='W22.07');\nconst expected=[...b.protected,...[...b.accepted_dependencies,q].flatMap(d=>[...d.files.filter(p=>!owned.has(p.path)),d.review])],mismatches=expected.filter(p=>pin(p).sha256!==p.sha256).map(p=>p.path),map=[...new Map([...b.owned_before,...expected].map(p=>[p.path,pin(p)])).values()].sort((a,b)=>a.path.localeCompare(b.path));\nconsole.log(JSON.stringify({at:new Date().toISOString(),pin_count:map.length,pin_digest:hash(JSON.stringify(map)),protected_mismatches:mismatches,owned:b.owned_before.map(pin)}));if(mismatches.length)process.exitCode=1;\nNODE",
+    "final_snapshot_command": "node - <<'NODE'\nconst fs=require('fs'),c=require('crypto'),hash=x=>c.createHash('sha256').update(x).digest('hex'),pin=p=>({path:p.path,sha256:hash(fs.readFileSync(p.path))});\nconst b=JSON.parse(fs.readFileSync('docs/remediation/design/W35.02/baseline.json')),owned=new Set(b.owned_before.map(p=>p.path)),q=JSON.parse(fs.readFileSync(b.qualified_buffered_dependency.basis.path)).accepted_dependencies.find(d=>d.task_id==='W22.07');\nconst expected=[...b.protected,...[...b.accepted_dependencies,q].flatMap(d=>[...d.files.filter(p=>!owned.has(p.path)),d.review])],mismatches=expected.filter(p=>pin(p).sha256!==p.sha256).map(p=>p.path),map=[...new Map([...b.owned_before,...expected].map(p=>[p.path,pin(p)])).values()].sort((a,b)=>a.path.localeCompare(b.path));\nconsole.log(JSON.stringify({at:new Date().toISOString(),pin_count:map.length,pin_digest:hash(JSON.stringify(map)),protected_mismatches:mismatches,owned:b.owned_before.map(pin),files:map}));if(mismatches.length)process.exitCode=1;\nNODE",
+    "prior_candidate_overrides": [
+      {
+        "pin_digest": "0d7938c2e530448fa63cf56885774f19f504395678076357e8564510801a9230",
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "aa86e5fb6d309effe25eb5ee7bca346a8bf46e50052c910b0d23e9321577a416"
+      },
+      {
+        "pin_digest": "7a584c268b2cecfdbbc11be12c1549a46849f9953db3c13a0b561b067eeb5052",
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "0e054b85c2abc5380dd45458be487e1f6cce7779ebea51807b014e0678124459"
+      }
+    ]
+  },
+  "scope_summary": [
+    "Shared bounded entry validation/host-only snapshot serialization, enum channel normalization, live/read visit distinction and existing-policy merge; no classifier/idle-boundary changes.",
+    "Both hosts retain optional visit context and expose consent-gated read projections without guessed first/direct. Live DO commits retain visitorId; restart/merge/manual/import/alarm/buffered paths preserve context.",
+    "Principal cold legacy reads return ephemeral context; owned personalization GET does not emit session cookies. Existing necessary refusal/config/connector operations remain.",
+    "SDK source and both owned bundles transport optional bounded host-only entry and strip it on readiness withdrawal; API documents bounds, precedence, unknowns and local limitations.",
+    "Exactly three grouped cases added (two route/object groups, one source+shipped SDK group); affected existing assertions updated. No new suite/framework."
+  ],
+  "lead_resolutions": [
+    "Principal cold read uses ephemeral SessionData, preserving nondefault configuration validation and post-await signed checks; unsigned legacy/event path unchanged.",
+    "Manual segment and nonprincipal preference writers use observedLive=false, preserving activity/visit fields while retaining existing write/TTL semantics.",
+    "SDK serializes only within4096 JSON characters; oversize optional context omitted rather than failing hydrate.",
+    "Root approved both runtime fixture corrections and required lifecycle fixture correction; no production change after first fixed12 attempt."
+  ],
+  "sdk_generation": {
+    "command": "node --max-old-space-size=512 --input-type=module - <<'NODE'\nimport * as esbuild from 'esbuild';import fs from 'node:fs';import {resolve} from 'node:path';import {spawnSync} from 'node:child_process';import {createHash} from 'node:crypto';\nconst version=fs.readFileSync('src/sdk/version.ts','utf8').match(/'([^']+)'/)[1],banner='/* edge-personalization SDK v'+version+' — one package: core (identity, transport), emit (four capture paths), listen (decisions). */';\nconst outputs=[];\nfor(const [entry,out,format] of [['src/sdk/index.ts','public/sdk/edge-personalization.esm.js','esm'],['src/sdk/browser.ts','public/sdk/edge-personalization.js','iife']]){\nconst r=await esbuild.build({bundle:true,platform:'browser',target:'es2022',minify:false,sourcemap:false,legalComments:'none',logLevel:'silent',metafile:true,banner:{js:banner},entryPoints:[resolve(entry)],outfile:resolve(out),format,write:false});\nconst contents=Buffer.from(r.outputFiles[0].contents),d=spawnSync('diff',['-u',out,'-'],{input:contents,encoding:'utf8',maxBuffer:4*1024*1024});\nif(d.status!==0&&d.status!==1)throw new Error(d.stderr);\noutputs.push({path:out,bytes:contents.length,sha256:createHash('sha256').update(contents).digest('hex'),patch:d.status===0?'':'*** Begin Patch\\n*** Update File: '+resolve(out)+'\\n'+d.stdout.split('\\n').slice(2).join('\\n').replace(/^@@.*@@.*$/gm,'@@')+'*** End Patch'});\n}console.log(JSON.stringify(outputs));\nNODE",
+    "method": "esbuild write:false with existing build options/banner; returned diff applied only through apply_patch to two owned bundles.",
+    "attempts": [
+      {
+        "capture": "d84ebd",
+        "exit_code": 0,
+        "session_drained": true,
+        "outputs": [
+          {
+            "path": "public/sdk/edge-personalization.esm.js",
+            "bytes": 53008,
+            "sha256": "f7280352d80a3971e15168ab5786093de80b387093bf77bfb5f5b008d74b9124"
+          },
+          {
+            "path": "public/sdk/edge-personalization.js",
+            "bytes": 55885,
+            "sha256": "f31efa97c19f47c1415e9226605235dc22b4b127be61a8a10d95d4665083ae1d"
+          }
+        ]
+      },
+      {
+        "capture": "29af13",
+        "exit_code": 0,
+        "session_drained": true,
+        "outputs": [
+          {
+            "path": "public/sdk/edge-personalization.esm.js",
+            "bytes": 53116,
+            "sha256": "2e6a442bce4d23fee914c6efaea1a14c3b10fd24104027f72525598d826f772e"
+          },
+          {
+            "path": "public/sdk/edge-personalization.js",
+            "bytes": 55999,
+            "sha256": "9ed7820d555f98d6835940a0dc4f74a7b10f960476c9a84ec690d7b3e5cdfa04"
+          }
+        ]
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "id": "K1_attempt1",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/services/SessionManager.visit.test.ts src/content/cell.test.ts src/sdk/listen.test.ts src/content/consent.test.ts -t 'W35[.]02|W35[.]01|W22[.]07 (applies age-decayed interest|preserves exact session expiry)|W26[.]04|no entry signals at all|never guesses a channel|acknowledges snapshot refusal before rendered callbacks|is behavior-read-only when cold|hydrates from the snapshot and delivers each slot' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "ef0ca7",
+        "exit_code": 0,
+        "at": "2026-09-15T21:42:01.042Z",
+        "pin_count": 119,
+        "pin_digest": "0d7938c2e530448fa63cf56885774f19f504395678076357e8564510801a9230",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "f98987",
+        "wall_time_seconds": 1.001116172,
+        "session_id": 74659,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "61e9c2",
+          "wall_time_seconds": 5.001485578,
+          "session_id": 74659,
+          "original_token_count": 7509,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > preserves object visit identity through sockets restart non-live changes merge and rejected commits\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > preserves object visit identity through sockets restart non-live changes merge and rejected commits\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > preserves object visit identity through sockets restart non-live changes merge and rejected commits\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ❯ src/routes/realtime.sdkContract.test.ts  (60 tests | 2 failed | 54 skipped) 603ms\n   ❯ src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n     → expected { channel: 'paid_social', …(4) } to deeply equal { channel: 'unknown', …(4) }\n   ❯ src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n     → Cannot set properties of null (setting 'shopperId')\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W26.04 keeps actual fatigue ranking receipts and replay within the requested brand\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (27 tests | 26 skipped) 38ms\n"
+        },
+        {
+          "chunk_id": "32ac79",
+          "wall_time_seconds": 0.041691066,
+          "exit_code": 1,
+          "original_token_count": 633,
+          "output": " ✓ src/sdk/listen.test.ts  (13 tests | 10 skipped) 119ms\n ✓ src/services/SessionManager.visit.test.ts  (12 tests | 11 skipped) 3ms\n ✓ src/content/cell.test.ts  (4 tests | 3 skipped) 1ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nAssertionError: expected { channel: 'paid_social', …(4) } to deeply equal { channel: 'unknown', …(4) }\n\n- Expected\n+ Received\n\n  Object {\n    \"affinity\": null,\n-   \"channel\": \"unknown\",\n+   \"channel\": \"paid_social\",\n    \"region\": null,\n    \"stage\": \"unknown\",\n    \"visit_bucket\": \"unknown\",\n  }\n\n ❯ cell src/routes/realtime.sdkContract.test.ts:160:55\n    158|           const out = await r.json() as { cell: { channel: string; vis…\n    159|           expect(out.records).toHaveLength(1); expect(out.records[0]!.…\n    160|           expect(f.queued.at(-1)?.records?.[0]?.cell).toEqual(out.cell…\n       |                                                       ^\n    161|         expect(await cell(paid)).toMatchObject({ channel: 'paid_social…\n    162|         const cold = await f.call(`/realtime/personalization/${f.g.sub…\n ❯ src/routes/realtime.sdkContract.test.ts:206:16\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nTypeError: Cannot set properties of null (setting 'shopperId')\n ❯ src/routes/realtime.sdkContract.test.ts:2825:73\n    2823|           const key = tenantKey('meridian', `session:${grant.sessionId…\n    2824|           x.sessions.data.set(key, JSON.stringify(failure === 'owner' …\n    2825|         } else if (failure === 'owner') (item!.shopper as any).affinit…\n       |                                                                         ^\n    2826|         else if (failure === 'forward') (item!.shopper as any).forward…\n    2827|         else { item!.data.set('consent', failure); (item!.shopper as a…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  1 failed | 4 passed (5)\n      Tests  2 failed | 10 passed | 104 skipped (116)\n   Start at  17:42:03\n   Duration  22.95s (transform 5.66s, setup 0ms, collect 10.35s, tests 764ms, environment 0ms, prepare 8.75s)\n\n"
+        }
+      ],
+      "exit_code": 1,
+      "session_drained": true,
+      "after": {
+        "capture": "a2962a",
+        "exit_code": 0,
+        "at": "2026-09-15T21:42:27.197Z",
+        "pin_count": 119,
+        "pin_digest": "0d7938c2e530448fa63cf56885774f19f504395678076357e8564510801a9230",
+        "protected_mismatches": []
+      },
+      "result": "FAIL: 2 failed,10 passed,104 unselected; queue-refusal helper compared old record; existing warm fixture dropped an unknown nondefault-tenant demo product."
+    },
+    {
+      "id": "K1_attempt2",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/services/SessionManager.visit.test.ts src/content/cell.test.ts src/sdk/listen.test.ts src/content/consent.test.ts -t 'W35[.]02|W35[.]01|W22[.]07 (applies age-decayed interest|preserves exact session expiry)|W26[.]04|no entry signals at all|never guesses a channel|acknowledges snapshot refusal before rendered callbacks|is behavior-read-only when cold|hydrates from the snapshot and delivers each slot' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "a180ee",
+        "exit_code": 0,
+        "at": "2026-09-15T21:44:40.311Z",
+        "pin_count": 119,
+        "pin_digest": "7a584c268b2cecfdbbc11be12c1549a46849f9953db3c13a0b561b067eeb5052",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "48875a",
+        "wall_time_seconds": 1.001489017,
+        "session_id": 89911,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "599011",
+          "wall_time_seconds": 5.000888104,
+          "session_id": 89911,
+          "original_token_count": 11780,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > preserves object visit identity through sockets restart non-live changes merge and rejected commits\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > preserves object visit identity through sockets restart non-live changes merge and rejected commits\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > preserves object visit identity through sockets restart non-live changes merge and rejected commits\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/routes/realtime.sdkContract.test.ts  (60 tests | 54 skipped) 781ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W26.04 keeps actual fatigue ranking receipts and replay within the requested brand\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (27 tests | 26 skipped) 33ms\n ✓ src/sdk/listen.test.ts  (13 tests | 10 skipped) 108ms\n"
+        },
+        {
+          "chunk_id": "658612",
+          "wall_time_seconds": 0.000001553,
+          "exit_code": 0,
+          "original_token_count": 84,
+          "output": " ✓ src/services/SessionManager.visit.test.ts  (12 tests | 11 skipped) 3ms\n ✓ src/content/cell.test.ts  (4 tests | 3 skipped) 1ms\n\n Test Files  5 passed (5)\n      Tests  12 passed | 104 skipped (116)\n   Start at  17:44:42\n   Duration  22.29s (transform 5.00s, setup 1ms, collect 9.18s, tests 926ms, environment 1ms, prepare 8.63s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "session_drained": true,
+      "after": {
+        "capture": "20a640",
+        "exit_code": 0,
+        "at": "2026-09-15T21:45:10.400Z",
+        "pin_count": 119,
+        "pin_digest": "7a584c268b2cecfdbbc11be12c1549a46849f9953db3c13a0b561b067eeb5052",
+        "protected_mismatches": []
+      },
+      "result": "PASS12,104 unselected; intermediate fixture before explicit lifecycle type correction."
+    },
+    {
+      "id": "K2_attempt1",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/services/visit.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/content/service.ts src/content/cell.ts src/routes/decisions.ts src/routes/realtime.ts src/sdk/core.ts src/sdk/listen.ts src/routes/realtime.sdkContract.test.ts src/services/SessionManager.visit.test.ts src/content/cell.test.ts src/sdk/listen.test.ts && git diff --check -- src/services/visit.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/content/service.ts src/content/cell.ts src/routes/decisions.ts src/routes/realtime.ts src/sdk/core.ts src/sdk/listen.ts src/routes/realtime.sdkContract.test.ts src/services/SessionManager.visit.test.ts src/content/cell.test.ts src/sdk/listen.test.ts public/sdk/edge-personalization.esm.js public/sdk/edge-personalization.js docs/api/01-rest-endpoints.md",
+      "before": {
+        "capture": "20a640",
+        "exit_code": 0,
+        "at": "2026-09-15T21:45:10.400Z",
+        "pin_count": 119,
+        "pin_digest": "7a584c268b2cecfdbbc11be12c1549a46849f9953db3c13a0b561b067eeb5052",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "f51e18",
+        "wall_time_seconds": 1.000581255,
+        "session_id": 39568,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "2b31e4",
+          "wall_time_seconds": 0.000001259,
+          "exit_code": 2,
+          "original_token_count": 61,
+          "output": "src/routes/realtime.sdkContract.test.ts(140,7): error TS2741: Property 'lifecycle' is missing in type '{ id: string; customerContentId: string; type: string; title: string; tags: {}; slotTypes: string[]; }' but required in type 'ContentPiece'.\n"
+        }
+      ],
+      "exit_code": 2,
+      "session_drained": true,
+      "after": {
+        "capture": "0d0bd2",
+        "exit_code": 0,
+        "at": "2026-09-15T21:45:35.389Z",
+        "pin_count": 119,
+        "pin_digest": "7a584c268b2cecfdbbc11be12c1549a46849f9953db3c13a0b561b067eeb5052",
+        "protected_mismatches": []
+      },
+      "result": "FAIL compiler exit2: new ContentPiece fixture omitted required lifecycle; chained lint/whitespace did not execute."
+    },
+    {
+      "id": "K4_attempt1",
+      "command": "node --max-old-space-size=512 --input-type=module -e 'import * as esbuild from '\\''esbuild'\\'';import fs from '\\''node:fs'\\'';import assert from '\\''node:assert/strict'\\'';import {resolve} from '\\''node:path'\\'';import {createHash} from '\\''node:crypto'\\'';const version=fs.readFileSync('\\''src/sdk/version.ts'\\'','\\''utf8'\\'').match(/'\\''([^'\\'']+)'\\''/)[1];const banner='\\''/* edge-personalization SDK v'\\''+version+'\\'' — one package: core (identity, transport), emit (four capture paths), listen (decisions). */'\\'';for(const [entry,out,format] of [['\\''src/sdk/index.ts'\\'','\\''public/sdk/edge-personalization.esm.js'\\'','\\''esm'\\''],['\\''src/sdk/browser.ts'\\'','\\''public/sdk/edge-personalization.js'\\'','\\''iife'\\'']]){const r=await esbuild.build({bundle:true,platform:'\\''browser'\\'',target:'\\''es2022'\\'',minify:false,sourcemap:false,legalComments:'\\''none'\\'',logLevel:'\\''silent'\\'',metafile:true,banner:{js:banner},entryPoints:[resolve(entry)],outfile:resolve(out),format,write:false});const actual=fs.readFileSync(out);assert.deepEqual(Buffer.from(r.outputFiles[0].contents),actual,out);console.log(JSON.stringify({path:out,bytes:actual.length,sha256:createHash('\\''sha256'\\'').update(actual).digest('\\''hex'\\''),matches:true}));}'",
+      "before": {
+        "capture": "9cdbe1",
+        "exit_code": 0,
+        "at": "2026-09-15T21:45:33.818Z",
+        "pin_count": 119,
+        "pin_digest": "7a584c268b2cecfdbbc11be12c1549a46849f9953db3c13a0b561b067eeb5052",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "55ede0",
+        "wall_time_seconds": 0.187940533,
+        "exit_code": 0,
+        "original_token_count": 77,
+        "output": "{\"path\":\"public/sdk/edge-personalization.esm.js\",\"bytes\":53116,\"sha256\":\"2e6a442bce4d23fee914c6efaea1a14c3b10fd24104027f72525598d826f772e\",\"matches\":true}\n{\"path\":\"public/sdk/edge-personalization.js\",\"bytes\":55999,\"sha256\":\"9ed7820d555f98d6835940a0dc4f74a7b10f960476c9a84ec690d7b3e5cdfa04\",\"matches\":true}\n"
+      },
+      "polls": [],
+      "exit_code": 0,
+      "session_drained": true,
+      "after": {
+        "capture": "226ae7",
+        "exit_code": 0,
+        "at": "2026-09-15T21:45:36.365Z",
+        "pin_count": 119,
+        "pin_digest": "7a584c268b2cecfdbbc11be12c1549a46849f9953db3c13a0b561b067eeb5052",
+        "protected_mismatches": []
+      },
+      "result": "PASS both shipped bundles equal write:false build. Reused on final source: only route test lifecycle changed subsequently; all build source/bundle pins unchanged."
+    },
+    {
+      "id": "K1_attempt3",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/services/SessionManager.visit.test.ts src/content/cell.test.ts src/sdk/listen.test.ts src/content/consent.test.ts -t 'W35[.]02|W35[.]01|W22[.]07 (applies age-decayed interest|preserves exact session expiry)|W26[.]04|no entry signals at all|never guesses a channel|acknowledges snapshot refusal before rendered callbacks|is behavior-read-only when cold|hydrates from the snapshot and delivers each slot' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "a81593",
+        "exit_code": 0,
+        "at": "2026-09-15T21:46:01.249Z",
+        "pin_count": 119,
+        "pin_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "23922c",
+        "wall_time_seconds": 1.001300178,
+        "session_id": 99904,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "af73e4",
+          "wall_time_seconds": 5.000282708,
+          "session_id": 99904,
+          "original_token_count": 11853,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > carries first-paint and live return context into actual both-host cells without read activity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > preserves object visit identity through sockets restart non-live changes merge and rejected commits\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > preserves object visit identity through sockets restart non-live changes merge and rejected commits\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W35.02 visit context > preserves object visit identity through sockets restart non-live changes merge and rejected commits\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.03 consent-safe product sorting > is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints\n<empty line>\n ✓ src/routes/realtime.sdkContract.test.ts  (60 tests | 54 skipped) 750ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W26.04 keeps actual fatigue ranking receipts and replay within the requested brand\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (27 tests | 26 skipped) 33ms\n"
+        },
+        {
+          "chunk_id": "9d4af4",
+          "wall_time_seconds": 0.00000217,
+          "exit_code": 0,
+          "original_token_count": 99,
+          "output": " ✓ src/sdk/listen.test.ts  (13 tests | 10 skipped) 114ms\n ✓ src/services/SessionManager.visit.test.ts  (12 tests | 11 skipped) 3ms\n ✓ src/content/cell.test.ts  (4 tests | 3 skipped) 2ms\n\n Test Files  5 passed (5)\n      Tests  12 passed | 104 skipped (116)\n   Start at  17:46:04\n   Duration  23.18s (transform 5.29s, setup 0ms, collect 10.44s, tests 902ms, environment 1ms, prepare 8.72s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "session_drained": true,
+      "after": {
+        "capture": "62319d",
+        "exit_code": 0,
+        "at": "2026-09-15T21:46:44.181Z",
+        "pin_count": 119,
+        "pin_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+        "protected_mismatches": []
+      },
+      "result": "PASS12,104 unselected on final candidate."
+    },
+    {
+      "id": "K2_attempt2",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/services/visit.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/content/service.ts src/content/cell.ts src/routes/decisions.ts src/routes/realtime.ts src/sdk/core.ts src/sdk/listen.ts src/routes/realtime.sdkContract.test.ts src/services/SessionManager.visit.test.ts src/content/cell.test.ts src/sdk/listen.test.ts && git diff --check -- src/services/visit.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/content/service.ts src/content/cell.ts src/routes/decisions.ts src/routes/realtime.ts src/sdk/core.ts src/sdk/listen.ts src/routes/realtime.sdkContract.test.ts src/services/SessionManager.visit.test.ts src/content/cell.test.ts src/sdk/listen.test.ts public/sdk/edge-personalization.esm.js public/sdk/edge-personalization.js docs/api/01-rest-endpoints.md",
+      "before": {
+        "capture": "a81593",
+        "exit_code": 0,
+        "at": "2026-09-15T21:46:01.249Z",
+        "pin_count": 119,
+        "pin_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "f4c2a7",
+        "wall_time_seconds": 1.001808502,
+        "session_id": 95356,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "7ff921",
+          "wall_time_seconds": 5.001300271,
+          "session_id": 95356,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "965b3c",
+          "wall_time_seconds": 0.000001629,
+          "exit_code": 0,
+          "original_token_count": 3587,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/durable-objects/ShopperReflex.ts\n   134:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   510:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   550:24  warning  '_ws' is defined but never used           @typescript-eslint/no-unused-vars\n   550:40  warning  '_code' is defined but never used         @typescript-eslint/no-unused-vars\n   550:55  warning  '_reason' is defined but never used       @typescript-eslint/no-unused-vars\n   550:72  warning  '_wasClean' is defined but never used     @typescript-eslint/no-unused-vars\n   555:24  warning  '_ws' is defined but never used           @typescript-eslint/no-unused-vars\n   555:40  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars\n   562:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   610:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   827:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   986:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  1013:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  1136:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  1354:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts\n   119:129  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n  1985:30   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1986:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1987:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1987:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1990:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1993:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2004:40   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2032:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2051:95   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2057:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2058:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2095:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2107:173  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2115:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2116:76   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2146:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2147:24   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2148:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2156:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2156:36   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2164:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2177:55   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  2178:57   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  2184:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2211:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2273:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2277:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2278:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2279:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2292:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2310:47   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  2356:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2360:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2363:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2366:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2366:37   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2457:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2461:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2462:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2463:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2629:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2632:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2636:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2644:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2652:25   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2670:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2676:60   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2689:71   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2696:100  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2714:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2721:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2738:110  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2744:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2745:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2746:68   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2757:52   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2758:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2758:109  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2759:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2763:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2774:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2776:119  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2791:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2796:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2798:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2821:112  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2827:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2828:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2829:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2832:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2880:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2931:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2944:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2967:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2982:101  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2989:65   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3027:153  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3061:55   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3086:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3096:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3113:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3115:77   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3127:64   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3131:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3144:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3147:41   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3152:130  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3155:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3166:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3197:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3198:71   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  3215:125  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  3218:122  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.ts\n  3:10  warning  'DEFAULT_TENANT' is defined but never used  @typescript-eslint/no-unused-vars\n  3:26  warning  'TenantKV' is defined but never used        @typescript-eslint/no-unused-vars\n  3:41  warning  'KVLike' is defined but never used          @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/listen.test.ts\n   26:39   warning  Unexpected empty arrow function             @typescript-eslint/no-empty-function\n   29:167  warning  Unexpected empty method 'addEventListener'  @typescript-eslint/no-empty-function\n   51:68   warning  Unexpected empty method 'addEventListener'  @typescript-eslint/no-empty-function\n  147:146  warning  Unexpected empty arrow function             @typescript-eslint/no-empty-function\n  151:68   warning  Unexpected empty method 'addEventListener'  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/listen.ts\n  167:25  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/services/RealtimeSegmentEngine.ts\n    48:3   warning  'extractTouches' is defined but never used   @typescript-eslint/no-unused-vars\n    66:3   warning  'reflexConfigFor' is defined but never used  @typescript-eslint/no-unused-vars\n    93:24  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n   117:30  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n   138:36  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n   185:30  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n   269:69  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n   709:32  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n   783:44  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n   837:32  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n  1190:37  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n  1212:12  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/services/SessionManager.ts\n  20:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n✖ 131 problems (0 errors, 131 warnings)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "session_drained": true,
+      "after": {
+        "capture": "6361e1",
+        "exit_code": 0,
+        "at": "2026-09-15T21:46:45.166Z",
+        "pin_count": 119,
+        "pin_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+        "protected_mismatches": []
+      },
+      "result": "PASS compiler1536,14TS lint0errors131warnings,scoped git diff --check on final candidate."
+    },
+    {
+      "id": "warning_attempt1",
+      "command": "node --max-old-space-size=512 - <<'NODE'\nconst fs=require('fs'),{ESLint}=require('eslint'),path=require('path');\n(async()=>{const b=JSON.parse(fs.readFileSync('docs/remediation/design/W35.02/baseline.json')),rows=await new ESLint().lintFiles(b.lint.rows.map(r=>r.path)),counts=a=>{const m=new Map();for(const v of a){const k=JSON.stringify(v);m.set(k,(m.get(k)||0)+1);}return m;};let errors=0,warnings=0;const additions=[],summary=[];for(const r of rows){const p=path.relative(process.cwd(),r.filePath),old=b.lint.rows.find(v=>v.path===p),prior=counts(old.signatures),current=counts(r.messages.filter(m=>m.severity===1).map(m=>[m.ruleId,m.message]));errors+=r.errorCount;warnings+=r.warningCount;for(const [key,n]of current)if(n>(prior.get(key)||0))additions.push({path:p,signature:JSON.parse(key),count:n,baseline:prior.get(key)||0});summary.push({path:p,errors:r.errorCount,warnings:r.warningCount,baseline:old.warnings});}console.log(JSON.stringify({errors,warnings,ceiling:131,new_signatures:additions,rows:summary}));if(errors||warnings>131||additions.length)process.exitCode=1;})().catch(e=>{console.error(e);process.exitCode=1;});\nNODE",
+      "before": {
+        "capture": "6b88af",
+        "exit_code": 0,
+        "at": "2026-09-15T21:46:51.865Z",
+        "pin_count": 119,
+        "pin_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "e26e60",
+        "wall_time_seconds": 1.001305013,
+        "session_id": 9811,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "96ed69",
+          "wall_time_seconds": 0.000001964,
+          "exit_code": 0,
+          "original_token_count": 283,
+          "output": "{\"errors\":0,\"warnings\":131,\"ceiling\":131,\"new_signatures\":[],\"rows\":[{\"path\":\"src/services/visit.ts\",\"errors\":0,\"warnings\":0,\"baseline\":0},{\"path\":\"src/services/SessionManager.ts\",\"errors\":0,\"warnings\":1,\"baseline\":1},{\"path\":\"src/services/RealtimeSegmentEngine.ts\",\"errors\":0,\"warnings\":12,\"baseline\":12},{\"path\":\"src/durable-objects/ShopperReflex.ts\",\"errors\":0,\"warnings\":15,\"baseline\":15},{\"path\":\"src/content/service.ts\",\"errors\":0,\"warnings\":0,\"baseline\":0},{\"path\":\"src/content/cell.ts\",\"errors\":0,\"warnings\":0,\"baseline\":0},{\"path\":\"src/routes/decisions.ts\",\"errors\":0,\"warnings\":0,\"baseline\":0},{\"path\":\"src/sdk/core.ts\",\"errors\":0,\"warnings\":0,\"baseline\":0},{\"path\":\"src/sdk/listen.ts\",\"errors\":0,\"warnings\":1,\"baseline\":1},{\"path\":\"src/routes/realtime.sdkContract.test.ts\",\"errors\":0,\"warnings\":94,\"baseline\":94},{\"path\":\"src/services/SessionManager.visit.test.ts\",\"errors\":0,\"warnings\":0,\"baseline\":0},{\"path\":\"src/content/cell.test.ts\",\"errors\":0,\"warnings\":0,\"baseline\":0},{\"path\":\"src/sdk/listen.test.ts\",\"errors\":0,\"warnings\":5,\"baseline\":5},{\"path\":\"src/routes/realtime.ts\",\"errors\":0,\"warnings\":3,\"baseline\":3}]}\n"
+        }
+      ],
+      "exit_code": 0,
+      "session_drained": true,
+      "after": {
+        "capture": "99c8e3",
+        "exit_code": 0,
+        "at": "2026-09-15T21:47:18.648Z",
+        "pin_count": 119,
+        "pin_digest": "7a3f93075356b67aa685ee61d1ca54124d8f12d714f787248c68c06c0a176b25",
+        "protected_mismatches": []
+      },
+      "result": "PASS: every per-file [ruleId,message] warning multiplicity unchanged from admitted baseline;0errors131warnings."
+    }
+  ],
+  "failures_and_rework": [
+    {
+      "phase": "pre-runtime editing",
+      "detail": "One multi-file apply_patch context mismatch was corrected against actual source before any runtime; no partially claimed successful patch or runtime evidence."
+    },
+    {
+      "phase": "K1_attempt1",
+      "detail": "Tracking=false legitimately emits no new decision queue record; fixture now asserts queue length unchanged. W05.03 warm helper used COA-CH857 for meridian without attributes; resolveTenantCatalog returns null for nondefault tenants and DO drops unknown products without touches. Added configured line:'Tabby' and no-dropped assertion to establish intended corruption-test state, preserving all refusal/ownership negatives. Initial inference that a cold read caused null affinity was superseded by this source-confirmed cause."
+    },
+    {
+      "phase": "K2_attempt1",
+      "detail": "Added lifecycle:{status:'live'} to synthetic ContentPiece, matching typed publication contract. No type weakening, production change or additional case. Final fixed12 and K2 supersede intermediate validation; K4 reused only for unchanged build source/bundles."
+    }
+  ],
+  "criteria": {
+    "C1": "Both-host actual decisions and queued decision cells cover raw first-paint, populated legacy missing fields, stored same-visit, explicit request override, repeated idle reads and one subsequent live increment. Legacy provider attributes agree; cold/warm read state and cookie assertions, malformed input and consent gates pass.",
+    "C2": "Object HTTP/WS live context, visitorId, restart, manual/import/alarm preservation, rejected commit/recovery and sum/later-entry absorb pass. Reused W35.01 commit/recovery, W22.07 buffered expiry/owner/context and W26.04 brand-local fatigue/replay controls pass.",
+    "C3": "Source+IIFE+ESM SDK host-only/bounded transport, explicit channel and readiness withdrawal pass; final12,compiler,lint warning comparison,whitespace pass. K4 exact source/bundle byte equality reused as documented. Independent review remains lead-owned and pending."
+  },
+  "limitations": [
+    "Local synthetic Node actual-module/browser-VM evidence only; not native workerd, deployed runtime, customer acceptance or latency/SLO proof.",
+    "Decision queue cell capture is synthetic delivery, not actual durable learning credit; learning_incomplete/queue_unavailable output is retained and not called end-to-end measurement acceptance.",
+    "Existing30-minute policy/classifier and sum/later-start link semantics retained; no historical visit reconstruction, distinct-visit dedup or retention-policy change.",
+    "Malformed supplied DO persisted visit fields fail closed on load; legacy SessionManager projection yields unknown when valid historical context is unavailable. Missing optional fields remain loadable.",
+    "Full W35/F14, identity/erase/old-writer fencing, production authority/cutover/rollback, gamma-zero seeded influence, journey reset and customer/native tails remain outside this task.",
+    "No new storage/network calls solely for visit projection; necessary refusals and existing config/connector/seeding effects are not claimed globally read-only."
+  ],
+  "disposition": {
+    "source": "STOP",
+    "source_stop_at": "2026-09-15T21:47:18.648Z",
+    "evidence": "STOP after this record is saved and hashed",
+    "active_commands": [],
+    "independent_review": "pending",
+    "lead_acceptance": "pending",
+    "next_action": "Lead freezes exact artifact, obtains distinct review/fixed12 and records disposition; worker performs no further source writes without new instruction."
+  }
+}

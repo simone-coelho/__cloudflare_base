@@ -1,0 +1,241 @@
+{
+  "task_id": "W05.10",
+  "revision": "R1",
+  "actor": "/root/w01_reviewer",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "status": "PASS_LOCAL",
+  "at": "2026-09-17T06:19:24.284Z",
+  "scope": "Independent whole-original-W05 local review after C4 R1 correction, under unchanged C1–C7 and approved explicit-choice/30-day necessary-instruction policy. No full package/customer/live/release acceptance.",
+  "artifact_digest": "071c304409f4a63666d0317bf6565656797a7e95263ef1d670bc883a98e725ba",
+  "contract_digest": "377488540d84dd99f9cdb663b287a044fb1fd7df29d3cda37b94cd245a7aaa0f",
+  "basis": [
+    {
+      "path": "docs/remediation/evidence/W05.10/source-freeze-v2.json",
+      "sha256": "2bdfdf88717c0bf3b6fdc859ad77eb38b4fdf27c6b3a109ec9360961a082d645"
+    },
+    {
+      "path": "docs/remediation/evidence/W05.10/worker-v2.json",
+      "sha256": "2076373971f99765019e2868be3dab635f064898917484d17c00b6900251f477"
+    },
+    {
+      "path": "docs/remediation/evidence/W05.10/worker.json",
+      "sha256": "e9e4bd93e37f8838f8a3a6296879bb7ea49354d8458eb5c10bc29a034cb78b87"
+    },
+    {
+      "path": "docs/remediation/evidence/W05.10/source-freeze.json",
+      "sha256": "0ddb8ab809a593bec7aef6cef8610f1ab40d5c48c1480c01a1c9737fe9372e9a"
+    },
+    {
+      "path": "docs/remediation/evidence/W05.10/review.json",
+      "sha256": "c70203690e62d24c190c03c46f4f136fe257b29a450719f0328bb079a464a05a"
+    }
+  ],
+  "requirements": "Re-read AGENTS/current RESUME, assigned criteria/admission/R1, complete doc35 W05 and F05/F10/N06/N11/N12. Existing execution/governance and prior whole-artifact review retained. No independent board run or implementation delegation.",
+  "finding_disposition": {
+    "id": "R1",
+    "status": "CORRECTED_LOCAL",
+    "source": [
+      "src/sdk/core.ts:27 shared decisionRequiresConsent treats declared non-default/unknown arms and nonempty affinity/drivers as private; explicit default editorial pins and unmarked empty absence remain usable. Used by emit, socket and snapshot return.",
+      "src/sdk/core.ts:614–627 captures post-ack consent epoch before actual saveRefusal await, then rechecks current purpose and epoch. Final current-grant fence remains. Same-grant withdrawal/re-enable cannot revive a pending private response, without rejecting legitimate default refusal acknowledgments.",
+      "src/sdk/listen.ts:55–107 checks purpose at cache use and each callback; distinguishes still-owned consent absence from foreign-authority silent invalidation. hydrate:158–160 returns only its own accepted current object, never rejected input or reentrant successor. rendered reads admitted cache.",
+      "Both frozen ESM/IIFE contain these same branches; actual createClient.listen and public Client.core are exercised from source and both shipped bundles."
+    ],
+    "regressions": "New full-client cases populate private cache and exercise expired/refused use, immediate subscriptions, direct apply, zero-score exploration, default pins, actual mirror-lock delayed hydrate/direct-core returns, callback-time expiry/reentrant newer defaults and same-grant withdrawal→acknowledged-enable. Existing personalized-empty-frame and cross-tab silent-subscribe oracles remain unchanged and pass worker final full SDK.",
+    "fixture_amendment": "Only old W20.06 renewed and following identity-child snapshot responses became genuine defaults. The fresh tokenless recovery response remains false/false, with all original page/generation/intent/newer-child assertions and earlier private positives. No unsupported affirmative consent carry or production recovery change. Machine-verified old fixture prefix outside approved import/two-response changes; R1 group appended.",
+    "outstanding_local_findings": []
+  },
+  "criteria": {
+    "C1": "Local source/new-group evidence supports scoped explicit OFF-by-default instructions, server per-switch 30-day clocks, cold necessary-only choice, current-grant/payload/revision-bound retry and failed-write refusal. Missing hints remain neutral. Server/helper bytes unchanged; retained local evidence remains applicable.",
+    "C2": "Reviewed nonrenewing carry/intersection and retained owner serialization, grants, transfer/import/erasure witnesses. Strict capability-spread defect was corrected by selecting scope fields only; prior signed transition and actual history/import controls are retained through qualified K1 assurance. R1 changes no choice clocks, bootstrap/identity/transition/anchor code. OFF tokenless renewal fixture now matches actual new-owner semantics.",
+    "C3": "Reviewed tracking versus personalization guards at actual owner binding/provider/response/relay effects and preserved refusal/unknown/error controls. Historical owned analytics self-access remains a necessary read exception with no new behavioral TTL/visit/provider activity. W01 excluded routes/bindings and safe telemetry/log controls are preserved; configured transports are synthetic local evidence. Changed SDK decision paths independently rerun; no server/provider/owner effect changes in R1.",
+    "C4": "PASS_LOCAL. Frozen source/bundles correct R1; independent20 selected SDK cases pass, including15 actual full-client regressions plus5 retained W05.10 controls. Existing actual-router W05.06 two-host blocked-cookie/four-switch/default/refusal/acknowledged tracking-only case independently passes.",
+    "C5": "Reviewed pre-armed choice-copy alarms, transactional reset deadline, partial expiry/copy pruning, independent behavioral/security witnesses, expiry-backed mirrors and timer-without-get cleanup. Buffered refusal no longer rewrites behavior or renews its original TTL. No new behavioral retention authority. No necessary-copy/deadline/lifetime implementation changes in R1; current SDK expiry/mirror controls pass.",
+    "C6": "PASS_LOCAL with explicit component reuse. Verified five v1-relative dirty-baseline forward/inverse deltas,111 current pins/106 unchanged,21 compressed worker blocks and three immutable v1 records. Two exact independent selectors pass; failed attempts, approved fixture correction and warning debt remain visible.",
+    "C7": "NOT_RUN. Final separately authorized deployment/resource/destination, real browser/storage/alarm and customer acceptance remains open."
+  },
+  "artifact_checks": {
+    "at": "2026-09-17T06:16:20.909Z",
+    "worker_sha256": "2076373971f99765019e2868be3dab635f064898917484d17c00b6900251f477",
+    "freeze_sha256": "2bdfdf88717c0bf3b6fdc859ad77eb38b4fdf27c6b3a109ec9360961a082d645",
+    "compressed_blocks": 21,
+    "pins": 111,
+    "unchanged": 106,
+    "outputs": [
+      {
+        "path": "src/sdk/core.ts",
+        "before": "50ff12d59a234a558e1f7837d1dceff2734e103f2a20a514c224c1e004815e8c",
+        "after": "ee57bd3e8e25b0868021431eb3c67778b42c988bb5d4478cb4bd37e9319f9bd9",
+        "forward_inverse": true
+      },
+      {
+        "path": "src/sdk/listen.ts",
+        "before": "c35f7500eac93d9ec57f939f04baa9660b2e14027898bd50533aae338cd3d8ea",
+        "after": "47bd68fbf551b4f77537de654f99e84e149e8466d5dab61fdcd516691b347d4f",
+        "forward_inverse": true
+      },
+      {
+        "path": "src/sdk/listen.test.ts",
+        "before": "c2fad830ffbecb881ae016ef57e544bf2a5d89c67d7087088567f245338ea81f",
+        "after": "f80b57442b237b5490154c40c1e2c7ca64c2e7405e510183487af30abe4da7b4",
+        "forward_inverse": true
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "before": "92f90eb0ebcc60dcf086addb87cde00efb922d71cf4d04f17054ff2e725c98de",
+        "after": "29122b9ce433fdd3e24a475ae0e69598e9a7314ecb72d837a44bdc45088b63aa",
+        "forward_inverse": true
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "before": "8cb2db86461521efa1657e1c66d8d288efe9a526452e5476cff74ffb771c443e",
+        "after": "297a168a59514613bfcd37cf941d71831a28de3246a644fa2b59ec84a72addbb",
+        "forward_inverse": true
+      }
+    ],
+    "immutable": [
+      {
+        "path": "docs/remediation/evidence/W05.10/worker.json",
+        "sha256": "e9e4bd93e37f8838f8a3a6296879bb7ea49354d8458eb5c10bc29a034cb78b87",
+        "matched": true
+      },
+      {
+        "path": "docs/remediation/evidence/W05.10/source-freeze.json",
+        "sha256": "0ddb8ab809a593bec7aef6cef8610f1ab40d5c48c1480c01a1c9737fe9372e9a",
+        "matched": true
+      },
+      {
+        "path": "docs/remediation/evidence/W05.10/review.json",
+        "sha256": "c70203690e62d24c190c03c46f4f136fe257b29a450719f0328bb079a464a05a",
+        "matched": true
+      }
+    ],
+    "old_fixture_preserved": true,
+    "errors": [],
+    "original_baselines": "Prior independent review verified all36 admission dirty-baseline forward/inverse deltas and v1 evidence. Reused that immutable basis, then independently applied/inverted all five R1 patches against exact v1 bytes; not claiming repeated original36 reconstruction.",
+    "digest": "Before runtime recomputed full sorted111-file artifact digest with frozen contract/configuration;111 physical pins matched before/after both commands and later read-only identity verification."
+  },
+  "independent_runtime": {
+    "artifact_digest": "071c304409f4a63666d0317bf6565656797a7e95263ef1d670bc883a98e725ba",
+    "contract_digest": "377488540d84dd99f9cdb663b287a044fb1fd7df29d3cda37b94cd245a7aaa0f",
+    "freeze": {
+      "path": "docs/remediation/evidence/W05.10/source-freeze-v2.json",
+      "sha256": "2bdfdf88717c0bf3b6fdc859ad77eb38b4fdf27c6b3a109ec9360961a082d645"
+    },
+    "before_at": "2026-09-17T06:14:36.190Z",
+    "after_at": "2026-09-17T06:14:58.182Z",
+    "before": {
+      "bytes": 22900,
+      "sha256": "b24dbd49ddcd1ccfebd1d4e191e10153cb71e7fe407e7357e5316f79443276c9",
+      "gzip_base64": "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"
+    },
+    "after": {
+      "bytes": 22900,
+      "sha256": "b24dbd49ddcd1ccfebd1d4e191e10153cb71e7fe407e7357e5316f79443276c9",
+      "gzip_base64": "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"
+    },
+    "runs": [
+      {
+        "name": "independent SDK W05.10",
+        "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/listen.test.ts -t 'W05[.]10' --maxWorkers=1 --minWorkers=1",
+        "started_at": "2026-09-17T06:14:36.374Z",
+        "drained_at": "2026-09-17T06:14:45.109Z",
+        "duration_ms": 8735,
+        "exit_code": 0,
+        "signal": null,
+        "stdout": {
+          "bytes": 400,
+          "sha256": "ac8686dabd9f663fbe7480fae6693c9611bdaef30c7ab74f52ef2a9a459c61a8",
+          "gzip_base64": "H4sIAAAAAAAAA1WQz07DMAyH73mK37GTUNMk3R92Rhw5wDhXofVEtbSJYncSaG/BlafjSVA3TQyf/Nn+LMsKz69PwNGUq9JAD6PoVk9MmXXw77qL7TTQKKybpqMjhZhm1DFJP/SfFD5007QhTt0++EzNm2dSCj/fX+Dcau4Ouo2ZSiGWUhgorMMMjBPMBnzoU6JuAVuZgf+LoWeh8Vbd/KnuRnXVwEphRyx47AMxYJE8M3Uo7ELhHLuzCltdWyc4c92CYmnOgy/is8ALUNmtqbduM1cfpuyljyOwKq1hFJL9yPuYB9S2HvgOTDIlVHPaxhCoFazv1zNeTq6dmYHGY5/jOP/wMpwyJZ8Jrlw6Xij1C0m8uJCQAQAA"
+        },
+        "stderr": {
+          "bytes": 153,
+          "sha256": "6a013b71d94eadb16a930c32d667b41cd78de87ee97381f3cb81ed13fbe986e3",
+          "gzip_base64": "H4sIAAAAAAAAA0XMoQ7CMBAGYM8rzFyCQHUVU+AICgQhGcFMbbt/9Ei7W9rbnp+g8F++qmua9Aygy62lYZXIpBO9xHAodFcGnR9XkkKMJWPsDVxTC1AwW8rJ+00MNWPz71UY3rKuQ0QJqibzuw6W4v5n3PgpblaG6xdx/40mzZQ0gxjWSyx11TXHtPsCKiJbmpkAAAA="
+        },
+        "pins_match": true,
+        "result": {
+          "passed": 20,
+          "failed": 0,
+          "unselected": 31,
+          "test_files_passed": 2,
+          "vitest_seconds": 6.21
+        },
+        "selected_names": {
+          "basis": "Names from inspected frozen test declarations; default primary reporter prints file/count summaries, not passing case names.",
+          "core_group": "W04.03 shared authority ownership",
+          "core": [
+            "W05.10 starts OFF without provenance and stops collection/cached callbacks at original choice expiry in source and both bundles",
+            "W05.10 memory-host cookie deadlines physically remove a dormant mirror without refreshing on reads",
+            "W05.10 shares pending refusal, reconciles exact lost replies and expires each mirror independently in source and both bundles",
+            "W05.10 rechecks personalized decisions at each callback while preserving default delivery",
+            "W05.10 never clears a newer same-time sibling refusal when both tabs were already false"
+          ],
+          "listen_group": "W05.10 R1 actual client decision delivery",
+          "listen_formats": [
+            "source",
+            "esm",
+            "iife"
+          ],
+          "listen_case_suffixes": [
+            "expiry during the actual mirror lock suppresses hydrate and public core returns",
+            "populated private cache is unavailable to current, immediate subscriptions and direct apply after refusal or expiry",
+            "zero-score non-default arms require a choice while genuine default pins and their refusal acknowledgments remain usable",
+            "callback-time expiry and reentrant default delivery cannot return or deliver the old private set",
+            "same-grant withdrawal and acknowledged re-enable during the mirror await cannot revive a pre-withdrawal snapshot"
+          ]
+        }
+      },
+      {
+        "name": "affected W05.06 actual SDK/both-host integration",
+        "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts -t 'W05[.]06 SDK collection and transport' --maxWorkers=1 --minWorkers=1",
+        "started_at": "2026-09-17T06:14:45.110Z",
+        "drained_at": "2026-09-17T06:14:58.182Z",
+        "duration_ms": 13071,
+        "exit_code": 0,
+        "signal": null,
+        "stdout": {
+          "bytes": 362,
+          "sha256": "8e6cf8e2551c9d6e2d5020ff115f6bdfbd9053dfc483dd78b43cb2306c01182e",
+          "gzip_base64": "H4sIAAAAAAAAA01Qu04DMRDs/RVTJlJkn6NwebQgSgoI9cncbRQrfsm7FwnEX9DydXwJuksB283OQ6NReH59Aq5Wt9rCxCSmNyNTZRPc2Qy5HyMlYdN1A10p5DJBk4v46D8ovJuu60Meh1Nwlbo3x6QUfr6/wLU3NY9CbCq5ID6S5uFyn5NU14sWYtHCwMI2DSbE+MR+D774UmhYYr1tIyuFI7Hg0QdiwKI4ZhqwsEuF+Y6z9Y/5HzKHz8IXcVXgBGjWB7s5bLbT92GsTnxOgG10u2EspLrEp1wj7nSz4xWYZCxoIq/Q5xCoF2x1OzG3znPLFShdfc1pWucmLpWKqwSrd5aXSv0C4TAPUGoBAAA="
+        },
+        "stderr": {
+          "bytes": 6418,
+          "sha256": "1d0b30fa08583ff81e991d534b6f45d07f1709d05603061c4eee12bdf06c1751",
+          "gzip_base64": "H4sIAAAAAAAAA+1XTW/kRBC9+y/spSQOuWRmggJI5LBStAsSLCzRho/DHqKe7me7mHaXqS47ZGElfgS/kF+CbM8knih3dpGP/erVq1eeeW752dvz8+bHGvTi22vadhwDSUk/s+Ek02sJoMurb4gzBbQK7wxhTdcA1WZtvthsejasA/pN1XHAxlS6bUSuRYxTta6tiZ8MnJX/Na+SBKxcy6sHNSpFqREFBZjjmNfP3p5/2RTZAlTpT8rqNyqdIW8ULho3WOeweyHJ1HlbG7KtLdNz+uXs8/XZF3T98hV5iRHeWBK5FMjUpdyKGj2nWpJoJuetc5HsVla1ZCMvKSPZKbWKDO0xrFy6Llo+HTUUuWuQSVK8I+d3SW4jQoVR3e84Vaux1MDlTtEgGd2y1bSN4ncI5EV2jFyMXXoTELmH3t2UjiMC/VEQeQm4oJPfOnS46ZLrHUe3jTg5LWgw1jpFuKBPh6PCi4a8P80NvTlUzoZKl4ZKOgaT2KUZmtZm9FGojS4lhO+Rs6vwlPxDaa7/CJ0PmGkV74sIp4lTdcPJS9NGGMbde2hmSfuBO06HRaeH8tl+Z3B//wh8Z1KW1ztu2wE7m9guIvv7s3KqLmfuZ/BPk/MZ8nrmej8Dv7cy/J5XKh453wsc8OPpB/RY+oAey092FYHtKrr0atbgzJS33QMNkSveRuyPt+CqtkeLT0qPbE7oU8xjixP2hEEXnTb5gVy8L/7H2fyOe7yE5+GfeKXSc4BeUHDmSo7Y+MhDKyc22sf2n7/+pi5zqqgRv6PSxbh1fld8PZVNRja7yO9AP7TGDb9DvDsdmUPbwB5oY/s0oPhKVZR8jdE7lXDWKaiMrtrXKtjwfiUX4325d8rD2yIv/R95/3JFLFfEckV8mFfEks0lm0s2l2wu2VyyuWTzv/i0WlK+pHxJ+YeZ8iWbSzY/7mz+C3Bb6x0SGQAA"
+        },
+        "pins_match": true,
+        "result": {
+          "passed": 1,
+          "failed": 0,
+          "unselected": 99,
+          "test_files_passed": 1,
+          "vitest_seconds": 10.64
+        },
+        "selected_name": "W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies"
+      }
+    ],
+    "capture": "Complete separate stdout/stderr and exact before/after 111-pin JSON maps; gzip_base64 encodes original bytes, bytes/SHA256 refer to decompressed bytes. Commands executed once each as node plus the exact recorded argv, sequentially. Wrapper timings bound process spawn-to-close; Vitest timings remain distinct. Helper 31580 closed exit0, no commands/helpers remain.",
+    "diagnostics": "Inherited Vite CJS deprecation; affected integration emits retained synthetic queue_unavailable/learning_incomplete and FX mock-fallback diagnostics. Full stderr preserved. Consent/default/tracking admission assertions passed; this run does not establish delivery to missing configured sinks."
+  },
+  "reused_evidence": {
+    "server_K1": "K1.7-final actually exit1:98passed/1failed/190unselected. Only final W05.08 fixture +2/-1 changes afterward; all110 other pins match. K1.8-final-affected exit0:3passed/97unselected. Component reuse, NOT a whole final K1 command pass. Those server source/config/test pins are unchanged in R1. Changed actual SDK dependency in W05.06 was NOT blindly reused: separately rerun on final bytes.",
+    "server_independent_K5": "Immutable v1 independent server W05.10 run16passed/273unselected remains valid for unchanged server/owner/provider/relay code and its synthetic/native-local fixtures. No whole original seven-file K1/K5 rerun claimed.",
+    "affected_dependency_review": "Inspected actual imports/call paths: realtime.sdkContract:4030–4063 uses modified hydrate/getJson and was rerun. Retained actual SDK failed-logout/account-switch case at4948 and identity.test fresh-proof retry at402 use unchanged ready/postJson/identity paths, not modified decision/getJson branches. Native socket/provider/server tests do not execute modified browser decision delivery. Hash equality alone is not the reuse rationale.",
+    "final_v1_oracle": "The final unsigned internal snapshot is correctly neutral under refused consent. Replacement assertion checks affinity:null/journeyStage:null AND the exact retained durable Tabby affinity positive, followed by throwing private getter/no-effect checks. No privacy gate was relaxed.",
+    "prior_oracle_corrections": "Reviewed explicit-choice/current-owner fixtures, genuine native host/grant/transport oracles, actual LiveDecisionProvider positive spy, exact W04 canonical import pointer/stage publication, atomic import fold count, buffered absolute expiry rounded down to seconds, actual mounted tracking path, real telemetry owner plus throwing-binding/remote-effect controls. SessionManager held-owner arithmetic remains unit-only, not authority proof. Initial authority storage failure401 and post-commit reset relay500 remain distinct. Old destination/refusal/foreign-state/erasure expectations are retained.",
+    "SDK": "worker-v2 R1.K2.2 exact final four SDK fixtures66/66 (51 retained+15 new),12.32s; source and both shipped full clients. Independent selected SDK20/20 adds distinct final-artifact proof, not a full SDK rerun by reviewer.",
+    "static": "Retained v1 server static: whole K3.5 then final affected K3.6, composed228warnings=214inherited+14changed/new with9resolved. R1.K3.2 exact final SDK compiler/three-file lint/two-bundle syntax/five-file whitespace exits0: six exact inherited SDK warnings, no new/resolved. No new server compiler or whole static rerun claimed.",
+    "reproducibility": "worker-v2 R1.repro supplied generator repeated with byte-identical final ESM29122b9c… and IIFE297a168a…; independently verified exact final bundle pins and inspected changed generated branches. No duplicate reviewer build.",
+    "failures": "Preserved v1 failed/partial attempts and warnings. R1 baseline15failed/13unselected on v1; each case stops at first failed assertion, so later direct-core/reentrant/refusal/default loops were not measured then. R1.K2.1=63pass/3fail: two introduced production preservation regressions corrected with old core tests unchanged; one unsafe OFF-recovery positive fixture corrected as approved. R1.K3.1 compiler invalid new strategy pin; subsequent chained stages not reached. One rejected apply_patch had no file effects. Six runtime/static/build commands plus that rejected patch entry, not seven passing checks. All21 compressed blocks validated; combined worker streams not represented as separate stderr/stdout. Final full66 and independent20 execute all selected new loops.",
+    "v1_capture_limits": "All failed/partial attempts remain in worker.json. K1.1 SIGTERM is partial, not a pass; compiler-failed chained static attempts do not establish later lint execution. Read-only findings are not invented runtime failures."
+  },
+  "limits": [
+    "PASS_LOCAL is only a distinct review recommendation for completed original-W05 local implementation; lead owns disposition. Full W05/C7/K6, finding/customer/deployed/legal/privacy-policy/release acceptance stays open.",
+    "SDK actual source/VM-loaded bundles use deterministic synthetic grants, Host locks/storage/cookies and clock; not real multi-process browser or device attestation. Supplemental both-host test uses actual routers/classes with synthetic bindings, not native production storage. Retained native local socket assurance is unchanged-component evidence only.",
+    "Configured ODP/regional/webhook and telemetry/log consent controls are local intercepted/negative/positive evidence, not real destination credentials/resource mapping or historical deletion proof.",
+    "Full D06 historical/behavioral scope and W06/W07/W08 obligations remain open. Necessary30-day instruction policy does not authorize behavioral retention, expire security/erasure witnesses or erase historic logs/AE/regional contributions.",
+    "Only review-v2.json written. No source edits, extra suites, compiler/build/board runs, new frameworks/delegation, cloud/resource/credential/customer-data operations, commit/push/merge or deployment."
+  ],
+  "source_state": "SOURCE/EVIDENCE STOP; reviewer commands and helper drained. Immutable v1 review/evidence remain unchanged."
+}

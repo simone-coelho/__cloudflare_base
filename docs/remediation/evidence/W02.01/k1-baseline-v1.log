@@ -1,0 +1,557 @@
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+ RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"open","state":"fresh","statuses":{"me":200,"patch":200},"accountReads":1,"kvWrites":3,"revision":[1,2],"K":[3,99],"history":[1,2]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"open","state":"revoked","statuses":{"me":200,"patch":200},"accountReads":1,"kvWrites":3,"revision":[1,2],"K":[3,99],"history":[1,2]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"enforced","state":"fresh","statuses":{"me":200,"patch":200},"accountReads":1,"kvWrites":3,"revision":[1,2],"K":[3,99],"history":[1,2]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"enforced","state":"revoked","statuses":{"me":200,"patch":200},"accountReads":1,"kvWrites":3,"revision":[1,2],"K":[3,99],"history":[1,2]}
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts  (28 tests | 14 failed) 355ms
+   ❯ src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+     → expected 200 to be 401 // Object.is equality
+     → expected undefined to be 'Invalid token' // Object.is equality
+     → expected 200 to be 401 // Object.is equality
+     → expected undefined to be 'Invalid token' // Object.is equality
+     → expected 1 to be +0 // Object.is equality
+     → expected [ …(4) ] to deeply equal []
+     → expected [ { user: { …(7) }, …(1) }, …(1) ] to deeply equal [ undefined, undefined ]
+     → expected false to be true // Object.is equality
+     → expected 2 to be 1 // Object.is equality
+     → expected 'reflex-demo-v1+r2' to be 'reflex-demo-v1+r1' // Object.is equality
+     → expected 99 to be 3 // Object.is equality
+     → expected { …(2) } to deeply equal { …(2) }
+   ❯ src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+     → expected 200 to be 401 // Object.is equality
+     → expected undefined to be 'Invalid token' // Object.is equality
+     → expected 200 to be 401 // Object.is equality
+     → expected undefined to be 'Invalid token' // Object.is equality
+     → expected 1 to be +0 // Object.is equality
+     → expected [ …(4) ] to deeply equal []
+     → expected [ { user: { …(7) }, …(1) }, …(1) ] to deeply equal [ undefined, undefined ]
+     → expected false to be true // Object.is equality
+     → expected 2 to be 1 // Object.is equality
+     → expected 'reflex-demo-v1+r2' to be 'reflex-demo-v1+r1' // Object.is equality
+     → expected 99 to be 3 // Object.is equality
+     → expected { …(2) } to deeply equal { …(2) }
+   ❯ src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+     → expected 200 to be 401 // Object.is equality
+     → expected undefined to be 'Invalid token' // Object.is equality
+     → expected 200 to be 401 // Object.is equality
+     → expected undefined to be 'Invalid token' // Object.is equality
+     → expected 1 to be +0 // Object.is equality
+     → expected [ …(4) ] to deeply equal []
+     → expected [ { user: { …(7) }, …(1) }, …(1) ] to deeply equal [ undefined, undefined ]
+     → expected false to be true // Object.is equality
+     → expected 2 to be 1 // Object.is equality
+     → expected 'reflex-demo-v1+r2' to be 'reflex-demo-v1+r1' // Object.is equality
+     → expected 99 to be 3 // Object.is equality
+     → expected { …(2) } to deeply equal { …(2) }
+   ❯ src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+     → expected 200 to be 401 // Object.is equality
+     → expected undefined to be 'Invalid token' // Object.is equality
+     → expected 200 to be 401 // Object.is equality
+     → expected undefined to be 'Invalid token' // Object.is equality
+     → expected 1 to be +0 // Object.is equality
+     → expected [ …(4) ] to deeply equal []
+     → expected [ { user: { …(7) }, …(1) }, …(1) ] to deeply equal [ undefined, undefined ]
+     → expected false to be true // Object.is equality
+     → expected 2 to be 1 // Object.is equality
+     → expected 'reflex-demo-v1+r2' to be 'reflex-demo-v1+r1' // Object.is equality
+     → expected 99 to be 3 // Object.is equality
+     → expected { …(2) } to deeply equal { …(2) }
+   ❯ src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with undefined (authority claims=false)
+     → expected 200 to be 401 // Object.is equality
+   ❯ src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with undefined (authority claims=true)
+     → expected 200 to be 401 // Object.is equality
+   ❯ src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"required":false} (authority claims=false)
+     → expected 200 to be 401 // Object.is equality
+   ❯ src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"required":false} (authority claims=true)
+     → expected 200 to be 401 // Object.is equality
+   ❯ src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"roles":["admin"]} (authority claims=false)
+     → expected 403 to be 401 // Object.is equality
+   ❯ src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"roles":["admin"]} (authority claims=true)
+     → expected 200 to be 401 // Object.is equality
+   ❯ src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"permissions":["write"]} (authority claims=false)
+     → expected 403 to be 401 // Object.is equality
+   ❯ src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"permissions":["write"]} (authority claims=true)
+     → expected 200 to be 401 // Object.is equality
+   ❯ src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > fresh refresh cannot substitute for an SDK key or operator access token
+     → expected 200 to be 401 // Object.is equality
+     → expected [ 'shopper-read' ] to deeply equal []
+     → expected 200 to be 401 // Object.is equality
+     → expected [ 'shopper-read', 'shopper-write' ] to deeply equal []
+     → expected 200 to be 401 // Object.is equality
+     → expected [ 'shopper-read', …(2) ] to deeply equal []
+   ❯ src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > revoked refresh cannot substitute for an SDK key or operator access token
+     → expected 200 to be 401 // Object.is equality
+     → expected [ 'shopper-read' ] to deeply equal []
+     → expected 200 to be 401 // Object.is equality
+     → expected [ 'shopper-read', 'shopper-write' ] to deeply equal []
+     → expected 200 to be 401 // Object.is equality
+     → expected [ 'shopper-read', …(2) ] to deeply equal []
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected 200 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 200
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:125:28
+    123|     const protectedCalls = [...f.cache.calls];
+    124|     const accountReads = getAccount.mock.calls.length;
+    125|     expect.soft(me.status).toBe(401);
+       |                            ^
+    126|     expect.soft((await me.json() as { error?: string }).error).toBe('I…
+    127|     expect.soft(mutation.status).toBe(401);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected undefined to be 'Invalid token' // Object.is equality
+
+- Expected: 
+"Invalid token"
+
++ Received: 
+undefined
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:126:64
+    124|     const accountReads = getAccount.mock.calls.length;
+    125|     expect.soft(me.status).toBe(401);
+    126|     expect.soft((await me.json() as { error?: string }).error).toBe('I…
+       |                                                                ^
+    127|     expect.soft(mutation.status).toBe(401);
+    128|     expect.soft((await mutation.json() as { error?: string }).error).t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected 200 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 200
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:127:34
+    125|     expect.soft(me.status).toBe(401);
+    126|     expect.soft((await me.json() as { error?: string }).error).toBe('I…
+    127|     expect.soft(mutation.status).toBe(401);
+       |                                  ^
+    128|     expect.soft((await mutation.json() as { error?: string }).error).t…
+    129|     expect.soft(accountReads).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected undefined to be 'Invalid token' // Object.is equality
+
+- Expected: 
+"Invalid token"
+
++ Received: 
+undefined
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:128:70
+    126|     expect.soft((await me.json() as { error?: string }).error).toBe('I…
+    127|     expect.soft(mutation.status).toBe(401);
+    128|     expect.soft((await mutation.json() as { error?: string }).error).t…
+       |                                                                      ^
+    129|     expect.soft(accountReads).toBe(0);
+    130|     expect.soft(protectedCalls).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:129:31
+    127|     expect.soft(mutation.status).toBe(401);
+    128|     expect.soft((await mutation.json() as { error?: string }).error).t…
+    129|     expect.soft(accountReads).toBe(0);
+       |                               ^
+    130|     expect.soft(protectedCalls).toEqual([]);
+    131|     expect.soft(f.observedAuth).toEqual([undefined, undefined]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected [ …(4) ] to deeply equal []
+
+- Expected
++ Received
+
+- Array []
++ Array [
++   "put:reflex:config:w0201-4e0db628-99f3-430c-8ae5-460ee632a346:rev:2",
++   "put:reflex:config:w0201-4e0db628-99f3-430c-8ae5-460ee632a346:current",
++   "get:reflex:config:w0201-4e0db628-99f3-430c-8ae5-460ee632a346:index",
++   "put:reflex:config:w0201-4e0db628-99f3-430c-8ae5-460ee632a346:index",
++ ]
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:130:33
+    128|     expect.soft((await mutation.json() as { error?: string }).error).t…
+    129|     expect.soft(accountReads).toBe(0);
+    130|     expect.soft(protectedCalls).toEqual([]);
+       |                                 ^
+    131|     expect.soft(f.observedAuth).toEqual([undefined, undefined]);
+    132|     expect.soft(JSON.stringify([...f.cache.values]) === dataBefore).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected [ { user: { …(7) }, …(1) }, …(1) ] to deeply equal [ undefined, undefined ]
+
+- Expected
++ Received
+
+  Array [
+-   undefined,
+-   undefined,
++   Object {
++     "isAuthenticated": true,
++     "user": Object {
++       "aud": "w0201",
++       "exp": 1789346377,
++       "iat": 1788741577,
++       "iss": "w0201",
++       "jti": "2069c634-3e07-4c06-9bc0-a4a6a4fe8b74",
++       "sub": "synthetic-operator",
++       "type": "refresh",
++     },
++   },
++   Object {
++     "isAuthenticated": true,
++     "user": Object {
++       "aud": "w0201",
++       "exp": 1789346377,
++       "iat": 1788741577,
++       "iss": "w0201",
++       "jti": "2069c634-3e07-4c06-9bc0-a4a6a4fe8b74",
++       "sub": "synthetic-operator",
++       "type": "refresh",
++     },
++   },
+  ]
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:131:33
+    129|     expect.soft(accountReads).toBe(0);
+    130|     expect.soft(protectedCalls).toEqual([]);
+    131|     expect.soft(f.observedAuth).toEqual([undefined, undefined]);
+       |                                 ^
+    132|     expect.soft(JSON.stringify([...f.cache.values]) === dataBefore).to…
+    133|     expect.soft(JSON.stringify({ users: [...f.store.users], sessions: …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:132:69
+    130|     expect.soft(protectedCalls).toEqual([]);
+    131|     expect.soft(f.observedAuth).toEqual([undefined, undefined]);
+    132|     expect.soft(JSON.stringify([...f.cache.values]) === dataBefore).to…
+       |                                                                     ^
+    133|     expect.soft(JSON.stringify({ users: [...f.store.users], sessions: …
+    134| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:139:33
+    137|     const after = await f.current();
+    138|     const historyAfter = await f.history();
+    139|     expect.soft(after.revision).toBe(before.revision);
+       |                                 ^
+    140|     expect.soft(after.config.version).toBe(before.config.version);
+    141|     expect.soft(after.config.K).toBe(before.config.K);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected 'reflex-demo-v1+r2' to be 'reflex-demo-v1+r1' // Object.is equality
+
+- Expected
++ Received
+
+- reflex-demo-v1+r1
++ reflex-demo-v1+r2
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:140:39
+    138|     const historyAfter = await f.history();
+    139|     expect.soft(after.revision).toBe(before.revision);
+    140|     expect.soft(after.config.version).toBe(before.config.version);
+       |                                       ^
+    141|     expect.soft(after.config.K).toBe(before.config.K);
+    142|     expect.soft(historyAfter).toEqual(historyBefore);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected 99 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 99
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:141:33
+    139|     expect.soft(after.revision).toBe(before.revision);
+    140|     expect.soft(after.config.version).toBe(before.config.version);
+    141|     expect.soft(after.config.K).toBe(before.config.K);
+       |                                 ^
+    142|     expect.soft(historyAfter).toEqual(historyBefore);
+    143|     console.info('W02.01 protected-boundary observation', JSON.stringi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  Object {
+    "revisions": Array [
+      Object {
++       "actor": "synthetic-operator",
++       "at": 1788741577119,
++       "note": "refresh misuse",
++       "revision": 2,
++       "version": "reflex-demo-v1+r2",
++     },
++     Object {
+        "actor": "Synthetic Operator",
+        "at": 1788741577115,
+        "note": "access control",
+        "revision": 1,
+        "version": "reflex-demo-v1+r1",
+      },
+    ],
+    "scope": "w0201-4e0db628-99f3-430c-8ae5-460ee632a346",
+  }
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:142:31
+    140|     expect.soft(after.config.version).toBe(before.config.version);
+    141|     expect.soft(after.config.K).toBe(before.config.K);
+    142|     expect.soft(historyAfter).toEqual(historyBefore);
+       |                               ^
+    143|     console.info('W02.01 protected-boundary observation', JSON.stringi…
+    144|       statuses: { me: me.status, patch: mutation.status }, accountRead…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with undefined (authority claims=false)
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with undefined (authority claims=true)
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"required":false} (authority claims=false)
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"required":false} (authority claims=true)
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"roles":["admin"]} (authority claims=true)
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"permissions":["write"]} (authority claims=true)
+AssertionError: expected 200 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 200
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:187:31
+    185|         ...(authority ? { roles: ['admin'], permissions: ['write'] } :…
+    186|       const response = await f.request(token);
+    187|       expect(response.status).toBe(401);
+       |                               ^
+    188|       expect(await response.json()).toEqual({ error: 'Invalid token' }…
+    189|       expect(f.reached).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"roles":["admin"]} (authority claims=false)
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > shared JWT verifier ordering and failure behavior > rejects refresh before context/next/authority checks with {"permissions":["write"]} (authority claims=false)
+AssertionError: expected 403 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 403
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:187:31
+    185|         ...(authority ? { roles: ['admin'], permissions: ['write'] } :…
+    186|       const response = await f.request(token);
+    187|       expect(response.status).toBe(401);
+       |                               ^
+    188|       expect(await response.json()).toEqual({ error: 'Invalid token' }…
+    189|       expect(f.reached).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > fresh refresh cannot substitute for an SDK key or operator access token
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > fresh refresh cannot substitute for an SDK key or operator access token
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > fresh refresh cannot substitute for an SDK key or operator access token
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > revoked refresh cannot substitute for an SDK key or operator access token
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > revoked refresh cannot substitute for an SDK key or operator access token
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > revoked refresh cannot substitute for an SDK key or operator access token
+AssertionError: expected 200 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 200
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:259:34
+    257|     for (const [path, method] of [['/v1/acme/snapshot', 'GET'], ['/rea…
+    258|       const denied = await app.request(`${ORIGIN}${path}`, { method, .…
+    259|       expect.soft(denied.status).toBe(401);
+       |                                  ^
+    260|       expect.soft(effects).toEqual([]);
+    261|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > fresh refresh cannot substitute for an SDK key or operator access token
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > revoked refresh cannot substitute for an SDK key or operator access token
+AssertionError: expected [ 'shopper-read' ] to deeply equal []
+
+- Expected
++ Received
+
+- Array []
++ Array [
++   "shopper-read",
++ ]
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:260:28
+    258|       const denied = await app.request(`${ORIGIN}${path}`, { method, .…
+    259|       expect.soft(denied.status).toBe(401);
+    260|       expect.soft(effects).toEqual([]);
+       |                            ^
+    261|     }
+    262|     effects.length = 0;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > fresh refresh cannot substitute for an SDK key or operator access token
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > revoked refresh cannot substitute for an SDK key or operator access token
+AssertionError: expected [ 'shopper-read', 'shopper-write' ] to deeply equal []
+
+- Expected
++ Received
+
+- Array []
++ Array [
++   "shopper-read",
++   "shopper-write",
++ ]
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:260:28
+    258|       const denied = await app.request(`${ORIGIN}${path}`, { method, .…
+    259|       expect.soft(denied.status).toBe(401);
+    260|       expect.soft(effects).toEqual([]);
+       |                            ^
+    261|     }
+    262|     effects.length = 0;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/68]⎯
+
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > fresh refresh cannot substitute for an SDK key or operator access token
+ FAIL  src/middleware/auth.refresh-boundary.test.ts > refresh credentials at the actual edge middleware > revoked refresh cannot substitute for an SDK key or operator access token
+AssertionError: expected [ 'shopper-read', …(2) ] to deeply equal []
+
+- Expected
++ Received
+
+- Array []
++ Array [
++   "shopper-read",
++   "shopper-write",
++   "operator-write",
++ ]
+
+ ❯ src/middleware/auth.refresh-boundary.test.ts:260:28
+    258|       const denied = await app.request(`${ORIGIN}${path}`, { method, .…
+    259|       expect.soft(denied.status).toBe(401);
+    260|       expect.soft(effects).toEqual([]);
+       |                            ^
+    261|     }
+    262|     effects.length = 0;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/68]⎯
+
+ Test Files  1 failed (1)
+      Tests  14 failed | 14 passed (28)
+   Start at  20:39:31
+   Duration  5.65s (transform 432ms, setup 0ms, collect 2.29s, tests 355ms, environment 0ms, prepare 2.13s)
+
+

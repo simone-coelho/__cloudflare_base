@@ -1,0 +1,73 @@
+{
+  "task_id": "W22.06",
+  "at": "2026-09-15T16:23:24.594Z",
+  "journal_seq": 1818,
+  "artifact_digest": "10937364913882ed5f15f0789f2e988d86ed0b860d2f535dd359a0e4026f0d1b",
+  "contract_digest": "186f2c82d3f3e9de3e762488babe4a340982585b68351a41bca2cdae703ca3ec",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W22.06/acceptance.md",
+    "sha256": "eb024b0f93230df3d815f42918df0a35879a94564b067bce7c184053f2d69c77"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W22.06/review.json",
+    "sha256": "ddf64016cb4a7400624f3202ba317aea294e5e00fca4a7c410cd3b407b745e33"
+  },
+  "root_review_capture": [
+    "22f13e",
+    "549f71",
+    "258829",
+    "7c537d",
+    "9b84bf"
+  ],
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){process.argv=[process.execPath,file,command];const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);await import(entry.href);write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;if(process.exitCode!==0)break;}'",
+    "initial": {
+      "chunk_id": "958819",
+      "wall_time_seconds": 1.000841511,
+      "session_id": 33299,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "a69bd0",
+        "wall_time_seconds": 5.001367579,
+        "session_id": 33299,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f1452c",
+        "wall_time_seconds": 5.000628447,
+        "session_id": 33299,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ea50a9",
+        "wall_time_seconds": 5.001608936,
+        "session_id": 33299,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f96ceb",
+        "wall_time_seconds": 3.752238934,
+        "exit_code": 0,
+        "original_token_count": 671,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=125, closed=1; evidence records=371\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.06 — Continue W09/W22 ledger producer failure handling: inspect enqueueDecisions/enqueueOutcome/sendManaged in src/ledger/enqueue.ts and their actual callers against the complete delivery/recovery contract. Source read f8f818 shows binding acquisition (env.ANALYTICS, env.EVENT_QUEUE and recovery flag) outside guarded receipt paths despite a resolves-without-throwing contract; determine and admit the smallest coherent fix for concrete failure paths without enabling managed recovery or extra retention. Preserve W22.06 synchronous generic receipts and all existing consent/time/perimeter controls; generic ingress remains distinct from the decision/outcome ledger. Historical reconstruction, across-call identity state and customer/privacy/lifecycle choices remain separate; no global age cutoff or external/customer-data operation.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 26081\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=125, closed=1; evidence records=371\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.06 — Continue W09/W22 ledger producer failure handling: inspect enqueueDecisions/enqueueOutcome/sendManaged in src/ledger/enqueue.ts and their actual callers against the complete delivery/recovery contract. Source read f8f818 shows binding acquisition (env.ANALYTICS, env.EVENT_QUEUE and recovery flag) outside guarded receipt paths despite a resolves-without-throwing contract; determine and admit the smallest coherent fix for concrete failure paths without enabling managed recovery or extra retention. Preserve W22.06 synchronous generic receipts and all existing consent/time/perimeter controls; generic ingress remains distinct from the decision/outcome ledger. Historical reconstruction, across-call identity state and customer/privacy/lifecycle choices remain separate; no global age cutoff or external/customer-data operation.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 26081\n"
+      }
+    ],
+    "result": "VALID",
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "next_admission_source_note": {
+    "capture": "f8f818",
+    "path": "src/ledger/enqueue.ts",
+    "observed": "Binding acquisition occurs outside guarded receipt paths despite a resolves-without-throwing producer contract.",
+    "disposition": "Read-only follow-on observation; no new task, fix, runtime failure or acceptance claimed."
+  },
+  "handoff": "Source/evidence STOP;44 exact pins rechecked, no worker/reviewer commands running. Only final handoff metadata/checkpoint updated after validated acceptance state. Tracker consistency is not engine/customer/SLO/release approval.",
+  "next_action": "Continue W09/W22 ledger producer failure handling: inspect enqueueDecisions/enqueueOutcome/sendManaged in src/ledger/enqueue.ts and their actual callers against the complete delivery/recovery contract. Source read f8f818 shows binding acquisition (env.ANALYTICS, env.EVENT_QUEUE and recovery flag) outside guarded receipt paths despite a resolves-without-throwing contract; determine and admit the smallest coherent fix for concrete failure paths without enabling managed recovery or extra retention. Preserve W22.06 synchronous generic receipts and all existing consent/time/perimeter controls; generic ingress remains distinct from the decision/outcome ledger. Historical reconstruction, across-call identity state and customer/privacy/lifecycle choices remain separate; no global age cutoff or external/customer-data operation.",
+  "limitations": "Synchronous generic event/webhook acknowledgement only. Not decision/outcome ledger recovery, destination durable processing, tenant-isolated destination configuration, background retry/outbox/dedup, historical repair/erasure, lifecycle/retention/age policy or customer/SLO/release acceptance. Stop new unsupported generic queue writes; existing queued bodies unchanged. Preserve W22.05 occurrence-time/current authority/consent and W30.04 hourly implementation; overlapping exact proofs qualified, acceptance histories retained. No install/emitted build/commit/push/deploy/cloud/credentials/customer-data/destructive/external operations; existing memory-only native fixture permitted. Worker and distinct reviewer each pass exact23 local/native synthetic checks,138 deliberately unselected. Same-byte compiler/scoped lint/whitespace pass; inherited lint warnings remain. Initial two fixture expectation failures and pre-runtime type validation correction retained; no failed/skipped required evidence counted as pass."
+}

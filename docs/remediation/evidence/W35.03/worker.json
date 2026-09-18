@@ -1,0 +1,510 @@
+{
+  "task_id": "W35.03",
+  "actor_id": "w3503-worker",
+  "run_id": "/root/w3503_link_investigation",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T00:05:47.865Z",
+  "status": "rework_complete_pending_independent_review",
+  "source_go": {
+    "journal": 1935,
+    "contract_digest": "0046f1b04a0e82a0388d32bec7300870adc7dded8c16a69b7408fb639bcd35b1",
+    "lead_authority": "GO under approved local DO direction; sole writer; no delegation."
+  },
+  "references": [
+    {
+      "path": "docs/remediation/design/W35.03/plan.md",
+      "sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d"
+    },
+    {
+      "path": "docs/remediation/design/W35.03/baseline.json",
+      "sha256": "4f42d52a8aa4687b88182708ea3e3da85d61b09f8a8dc5b42db41f3dae87054f"
+    },
+    {
+      "path": "docs/remediation/evidence/W35.03/admission.json",
+      "sha256": "22fccf4bcc0d12784b4d5d30597f4ea508cef1796b90b43e706df200e5a1975e"
+    }
+  ],
+  "basis": {
+    "source_confirmed_not_prechange_runtime_reproduction": true,
+    "read_captures": [
+      "aad8ab",
+      "570d5a",
+      "87b5ba"
+    ],
+    "baseline_original_hashes_source": "docs/remediation/design/W35.03/baseline.json; retained admission baseline, not a separate worker pre-edit hash run.",
+    "board": "Lead reported VALID at journal1935. Earlier investigative board wrapper was terminated and drained at deef2e, exit1/SIGTERM; it is not recorded as a passing check.",
+    "rework_board": {
+      "lead_admission": "VALID journal1942 supplied by lead; RESUME confirms bounded rework.",
+      "worker_attempts": "Read-only entry check/status did not finish during implementation. Only owned processes terminated; sessions67773/30332 drained exit143/SIGTERM887b3d/95fa0e. Not passing tracker checks; final governance validation remains lead-owned.",
+      "captures": [
+        "889d4f",
+        "1a9949",
+        "97b82e",
+        "887b3d",
+        "95fa0e"
+      ]
+    }
+  },
+  "implementation": [
+    "DO linkVisitor delegates to a serialized source transition; the session-host path retains its existing behavior.",
+    "Source freezes committed profile and immutable transfer identity before target dispatch; durable pending/complete state fences HTTP/WS/buffered/manual/internal import/absorb/forward and alarm behavior.",
+    "Target commits profile, receipt and bounded authoritative compatibility members together, then publishes the latest member set and visitor projection under target serialization. KV never selects whether to remerge.",
+    "Consent is excluded from immutable identity; current source/target restrictions intersect before first merge, suppress incoming behavior/enrichment under refusal, and later refusals tighten without remerge.",
+    "Completed-source retries require the existing target receipt, so a sequential target reset does not recreate the erased profile. In-flight/prepared cross-object erasure remains excluded.",
+    "R1: refused first transfer into an existing valid target preserves affinity/pipeline, audienceOwner and timer exactly; no target config resolution, merge/tick/requalification, enrichment merge or timer refresh. Receipt/current members/tightened consent still commit atomically. Cold-target establishment unchanged."
+  ],
+  "lead_resolutions": [
+    "Strict one-time compatibility adoption: missing target identityMembers adopts a validated matching existing bounded KV shopper record; absence is empty, malformed/unavailable/mismatched fails before target commit. Historic KV completeness and mixed-version writers are not proved.",
+    "Completed-source receiptRequired guard approved after a source inspection found sequential reset replay; one assertion added inside the existing authority group.",
+    "R1: select retained state before resolving target config; only cold/accepted merge paths need that config."
+  ],
+  "checks": {
+    "K1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]03|W35[.]01|the link, on the session host|detach' --maxWorkers=1 --minWorkers=1",
+      "exit_code": 0,
+      "result": "13 passed, 93 skipped; 2 files passed",
+      "captures": [
+        "b397b4",
+        "045e96"
+      ],
+      "session_id": 67837,
+      "drained": true,
+      "output_tail": " ✓ src/routes/realtime.sdkContract.test.ts  (63 tests | 58 skipped) 956ms\n ✓ src/routes/identity.test.ts  (43 tests | 35 skipped) 44ms\n\n Test Files  2 passed (2)\n      Tests  13 passed | 93 skipped (106)\n   Start at  20:04:36\n   Duration  17.40s (transform 5.16s, setup 0ms, collect 10.59s, tests 1000ms, environment 0ms, prepare 4.06s)\n\n",
+      "diagnostics": "Synthetic queue_unavailable and learning_incomplete retained in045e96; not delivery/learning acceptance.",
+      "supersedes_attempts": [
+        3,
+        4
+      ]
+    },
+    "K2": {
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/identity/link.ts src/identity/store.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts && git diff --check -- src/identity/link.ts src/identity/store.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+      "exit_code": 0,
+      "result": "Compiler, ESLint and scoped whitespace passed; 0 errors, 109 warnings.",
+      "captures": [
+        "423786",
+        "177d31",
+        "04196c"
+      ],
+      "session_id": 25820,
+      "drained": true,
+      "warning_signatures": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-explicit-any",
+          "message": "Unexpected any. Specify a different type",
+          "count": 9
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'_ws' is defined but never used",
+          "count": 2
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'_code' is defined but never used",
+          "count": 1
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'_reason' is defined but never used",
+          "count": 1
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'_wasClean' is defined but never used",
+          "count": 1
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'error' is defined but never used",
+          "count": 1
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "rule": "@typescript-eslint/no-empty-function",
+          "message": "Unexpected empty method 'passThroughOnException'",
+          "count": 1
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "rule": "@typescript-eslint/no-explicit-any",
+          "message": "Unexpected any. Specify a different type",
+          "count": 89
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "rule": "@typescript-eslint/no-empty-function",
+          "message": "Unexpected empty arrow function",
+          "count": 2
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "rule": "@typescript-eslint/no-empty-function",
+          "message": "Unexpected empty method 'set'",
+          "count": 2
+        }
+      ],
+      "baseline_warning_count": 109,
+      "baseline_signature_comparison": "Final capture04196c inspected against retained prior worker signatures: same path/rule/message/count multiset,109 total. Prior independent review records baseline/final multiset equality for the previous artifact.",
+      "supersedes_attempts": [
+        4,
+        5
+      ]
+    }
+  },
+  "attempt_history": [
+    {
+      "check": "K1",
+      "attempt": 1,
+      "captures": [
+        "3e46fb",
+        "3bf9c0"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "result": "13 passed, 93 skipped",
+      "files": {
+        "src/identity/link.ts": "98e9257ec566ecc5f7ef2128fa15317fa145c9a5b1f26435689c1f7a8b9f79a1",
+        "src/identity/store.ts": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24",
+        "src/durable-objects/ShopperReflex.ts": "0416f36c7a39a533d1eeabf73a00456f72a421552e9c62d220c200e21ecaf73f",
+        "src/routes/realtime.sdkContract.test.ts": "c9e207e0ab505242d82abec1a3aa6aa86f7b20dd96a724fe54a146f81759924a"
+      },
+      "disposition": "Superseded by final bytes."
+    },
+    {
+      "check": "K2",
+      "attempt": 1,
+      "captures": [
+        "bd2ac9",
+        "c32a87"
+      ],
+      "exit_code": 2,
+      "drained": true,
+      "files": {
+        "src/identity/link.ts": "98e9257ec566ecc5f7ef2128fa15317fa145c9a5b1f26435689c1f7a8b9f79a1",
+        "src/identity/store.ts": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24",
+        "src/durable-objects/ShopperReflex.ts": "0416f36c7a39a533d1eeabf73a00456f72a421552e9c62d220c200e21ecaf73f",
+        "src/routes/realtime.sdkContract.test.ts": "c9e207e0ab505242d82abec1a3aa6aa86f7b20dd96a724fe54a146f81759924a"
+      },
+      "result": "TS2367 on overloaded storage-put fault spy key comparison at test line164; lint/whitespace not reached.",
+      "correction": "Test-only widening of the key union."
+    },
+    {
+      "check": "K2",
+      "attempt": 2,
+      "captures": [
+        "7a2646",
+        "0f0c5a",
+        "1131a0"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "files": {
+        "src/identity/link.ts": "98e9257ec566ecc5f7ef2128fa15317fa145c9a5b1f26435689c1f7a8b9f79a1",
+        "src/identity/store.ts": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24",
+        "src/durable-objects/ShopperReflex.ts": "0416f36c7a39a533d1eeabf73a00456f72a421552e9c62d220c200e21ecaf73f",
+        "src/routes/realtime.sdkContract.test.ts": "4ee0175f9ad344e57e8d8508d211b18d8632d790e88760a1fead47c5c9fd71f3"
+      },
+      "result": "Compiler/whitespace passed, but 110 warnings violated the 109 baseline criterion; not accepted.",
+      "correction": "Removed now-unused readEnrichment import. Clarified existing source comment, rechecked grant expiry at preparation/dispatch, and selected actual oldest committed receipt in the concurrency assertion."
+    },
+    {
+      "check": "K1",
+      "attempt": 2,
+      "captures": [
+        "72bd28",
+        "f2cbe5"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "result": "13 passed, 93 skipped",
+      "source_hash_capture": "bd9ed9",
+      "disposition": "Superseded by lead-approved sequential reset guard."
+    },
+    {
+      "check": "K2",
+      "attempt": 3,
+      "captures": [
+        "1c3dd2",
+        "098d52"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "result": "Compiler/lint/whitespace passed with 109 warnings",
+      "source_hash_capture": "bd9ed9",
+      "disposition": "Superseded by lead-approved sequential reset guard."
+    },
+    {
+      "check": "K1",
+      "attempt": 3,
+      "captures": [
+        "6191f6",
+        "a8bdb3"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "result": "Final 13 passed, 93 skipped",
+      "source_hash_capture": "eddf17 -> f30e5e"
+    },
+    {
+      "check": "K2",
+      "attempt": 4,
+      "captures": [
+        "e11135",
+        "e370dc"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "result": "Final compiler/lint/whitespace pass, 109 warnings",
+      "source_hash_capture": "eddf17 -> f30e5e"
+    },
+    {
+      "check": "K1",
+      "attempt": 4,
+      "phase": "R1 intermediate",
+      "captures": [
+        "dd93ce",
+        "b38959",
+        "7fc450"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "result": "13 passed,93 skipped;2 files passed;15.91s",
+      "source_hash_capture": "0e0ad3",
+      "disposition": "Superseded to remove target config dependency on retained branch."
+    },
+    {
+      "check": "K2",
+      "attempt": 5,
+      "phase": "R1 intermediate",
+      "captures": [
+        "348a83",
+        "b77977",
+        "85fe89",
+        "eac563"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "result": "Compiler/lint/whitespace passed;0 errors109 warnings",
+      "source_hash_capture": "0e0ad3",
+      "disposition": "Superseded to remove target config dependency on retained branch."
+    },
+    {
+      "check": "K1",
+      "attempt": 5,
+      "phase": "R1 final",
+      "captures": [
+        "b397b4",
+        "045e96"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "result": "13 passed,93 skipped;2 files passed;17.40s",
+      "source_hash_capture": "badd4b -> 159b5f",
+      "supersedes_attempts": [
+        3,
+        4
+      ]
+    },
+    {
+      "check": "K2",
+      "attempt": 6,
+      "phase": "R1 final",
+      "captures": [
+        "423786",
+        "177d31",
+        "04196c"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "result": "Compiler/lint/whitespace passed;0 errors109 unchanged warning signatures",
+      "source_hash_capture": "badd4b -> 159b5f",
+      "supersedes_attempts": [
+        4,
+        5
+      ]
+    }
+  ],
+  "criterion_evidence": {
+    "W35.03-C1": "Concurrency group: delayed accepted source event included once, duplicate same-pair requests converge, two sources sum their counters/visits; completed and pending source fences survive restarts and reject conflicting target; actual HTTP/manual/WS/buffered/internal import/absorb/forward/alarm state checked.",
+    "W35.03-C2": "Failure group: rejected/ambiguous prepare, target state+receipt, shopper/visitor KV publication and source completion; restart/retry yields one receipt/merge, stable session/outcome, forwarding. Concurrency group retries actual older receipt against stale KV and checks latest two-member set.",
+    "W35.03-C3": "Existing authority group retains SID/tenant/fingerprint/refusal/retry/reset/adoption controls. R1 adds populated target preservation for source-tracking and target-personalization refusal: affinity/pipeline/enrichment/visits/config/lastSeen0, audience owner and alarm list remain exactly equal; explicit pure tick would exit retained membership, but link changes stay empty. Receipt/current two-member set commit with existing SID. Cold refusal and accepted/later-refusal paths remain covered. Independent superseding review pending."
+  },
+  "artifact": {
+    "owned_outputs": [
+      {
+        "path": "src/identity/link.ts",
+        "sha256": "dea9305e971ca2913fee2c70f4d23d3404e7044addded63bcafe33bb69e94978"
+      },
+      {
+        "path": "src/identity/store.ts",
+        "sha256": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "9693e8071e14a5ffc3ca5e75a198ff0e7e40e3a3d39b3fd26f35c520e322c444"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "452940cea677fad2a6294ae48fbf51ccccc12198fd7c0e6d04f8e0d869458a63"
+      }
+    ],
+    "assigned_read_basis_after_checks": [
+      {
+        "path": "src/identity/link.ts",
+        "sha256": "dea9305e971ca2913fee2c70f4d23d3404e7044addded63bcafe33bb69e94978"
+      },
+      {
+        "path": "src/identity/store.ts",
+        "sha256": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "9693e8071e14a5ffc3ca5e75a198ff0e7e40e3a3d39b3fd26f35c520e322c444"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "452940cea677fad2a6294ae48fbf51ccccc12198fd7c0e6d04f8e0d869458a63"
+      },
+      {
+        "path": "src/routes/identity.ts",
+        "sha256": "ba760b40f7939cf96f2d8ca485b3b469f34a60260745f22857e40dccafe2be9c"
+      },
+      {
+        "path": "src/identity/sessionCapability.ts",
+        "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+      },
+      {
+        "path": "src/content/consent.ts",
+        "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "19faab942934a61c7ef13db67e62fcb06228346be85abed9d3b71ac00d37d186"
+      },
+      {
+        "path": "src/reflex/identityMerge.ts",
+        "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+      },
+      {
+        "path": "src/identity/profileEnrichment.ts",
+        "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5"
+      },
+      {
+        "path": "src/services/visit.ts",
+        "sha256": "9bf380f59633c1eb23cabcec60acf6318ff17eb8898172c71a1fa4ecd3b244d6"
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+      },
+      {
+        "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+        "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c"
+      },
+      {
+        "path": "docs/remediation/design/W35.03/plan.md",
+        "sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d"
+      },
+      {
+        "path": "docs/remediation/design/W35.03/baseline.json",
+        "sha256": "4f42d52a8aa4687b88182708ea3e3da85d61b09f8a8dc5b42db41f3dae87054f"
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+      },
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+      },
+      {
+        "path": "wrangler.toml",
+        "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923"
+      }
+    ],
+    "hash_captures": [
+      "badd4b",
+      "159b5f"
+    ],
+    "source_changed_during_final_checks": false
+  },
+  "limitations": [
+    "Local Node/Vitest fake bindings are not native workerd, customer/browser/feed, latency/SLO, deployment or release evidence.",
+    "Full W35/F14, host selection/cutover, migration and historical link repair remain open.",
+    "Prepared/in-flight transfer versus reset/erasure, complete deletion epochs, stale bearer detach/erase revocation and pushed-frame revocation remain separate.",
+    "One-time KV compatibility adoption does not prove completeness of pre-existing members; current schema retains the existing maximum50 and mixed-version writers are not qualified.",
+    "Receipt storage follows existing object reset/retention lifecycle; no new retention/privacy policy or cleanup programme.",
+    "Existing unsigned legacy identity fixture and broader publication-fixture baseline failure were not repaired or included."
+  ],
+  "handoff": {
+    "source_stop": true,
+    "evidence_stop": true,
+    "running_commands": [],
+    "next_action": "Lead freezes superseding R1 artifact and requests independent Astra/xhigh K3. Prior failures, review REWORK and superseded checks retained. Worker does not accept task/package or edit governance."
+  },
+  "rework_go": {
+    "journal": 1942,
+    "finding": "W35.03-R1",
+    "review": {
+      "path": "docs/remediation/evidence/W35.03/review.json",
+      "sha256": "bf3ecf393d58b856968fa5889d6f93055ad3546ad64607dd1fdbece6a8ea9e94",
+      "verdict": "REWORK"
+    },
+    "scope": "Only preserve existing target behavior on refused first transfer and extend existing authority group; unchanged contract."
+  },
+  "rework_history": [
+    {
+      "finding": "W35.03-R1",
+      "superseded_artifact_digest": "111ac5bfdfe72e8aa80200fdc72bae95686668d7a642b68a42432b97956b0659",
+      "superseded_worker": {
+        "sha256": "ae4e2fa94f02edaf96459c87de075ee818e0b4cf8e171a0be9ee051fbc49bda0",
+        "gzip_base64": "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"
+      },
+      "before_source_hash_capture": "a529ab",
+      "intermediate_source_hash_capture": "0e0ad3",
+      "final_source_hash_captures": [
+        "badd4b",
+        "159b5f"
+      ],
+      "changed_paths": [
+        "src/durable-objects/ShopperReflex.ts",
+        "src/routes/realtime.sdkContract.test.ts",
+        "docs/remediation/evidence/W35.03/worker.json"
+      ],
+      "unowned_read_basis_changed": [],
+      "new_test_cases": 0,
+      "new_suites": 0
+    }
+  ]
+}

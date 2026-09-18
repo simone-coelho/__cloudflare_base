@@ -1,0 +1,157 @@
+{
+  "task_id": "W27.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T13:56:38.991Z",
+  "verdict": "pass",
+  "artifact_digest": "d719c234612a2ba4b256408cf6e410eb857e4a42002f43763e57c7527b933402",
+  "contract_digest": "9d91054bb781cda9ab6ca89c31dd36a97ef13362420c70827f55f50a7958afc6",
+  "summary": "Independent source and fixed9 runtime pass for forward archive-before-live publication and truthful operator outcomes. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W27.01-C1",
+      "verdict": "pass",
+      "evidence": "Actual LearnStats delta freezes estimates/time once, bounds allocation to eight positive safe-integer create-only candidates, advances only on null, and validates exact key/nonblank bounded ETag/final UTF-8 size before awaited KV. The publisher group distinguishes delayed ACK, malformed/missing/thrown ACK, same-ms changed data, restart/reset collision and exhaustion; preserves prior archives/counters and checks archive/KV unknown effects, committed item deletion, fresh 30s alarm and scheduling failure. Existing state/prior/capacity checks remain effective; no applied:false after ambiguous publication."
+    },
+    {
+      "id": "W27.01-C2",
+      "verdict": "pass",
+      "evidence": "Actual service group retains winner a and its version after archive failure, then selects b with an acknowledged new version. Real replayDeps/replayDecision resolves and exactly replays both retained single-slot records. Authenticated route group rejects cross-tenant access, transport/HTTP/body/owner mismatch without reset revision writes, and verifies empty publication, valid publication and acknowledged reset with actor/revision. Actual routes gate downstream success and invalidate uncertain live cache; this is not page-wide replay proof."
+    },
+    {
+      "id": "W27.01-C3",
+      "verdict": "pass",
+      "evidence": "All six baseline-to-current deltas and three added groups inspected; unchanged inspected hashes reconciled with STOP and frozen manifest. Exact fixed9 ran independently once, 56 tests unselected. All121 artifact pins,115 source/output pins and109 protected pins verified before/after; six forward/reverse patches reproduce exact bytes. Final worker compiler/scoped lint/whitespace reused on identical bytes: exit0, zero errors and the same three inherited unused-parameter warnings. No schema, scoring arithmetic or decision hot-path I/O change."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W27.01/plan.md",
+      "sha256": "996dd84a88edd2b8f5fb6091bc63cafa241e28597cddbf9b1ea76e920494fdf4"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W27.01/artifact.json",
+      "sha256": "66d053ccefa2a3985d5b413a7a93f68b6c652f688e7759e6307afe57f297b073"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W27.01/worker.json",
+      "sha256": "9ba0dd3d76137849e36e34316cb0d1816dd185ffa290e4f6d41a050f915b82e7"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts -t 'W27.01|W10.01|W23.01 keeps weighted|W24.01 pins|statistics object counts, arms one alarm|W25.01 publishes' --maxWorkers=1 --minWorkers=1",
+    "session_id": 16450,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "captures": [
+      {
+        "chunk_id": "ae5469",
+        "wall_time_seconds": 1.001130384,
+        "session_id": 16450,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "e48745",
+        "wall_time_seconds": 5.001420633,
+        "session_id": 16450,
+        "original_token_count": 75,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (22 tests | 21 skipped) 68ms\n"
+      },
+      {
+        "chunk_id": "f0ac49",
+        "wall_time_seconds": 0.000002414,
+        "exit_code": 0,
+        "original_token_count": 81,
+        "output": " ✓ src/learn/learn.test.ts  (24 tests | 18 skipped) 173ms\n ✓ src/content/consent.test.ts  (19 tests | 17 skipped) 70ms\n\n Test Files  3 passed (3)\n      Tests  9 passed | 56 skipped (65)\n   Start at  09:54:53\n   Duration  31.01s (transform 7.20s, setup 0ms, collect 17.82s, tests 311ms, environment 0ms, prepare 9.81s)\n\n"
+      }
+    ],
+    "result": {
+      "passed": 9,
+      "unselected": 56,
+      "total": 65,
+      "test_files": 3,
+      "new_grouped_cases": 3,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "before": {
+      "at": "2026-09-12T13:54:42.854Z",
+      "captures": [
+        "326a53",
+        "f5ff1f"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T13:55:43.810Z",
+      "captures": [
+        "d51008",
+        "fbbb9f"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "artifact_pins": 121,
+    "source_and_output_pins": 115,
+    "protected_pins": 109,
+    "changed_protected": [],
+    "pin_mismatches": [],
+    "exact_forward_and_reverse_deltas": 6,
+    "manifest_sha256": "66d053ccefa2a3985d5b413a7a93f68b6c652f688e7759e6307afe57f297b073",
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "f5ff1f",
+          "wall_time_seconds": 0.074215218,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T13:54:43.169Z\",\"task\":\"W27.01\",\"state\":\"verification\",\"contract_digest\":\"9d91054bb781cda9ab6ca89c31dd36a97ef13362420c70827f55f50a7958afc6\",\"artifact_digest\":\"d719c234612a2ba4b256408cf6e410eb857e4a42002f43763e57c7527b933402\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "fbbb9f",
+          "wall_time_seconds": 0.052069821,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T13:55:44.114Z\",\"task\":\"W27.01\",\"state\":\"verification\",\"contract_digest\":\"9d91054bb781cda9ab6ca89c31dd36a97ef13362420c70827f55f50a7958afc6\",\"artifact_digest\":\"d719c234612a2ba4b256408cf6e410eb857e4a42002f43763e57c7527b933402\"}\n"
+        }
+      ]
+    },
+    "inspection": "Actual production deltas 3f7c69, learn fixture e7e511, consent/ledger/kit deltas b71ac3; relevant actual publisher/callers/types/replay/live dependencies e79800/8d5001/7af04d. Plan and actual C1-C3 read, full worker captures/baseline lint/frozen six-hash reconciliation read untruncated at a4f500. All six inspected hashes equal STOP2026-09-12T13:52:14.499Z and current frozen bytes. Source-freeze/artifact/deltas read and verified; no moving-artifact acceptance."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W27.01/worker.json",
+      "sha256": "9ba0dd3d76137849e36e34316cb0d1816dd185ffa290e4f6d41a050f915b82e7"
+    },
+    "command_capture": "K2 compiler, scoped lint and whitespace",
+    "session_id": 54191,
+    "final_capture": "5d6de4",
+    "exit_status": 0,
+    "drained": true,
+    "errors": 0,
+    "warnings": 3,
+    "qualification": "Same inherited @typescript-eslint/no-unused-vars _key/_url/_init at shifted learn.test.ts605-606; baseline520-521. Sequential && command reaches whitespace only after compiler and lint succeed. No static rerun."
+  },
+  "retained_failures_and_qualifications": [
+    "Worker first exact fixed9 and final static passed; no failed or superseded runtime/static candidate is reported in the retained evidence. Independent runtime also passed first invocation; Vite CJS deprecation is retained verbatim in captures.",
+    "Reviewer read-only path lookups initially missed the baseline and a few dependency filenames, then resolved/read actual paths. Broad combined evidence displays truncated; full load-bearing worker evidence was reread at a4f500. These were inspection issues, not hidden test failures or source changes.",
+    "Existing publication fixtures were upgraded to synthetic conditional archive acknowledgements; no assertion weakening, extra group, native suite or broad replay. Unchanged protected dependency assurance is reused, not newly re-executed."
+  ],
+  "limitations": [
+    "Forward ordering/immutability containment applies to the upgraded publisher using the acknowledged conditional binding contract. Synthetic Node/Vitest bindings do not establish native/deployed R2 or KV durability, propagation, sustained capacity, latency, customer acceptance or release approval.",
+    "Full W27/F22 remain open: no page-wide dependency manifest, coupled-slot/exploration/gamma-zero replay parity, choice metadata, dependency-aware pins or repair of old missing/corrupt archives. Actual replay proof is single-slot only.",
+    "Numeric versions are neither globally chronological nor stable idempotent publication identities. Eight collisions can refuse safely; old unconditional writers, external deletion/corruption, retention and mixed-version rollout remain unresolved.",
+    "Ambiguous archives may remain orphaned. KV rejection can follow an applied write; reset-item may already have committed, and a later reset-note/configuration write is not transactional with the deletion. Failure is not rollback or exactly-once completion.",
+    "Publication retry is best-effort alarm scheduling with propagated scheduling failure, not guaranteed eventual publication. State/prior/snapshot refusals retain existing behavior and are not automatically retried.",
+    "Only this review record was written. No source/governance changes, subdelegation, external/cloud/customer-data/credential/commit/deployment operations; root alone owns acceptance."
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "task_id": "W14.03",
+  "actor_id": "w1403-reviewer",
+  "run_id": "/root/w1403_design_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "verdict": "pass",
+  "at": "2026-09-11 02:10:40 UTC",
+  "artifact_digest": "951566226b6fe19f0c1c6708f208a1de76fd3a4a085dbc0521db5fa1248506c9",
+  "contract_digest": "9575a53d78e06106ea8b0f1de62476fa63a26e72de2c459f4817f50400eef050",
+  "summary": "C1-C3 pass for supplied enrichment proposal capture, explicit human review and unpublished approved tag-addition export. Independent final-source review and the fixed single-file runtime command found no blocking defect. Root acceptance remains separate.",
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W14.03/plan.md",
+      "sha256": "8972203b12fb9ca9a9abe2df74b0e8a00864ab643f3d6226fb5df2040afa36a1"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W14.03/artifact.json",
+      "sha256": "30f47de9b74fd1164dfbe22c1818ee142b0af73927c3d4fe2872ece3e755e064"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W14.03/worker.json",
+      "sha256": "b6f5d95846ce490c6507aedf56207de8122b6c69601efa0609f425f7ae3bc43f"
+    },
+    "source_stopped_at": "2026-09-11T02:04:24.307Z",
+    "source_frozen_at": "2026-09-11T02:07:15Z",
+    "review": "Read full admitted task/plan and baseline metadata, actual new module and route/test/doc changes, relevant unchanged validator/import/lifecycle/versionedStore/operator JWT/current account/tenant sources, and complete worker record/captures. Canonical full W14, linked findings/requirements and actual accepted-view v8 clause were independently inspected during preflight. Reconstructed admitted before bytes and verified every forward/reverse patch against frozen bytes in memory."
+  },
+  "criteria": [
+    {
+      "id": "W14.03-C1",
+      "verdict": "pass",
+      "evidence": "Actual route fixture captures500pieces/4000labels with arbitrary customer vocabulary and preserves the original sample, tags, IDs, empty/unknown metadata, lifecycle/windows/eligibility/stock, duplicate stage and product-link values. Server actor/time/provenance declarations and digest are retained. Complete explicit review accepts approve/edit/reject only; malformed action values, omitted/duplicate/unknown label IDs, invalid edits and digest mismatch refuse. Export matches exactly two approved/edited additions with original proposal/review evidence and published:false; rejected labels are absent from additions and pending export refuses. No catalog normalization/publication or model generation is claimed."
+    },
+    {
+      "id": "W14.03-C2",
+      "verdict": "pass",
+      "evidence": "Real Hono tenant middleware, JWT verification and current in-memory account/session authority operate in open/enforced modes across atelier-a/atelier-b. Typed/granted capture/read/export and current human operator/admin review checks precede storage; invalid/refresh/untyped/ungranted/stale credentials, current account demotion/disable/password-change/session deletion, service review and conflicting/duplicate selectors refuse. Conditional R2 fixture asserts If-None-Match:* and one terminal201 versus409 under competing review, immutable retries/capture collisions, and correct readback. Missing proposal404 differs from corrupt/null/identity/digest/undefined/read/stream/metadata failures503; unconfirmed writes do not acknowledge success and capture exposes recoveryID. Strict references/prototype/depth/string/count and actual UTF8 streamed/body/envelope byte bounds refuse without writes. Functional group fetch spy and all groups' KV assertions plus actual module inspection establish no provider/catalog/config/ledger/AE/learning effects. Conditional storage consistency remains synthetic evidence."
+    },
+    {
+      "id": "W14.03-C3",
+      "verdict": "pass",
+      "evidence": "Exactly four admitted source/fixture/doc changes and three new grouped fixture cases. Independent final frozen primary17/17 passes. All27artifact pins,22source-freeze pins and18unchanged baseline source pins verified; artifact and task-contract digests recomputed; all4bidirectional patches match in memory. Final compiler/lint/whitespace evidence reused with failed first lint and untracked difference exit status preserved. Kit states caller-supplied sample/provenance, human-account boundary, errors/recovery, immutable review and unpublished export with full AI/publication/taxonomy/retention/customer limits."
+    }
+  ],
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts --maxWorkers=1 --minWorkers=1",
+    "started_at": "2026-09-11 02:08:28 UTC",
+    "captures": [
+      {
+        "chunk_id": "70d185",
+        "wall_time_seconds": 1.00063584,
+        "session_id": 20056,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "5ef767",
+        "wall_time_seconds": 0.000002121,
+        "exit_code": 0,
+        "original_token_count": 119,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/content.test.ts  (17 tests) 536ms\n\n Test Files  1 passed (1)\n      Tests  17 passed (17)\n   Start at  22:08:31\n   Duration  7.23s (transform 842ms, setup 0ms, collect 2.38s, tests 536ms, environment 0ms, prepare 3.23s)\n\n"
+      }
+    ],
+    "session_id": 20056,
+    "exit_status": 0,
+    "drained": true,
+    "completed_at": "2026-09-11 02:08:45 UTC",
+    "result": "17/17PASS in one file:14existing cases and3new groups. Reported7.23s; tests536ms. Local synthetic fixture duration, not deployed/customer/SLO evidence. Executed once on final frozen source."
+  },
+  "artifact_verification": {
+    "before_runtime": {
+      "chunk_id": "2b07f0",
+      "at": "2026-09-11T02:08:23.907Z",
+      "artifact_digest": "951566226b6fe19f0c1c6708f208a1de76fd3a4a085dbc0521db5fa1248506c9",
+      "contract_digest": "9575a53d78e06106ea8b0f1de62476fa63a26e72de2c459f4817f50400eef050",
+      "artifact_files": 27,
+      "source_pins": 22,
+      "source_frozen_at": "2026-09-11T02:07:15Z",
+      "mismatches": [],
+      "refs": [
+        {
+          "path": "docs/remediation/evidence/W14.03/artifact.json",
+          "sha256": "30f47de9b74fd1164dfbe22c1818ee142b0af73927c3d4fe2872ece3e755e064"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.03/source-freeze.json",
+          "sha256": "92ba5de82abbeb96919d9c4beccd655d8e94dbc7490a831d146a8a5233d46712"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.03/source-deltas.json",
+          "sha256": "2e1b6753601e3df4a8858948e0ffbc2d17c221f16af83199b89c778377810acb"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.03/worker.json",
+          "sha256": "b6f5d95846ce490c6507aedf56207de8122b6c69601efa0609f425f7ae3bc43f"
+        }
+      ],
+      "exit_code": 0
+    },
+    "digest_and_delta_capture": {
+      "chunk_id": "008891",
+      "at": "2026-09-11T02:09:06.841Z",
+      "artifact_files": 27,
+      "source_pins": 22,
+      "unowned_checked": 18,
+      "bidirectional_deltas": 4,
+      "errors": [],
+      "exit_code": 0
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W14.03/source-freeze.json",
+      "sha256": "92ba5de82abbeb96919d9c4beccd655d8e94dbc7490a831d146a8a5233d46712"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W14.03/source-deltas.json",
+      "sha256": "2e1b6753601e3df4a8858948e0ffbc2d17c221f16af83199b89c778377810acb"
+    }
+  },
+  "reused_worker_checks": {
+    "review": "Inspected complete retained command/capture outputs and STOP identities in worker.json. Final compiler and lint cover frozen bytes. Worker primary predates equivalent while(true)->for(;;) correction and kit wording; it is not the final-byte runtime proof. This separate independent primary is the final-byte runtime evidence.",
+    "baseline_lint": "Root-provided63281/0e26d6 exit0/drained, empty output, zero warnings; recorded authority/baseline reused without rerunning.",
+    "primary_historical": "22212/53638617/17PASS exit0/drained,6.90s; qualified pre-final-loop source, not substituted for independent runtime.",
+    "compiler_final": "32852/9db75b exit0/drained, empty output. Earlier1055/d90c3d also exited0 before final loop syntax.",
+    "lint_final": "39621/1f09b9 exit0/drained, empty output, zero warnings. First57524/973348 exit1 no-constant-condition retained and corrected without disabling rule.",
+    "whitespace": "4657a5 tracked scoped git diff --check exit0/no output. New-module192ee9 git diff --no-index --check exit1/no output is a difference status, with no whitespace diagnostics; not relabeled exit0.",
+    "rework": "Pre-primary exact action/createdWith comparison, stored-null rejection, uncertain-capture recoveryID and reader cancellation corrections are retained. Documentation qualification and equivalent loop syntax are the only recorded post-primary changes; independent final frozen runtime covers them."
+  },
+  "limitations": [
+    "Partial local W14§1.3 supplied proposal capture/human review/export only; no AI generation, model/provider egress, UI, live catalog publication, customer sample/taxonomy calibration, feed integration or full workflow/customer acceptance.",
+    "Original sample and source/model provenance are caller-declared/unverified. Digests bind stored evidence, not a current catalog revision or actual model execution. Export contains approved tag additions only; downstream current-state, taxonomy and W11-safe publication checks remain necessary.",
+    "R2 conditional behavior uses a synthetic fixture and the existing documented conditional API pattern; no native/deployed R2 or concurrent external-writer attestation. Selected27pins are not an exhaustive installed-runtime or deployed manifest.",
+    "First terminal review wins; identical retries also409. Unconfirmed503 may have persisted, requiring authorized readback. No capture idempotency key, mutable index, repair/delete API, automatic cleanup or general recovery/retention workflow.",
+    "Typed current access session plus operator/admin account role establishes human-account authority at request admission, not physical-user attestation or atomic revocation against an already-running storage operation.",
+    "Preserved metadata does not close W19 semantic fidelity, and data retention/operator privacy/audit and external recovery remain open. No customer data, credentials, cloud or external-provider operations occurred.",
+    "Full W14/findings/gates/release/SLO/lift acceptance, D05/D10 decisions and W11 publication remain open. Existing serving/scoring/import/core/auth dependencies are unchanged and prior valid assurance is reused."
+  ],
+  "diagnostics": [
+    "Only runtime diagnostic was the inherited Vite CJS deprecation notice; independent command had no failure.",
+    "Initial combined baseline/delta displays were oversized and truncated. Bounded actual source/delta reads, stripped baseline metadata and complete in-memory patch/hash verification replaced those displays; they are not additional product-test passes."
+  ],
+  "pending_sessions": [],
+  "writes": "Only this review.json. No source edits, extra suites, board commands, external/customer/cloud operations or subdelegation."
+}

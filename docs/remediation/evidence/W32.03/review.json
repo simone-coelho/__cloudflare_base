@@ -1,0 +1,155 @@
+{
+  "at": "2026-09-12T22:20:06Z",
+  "task_id": "W32.03",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "5851ecd3658fd92b9e22629c9aeaeb0894c7349c6ac6416199936044e060a52e",
+  "contract_digest": "1cc76d8108d879e88105dc51f09636eb046d9eb5dbbf341788db09fe41c91297",
+  "verdict": "PASS",
+  "summary": "Independent final-byte review passes the admitted aggregate-day and saved day/window refusal containment. No full W32/W31, summary, paging, native capacity, scientific or customer acceptance claim.",
+  "criteria": [
+    {
+      "id": "W32.03-C1",
+      "verdict": "PASS",
+      "evidence": "Actual loader restricts distinct canonical key/body identities to 24 hours with bounded traversal/cursors and 16 MiB aggregate bytes. Pure admission precedes sorting/merge/snapshots: validates consumed structures, charges containers and counters conservatively for repeated cumulative copies, limits the six-policy union, projected item/recursive-parent cells and policy×slot outputs. Merged and derived non-finite values refuse before return/put; final JSON has an 8 MiB guard. Actual grouped cases and retained aggregate controls passed parity/input immutability, ancestor expansion, empty-container work, cells/output/policies, wrong identity, unavailable listed object and no-publication refusal checks. Existing latest-policy behavior and W30 coverage arithmetic remain."
+    },
+    {
+      "id": "W32.03-C2",
+      "verdict": "PASS",
+      "evidence": "Actual shared reader checks native size and streamed UTF-8 bytes before JSON, has no json-only fallback, validates requested owner/date and consumed structures, and treats only null as missing. Saved reads cap each object at 8 MiB, windows share 16 MiB and 16,384 consumed/pooled rows/cells; final window and wrapped GET responses are bounded. Both authenticated routes return sanitized no-store 413/503 without writeback or partial success. Actual fixed groups passed byte-boundary/read-count, cancellation, invalid UTF-8/shape/owner, unavailable and null cases, cumulative cells/counts/ratio overflow. Legacy absent fields, W30 invalid-coverage normalization, repeated credits and zero denominators are retained."
+    },
+    {
+      "id": "W32.03-C3",
+      "verdict": "PASS",
+      "evidence": "Personally inspected all eight frozen deltas against baseline, actual relevant consumers and all three new groups, final complete worker evidence and retained candidate corrections. Exactly one independent K3 invocation passed 11 with 31 unselected. Final compiler/seven-file zero-warning lint/eight-file whitespace reused without rerun. All 43 artifact pins, 28 protected pins, eight exact bidirectional reconstructions and current contract match before/after. Kit accurately states containment and residual work."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W32.03/plan.md",
+      "sha256": "34d0631258ffa33dd36a672959af057865ea847acec7633b8ea517f8ac69b06f"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W32.03/artifact.json",
+      "sha256": "b8324b22c028c541177c219b75a988833b815c5d97b29c769e7444bd2261613e"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.03/worker.json",
+      "sha256": "11f9106e9d6daf4f4577a70d7a6b766559a0a91d93552ebc2e41f66b081bb521"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts -t 'W32.03|W32.02|W33.01 authenticated|W30.02|the day report comes from the hours|preserves repeated credits and zero-denominator' --maxWorkers=1 --minWorkers=1",
+    "session_id": 90912,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "0dd30e",
+        "wall_time_seconds": 1.001063097,
+        "session_id": 90912,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0a0296",
+        "wall_time_seconds": 0.000001818,
+        "exit_code": 0,
+        "original_token_count": 155,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (22 tests | 19 skipped) 184ms\n ✓ src/learn/report.test.ts  (14 tests | 8 skipped) 485ms\n ✓ src/measure/window.test.ts  (6 tests | 4 skipped) 70ms\n\n Test Files  3 passed (3)\n      Tests  11 passed | 31 skipped (42)\n   Start at  18:17:56\n   Duration  12.38s (transform 2.01s, setup 0ms, collect 4.68s, tests 739ms, environment 0ms, prepare 5.09s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 11,
+      "unselected": 31,
+      "total": 42,
+      "test_files": 3,
+      "new_grouped_cases": 3,
+      "retained_selected_cases": 8,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 43,
+    "source_and_output_pins": 36,
+    "protected_pins": 28,
+    "exact_forward_and_reverse_deltas": 8,
+    "manifest_sha256": "b8324b22c028c541177c219b75a988833b815c5d97b29c769e7444bd2261613e",
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "output_ownership_mismatches": [],
+    "before": {
+      "at": "2026-09-12T22:17:54.268Z",
+      "capture": "5375d8",
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T22:20:06.359Z",
+      "capture": "435880",
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_before": [
+      {
+        "chunk_id": "833ca7",
+        "wall_time_seconds": 0.020556666,
+        "exit_code": 0,
+        "original_token_count": 61,
+        "output": "{\"at\":\"2026-09-12T22:17:54.163Z\",\"task\":\"W32.03\",\"state\":\"verification\",\"contract_digest\":\"1cc76d8108d879e88105dc51f09636eb046d9eb5dbbf341788db09fe41c91297\",\"artifact_digest\":\"5851ecd3658fd92b9e22629c9aeaeb0894c7349c6ac6416199936044e060a52e\"}\n"
+      }
+    ],
+    "contract_after": [
+      {
+        "chunk_id": "380a3a",
+        "wall_time_seconds": 0.026110094,
+        "exit_code": 0,
+        "original_token_count": 61,
+        "output": "{\"at\":\"2026-09-12T22:20:06.337Z\",\"task\":\"W32.03\",\"state\":\"verification\",\"contract_digest\":\"1cc76d8108d879e88105dc51f09636eb046d9eb5dbbf341788db09fe41c91297\",\"artifact_digest\":\"5851ecd3658fd92b9e22629c9aeaeb0894c7349c6ac6416199936044e060a52e\"}\n"
+      }
+    ],
+    "source_stopped_at": "2026-09-12T22:15:43.878Z",
+    "inspection": "Plan/task 2076ef/26bbd3 and current criteria/K3 33717e; production deltas 8529f9/e7d830, three fixture groups and kit 0713a8/37c04a. Relevant merge/snapshot/coverage/route sources personally read during preparation and reconciled with all frozen deltas. Complete worker record/captures 3d62e3 supersedes truncated initial displays. Candidate metadata 7d74c2 and all eight retained candidate source reconstructions plus exact three-file final correction 33717e; output ownership checked."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.03/worker.json",
+      "sha256": "11f9106e9d6daf4f4577a70d7a6b766559a0a91d93552ebc2e41f66b081bb521"
+    },
+    "command_capture": "command_captures.static_final",
+    "session_id": 64271,
+    "captures": [
+      "b8768c",
+      "777e2e",
+      "d24374"
+    ],
+    "started_at": "2026-09-12T22:14:46.757Z",
+    "finished_at": "2026-09-12T22:15:26.135Z",
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace": "PASS",
+    "reviewer_reruns": 0,
+    "qualification": "Inspected full actual compound command and terminal capture; valid final-byte static evidence reused."
+  },
+  "retained_failures_and_qualifications": [
+    "Two failed apply_patch context checks changed no source; retained in worker execution_history.",
+    "Initial fixed11 session 9099/513017 passed, but static 92935/bc4d2d exited 1 for one new unused fixture parameter after compiler success; whitespace was not reached. This candidate is not accepted.",
+    "Root's source-confirmed pooled positive-denominator ratio overflow was corrected in window.ts with an assertion in the existing group; the unused fixture parameter was removed. Retained candidate-attempt1.json SHA f2d1118db0149d6d2e57fa7856cb4793b3696d9e71241d73c7423230a521f02c reconstructs all eight historical source hashes. This was not a separately executed pre-fix failure probe.",
+    "Final worker fixed11 session 29705/ecd095 passed on corrected bytes; final static and STOP follow it. Independent fixed11 also passed. No runtime failure, extra suite or benchmark is claimed.",
+    "Root entry VALID1312 and accepted W32.02 raw arithmetic/performance dependency assurance reused as admitted. This task measures byte/read-count refusal effects in existing fixtures, not throughput."
+  ],
+  "limitations": [
+    "Application refusal estimates, not native Worker CPU/memory/provider capacity, SLO or customer traffic guarantees. Pure objects already exist; JSON serialization precedes its measured output-size check. Native-size/stream paths bound reads before parsing; text-only adapters can only check after materialization.",
+    "Reports still read and parse existing full objects. Windows may refuse below 92 days; lightweight persisted summaries, useful paging and long-window availability remain undelivered.",
+    "Hour-fold/shard ingestion, configuration/tombstone load bounds, policy compatibility, historical reconstruction, model/reference objectives, metric/target versions, experimental inference and mature customer measurement remain separate.",
+    "Existing canonical write acknowledgement swallowing and canonical-versus-canonical races remain. W33 explicit-array isolation and read-only saved projections are preserved, not historical repair or stronger persistence guarantees.",
+    "Synthetic storage and authenticated local Hono fixtures only; no native/deployed/load/customer-data exercise, external operation, source/governance edit, full package/finding closure or release approval. Lead disposition is separate."
+  ]
+}

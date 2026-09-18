@@ -1,0 +1,133 @@
+{
+  "task_id": "W01.06",
+  "actor": {
+    "id": "w0106-reviewer",
+    "role": "independent_verifier",
+    "run": "/root/w0106_preflight",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "implementer_run": "/root/w0106_worker"
+  },
+  "verdict": "PASS",
+  "at": "2026-09-10T00:59:33.728Z",
+  "scope": "Bounded local enforced operator authority on eight diagnostic GET/HEAD routes and explicit-grant brand discovery. Lead acceptance remains separate; no full package, finding, customer, deployed or release acceptance.",
+  "basis": {
+    "contract_digest": "cf5626b9c1326fb75b816e27f8ee5b6ff9631d91f0cdeff846fbb8cbd6031ff1",
+    "plan": {
+      "path": "docs/remediation/design/W01.06/plan.md",
+      "sha256": "90173f4622cd5c42e5c808c7cd7b2ca3278ab5403e074469c0914e55077dd34b"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W01.06/baseline.json",
+      "sha256": "53aabbd1dea8c506d6220fe5bf4642f91613f895fca6c32aed4fd5f54d5129b1"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W01.06/source-freeze.json",
+      "sha256": "95929ffcac169082ab2cc1e439c52e0656f37a49b99207706a39585e96d60c59",
+      "at": "2026-09-10T00:55:21Z",
+      "worker_stop": "2026-09-10T00:54:57.386Z"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W01.06/source-deltas.json",
+      "sha256": "442f34ac01cd59f6e9e19bce2e1028b9daa2588739c6227f61d94522c2a5976a"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W01.06/worker.json",
+      "sha256": "c84e8a2aad593cba9d6459315ceb192574ae3a4d0b733777665cd2c8fa89b696"
+    },
+    "reads": "Independently read AGENTS, execution README, complete governance36/RESUME, complete canonical W01/W03 and linked F01/F03/F25/F33/N01/N03 dispositions and raw reports, relevant canonical customer clauses, kit, actual retained entry/operator/diagnostic routes, authority helpers and callers. Read complete admitted final plan/task C1-C3 and independently reconstructed complete owned baseline-to-frozen diffs."
+  },
+  "artifact": {
+    "path": "docs/remediation/evidence/W01.06/artifact.json",
+    "sha256": "f644a6bd2308cefd60453abee427527bda4195126605c66933b0f40c42f1dbdf",
+    "digest": "4d44684a26971f0579c4ede411a4232cfd10a410d3bf1bbecf3087d7b5f359a5",
+    "manifest_file_count": 338,
+    "registered_journal": 699,
+    "owned": [
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "fca0b292dbbde7b7ff66ccaf626c56ba4e0e21e5de78f40d39ad9f8e3b3158af"
+      },
+      {
+        "path": "src/middleware/operatorAuth.ts",
+        "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "9814eb646018ac10046aeaaa718f40e3827931e82a560af2c88c1a9ab3e539fb"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "6401225bfd2743a6ebd92bf2834680b16fa51d318e2d20834db23fa76550ecfd"
+      }
+    ],
+    "manifest_and_contract_digests_verified": true,
+    "verification": "Recomputed official artifact and current task-contract digests using board exports. Compared all333 freeze entries against official338-file manifest and baseline records; exactly4owned changed, none omitted. Individually hashed4current files and5proof/config additions. Decompressed and hash-checked all4baseline bytes and retained patches; independently applied each forward and reverse in memory, matching exact frozen and baseline bytes. Reviewed complete actual four-file deltas. Stdin diff file-mode labels are synthetic comparison metadata, not evidence of a task chmod."
+  },
+  "independent_check": {
+    "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+    "attempts": 1,
+    "exit_code": 0,
+    "session_id": 57120,
+    "session_drained": true,
+    "runner_start": "2026-09-09 20:56:00 America/New_York (UTC-04:00), as reported by Vitest",
+    "completion_observed_before": "2026-09-10T00:57:31.119Z",
+    "tests": 48,
+    "passed": 48,
+    "test_duration_ms": 14006,
+    "total_duration_seconds": 21.95,
+    "runtime": "Actual exported Worker/Hono/JWT and installed routing code bundled in memory into local workerd, synthetic bindings and outbound-denying fixture; existing native shopper/socket controls retained.",
+    "output_complete": true,
+    "output_format": "Complete exec/write_stdin output chunks concatenated in arrival order, including existing Vite deprecation warning.",
+    "output_sha256": "e4a2459b69d0bdb9b368e445623bcb3fa0da3258c79dae4d0a72add2e327d390",
+    "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (48 tests) 14006ms\n\n Test Files  1 passed (1)\n      Tests  48 passed (48)\n   Start at  20:56:00\n   Duration  21.95s (transform 1.25s, setup 0ms, collect 5.18s, tests 14.01s, environment 0ms, prepare 1.89s)\n\n",
+    "measurement_limit": "Local fixture duration only; no production latency, throughput, SLO, installed binary provenance or customer acceptance inference."
+  },
+  "criteria": [
+    {
+      "id": "W01.06-C1",
+      "verdict": "PASS",
+      "evidence": "Exactly8diagnostic GET registrations use unchanged existing operatorWrites, which calls operatorJwt only in exact enforced mode. Actual Worker tests cover GET/HEAD for two nondefault tenants, current/archive lift variants, absent/header/query site credentials, invalid/refresh/expired JWT and wrong-tenant JWT with valid target site key. Encoded aliases and selector conflicts refuse before diagnostic destination calls, body reads, store mutations, logs or deferred work; no-store and empty HEAD retained. Real issued shopper capability does not confer operator authority. Existing preflight/unknown-method behavior and outbound denial remain."
+    },
+    {
+      "id": "W01.06-C2",
+      "verdict": "PASS",
+      "evidence": "Populated tenant-distinct current/archive lift, catalog/learn joins, slot controls/evidence, exploring and R2day/window reports succeed with granted operators both with/without SDK keys. Assertions inspect exact CACHE/R2keys, private tenant-specific results and unchanged state. Existing report readers correct stale rate999, remove stale inference markers and retain incomplete hours. hasOperatorGrant body is unchanged apart from export; brands uses verified AuthContext.user.sub, maps original default flags before filtering and retains manifest order. Single/default:false, dual-grant, hidden-third, missing/malformed/wildcard-grant and open/unset/nonexact controls pass. Exactly3grouped additions; two prior /brands positive fixtures adapted to valid grants. SDK trend, owned shopper snapshot, earlier operator/demo/consent/erasure implementations remain. Kit auth/discovery wording matches."
+    },
+    {
+      "id": "W01.06-C3",
+      "verdict": "PASS",
+      "evidence": "Official338-file artifact and current contract recomputed; four actual owned hashes, baseline bytes, retained patch hashes and in-memory forward/reverse roundtrips match. Five proof/config additions individually verified,333freeze entries preserved. Independently read/decompressed/hash-verified all6full primary outputs: initial47/48failure preserved, final48/48pass, compiler0, baseline/final lint0errors/0warnings, whitespace0; reviewed child exit/drained metadata. Independent exactK1 ran once and passed48/48. Root protected329 attestation reused explicitly; no redundant broad rescan/compiler/lint/report suite. Lead disposition remains pending."
+    }
+  ],
+  "primary_outputs_reviewed": [
+    "lint_before",
+    "runtime_first",
+    "compiler",
+    "lint_final",
+    "whitespace",
+    "runtime_final"
+  ],
+  "failures_and_rework": [
+    "Primary first K1 returned47/48 with transport500 at probe dispatch because anonymous subject synthetic-shopper violated existing issuer shape validation. Exact first output/exit1 retained in worker.json; corrected vis-00000000-0000-4000-8000-000000000006 yielded final48/48, product gate unchanged. Independent reviewer inspected actual issueSessionCapability/verifySessionCapability-before-dispatch wrapper: probe requires transport200 before application401, preventing infrastructure failure from masquerading as denied authority.",
+    "Initial read-only displays of large freeze/baseline JSON were truncated; no verdict was inferred from them. Subsequent bounded parsed checks verified manifest structure, exact owned bytes and all proof additions; complete deltas and primary outputs were separately read."
+  ],
+  "protected_input_assurance": {
+    "source": "Root source-freeze.json at2026-09-10T00:55:21Z,333pins/329unowned_unchanged under admitted root-only integration ownership.",
+    "reuse": "Explicitly reuse root live-file attestation for329unchanged protected source/dependency inputs. Independently compare their retained baseline/freeze/official-manifest hashes and verify changed4owned plus5proof/config additions. No claim that reviewer independently reread/rehashed all329live files or reaccepted historical whole-task proof."
+  },
+  "limitations": [
+    "Local synthetic workerd authorization containment only; source-confirmed pre-change design case, not a newly executed before exploit.",
+    "No changed report arithmetic/learning/ranking/storage schema, UI/SDK/scripts, grant-verification model or shopper/consent/erasure semantics. Existing accepted/qualified dependency assurance reused only within admitted scope; no broad report/customer matrix.",
+    "Site-key-only legacy diagnostic scripts now refuse on enforced stamps; existing console/learning callers send Bearer and canonical tenant. No script or external workflow executed.",
+    "Full W01/W03 role/session/audit, live grants, global resources/stamp separation, geo/cohort and health exposure, all-store erasure, long-window/report completeness/scientific/lift/customer/gate/release acceptance remain open.",
+    "Open/unset/nonexact mode intentionally retains historical demo-read policy. No new authority/customer decision, deploy/provision/seed/project build/install/migration/cloud/credential/customer-data operation, external message, staging/commit/push or destructive change.",
+    "Reviewer wrote only this review.json; no source edits, additional runtime attempts or subdelegation."
+  ],
+  "handoff": {
+    "next_action": "Lead inspect this independent review and retained exact evidence, record bounded disposition and durable checkpoint.",
+    "pending_sessions": [],
+    "source_writer_stopped": true,
+    "independent_run_drained": true
+  }
+}

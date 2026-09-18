@@ -1,0 +1,96 @@
+{
+  "task_id": "W15.02",
+  "at": "2026-09-18T16:15:23Z",
+  "before": "645d46b76fb9a42e9c4366728173b264f06e677868fdcacfbdab4e6442d4cb1d",
+  "after": "a6f51718893ca7c585de995e3db8b6d952991672a6b20f665486e25d5a09846a",
+  "scope": "Supported refresh or genuine push through the exact kit; coalescing/stale-response guards, correct absence/default handoff and server-snapshot/no-flash contract. Distinguish read-only polls from actual correlated exposures. Deliver customer browser/operator acceptance, tag-plan/debug artifacts and feed failure cases. Correct objective/symbol/default/acceptance claims; reconcile SSO with customer authority, not unilateral deletion.",
+  "base_plan": {
+    "path": "docs/remediation/evidence/W15.02/admission-claims.json",
+    "sha256": "af2fb5e33a56464b068790459315f70ce0abffb86b46956b44ec3680cb8bd82c"
+  },
+  "original_plan": {
+    "path": "docs/remediation/evidence/W15.02/admission.json",
+    "sha256": "911b9d6504529d2a02296bcebcfc7994aa3b4a809489ed064bdc3787980b5ca2"
+  },
+  "reason": "Distinct source review found three connected C4 defects in mutable untested W15. Root read actual first transaction and owner admission. Add one minimal file to correct original offer expiry at durable boundary; other two corrections already owned.",
+  "review": {
+    "actor": "/root/w1202_review",
+    "kind": "Read-only early source challenge, not acceptance",
+    "findings": [
+      {
+        "id": "R1",
+        "status": "open",
+        "issue": "Offer eventId/timestamp can be minted at realtime ingress, so missing-wire retries change original receipt payload and conflict.",
+        "required": "Require exact original wire identity/time for offers before any effects; ordinary event fallback behavior unchanged."
+      },
+      {
+        "id": "R2",
+        "status": "open",
+        "issue": "Session-host buffered branch drops exact durable render ACK after redemption, unlike DO response.",
+        "required": "Explicit support with exact ACK or refusal before effects; same host contract."
+      },
+      {
+        "id": "R3",
+        "status": "open",
+        "issue": "Offer.until is not fenced through awaited first raw source transaction; broader owner/tracking deadlines can admit an expired offer.",
+        "required": "Validate original authenticated firstAdmissionUntil and check inside first savePayload transaction before writes and after awaited writes; expiry throws and rolls back. Existing admitted operations retain original independent recovery lifetime, no recapture/extension. Post-write outer rejection alone insufficient."
+      }
+    ]
+  },
+  "added_output": {
+    "path": "src/ledger/recovery.ts",
+    "exists": true,
+    "bytes": 26857,
+    "sha256": "8f859b8be7c493afa1da4f64258bb457354b076670b3c21f8f0403ea8f93270f"
+  },
+  "design": "Decision RecoveryInput/recoverDecisions optional authenticated firstAdmissionUntil; first savePayload transaction validates/checks it before and after awaited writes so native transaction rollback prevents late durable effects. Preserve source logical identity and existing admitted payload/lifetimes; first-admission cap does not shorten/refresh/rebirth recovery. No changes to other event capture behavior, owner authorization or old record lifetime. All malformed/missing/late controls fail closed as applicable.",
+  "ownership": {
+    "worker": "/root/w1202_implement",
+    "added_paths": [
+      "src/ledger/recovery.ts"
+    ],
+    "product_outputs": 95,
+    "protected_after": 293,
+    "basis": 388,
+    "reviewer": "/root/w1202_review"
+  },
+  "checks": {
+    "K2": {
+      "id": "W15.02-K2",
+      "required": true,
+      "criterion_ids": [
+        "W15.02-C3",
+        "W15.02-C4",
+        "W15.02-C5",
+        "W15.02-C6",
+        "W15.02-C7"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/content/decide.test.ts src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/ledger/ledger.test.ts -t 'W15' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Existing content/consent/both-host signed SDK and durable ledger fixtures",
+      "workload": "Selected connected W15 offer/redemption/privacy/lifetime/durable retry and measurement-basis cases, not helper-only success; retain original W05/W06/W09/W14 assertions on affected paths. Include original wire render identity, buffered rejection/support before effects, first native-storage admission held past original offer deadline and already-admitted recovery with its original independent lifetime.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    "K6": {
+      "id": "W15.02-K6",
+      "required": true,
+      "criterion_ids": [
+        "W15.02-C3",
+        "W15.02-C4",
+        "W15.02-C6",
+        "W15.02-C8",
+        "W15.02-C9",
+        "W15.02-C10"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W15|W02[.]06|W02[.]08|W06[.]12 native owner/R2|W09[.]09 native DLQ|W12[.]02' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Existing native workerd/R2/D1/owner fixtures, cf:false and denied external traffic",
+      "workload": "Real entrypoint two nondefault tenants/both shopper hosts; bounded local intercepted OIDC protocol and native seeded schema/FK/trigger rollback, consume+session CAS, late revoke; original lifetime/recovery and actual synthetic producer/consumer. No new harness. Existing native W15 fixture also verifies first source transaction rollback when original offer deadline expires, and continued already-admitted recovery without rebirth.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    "K9": "Same exact syntax/whitespace command plus src/ledger/recovery.ts. No new command or broad test suite."
+  },
+  "preservation": "The added file is currently protected in original baseline. Save its exact original bytes before editing, move only its ownership to output, preserve293 remaining protected. Existing94 source implementation continues under prior GO; this file alone waits valid amended board.",
+  "authority": "Same complete originalW15 C1–C12/local mandate. No product writes by root, no external/credential/customer operation, no rollout, no privacy horizon or recovery deadline change.",
+  "rollback": "Only owned delta with preserved original dirty bytes, no reset of unrelated work; native transaction failure must leave source/logical/chunks/meta unchanged. Original base plan criteria/dependencies/design and all limits retained."
+}

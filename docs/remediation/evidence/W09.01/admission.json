@@ -1,0 +1,15 @@
+{
+  "at": "2026-09-11T21:45:05Z",
+  "task_id": "W09.01",
+  "status": "source_go",
+  "approved_by": "w01-lead",
+  "command": "node --input-type=module -e 'import fs from \"node:fs\";import{sha256,taskContractDigest}from\"./scripts/remediation/board.mjs\";const d=JSON.parse(fs.readFileSync(\"docs/remediation/tracker.json\")),t=d.tasks.find(t=>t.id===\"W09.01\"),b=JSON.parse(fs.readFileSync(\"docs/remediation/design/W09.01/baseline.json\")),a=d.authority.local_authorization,x=a.scope_extensions.find(e=>e.scope_task_ids.includes(t.id)),s=d.journal.find(e=>e.task_id===t.id&&e.to===\"in_progress\");if(t.state!==\"in_progress\"||d.tasks.filter(t=>[\"in_progress\",\"verification\"].includes(t.state)).length!==1||!a.scope_task_ids.includes(t.id)||a.scope_package_ids.includes(\"W09\")||d.authority.deployment!==false||!x||Date.parse(x.at)>Date.parse(s.at)||sha256(fs.readFileSync(x.record.path))!==x.record.sha256||sha256(fs.readFileSync(t.preflight.plan.path))!==t.preflight.plan.sha256||taskContractDigest(t)!==t.preflight.contract_digest||s.plan_sha256!==t.preflight.plan.sha256)throw Error(\"Contract/authority/start\");for(const p of b.pins)if(sha256(fs.readFileSync(p.path))!==p.sha256)throw Error(\"Pin \"+p.path);for(const task of d.tasks.filter(t=>t.state===\"closed\"))for(const f of task.artifact.files)if(sha256(fs.readFileSync(f.path))!==f.sha256)throw Error(\"Accepted drift \"+f.path);console.log(JSON.stringify({ok:true,task:t.id,journal:d.journal.length,contract:t.preflight.contract_digest,plan:t.preflight.plan.sha256,start:s.at,scope_extension:x.at,pins:b.pins.length,protected:b.pins.length-b.owned.length,closed:d.tasks.filter(t=>t.state===\"closed\").map(t=>t.id)}));'",
+  "capture": {
+    "chunk_id": "f97a27",
+    "wall_time_seconds": 0.279821197,
+    "exit_code": 0,
+    "original_token_count": 78,
+    "output": "{\"ok\":true,\"task\":\"W09.01\",\"journal\":1014,\"contract\":\"e1971a1e36ac5fc9b961e322005811312ea6d23024b1acbde2e75137724f055b\",\"plan\":\"4f0b8f93752260a4b3a64b0c0cf7b2eca21bd9731b78718c0d1bc3402142959b\",\"start\":\"2026-09-11T21:44:10Z\",\"scope_extension\":\"2026-09-11T21:44:10Z\",\"pins\":72,\"protected\":68,\"closed\":[\"W08.04\"]}\n"
+  },
+  "source_scope": "Four admitted files only plus worker.json; exact approved plan. Full W09, durable recovery and external authority excluded."
+}

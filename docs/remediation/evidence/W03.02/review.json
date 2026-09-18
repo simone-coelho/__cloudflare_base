@@ -1,0 +1,289 @@
+{
+  "task_id": "W03.02",
+  "actor": {
+    "agent": "/root/w3708_review",
+    "actor_id": "w0302-reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "role": "independent_reviewer",
+    "provenance": "Distinct from sole implementer /root/w3708_worker and lead /root. Bounded preflight, frozen actual source/proof review and one exact K1. Writes only this review; no subdelegation."
+  },
+  "verdict": "pass",
+  "scope": "W03.02 C1-C3 only: local enforced exact-subject operator tenant authority, canonical administrative document destinations and global administration containment.",
+  "basis": {
+    "canonical_audit": {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    "plan": {
+      "path": "docs/remediation/design/W03.02/plan.md",
+      "sha256": "f4e27ad0f234a36beb2ab535b8fddf0d7bff08e5a2c0b622fc3e0187fc2e8530"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W03.02/baseline.json",
+      "sha256": "b5e53dcd42e32d29e3693ab3aa00e40f3693ebe0330769d46aa7ca2158a21aa0"
+    },
+    "contract_digest": "c40bbe052eebdda2e3885fee067d77ef90d7ebfaec442de78fdf2420fbd181fa",
+    "read": [
+      "Complete AGENTS, execution README, governance36, RESUME, canonical W03/F03 and linked requirements/customer clauses, and admitted plan/criteria.",
+      "All 14 actual admission-to-freeze source/fixture deltas and relevant middleware/mount/destination code; complete retained primary stdout/stderr, including decoded lint and the existing auth runtime-input graph."
+    ],
+    "entry_checks": "Root authoritative entry check/status VALID623 and admission VALID631 reused under explicit direction; no reviewer board run. Official artifact/E1/E2 registered at journal634.",
+    "source_freeze_at": "2026-09-09T17:14:12.777Z",
+    "baseline_class": "Source-confirmed justified design case; no newly executed failing pre-implementation runtime baseline claimed."
+  },
+  "artifact": {
+    "path": "docs/remediation/evidence/W03.02/artifact.json",
+    "sha256": "9302472532a204b0b633a45ec5264974ab4654eb95739f963fc031206941afa1",
+    "digest": "4d189048fea40e8c8507e6171ef5e677c1ac16822f54a8a6690f00ee9fc03504",
+    "pins": 315,
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W03.02/source-freeze.json",
+      "sha256": "96d6e0ddffc256783b3e9b5d659e37fef33523c934acaf84447bc133b4904beb"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W03.02/worker.json",
+      "sha256": "42341893915afe5c731ef3d1797337d640af802c01bef3c77f84cb2f5c832d52"
+    }
+  },
+  "independent_check": {
+    "id": "W03.02-K1",
+    "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --testNamePattern=\"W03.02|W37.09|W37.08|retains SDK-authorized|W04.02\" --maxWorkers=1 --minWorkers=1",
+    "runner_started_at": "2026-09-09T17:15:32Z",
+    "completion_observed_before": "2026-09-09T17:17:15.373Z",
+    "exit_code": 0,
+    "result": "9 passed; 27 excluded by the declared filter; 36 total; 1 file passed. Duration 17.55s, selected test time 9.681s.",
+    "attempts": 1,
+    "runtime": "Existing actual Worker/workerd in-memory synthetic fixture, blocked egress, zero-outbound assertion and disposal. Timing is not performance acceptance.",
+    "output_complete": true,
+    "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (36 tests | 27 skipped) 9681ms\n\n Test Files  1 passed (1)\n      Tests  9 passed | 27 skipped (36)\n   Start at  13:15:32\n   Duration  17.55s (transform 1.10s, setup 0ms, collect 5.22s, tests 9.68s, environment 0ms, prepare 1.81s)\n\n"
+  },
+  "criteria": [
+    {
+      "id": "W03.02-C1",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "evidence": "Frozen actual source, primary K1/K2 and independent exact K1.",
+      "findings": "A separate required-JWT helper permits only the verified exact subject's own named provisioned tenant grants. Missing/malformed maps, wildcards, unknown tenants and mismatches fail closed on operator paths. Canonical tenant binds SDK Bearer fallback, required decisions/identity operations, operator methods and config/content. Two nondefault wrong-grant cases, including valid target site keys plus wrong Bearer, refuse read/write/export/erasure before destination/body effects. Duplicate/disagreeing document selectors refuse before effects. Positive documents preserve exact revision/actor and physical scopes, including tenant:brighthour; nonempty two-tenant ledger export and identity/publication checks observe exact destinations."
+    },
+    {
+      "id": "W03.02-C2",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "evidence": "Primary K1 9 passed; K2 160 passed across five suites; compiler/lint/whitespace exit0; independent K1 9 passed.",
+      "findings": "Generic JWT/signing/claim/purpose implementation remains unchanged; adjusted fixtures provide explicit trusted grants/context without deriving authority from JWT claims. Self-service, open demo and valid named shopper behavior remain; malformed optional grants do not disable named shopper access. Retained canonical/CORS/wildcard/native socket checks pass. Enforced global account/audit routes authenticate/admin-check then refuse before storage; demo events reset/stats refuse before effects; audience publication performs tenant writes without legacy global broadcast discovery."
+    },
+    {
+      "id": "W03.02-C3",
+      "verdict": "pass",
+      "claim": "source_confirmed",
+      "evidence": "315 official pins, 311 frozen source pins, 297 unchanged unowned pins, 14 exact reversible deltas, complete primary proof and one independent exact K1.",
+      "findings": "Official artifact/contract/tracker identity agrees. All hashes match and all 14 retained patches reproduce exact before/after bytes in both directions. Final evidence supersedes retained failed attempts without erasing them; all five lint warnings match the pre-edit baseline. No blocker within this bounded authority/destination containment; lead disposition remains separate."
+    }
+  ],
+  "integrity_verification": {
+    "at": "2026-09-09T17:20:13.929Z",
+    "failures": [],
+    "official_pins": 315,
+    "source_pins": 311,
+    "unowned_pins": 297,
+    "digest": "4d189048fea40e8c8507e6171ef5e677c1ac16822f54a8a6690f00ee9fc03504",
+    "digest_matches": true,
+    "tracker_artifact_matches": true,
+    "contract_matches": true,
+    "retained_deltas": [
+      {
+        "path": "src/middleware/operatorAuth.ts",
+        "admission_sha256": null,
+        "current_sha256": "be689d2d854e380888eb7c303392b872beac0f7a59d87743f404dfd3d7f61252",
+        "diff_sha256": "7592a2a384549742d9c104232d6d4a074d240a8716134eb38482483a1f60e8ff",
+        "roundtrip": true,
+        "admission_absent": true,
+        "rollback_requires_removing_new_file": true
+      },
+      {
+        "path": "src/middleware/edgeAccess.ts",
+        "admission_sha256": "270ff0948f5ae0bd654cbd67ef688fa3bda7bb10e27b61c346c0e32010b280b9",
+        "current_sha256": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342",
+        "diff_sha256": "59832875f6c4d9ab9d1894cd234956b1768a855d5814d57fe8f03a046afcfb76",
+        "roundtrip": true
+      },
+      {
+        "path": "src/routes/auth.ts",
+        "admission_sha256": "f69f9d83d15d869fa1685a23550322b28fe023ece00295a694efd2b4355096b1",
+        "current_sha256": "b4828c9fd32a54c4a8c02fcfbea1b2d2555d7ea544f311e47f8458c229571c9d",
+        "diff_sha256": "4af757ad0865c7e03329858fcd072b65ccd17e4a0eecff170011033ae2e451cc",
+        "roundtrip": true
+      },
+      {
+        "path": "src/routes/config.ts",
+        "admission_sha256": "7fe1e9c4ef95a17a485c55f076b590c4b1658456c6582483d241356c453adec3",
+        "current_sha256": "6996ae7016b11e8c9022a4c49afe90b9d6d6ab317b6e9742b9cb31ede20ec76c",
+        "diff_sha256": "25d3c4ae0e3e79f82620370c26348b492d56e4f63404b6f06e740074b0a7f4f8",
+        "roundtrip": true
+      },
+      {
+        "path": "src/routes/content.ts",
+        "admission_sha256": "4344476c6d9d61db58f243f9e6649b499d2ac029269ea4dfa5fccf4447a8eed8",
+        "current_sha256": "116de5ebacbc056f3503a2299e05bc7a49c599fd59d1cf500779104d4e8b38fc",
+        "diff_sha256": "ec6380ed917ff6b5df7ec77367951270f5ab5e7910bad4b7006d4ebdbb52d022",
+        "roundtrip": true
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "admission_sha256": "53968e08174789a8b2fa7f3c55515d4db31ad75abf5904c1351dc31165c4e213",
+        "current_sha256": "0cddeefd0a7f8d60cf6fb3354e41ef108ae2e776c99266cac0f9ed764d3d1cd1",
+        "diff_sha256": "e96be5df69902966b81eb78ea942089ca585edfb67c52fa0207711af97dfffe2",
+        "roundtrip": true
+      },
+      {
+        "path": "src/routes/identity.ts",
+        "admission_sha256": "9f1fe4760f92e4f20a1c6f41dd67ecbe064da8996d2476b34718a1b7f87915e3",
+        "current_sha256": "7c367e606c65e4216cb7b64a576218b314b1dd804abb80df700579b4b3385572",
+        "diff_sha256": "fd524df9e51d372f9036906b47e655a4188de730c4f3fb62af7ef05e1f5c1598",
+        "roundtrip": true
+      },
+      {
+        "path": "src/routes/operator.ts",
+        "admission_sha256": "daaad5a98bad384acf3cd1603e78dc525fb7ef561eaa279c566b6ecdc37339ba",
+        "current_sha256": "0e9f3f2dfef869d054d3f484f1b7c592e53ede5da052ebfe3037f01549f64223",
+        "diff_sha256": "53f0cc9397de339dcb104fc0edba1cf22a585ff61849a684aea765b63420b22e",
+        "roundtrip": true
+      },
+      {
+        "path": "src/middleware/edgeAccess.test.ts",
+        "admission_sha256": "7d2e3f37f36d0df89f6a0301da73237e7d257ebfb8ec107ce27c3159db49f192",
+        "current_sha256": "ad9501a6f83e33552a762863a9d78cc3c93a119fa7dfa54918e73c9b37e48c96",
+        "diff_sha256": "c747c89589656cb2decb4981120e2d595e5538471b2fd882a4cd27b1e24d4cb0",
+        "roundtrip": true
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "admission_sha256": "275ca3a6f8876ea2f212192fd48a2c62b53268a8705821d5bb6ed706d0aa8895",
+        "current_sha256": "638dbb5973a6322761f92a07842dfd61d3cb1437061200e0e5ce45976fdc3231",
+        "diff_sha256": "b57d2f4f8ebc80db5b196e92abcb94dae261d039be7c63fd39c58ed0b02ad8b5",
+        "roundtrip": true
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "admission_sha256": "bb6a3257ec32648c0b7c4d14add6d540821aa5f0db51def91c7eeccbfea958f6",
+        "current_sha256": "f86617ac9ba851d1ac088206aeead70749517474e1226c1e0949a8be06c81462",
+        "diff_sha256": "bb3dfc25cae6e6d8ffcb8c8d8686443cacb2b133cfcfcbe70e6756a2980b7a00",
+        "roundtrip": true
+      },
+      {
+        "path": "src/middleware/auth.claims-boundary.test.ts",
+        "admission_sha256": "7344a1c37caec0bfff97935c25e25a8116b8135f7fcd409ee9c9f377927d4f90",
+        "current_sha256": "395e0c7a0a50fc8ce8858d68fce5f32943bb951190503f396679d109883dd55f",
+        "diff_sha256": "c94e80864e76e03e54b26c1a50105558e2c087b539f3e367aa9e92ff875abe3a",
+        "roundtrip": true
+      },
+      {
+        "path": "src/middleware/auth.refresh-boundary.test.ts",
+        "admission_sha256": "92aac9de89e06a391d83b4e33e06a1d169135294ea23a85be8d96f848939564a",
+        "current_sha256": "698c894cfa369dbc64e4adbb5c9cc572ba8ae9799d076da59c2e16d68a0ca4a8",
+        "diff_sha256": "37b32d4f5368c6a5f8a8f6a98a3e3b5caf958c398f306cc03b78b19bc7d7fca9",
+        "roundtrip": true
+      },
+      {
+        "path": "src/auth/signing-config.boundary.test.ts",
+        "admission_sha256": "ff9eb936f5e876456eff8166971dbfec7a86e8b2cc47eeb5598930c3e67234e9",
+        "current_sha256": "9c070973716c80045abac16974943a3d648e87b2acff4fd9fc8230abcd16bc66",
+        "diff_sha256": "3e37da9c700f80f80b40ce802680729dcc75eacd8f679dd5bdc80afd2afb5a75",
+        "roundtrip": true
+      }
+    ],
+    "primary_outputs": [
+      {
+        "name": "runtime",
+        "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --testNamePattern=\"W03.02|W37.09|W37.08|retains SDK-authorized|W04.02\" --maxWorkers=1 --minWorkers=1",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "119972b8d2e2e82c13b32f5ef6bb2260a6d2e9059e65e2c1374cd1611a5850b7",
+        "stderr_sha256": "6a013b71d94eadb16a930c32d667b41cd78de87ee97381f3cb81ed13fbe986e3"
+      },
+      {
+        "name": "edge",
+        "command": "node node_modules/vitest/vitest.mjs run src/middleware/edgeAccess.test.ts src/routes/content.test.ts src/middleware/auth.claims-boundary.test.ts src/middleware/auth.refresh-boundary.test.ts src/auth/signing-config.boundary.test.ts --maxWorkers=1 --minWorkers=1",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "577a84ed7f1e98d9502bbb6f2db437f438a92d9aff40c946d3e1aa3c717b8b3e",
+        "stderr_sha256": "6a013b71d94eadb16a930c32d667b41cd78de87ee97381f3cb81ed13fbe986e3"
+      },
+      {
+        "name": "compiler",
+        "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "lint",
+        "command": "node node_modules/eslint/bin/eslint.js src/middleware/operatorAuth.ts src/middleware/edgeAccess.ts src/routes/auth.ts src/routes/config.ts src/routes/content.ts src/routes/decisions.ts src/routes/identity.ts src/routes/operator.ts src/middleware/edgeAccess.test.ts src/index.api-boundary.test.ts src/routes/content.test.ts src/middleware/auth.claims-boundary.test.ts src/middleware/auth.refresh-boundary.test.ts src/auth/signing-config.boundary.test.ts --format json --max-warnings 5",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "35bf542438c12aa072f6383065bba16451539554310b00ae09c156b41e8c82c0",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "whitespace",
+        "command": "git diff --check -- src/middleware/operatorAuth.ts src/middleware/edgeAccess.ts src/routes/auth.ts src/routes/config.ts src/routes/content.ts src/routes/decisions.ts src/routes/identity.ts src/routes/operator.ts src/middleware/edgeAccess.test.ts src/index.api-boundary.test.ts src/routes/content.test.ts src/middleware/auth.claims-boundary.test.ts src/middleware/auth.refresh-boundary.test.ts src/auth/signing-config.boundary.test.ts",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "lint": {
+      "warnings": 5,
+      "errors": 0,
+      "unchanged_matches": 5
+    },
+    "references": [
+      {
+        "path": "docs/remediation/evidence/W03.02/artifact.json",
+        "sha256": "9302472532a204b0b633a45ec5264974ab4654eb95739f963fc031206941afa1"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.02/worker.json",
+        "sha256": "42341893915afe5c731ef3d1797337d640af802c01bef3c77f84cb2f5c832d52"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.02/source-freeze.json",
+        "sha256": "96d6e0ddffc256783b3e9b5d659e37fef33523c934acaf84447bc133b4904beb"
+      },
+      {
+        "path": "docs/remediation/design/W03.02/plan.md",
+        "sha256": "f4e27ad0f234a36beb2ab535b8fddf0d7bff08e5a2c0b622fc3e0187fc2e8530"
+      },
+      {
+        "path": "docs/remediation/design/W03.02/baseline.json",
+        "sha256": "b5e53dcd42e32d29e3693ab3aa00e40f3693ebe0330769d46aa7ca2158a21aa0"
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+      }
+    ],
+    "method": "Read-only SHA256 of every official/frozen/unowned pin; decode admission and patch bytes and independently apply forward/reverse in memory. Recompute artifactDigest through existing board export; verify full retained outputs and five unchanged lint source lines. New operatorAuth.ts had no admission file; rollback requires removing that newly added file. No source mutation or rollback performed."
+  },
+  "rework": "Retained initial failures show the missing admin-wrapper closing brace, subsequent Hono context type incompatibility and stale fixture cache across fresh bindings (revision 3 versus expected 1). Final source corrects the wrapper/cast and fixture invalidation. Root's source challenge also tightened nonvacuous two-tenant export assertions and bound the open demo-reset fixture. Final K1/K2/compiler/lint/whitespace supersede earlier attempts; the prior passing K2 is not substituted for the final run.",
+  "bookkeeping_caveat": "One reviewer metadata display included the full tracker artifact and was truncated. A bounded follow-up verified every official pin and exact tracker/contract/digest identity; no acceptance output is truncated.",
+  "limitations": [
+    "Explicit TENANTS.operatorGrants is a trusted configuration mechanism, not live customer membership assignment or grant-management UI. Fine-grained roles/actions, SSO/onboarding, account/session revocation and comprehensive durable privileged audit (N13) remain open; existing actor attribution is not full audit acceptance.",
+    "Legacy shared-host console/import callers using only ?scope now require canonical X-Tenant or a configured host and an explicit operator grant in enforced mode. Caller adaptation remains undelivered; query scope is not canonical authority.",
+    "Global CDP/Optimizely/demo/agent and synthetic insight/connector policy remain outside this bounded containment. Enforced global account/audit and demo-event operations are withdrawn, not redesigned as tenant administration.",
+    "Runtime uses synthetic destinations/credentials and existing workerd/Node/Hono fixtures; no browser, deployed resource, live customer or complete export/erasure acceptance. Positive export proof is bounded to retained tenant objects, not completeness of all customer records.",
+    "Unchanged dependency assurance is reused as admitted. Preserve v4 erasure recovery and exact v1-v3 semantics; no package-wide suite, new broad matrix, external mutation or deployment was performed.",
+    "No full F03/W03/W37, finding, gate, customer, release or North Star relevance/latency/lift/business acceptance is implied."
+  ],
+  "handoff": {
+    "status": "independent_pass_pending_lead_acceptance",
+    "pending_commands": [],
+    "command_session": "19516 drained with exit0; no active reviewer sessions",
+    "owned_output": "docs/remediation/evidence/W03.02/review.json",
+    "next_action": "Lead inspect review/evidence, record bounded disposition and update tracker/journal/RESUME; reviewer source/tests stopped."
+  },
+  "reviewed_at": "2026-09-09T17:20:13.929Z"
+}

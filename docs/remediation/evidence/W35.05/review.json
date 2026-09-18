@@ -1,0 +1,72 @@
+{
+  "task_id": "W35.05",
+  "actor_id": "w3505-reviewer",
+  "run_id": "/root/w3505_source_scout",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T02:15:39.040Z",
+  "verdict": "PASS",
+  "artifact_digest": "7c1890bdcc2fd00b1d23721f601ea7cda24679faae77f89874cc20e8b2cea5c2",
+  "contract_digest": "238bbbe0349bfa4f86a2e7fec304661ed6e9e3076f71ac375f2764e6cacc4a6b",
+  "independence": "Distinct from implementer /root/w3505_scope_scout. Reviewer inspected actual current source, decoded task-only deltas and assertions, recomputed artifact/contract and all manifest hashes, and independently ran K3 once. No source edits or further delegation.",
+  "artifact_verification": {
+    "before": "2026-09-16T02:14:22.497Z",
+    "after": "2026-09-16T02:15:39.040Z",
+    "manifest_pin_count": 22,
+    "mismatches_before": [],
+    "mismatches_after": [],
+    "worker": { "path": "docs/remediation/evidence/W35.05/worker.json", "sha256": "2116d287fb393ed937028e69f935f70e4efed2022c69ce5ec868e9ec43e887e3" },
+    "source_freeze": { "path": "docs/remediation/evidence/W35.05/source-freeze.json", "sha256": "855686aca8ff3e8f8ae3eba223208eb99c318f0a0910fdfdf129658f8b0c8d1c" },
+    "owned_files": {
+      "src/durable-objects/ShopperReflex.ts": "32e3104125e5974c51d5d1a94172a0e245c921c49bb1b03f0e66dae75f098105",
+      "src/routes/realtime.sdkContract.test.ts": "734da3bd0a304a0a4bfa5d54ebeaa75410c7bd5045a6809c968f785c641ce91e"
+    },
+    "delta": "Both retained before-byte, patch and final hashes match. Independently applied each decoded unified patch in memory with every removed/context line checked; both reconstructed outputs equal current bytes exactly. Reviewed all +186/-11 task lines across two files; no prior dirty-tree change is attributed to W35.05.",
+    "checker_basis": "Lead reports board check/status VALID at journal1969; reviewer independently recomputed manifest and contract rather than repeating the slow whole-register checker."
+  },
+  "checks": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts -t 'W35[.]05|W35[.]04|W35[.]03' --maxWorkers=1 --minWorkers=1",
+      "attempts": 1,
+      "exit_code": 0,
+      "session_id": 36028,
+      "session_drained": true,
+      "captures": ["a977e9", "5bc64b"],
+      "result": "1 file passed; 7 tests passed, 60 skipped, 67 total. Test time 1813ms; total duration 12.64s (transform5.16s, collect7.78s, tests1.81s, prepare2.15s).",
+      "diagnostics": "Synthetic queue_unavailable and learning_incomplete fixture diagnostics were emitted. The tool truncated the repetitive diagnostic body; the final pass/count/timing summary and exit0 were retained. These are not delivery/learning acceptance."
+    },
+    "K2": {
+      "disposition": "Reused exact-byte final worker K2 as permitted; not rerun.",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+      "worker_result": "Final attempt3 exit0; compiler, scoped ESLint and whitespace pass; zero errors, 109 warnings.",
+      "warning_verification": "Independent path/rule/message/count comparison exactly matches the two-file subset of W35.04's admitted 113-warning seven-file baseline.",
+      "warning_basis": { "path": "docs/remediation/evidence/W35.04/worker.json", "sha256": "3eb232a3684785cc5bea23dcf4d4a2da3c737e36db58c9b24ca766c10ec3fdc1" },
+      "history": "Worker retains the initial fixture TS2464 failure and two subsequent exact-byte supersessions. They were not rewritten as passes. Reviewer initially used an incorrect array assumption when printing worker.files; that read-only inspection failed with TypeError, then corrected object iteration verified both deltas. No acceptance check was repeated because of that inspection error."
+    }
+  },
+  "criteria": {
+    "W35.05-C1": {
+      "verdict": "PASS",
+      "basis": "The new actual-module group exercises prepared-uncommitted and target-committed-before-publication states across signed reset, internal reset used by eraseSubject, and the actual retention alarm. It verifies changed epoch, empty behavior/receipt/member/grants, restart, old retry rejection and exact post-barrier target/KV/source immutability. Fresh linking contributes only fresh-source counters; another old retry remains inert. This tests the erasure destination boundary, not the entire discovery/job workflow."
+    },
+    "W35.05-C2": {
+      "verdict": "PASS",
+      "basis": "Admission is internal-only and serialized, validates recognized object identity, paired profile/owner/consent and authority, and permits initialization only with the explicit safe legacy key set. Tests cover concurrent one-write initialization, rejected/ambiguous acknowledgement, preserved pre-authority state/timers/index, prior markers and corrupt/wrong-object grants. targetEpoch is required by transferSchema, retained by the receipt schema and included in the immutable fingerprint. Only the unprepared source calls admission. Missing/malformed/substituted persisted pins refuse without target calls. Delaying the old admission response across reset produces an old pin that cannot publish; genuinely new sources bind the new epoch. Target epoch comparison occurs within serialization before receipt lookup, member adoption, merge, grant creation, state write or KV publication."
+    },
+    "W35.05-C3": {
+      "verdict": "PASS",
+      "basis": "All six existing selected W35.03/W35.04 recovery/consent/grant controls pass. Existing source expiry checks bracket the additional await. Reset/internal erasure/retention retain the same atomic rotating barrier. Admission performs storage reads and at most one authority write and never calls back into the source; the source is anonymous and target recognized, avoiding a new serialization cycle. The single existing fixture correction distinguishes necessary empty authority from behavioral/receipt/index effects without removing its malformed-membership refusal assertion. Exact-byte static and warning comparison pass."
+    }
+  },
+  "limitations": [
+    "Bounded local target-generation fence only. Unpublished source copies, complete subject discovery, concurrent broader erasure workflow and historical cleanup remain open.",
+    "No session-host strong revocation, production token/transfer migration, cutover, deployment, customer-data operation or full W35/F14/F06 closure.",
+    "Node/Vitest synthetic binding checks do not prove native workerd durability, browser/customer behavior, latency tails, SLO or release acceptance. The added first-link admission request and active grant-map capacity remain unqualified.",
+    "Older persisted transfer descriptors without targetEpoch fail closed; rollback requires descriptor compatibility review and cannot silently run the former protocol against new durable records."
+  ],
+  "handoff": {
+    "source": "UNCHANGED_STOP",
+    "commands_running": [],
+    "next_action": "Lead inspects this frozen-artifact PASS and performs bounded disposition and tracker/handoff updates; reviewer does not accept task/package/finding or change governance."
+  }
+}

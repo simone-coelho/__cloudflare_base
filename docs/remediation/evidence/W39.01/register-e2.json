@@ -1,0 +1,121 @@
+{
+  "before": null,
+  "after": {
+    "id": "W39.01-E2",
+    "task_id": "W39.01",
+    "check_id": "W39.01-K2",
+    "criterion_ids": [
+      "W39.01-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w3901-worker",
+    "run_id": "/root/w3901_worker",
+    "file": {
+      "path": "docs/remediation/evidence/W39.01/worker.json",
+      "sha256": "e65330c9084ff063af055a54ddd9d4d3c26df3052105e19b70ed6679c815b937"
+    },
+    "at": "2026-09-10T11:44:06Z",
+    "limitations": "Bounded local generator retirement and shared-reference preservation only. The generator was inspected and syntax-parsed, never executed; no runtime refusal or cloud-zero-call claim. SQLite checks execute only actual shared-reference schema/statements in :memory:, not the full numbered migration/base-seed/first-party sequence or deployed D1. Existing conflicts are preserved, not repaired; lost or incorrect history needs reviewed reference-only recovery with authorized target. Base seed resets, other historical entrypoints, safe replacement generation/ownership, full rerun/scoped recovery, product/demo schema/assets, backups, fresh-clone/index handoff and D01/D08 remain W39/W08. No source cleanup, real data/resources/credentials, deployment, commit, customer/release/finding/package/gate acceptance or measured relevance/latency/SLO claim; customer-neutral deterministic core is unchanged.",
+    "command": "node --test scripts/seed-d1.test.mjs",
+    "runtime": "Installed Node built-ins and /usr/bin/sqlite3 :memory: via stdin, synthetic public-reference-only schema/statements, no disk database or D1 CLI.",
+    "workload": "Actual0004 schema and extracted0008-to-011 shared-table statements including destructive statements if any; NY14/exact provenance, sentinel/conflicts, missing NC and repeat equality. Not full migration/first-party seed order.",
+    "result": "pass",
+    "artifact_digest": "3fea24050b73c365bfaa6d887985aacab9eb5a74feb73e7c0e72d012e253df3b",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "0d4c7e0b299ed39d45daf3efda0c4c19e7491f52dd19310d16df17771adbcc12",
+      "configuration": "W39.01 partial dangerous seed subset. Unsafe generator fully retired; seed011 shared references preserve existing rows/provenance; targeted header/doc10/wrangler comments withdraw operative workflow. Five source/fixture outputs plus worker proof and scoped source/configuration pins. Installed Node built-ins and system SQLite :memory:, actual0004 schema and extracted0008/011 reference statements only; not complete first-party seed sequence, deployed D1 or customer setup/recovery.",
+      "files": [
+        {
+          "path": "scripts/seed-d1.mjs",
+          "sha256": "6bf4d92126b432c0b5eef8fe6146c0db75e8a50a0540fabef903ef2a69e2a074",
+          "role": "output"
+        },
+        {
+          "path": "migrations/seed/seed_011_geo.sql",
+          "sha256": "d1195dcc499fab227873e1445996930f0cf971cb3c25729bafdb1e927c09dd98",
+          "role": "output"
+        },
+        {
+          "path": "docs/architecture/10-d1-schema.md",
+          "sha256": "73d19bfa9c50de9ca090dc5f690a8e6ee4274d74a72580e52013f8e76d69f8f2",
+          "role": "output"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+          "role": "output"
+        },
+        {
+          "path": "migrations/0004_geo_census.sql",
+          "sha256": "579117f14a6fb392b630fb7e383ab86ad7ce50e2589bc6c7f6b2248ebfb20c7b",
+          "role": "source"
+        },
+        {
+          "path": "migrations/0008_meridian_geo_cohort.sql",
+          "sha256": "6031d7d362ec7a8c9157740d875fa9651ad7a771f66ace51ae52833931059d86",
+          "role": "source"
+        },
+        {
+          "path": "scripts/setup.sh",
+          "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-stamp.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-staging.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/deploy.sh",
+          "sha256": "14ad032bf8e7f3a9398a7e703def34e62fd41689be085449a8a710e5deb633c2",
+          "role": "source"
+        },
+        {
+          "path": "docs/deployment/01-deploy.md",
+          "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee",
+          "role": "source"
+        },
+        {
+          "path": "scripts/seed-d1.test.mjs",
+          "sha256": "06cdd34819846bafdebffe82f13e2d1624f9ee9dbba8dff1d8133f086e1d2f1a",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W39.01/worker.json",
+          "sha256": "e65330c9084ff063af055a54ddd9d4d3c26df3052105e19b70ed6679c815b937",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W39.01/plan.md",
+          "sha256": "533356fa664d553a826281f36730843d7c4063254abeb73ce7a75a644ee1cebe",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W39.01/baseline.json",
+          "sha256": "913fb6c8a55112d82d38f8082aca718b43acab86c5dc3f69b51aab7bf0625a8e",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W39.01/source-freeze.json",
+          "sha256": "3abac9402ca313492b9d207fbac767d094978d91ac9fbd8f56d3a89625697f19",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W39.01/source-deltas.json",
+          "sha256": "bee74e80fa4e2f92fe8c93391af8633810ce292c0e3cbaf218f21aafed1241e0",
+          "role": "configuration"
+        }
+      ],
+      "digest": "3fea24050b73c365bfaa6d887985aacab9eb5a74feb73e7c0e72d012e253df3b"
+    }
+  }
+}

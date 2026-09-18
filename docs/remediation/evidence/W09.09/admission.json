@@ -1,0 +1,700 @@
+{
+  "task_id": "W09.09",
+  "at": "2026-09-17T19:08:40.000Z",
+  "scope": "Version/chunk queue envelopes by serialized byte and batch budgets, including shared inputs without breaking readers. Define durable recovery for producer rejection, invalid/quarantined records and partial writes; DLQ in each environment; validate fan-out responses and reconcile counts to sinks. Fault tests cover oversize, outage, malformed records, retry/regroup, duplicate sends and recovery. Logging/DLQ alone is not closure. Complete original local scope preserving prior remedies; full live/customer acceptance remains separately authorized final batch.",
+  "contract_digest": "ea9b09b82fe2a51aff057120bac7c3cc0b2067f54eed3356af0ba137cfd6a70b",
+  "baseline": {
+    "kind": "Current-source confirmed remaining original-W09 design case; no new runtime reproduction claimed",
+    "case": "Earlier .01–.08 preserve byte-bounded immutable envelopes/claims, positional receipts, nonce IDs, downstream acknowledgements, managed fallback/cohort CAS and declared DLQs. Remaining admission-before-effects, LearnStats atomic idempotency/immutable credit recovery, retained quarantine/operator repair and whole-sink reconciliation require this coherent batch. Existing owner waits drain actual private I/O; current retained-body/expiry/reset/cross-object cleanup constraints govern design.",
+    "outputs": [
+      {
+        "path": "src/ledger/enqueue.ts",
+        "exists": true,
+        "sha256": "2ded4f1a0f70a262c5d9088f0faae4184ed8f6ff5af0b34cecc11c6f16793149",
+        "bytes": 13755
+      },
+      {
+        "path": "src/ledger/consume.ts",
+        "exists": true,
+        "sha256": "df55c0eee8a42561918075052e800b3746796f3afa3264db74b3af64a62a02d1",
+        "bytes": 15105
+      },
+      {
+        "path": "src/ledger/writer.ts",
+        "exists": true,
+        "sha256": "70429f698f2198fe257f0bf40d6a22dc4412057d0a27d062917e887fbcb71555",
+        "bytes": 25100
+      },
+      {
+        "path": "src/ledger/delivery.ts",
+        "exists": true,
+        "sha256": "5877cfa0aa0805c30f88867eda5c0ac9cf418a16b24a7324fec51194cfe1363c",
+        "bytes": 14537
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "exists": true,
+        "sha256": "7831ab9b80cb9808dc536a4f91dd6347782c2f9c4b4b68202d84e493665e874f",
+        "bytes": 54252
+      },
+      {
+        "path": "src/ledger/recovery.ts",
+        "exists": false,
+        "sha256": null,
+        "bytes": 0
+      },
+      {
+        "path": "src/ledger/quarantine.ts",
+        "exists": false,
+        "sha256": null,
+        "bytes": 0
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "exists": true,
+        "sha256": "539ad198464d5a72254c357e0437e434cd930cc87f2aad09194c4ce1db10ec5b",
+        "bytes": 20675
+      },
+      {
+        "path": "src/learn/route.ts",
+        "exists": true,
+        "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad",
+        "bytes": 1932
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "exists": true,
+        "sha256": "ad15b55895627d292eb52af1f7bacc0c466f487e5f0f32b1d749ba44872f9763",
+        "bytes": 219342
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "exists": true,
+        "sha256": "ed16b44ce4ce16a783941249a61c2e5c4448185fae8a16e245df07f6fa7f0240",
+        "bytes": 19696
+      },
+      {
+        "path": "src/durable-objects/LearnStats.ts",
+        "exists": true,
+        "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974",
+        "bytes": 16170
+      },
+      {
+        "path": "src/identity/sessionAuthority.ts",
+        "exists": true,
+        "sha256": "83068676e8d425aa781835e1caf529321e670c86ecf551fad5caf69e27c0c73a",
+        "bytes": 38581
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "exists": true,
+        "sha256": "69b2f267a4b03eae13c53c89320cda7856201627fdcd493a70051c7d4e91506b",
+        "bytes": 90573
+      },
+      {
+        "path": "src/content/service.ts",
+        "exists": true,
+        "sha256": "c1a65aa09219c5b2637af289c1c4a2813535a15900e1c12f25070d66e481b72f",
+        "bytes": 19252
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "exists": true,
+        "sha256": "240658c022155306ee3b075479eb37a3b1d42c31ae2821d40a1c26a20f2d75b1",
+        "bytes": 40079
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "exists": true,
+        "sha256": "383b4260c59f273badc071eaa9c3e3dfd9bed71c996097ef73bc76761cdf33c2",
+        "bytes": 57797
+      },
+      {
+        "path": "src/routes/health.ts",
+        "exists": true,
+        "sha256": "7eb9339cdbe2010676f71ad44d2726645644f373abff86f5ba6b2ffb8b056870",
+        "bytes": 2845
+      },
+      {
+        "path": "src/routes/ledgerRecovery.ts",
+        "exists": false,
+        "sha256": null,
+        "bytes": 0
+      },
+      {
+        "path": "src/index.ts",
+        "exists": true,
+        "sha256": "2bf1425b3bbf58ba1938d7ff0b241f6a97b8bacb2d7bec686564edc340b6b9ea",
+        "bytes": 17460
+      },
+      {
+        "path": "src/customerBoundary.ts",
+        "exists": true,
+        "sha256": "f4c4cf8b48cbc6bd7ff070512a3282632fadadecd4ddc9502f319eedb3631f62",
+        "bytes": 8357
+      },
+      {
+        "path": "src/auth/store.ts",
+        "exists": true,
+        "sha256": "14a2009f44b5af8c0ef987faee989b284eb0d279ceae41da00878ebcf870ab66",
+        "bytes": 38233
+      },
+      {
+        "path": "src/auth/subjectAudit.ts",
+        "exists": true,
+        "sha256": "a57ef271c50d137f1ca3926f6582e74e89c19e1745641ae6b3e09099d8b0b9a4",
+        "bytes": 14160
+      },
+      {
+        "path": "src/retention.ts",
+        "exists": true,
+        "sha256": "a7f1e12a1854e0850211266fabc5b554329e6e4b94e9851f4adddbeb2ade77aa",
+        "bytes": 9768
+      },
+      {
+        "path": "src/types/env.ts",
+        "exists": true,
+        "sha256": "61ee30cef05db9805773ee855d9d3097babe83ee7ee86993580b37637dfb67b7",
+        "bytes": 8838
+      },
+      {
+        "path": "scripts/stamp-workflow.mjs",
+        "exists": true,
+        "sha256": "c6b640dbe7c80bc8542eb3e47809c691735ab05dfb17f592b2e140e8204bf611",
+        "bytes": 70271
+      },
+      {
+        "path": "wrangler.toml",
+        "exists": true,
+        "sha256": "61df8f7400045ccbf72d5ba70894b292c45487c3a603e19439b9ba1e4a1efd91",
+        "bytes": 14438
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "exists": true,
+        "sha256": "62b66c3c86482e697f2b5452c5364f25b6b70f355b0dea256b96a9746243bd93",
+        "bytes": 139355
+      },
+      {
+        "path": "src/ledger/erasure.test.ts",
+        "exists": true,
+        "sha256": "78295b27d90db374b16018aba6e51b24889f212a6032d77cddef472af17d9939",
+        "bytes": 48994
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "exists": true,
+        "sha256": "8a59717dacd76b820fd0400b7751e4e414722671d5a9acee3e2cced760f43c9f",
+        "bytes": 112977
+      },
+      {
+        "path": "src/learn/holdoutArms.test.ts",
+        "exists": true,
+        "sha256": "29fee3f7719743e09d52dd88676fd7d9f5b9a959ae6e663c5dfef33d12b88c0a",
+        "bytes": 23952
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "exists": true,
+        "sha256": "52e1adef1b00688bebf49fa07c9875750a724ac73f6091085e29588af47790fd",
+        "bytes": 79389
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "exists": true,
+        "sha256": "663963732e25de4cdc327ff8e96f80179cabee2f2fbb9380927b15914ee57255",
+        "bytes": 496681
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "exists": true,
+        "sha256": "93c4cf6219d0af20511a778606e46b038c2d2f8ba72c3961fe0019714511431c",
+        "bytes": 177778
+      },
+      {
+        "path": "scripts/stamp-workflow.test.mjs",
+        "exists": true,
+        "sha256": "bb02d1ac87b6af40ceb19fc7108440b14ee1852abd3270020c7c3d71016577d2",
+        "bytes": 40372
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "exists": true,
+        "sha256": "d455f550a620b144a87cc7e03b3deea82b6581209e471032cc098a6b8e27193d",
+        "bytes": 96731
+      },
+      {
+        "path": "docs/deployment/01-deploy.md",
+        "exists": true,
+        "sha256": "3e7af37a1b93e37ce736fb49f2d0b1b920732a449043bdd63f11280775fc848b",
+        "bytes": 12511
+      }
+    ],
+    "pins": [
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+        "bytes": 690
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+        "bytes": 2696
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+        "bytes": 324615
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "f65418c549c2b2a2fefe963e18baf3ad37ed7ce2f7a204462f9b986ed9a60001",
+        "bytes": 1058
+      },
+      {
+        "path": "src/sdk/tsconfig.json",
+        "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360",
+        "bytes": 377
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+        "bytes": 2314
+      },
+      {
+        "path": "node_modules/typescript/package.json",
+        "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3",
+        "bytes": 3620
+      },
+      {
+        "path": "node_modules/vitest/package.json",
+        "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5",
+        "bytes": 4865
+      },
+      {
+        "path": "node_modules/eslint/package.json",
+        "sha256": "cb3eb0b9246ff4cf36d7f00b76358dc6b1ccab18773ab89c25b9e390041ae9d3",
+        "bytes": 5699
+      },
+      {
+        "path": "node_modules/esbuild/package.json",
+        "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+        "bytes": 3980
+      },
+      {
+        "path": "node_modules/wrangler/package.json",
+        "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+        "bytes": 6501
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "f467f19d6f27738f63d25da9ed2513c435523951bcdf8f37c0581a93d3db443d",
+        "bytes": 12202
+      },
+      {
+        "path": "src/ledger/productSort.ts",
+        "sha256": "d5e38dd021d5f2e44a1ef5f8c9062f2c5e8a5e7181d4a54335101ea7e4bab0f1",
+        "bytes": 4283
+      },
+      {
+        "path": "src/learn/receipts.ts",
+        "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c",
+        "bytes": 5263
+      },
+      {
+        "path": "src/learn/rows.ts",
+        "sha256": "5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060",
+        "bytes": 9948
+      },
+      {
+        "path": "src/learn/policy.ts",
+        "sha256": "019465dbb7cbe2cdec26a754a02e6aaebc27ec7ad80d16e480559b9cda442bdf",
+        "bytes": 5839
+      },
+      {
+        "path": "src/learn/stats.ts",
+        "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+        "bytes": 10062
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "4762040b772fd47622f2dde11131f3ec9dbf595a1f656effcb73aece11865fa6",
+        "bytes": 82672
+      },
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "1c93c534e71967a84ead589104cdb816aa01333ada48ad9924438f28fd66d600",
+        "bytes": 58501
+      },
+      {
+        "path": "src/learn/queue.ts",
+        "sha256": "724bd6caf6332b74d8706c1410531f1a550a13341bbf381326eb96e40429644c",
+        "bytes": 2071
+      },
+      {
+        "path": "src/learn/cycle.ts",
+        "sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c",
+        "bytes": 2449
+      },
+      {
+        "path": "src/learn/autonomy.ts",
+        "sha256": "667a6083d145ab6f4f35944a8b290738396b6fdac006abcc7baaf919903ebc60",
+        "bytes": 4851
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "0d2dd432f4798c5cf88892be1e2a72786ccff95123ca69c0f7ac2cd7037542c1",
+        "bytes": 18440
+      },
+      {
+        "path": "src/learn/priors.ts",
+        "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad",
+        "bytes": 3936
+      },
+      {
+        "path": "src/auth/accounts.ts",
+        "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+        "bytes": 6904
+      },
+      {
+        "path": "src/auth/authority.ts",
+        "sha256": "e037a63988db87268a0550833273846ba301217dc016221df089c1f68a3c30fc",
+        "bytes": 14642
+      },
+      {
+        "path": "src/auth/loginBudget.ts",
+        "sha256": "d9fe3a5f82d1f22082c591c66f94c68ea00da0859bdfd4a5c2754c40dbc14ca6",
+        "bytes": 4098
+      },
+      {
+        "path": "src/auth/signingConfig.mjs",
+        "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+        "bytes": 1088
+      },
+      {
+        "path": "src/middleware/auth.ts",
+        "sha256": "e0aa49f688df881c4904394a1d73083ca7c2fcb84a09518f57989dc79bde333f",
+        "bytes": 8435
+      },
+      {
+        "path": "src/middleware/operatorAuth.ts",
+        "sha256": "fbfdbaed152204793b1b5320d53d1ea8a475267077cadca5ea7b22a136807bd1",
+        "bytes": 2524
+      },
+      {
+        "path": "src/middleware/edgeAccess.ts",
+        "sha256": "de97226d996fe4607ed2cb301fb82dbfdb65f656942ce973118d631a43800f2f",
+        "bytes": 10252
+      },
+      {
+        "path": "src/tenancy/middleware.ts",
+        "sha256": "baa6107cb0d0304198c43a50b45b9c6c1620dbc31920d065f450aaad14fca521",
+        "bytes": 5254
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+        "bytes": 11730
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67",
+        "bytes": 2949
+      },
+      {
+        "path": "src/identity/assertion.ts",
+        "sha256": "b1bc560559f68b009dd3152d105282179ae9bdef9ac97300648ae1d5b9407960",
+        "bytes": 5174
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "dce46ca1d7cb880e878edd742c25c9702e3301446b4f3a4c705d700519d4d6b3",
+        "bytes": 14682
+      },
+      {
+        "path": "src/identity/consentContinuity.ts",
+        "sha256": "1c5d3b1c2971b54815bbf3fd36752bb73d0c3e375b483ceab43ed3b2940574c8",
+        "bytes": 4020
+      },
+      {
+        "path": "src/identity/sessionCapability.ts",
+        "sha256": "1c811214eb5e3613c5cbeb172704ee96689161945e6ee2c55bf332bdee0b3f51",
+        "bytes": 9320
+      },
+      {
+        "path": "src/identity/store.ts",
+        "sha256": "97536a4c94321d4fc821a8d3b697908587c6d6984a5589b742c7b14a861b437f",
+        "bytes": 9733
+      },
+      {
+        "path": "src/identity/material.mjs",
+        "sha256": "c9393df81cbe7afce6b639fe0b21887a634a60151bd7ede29d8b986e109b0e94",
+        "bytes": 2290
+      },
+      {
+        "path": "src/content/consent.ts",
+        "sha256": "9d69d3dd7644dab4a90a30e7b07f7a8d4bb29a0844bd81d8deb834e9bae740c4",
+        "bytes": 11458
+      },
+      {
+        "path": "src/content/cell.ts",
+        "sha256": "80bc29f98de5e25a17b8d631639c8abfccd247f42582bae808e2f534c783b017",
+        "bytes": 2623
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f",
+        "bytes": 30723
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "ce2465b29f82ed165b7461b250cb47f52ca4a72729271ca3116eca8a3d18d1d0",
+        "bytes": 16515
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+        "bytes": 23134
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "3e6ffd61d72c67730a1f8992644b92fab29a629dd8369ccd50b535c96b402d7d",
+        "bytes": 49788
+      },
+      {
+        "path": "src/services/RealtimeSegmentEngine.ts",
+        "sha256": "dbe17b344d9aa7791778b1e45f63c3da39a107e8750c1ef4df6cf756345b55c2",
+        "bytes": 63322
+      },
+      {
+        "path": "src/services/EventDispatcher.ts",
+        "sha256": "0e6894bc832fb84e547d7dd3ff0fd066e80ecb87a3c4b9e7deff31630337b213",
+        "bytes": 9836
+      },
+      {
+        "path": "src/durable-objects/PersonalizationWebSocket.ts",
+        "sha256": "ad82294b74abdf8104c5d6088b98dc41dfa14e3b2231c08b2aab8426bff740c3",
+        "bytes": 15087
+      },
+      {
+        "path": "src/durable-objects/RegionTrend.ts",
+        "sha256": "1244d0bfd4869a0385b7734694ea88c309a584fb597ae0f2e1b7b6d3503dcc0d",
+        "bytes": 5541
+      },
+      {
+        "path": "src/durable-objects/RateLimiter.ts",
+        "sha256": "1e03cbb0ab00de857d6dcb209ee81f12b65d0c708ef7d9ede45acf20332f9763",
+        "bytes": 5622
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "12db3ef82bc54209e929b3c8cbb9a3bab6fc59d7c537c64e68f0f7b8cf2069c4",
+        "bytes": 47822
+      },
+      {
+        "path": "src/sdk/listen.ts",
+        "sha256": "9843330e5745677054dab851158317c99137990e1169db0143131a01f594cd2d",
+        "bytes": 9964
+      },
+      {
+        "path": "src/sdk/types.ts",
+        "sha256": "562fbfcb9a7d52c930d31674eb3f2f74e11ea68255860cef15e0e7fdfc10c895",
+        "bytes": 7802
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "5cf1ba33964d989d4f808c8148b3ae46ae4b56dd5eda584e722713d2ec70022e",
+        "bytes": 69302
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "4564fbff5d05e6b6427b48076e48a3cd23e5977cc5674031c834ebe2cc0c0ecc",
+        "bytes": 72913
+      },
+      {
+        "path": "scripts/build-sdk.mjs",
+        "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79",
+        "bytes": 1663
+      },
+      {
+        "path": "src/connectors/config.ts",
+        "sha256": "8375efba73f8358295c770d6125c5dc06d2d82793cadff6078ecc72b9a9ed9c2",
+        "bytes": 8597
+      },
+      {
+        "path": "src/ops/monitor.ts",
+        "sha256": "3ec3e2daee729a09a2cecaa8674c2301a0fefd27d5da79b9d9ff011286d33ea4",
+        "bytes": 14994
+      },
+      {
+        "path": "src/utils/context.ts",
+        "sha256": "64969bfb7d22959c072ac2a3425861f20658a502b3590c7205b050cb96231475",
+        "bytes": 4662
+      },
+      {
+        "path": "migrations/product/0010_operator_accounts.sql",
+        "sha256": "7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55",
+        "bytes": 1784
+      },
+      {
+        "path": "migrations/product/0011_operator_audit_tenant.sql",
+        "sha256": "d279d332fbc0fdbdcfe5ad1dad2cb8347a056ee85ea9b975127dd3cf40e2074c",
+        "bytes": 284
+      },
+      {
+        "path": "migrations/product/0012_operator_authority.sql",
+        "sha256": "63143e1690f1be2bb331b547cf8d48716d6583fcefacf3353c9274075fd187b7",
+        "bytes": 2589
+      },
+      {
+        "path": "scripts/operator-seed.mjs",
+        "sha256": "0f81c74682ddf61bda763943bf69404668362ae5dee65a8caeb314a5b1264c3e",
+        "bytes": 17154
+      },
+      {
+        "path": "scripts/identity-material.mjs",
+        "sha256": "8a6b67eeb248183412d72b34ea2a883e6c6dbf7ed09e4a22b79d40c2bc4ff9af",
+        "bytes": 15700
+      }
+    ]
+  },
+  "acceptance": [
+    {
+      "id": "W09.09-C1",
+      "description": "Preserve W09.01–.08 full immutable records/shared inputs, IDs, legacy readers and serialized UTF8 body<=120000/batch<=240000/100-message limits, whole-invocation oversize/serialization refusal, exact positional receipts, immutable managed claims/grouping/CAS/cohort isolation and safe fixed numeric diagnostics. New durable mode may retry only stable proved-idempotent effects; explicitly supersede earlier bounded-task no-retry/no-DLQ-consumer/non-persistence exclusions only for this admitted coherent implementation. Do not reduce original W09 scope or undo earlier remedies.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W09.09-C2",
+      "description": "Under existing owner authority, durably admit a bounded immutable logical operation before ledger/learning effects, binding original logical IDs/digests, exact frozen transport identities, destinations/attribution/config and original consent/owner/retention. Queue rejection, fallback, interrupted/lost acknowledgement and restart reuse it without new identity/lifetime. Failure or ambiguity in admission cannot claim durable acceptance; no uncategorized raw outbox or extra infrastructure service. Preserve literal-true opt-in/default-off compatibility and truthful unsupported legacy behavior.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W09.09-C3",
+      "description": "Implement atomic LearnStats effect markers with counters: decision exposure identity; outcome+attributed decision+destination credit identity; exact repeats alreadyApplied, conflicting payload refuses. Persist immutable attribution before first credit, retry only missing effects, maintain original event time including zero/W23 decay and W24 compatible forward configuration. Retained whole/item technical reset-generation fences invalidate prepared old work without authorizing historical reset/rebuild. Bound markers/plans without dropping protection for retryable work; downstream waits remain outside ring lock, /recent responsiveness and actual owner-mediated caller timing are measured.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W09.09-C4",
+      "description": "Real configured DLQ intake durably quarantines bounded cases before acknowledgement, binding provider/opaque identity, exact body commitment and truthful encoding/provenance. Intact managed redrive consumes original body/delivery identity/claims/ordinals directly; never regenerate producer IDs. Wrapper repair requires authenticated retained original proof. Malformed/unversioned/legacy records lacking sink idempotency remain explicitly unsafe, not silently converted to managed or labelled recovered. Logging, metadata-only capture or DLQ declaration is not closure.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W09.09-C5",
+      "description": "Bounded list/status/redrive/resolve operations use opaque case ID plus expected digest/revision: proved ownership needs current human tenant administrator; unassigned cases current human stamp owner. No arbitrary storage key/replacement payload/tenant override or service-human session mixing. Existing D1 audit tables and narrow subject-audit route/enums record admission and outcomes; fail visibly on audit/storage uncertainty. Distinguish recovered, suppressed-erased, expired-unrecovered, irrecoverable and disposal-pending; unknown payload/row counts remain unknown and terminal loss never counts as recovered.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W09.09-C6",
+      "description": "Recheck original grants/consent deadlines/owner epochs/retention/erasure for alarms, retries and operator recovery. Never persist reusable bearer authority, refresh original lifetime or invent tenant ownership. Physically expire/erase pending bodies, attribution, effect markers and quarantined copies while preserving necessary recovery/erasure barriers. Mixed-owner repair preserves surviving original ordinals/commitments with existing authenticated v2 proof, not a filtered envelope falsely satisfying whole claims. Restricted unknown-owner retention/disposal configuration is explicit and fail-closed unset; no actual policy durations, historical destructive cleanup or live authority inferred. Preserve bounded destination-cleanup references/continuation proof before erasing owner recovery keys, so cross-object markers remain discoverable for erasure.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W09.09-C7",
+      "description": "Conserve source-operation counts separately from destination effects: expected, newly applied, already present, suppressed, pending/unknown and terminal loss. Reconcile actual sinks, not receipts alone; never sum ring/exposure/credit units into fictitious unique events. Focused faults cover byte limits/oversize, queue/R2/DO outages, committed response loss, interruption/restart, malformed/conflicting records, regrouping, duplicate sends, partial credits, expiry/withdrawal/erasure/reset during retry and audit/storage failure. Preserve existing downstream/report/replay reader compatibility, expose incompleteness and capacity limits rather than claiming W22/W30 closure.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W09.09-C8",
+      "description": "Integrate explicit literal-true recovery intent through W08 desired-state/validation/resources, all three environment DLQ consumer declarations, guarded promotion and forward-compatible rollback closure. Default off stays off; false/unreadable intent or missing prerequisites never advertises durable-recovery readiness. Readers/consumers/erasers recognize already-managed state independently of producer activation. Preserve customer isolation, schema/credentials/telemetry and build-once artifact semantics. Use existing fixtures and concise API/deploy contracts, no new SQL migration/dependency/SDK regeneration/framework. Distinct whole-original-W09 actual artifact review and targeted independent fault tests required. Adding the DLQ consumer must extend W08 restore/continuation quiescence and real pause/readback to BOTH source and DLQ queues, preserve each prior pause state, and require fresh scoped resume authorization; the old no-DLQ-consumer safety assumption cannot survive activation.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    },
+    {
+      "id": "W09.09-C9",
+      "description": "Full/live/customer acceptance remains OPEN for separately authorized final batch: actual category/unknown-owner retention/disposal values, resource ownership/access/queue+DLQ consumer wiring, activation, real producer rejection and recovery with reconciled sink counts, deployment/browser/customer/SLO/retention/historical evidence. Local synthetic/native proof is not deployed/provider/customer acceptance; finite queue retention and unprovable legacy records remain explicit. No cloud/resource/credential/customer-data/external messages/commit/merge/push/deploy under local mandate.",
+      "required_evidence_kinds": [
+        "deployed_test"
+      ],
+      "minimum_claim": "deployed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W09.09-K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts -t 'W09|W06[.]12 (authenticates actual partial-survivor|resumes only claim-proven|retains complete large|preserves full managed grouping|preserves earlier cohort proof)' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Vitest; actual ledger modules with synthetic bounded stores",
+      "workload": "New W09.09 durable/quarantine faults and retained envelope/grouping/proof/erasure controls on changed delivery dependencies."
+    },
+    {
+      "id": "W09.09-K2",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts -t 'W09|W24[.]01|W23[.]01 keeps weighted|W22[.](04|08|09)|W26[.]03|W06[.]12 expires|W06[.]06 rejects an append|W10[.](01|02)' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Vitest; actual ring/statistics and synthetic durable storage",
+      "workload": "Stable effect dedup, attribution, lost replies, bounded reset/retention and retained compatibility/latency controls; no broad learning suite."
+    },
+    {
+      "id": "W09.09-K3",
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts -t 'W09|W24[.]01|drains unawaited private I/O|W06[.]12 propagates|W22[.]07 gates|uses stored switches for both hosts' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Actual owner-mediated content/outcome routes in existing fixtures",
+      "workload": "New W09.09 admission/recovery and both-host privacy/timing integration; preserve returned response and original authority."
+    },
+    {
+      "id": "W09.09-K4",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W09|W06[.]12 native owner/R2|W07[.]01 preserves successful ledger' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Actual queue/API entry with existing local native fixture, synthetic stores/outbound denied",
+      "workload": "DLQ intake/operator authority/audit and selected actual managed queue compatibility. No real provider calls."
+    },
+    {
+      "id": "W09.09-K5",
+      "command": "node --test --test-name-pattern='W09|W08[.]05 (strict intent|protected receipts|actual restore transport|restore resumes)' scripts/stamp-workflow.test.mjs",
+      "runtime": "Installed Node/injected provider; actual workflow",
+      "workload": "Changed desired-state/DLQ config/guarded promotion/rollback integration only; reuse unchanged W08 packaging-tool proof, not its old built Worker bytes as proof of new W09 source. No routine package rebuild; existing native entry fixture covers changed runtime. Prove both source and DLQ queue pause/readback, preserved pause states and authorized maintenance resume now that both may consume."
+    },
+    {
+      "id": "W09.09-K6",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/eslint/bin/eslint.js src/ledger/enqueue.ts src/ledger/consume.ts src/ledger/writer.ts src/ledger/delivery.ts src/ledger/erasure.ts src/ledger/recovery.ts src/ledger/quarantine.ts src/learn/fan.ts src/learn/route.ts src/durable-objects/ShopperReflex.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/identity/sessionAuthority.ts src/identity/erase.ts src/content/service.ts src/routes/realtime.ts src/routes/decisions.ts src/routes/health.ts src/routes/ledgerRecovery.ts src/index.ts src/customerBoundary.ts src/auth/store.ts src/auth/subjectAudit.ts src/retention.ts src/types/env.ts src/ledger/ledger.test.ts src/ledger/erasure.test.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts && node --check scripts/stamp-workflow.mjs && node --check scripts/stamp-workflow.test.mjs && git diff --check -- src/ledger/enqueue.ts src/ledger/consume.ts src/ledger/writer.ts src/ledger/delivery.ts src/ledger/erasure.ts src/ledger/recovery.ts src/ledger/quarantine.ts src/learn/fan.ts src/learn/route.ts src/durable-objects/ShopperReflex.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/identity/sessionAuthority.ts src/identity/erase.ts src/content/service.ts src/routes/realtime.ts src/routes/decisions.ts src/routes/health.ts src/routes/ledgerRecovery.ts src/index.ts src/customerBoundary.ts src/auth/store.ts src/auth/subjectAudit.ts src/retention.ts src/types/env.ts scripts/stamp-workflow.mjs wrangler.toml src/ledger/ledger.test.ts src/ledger/erasure.test.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts scripts/stamp-workflow.test.mjs docs/kit/02-api-reference.md docs/deployment/01-deploy.md",
+      "runtime": "Installed Worker TypeScript project, changed-TS ESLint, workflow syntax and owned whitespace",
+      "workload": "Cross-boundary types plus exact changed TS lint/baseline warnings, workflow syntax and owned whitespace; no SDK change/compiler/build, broadCI or deployment."
+    },
+    {
+      "id": "W09.09-K7",
+      "command": "Independent frozen artifact and complete original W09 requirement review",
+      "runtime": "Distinct gpt-6-astra/xhigh reviewer",
+      "workload": "Complete original W09/F16/N07/N08/N10, actual dirty-baseline deltas, durable protocols/privacy/authority/whole-primary proof and retained remedies."
+    },
+    {
+      "id": "W09.09-K8",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts -t 'W09[.]09' --maxWorkers=1 --minWorkers=1 && node --test --test-name-pattern='W09[.]09' scripts/stamp-workflow.test.mjs",
+      "runtime": "Distinct local Vitest/Node exact frozen artifact",
+      "workload": "New W09.09 fault groups only; reuse valid unchanged static/old controls after actual source qualification. No package rebuild/broad CI."
+    },
+    {
+      "id": "W09.09-K9",
+      "command": "Separately authorized live queue/DLQ/owner/sink recovery and customer count reconciliation",
+      "runtime": "Authorized selected stamp/resource/privacy/customer owners; not run locally",
+      "workload": "Final authorized batch with real policy values/activation/resources/retention/authority/records and sink counts, no synthetic proof substituted."
+    }
+  ],
+  "dependencies": "Whole-original-W08 independent local PASS; exact overlapping source proof prospectively qualified, not W08 historical package relabelled for W09. Preserve W01 customer profile, W02 shared humans/current tenant membership/stamp-owner recovery/registered services, W03 tenant registry, W04 grants/erasure, W05 explicit-choice30day consent, W06 per-category failclosed retention/current recovery barriers, W07 safe operational measurement, and allW09.01–.08 remedies.",
+  "interface": "Existing owner-held immutable logical admission before ledger/learning effects; original managed envelopes/identities/ordinals and destinations reused. Atomic marker+counter/immutable attribution and reset fences; retries/alarms recheck original authority/deadlines. Actual bounded durable quarantine and opaque-id+revision current-human audited recovery, known/unknown ownership separated. Existing explicit categories extended failclosed unset, no raw arbitrary-body repair/retention defaults. Physical expiry/erasure retains bounded cross-object cleanup continuations before deleting owner references. All3env DLQ consumers and W08 BOTH-queue pause/readback/prior-state/fresh-resume integration. Source counts remain distinct from destination effects.",
+  "rollback": "Save exact pre-existing dirty originals before edits and apply only admitted hunks for local rollback. Do not delete stores/history, reset counters or invalidate privacy/recovery fences. New managed readers/erasers remain compatible independently of producer flag; no old worker rollback that discards enforcement. Live data recovery/cleanup/activation separately authorized.",
+  "ownership": {
+    "worker": "Exactly37 write_paths plus docs/remediation/evidence/W09.09/worker.json after valid board GO. One writer, no subdelegation; capture exact originals/baseline lint, focused K1–K6, full primaries/failures/deltas/pins; SOURCE/EVIDENCE STOP.",
+    "reviewer": "Read-only source review during coherent implementation; only docs/remediation/evidence/W09.09/review.json after frozen GO, complete originalW09 plus exactK8newgroups. No product/governance edits or subdelegation.",
+    "lead": "Existing admission/tracker/journal/freeze/disposition/RESUME only; no product edits/tests."
+  },
+  "authority": "Existing user orderedW01–W41 local mandate; explicit Astra/xhigh writer/reviewer. No cloud/resource/credential/customer-data/provider/external operation, actual retention/disposal values, historical reset/deletion, SDK regeneration, broadCI, commit/merge/push/deploy or extra tracker/framework/documentation programme. Live-only acceptance does not block nextlocalW after independentlocalreview."
+}

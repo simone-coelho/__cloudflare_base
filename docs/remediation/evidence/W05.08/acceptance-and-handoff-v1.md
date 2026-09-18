@@ -1,0 +1,15 @@
+# W05.08 acceptance and handoff
+
+Accepted by w01-lead (/root) at 2026-09-08T02:28:34Z, after independent w0508-reviewer C1–C3 PASS at 2026-09-08T02:26:35Z. Artifact `fc4c7f0be3ceed7455bcce7e5562a6390b4ba70f19c2960956dac90728a36377`; plan/contract unchanged.
+
+Implemented: owned preference updates are necessary-only, emitting consent cookies without personalization, behavioral/counter/timestamp or user-pointer mutation. Session path falls from three reads/two writes to one/one in the local integration fixture. Both hosts resolve refusal before personalization/segments/reflex projection and manual assignment; strict state/write failures do not receive successful acknowledgment. Consented behavior, deterministic core, SDK bundles, historical analytics and headerless internal paths are preserved.
+
+Evidence: worker exact existing K1 24/24, app noEmit and scoped diff exit0; independent same K1 once24/24, actual source/full available proof review and112 physical pins pass. Initial worker22/24 fixture failures/corrections and pre-freeze expiry-guard improvement remain recorded. No extra suite/build or deployed latency claim. See worker-checks.json, review-v1.md/review-checks-v1.json and root-review-v1.json.
+
+Important compatibility limit: never-set all-true DO preference now404 (previous200); existing cold refusal can enable. Neutral responses do not prove UI clearing. Bounded local owned preference/read/manual-segment consent only, both hosts. Actual local Hono/capability/session/DO and provider implementations with synthetic stores/destinations; no live vendor, native UI clearing, workerd/deployed latency/SLO/customer or release acceptance. Never-set all-consenting DO preference404 is an admitted normalization; existing cold refusal can enable. Headerless internal/live/identity and historical analytics remain unchanged. Full W05/finding/gate, provider webhook trust/preview/datafile, global absent-state/necessary-record retention/historic destinations, D01/D03/D06 and atomic copied-grant revocation remain open. SDK/source/bundles unchanged; historical whole-task evidence remains qualified, not reaccepted.
+
+W05.07 exact accepted artifact/review/signoff remains historical after shared inputs changed; its implemented fixes remain. Other qualified history is not silently reaccepted. W05 and release stay open; no customer/privacy decision is made.
+
+Next: Move to the next concrete G0 defect: inspect W06 durable erasure/discovery and replay-barrier implementation against its complete parent scope and F04/F06/F18/N05/N12/N13; admit one coherent decision-independent local remedy under standing authority. Retain W05's unresolved provider/internal/demo trust and global privacy/lifecycle boundaries; do not invent D01/D03/D06 policy or retest old tasks solely to refresh status. No next task/source edit admitted yet.
+
+Final existing board check/status and trusted290 append-only comparison follow closure; retain actual results in final-checks-v1.json and RESUME.md. These are consistency checks, not engine acceptance. Preserve dirty worktree/deletions; no commit/push/deploy/cloud/credential/customer-data/destructive action.

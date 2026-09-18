@@ -1,0 +1,63 @@
+{
+  "task_id": "W05.09",
+  "journal_seq": 915,
+  "at": "2026-09-11T08:12:22Z",
+  "actor_id": "w01-lead",
+  "command": "node scripts/remediation/board.mjs check; node scripts/remediation/board.mjs status",
+  "execution": "Actual read-only check/status entry points via existing bounded memoized filesystem reads/errors wrapper; NOTE lines counted/filtered, no validation skipped. No file changes while pair ran.",
+  "session_id": 80135,
+  "exit_status": 0,
+  "drained": true,
+  "result": "Tracker VALID; check and status exit0,11573 historical/limitation notes each. This is register consistency, not engine/customer/release acceptance.",
+  "captures": [
+    {
+      "chunk_id": "7a8bf1",
+      "wall_time_seconds": 1.000945911,
+      "session_id": 80135,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "10d51a",
+      "wall_time_seconds": 5.00061411,
+      "session_id": 80135,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "d762d2",
+      "wall_time_seconds": 5.000937774,
+      "session_id": 80135,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "4935d3",
+      "wall_time_seconds": 10.001086279,
+      "session_id": 80135,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "70e7f2",
+      "wall_time_seconds": 10.001647527,
+      "session_id": 80135,
+      "original_token_count": 305,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=17, unscoped=24\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=64, closed=3; evidence records=187\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W05.09 — W14 §1.12 typed historical attributes/precomputed audiences is the next functional slice. The existing import still converts product attributes to behavioral touches only. Admit one bounded usable persistence-plus-consumer implementation after reading actual field meaning/identity requirements and live segment merge/profile/decision paths; reuse W05.09 consent/exact-target assurance and W14.04 reviewed publication without reopening unchanged checks. Preserve customer-neutral relevance, explainability and latency; no unused schema/store-only completion or new framework. Full W05/W06/W35/W14, D03/D10, transactional identity/erasure and customer/release acceptance remain open; no external authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 11573\n"
+    },
+    {
+      "chunk_id": "025e79",
+      "wall_time_seconds": 10.000859616,
+      "session_id": 80135,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "f1f18a",
+      "wall_time_seconds": 4.378263272,
+      "exit_code": 0,
+      "original_token_count": 305,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=17, unscoped=24\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=64, closed=3; evidence records=187\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W05.09 — W14 §1.12 typed historical attributes/precomputed audiences is the next functional slice. The existing import still converts product attributes to behavioral touches only. Admit one bounded usable persistence-plus-consumer implementation after reading actual field meaning/identity requirements and live segment merge/profile/decision paths; reuse W05.09 consent/exact-target assurance and W14.04 reviewed publication without reopening unchanged checks. Preserve customer-neutral relevance, explainability and latency; no unused schema/store-only completion or new framework. Full W05/W06/W35/W14, D03/D10, transactional identity/erasure and customer/release acceptance remain open; no external authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 11573\n"
+    }
+  ]
+}

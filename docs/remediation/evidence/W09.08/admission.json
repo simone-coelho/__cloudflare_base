@@ -1,0 +1,29 @@
+{
+  "task_id": "W09.08",
+  "at": "2026-09-15T16:29:32.052Z",
+  "plan": {
+    "path": "docs/remediation/design/W09.08/plan.md",
+    "sha256": "bf65ebc518b82bf23d12ad9e05ec9fa0e3ed4a6ce0639a026b3bbeb02bc0a2eb"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W09.08/baseline.json",
+    "sha256": "c6d1a4449bdb065f37ec4dd4ff455ca40a19539c5e03efd6bb218273b3a08bff"
+  },
+  "contract_digest": "edfe2f6bf671c5fca5b95535f26c789d999c385563fa5f7fdd17a54d7dbd8ae9",
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "bf65ebc518b82bf23d12ad9e05ec9fa0e3ed4a6ce0639a026b3bbeb02bc0a2eb",
+    "reason": "Source and exact6 plan reviewed; unreadable setting must not silently select legacy or authorize managed capture. Missing storage receipt distinguishes pre-call from unknown post-call effects."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T16:29:32.052Z",
+    "plan_sha256": "bf65ebc518b82bf23d12ad9e05ec9fa0e3ed4a6ce0639a026b3bbeb02bc0a2eb",
+    "rationale": "Root actual-source read plus distinct exact-plan PASS. Small two-file recovery/receipt boundary, fixed6, no activation or new I/O."
+  },
+  "limits": "Binding-failure handling in existing ledger producers and opted-in canonical recovery only. No recovery activation, new state/retention/outbox/quarantine, changed erasure/identity/event-time/lifecycle policy, historical repair or full W09/W22/customer/SLO/release acceptance. Preserve exact W22.06 and all inherited fixes. No install/emitted build/deploy/provision/cloud/credential/customer-data/destructive/commit/push/external operations."
+}

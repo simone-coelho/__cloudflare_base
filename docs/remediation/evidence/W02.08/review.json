@@ -1,0 +1,78 @@
+{
+  "task_id": "W02.08",
+  "reviewer": "/root/w01_reviewer",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "at": "2026-09-16T22:50:59Z",
+  "verdict": "PASS_LOCAL",
+  "source_state": "STOP",
+  "artifact": {
+    "digest": "01034ec31000987cbf0a562137063e3669eae6e54936d7cab1a1eb2c06431028",
+    "contract_digest": "e7bc7200e7ee9f85015acda11b8edad9a21232e77a701115a76eed0fd513ab08",
+    "manifest": "docs/remediation/evidence/W02.08/source-freeze.json",
+    "manifest_sha256": "45184d09dc87b09efca51595729621ea33c4eff879897e860fb4cc3fbea0e91d",
+    "worker": "docs/remediation/evidence/W02.08/worker.json",
+    "worker_sha256": "5e6d04fbd3effa38b82aede2363ddc853ec69137f952836cf8a3a48b83754808"
+  },
+  "scope": "Independent actual-source, task-only-delta and evidence review against complete original W02/doc35, F02/F09, N02/N14 and admitted C1–C5; preserve W02.01–.07 and customer W01 boundary. Local-only user mandate; no full package, finding, customer or release acceptance.",
+  "identity_checks": "All53 frozen pins match disk; all22 worker final/baseline hashes match freeze/admission. Every patch reconstructs admitted baseline by reversal and stopped output by forward application, including two absent-baseline additions. Three post-initial-K1 patches independently reconstruct their stated initial/final hashes.",
+  "independent_runtime": {
+    "check": "W02.08-K5",
+    "command": "node node_modules/vitest/vitest.mjs run src/middleware/auth.claims-boundary.test.ts -t 'W02.08' --maxWorkers=1 --minWorkers=1",
+    "executions": 1,
+    "session": 69595,
+    "exit": 0,
+    "started_at_utc": "2026-09-16T22:48:26Z",
+    "duration_seconds": 20.36,
+    "result": "1 selected passed;76 unselected;60 native assertions;8 protected positive effects;0 outbound;3 runtimes disposed. Session drained.",
+    "output": "docs/remediation/evidence/W02.08/review-k5.log",
+    "output_sha256": "d1365070fbff9beadec2b304ca2212533942098831a2d5bf08505da18a44f971",
+    "inputs": "Independent output graph:289 physical current inputs match disk;2 virtual harness inputs retained in the log; historical before-verifier graph excluded from current-drift comparison."
+  },
+  "reused_evidence": {
+    "K1": "Initial five-fixture session67390 exited1:203 passed/24 failed. Retain its unchanged boundary62, console42 and routes12 passes. Affected auth/signing session36091 exited0:111/111. Combined227 covered; not a newly executed full run.",
+    "K2": "Worker session68202 exited0:39/39 tool/seed checks; scripts, schema, verifier and store runtime inputs unchanged since this execution. No real seed/Wrangler/cloud execution.",
+    "K3": "Worker final session58765 exited0: compiler/scoped lint/script syntax/whitespace.0 errors,3 warnings:2 inherited middleware signatures and1 new intentionally unused tokenHash exclusion binding. Initial six-error compiler attempt/session37623 remains retained.",
+    "corrections": "Only two stale fixture KV adapters gained get(key,'stream') ReadableStream support required by unchanged versionedStore; native recovery next-password input stopped containing the email local part. Success/status/effect oracles were preserved. The sole post-K1 production edit is authorityActor's structural TypeScript parameter.",
+    "equivalence": "Independently reconstructed initial/final routes/auth.ts and transformed both with installed esbuild(loader:ts,format:esm,target:esnext): byte-identical JavaScript SHA256 d23ad64b331b69bfdbfc9dde376512576c1553a74f30a985edeed97f12a06734. Initial worker current graph has only that source annotation mismatch; affected final graph has none (289 physical inputs each). Reused results retain their original execution provenance."
+  },
+  "coverage": [
+    {
+      "criterion": "C1 / original W02 / F02 / N02 / N14",
+      "assessment": "Typed refresh/access/service separation, required identity/array/expiry claims, HS256 pinning, current active human account/session checks and restricted onboarding remain. Retained native lifecycle/removal tests cover logout, disable, delete, demotion, competing password changes, stale login/session commits, SQL rollback and recovery. Signing suitability/readiness guards remain before protected work. Unchanged source/stamp login budgets,4KiB streaming bound, no account-email lockout or anonymous audit writes, fixed-window recovery and existing selfservice outside login admission are covered by the passing affected suite."
+    },
+    {
+      "criterion": "C2",
+      "assessment": "Global identity controls require explicit configured stamp ownership and a completed current human session; native create/transaction entry rechecks acting account revision/SID. Tenant administration uses ingress-selected provisioned tenant and current admin membership, with no global password/account/session changes. Revision tombstones prevent delayed-create revival; explicit current-generation regrant is required. Native stale-owner and stale-tenant-admin cases refuse without state changes; paused HTTP reset/logout assertion is retained. Recovery CLI pins target/configured owner and binds operation to account/email/revision/password/flags; AFTER INSERT trigger atomically resets/revokes/audits. Exact retry is historical no-op, changed payload conflicts, later disable/delete remains intact, ambiguous output does not assert rollback or current usability."
+    },
+    {
+      "criterion": "C3",
+      "assessment": "Customer services require current registered ID/token hash/subject/expiry/tenant role and nonrevocation, independent of human logout. Native issuance/current-row parsing, altered signed claims, foreign tenant, replacement/revocation/sibling survival and faults pass. Existing-ID insertion aborts the entire replacement batch before old revocation; retired identities are not silently reused. Input expiry is safe-integer validated before effects.100-row continuation preserves all201 retained credentials and membership tombstones. Tool adapters require explicit issued customer credentials; offline minting is explicit demo-only."
+    },
+    {
+      "criterion": "C4",
+      "assessment": "Every direct operator-grant consumer carries server-loaded authority; current tenant role replaces global/signed privilege, with no customer static-grant fallback. Mounted customer catalog/decision/audit refusals precede effects and same-tenant catalog remains usable. Exact new auth route/method policy and CORS compose with retained W01 Worker-first assets/binding exclusions. Accounts UI separates tenant membership controls from owner identity controls and sends tenant/revision. Synthetic A→unsafe→B signing transition refuses old human/service credentials and restores legitimate human/new registered machine access without changing shared identity/site keys/salt; real rollout is not proved."
+    },
+    {
+      "criterion": "C5",
+      "assessment": "Distinct reviewer inspected actual frozen code, all22 task-only deltas, primary failed/final worker outputs and source-backed fixture corrections; independently verified hashes/reconstruction/runtime equivalence and ran K5 once."
+    }
+  ],
+  "findings": {
+    "unresolved_local": [],
+    "corrected": [
+      "Replacement collision postcommit revocation",
+      "Credential base64url hash parser mismatch",
+      "Membership removal/delayed-create ABA",
+      "Acting-owner stale commit",
+      "Unsafe service expiry persistence",
+      "Retained-history listing failure above200"
+    ]
+  },
+  "limitations": [
+    "C6/K6 not run: separately authorized deployed schema/owner/membership/service rollout, secure credential handoff, selected signing-key rotation and genuine operator/tool/last-owner recovery remain required final live work.",
+    "No deployment, resource/credential/customer-data mutation, commit/push/merge or broad CI. Local native D1 and synthetic ingress/DOM/tool evidence are not selected-deployment or customer acceptance.",
+    "Signing suitability is not entropy or secret-state attestation; budgets are not deployed capacity or guaranteed availability under sustained stamp-wide exhaustion. Privileged recovery hash-bearing SQL still needs controlled process/query retention.",
+    "Full W02/F02/F09/N02/N14 closure and customer/release approval are withheld; lead owns local disposition and ordered continuation."
+  ]
+}

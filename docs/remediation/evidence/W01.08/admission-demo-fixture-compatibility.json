@@ -1,0 +1,38 @@
+{
+  "before": "77e9aab6030d677bf1ed17c88016816e05d1495f8c259cddd0198a2f6aad1c59",
+  "after": "fe50ee06f9f22fbc5fddfbfcdc5ad9522a1f3968f55b8576993b5de11ca8d5d8",
+  "at": "2026-09-16T21:16:23.171Z",
+  "continues": {
+    "path": "docs/remediation/evidence/W01.08/admission-audience-correction.json",
+    "sha256": "d5dccc9b0534d63ce7ac9ad7dff2d47987d2a5a6c8726a19781b8ec1ae0e1c18"
+  },
+  "baseline": {
+    "src/demos/brighthour/surface.test.ts": "3b7aa39fb5a676fcbe68650e61d8eda826b4f5aea5cbe2845c6b0d3e7087152a",
+    "src/reflex/shopperReflex.test.ts": "170bcf95405c31a448acfdcf32d5fa4a302fe5a15141a0102ffb4d8307277cf0",
+    "src/services/telemetry.boundary.test.ts": "c8cbef1082bc82bbcb458d197a1aff738daf953f8ce6450a5c8457c702093d74"
+  },
+  "reason": "Actual source inspection found three existing demo behavior fixtures omit the now-required explicit profile, and an existing non-default guard case requires zero Env access. This is the direct dependency of the approved shared-helper correction, not a broad validation programme.",
+  "implementation": [
+    "Add DEPLOYMENT_PROFILE: demo only to the three existing demo test setups; do not weaken or skip their seeded audience/telemetry assertions. No other product changes or unrelated fixture repair.",
+    "Preserve non-default return before any Env/Catalog access by keeping the tenant check before the new profile check in already-owned RealtimeSegmentEngine.ts."
+  ],
+  "verification": [
+    {
+      "id": "W01.08-K2",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.ts src/customerBoundary.ts src/types/env.ts src/routes/operator.ts src/services/RealtimeSegmentEngine.ts src/index.api-boundary.test.ts src/demos/brighthour/surface.test.ts src/reflex/shopperReflex.test.ts src/services/telemetry.boundary.test.ts && git diff --check -- src/index.ts src/customerBoundary.ts src/types/env.ts src/routes/operator.ts src/services/RealtimeSegmentEngine.ts wrangler.toml src/index.api-boundary.test.ts src/demos/brighthour/surface.test.ts src/reflex/shopperReflex.test.ts src/services/telemetry.boundary.test.ts",
+      "workload": "Changed source/configuration and installed compiler; inherited warnings distinguished. New-file whitespace inspected too."
+    },
+    {
+      "id": "W01.08-K3",
+      "command": "node node_modules/vitest/vitest.mjs run src/demos/brighthour/surface.test.ts src/reflex/shopperReflex.test.ts src/services/telemetry.boundary.test.ts src/routes/realtime.sdkContract.test.ts -t 'generates the coach audience set|three brisk views enter|retains segment qualification fallback|before any environment or catalog access' --maxWorkers=1 --minWorkers=1",
+      "workload": "Four existing cases only: explicit-demo audience generation, explicit-demo shopper seeded qualification, safe seed-failure telemetry, and non-default zero-environment/catalog access. No new tests or broad suite."
+    }
+  ],
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T21:16:23.171Z",
+    "scope": "Same W01 implementation batch; three narrowly owned fixture profile declarations and four selected existing dependency cases."
+  },
+  "rollback": "Inverse only of worker-owned deltas; preserve admitted dirty bytes.",
+  "limits": "No broad CI or deployed/customer/resource acceptance. Original W01 criteria, including K5, remain unchanged."
+}

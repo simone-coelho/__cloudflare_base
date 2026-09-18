@@ -1,0 +1,452 @@
+{
+  "before": {
+    "id": "W22.02-E1",
+    "task_id": "W22.02",
+    "check_id": "W22.02-K1",
+    "criterion_ids": [
+      "W22.02-C1",
+      "W22.02-C2",
+      "W22.02-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w2202-reviewer",
+    "run_id": "/root/w2202_review",
+    "file": {
+      "path": "docs/remediation/evidence/W22.02/review.json",
+      "sha256": "9546635e29abdbb67e0250ada96ba2e4b4356c6657af70cd90295d310b2827dc"
+    },
+    "at": "2026-09-14 13:16:41 UTC",
+    "limitations": "Forward listed-input completeness refusal only: unavailable/corrupt input is not repaired automatically. Existing catchUp can retry after availability is restored, within its lookback/horizon; historical partial aggregates, late arrivals, partially written shards, event-time manifests, durable producer recovery, online/export/point-read reconciliation and complete retention remain open. Physical caps and explicit truncation unchanged, no served/rendered/viewable or customer policy change. No native/SLO/customer/release claim or commit/push/build/install/deploy/cloud/credential/customer-data/destructive/external operation. Recovery assurance covers retry before later-hour progress; catchUp still continues after failure, so later carry-in/attribution may remain incomplete and is not rebuilt.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.02|W22.01|loadDay reads|an hour built again|an hour past the object cap|the five-minute job|the run continues past an hour whose fold throws' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest actual report/hourly modules with synthetic R2.",
+    "workload": "Fixed10:8 existing controls plus2 grouped refusal/retry cases; no broad/native claim.",
+    "result": "pass",
+    "artifact_digest": "0aafbe28b3ad1be7ea2811b7433f920c4ac0ea162ed499ff91a0aff274238cb6",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2",
+      "configuration": "Forward listed-input completeness refusal only: unavailable/corrupt input is not repaired automatically. Existing catchUp can retry after availability is restored, within its lookback/horizon; historical partial aggregates, late arrivals, partially written shards, event-time manifests, durable producer recovery, online/export/point-read reconciliation and complete retention remain open. Physical caps and explicit truncation unchanged, no served/rendered/viewable or customer policy change. No native/SLO/customer/release claim or commit/push/build/install/deploy/cloud/credential/customer-data/destructive/external operation. Recovery assurance covers retry before later-hour progress; catchUp still continues after failure, so later carry-in/attribution may remain incomplete and is not rebuilt.",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "344b264bf8132246a18c903f80b739c0d46d4e7475b18136ca2165e5b749f0b7",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "cf838dd6bf1cb7946d8b52f8177e0ef4b3d53012eb1735b540e75ce173e3f382",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "a0d6ccaac1a501dd362ef83a26326cc3a8a9b232af00525695a617d12ccc443d",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "7e2a514516ee25d1bcfda5858beb119e4804e738c84ae8caf45e8318650aaf46",
+          "role": "output"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "f07d4b0fabb7ba90cf0119f1eaddd305e0435dd59bd203f67e3f633f2d5fd0e1",
+          "role": "output"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "sha256": "4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/ledger.test.ts",
+          "sha256": "2a2f61f845a9152b6e72b61adbdf75ef5e1dceb9d34de719d518476c6df8b35d",
+          "role": "source"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "0927a0dc9428e64d362d1210325ed7cca4c4e09324608faf7c6f07d73594494d",
+          "role": "source"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "sha256": "2fba160c596b9740527465d8c6abb37aa95979656d1475ed08b76403b4453db6",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+          "role": "source"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F16.md",
+          "sha256": "640186887aff1cbecd481260abdc135f9b53cbd4001e9e23eb28f8dac124eb36",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad",
+          "role": "source"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "3aae86085cb5a461a10c8925732e86e0a6507d9065af9c66e376349247282b70",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da",
+          "role": "source"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.02/worker.json",
+          "sha256": "76ad8847b588f6a788b06d5b4658662465b10a69a854c404fda01b9f8bec0506",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W22.02/plan.md",
+          "sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W22.02/baseline.json",
+          "sha256": "96cba01da8a25be555d8ea6e05f0ce26fa42087c0772d22ed276af391dac0d3c",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.02/admission.json",
+          "sha256": "6fdb2fcc99305188c4d6b3bb209303ba861b94236c19264dca7ddaea5e7745c2",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.02/source-freeze.json",
+          "sha256": "d538c98b3e5d15010b58af02ee6a31a7fca493fe08d35b99221c4c6530e486ec",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.02/source-deltas.json",
+          "sha256": "2811276da8da5a5af68e256caaadbabe52ac817611b96c4ea48b4f099c9b2507",
+          "role": "configuration"
+        }
+      ],
+      "digest": "0aafbe28b3ad1be7ea2811b7433f920c4ac0ea162ed499ff91a0aff274238cb6"
+    }
+  },
+  "after": {
+    "id": "W22.02-E1",
+    "task_id": "W22.02",
+    "check_id": "W22.02-K1",
+    "criterion_ids": [
+      "W22.02-C1",
+      "W22.02-C2",
+      "W22.02-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w2202-reviewer",
+    "run_id": "/root/w2202_review",
+    "file": {
+      "path": "docs/remediation/evidence/W22.02/review.json",
+      "sha256": "9546635e29abdbb67e0250ada96ba2e4b4356c6657af70cd90295d310b2827dc"
+    },
+    "at": "2026-09-14 13:16:41 UTC",
+    "limitations": "Forward listed-input completeness refusal only: unavailable/corrupt input is not repaired automatically. Existing catchUp can retry after availability is restored, within its lookback/horizon; historical partial aggregates, late arrivals, partially written shards, event-time manifests, durable producer recovery, online/export/point-read reconciliation and complete retention remain open. Physical caps and explicit truncation unchanged, no served/rendered/viewable or customer policy change. No native/SLO/customer/release claim or commit/push/build/install/deploy/cloud/credential/customer-data/destructive/external operation. Recovery assurance covers retry before later-hour progress; catchUp still continues after failure, so later carry-in/attribution may remain incomplete and is not rebuilt.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.02|W22.01|loadDay reads|an hour built again|an hour past the object cap|the five-minute job|the run continues past an hour whose fold throws' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest actual report/hourly modules with synthetic R2.",
+    "workload": "Fixed10:8 existing controls plus2 grouped refusal/retry cases; no broad/native claim.",
+    "result": "pass",
+    "artifact_digest": "0aafbe28b3ad1be7ea2811b7433f920c4ac0ea162ed499ff91a0aff274238cb6",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2",
+      "configuration": "Forward listed-input completeness refusal only: unavailable/corrupt input is not repaired automatically. Existing catchUp can retry after availability is restored, within its lookback/horizon; historical partial aggregates, late arrivals, partially written shards, event-time manifests, durable producer recovery, online/export/point-read reconciliation and complete retention remain open. Physical caps and explicit truncation unchanged, no served/rendered/viewable or customer policy change. No native/SLO/customer/release claim or commit/push/build/install/deploy/cloud/credential/customer-data/destructive/external operation. Recovery assurance covers retry before later-hour progress; catchUp still continues after failure, so later carry-in/attribution may remain incomplete and is not rebuilt.",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "344b264bf8132246a18c903f80b739c0d46d4e7475b18136ca2165e5b749f0b7",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "cf838dd6bf1cb7946d8b52f8177e0ef4b3d53012eb1735b540e75ce173e3f382",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "a0d6ccaac1a501dd362ef83a26326cc3a8a9b232af00525695a617d12ccc443d",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "7e2a514516ee25d1bcfda5858beb119e4804e738c84ae8caf45e8318650aaf46",
+          "role": "output"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "f07d4b0fabb7ba90cf0119f1eaddd305e0435dd59bd203f67e3f633f2d5fd0e1",
+          "role": "output"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "sha256": "4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/ledger.test.ts",
+          "sha256": "2a2f61f845a9152b6e72b61adbdf75ef5e1dceb9d34de719d518476c6df8b35d",
+          "role": "source"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "0927a0dc9428e64d362d1210325ed7cca4c4e09324608faf7c6f07d73594494d",
+          "role": "source"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "sha256": "2fba160c596b9740527465d8c6abb37aa95979656d1475ed08b76403b4453db6",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+          "role": "source"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F16.md",
+          "sha256": "640186887aff1cbecd481260abdc135f9b53cbd4001e9e23eb28f8dac124eb36",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad",
+          "role": "source"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "3aae86085cb5a461a10c8925732e86e0a6507d9065af9c66e376349247282b70",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da",
+          "role": "source"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.02/worker.json",
+          "sha256": "76ad8847b588f6a788b06d5b4658662465b10a69a854c404fda01b9f8bec0506",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W22.02/plan.md",
+          "sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W22.02/baseline.json",
+          "sha256": "96cba01da8a25be555d8ea6e05f0ce26fa42087c0772d22ed276af391dac0d3c",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.02/admission.json",
+          "sha256": "6fdb2fcc99305188c4d6b3bb209303ba861b94236c19264dca7ddaea5e7745c2",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.02/source-freeze.json",
+          "sha256": "d538c98b3e5d15010b58af02ee6a31a7fca493fe08d35b99221c4c6530e486ec",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.02/source-deltas.json",
+          "sha256": "2811276da8da5a5af68e256caaadbabe52ac817611b96c4ea48b4f099c9b2507",
+          "role": "configuration"
+        }
+      ],
+      "digest": "0aafbe28b3ad1be7ea2811b7433f920c4ac0ea162ed499ff91a0aff274238cb6"
+    }
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "task": "W34.01",
+  "basis": "Pre-admission, read-only actual-service reproduction; no production changes.",
+  "execution": {
+    "command": "node --input-type=module <<'NODE'\nimport { build } from 'esbuild';\nimport { createRequire } from 'node:module';\nimport { createHash } from 'node:crypto';\nimport { readFileSync } from 'node:fs';\nconst wrapper = `\nimport { write, invalidateCache } from './src/config/versionedStore.ts';\nimport { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from './src/content/kinds.ts';\nimport { serveContentDecisions, invalidateLiftCache } from './src/content/service.ts';\nimport { invalidateExternalCache } from './src/learn/external.ts';\nimport { replayDecision } from './src/learn/replay.ts';\nexport { write, invalidateCache, CONTENT_KIND, SLOTS_KIND, LEARN_KIND, serveContentDecisions, invalidateLiftCache, invalidateExternalCache, replayDecision };\n`;\nconst bundle = await build({ stdin: { contents: wrapper, resolveDir: process.cwd(), sourcefile: 'w3401-preflight.ts', loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', packages: 'external', write: false, metafile: true, logLevel: 'silent' });\nconst mod = { exports: {} };\nnew Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(process.cwd()+'/package.json'), mod, mod.exports);\nconst m = mod.exports;\nconst originalFetch = globalThis.fetch;\nconst now = 1809749700000;\nconst body = { version: 'synthetic-score-v1', scores: { a: 0, n: 1, draft: 1 } };\nconst piece = (id, value, status='live') => ({ id, customerContentId: 'cms-'+id, type: 'editorial', title: id, tags: { line: [value] }, slotTypes: ['hero'], lifecycle: {status} });\ntry {\n  for (const [label, external] of [\n    ['ordinary', undefined],\n    ['http', {kind:'service',ref:'https://synthetic.invalid/score'}],\n    ['binding', {kind:'service',ref:'MODEL'}],\n    ['ai', {kind:'workers_ai',ref:'synthetic-model'}],\n    ['table', {kind:'table',ref:'synthetic-table'}]\n  ]) {\n    m.invalidateCache(); m.invalidateLiftCache(); m.invalidateExternalCache();\n    const counts={http:0,binding:0,ai:0,table:0,shopper:0};\n    let request = null;\n    const store = new Map();\n    const kv = {get: async key => {if(key.startsWith('ext:')) counts.table++; return store.has(key)?JSON.parse(store.get(key)):null;}, put:async(key,value)=>{store.set(key,value);}};\n    globalThis.fetch=async(url,init)=>{counts.http++; request=JSON.parse(String(init.body));return Response.json(body);};\n    const env = {CACHE:kv,REFLEX_HOST:'do',ENVIRONMENT:'production',EXTERNAL_SCORING_POLICY:'off',\n      SHOPPER_REFLEX:{idFromName:n=>n,get:()=>({fetch:async()=>{counts.shopper++;return Response.json({affinity:{dims:{line:{Drover:0.9}}},journeyStage:'mid'});}})},\n      MODEL:{fetch:async(url,init)=>{counts.binding++;request=JSON.parse(String(init.body));return Response.json(body);}},\n      AI:{run:async(model,input)=>{counts.ai++;request=JSON.parse(input.prompt.slice(input.prompt.indexOf('\\n')+1));return body;}}\n    };\n    const documents = [\n      [m.CONTENT_KIND,{pieces:[piece('a','Drover'),piece('n','Other'),piece('draft','Drover','draft')]}],\n      [m.SLOTS_KIND,{pages:{home:[{slot:'hero',take:1,weights:{line:0.5}}]}}],\n      [m.LEARN_KIND,{holdout:{share:0,salt:'',arms:['default']},slots:{hero:{external:{weight:0.5}}},...(external?{external:{...external,timeoutMs:50,fallback:'omit'}}:{})}]\n    ];\n    for(const [kind,value] of documents){const written=await m.write(env,kind,'coach',value,{actor:'synthetic-preflight',nowMs:now});if(!written.ok)throw new Error(JSON.stringify(written.errors));}\n    store.set('ext:coach:coach',JSON.stringify(body));\n    const out=await m.serveContentDecisions(env,{tenant:'coach',page:'home',visitorId:'synthetic-v',sessionId:'synthetic-s',cookieHeader:null,stateTenant:'coach',nowMs:now,channel:'direct'});\n    await out.afterResponse;\n    const rec=out.records[0];\n    const replay=await m.replayDecision(env,rec);\n    console.log(JSON.stringify({label,counts,arm:out.arm,selected:rec.item_id,score:rec.explain.score_final,sourceExternal:out.sources.external,receiptExternal:rec.explain.external??null,externalInputs:!!rec.inputs.external,sharedAffinity:!!request?.affinity?.line,sharedDraft:!!request?.candidates?.some(c=>c.id==='draft'),replayEqual:replay.equal}));\n  }\n  console.log(JSON.stringify({sourceSha256:createHash('sha256').update(readFileSync('src/content/service.ts')).digest('hex'),bundleInputs:Object.keys(bundle.metafile.inputs).length,realNetwork:0}));\n} finally {globalThis.fetch=originalFetch;}\nNODE",
+    "startedAtUTC": "2026-09-07 04:23:10 UTC",
+    "completedAtUTC": null,
+    "timingLimit": "Completion clock was not sampled; the completed process was collected before 2026-09-07 04:25:03 UTC.",
+    "initialToolResult": {
+      "chunk_id": "70eb5b",
+      "wall_time_seconds": 1.00148954,
+      "session_id": 96436,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "completedToolResult": {
+      "chunk_id": "1fef84",
+      "wall_time_seconds": 0.000001595,
+      "exit_code": 0,
+      "original_token_count": 564,
+      "output": "{\"label\":\"ordinary\",\"counts\":{\"http\":0,\"binding\":0,\"ai\":0,\"table\":0,\"shopper\":1},\"arm\":\"personalized\",\"selected\":\"a\",\"score\":0.45,\"sourceExternal\":null,\"receiptExternal\":null,\"externalInputs\":false,\"sharedAffinity\":false,\"sharedDraft\":false,\"replayEqual\":true}\n{\"label\":\"http\",\"counts\":{\"http\":1,\"binding\":0,\"ai\":0,\"table\":0,\"shopper\":1},\"arm\":\"personalized\",\"selected\":\"n\",\"score\":0.5,\"sourceExternal\":{\"kind\":\"service\",\"ref\":\"https://synthetic.invalid/score\",\"ok\":true,\"ms\":0,\"version\":\"synthetic-score-v1\",\"reason\":null},\"receiptExternal\":{\"kind\":\"service\",\"ref\":\"https://synthetic.invalid/score\",\"version\":\"synthetic-score-v1\",\"weight\":0.5,\"score\":1,\"contribution\":0.5},\"externalInputs\":true,\"sharedAffinity\":true,\"sharedDraft\":true,\"replayEqual\":true}\n{\"label\":\"binding\",\"counts\":{\"http\":0,\"binding\":1,\"ai\":0,\"table\":0,\"shopper\":1},\"arm\":\"personalized\",\"selected\":\"n\",\"score\":0.5,\"sourceExternal\":{\"kind\":\"service\",\"ref\":\"MODEL\",\"ok\":true,\"ms\":0,\"version\":\"synthetic-score-v1\",\"reason\":null},\"receiptExternal\":{\"kind\":\"service\",\"ref\":\"MODEL\",\"version\":\"synthetic-score-v1\",\"weight\":0.5,\"score\":1,\"contribution\":0.5},\"externalInputs\":true,\"sharedAffinity\":true,\"sharedDraft\":true,\"replayEqual\":true}\n{\"label\":\"ai\",\"counts\":{\"http\":0,\"binding\":0,\"ai\":1,\"table\":0,\"shopper\":1},\"arm\":\"personalized\",\"selected\":\"n\",\"score\":0.5,\"sourceExternal\":{\"kind\":\"workers_ai\",\"ref\":\"synthetic-model\",\"ok\":true,\"ms\":0,\"version\":\"synthetic-score-v1\",\"reason\":null},\"receiptExternal\":{\"kind\":\"workers_ai\",\"ref\":\"synthetic-model\",\"version\":\"synthetic-score-v1\",\"weight\":0.5,\"score\":1,\"contribution\":0.5},\"externalInputs\":true,\"sharedAffinity\":true,\"sharedDraft\":true,\"replayEqual\":true}\n{\"label\":\"table\",\"counts\":{\"http\":0,\"binding\":0,\"ai\":0,\"table\":1,\"shopper\":1},\"arm\":\"personalized\",\"selected\":\"n\",\"score\":0.5,\"sourceExternal\":{\"kind\":\"table\",\"ref\":\"synthetic-table\",\"ok\":true,\"ms\":0,\"version\":\"synthetic-score-v1\",\"reason\":null},\"receiptExternal\":{\"kind\":\"table\",\"ref\":\"synthetic-table\",\"version\":\"synthetic-score-v1\",\"weight\":0.5,\"score\":1,\"contribution\":0.5},\"externalInputs\":true,\"sharedAffinity\":false,\"sharedDraft\":false,\"replayEqual\":true}\n{\"sourceSha256\":\"a19d57d85dd757574eb5e3e913ec06635314f839efe372771a1f35cd503d4d6d\",\"bundleInputs\":52,\"realNetwork\":0}\n"
+    },
+    "parsedOutput": [
+      {
+        "label": "ordinary",
+        "counts": {
+          "http": 0,
+          "binding": 0,
+          "ai": 0,
+          "table": 0,
+          "shopper": 1
+        },
+        "arm": "personalized",
+        "selected": "a",
+        "score": 0.45,
+        "sourceExternal": null,
+        "receiptExternal": null,
+        "externalInputs": false,
+        "sharedAffinity": false,
+        "sharedDraft": false,
+        "replayEqual": true
+      },
+      {
+        "label": "http",
+        "counts": {
+          "http": 1,
+          "binding": 0,
+          "ai": 0,
+          "table": 0,
+          "shopper": 1
+        },
+        "arm": "personalized",
+        "selected": "n",
+        "score": 0.5,
+        "sourceExternal": {
+          "kind": "service",
+          "ref": "https://synthetic.invalid/score",
+          "ok": true,
+          "ms": 0,
+          "version": "synthetic-score-v1",
+          "reason": null
+        },
+        "receiptExternal": {
+          "kind": "service",
+          "ref": "https://synthetic.invalid/score",
+          "version": "synthetic-score-v1",
+          "weight": 0.5,
+          "score": 1,
+          "contribution": 0.5
+        },
+        "externalInputs": true,
+        "sharedAffinity": true,
+        "sharedDraft": true,
+        "replayEqual": true
+      },
+      {
+        "label": "binding",
+        "counts": {
+          "http": 0,
+          "binding": 1,
+          "ai": 0,
+          "table": 0,
+          "shopper": 1
+        },
+        "arm": "personalized",
+        "selected": "n",
+        "score": 0.5,
+        "sourceExternal": {
+          "kind": "service",
+          "ref": "MODEL",
+          "ok": true,
+          "ms": 0,
+          "version": "synthetic-score-v1",
+          "reason": null
+        },
+        "receiptExternal": {
+          "kind": "service",
+          "ref": "MODEL",
+          "version": "synthetic-score-v1",
+          "weight": 0.5,
+          "score": 1,
+          "contribution": 0.5
+        },
+        "externalInputs": true,
+        "sharedAffinity": true,
+        "sharedDraft": true,
+        "replayEqual": true
+      },
+      {
+        "label": "ai",
+        "counts": {
+          "http": 0,
+          "binding": 0,
+          "ai": 1,
+          "table": 0,
+          "shopper": 1
+        },
+        "arm": "personalized",
+        "selected": "n",
+        "score": 0.5,
+        "sourceExternal": {
+          "kind": "workers_ai",
+          "ref": "synthetic-model",
+          "ok": true,
+          "ms": 0,
+          "version": "synthetic-score-v1",
+          "reason": null
+        },
+        "receiptExternal": {
+          "kind": "workers_ai",
+          "ref": "synthetic-model",
+          "version": "synthetic-score-v1",
+          "weight": 0.5,
+          "score": 1,
+          "contribution": 0.5
+        },
+        "externalInputs": true,
+        "sharedAffinity": true,
+        "sharedDraft": true,
+        "replayEqual": true
+      },
+      {
+        "label": "table",
+        "counts": {
+          "http": 0,
+          "binding": 0,
+          "ai": 0,
+          "table": 1,
+          "shopper": 1
+        },
+        "arm": "personalized",
+        "selected": "n",
+        "score": 0.5,
+        "sourceExternal": {
+          "kind": "table",
+          "ref": "synthetic-table",
+          "ok": true,
+          "ms": 0,
+          "version": "synthetic-score-v1",
+          "reason": null
+        },
+        "receiptExternal": {
+          "kind": "table",
+          "ref": "synthetic-table",
+          "version": "synthetic-score-v1",
+          "weight": 0.5,
+          "score": 1,
+          "contribution": 0.5
+        },
+        "externalInputs": true,
+        "sharedAffinity": false,
+        "sharedDraft": false,
+        "replayEqual": true
+      },
+      {
+        "sourceSha256": "a19d57d85dd757574eb5e3e913ec06635314f839efe372771a1f35cd503d4d6d",
+        "bundleInputs": 52,
+        "realNetwork": 0
+      }
+    ]
+  },
+  "originalSources": [
+    {
+      "path": "src/content/service.ts",
+      "sha256": "a19d57d85dd757574eb5e3e913ec06635314f839efe372771a1f35cd503d4d6d",
+      "source": "// src/content/service.ts\n// The decision service: everything decide.ts needs, resolved from where it lives,\n// with the failure posture doc 22 §1 requires — a store or state read that fails\n// produces a cold decision, never a failed request. Reads only. Nothing here\n// writes a record; the ledger writer is Phase 0's and consumes `records` as is.\n\nimport type { Env } from '@/types/env';\nimport { readRevision } from '@/config/versionedStore';\nimport { readReflexConfigRevision } from '@/reflex/configStore';\nimport { DEFAULT_REFLEX_CONFIG, snapshot as reflexSnapshot, type AffinitySnapshot, type ReflexConfig } from '@/reflex/core';\nimport { RealtimeSegmentEngine } from '@/services/RealtimeSegmentEngine';\nimport { getConnectors } from '@/connectors';\nimport { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';\nimport { shopperObject } from '@/tenancy/objects';\nimport { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';\nimport { armFor } from './holdout';\nimport { cellFor, type CfLike } from './cell';\nimport { armUnder, CONSENTING, consentOf, personalizes, type Consent } from './consent';\nimport { decideContent } from './decide';\nimport { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';\nimport { fanDecisions, liftKey, readRing, servedCounts, type SlotLearnConfig } from '@/learn/fan';\nimport { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';\nimport { scoreExternal, type ExternalResult } from '@/learn/external';\nimport type { ExternalTerm } from './types';\nimport type { ContentDecisionSet } from './types';\n\nexport interface ServeRequest {\n  tenant: string;\n  brand?: string;\n  page: string;\n  visitorId: string;\n  cookieHeader: string | null;\n  /** The client's browsing session, when the SDK sends one: what the decision's session_id carries, so an outcome from the same client compares equal. */\n  sessionId?: string | null;\n  cf?: CfLike | null;\n  channel?: string | null;\n  nowMs?: number;\n  /** The brand whose shopper state this request reads, as the tenancy middleware resolved it. */\n  stateTenant?: TenantId;\n}\n\n/** Where each input came from, so a reader can tell a tuned scope from a compiled default. */\n/** The lift snapshots the decision path reads: KV through a per-isolate cache, never the object. */\nconst LIFT_TTL_MS = 60_000;\nconst liftCache = new Map<string, { at: number; value: LiftSnapshot | null }>();\nexport function invalidateLiftCache(): void { liftCache.clear(); }\nasync function readLift(env: Pick<Env, 'CACHE'>, tenant: string, brand: string, slot: string, now: number): Promise<LiftSnapshot | null> {\n  const key = liftKey(tenant, brand, slot);\n  const hit = liftCache.get(key);\n  if (hit && now - hit.at < LIFT_TTL_MS) return hit.value;\n  let value: LiftSnapshot | null = null;\n  try { value = (await env.CACHE.get(key, 'json')) as LiftSnapshot | null; } catch { value = null; }\n  liftCache.set(key, { at: now, value });\n  return value;\n}\n\n/** What each slot learns against: its reward and the estimator's constants, from the learn document. */\nexport function slotLearnConfigOf(learn: { stats?: SlotLearnConfig['stats']; slots?: Record<string, { reward?: SlotLearnConfig['reward'] }> }): (slot: string) => SlotLearnConfig {\n  const stats = learn.stats ?? DEFAULT_STATS;\n  return (slot) => ({ reward: learn.slots?.[slot]?.reward ?? 'click', stats, objective: (learn.slots?.[slot] as { objective?: 'unit' | 'revenue' | 'margin' } | undefined)?.objective ?? 'unit' });\n}\n\nexport interface DecisionSources {\n  catalog: { version: string | null; revision: number; pieces: number };\n  slots: { version: string | null; revision: number; count: number };\n  learn: { version: string | null; revision: number };\n  config: { label: string; revision: number };\n  /** Phase 3 (doc 22 §9): their model's answer for this page, when a slot on it weights one. */\n  external: { kind: string; ref: string; ok: boolean; ms: number; version: string | null; reason: string | null } | null;\n  state: 'do' | 'session' | 'none';\n  /** CW31: the shopper's consent switches as the host reported them, and whether the engine personalized at all. */\n  consent: Consent & { personalized: boolean };\n  /** Milliseconds per stage of this decision: documents, shopper, trend, lift, decide. */\n  timings: Record<string, number>;\n}\n\ninterface ShopperRead {\n  affinity: AffinitySnapshot | null;\n  sessionId: string | null;\n  isNewSession: boolean | null;\n  state: DecisionSources['state'];\n  /** CW29: the journey stage the engine last derived for this shopper, from whichever host holds it; null when none. */\n  stage: string | null;\n  /** CW31: the shopper's two consent switches, from whichever host holds them; a host that says nothing is consenting. */\n  consent: Consent;\n}\n\n/**\n * The shopper's live affinity, from whichever host holds it. Mirrors the two\n * branches of GET /realtime/reflex so the decision reads the same state the\n * instrument shows. A read failure is a cold shopper, not an error.\n */\nasync function readShopper(\n  env: Env, visitorId: string, cookieHeader: string | null, cfg: ReflexConfig, now: number, tenant: TenantId,\n  /** CW37: where the session write goes, so it is not on the decision's path. */\n  defer?: (p: Promise<unknown>) => void,\n  /** CW39: the browsing session the client sent, which names the session it creates. */\n  clientSessionId?: string | null,\n): Promise<ShopperRead> {\n  if ((env.REFLEX_HOST ?? 'session') === 'do') {\n    try {\n      // The brand's object for this visitor; the default brand keeps the bare name.\n      const stub = shopperObject(env.SHOPPER_REFLEX, visitorId, tenant);\n      const res = await stub.fetch('https://shopper-reflex/snapshot');\n      const body = (await res.json()) as { affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: { tracking?: unknown; personalization?: unknown } | null };\n      return { affinity: body.affinity ?? null, sessionId: null, isNewSession: null, state: 'do', stage: body.journeyStage ?? null, consent: consentOf({ consent: body.consent }) };\n    } catch {\n      return { affinity: null, sessionId: null, isNewSession: null, state: 'none', stage: null, consent: CONSENTING };\n    }\n  }\n  try {\n    const engine = new RealtimeSegmentEngine(env, getConnectors(env), { tenant });\n    const { sessionId, sessionData, isNewSession } = await engine.getOrCreateSessionFromCookies(cookieHeader, visitorId, defer, clientSessionId ?? undefined);\n    return {\n      affinity: sessionData.reflex ? reflexSnapshot(sessionData.reflex, now, cfg) : null,\n      sessionId, isNewSession, state: 'session',\n      stage: sessionData.metadata?.journeyStage ?? null,\n      consent: consentOf({ preferences: sessionData.preferences }),\n    };\n  } catch {\n    return { affinity: null, sessionId: null, isNewSession: null, state: 'none', stage: null, consent: CONSENTING };\n  }\n}\n\nexport async function serveContentDecisions(\n  env: Env, r: ServeRequest,\n): Promise<ContentDecisionSet & { sources: DecisionSources; afterResponse: Promise<void>; /** CW31: false when tracking is withheld, and nothing about this request may be written. */ write: boolean }> {\n  const now = r.nowMs ?? Date.now();\n  const scope = r.tenant;\n  const brand = r.brand ?? r.tenant;\n  // Where the time goes, in milliseconds per stage, on the answer and on the Server-Timing header.\n  const timings: Record<string, number> = {};\n  let mark = performance.now();\n  const lap = (name: string) => { const t = performance.now(); timings[name] = Math.round(t - mark); mark = t; };\n\n  const [catalogRev, slotsRev, learnRev, cfgRev] = await Promise.all([\n    readRevision(env, CONTENT_KIND, scope, now),\n    readRevision(env, SLOTS_KIND, scope, now),\n    readRevision(env, LEARN_KIND, scope, now),\n    readReflexConfigRevision(env, scope, now),\n  ]);\n  const catalog = catalogRev?.value ?? EMPTY_CATALOG;\n  const slotsDoc = slotsRev?.value ?? DEFAULT_SLOTS;\n  const learn = learnRev?.value ?? DEFAULT_LEARN;\n  const cfg = cfgRev?.config ?? DEFAULT_REFLEX_CONFIG;\n  const configRevision = cfgRev?.revision ?? 0;\n  lap('documents');\n\n  // CW37 (doc 32 §4 item 1). Creating a shopper's session is two KV writes, and\n  // doc 32 measured them as effectively the whole of a new shopper's 627 ms. The\n  // decision does not depend on them having landed -- it is computed from the\n  // record the call returns -- so they are collected here and handed to the\n  // caller's waitUntil with the rest of the after-response work.\n  const sessionWrites: Promise<unknown>[] = [];\n  const shopper = await readShopper(env, r.visitorId, r.cookieHeader, cfg, now, r.stateTenant ?? DEFAULT_TENANT,\n    (p) => { sessionWrites.push(p); }, r.sessionId);\n  lap('shopper');\n  const cell = cellFor({\n    cf: r.cf, snap: shopper.affinity, cfg, channel: r.channel,\n    // Only a session boundary the engine itself observed counts as evidence of\n    // a first visit; anything else is unknown until CW7 gives visit number real semantics.\n    visitNumber: shopper.isNewSession === true ? 1 : null,\n    // CW29: the stage the host last derived; `cellFor` records anything else as unknown.\n    stage: shopper.stage,\n  });\n  // CW31: either consent switch off means the site's own defaults, whatever the holdout hash says.\n  const consent = shopper.consent;\n  const arm = armUnder(consent, armFor(r.visitorId, { ...learn.holdout, salt: learn.holdout.salt || brand }));\n  const slots = slotsDoc.pages[r.page] ?? [];\n\n  // CW6: the population prior. Read from KV through the isolate cache, never\n  // from the object; blended into a COPY of the affinity view. Off for the\n  // holdout's default arm, since defaults are the point of that arm.\n  const regionalCfg = learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };\n  let affinity: { dims: Record<string, Record<string, number>> } | null = shopper.affinity;\n  let regional: Parameters<typeof decideContent>[0]['regional'] = null;\n  if (regionalCfg.enabled && arm !== 'default') {\n    const trend = await readTrend(env, scope, regionKeyOf(r.cf), regionalCfg.minEvents, now);\n    if (trend) {\n      const lambda = lambdaFor(shopper.affinity?.dims, regionalCfg.kBlend);\n      const blended = blendAffinity(shopper.affinity?.dims, trend.snapshot.share, lambda);\n      affinity = { dims: blended.dims };\n      regional = { region: trend.region, level: trend.level, lambda, version: trend.snapshot.version, events: trend.snapshot.events, share: trend.snapshot.share };\n    }\n  }\n\n  lap('trend');\n  // What the state hung on: the DO host keys it on the durable visitor id, the\n  // session host on the cookie, and a failed read on nothing at all.\n  const identityAnchor = shopper.state === 'do' ? 'visitor' : shopper.state === 'session' ? 'session' : 'none';\n\n  // Phase 3 (doc 22 §9): their model, one weighted term under a hard budget, in\n  // parallel with the lift reads. Only when a slot on this page weights it, and\n  // never for the holdout's default arm.\n  const extCfg = learn.external ?? null;\n  const extWeightOf = (slot: string) => learn.slots?.[slot]?.external?.weight ?? 0;\n  const wantsExt = extCfg !== null && arm !== 'default' && slots.some((s) => extWeightOf(s.slot) > 0);\n  const extPromise: Promise<ExternalResult | null> = wantsExt && extCfg\n    ? scoreExternal(extCfg, {\n        tenant: r.tenant, brand, page: r.page, slots: slots.map((s) => s.slot), cell,\n        affinity: affinity?.dims ?? {}, candidates: catalog.pieces.map((p) => ({ id: p.id, tags: p.tags })),\n      }, now, {\n        fetch: (u, init) => fetch(u, init), kv: env.CACHE as unknown as { get(key: string, type: 'json'): Promise<unknown> },\n        ai: env.AI, bindings: env as unknown as Record<string, unknown>,\n      })\n    : Promise.resolve(null);\n\n  // Phase 1: the lift snapshot per slot, and the trust dial. Shadow by default.\n  const snapshots: Record<string, LiftSnapshot | null> = {};\n  // CW30: the visitor's ring, only when a slot on the page has a fatigue dial, never for the default arm, under a time budget.\n  const wantsRing = arm !== 'default' && slots.some((s) => (s.fatigue?.weight ?? 0) > 0);\n  const [extResult, ring] = await Promise.all([extPromise, wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...slots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now); })]);\n  const served = ring ? servedCounts(ring, slots, now) : null;\n  lap('lift');\n  const external: ExternalTerm | null = extCfg && extResult\n    ? extResult.ok\n      ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'ok', version: extResult.version, scores: extResult.scores }\n      : { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'unavailable', reason: extResult.reason }\n    : null;\n  const gammaOf = (slot: string) => learn.slots?.[slot]?.gamma ?? 0;\n  const exploreOf = (slot: string) => learn.slots?.[slot]?.exploration ?? null;\n  const controlOf = (slot: string, item: string) => learn.slots?.[slot]?.items?.[item] ?? null;\n\n  const set = decideContent({\n    tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: r.sessionId || shopper.sessionId, identityAnchor, nowMs: now,\n    pieces: catalog.pieces, slots, affinity, regional, cell, arm,\n    versions: { config: configRevision, catalog: catalogRev?.revision ?? 0, slots: slotsRev?.revision ?? 0, learn: learnRev?.revision ?? 0, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },\n    configLabel: cfg.version,\n    learning: { snapshots, gammaOf, exploreOf, controlOf },\n    external,\n    served,\n  });\n\n  lap('decide');\n  // CW31: a shopper who declined personalization sees why on every receipt.\n  if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = 'the site\\'s defaults: personalization is off by the shopper\\'s choice';\n  // After the response: the visitor's ring and each slot's exposures. Never awaited here.\n  // CW31: with tracking withheld the engine writes nothing about this request, here or in the ledger (`write`).\n  const afterResponse = Promise.all([\n    // The session write, off the response path but still before the request ends.\n    Promise.all(sessionWrites).catch(() => undefined),\n    consent.tracking ? fanDecisions(env, set, slotLearnConfigOf(learn)) : Promise.resolve(),\n  ]).then(() => undefined);\n\n  return {\n    ...set,\n    afterResponse,\n    write: consent.tracking,\n    sources: {\n      catalog: { version: catalog.version ?? null, revision: catalogRev?.revision ?? 0, pieces: catalog.pieces.length },\n      slots: { version: slotsDoc.version ?? null, revision: slotsRev?.revision ?? 0, count: slots.length },\n      learn: { version: learn.version ?? null, revision: learnRev?.revision ?? 0 },\n      config: { label: cfg.version, revision: configRevision },\n      external: extCfg && extResult ? { kind: extCfg.kind, ref: extCfg.ref, ok: extResult.ok, ms: extResult.ms, version: extResult.ok ? extResult.version : null, reason: extResult.ok ? null : extResult.reason } : null,\n      state: shopper.state,\n      consent: { ...consent, personalized: personalizes(consent) },\n      timings,\n    },\n  };\n}\n"
+    },
+    {
+      "path": "src/content/consent.test.ts",
+      "sha256": "485e09db3b2b5372d39cb07fa4e302ea85db3b2c4b97b9b1de074e00cf1305ba",
+      "source": "// src/content/consent.test.ts\n// CW31 (BTIE D10), the content service's half: either switch off means the\n// site's defaults whatever the holdout hash says; tracking off means the\n// engine writes nothing about the request (no ring, no exposure, no ledger);\n// a host that says nothing is consenting, which is what every stored session\n// already says today.\n\nimport { describe, it, expect, beforeEach } from 'vitest';\nimport type { Env } from '@/types/env';\nimport { invalidateCache, write } from '@/config/versionedStore';\nimport { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from './kinds';\nimport { armUnder, consentFromCookies, consentOf, personalizes } from './consent';\nimport { serveContentDecisions } from './service';\n\nclass FakeKV {\n  store = new Map<string, string>();\n  async get(key: string): Promise<unknown> { const raw = this.store.get(key); return raw === undefined ? null : JSON.parse(raw); }\n  async put(key: string, value: string): Promise<void> { this.store.set(key, value); }\n}\n/** A namespace whose one object answers every fetch with `reply` and records what was asked. */\nconst fakeNs = (reply: unknown, calls: string[]) => ({\n  idFromName: (n: string) => n,\n  get: (id: string) => ({ fetch: async (url: string, init?: { method?: string }) => { calls.push(`${id} ${init?.method ?? 'GET'} ${new URL(url).pathname}`); return new Response(JSON.stringify(reply), { status: 200, headers: { 'Content-Type': 'application/json' } }); } }),\n}) as unknown as DurableObjectNamespace;\n\nconst piece = (id: string) => ({ id, customerContentId: `cms-${id}`, type: 'editorial', title: id, tags: { line: ['Drover'] }, slotTypes: ['hero'] });\n\nasync function envWith(snapshot: Record<string, unknown>): Promise<{ env: Env; ring: string[]; shopper: string[] }> {\n  const ring: string[] = [], shopper: string[] = [];\n  const env = {\n    CACHE: new FakeKV(), REFLEX_HOST: 'do', ENVIRONMENT: 'test',\n    SHOPPER_REFLEX: fakeNs({ ok: true, affinity: null, journeyStage: 'mid', ...snapshot }, shopper),\n    DECISION_RING: fakeNs({ ok: true }, ring),\n  } as unknown as Env;\n  invalidateCache();\n  await write(env, CONTENT_KIND, 'coach', { pieces: [piece('a'), piece('b')] }, { actor: 'test' });\n  await write(env, SLOTS_KIND, 'coach', { pages: { home: [{ slot: 'hero', take: 1, weights: { line: 0.5 } }] } }, { actor: 'test' });\n  await write(env, LEARN_KIND, 'coach', { holdout: { share: 0, salt: '', arms: ['default'] } }, { actor: 'test' });\n  return { env, ring, shopper };\n}\nconst serve = (env: Env) => serveContentDecisions(env, { tenant: 'coach', page: 'home', visitorId: 'v1', sessionId: 's1', channel: 'direct', cf: null, cookieHeader: null, stateTenant: 'coach' });\n\ndescribe('CW31 consent, the pure part', () => {\n  it('reads either source, treats absence as consenting, and forces the default arm when either switch is off', () => {\n    expect(consentOf(null)).toEqual({ tracking: true, personalization: true });\n    expect(consentOf({ preferences: { trackingConsent: false, personalizationEnabled: true } })).toEqual({ tracking: false, personalization: true });\n    expect(consentOf({ consent: { tracking: true, personalization: false } })).toEqual({ tracking: true, personalization: false });\n    expect(consentOf({ consent: { tracking: 'false' } })).toEqual({ tracking: false, personalization: true });\n    expect(consentFromCookies('opt_session=abc; opt_tracking_consent=false; opt_personalization_enabled=true')).toEqual({ tracking: false, personalization: true });\n    expect(consentFromCookies(null)).toEqual({ tracking: true, personalization: true });\n    expect(armUnder({ tracking: true, personalization: true }, 'personalized')).toBe('personalized');\n    expect(armUnder({ tracking: true, personalization: false }, 'personalized')).toBe('default');\n    expect(armUnder({ tracking: false, personalization: true }, 'no_learning')).toBe('default');\n    expect(personalizes({ tracking: true, personalization: false })).toBe(false);\n  });\n});\n\ndescribe('CW31 consent on the content service', () => {\n  beforeEach(() => invalidateCache());\n\n  it('a consenting shopper is personalized, recorded, and fed to the ring', async () => {\n    const { env, ring } = await envWith({});\n    const out = await serve(env);\n    await out.afterResponse;\n    expect(out.arm).toBe('personalized');\n    expect(out.write).toBe(true);\n    expect(out.sources.consent).toEqual({ tracking: true, personalization: true, personalized: true });\n    expect(out.records).toHaveLength(1);\n    expect(out.records[0]!.explain.note ?? '').not.toContain('shopper');\n    expect(ring).toEqual(['coach:v1 POST /append']);\n  });\n\n  it('tracking withheld: the defaults, no ring, no ledger, and the receipt says why', async () => {\n    const { env, ring } = await envWith({ consent: { tracking: false, personalization: true } });\n    const out = await serve(env);\n    await out.afterResponse;\n    expect(out.arm).toBe('default');\n    expect(out.write).toBe(false);\n    expect(out.sources.consent).toEqual({ tracking: false, personalization: true, personalized: false });\n    expect(out.records[0]!.arm).toBe('default');\n    expect(out.records[0]!.explain.note).toContain('personalization is off by the shopper');\n    expect(ring).toEqual([]);\n  });\n\n  it('personalization withheld with tracking on: the defaults, still recorded', async () => {\n    const { env, ring } = await envWith({ consent: { tracking: true, personalization: false } });\n    const out = await serve(env);\n    await out.afterResponse;\n    expect(out.arm).toBe('default');\n    expect(out.write).toBe(true);\n    expect(out.records[0]!.explain.note).toContain('personalization is off by the shopper');\n    expect(ring).toEqual(['coach:v1 POST /append']);\n  });\n});\n"
+    }
+  ],
+  "graph": {
+    "actualExecutionReportedInputCount": 52,
+    "originalFullMetafileRetained": false,
+    "limitation": "The original execution emitted only its input count, not full paths. No reconstructed graph is represented as retained original execution output."
+  },
+  "authorityAndLimits": [
+    "Synthetic in-memory KV, shopper DO, service binding, HTTP and AI stubs; zero real network or customer data.",
+    "EXTERNAL_SCORING_POLICY=off was a proposed probe value, not an implemented/current environment control.",
+    "Source/hash snapshots collected after the completed probe and before any W34.01 implementation.",
+    "This proves actual Node service behavior on the synthetic fixture, not deployed-runtime configuration or acceptance.",
+    "No production/test edits, deployments, installs, git mutations or operational commands."
+  ]
+}

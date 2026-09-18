@@ -1,0 +1,344 @@
+{
+  "task_id": "W37.02",
+  "actor": {
+    "agent": "/root/w3702_review",
+    "actor_id": "w3702-reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "role": "independent_verifier",
+    "provenance": "Distinct lead-delegated Astra/xhigh run under AGENTS.md. No implementation edits or further delegation."
+  },
+  "reviewed_at": "2026-09-09T04:20:14Z",
+  "verdict": "pass",
+  "scope": "Bounded G0 regional tenant thread-through and forward-only legacy aggregate containment. Full W37 and finding/customer/deployment acceptance remain open.",
+  "basis": {
+    "canonical_audit": {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    "plan": {
+      "path": "docs/remediation/design/W37.02/plan-v1.md",
+      "sha256": "b526c4dfbf551fd9fee8a6d8e0839b726f70f1f025cebb0c5476673fae1858d6"
+    },
+    "contract_digest": "ac1c831b8c7d326f61952479a30481d1a76fecb501619342a50f8181d89e2bac",
+    "read": "AGENTS.md, remediation README, full governance36/RESUME, complete canonical W37/F31/F33/F03/N29, linked F reports and OD-8, canonical customer clause reconciliation and delivery-ledger stamp/regional requirements; exact admitted task/plan; actual producer, RegionTrend, tenant, consent, capability, content reader and decision-route source; all eight admission deltas and full ten worker command outputs.",
+    "entry_checks": "Reused root check/status VALID503 exit0 observed2026-09-09T03:54:05Z; worker evidence records root admission VALID511 exit0 observed04:02:09Z. No duplicate board/check suite.",
+    "baseline": "Source-confirmed failure/design case, not a before-change dynamic reproduction. Independently reversed all eight patches in memory to admission hashes and reapplied to current bytes. Existing dirty changes preserved."
+  },
+  "artifact": {
+    "path": "docs/remediation/evidence/W37.02/artifact.json",
+    "sha256": "a00c1c09d243460f033e235e4e49d400e921c3a7fc7f70e5b8816b7817a2975a",
+    "digest": "f614487f3314974722d8454eda8ab6bbed1660df3fe76f9dff26eb567a643c01",
+    "pins": 314
+  },
+  "worker_proof": {
+    "path": "docs/remediation/evidence/W37.02/worker.json",
+    "sha256": "444b84b97910175badb83da68c587488e1b1dbe879c28df073a328ff244cd110",
+    "checks_inspected": 10
+  },
+  "identity": {
+    "at": "2026-09-09T04:18:38.718Z",
+    "officialPins": 314,
+    "officialDigest": "f614487f3314974722d8454eda8ab6bbed1660df3fe76f9dff26eb567a643c01",
+    "digestMatches": true,
+    "contractMatches": true,
+    "trackerArtifactMatches": true,
+    "mismatches": [],
+    "freezeCovered": true,
+    "artifactSha256": "a00c1c09d243460f033e235e4e49d400e921c3a7fc7f70e5b8816b7817a2975a",
+    "workerSha256": "444b84b97910175badb83da68c587488e1b1dbe879c28df073a328ff244cd110",
+    "planSha256": "b526c4dfbf551fd9fee8a6d8e0839b726f70f1f025cebb0c5476673fae1858d6",
+    "canonicalSha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+    "K2FinalDifference": [
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "6bae6beee69fee2e1bf9f8574e1842171e040afac4ba90480bb95aab4fe3e58a"
+      }
+    ],
+    "source_freeze": {
+      "at": "2026-09-09T04:15:02.590Z",
+      "pins": 310,
+      "sha256": "1b3e384954ae0b0ffae56fbd7f028d4a5bc673e92ecdbdc42682088bb0eec93d",
+      "contract": "ac1c831b8c7d326f61952479a30481d1a76fecb501619342a50f8181d89e2bac",
+      "mismatches": []
+    },
+    "during_final_check": {
+      "at": "2026-09-09T04:14:27.139Z",
+      "owned": [
+        {
+          "path": "src/reflex/regionTrend.ts",
+          "sha256": "e32bf1887ad7c9d7eb4a5fbdf6a78639f76a5927fefc9b88a327875385434f16"
+        },
+        {
+          "path": "src/durable-objects/RegionTrend.ts",
+          "sha256": "8365708da95a830834f5837375e96f2948e6aec79acefe7a55767a4a6cd1f350"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "sha256": "6cd7b6a7956efecdbe59b81fcb66b79a608fc7a7b150f0dccf652c8cdf298306"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "0a02daf94aa51926be3a221db3537cc2d0d514ea4b6e66c995719ab185fd4b8a"
+        },
+        {
+          "path": "src/index.ts",
+          "sha256": "6f6cbb6e5dd9ce0c1a254baf4f01db0b24430aed7e4c863794c2d9e6bb1a4b71"
+        },
+        {
+          "path": "src/reflex/regionTrend.test.ts",
+          "sha256": "26ad2ef699a42bf0cc02444bbe4afbb528d3ed4c44bb7ffe4104289b1d549a1a"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "32116782ff0d16244ad35bd4a5a5bc20f47a2d14d7f48f31510dcc5c8b4ba214"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "sha256": "3fc41bde1441ec938dc493b3f07c1e6d792113a14a3ec104a19fb9f19525c900"
+        }
+      ],
+      "unownedChecked": 302,
+      "unownedMismatches": []
+    },
+    "admission_reconstruction": {
+      "at": "2026-09-09T04:17:49.606Z",
+      "workerSha256": "444b84b97910175badb83da68c587488e1b1dbe879c28df073a328ff244cd110",
+      "patches": [
+        {
+          "path": "src/reflex/regionTrend.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/durable-objects/RegionTrend.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/index.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/reflex/regionTrend.test.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        }
+      ],
+      "workerPins": 310,
+      "pinMismatches": [],
+      "lintWarningCount": 131,
+      "warningsOnAddedLines": []
+    }
+  },
+  "independent_check": {
+    "id": "W37.02-K3/exact-K1-final",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/regionTrend.test.ts src/routes/realtime.sdkContract.test.ts --testNamePattern=\"W37.02|the population vector|the region object|uses stored switches for both hosts\" --maxWorkers=1 --minWorkers=1",
+    "invocation_started_at": "2026-09-09 04:14:13 UTC",
+    "completion_observed_at": "2026-09-09 04:14:33 UTC",
+    "exit_code": 0,
+    "runtime": "Installed Node v22.15.0/Vitest v1.6.1, actual Hono/SessionManager/ShopperReflex/RegionTrend modules with synthetic stores, signed capabilities and coarse CF geography. No external network.",
+    "result": "9 selected passed;26 excluded by the admitted filter. No selected skip, failure or timeout. Runner duration12.53s, selected cases699ms. This final run supersedes the first independently passing run after the fixture timestamp correction.",
+    "source_files": [
+      {
+        "path": "src/reflex/regionTrend.ts",
+        "sha256": "e32bf1887ad7c9d7eb4a5fbdf6a78639f76a5927fefc9b88a327875385434f16"
+      },
+      {
+        "path": "src/durable-objects/RegionTrend.ts",
+        "sha256": "8365708da95a830834f5837375e96f2948e6aec79acefe7a55767a4a6cd1f350"
+      },
+      {
+        "path": "src/services/RealtimeSegmentEngine.ts",
+        "sha256": "6cd7b6a7956efecdbe59b81fcb66b79a608fc7a7b150f0dccf652c8cdf298306"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "0a02daf94aa51926be3a221db3537cc2d0d514ea4b6e66c995719ab185fd4b8a"
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "6f6cbb6e5dd9ce0c1a254baf4f01db0b24430aed7e4c863794c2d9e6bb1a4b71"
+      },
+      {
+        "path": "src/reflex/regionTrend.test.ts",
+        "sha256": "26ad2ef699a42bf0cc02444bbe4afbb528d3ed4c44bb7ffe4104289b1d549a1a"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "32116782ff0d16244ad35bd4a5a5bc20f47a2d14d7f48f31510dcc5c8b4ba214"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "3fc41bde1441ec938dc493b3f07c1e6d792113a14a3ec104a19fb9f19525c900"
+      }
+    ],
+    "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":4}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":4}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/routes/realtime.sdkContract.test.ts  (28 tests | 26 skipped) 688ms\n ✓ src/reflex/regionTrend.test.ts  (7 tests) 11ms\n\n Test Files  2 passed (2)\n      Tests  9 passed | 26 skipped (35)\n   Start at  00:14:16\n   Duration  12.53s (transform 3.85s, setup 0ms, collect 6.45s, tests 699ms, environment 0ms, prepare 4.09s)\n\n",
+    "output_note": "Combined stdout/stderr returned by the command tool, including Vite CJS deprecation and synthetic logs. Runner timing is not serving latency."
+  },
+  "superseded_independent_checks": [
+    {
+      "id": "W37.02-K3/exact-K1-before-timestamp",
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/regionTrend.test.ts src/routes/realtime.sdkContract.test.ts --testNamePattern=\"W37.02|the population vector|the region object|uses stored switches for both hosts\" --maxWorkers=1 --minWorkers=1",
+      "exit_code": 0,
+      "result": "9passed/26filtered;runner duration12.10s, selected cases715ms. Retained as superseded, not acceptance for the final fixture.",
+      "chronology": "Started following root's first reported freeze. While this run was executing, worker compiler found missing ActionEvent timestamp in the unsigned synthetic event. This run completed and session66766 was consumed before reviewer authorized worker to correct the fixture. Exact invocation/completion UTC was not separately captured; retained runner start is00:11:44. No runtime change; final independent K1 executed after explicit source refreeze.",
+      "source_files": [
+        {
+          "path": "src/reflex/regionTrend.ts",
+          "sha256": "e32bf1887ad7c9d7eb4a5fbdf6a78639f76a5927fefc9b88a327875385434f16"
+        },
+        {
+          "path": "src/durable-objects/RegionTrend.ts",
+          "sha256": "8365708da95a830834f5837375e96f2948e6aec79acefe7a55767a4a6cd1f350"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "sha256": "6cd7b6a7956efecdbe59b81fcb66b79a608fc7a7b150f0dccf652c8cdf298306"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "0a02daf94aa51926be3a221db3537cc2d0d514ea4b6e66c995719ab185fd4b8a"
+        },
+        {
+          "path": "src/index.ts",
+          "sha256": "6f6cbb6e5dd9ce0c1a254baf4f01db0b24430aed7e4c863794c2d9e6bb1a4b71"
+        },
+        {
+          "path": "src/reflex/regionTrend.test.ts",
+          "sha256": "26ad2ef699a42bf0cc02444bbe4afbb528d3ed4c44bb7ffe4104289b1d549a1a"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "6bae6beee69fee2e1bf9f8574e1842171e040afac4ba90480bb95aab4fe3e58a"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "sha256": "3fc41bde1441ec938dc493b3f07c1e6d792113a14a3ec104a19fb9f19525c900"
+        }
+      ],
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":4}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":4}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/routes/realtime.sdkContract.test.ts  (28 tests | 26 skipped) 702ms\n ✓ src/reflex/regionTrend.test.ts  (7 tests) 13ms\n\n Test Files  2 passed (2)\n      Tests  9 passed | 26 skipped (35)\n   Start at  00:11:44\n   Duration  12.10s (transform 3.90s, setup 0ms, collect 6.50s, tests 715ms, environment 0ms, prepare 3.63s)\n\n"
+    }
+  ],
+  "worker_checks_inspected": [
+    {
+      "id": "K1",
+      "result": "Exit1;new fixture incorrectly expected unsigned internal DO ingress401 although existing door accepts200. Runtime path and zero-regional-frame task boundary confirmed. Corrected fixture retains public unsigned401 and no-regional-frame assertions; no runtime rework."
+    },
+    {
+      "id": "K1-rerun",
+      "result": "Exit0;9passed26filtered. Historical success superseded by fixture timestamp correction."
+    },
+    {
+      "id": "K2",
+      "result": "Exit0;2passed25filtered in actual existing workerd entry fixture,13.42s runner/4.25s selected cases. Current trend read and deduplicated3tenant cron with conflicting old list; historical sentinel preserved. Only difference from final artifact is unrelated realtime.sdkContract.test.ts timestamp; inspected index fixture bundles actual src/index.ts and does not import that other test, so required K2 evidence remains valid."
+    },
+    {
+      "id": "compiler",
+      "result": "Exit2;TS2345 required timestamp missing in direct unsigned synthetic ActionEvent. Full error retained, superseded by compiler-final."
+    },
+    {
+      "id": "lint",
+      "result": "Exit0;131warnings0errors. Historical run, superseded by lint-final; full output byte-identical to final output and inspected."
+    },
+    {
+      "id": "whitespace",
+      "result": "Exit0;empty output. Superseded after fixture timestamp."
+    },
+    {
+      "id": "K1-final",
+      "result": "Exit0;9passed26filtered,16.19s runner/712ms selected cases. Final source hashes match independent run."
+    },
+    {
+      "id": "compiler-final",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "result": "Exit0;empty output."
+    },
+    {
+      "id": "lint-final",
+      "result": "Exit0;0errors131warnings. Independently mapped all131 warning locations to unchanged admission lines; none on added/replaced lines. No warning-clean claim."
+    },
+    {
+      "id": "whitespace-final",
+      "result": "git diff --check on owned files exit0;empty output. Worker also retains zero trailing-whitespace findings for all owned admission patches, including untracked index fixture."
+    }
+  ],
+  "criteria": [
+    {
+      "id": "W37.02-C1",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "finding": "Actual signed HTTP action routes on session and DO hosts use two non-default tenants, meridian and real brighthour, with identical shopper/session identifiers. Personal content score and published prior carry distinct video/editorial touches and actual CF US-NY geography. Forged body geography is stripped at route ingress; missing edge geography and WS-supplied geography produce no count. Regional ownership uses verified principal.tenant regardless of demo surface. Scored BrightHour product contributes only to the real non-default tenant; default BrightHour demo and unsigned legacy fan-in produce none. Signed default Coach remains positive. Existing W05.02 checks retain all tracking/personalization combinations, refusal, private update and egress assertions; only DO regional positive is strengthened."
+    },
+    {
+      "id": "W37.02-C2",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "finding": "New trend:v2 KV/DO names and trend:v2 internal state are isolated from legacy data. Ingest/load/publish validate generation2, exact tenant/region and actual namespace-derived DO id. Invalid current state cannot be overwritten by fresh input; old objects with pending alarms or current-looking injected bytes cannot publish/ingest/reset old state. Reads and rollups exclude legacy and mismatched snapshots; selected lifecycle test verifies old bytes retained after alarm/read/rollup/reset. Existing population math/ladder tests pass. Actual workerd route reads only the new tenant key; hourly cron deduplicates tenantConfig.provisioned, includes Coach and two non-defaults, ignores competing old list, retains old snapshot. Other schedules/report/erasure and W29-withdrawal assertions retained; compiler/scoped lint/whitespace pass."
+    },
+    {
+      "id": "W37.02-C3",
+      "verdict": "pass",
+      "claim": "source_confirmed",
+      "finding": "All314 official pins, artifact digest and admitted contract match, covering310 frozen source/dependency pins. All eight reversible patches match the admitted baseline and current bytes;302unowned inputs unchanged. Full10 worker command outputs inspected, including failed fixture assertion/compiler and truthful supersession. Final exact independent K1 passes, first independent result retained as superseded. Exact deltas preserve W37.01 local audience/scoped seed behavior and prior consent/ownership/safety regions; no blanket historical assurance restored."
+    }
+  ],
+  "limitations": [
+    "Local source and synthetic Node/workerd evidence only; no deployed-resource, customer, relevance, shared-load or serving-latency acceptance.",
+    "Current priors start empty until new scoped events publish. Old KV/DO data remains preserved and excluded; no migration, erasure, historical repair, relabeling or cleanup performed.",
+    "Matched current-code proof only. Mixed deployed Worker/DO versions, rolling upgrades and unsafe rollback to legacy readers/writers are not certified.",
+    "Full W37 generic catalog/config/customer generation/DO audience parity/history/link/sort/ODP/ingress and operator authority/managed registry/stamp/resource ownership/shared-load/export/erasure remain open.",
+    "Regional freshness/minimum-event policy, malformed payload schema hardening, ordering/caps, arithmetic and failure recovery are not certified beyond the retained focused cases. The new validator establishes generation and scope, not full numerical schema validation.",
+    "No customer/privacy/scientific/finding/gate/release acceptance; W37.01 prior whole-source proof remains historically qualified. W06 pending-v4 and W29 withdrawal code preserved without claiming renewed full-package verification.",
+    "Internal HTTP geo relies on the existing canonical route stripping client geo and forwarding CF fields; WS has no server geography propagation and remains no-regional-fan-in."
+  ],
+  "review_notes": [
+    "No source edits, new suite, broader matrix, duplicate board commands, external operations or subdelegation.",
+    "Only repeated independent K1 was required by a concrete fixture correction after the initially reported freeze.",
+    "One read-only source search referenced nonexistent conventional test directories; subsequent rg discovery located the existing fixtures. No check result was inferred from that failed path search.",
+    "This review owns review.json only; governance and final disposition remain with the lead."
+  ],
+  "handoff": {
+    "status": "ready_for_lead_disposition",
+    "next_action": "Lead inspect primary evidence and this review, disposition only bounded W37.02, update tracker/journal/RESUME and run final board check/status.",
+    "pending_commands": [],
+    "owned_output": "docs/remediation/evidence/W37.02/review.json"
+  }
+}

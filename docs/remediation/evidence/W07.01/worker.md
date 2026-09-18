@@ -1,0 +1,13 @@
+# W07.01 worker handoff
+
+Source frozen at 2026-09-07T11:41:06.873Z under plan-v2 / contract `7092d0d7077f844850c745b7061c08fb6b6f22e9f2a10f71803b70d244509cb0`; independent acceptance pending. Seven production files and three tests only. Exact commands, complete outputs, initial failure and ten source hashes are in worker-checks.json. Original six production bytes are in immutable baseline.json; additional middleware and existing test originals are in worker-before-additional.json.
+
+Removed all eight raw AE writes, blanket Hono request logging and default queue-body/scene-success logs. Named router/global/queue failure logs use constant labels. Domain dispatch, response shapes and queue ack/retry decisions remain. Erasure receipts append unconditional historical AE and Worker/application-log limitations after unchanged ODP; no erasure operation changed.
+
+K1 final: 54/54 pass (28 telemetry, 20 identity, 6 ledger), 14.65s. K2: all five selected W07.01 actual-workerd cases pass, 11.89s; nineteen unrelated historical cases intentionally excluded by the exact required selector. Application noEmit and scoped diff check pass. K2 inputs did not change after its run. All subprocesses completed; runtime disposed.
+
+Initial K1/K2 passed. Initial application TypeScript exited2 on eight new-fixture mock generic declarations; precise method/fetch mock types corrected them without changing assertions or production. Exact K1 and noEmit were rerun successfully. The lead-requested administrative pause preserved v1 changes; plan-v2 changed only the C2 evidence-class common floor, not scope/checks. No acceptance test was skipped to obtain a pass.
+
+The fixture proves actual routers/decoder/dispatcher with intercepted destination fetch and Optimizely service seams; it does not prove external SDK delivery. Workerd scene success is cached, failure is missing model configuration; no model call occurred. Existing ledger and health aggregate controls survive. Selected raw path/query/request-ID, default body, ledger R2 failure, scene and catch log branches preserve ack/retry outcomes.
+
+Limits: other EventDispatcher/OptimizelyService/scene-generation/WebSocket/scheduled/route logs remain open. Public error-response details intentionally remain, as asserted. Dispatch and ledger/domain writes continue under existing policy: this is not a nothing-written-under-refusal claim. Historical deletion, dataset isolation/attestation, retention/disposition, consent/privacy decisions and full W07/finding/gate/customer/SLO/deployed/release acceptance remain open. No old-proof reclosure or complete dependency attestation is claimed. Lead owns manifests, independent review, tracker and final disposition.

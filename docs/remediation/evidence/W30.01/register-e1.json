@@ -1,0 +1,187 @@
+{
+  "before": null,
+  "after": {
+    "id": "W30.01-E1",
+    "task_id": "W30.01",
+    "check_id": "W30.01-K1",
+    "criterion_ids": [
+      "W30.01-C1",
+      "W30.01-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W30.01/review.json",
+      "sha256": "1b3970fc04f174e40157431a87ec620f60850911d990acf886f4c7e546a12e76"
+    },
+    "at": "2026-09-12T17:51:38.701Z",
+    "limitations": "Bounded local event-time attribution over already-loaded current-hour rows and available retained carry-in; not full W30/F17/F18/F25/N08/N23 reconstruction, arbitrary late/mutable/hour repair, seven-day policy, online/batch parity, workload capacity, policy/maturity/report-window assurance or customer/release acceptance. Preceding decisions can still exhaust the retained cap (actual F17 P2 remains); no historical carry-in evicted by cap/horizon is recovered. Aggregate/ring persistence is not transactional; newer-date refusal and non-forward ringsFolded=false remain. W06 privacy and W26 named placement retained. W28 actual withdrawal unchanged but broad shared-artifact proof qualified prospectively; W08.04 unchanged. No serving-path I/O, new infrastructure/schema, deployment/cloud/resource/credential/customer-data repair, external messages, contract amendment, destructive/commit/push authority.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts -t 'W30.01|W06.07|W26.01|the day from its hours|an hour built again|the rings forget' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest real hourly/policy/report code with synthetic R2.",
+    "workload": "Fixed12: three grouped W30.01, five W06.07, W26.01 and existing parity/repeat/cap controls.",
+    "result": "pass",
+    "artifact_digest": "933f82dc339e9edebe073fd5f1e88c229c6b8d2286c96bf42eb4b4392c5926dc",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "ab5cba3191239452ec1b0da84d67c0481e066779bd9d5911d9c6b2a87cda49b6",
+      "configuration": "Bounded local event-time attribution over already-loaded current-hour rows and available retained carry-in; not full W30/F17/F18/F25/N08/N23 reconstruction, arbitrary late/mutable/hour repair, seven-day policy, online/batch parity, workload capacity, policy/maturity/report-window assurance or customer/release acceptance. Preceding decisions can still exhaust the retained cap (actual F17 P2 remains); no historical carry-in evicted by cap/horizon is recovered. Aggregate/ring persistence is not transactional; newer-date refusal and non-forward ringsFolded=false remain. W06 privacy and W26 named placement retained. W28 actual withdrawal unchanged but broad shared-artifact proof qualified prospectively; W08.04 unchanged. No serving-path I/O, new infrastructure/schema, deployment/cloud/resource/credential/customer-data repair, external messages, contract amendment, destructive/commit/push authority.",
+      "files": [
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "output",
+          "sha256": "f90a57425c5960179aa9855d03706d9ac85a65e14420af39efe5ef05e788d653"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "output",
+          "sha256": "5e3b46d225bd05390f46205f53c1a47c8f1dbd94485b6173e27dc23e4315e726"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "role": "source",
+          "sha256": "faa9211fe078e6069e095e556a1d34cf05569ff96ae52be2dee7d7add3bb1b65"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "role": "source",
+          "sha256": "292ca971dc99e718b24b3a3d51050fbd955e0eccd6bf6d135091bfa0b2daea91"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F17.md",
+          "role": "source",
+          "sha256": "84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F18.md",
+          "role": "source",
+          "sha256": "f4305909762cdb691c46ae8f9db55b560bf19fc60b8a37b5c202da95fe934bb9"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F25.md",
+          "role": "source",
+          "sha256": "2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-operations-and-delivery.md",
+          "role": "source",
+          "sha256": "4f3a01b78cc611aacf8d710bff4f45e264906b1b15a4be0ed4a2d484f67e3cae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-learning-and-statistics.md",
+          "role": "source",
+          "sha256": "0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "docs/architecture/31-load-test-2026-09-05.md",
+          "role": "source",
+          "sha256": "3b0cd44153dea07a8ce40ddd50db02cd14774812bffdbaf44a16c381d0f1c174"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.01/worker.json",
+          "role": "output",
+          "sha256": "b80d342e2aa813d152da1d0c83a964678afa2b72cd59c8eb6fd6c40f2cb79ef6"
+        },
+        {
+          "path": "docs/remediation/design/W30.01/plan.md",
+          "role": "configuration",
+          "sha256": "5bd349259e87847392477b79a59b723fa35744128e6eabd698e932dced9bac30"
+        },
+        {
+          "path": "docs/remediation/design/W30.01/baseline.json",
+          "role": "configuration",
+          "sha256": "ff3222d3b2c64063c8f139938ddca5747d88e9483898714774d748e88c6b11c8"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.01/admission.json",
+          "role": "configuration",
+          "sha256": "1fa3726b54b1df9058e2373c6b1b1c63bdce2856866b2d1c74eae107d0452653"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.01/source-freeze.json",
+          "sha256": "f5d35351cd43929cf775414cea703d2de36c82166daf3ce05bdad2dffddd2e64",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.01/source-deltas.json",
+          "sha256": "e81d555cf5709704448716886f954fea503e442f31943ca9f8daef281519d3b5",
+          "role": "configuration"
+        }
+      ],
+      "digest": "933f82dc339e9edebe073fd5f1e88c229c6b8d2286c96bf42eb4b4392c5926dc"
+    }
+  }
+}

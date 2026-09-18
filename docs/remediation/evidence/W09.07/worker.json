@@ -1,0 +1,258 @@
+{
+  "task_id": "W09.07",
+  "contract_digest": "6d5905c73b4435252feb0b4fafdf09605f952403e4ea5aeea8ce7eb56afd48c6",
+  "at": "2026-09-14T19:42:58.055Z",
+  "actor": {
+    "id": "w0907-worker",
+    "run_id": "/root/w0907_worker",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "authority": {
+    "plan": {
+      "path": "docs/remediation/design/W09.07/plan.md",
+      "sha256": "cb9518a99ffd5d631672e41ac74b56c93537ab7b1b8c06238b66daf8fa835619"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W09.07/baseline.json",
+      "sha256": "f996480ddb1cfdb2471c46f0df824f0bbaf900392174d7299bca8c202e9cdd85"
+    },
+    "admission": "docs/remediation/evidence/W09.07/admission.json",
+    "lead_approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T19:34:02.772Z",
+      "plan_sha256": "cb9518a99ffd5d631672e41ac74b56c93537ab7b1b8c06238b66daf8fa835619",
+      "rationale": "Root completed full parent/linked scope, existing managed/consumer/erasure source and selected fixture reads; independent Astra/xhigh exact-plan PASS cb9518a9. Coherent per-delivery isolation closes a documented residual without per-message objects, new schema/state or activation. Fixed10 and scoped static only."
+    },
+    "source_go_journal": 1755,
+    "baseline_verification": "2026-09-14T19:34:51.317Z: all41 owned/protected baseline pins and exact plan hash matched before edits."
+  },
+  "implemented": [
+    "Internal managed capture subtype carries ordered ack/retry positions without IDs. Exact full-wire same-ID conflicts reject all occurrences before writes. Original delivery indices follow every immutable partition, with completion only after all partitions acknowledge.",
+    "Commitment/claim failures block their delivery; destination read/body/CAS failures retain conservative same-key retries while disjoint work proceeds through existing shared bins. Existing identity/claim/data schemas, bounds, CAS attempts and producer default-off behavior preserved.",
+    "Consumer validates exact dense positional proof, maps managed completion to original envelopes and persists legacy independently after the shared initial tenant-barrier preflight. Missing/malformed proof remains retry; legacy partial failure does not erase known managed completion.",
+    "One grouped existing-ledger-fixture case plus directly superseded W09.03 expectations; API paragraph and one index comment accurately describe scope. Index runtime bytes otherwise unchanged."
+  ],
+  "attempts": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts -t 'W09\\.02|W09\\.03|W09\\.07|an R2 failure reports|suppresses delayed|fails the entire batch|writes one range-named' --maxWorkers=1 --minWorkers=1",
+      "source": {
+        "at": "2026-09-14T19:39:47.132Z",
+        "files": [
+          {
+            "path": "src/ledger/delivery.ts",
+            "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf"
+          },
+          {
+            "path": "src/ledger/writer.ts",
+            "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d"
+          },
+          {
+            "path": "src/ledger/consume.ts",
+            "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78"
+          },
+          {
+            "path": "src/ledger/ledger.test.ts",
+            "sha256": "f9f642a9c83b4d4c8ea982256cddfa3a96316848814f369d9ef134cf9e1e4793"
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "sha256": "dcd69dc0ad3b50695f1d894bc6ba62914392e94c928350b268876578e03596d5"
+          },
+          {
+            "path": "src/index.ts",
+            "sha256": "63acd0920b266e7b1eec275b10c40e79f054af5663754b2036301acc8db4e50c"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "e6d9e9",
+        "wall_time_seconds": 1.001219158,
+        "session_id": 84426,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "14c2c6",
+          "wall_time_seconds": 5.001095959,
+          "session_id": 84426,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "89b38e",
+          "wall_time_seconds": 5.000845782,
+          "session_id": 84426,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "cb609a",
+          "wall_time_seconds": 0.325115655,
+          "exit_code": 0,
+          "original_token_count": 82,
+          "output": " ✓ src/ledger/ledger.test.ts  (25 tests | 16 skipped) 6650ms\n ✓ src/ledger/erasure.test.ts  (12 tests | 11 skipped) 16ms\n\n Test Files  2 passed (2)\n      Tests  10 passed | 27 skipped (37)\n   Start at  15:39:51\n   Duration  38.81s (transform 7.28s, setup 0ms, collect 21.03s, tests 6.67s, environment 0ms, prepare 7.16s)\n\n"
+        }
+      ],
+      "result": "pass",
+      "drained": true,
+      "completed_at": "2026-09-14T19:40:30.551Z",
+      "id": "fixed10_candidate1",
+      "initial_capture_recorded_at": "2026-09-14T19:39:48.379Z"
+    },
+    {
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/delivery.ts src/ledger/writer.ts src/ledger/consume.ts src/ledger/ledger.test.ts && git diff --check -- src/ledger/delivery.ts src/ledger/writer.ts src/ledger/consume.ts src/ledger/ledger.test.ts src/index.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-14T19:40:39.370Z",
+      "source": {
+        "at": "2026-09-14T19:39:47.132Z",
+        "files": [
+          {
+            "path": "src/ledger/delivery.ts",
+            "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf"
+          },
+          {
+            "path": "src/ledger/writer.ts",
+            "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d"
+          },
+          {
+            "path": "src/ledger/consume.ts",
+            "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78"
+          },
+          {
+            "path": "src/ledger/ledger.test.ts",
+            "sha256": "f9f642a9c83b4d4c8ea982256cddfa3a96316848814f369d9ef134cf9e1e4793"
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "sha256": "dcd69dc0ad3b50695f1d894bc6ba62914392e94c928350b268876578e03596d5"
+          },
+          {
+            "path": "src/index.ts",
+            "sha256": "63acd0920b266e7b1eec275b10c40e79f054af5663754b2036301acc8db4e50c"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "850dab",
+        "wall_time_seconds": 1.001342525,
+        "session_id": 40460,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "6fc2fe",
+          "wall_time_seconds": 5.001228047,
+          "session_id": 40460,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f1929e",
+          "wall_time_seconds": 5.001496189,
+          "session_id": 40460,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "266c97",
+          "wall_time_seconds": 5.00040011,
+          "session_id": 40460,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5d5ba8",
+          "wall_time_seconds": 5.001020161,
+          "session_id": 40460,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "1a96cb",
+          "wall_time_seconds": 0.000001948,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "result": "pass",
+      "drained": true,
+      "completed_at": "2026-09-14T19:42:14.971Z",
+      "id": "static_candidate1"
+    }
+  ],
+  "measurement": {
+    "final_tests": 10,
+    "unselected": 27,
+    "selection": "9 selected ledger tests (8 existing and1 new grouped W09.07) plus1 existing managed-erasure group. Other27 deliberately unselected.",
+    "runtime_seconds": 38.81,
+    "test_execution_seconds": 6.67,
+    "fixture": "Synthetic ManagedR2/FakeR2 using actual writer/consumer/producer modules; existing in-memory Miniflare native R2 conditional/concurrent and managed-erasure controls.",
+    "effects": "Persisted commitment/claim poison retries only poison while two healthy new managed deliveries share one new object and legacy writes independently. All same-ID conflicting positions refuse before identity creation; exact duplicate healthy positions store once. Three multi-hour partial/uncertain modes preserve independent success, never acknowledge partial deliveries, conserve five input rows and converge after restored retry to three physical rows/objects with unchanged claims. Same-key failures retry both co-residents and converge to one grouped object. Missing, malformed, mis-sized and sparse positional proof never acknowledges a managed envelope.",
+    "boundaries": "Local correctness and object-count assertions only, no throughput/SLO/deployed/customer/whole-pipeline proof. Existing native control retained; no new native topology/bundle or suite."
+  },
+  "lint": {
+    "baseline_errors": 0,
+    "baseline_warnings": 0,
+    "final_errors": 0,
+    "final_warnings": 0
+  },
+  "static": {
+    "compiler": "pass; full noEmit/incremental false/composite false,1536MiB",
+    "scoped_lint": "pass; four changed code files,512MiB,zero diagnostics",
+    "whitespace": "pass; git diff --check on six owned paths. Inherited untracked delivery.ts is not covered by tracked diff; actual three added subtype lines require independent whitespace/source inspection.",
+    "exit_code": 0,
+    "same_source_as_runtime": true
+  },
+  "failures_and_rework": [
+    "Before the sole runtime/static runs, root source review identified that Array.every skips sparse positional proof. Changed validation to iterate dense expected delivery positions and added sparse proof to the existing new grouped case. No failed runtime is claimed; the passing commands cover the corrected final bytes.",
+    "Initial combined baseline display included compressed snapshots and was truncated; subsequent parsed hash verification checked all41 owned/protected pins and exact plan. No product check was repeated or credited for that read-only display."
+  ],
+  "final_source": [
+    {
+      "path": "src/ledger/delivery.ts",
+      "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf",
+      "before_sha256": "35907738604b099ea4ab4155be8c1b3049147e53b41777732cb4c01059875e06"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d",
+      "before_sha256": "ab36da893a42b1cc27d2f39810c387cff5c246c81cc3448bd4f638481b3d1f2a"
+    },
+    {
+      "path": "src/ledger/consume.ts",
+      "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78",
+      "before_sha256": "03ce5c01ac378e0aa7bb99720a669421c93cdc788872844584a5041e4260713b"
+    },
+    {
+      "path": "src/ledger/ledger.test.ts",
+      "sha256": "f9f642a9c83b4d4c8ea982256cddfa3a96316848814f369d9ef134cf9e1e4793",
+      "before_sha256": "7047877a0794d9bf419c105f5046d7483d4cc08f869d443cb9d59d99f9067db1"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "dcd69dc0ad3b50695f1d894bc6ba62914392e94c928350b268876578e03596d5",
+      "before_sha256": "e43414e619fca8268c8ac45251462ee123081ed780478487c20732adb037ea65"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "63acd0920b266e7b1eec275b10c40e79f054af5663754b2036301acc8db4e50c",
+      "before_sha256": "c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b"
+    }
+  ],
+  "protected": {
+    "checked": 35,
+    "changed": [],
+    "index_comment_only": true
+  },
+  "limitations": "Bounded managed per-delivery completion and disjoint delivery/key failure isolation, plus managed/legacy cohort independence only. Shared-key failures may conservatively retry co-resident deliveries; no immutable claim reassignment or per-message object fanout. Legacy partial-write duplication, pre-capture process loss, logical-event/online/export reconciliation, quarantine/outbox, activation/retention/claim lifecycle, atomic erasure fence/ABA/journal/manifest races, historical/fold recovery and full W09/W22/customer/SLO/release scope remain open. Producer flag default-off, existing persisted schema/identifiers and native queue mapping unchanged. D06/D08/W24 boundaries remain. No commit/push/install/emitted build/provision/deploy/cloud/credentials/customer-data/destructive operations.",
+  "disposition": {
+    "worker": "SOURCE_AND_EVIDENCE_STOPPED_PENDING_INDEPENDENT_REVIEW",
+    "source_stopped_at": "2026-09-14T19:42:58.055Z",
+    "running_commands": [],
+    "next_action": "Root freezes exact source/evidence; separate Astra/xhigh reviewer inspects actual deltas and repeats the fixed10 once, reusing exact-byte static. Root owns task acceptance/tracker/handoff.",
+    "rollback": "Reverse only the six admitted baseline-relative deltas; preserve inherited user changes and execution history."
+  }
+}

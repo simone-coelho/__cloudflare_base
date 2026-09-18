@@ -1,0 +1,367 @@
+{
+  "task_id": "W18.01",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T14:55:46.082Z",
+  "contract_digest": "b748849e2213a20e67b729720aa908aa237dcba36a58c8b9b949e2b04c452bbe",
+  "references": [
+    {
+      "path": "docs/remediation/design/W18.01/plan.md",
+      "sha256": "d51d39967213d70e7e9fdf9ffe3e42200a1dd08584cb68aee5f30f9cabaa804f"
+    },
+    {
+      "path": "docs/remediation/design/W18.01/baseline.json",
+      "sha256": "6a0a1ccd5db3eac4c172411557d99a775bf8304074c4d9c4f91c791f23460ab3"
+    },
+    {
+      "path": "docs/remediation/evidence/W18.01/admission.json",
+      "sha256": "3a57f543298a18f99bab66720e7a611e5fbe6f49db49928eb9e0ebbd94726b44"
+    }
+  ],
+  "baseline": {
+    "kind": "source_confirmed_design_case",
+    "entry": "Root37564 d65455/6854b1/d9049f check/status VALID1472 exit0/drained; admission journal1477/direct107545; baseline static48799/03d230 exit0/drained reused.",
+    "qualification": "Read complete admitted plan/task/admission before edits. Original form default1.2 conflicts with real0..1 validator, cleared values selected extreme effects, numeric slot weights absent. No new baseline runtime claimed. Shell owns current state; no shared.js/bootstrap registry was assumed. Accepted W20 validator/pin source remains unchanged."
+  },
+  "summary": "Correct stage defaults/ranges/additive copy and neutral clears. Load current-tenant registry locally, render independent numeric slot weights with safe focus IDs, preserve unknown stored weights visibly, and reuse validated save/readback plus existing History rollback. Local context/load guards prevent stale registry installation or a prior form save under a changed tenant.",
+  "criteria": [
+    {
+      "id": "W18.01-C1",
+      "verdict": "local_runtime_pass",
+      "evidence": "Actual DOM dry-run and PUT use real validateSlotCatalog. Stage default0.5/0.2, both0..1 bounds, illegal1.2/noPUT, neutral cleared1/0, off deletion and unchanged sibling pin verified. Other slot-rule defaults pass the real validator. Actual decide proves modest additive0.2, neutral/absent-rule decision parity, and out0 retaining eligibility with later freshness0.2."
+    },
+    {
+      "id": "W18.01-C2",
+      "verdict": "local_runtime_pass",
+      "evidence": "Registry keys/current numeric values, >1 refusal/noPUT, explicit0/clear0, quoted/bracket key focus safety, unknown weight preservation/read-only explanation, sibling freshness/pin preservation, saved revision5 readback, second save and existing History rollback4→7/readback verified. Actual decide winner changes first→second. Missing/empty/503 registry has no invented rows; delayed former-tenant response cannot replace current registry, and a prior form cannot PUT during context change. Requests use named tenant and real BrightHour configScope."
+    },
+    {
+      "id": "W18.01-C3",
+      "verdict": "worker_checks_pass_independent_review_pending",
+      "evidence": "Exactly two grouped additions plus six admitted existing controls passed. Final full compiler, scoped TS lint0, shipped JS syntax and two-file whitespace passed on stopped hashes; no backend/core/API changes. Separate frozen review and lead disposition remain pending."
+    }
+  ],
+  "source_ready": {
+    "at": "2026-09-13T15:06:14.552Z",
+    "files": [
+      {
+        "path": "public/console/views-config.js",
+        "sha256": "2b94f3edc1a159266366f304b01ef12e9c733a8ce2548c0f7d7602ca4d3217f8"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "896106b6362c1e06cef16fe6714b15cebf8bef7243f9ef55c57cbe44725d8fd5"
+      }
+    ],
+    "capture": "c1528e"
+  },
+  "source_history": {
+    "initial": {
+      "at": "2026-09-13T15:01:54.396Z",
+      "files": [
+        {
+          "path": "public/console/views-config.js",
+          "sha256": "55059d063ad045b1ad95192b548a5c37005d7a76e3dd15ab391ccc085107c7d9"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "sha256": "9da67991556f8ee242504343dc658f898296f9993c212cc3c7316864af7f36f8"
+        }
+      ],
+      "capture": "91175e"
+    },
+    "repaint": {
+      "at": "2026-09-13T15:03:51.036Z",
+      "files": [
+        {
+          "path": "public/console/views-config.js",
+          "sha256": "2b94f3edc1a159266366f304b01ef12e9c733a8ce2548c0f7d7602ca4d3217f8"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "sha256": "9da67991556f8ee242504343dc658f898296f9993c212cc3c7316864af7f36f8"
+        }
+      ],
+      "capture": "16f4d9"
+    },
+    "typed_final": {
+      "at": "2026-09-13T15:06:14.552Z",
+      "files": [
+        {
+          "path": "public/console/views-config.js",
+          "sha256": "2b94f3edc1a159266366f304b01ef12e9c733a8ce2548c0f7d7602ca4d3217f8"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "sha256": "896106b6362c1e06cef16fe6714b15cebf8bef7243f9ef55c57cbe44725d8fd5"
+        }
+      ],
+      "capture": "c1528e"
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 8,
+      "unselected": 29,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 49.04
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "new_warnings": 0,
+      "final_bytes": true
+    },
+    "syntax": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    }
+  },
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W18.01|a slot rule switched on|history shows every document|the interests screen speaks|W03.03 carries named auth context|never leaves a screen|the dials arm the save bar' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 15:01:54 UTC",
+      "captures": [
+        {
+          "chunk_id": "b82ee5",
+          "wall_time_seconds": 1.001848106,
+          "session_id": 52311,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b60e51",
+          "wall_time_seconds": 5.000522278,
+          "session_id": 52311,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "6eb7cd",
+          "wall_time_seconds": 5.000443485,
+          "session_id": 52311,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fcf17f",
+          "wall_time_seconds": 4.860152302,
+          "exit_code": 1,
+          "original_token_count": 632,
+          "output": " ❯ src/console/console.render.test.ts  (37 tests | 2 failed | 29 skipped) 16883ms\n   ❯ src/console/console.render.test.ts > the operator application, rendered > W18.01 validates stage bounds and neutral clears with real scoring and the other rule defaults\n     → Cannot set properties of undefined (setting 'value')\n   ❯ src/console/console.render.test.ts > the operator application, rendered > W18.01 edits registry weights with validated readback, visible consequences and existing History rollback\n     → expected [] to deeply equal [ '0', '1', '0.25' ]\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/console/console.render.test.ts > the operator application, rendered > W18.01 validates stage bounds and neutral clears with real scoring and the other rule defaults\nTypeError: Cannot set properties of undefined (setting 'value')\n ❯ input src/console/console.render.test.ts:900:10\n    898|     const input = (key: string, value: string) => {\n    899|       const el = c.all(`[data-focus-key=\"${key}\"]`)[0]!;\n    900|       el.value = value; el.dispatchEvent(new c.w.Event('input', { bubb…\n       |          ^\n    901|     };\n    902|     const toggleRule = (name: string, value: string) => {\n ❯ src/console/console.render.test.ts:927:7\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/console/console.render.test.ts > the operator application, rendered > W18.01 edits registry weights with validated readback, visible consequences and existing History rollback\nAssertionError: expected [] to deeply equal [ '0', '1', '0.25' ]\n\n- Expected\n+ Received\n\n- Array [\n-   \"0\",\n-   \"1\",\n-   \"0.25\",\n- ]\n+ Array []\n\n ❯ src/console/console.render.test.ts:982:72\n    980|       expect(changed.pages.home[1]).toEqual(original.pages.home[1]);\n    981|       expect(changed.pages.home[0]!.freshness).toEqual(original.pages.…\n    982|       expect(c.all('[data-focus-key^=\"weight:\"]').map(el => el.value))…\n       |                                                                        ^\n    983|       expect(c.text()).toContain('from revision 5'); expect(c.$('saveb…\n    984|       const decision: DecideInput = { tenant: 'synthetic', brand: 'syn…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  1 failed (1)\n      Tests  2 failed | 6 passed | 29 skipped (37)\n   Start at  11:01:58\n   Duration  82.28s (transform 1.26s, setup 0ms, collect 58.63s, tests 16.88s, environment 0ms, prepare 4.74s)\n\n"
+        }
+      ],
+      "session_id": 52311,
+      "drained": true,
+      "exit_code": 1,
+      "finished_at": "2026-09-13 15:03:21 UTC",
+      "source_basis": "source_history.initial"
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W18.01|a slot rule switched on|history shows every document|the interests screen speaks|W03.03 carries named auth context|never leaves a screen|the dials arm the save bar' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 15:03:51 UTC",
+      "captures": [
+        {
+          "chunk_id": "61fc12",
+          "wall_time_seconds": 1.00143236,
+          "session_id": 28380,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "61d33d",
+          "wall_time_seconds": 5.000868855,
+          "session_id": 28380,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "9290ef",
+          "wall_time_seconds": 5.00149099,
+          "session_id": 28380,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f284f1",
+          "wall_time_seconds": 1.447705881,
+          "exit_code": 0,
+          "original_token_count": 69,
+          "output": " ✓ src/console/console.render.test.ts  (37 tests | 29 skipped) 22367ms\n\n Test Files  1 passed (1)\n      Tests  8 passed | 29 skipped (37)\n   Start at  11:03:55\n   Duration  78.87s (transform 880ms, setup 0ms, collect 50.33s, tests 22.37s, environment 0ms, prepare 4.27s)\n\n"
+        }
+      ],
+      "session_id": 28380,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 15:05:14 UTC",
+      "source_basis": "source_history.repaint",
+      "qualification": "8 passed/29 skipped; superseded by fixture-only typing correction."
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/console/console.render.test.ts --max-warnings 0 && node --check public/console/views-config.js && git diff --check -- public/console/views-config.js src/console/console.render.test.ts",
+      "started_at": "2026-09-13 15:05:14 UTC",
+      "captures": [
+        {
+          "chunk_id": "a8df56",
+          "wall_time_seconds": 1.000546041,
+          "session_id": 99127,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "afd4ba",
+          "wall_time_seconds": 5.001271342,
+          "session_id": 99127,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "a0ede4",
+          "wall_time_seconds": 0.000002165,
+          "exit_code": 2,
+          "original_token_count": 567,
+          "output": "src/console/console.render.test.ts(211,51): error TS2722: Cannot invoke an object which is possibly 'undefined'.\nsrc/console/console.render.test.ts(249,26): error TS2722: Cannot invoke an object which is possibly 'undefined'.\nsrc/console/console.render.test.ts(249,26): error TS18048: 'SLOTS_KIND.stamp' is possibly 'undefined'.\nsrc/console/console.render.test.ts(957,11): error TS2322: Type '{ version: string; pages: { home: ({ slot: string; take: number; weights: { line: number; }; freshness: { weight: number; halfLifeDays: number; }; pinnedPieceId?: undefined; } | { slot: string; take: number; weights: { ...; }; pinnedPieceId: string; freshness?: undefined; })[]; }; }' is not assignable to type 'SlotCatalog'.\n  Types of property 'pages' are incompatible.\n    Type '{ home: ({ slot: string; take: number; weights: { line: number; }; freshness: { weight: number; halfLifeDays: number; }; pinnedPieceId?: undefined; } | { slot: string; take: number; weights: { line?: undefined; }; pinnedPieceId: string; freshness?: undefined; })[]; }' is not assignable to type 'Record<string, SlotStrategy[]>'.\n      Property 'home' is incompatible with index signature.\n        Type '({ slot: string; take: number; weights: { line: number; }; freshness: { weight: number; halfLifeDays: number; }; pinnedPieceId?: undefined; } | { slot: string; take: number; weights: { line?: undefined; }; pinnedPieceId: string; freshness?: undefined; })[]' is not assignable to type 'SlotStrategy[]'.\n          Type '{ slot: string; take: number; weights: { line: number; }; freshness: { weight: number; halfLifeDays: number; }; pinnedPieceId?: undefined; } | { slot: string; take: number; weights: { line?: undefined; }; pinnedPieceId: string; freshness?: undefined; }' is not assignable to type 'SlotStrategy'.\n            Type '{ slot: string; take: number; weights: { line?: undefined; }; pinnedPieceId: string; freshness?: undefined; }' is not assignable to type 'SlotStrategy'.\n              Types of property 'weights' are incompatible.\n                Type '{ line?: undefined; }' is not assignable to type 'Record<string, number>'.\n                  Property '\"line\"' is incompatible with index signature.\n                    Type 'undefined' is not assignable to type 'number'.\n"
+        }
+      ],
+      "session_id": 99127,
+      "drained": true,
+      "exit_code": 2,
+      "finished_at": "2026-09-13 15:05:45 UTC",
+      "source_basis": "source_history.repaint"
+    },
+    "runtime3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W18.01|a slot rule switched on|history shows every document|the interests screen speaks|W03.03 carries named auth context|never leaves a screen|the dials arm the save bar' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 15:06:14 UTC",
+      "captures": [
+        {
+          "chunk_id": "7c5369",
+          "wall_time_seconds": 1.001054037,
+          "session_id": 84280,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6f3d45",
+          "wall_time_seconds": 5.000867067,
+          "session_id": 84280,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "49276e",
+          "wall_time_seconds": 5.001498713,
+          "session_id": 84280,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b7db0d",
+          "wall_time_seconds": 0.00000201,
+          "exit_code": 0,
+          "original_token_count": 69,
+          "output": " ✓ src/console/console.render.test.ts  (37 tests | 29 skipped) 21615ms\n\n Test Files  1 passed (1)\n      Tests  8 passed | 29 skipped (37)\n   Start at  11:06:19\n   Duration  49.04s (transform 410ms, setup 1ms, collect 22.66s, tests 21.61s, environment 0ms, prepare 2.53s)\n\n"
+        }
+      ],
+      "session_id": 84280,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 15:07:16 UTC",
+      "source_basis": "source_history.typed_final"
+    },
+    "static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/console/console.render.test.ts --max-warnings 0 && node --check public/console/views-config.js && git diff --check -- public/console/views-config.js src/console/console.render.test.ts",
+      "started_at": "2026-09-13 15:07:16 UTC",
+      "captures": [
+        {
+          "chunk_id": "8e9466",
+          "wall_time_seconds": 1.000421173,
+          "session_id": 81022,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f1d079",
+          "wall_time_seconds": 5.000660828,
+          "session_id": 81022,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "0dc1ec",
+          "wall_time_seconds": 0.000001255,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 81022,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 15:08:05 UTC",
+      "source_basis": "source_history.typed_final"
+    }
+  },
+  "failed_attempts": [
+    {
+      "command": "runtime1",
+      "result": "6 passed/2 failed/29 skipped; exit1/drained52311 b82ee5/b60e51/6eb7cd/fcf17f.",
+      "cause": "New guarded load cleared the DOM at save/readback start but did not repaint after the fetched document arrived. Both grouped checks caught missing immediate input rows.",
+      "correction": "After drain, added C.render at the end of context-guarded loadRules. Root approved in-scope one-line rework. Same fixed8 passed in runtime2 without weakening assertions."
+    },
+    {
+      "command": "static1",
+      "result": "Compiler exit2/drained99127 a8df56/afd4ba/a0ede4; four diagnostics. Chained lint/syntax/whitespace did not execute.",
+      "cause": "Fixture invoked the optional DocumentKind.stamp member without a non-null assertion at two sites; inferred heterogeneous SLOTS_DOC weights conflicted with SlotCatalog.",
+      "correction": "After drain, explicitly typed SLOTS_DOC as SlotCatalog and asserted the actual SLOTS_KIND.stamp at two call sites. No runtime logic change; stopped corrected bytes, reran exact8 and entire static chain successfully."
+    }
+  ],
+  "measurements": [],
+  "measurement_qualification": "Local Node/Vitest/JSDOM engineering checks using real validator and decideContent with simulated HTTP document/revision persistence. Exact elapsed Vitest durations retained, not a performance/SLO claim. Existing Vitest CJS deprecation warning retained.",
+  "final_source_stop": {
+    "at": "2026-09-13T15:09:22.946Z",
+    "files": [
+      {
+        "path": "public/console/views-config.js",
+        "sha256": "2b94f3edc1a159266366f304b01ef12e9c733a8ce2548c0f7d7602ca4d3217f8"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "896106b6362c1e06cef16fe6714b15cebf8bef7243f9ef55c57cbe44725d8fd5"
+      }
+    ],
+    "capture": "0c5e84",
+    "unchanged_since_source_ready": true
+  },
+  "protected_comparison": {
+    "status": "lead_owned_final_freeze",
+    "basis": "Root admission verified30 source pins/28 protected and unchanged closed W08.04/W20.01 manifests; worker modified only the admitted two files and own evidence. Root owns final deltas/protected comparison."
+  },
+  "limitations": [
+    "Bounded W18 stage/numeric weight operator controls and local real-validator save/readback/History only. Full W18/F26/F29 customer assets, actual customer browser/no-reload walkthrough and customer acceptance remain open.",
+    "Simulated HTTP persistence is not backend CAS, transactional/W35 authority, deployed propagation, native/runtime/SLO or release acceptance. Accepted unchanged W20 route/validator/pin dependency reused; no prior21 rerun.",
+    "Numeric readback is on Slot rules; /learn/slots grid still lists names. Failed/empty registry disables its weight editor. Unknown stored weights remain visible/read-only and preserved; server registry cross-validation is separate.",
+    "Cross-page same-slot-name selection, broader unsaved navigation loss and full W20 activation/pin UI/exclusions/fallback remain separate. No scoring/model/default-arm/pin policy change.",
+    "No subdelegation, external/cloud/deploy/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push or customer-policy actions. Root owns governance and acceptance; distinct reviewer owns independent review."
+  ],
+  "independent_review": {
+    "status": "pending",
+    "owner": "w1405-reviewer"
+  }
+}

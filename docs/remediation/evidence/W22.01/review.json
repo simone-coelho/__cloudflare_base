@@ -1,0 +1,158 @@
+{
+  "task_id": "W22.01",
+  "actor_id": "w2201-reviewer",
+  "role": "independent_verifier",
+  "run": "/root/w2201_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "model_provenance": "Parent-assigned required reviewer configuration; distinct from /root/w2201_worker.",
+  "at": "2026-09-14 04:01:07 UTC",
+  "verdict": "pass",
+  "claim": "local_runtime",
+  "artifact_digest": "5a7f6fa6dc71d97c55e5b0f1a42b8bfe962a2f52adadcc22bd188132ebc5f0d5",
+  "contract_digest": "875c06a0ad705e2b08c1541da73e56b50f8b733b73882bd81dd105b3c9caab5e",
+  "reviewed_basis": {
+    "canonical": "Document35 complete W22 scope and F16/F17/F19/F22/N10/N23; doc22 ledger, attribution, transparency/export and privacy boundaries read during preflight. Current canonical pin unchanged.",
+    "canonical_sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+    "plan": {
+      "path": "docs/remediation/design/W22.01/plan.md",
+      "sha256": "e3cb7a308889932dbd9b42114a701e887595c08cf3a57ca00c5150c86295e895"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W22.01/baseline.json",
+      "sha256": "76e1710e65d20cda98d7980cf5ed877294f1416fcddae08785b4e3b0bc18302f"
+    },
+    "freeze": {
+      "path": "docs/remediation/evidence/W22.01/source-freeze.json",
+      "sha256": "aebf1cb0edb4f400ea63b8f53e261605ce56c1197a4578d5ba59285ab65e4e34"
+    },
+    "deltas": {
+      "path": "docs/remediation/evidence/W22.01/source-deltas.json",
+      "sha256": "838e3c1f840eccbae04d58d0bb985b7778c4acd94565fe4c8d258fc217d84737"
+    },
+    "complete_worker": {
+      "path": "docs/remediation/evidence/W22.01/worker.json",
+      "sha256": "b7f0b2ca0b431423d5a2fd4584c1e3abbca76b6677bb2672f1e4593eb5ba2c48"
+    },
+    "pins": {
+      "count": 38,
+      "all_match": true,
+      "after_runtime_all_match": true,
+      "captures": [
+        "f57035",
+        "bc4134",
+        "06069c"
+      ],
+      "verification": "Read and SHA256-hashed every artifact file; independently recomputed artifactDigest and taskContractDigest using existing exported functions without running the board. Decoded all five retained gzip originals, verified before/after hashes and applied every retained diff in memory; each produced the current file exactly."
+    },
+    "inspected_outputs": [
+      "src/learn/report.ts",
+      "src/learn/hourly.ts",
+      "src/learn/report.test.ts",
+      "src/learn/hourly.test.ts",
+      "docs/kit/02-api-reference.md"
+    ],
+    "actual_source_review_captures": [
+      "41fb32",
+      "c9866c",
+      "bc4134",
+      "9263f2",
+      "2b1535",
+      "afdf9b"
+    ],
+    "scope": "Five baseline-relative source/document changes only; existing surrounding source and frozen dependencies retained. No source or worker/governance evidence modified by this reviewer."
+  },
+  "execution": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.01|W31.01|W32.02|W32.01|W26.02|W30.01 restores|W30.01 preserves|W21 .*repeated credits|W33.01 only null|W06.07 keeps legacy uncertainty|the day from its hours|an hour built again' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "e3c016",
+          "wall_time_seconds": 1.001668534,
+          "session_id": 42830,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e89d90",
+          "wall_time_seconds": 0.000001769,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (28 tests | 18 skipped) 313ms\n ✓ src/learn/report.test.ts  (18 tests | 10 skipped) 800ms\n\n Test Files  2 passed (2)\n      Tests  18 passed | 28 skipped (46)\n   Start at  23:59:18\n   Duration  11.67s (transform 2.63s, setup 1ms, collect 5.09s, tests 1.11s, environment 0ms, prepare 4.05s)\n\n"
+        }
+      ],
+      "session_id": 42830,
+      "exit_code": 0,
+      "drained": true,
+      "passed": 18,
+      "failed": 0,
+      "unselected": 28,
+      "total_discovered": 46,
+      "test_files_passed": 2,
+      "duration_seconds": 11.67,
+      "test_duration_ms": 1113,
+      "runtime": "Installed Node/Vitest1.6.1, actual report/hourly modules with synthetic R2, tombstones and retained shards. No deployed Worker/provider or customer workload.",
+      "selection": "Exactly15 existing controls plus3 grouped W22.01 cases. Runner's28 skipped cases are outside the approved title selection, not required cases bypassed.",
+      "diagnostic": "Existing Vite CJS Node API deprecation notice; no test failure.",
+      "timestamp_note": "Runner-local start and durations retained verbatim. No separately captured UTC command-start timestamp is inferred; review at is the later observed UTC time."
+    },
+    "static_reuse": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts docs/kit/02-api-reference.md",
+      "evidence": "worker.json command_captures.static3",
+      "captures": [
+        "beb84f",
+        "5fdc75"
+      ],
+      "session_id": 94707,
+      "exit_code": 0,
+      "drained": true,
+      "compiler": "full no-emit passed",
+      "lint": {
+        "errors": 0,
+        "warnings": 0,
+        "baseline_errors": 0,
+        "baseline_warnings": 0
+      },
+      "whitespace": "five owned paths passed",
+      "reuse_basis": "Read COMPLETE worker.json and checked all eight retained command-output SHA256 values (081883). Final static3 follows the final fixture correction and covers the frozen source hashes; reviewer reused it exactly as approved, without another compiler/lint run."
+    },
+    "before_change": {
+      "provenance": "source_confirmed",
+      "observation": "Decoded retained report/hourly baseline admits every repeated row, caps loadDay before identity, compacts hourly decisions before comparison and retains first-match collision behavior. No independent pre-edit runtime execution claimed."
+    },
+    "rework_review": "Read retained runtime1 failures and runtime2–5 supersession plus static1 warning/static2–3. Final assertions preserve early invalid-slot no-write refusal and valid metadata-overflow progress, use matching horizon0 for the erasure merge, assert exact four legacy range/fallback reads, demonstrate one versus two actual nonce credits, and exercise cross-shard collision with an opaque ID rather than an earlier carrier-scope refusal. No earlier result was relabeled as current proof.",
+    "not_run": "No additional tests, broad suite, SDK compiler/bundles, build, board CLI, native runtime or external checks. Root's retained VALID1663 entry is reused for tracker consistency only."
+  },
+  "criteria": [
+    {
+      "id": "W22.01-C1",
+      "verdict": "pass",
+      "evidence": "Independent fixed18 and actual source/diff review.",
+      "findings": "Shared ReportRowIdentity validates IDs/scope, nonce carrier/event/type/source and exact producer construction. Complete logical object fields and array values compare without key-order dependence; only strictly valid top-level transport provenance is excluded. Exact decision/proven nonce repeats precede logical caps; legacy repeated outcomes, changed subject/brand/payload and malformed provenance refuse. Raw physical bytes/objects/work remain bounded, and hourly full-row admission precedes compactOf and shard writes. Tests retain distinct nonce credits, late conflict detection and zero-write sentinels."
+    },
+    {
+      "id": "W22.01-C2",
+      "verdict": "pass",
+      "evidence": "Independent fixed18, final fold/read integration and saved-basis inspection.",
+      "findings": "Raw/hourly arithmetic agrees for the declared histories. Duplicate witnesses are counted only after requested-brand/erasure filtering; inclusive cleanup and returning activity remain intact. Retained compact ambiguity and forward incoming-ID overlap refuse before that shard mutation/cap; shared retained-ID allocation is bounded across shards. Replay remains supported. The cross-shard test proves prior progress plus no aggregate rather than rollback. Valid bases1/2 retain bytes/labels with no invented duplicate count; mixed versions with3 withhold aggregation/pooling through existing compatibility logic."
+    },
+    {
+      "id": "W22.01-C3",
+      "verdict": "pass",
+      "evidence": "38 matching pins; exact five baseline-relative diffs; independent18 passing checks; inspected final static3 reuse.",
+      "findings": "The implementation and concise API amendments match the approved bounded contract. Documentation identifies basis3 as current-input dedup, repeated legacy outcome refusal, optional private duplicate counts, stricter hourly physical limits and partial-shard failure. Full W22 delivery/reconciliation, product-sort integration, histories and customer acceptance remain open."
+    }
+  ],
+  "limitations": [
+    "Local report-input containment only; no full W22/F16/F17/F19/F22/N10/N23, package, finding, gate, customer or release acceptance.",
+    "Repeated nonce-free outcome IDs refuse even for identical rows. Identical legacy decisions count logical IDs, not proved unique page views; nonce identity is not business-order uniqueness.",
+    "Physical duplicate traffic still consumes object/UTF8/work budgets. Hourly16MiB raw and shared retained-ID16MiB/1million-visited/2048-byte-ID bounds are conservative application refusals, not native capacity or supported customer throughput proof. Existing raw shard/configuration/tombstone loading and broader fold capacity are not certified.",
+    "Compact history cannot prove full-payload identity. A later retained-shard failure can follow earlier durable shard progress; no new aggregate is published and no rollback, atomicity, old-history repair or erasure completion is inferred.",
+    "Computation basis3 describes current loaded-input dedup only. Prior compact carry-in, expired evidence, same-count/late-hour repair, policy horizons, missing outcomes and historical aggregates are not repaired or declared clean.",
+    "Fresh tombstone checks do not establish an atomic global erasure fence. Online counters/fan-out, export/replay reconciliation, SDK/served/rendered/viewable units, automatic refresh and customer/privacy/scientific decisions remain separate.",
+    "18 selected synthetic local tests are one acceptance run;28 other discovered tests intentionally remain unselected. Timing is runner duration, not a deployment/SLO or latency claim."
+  ],
+  "disposition": "Independent bounded PASS for root technical acceptance review. Lead alone updates tracker/journal/RESUME and accepts the task; this report grants no external authority.",
+  "revalidation": "Changes to any frozen artifact/contract dependency, admitted semantics, runtime/workload, storage assumptions or this accepted evidence require scoped revalidation while preserving this record.",
+  "handoff": "All reviewer runtime sessions drained. Only this review.json was written. Root may integrate the independent verdict and run its final board handoff."
+}

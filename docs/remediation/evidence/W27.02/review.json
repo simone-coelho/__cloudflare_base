@@ -1,0 +1,153 @@
+{
+  "task_id": "W27.02",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T15:23:40.358Z",
+  "verdict": "PASS",
+  "artifact_digest": "6dca69a592a58141efc2a9f98ba05eb430c1922ccd300ea777280b7886578835",
+  "contract_digest": "cadfde6c36efdc4546588e6576330d601c755e95ced577de0b7dcb9e924f4ce0",
+  "summary": "Independent C1–C3 PASS for forward page-dependency replay. Seven actual deltas reviewed; fixed11 passed once on frozen bytes. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W27.02-C1",
+      "verdict": "PASS",
+      "evidence": "Actual types/decide changes add detached ordered version1 page inputs with effective learning presence, exact candidateLimit and explicit snapshot/prior identities or pin/default/unavailable zeros; scorer and live I/O are unchanged. Actual service→explicit enqueueDecisions→legacy expansion→consumeLedger→findById roundtrip retains the full record. Existing packing fixture preserves old projection baselines and independently measures added metadata: current envelopes38960/171062/224672/294869 bytes, messages1/2/2/3 and batches1/1/1/2; full-record body/batch limits and exact stored readback pass."
+    },
+    {
+      "id": "W27.02-C2",
+      "verdict": "PASS",
+      "evidence": "Actual replay validates present manifest shape/version, ordered unique full-page coverage, safe identities and target tuple, then loads required positive prefix snapshots even at gamma0 and verifies owner/slot/version/prior/basic consumed structure. Non-vacuous coupled picks/candidates, rotation/Thompson, true pins, absent/malformed dependencies, legacy ambiguity and candidateLimit differences are exercised. Authority/full exploration metadata are compared. Real service-generated two-slot record replays after canonical serialization; retained single-slot publication and nonce checks pass. Both review concerns are resolved: returned inputs preserve detached later-slot fatigue context, and legacy-pin used lift/prior correctly report zero."
+    },
+    {
+      "id": "W27.02-C3",
+      "verdict": "PASS",
+      "evidence": "Seven exact bidirectional deltas and all123 artifact pins/117 source-output pins/110 protected pins verified before and after independent fixed11. Three grouped additions only,44 unselected tests explicitly excluded. Worker final compiler/scoped lint/whitespace exit0 on identical bytes, with three unchanged inherited warnings; reused without rerun. Publisher/operator W27.01 implementation stays protected. No scoring/model/consent/attribution changes or new serving I/O."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W27.02/plan.md",
+      "sha256": "e1a2fa8eb9d8bad851e294dc3372b16c66c272079e5d866a172855d58e8e6547"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W27.02/artifact.json",
+      "sha256": "3e1b4bca1d5f15f33db87131c2082046e11793792491f8a6b5ab925c00609bce"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W27.02/worker.json",
+      "sha256": "9975c0ab305a7125289e71bad358454459d167758a290587c1d153985e3daabe"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/phase3.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts -t 'W27.02|the term on the decision|the same record decided again|a tampered receipt is caught|W27.01 keeps|W09.05 separates|W09.01 packs' --maxWorkers=1 --minWorkers=1",
+    "session_id": 6458,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "captures": [
+      {
+        "chunk_id": "c6449f",
+        "wall_time_seconds": 1.001392988,
+        "session_id": 6458,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "1ce077",
+        "wall_time_seconds": 0.000002018,
+        "exit_code": 0,
+        "original_token_count": 668,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/ledger/ledger.test.ts > producer > W09.01 packs real decision sets by UTF-8 bytes with lossless legacy expansion, storage and receipts\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 36032,\n  manifestBytes: 366,\n  addedBytes: 2928,\n  actualBytes: 38960,\n  messages: 1,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 135062,\n  manifestBytes: 1200,\n  addedBytes: 36000,\n  actualBytes: 171062,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 6,\n  values: 24,\n  regional: true,\n  baselineBytes: 188672,\n  manifestBytes: 1200,\n  addedBytes: 36000,\n  actualBytes: 224672,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 128,\n  regional: true,\n  baselineBytes: 291941,\n  manifestBytes: 366,\n  addedBytes: 2928,\n  actualBytes: 294869,\n  messages: 3,\n  batches: 2\n}\n\n ✓ src/ledger/ledger.test.ts  (22 tests | 21 skipped) 131ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (20 tests | 17 skipped) 88ms\n ✓ src/learn/phase3.test.ts  (13 tests | 6 skipped) 28ms\n\n Test Files  3 passed (3)\n      Tests  11 passed | 44 skipped (55)\n   Start at  11:21:25\n   Duration  27.42s (transform 5.59s, setup 1ms, collect 15.76s, tests 247ms, environment 0ms, prepare 8.47s)\n\n"
+      }
+    ],
+    "result": {
+      "passed": 11,
+      "unselected": 44,
+      "total": 55,
+      "test_files": 3,
+      "new_grouped_cases": 3,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "before": {
+      "at": "2026-09-12T15:21:13.017Z",
+      "captures": [
+        "77c904",
+        "7f7d3f"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T15:22:40.688Z",
+      "session_id": 93188,
+      "captures": [
+        "018419",
+        "af0f3a",
+        "27affc"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "artifact_pins": 123,
+    "source_and_output_pins": 117,
+    "protected_pins": 110,
+    "changed_protected": [],
+    "pin_mismatches": [],
+    "exact_forward_and_reverse_deltas": 7,
+    "manifest_sha256": "3e1b4bca1d5f15f33db87131c2082046e11793792491f8a6b5ab925c00609bce",
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "7f7d3f",
+          "wall_time_seconds": 0.16727329,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T15:21:13.438Z\",\"task\":\"W27.02\",\"state\":\"verification\",\"contract_digest\":\"cadfde6c36efdc4546588e6576330d601c755e95ced577de0b7dcb9e924f4ce0\",\"artifact_digest\":\"6dca69a592a58141efc2a9f98ba05eb430c1922ccd300ea777280b7886578835\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "27affc",
+          "wall_time_seconds": 0.120385483,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T15:22:41.012Z\",\"task\":\"W27.02\",\"state\":\"verification\",\"contract_digest\":\"cadfde6c36efdc4546588e6576330d601c755e95ced577de0b7dcb9e924f4ce0\",\"artifact_digest\":\"6dca69a592a58141efc2a9f98ba05eb430c1922ccd300ea777280b7886578835\"}\n"
+        }
+      ]
+    },
+    "inspection": "Mandatory entry/governance/current checkpoint159e2b, full canonical W27/F22/raw reportb0cdc6, plan/doc22§12.3 and actual task15684f/80b750. Actual pre-freeze source/dependencies39f5bb/6f6aa9/5b12be/ffc9cf reconciled with final production/source-freezec44f29 and complete remaining frozen deltas15684f. Final replay/context and full packing assertionsca8125; worker metadata, baseline lint, all complete candidate failures/final runtime/static/STOP captures80b750/bdbd31. Types/decide unchanged from pre-read; final replay numeric/context/used fixes and all updated fixture/kit bytes inspected. STOP2026-09-12T15:18:36.310Z."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W27.02/worker.json",
+      "sha256": "9975c0ab305a7125289e71bad358454459d167758a290587c1d153985e3daabe"
+    },
+    "command_capture": "K2 final candidate",
+    "session_id": 86180,
+    "final_capture": "3f3969",
+    "exit_status": 0,
+    "drained": true,
+    "errors": 0,
+    "warnings": 3,
+    "qualification": "Sequential compiler && scoped lint --max-warnings3 && whitespace passed. Same inherited unused _share/_s/_c warnings as baseline58203/bc8fdf, shifted only by changed lines. No static replay."
+  },
+  "retained_failures_and_qualifications": [
+    "Worker candidate1 session24419/579261 exit1:9 passed,2 failed,44 unselected. New service fixture wrongly expected afterResponse to enqueue; corrected with actual enqueueDecisions after service.write. Same-scope isolate lift cache leaked between synthetic environments; beforeEach now invalidates it. No production archive or manifest bypass. Candidate2 session64438/1332da supersedes those failures with final-byte11 PASS; original full failure evidence remains in worker.json.",
+    "Independent runtime passed first invocation. Full captures retain Vite CJS deprecation and two learning_incomplete diagnostics from the existing nonce fixture's synthetic downstream response; no sink durability claim.",
+    "Entry board/dependency assurance is reused under lead ownership; no board, static, broad suite, native or HTTP replay run by this reviewer. Historical F22 workload statistics were read as historical evidence, not remeasured."
+  ],
+  "limitations": [
+    "Forward page-dependency replay only, not full W27/F22 closure, cryptographic receipt integrity, deployed/native/HTTP endpoint/customer acceptance, SLO or release approval.",
+    "Legacy personalized multi-slot records without a manifest refuse. Qualified default/pin/single-slot replay does not recover arbitrary old pure-call candidate limits or ambiguous zero-lift learning controls. Numeric identities still depend on retained correct archives and configuration revisions.",
+    "Only required prefix/pin archives are loaded; the returned full manifest can name unread later dependencies, while used lift/prior describes the consumed target. Archive validation is basic consumed-shape/identity checking, not complete schema or Byzantine-store protection.",
+    "Four synthetic byte workloads validate current transport boundaries, not arbitrary page/catalog/ring capacity. Repeated metadata can reach existing queue/ring limits sooner; no sustained native resource/latency proof.",
+    "Exact current gamma0 rotation/Thompson replay is not W28/F23 statistical/propensity correctness or causal lift. No choice/scoring policy change.",
+    "W27.01 publisher safety remains implemented and protected, not newly deployed. Mixed-version rollout, retention, absent/corrupt historical archives, historical repair and global/idempotent publication guarantees remain open.",
+    "Only this review.json was written; no source/governance edits, subdelegation, external/resource/customer-data/credential/commit/deployment operations. Lead alone accepts."
+  ]
+}

@@ -1,0 +1,246 @@
+{
+  "at": "2026-09-13T12:07:30Z",
+  "task_id": "W38.03",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "a416896062da9e36d5784cbfd69c9483e6c643fcad3d1c0d46387036776d0031",
+  "contract_digest": "c2ffe07329d6c7c401b56c8ae12e615582549601efd631399910dcba3d090603",
+  "verdict": "PASS",
+  "summary": "Independent source and single fixed23 verification pass for the legacy serialized-document boundary and strict pre-effect mutation admission. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W38.03-C1",
+      "verdict": "PASS",
+      "evidence": "Actual current/history/index reads use KV streams and a geometrically grown buffer capped at 2,097,152 bytes before fatal UTF-8 decode and JSON.parse. Oversize/failing reads cancel and release the acquired reader; only provider null is absence. Independent cases admit exact-limit current/history data, exercise tiny/empty chunks and malformed data, and stop all three overflow paths after two pulls without parsing or validation. Existing public null/[]/fallback behavior, both envelope aliases, immutable history, W38.01/.02 cache and publication controls remain."
+    },
+    {
+      "id": "W38.03-C2",
+      "verdict": "PASS",
+      "evidence": "Strict uncached mutation current/rollback/index reads reject unreadable, oversized or malformed state, unsafe counters, mismatched historical revision and observed index regression before puts. Both exact serialized strings, including duplicated value/config, metadata and next index/version, are prepared and byte-admitted before the first put. Independent no-put assertions compare complete synthetic KV state for refused replace/patch/rollback operations; an exact 2 MiB output is stored unchanged. The real non-demo Reflex wrapper now uses the strict base, preserving an externally updated unpatched field despite an older serving cache and refusing missing customer config. Mounted handlers return fixed no-store 413/503 errors. Lost put acknowledgement remains a partial/unknown storage error, not a size refusal or rollback claim."
+    },
+    {
+      "id": "W38.03-C3",
+      "verdict": "PASS",
+      "evidence": "Ten exact owned deltas reconstructed forward and backward against retained baseline; all 39 artifact pins and 23 protected pins match before/after. One independent unchanged K3 invocation passes 23 with 135 unselected. Complete final worker compiler/lint/whitespace captures reused: zero errors and four inherited warnings, one fewer than baseline because the stream adapter now consumes _type. Three new groups and six existing fixture adapters only. Earlier fixture failure, superseded pass and compiler failure remain recorded; historical overlapping byte proof is qualified, not silently reapproved."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W38.03/plan.md",
+      "sha256": "3a0d5b09e5c041f3d1d9ca68297eec2562044e6bbad8db0a0a642979f76a31df"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W38.03/artifact.json",
+      "sha256": "3d362d3d7ce5e9913fc609e7393de78735519a87f2d515337cf6a2c4013bee19"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W38.03/worker.json",
+      "sha256": "5bb54a75b05bc8f88b2206339ec12f28cfcbf30f6c1a2a3abd3df7ecdf5ebb7b"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase2.test.ts -t 'W38.03|W38.02|W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots|versions, attributes|rolls forward on rollback|serves the fallback|merges nested objects instead|accepts the legacy|writes both field names|keeps every revision body|serves repeat reads from the isolate cache|re-reads once the TTL|a consenting shopper is personalized|the statistics object counts|real authenticated routes refuse all mutations' --maxWorkers=1 --minWorkers=1",
+    "session_id": 75890,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "316963",
+        "wall_time_seconds": 1.000748356,
+        "session_id": 75890,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "10a9de",
+        "wall_time_seconds": 0.000001846,
+        "exit_code": 0,
+        "original_token_count": 1031,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (24 tests | 23 skipped) 19ms\n ✓ src/routes/content.test.ts  (23 tests | 22 skipped) 57ms\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 bounds global charged residency with LRU expiry and binding-scope isolation\nW38.01 cache residency {\"entryLimit\":32,\"byteLimit\":8388608,\"countPressure\":{\"inserted\":33,\"retainedHits\":32,\"evictedMisses\":1},\"bytePressure\":{\"inserted\":5,\"retainedHits\":4,\"evictedMisses\":1,\"charges\":[1740886,1740886,1740886,1740886,1740886],\"insertedCharge\":8704430,\"retainedCharge\":6963544},\"measuredHeap\":false}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 fences delayed reads across local writes resets unknown acknowledgements and newer residents\nW38.01 cache fences {\"beforeWriteOrResetCases\":4,\"duringWriteCases\":1,\"newerResidentCases\":2,\"committedNoPutCases\":3,\"originalInflightRevisionPreserved\":true}\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 bounds streamed current history and index bytes before parsing and keeps read fallbacks\nW38.03 stream envelope {\"limit\":2097152,\"exact_bytes\":2097152,\"overflow_pulls\":2,\"cancelled_paths\":3,\"parsed_oversize\":false}\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 bounds legacy residency and isolates binding kind hooks and caller-owned values\nW38.02 charged residency {\"limit\":8388608,\"entries\":32,\"candidate_bytes\":[1740382,1740382,1740382,1740382,1740382],\"candidate_total\":8701910,\"retained_large_hits\":4}\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 bounds streamed current history and index bytes before parsing and keeps read fallbacks\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 admits both mutation bodies before puts and never rewrites unavailable or regressing history\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 fences both clocks resets partial writes and older delayed cache fills\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > serves the fallback rather than throwing when KV is down\n[config] read failed, serving fallback\n\n ✓ src/config/versionedStore.test.ts  (28 tests | 12 skipped) 2295ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > a consenting shopper is personalized, recorded, and fed to the ring\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (21 tests | 20 skipped) 23ms\n ✓ src/reflex/configStore.test.ts  (52 tests | 49 skipped) 21ms\n ✓ src/learn/phase2.test.ts  (10 tests | 9 skipped) 24ms\n\n Test Files  6 passed (6)\n      Tests  23 passed | 135 skipped (158)\n   Start at  08:05:48\n   Duration  28.23s (transform 4.04s, setup 0ms, collect 12.58s, tests 2.44s, environment 1ms, prepare 9.80s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 23,
+      "unselected": 135,
+      "total": 158,
+      "files": 6,
+      "new_grouped_cases": 3,
+      "retained_selected_cases": 20,
+      "duration_seconds": 28.23,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 39,
+    "source_pins": 33,
+    "protected_pins": 23,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": [
+      {
+        "path": "src/config/versionedStore.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/routes/config.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/routes/content.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/config/versionedStore.test.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/reflex/configStore.test.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/learn/phase2.test.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      }
+    ],
+    "manifest_sha256": "3d362d3d7ce5e9913fc609e7393de78735519a87f2d515337cf6a2c4013bee19",
+    "before": {
+      "at": "2026-09-13T12:05:33.742Z",
+      "capture_id": "a0990b",
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-13T12:07:29.900Z",
+      "capture_id": "6e3c8a",
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_before": {
+      "chunk_id": "9b0777",
+      "wall_time_seconds": 0.02390068,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T12:05:34.005Z\",\"task\":\"W38.03\",\"state\":\"verification\",\"contract_digest\":\"c2ffe07329d6c7c401b56c8ae12e615582549601efd631399910dcba3d090603\",\"artifact_digest\":\"a416896062da9e36d5784cbfd69c9483e6c643fcad3d1c0d46387036776d0031\"}\n"
+    },
+    "contract_after": {
+      "chunk_id": "fa804f",
+      "wall_time_seconds": 0.038860852,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T12:07:30.182Z\",\"task\":\"W38.03\",\"state\":\"verification\",\"contract_digest\":\"c2ffe07329d6c7c401b56c8ae12e615582549601efd631399910dcba3d090603\",\"artifact_digest\":\"a416896062da9e36d5784cbfd69c9483e6c643fcad3d1c0d46387036776d0031\"}\n"
+    },
+    "source_stopped_at": "2026-09-13T12:02:49.000Z",
+    "frozen_at": "2026-09-13T12:04:40.992Z",
+    "inspection": {
+      "instructions_and_scope": "Personal AGENTS/README/governance/checkpoint/full W38/F32/F08/N07 and relevant before-source reads: 578536,99dd0f,505b37,49b4d7,0520e1,797f09; reuse root VALID1410 entry, no board replay.",
+      "plan_and_current_criteria": "b593c5",
+      "actual_deltas": "10df42 all four production deltas; 95ce18 all six fixture deltas, with the short displayed learn/phase2 tail recovered directly from the complete retained output. Current source reconstructs exactly from each reviewed baseline delta.",
+      "artifact_and_freeze": "5f81b3",
+      "complete_worker": "17ae00 metadata/history,158caf failed runtime/static,7de71a superseded/final runtime,6cf43e final static and raw source STOP.",
+      "resolved_design_issue": "The actual non-demo Reflex patch bypass identified in preflight is removed. Current/target/index strictness and pre-put index serialization are integrated without changing content publication authority.",
+      "final_corrections": "Helper-derived atelier-a fixture keys replace the erroneous tenant:atelier-a seed; one explicit ignoreBOM:false option preserves the omitted runtime default while satisfying installed Workers types. No assertion weakening or source ownership expansion."
+    }
+  },
+  "static_reuse": {
+    "worker_record": "docs/remediation/evidence/W38.03/worker.json",
+    "command_capture": "command_captures.static2",
+    "session_id": 46012,
+    "capture_ids": [
+      "bc08af",
+      "25d025",
+      "511886"
+    ],
+    "inspection_capture": "6cf43e",
+    "started_at": "2026-09-13 12:01:41 UTC",
+    "finished_at": "2026-09-13 12:02:36 UTC",
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 4,
+    "new_warnings": 0,
+    "warnings": [
+      "versionedStore.ts:359:57 coerce scope unused",
+      "learn.test.ts:605:62 _key unused",
+      "learn.test.ts:606:36 _url unused",
+      "learn.test.ts:606:50 _init unused"
+    ],
+    "whitespace": "Final ten-file git diff --check passed; source-freeze direct comparison records zero new trailing whitespace for all ten files.",
+    "reviewer_reruns": 0
+  },
+  "measurements": {
+    "source": "Independent runtime 10a9de and actual grouped assertions",
+    "application_limit_bytes": 2097152,
+    "exact_read_bytes": 2097152,
+    "exact_duplicated_write_bytes": 2097152,
+    "oversize_read_paths": 3,
+    "overflow_pulls_per_path": 2,
+    "oversize_parse_calls": 0,
+    "qualification": "Actual modules with synthetic KV streams. Establishes the admitted byte/refusal behavior, not provider/native capacity, total heap, CPU or latency/SLO. Existing cache numeric outputs are retained controls."
+  },
+  "retained_failures_and_qualifications": [
+    "Worker runtime1 session53772 ended0772e2 exit1:22 passed/1 failed/135 unselected. Mounted fixture seeded a nonexistent tenant:atelier-a physical scope and thus observed genuine absence/200. Candidate2 uses actual reflexScopeForTenant; expected503 and no-put assertions remain.",
+    "Worker runtime2 session25162/4bbd15 passed23 but is superseded by final bytes. Static1 session20061/2182dd exited2 at compiler TS2345: installed TextDecoder options require ignoreBOM. Lint/whitespace did not run in that failed && compound.",
+    "Final candidate adds only explicit ignoreBOM:false. Worker runtime3 session61524/aea044 passes23 on final bytes; final static2 completes all stages. Both failures and earlier source hashes remain in worker.json.",
+    "Six existing synthetic KV helpers forward stream mode while retaining ordinary JSON consumers. The W38.02 independent-fault seed now resets its own synthetic index along with the current revision; existing cache/failure assertions remain intact.",
+    "The mounted non-demo wrapper case runs with real tenant selector/authenticated local handlers in demo mode, not a new enforced-tenant/deployed authority claim. The selected service fixture emits learning_incomplete for its synthetic fan destination; this run is not learning delivery acceptance.",
+    "W38.02 overlapping historical byte-specific proof remains prospectively qualified. Implemented cache remedies, history and selected affected controls are preserved; unrelated historical suites are not represented as rerun."
+  ],
+  "limitations": [
+    "The 2 MiB limit is per serialized legacy value, not a total-heap or customer/platform capacity claim. HTTP JSON/CSV input allocation, output serialization before sizing, arbitrary validator/stamp expansion, provider chunk allocation and concurrent misses remain outside the bound.",
+    "Public unavailable reads intentionally retain null/[]/compiled fallback. Strict mutations distinguish unavailable from absent but do not repair or delete oversized/corrupt historical state.",
+    "Safe counter and index checks prevent only observed regression. Unindexed history, stale remote reads, races between patch/current/index reads and writes, and the three-put sequence remain nontransactional. No CAS, automatic retry, rollback or lost-ack recovery is claimed.",
+    "The existing 50-entry browsable index and immutable revision-body retention remain. Both value/config fields, aliases and content publication dispatch are preserved; no deployed old-reader cutover or retention policy is approved.",
+    "No native, whole-path workload/SLO, ranking/candidate/model, full W38/F32/F08/N07, customer or release acceptance. Only this independent review record was written; no source/governance changes, extra tests/statics/board run, delegation or external operation."
+  ]
+}

@@ -1,0 +1,9 @@
+# W06.03 worker handoff — frozen for independent review
+
+Implemented bounded ledger-object opens and a tenant/day manifest coordinator with target anchors, pre-mutation fingerprints, durable per-visitor credits and absolute restartable day finalization. No mutation precedes the durable intent; missing/conflicting recovery state fails closed. Later erasures wait for an active coordinator; same/earlier retries preserve it.
+
+Exact K1: 20/20 passed (11 erasure, 9 unchanged ledger); app `tsc --noEmit`, exact before/current scoped diff and `git diff --check`: passed on the first attempts. Full commands, untruncated outputs and before/current source pins are in `worker-checks.json`. The existing whole-day-overrun assertion was corrected; grouped actual-module checks cover 16 before/after stage failures, partial two-target finalization, conflicting/missing coordinator/object state, mid-day restart, zero-credit listed absence, other-tenant/visitor and post-cutoff preservation. Injected failures are expected negative assertions, not failed check runs.
+
+No implementation or evidence edits after this worker freeze without lead-directed rework. Independent review/lead acceptance remain pending; prior W06.02 proof is historical, not silently reaccepted.
+
+Only the admitted production module, existing fixture and two worker proof files changed. This bounds ledger-object opens (including recovery), not whole-day listing/memory or metadata operations. It does not serialize concurrent rewrites/ingestion, establish a physical-deletion SLA/retention policy, reconcile other destinations, or close W06. An active day must resume with its recorded scan window; later cutoffs wait for its recovery. D03/D06 and W06.02 reader/re-entry limitations remain, including blanket post-cutoff `/receipts` rejection and operator pending counts that include completed barriers. Incompatible rollback must preserve/recover the coordinator and anchors, not discard them.

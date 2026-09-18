@@ -1,0 +1,71 @@
+{
+  "checkpoint_readback": {
+    "initial_capture": "5c9526",
+    "initial_exit_code": 1,
+    "initial_result": "Overbroad pending-text assertion also searched preserved historical checkpoints; active checkpoint already contained the final passing board result. No implementation or tracker defect.",
+    "corrected_capture": "2e397b",
+    "corrected_exit_code": 0,
+    "corrected_result": "Restricted pending-text assertion to active checkpoint before historical records. Active checkpoint, journal 1472, closed W20.01 state and drained valid board captures agree. Historical records preserved."
+  },
+  "at": "2026-09-13T14:48:47.803Z",
+  "task_id": "W20.01",
+  "artifact_digest": "a9a2e4bca7ca09e11b9dacad296b18ead1d5edfe3faad4600ba694be389c555d",
+  "journal_seq": 1472,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "1b2325",
+        "wall_time_seconds": 1.000322644,
+        "session_id": 69255,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "37fb7c",
+        "wall_time_seconds": 20.001254306,
+        "session_id": 69255,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "417618",
+        "wall_time_seconds": 6.771680315,
+        "exit_code": 0,
+        "original_token_count": 643,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=31, unscoped=10\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=102, closed=2; evidence records=303\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.01 — Inspect and admit W18 merchandiser tuning against complete W18/F26/F29: the existing rules form still submits inStage 1.2, labels an additive 0..1 bonus as a 1..3 multiplier, defaults cleared stage fields to maximum effects, and lacks numeric per-slot dimension-weight editing/readback. Fix the existing operator form and real-validator/save/readback path with focused current console cases, preserving customer-neutral registry dimensions and W20's single-position valid-pin contract. No new framework or broad suite. W20 catalog-activation/reference checks, visible operator pin controls, exclusions/off-limits/customer fallback and actual customer walkthrough remain open; native performance, W35 transaction authority and deployment/customer decisions remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 21385\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=31, unscoped=10\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=102, closed=2; evidence records=303\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.01 — Inspect and admit W18 merchandiser tuning against complete W18/F26/F29: the existing rules form still submits inStage 1.2, labels an additive 0..1 bonus as a 1..3 multiplier, defaults cleared stage fields to maximum effects, and lacks numeric per-slot dimension-weight editing/readback. Fix the existing operator form and real-validator/save/readback path with focused current console cases, preserving customer-neutral registry dimensions and W20's single-position valid-pin contract. No new framework or broad suite. W20 catalog-activation/reference checks, visible operator pin controls, exclusions/off-limits/customer fallback and actual customer walkthrough remain open; native performance, W35 transaction authority and deployment/customer decisions remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 21385\n"
+      }
+    ],
+    "chunk_id": "417618",
+    "wall_time_seconds": 6.771680315,
+    "session_id": 69255,
+    "original_token_count": 643,
+    "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=31, unscoped=10\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=102, closed=2; evidence records=303\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.01 — Inspect and admit W18 merchandiser tuning against complete W18/F26/F29: the existing rules form still submits inStage 1.2, labels an additive 0..1 bonus as a 1..3 multiplier, defaults cleared stage fields to maximum effects, and lacks numeric per-slot dimension-weight editing/readback. Fix the existing operator form and real-validator/save/readback path with focused current console cases, preserving customer-neutral registry dimensions and W20's single-position valid-pin contract. No new framework or broad suite. W20 catalog-activation/reference checks, visible operator pin controls, exclusions/off-limits/customer fallback and actual customer walkthrough remain open; native performance, W35 transaction authority and deployment/customer decisions remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 21385\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=31, unscoped=10\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=102, closed=2; evidence records=303\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.01 — Inspect and admit W18 merchandiser tuning against complete W18/F26/F29: the existing rules form still submits inStage 1.2, labels an additive 0..1 bonus as a 1..3 multiplier, defaults cleared stage fields to maximum effects, and lacks numeric per-slot dimension-weight editing/readback. Fix the existing operator form and real-validator/save/readback path with focused current console cases, preserving customer-neutral registry dimensions and W20's single-position valid-pin contract. No new framework or broad suite. W20 catalog-activation/reference checks, visible operator pin controls, exclusions/off-limits/customer fallback and actual customer walkthrough remain open; native performance, W35 transaction authority and deployment/customer decisions remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 21385\n",
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      21385,
+      21385
+    ]
+  },
+  "root_frozen_check": {
+    "chunk_id": "20d330",
+    "wall_time_seconds": 0.36291435,
+    "exit_code": 0,
+    "original_token_count": 77,
+    "output": "{\"at\":\"2026-09-13T14:44:36.868Z\",\"status\":\"passed\",\"state\":\"closed\",\"journal\":1472,\"pins\":46,\"prior_journal_preserved\":1452,\"artifact\":\"a9a2e4bca7ca09e11b9dacad296b18ead1d5edfe3faad4600ba694be389c555d\",\"contract\":\"f97f18fdacd9181bd32cfd54129f7e8310afce4fbbda92b6e39c23eeb5859d0c\",\"lead_signoff\":\"accepted\"}\n"
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "valid_pin_reservation_publication_and_replay",
+    "package_W20": "open",
+    "finding_F28": "open",
+    "finding_F26": "open",
+    "package_W35": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Inspect and admit W18 merchandiser tuning against complete W18/F26/F29: the existing rules form still submits inStage 1.2, labels an additive 0..1 bonus as a 1..3 multiplier, defaults cleared stage fields to maximum effects, and lacks numeric per-slot dimension-weight editing/readback. Fix the existing operator form and real-validator/save/readback path with focused current console cases, preserving customer-neutral registry dimensions and W20's single-position valid-pin contract. No new framework or broad suite. W20 catalog-activation/reference checks, visible operator pin controls, exclusions/off-limits/customer fallback and actual customer walkthrough remain open; native performance, W35 transaction authority and deployment/customer decisions remain separate."
+  },
+  "limitations": "Bounded W20 pin reservation, publication contradictions, refusal diagnostics and replay compatibility only. Full W20/F28/F26 activation/reference warnings, exclusions/off-limits, customer fallback/priority/multi-position design, actual merchandiser walkthrough and customer acceptance remain open. Legacy invalid pins remain readable but are refused without arbitrary fill in new runtime; retained receipts use recorded legacy semantics. No cross-page dedupe, ranking/model or exploration-policy change; W38.05 explanation optimization retained. Local synthetic checks are not deployed/runtime/SLO or release acceptance. Existing slot KV transaction/propagation limitations and W35 authority remain separate. No deploy/cloud/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external operations or customer-policy amendments. Authenticated mounted validate/PUT/rollback are checked; patch is the existing direct store helper, not an HTTP PATCH endpoint. Four inherited synthetic learning_incomplete logs remain visible; no new ingestion assurance claimed."
+}

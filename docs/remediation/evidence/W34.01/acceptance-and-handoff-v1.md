@@ -1,0 +1,11 @@
+# W34.01 acceptance and handoff
+
+2026-09-07T04:45:37.195Z — w01-lead, /root. Accept the bounded OFF-only C1/C2 remedy after reading the actual two-file change, baseline, worker failures/final results and independent review. Artifact eba761398a7fc71b7e9e7a05d45ed9ff061ddd14a849b13432b0ca1c95a53b1b; plan a89dc247a159a1ede3a07ecd3b66e777d0d47b673ca3958d62c4de00fac58e3f.
+
+The live content decision service no longer constructs or invokes external scoring, including HTTP, service bindings, AI and table lookup. Stored settings cannot enable it. Configured weighted terms truthfully remain unavailable; ordinary deterministic scoring, consent/holdout behavior and replay are preserved. No new production flag, helper, infrastructure or test harness.
+
+Worker and independent reviewer each passed the four declared suites (33/33). Actual application noEmit TypeScript and scoped diff pass. The reviewer checked all 71 artifact pins, original baseline bytes/output and exact worktree delta; root checked actual review/report hashes and source diff. Initial fixture-only failures and superseding successes are retained. A nonessential lead hash command used a nonexistent guessed auth-test filename and exited 1; it is not counted as a passing check. Actual auth-source identity was independently verified unchanged.
+
+This accepts W34.01, not full W34/F30, customer wording/D05, publication/authorized seam, deployed/runtime SLO, finding/gate/release or earlier authentication-proof reclosure. Static local graph/installed-package/full-TypeScript limits remain explicit. Prior broad proof history stays visible; implemented auth protections are unchanged. Final tracker consistency checks follow this signoff; their results belong in RESUME and final-checks-v1.json, not a backdated acceptance claim.
+
+Next: admit the bounded W03/N03 anonymous catalog/config/history and config-validation disclosure fix from the complete parent scope and actual routes, with the smallest sufficient existing-fixture checks. Binding authenticated tenant authority remains part of full W03; do not confuse authentication containment with isolation. No new framework or broad audit. Reuse the standing local G0 mandate; no deployment, cloud, credentials/customer operations, commits or unrelated changes. The user's throughput/North Star direction is now persistent in root AGENTS.md.

@@ -1,0 +1,83 @@
+{
+  "at": "2026-09-12T15:27:29.117Z",
+  "task_id": "W27.02",
+  "artifact_digest": "6dca69a592a58141efc2a9f98ba05eb430c1922ccd300ea777280b7886578835",
+  "journal_seq": 1195,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "session_id": 49858,
+    "captures": [
+      {
+        "chunk_id": "bb1dc3",
+        "wall_time_seconds": 1.0015811,
+        "session_id": 49858,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "e531df",
+        "wall_time_seconds": 5.00090155,
+        "session_id": 49858,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "19effd",
+        "wall_time_seconds": 30.001329985,
+        "session_id": 49858,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "480ef5",
+        "wall_time_seconds": 30.000610704,
+        "session_id": 49858,
+        "original_token_count": 261,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=24, unscoped=17\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=84, closed=2; evidence records=246\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W27.02 — Next inspect the remaining W27/F22 lifecycle obligation: rollout/version compatibility, retained dependency availability and explicit failure at the real authenticated replay boundary, reusing accepted page-manifest and publisher fixes. Select only a concrete in-scope remaining implementation, not a broad validation programme. Existing missing/corrupt historical data, native capacity, customer replay acceptance and deployment/retention operations remain unapproved; no authority for external mutation or data repair is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 17559\n"
+      },
+      {
+        "chunk_id": "c6259f",
+        "wall_time_seconds": 0.000002577,
+        "exit_code": 0,
+        "original_token_count": 261,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=24, unscoped=17\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=84, closed=2; evidence records=246\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W27.02 — Next inspect the remaining W27/F22 lifecycle obligation: rollout/version compatibility, retained dependency availability and explicit failure at the real authenticated replay boundary, reusing accepted page-manifest and publisher fixes. Select only a concrete in-scope remaining implementation, not a broad validation programme. Existing missing/corrupt historical data, native capacity, customer replay acceptance and deployment/retention operations remain unapproved; no authority for external mutation or data repair is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 17559\n"
+      }
+    ],
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      17559,
+      17559
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module -e 'import fs from'\\''node:fs'\\'';import assert from'\\''node:assert/strict'\\'';import{gunzipSync}from'\\''node:zlib'\\'';import{applyPatch}from'\\''diff'\\'';import{sha256,artifactDigest,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';const j=p=>JSON.parse(fs.readFileSync(p)),t=j('\\''docs/remediation/tracker.json'\\''),task=t.tasks.find(x=>x.id==='\\''W27.02'\\''),b=j('\\''docs/remediation/design/W27.02/baseline.json'\\''),a=j('\\''docs/remediation/evidence/W27.02/artifact.json'\\''),d=j('\\''docs/remediation/evidence/W27.02/source-deltas.json'\\'');assert.deepEqual(task.artifact,a);assert.equal(a.digest,artifactDigest(a));assert.equal(a.contract_digest,taskContractDigest(task));for(const f of a.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);for(const x of d.deltas){const before=gunzipSync(Buffer.from(b.owned.find(f=>f.path===x.path).content_gzip_base64,'\\''base64'\\'')).toString(),after=fs.readFileSync(x.path,'\\''utf8'\\'');assert.equal(applyPatch(before,x.forward),after,x.path);assert.equal(applyPatch(after,x.reverse),before,x.path);}console.log(JSON.stringify({ok:true,at:new Date().toISOString(),artifact:a.digest,files:a.files.length,source:b.pins.length,protected:b.pins.filter(f=>f.role==='\\''source'\\'').length,deltas:d.deltas.length,contract:a.contract_digest}));'",
+    "chunk_id": "a43605",
+    "wall_time_seconds": 0.847949972,
+    "exit_code": 0,
+    "original_token_count": 63,
+    "output": "{\"ok\":true,\"at\":\"2026-09-12T15:20:29.538Z\",\"artifact\":\"6dca69a592a58141efc2a9f98ba05eb430c1922ccd300ea777280b7886578835\",\"files\":123,\"source\":117,\"protected\":110,\"deltas\":7,\"contract\":\"cadfde6c36efdc4546588e6576330d601c755e95ced577de0b7dcb9e924f4ce0\"}\n",
+    "drained": true
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_page_dependency_replay",
+    "package_W27": "open",
+    "finding_F22": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Next inspect the remaining W27/F22 lifecycle obligation: rollout/version compatibility, retained dependency availability and explicit failure at the real authenticated replay boundary, reusing accepted page-manifest and publisher fixes. Select only a concrete in-scope remaining implementation, not a broad validation programme. Existing missing/corrupt historical data, native capacity, customer replay acceptance and deployment/retention operations remain unapproved; no authority for external mutation or data repair is inferred."
+  },
+  "next_read_only_inspection": {
+    "command": "sed -n '500,540p' src/routes/decisions.ts",
+    "chunk_id": "c2e4d8",
+    "wall_time_seconds": 0.044534774,
+    "exit_code": 0,
+    "original_token_count": 747,
+    "output": "  if (!found) return c.json({ ok: false, error: stream === 'product-sort' ? 'not found, or persistence did not complete' : 'not found, or not yet written by the consumer' }, 404);\n  if (!ownedLedgerRecord(found.record, tenant, id, stream)) return c.json({ ok: false, error: 'Ledger record unavailable' }, 503);\n  await bindSubject(found.record.visitor_id);\n  if (hidden(await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant), found.record)) return c.json({ ok: false, error: 'erased at the visitor\\'s request' }, 410);\n  return c.json({ ok: true, stream, key: found.key, record: found.record });\n  });\n});\n\n/**\n * GET /v1/:tenant/replay/:id (doc 22 §12.3). Fetch the decision record, decide\n * again from the documents at the recorded revisions, the archived lift\n * snapshot and the inputs the record carries, and compare. Authenticated,\n * because the record carries a visitor id. Behind by the queue lag at a peak.\n */\ndecisionRoutes.get('/:tenant/replay/:id', operatorJwt(), async (c) => {\n  const tenant = (c.req.param('tenant') ?? '').trim();\n  const id = (c.req.param('id') ?? '').trim();\n  if (!TENANT.test(tenant) || !validLedgerSelector(tenant, id)) return c.json({ ok: false, error: 'id must belong to the tenant in the path' }, 400);\n  return auditedSubjectRead(c, tenant, 'replay', id, async bindSubject => {\n  const found = await findById<DecisionRecord>(c.env.STORAGE as unknown as R2Like, id, 'decision');\n  c.header('Cache-Control', 'no-store');\n  if (!found) return c.json({ ok: false, error: 'not found, or not yet written by the consumer' }, 404);\n  if (!ownedLedgerRecord(found.record, tenant, id, 'decision')) return c.json({ ok: false, error: 'Ledger record unavailable' }, 503);\n  await bindSubject(found.record.visitor_id);\n  if (hidden(await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant), found.record)) return c.json({ ok: false, error: 'erased at the visitor\\'s request' }, 410);\n  const result = await replayDecision(c.env, found.record);\n  return c.json({ ok: result.ok, equal: result.equal, ...(result.reason ? { reason: result.reason } : {}), used: result.used, diff: result.diff, key: found.key, served: result.served, replayed: result.replayed });\n  });\n});\n\n/**\n * POST /v1/:tenant/models/reference (doc 22 §9). The reference implementation\n * of the model contract, as a service a data science team can call to see the\n * shape, and point the `service` kind at by URL to see the term on a receipt.\n * Stateless; no visitor id crosses it.\n */\ndecisionRoutes.post('/:tenant/models/reference', async (c) => {\n  const tenant = (c.req.param('tenant') ?? '').trim();\n  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);\n  const body = (await c.req.json().catch(() => null)) as Partial<ExternalRequest> | null;\n  if (!body || typeof body !== 'object' || !Array.isArray(body.candidates)) return c.json({ ok: false, error: 'a contract request: affinity and candidates' }, 400);\n",
+    "drained": true,
+    "scope": "Read-only actual authenticated replay boundary; no next implementation admitted."
+  },
+  "limitations": "Forward page-dependency replay correction, not full W27/F22 closure or cryptographic record integrity. New manifests snapshot numeric archive identities and effective choice settings; no new archive read/write on the serving path. Legacy personalized multi-slot records without a manifest are explicitly unreplayable; safe default/catalog-pin and qualified single-slot compatibility do not recover arbitrary historic custom pure-call settings. Old writers/readers, rollout fencing, retention, missing/corrupt historic archives and complete native replay resource/SLO assurance remain open. W27.01 publisher/conditional archive safety is retained unchanged, not newly deployed. Snapshot identity/version/prior/basic consumed-shape validation is not a complete archive schema or Byzantine-store proof. Exact deterministic replay of current Thompson behavior does not remediate W28/F23 statistical/propensity issues or prove causal lift. Source/Node tests with synthetic bindings and byte measurements are not customer/native/deployed acceptance. No schema migration/backfill, learning/consent/attribution policy change, sibling-record guess, automatic data reset or repair. No external/cloud/resource/credential/customer-data/deployment/commit/push/destructive cleanup or customer-policy authority."
+}

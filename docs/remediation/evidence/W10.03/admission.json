@@ -1,0 +1,744 @@
+{
+  "task_id": "W10.03",
+  "at": "2026-09-17T21:55:58Z",
+  "scope": "Bound total item/key/byte state, fine-level cardinality, channel vocabulary, snapshots and ring indexes. Define degraded/fallback statistics and recover already oversized/inconsistent objects without publishing uncommitted counts. Prove with runtime limits, restart and sustained high-cardinality traffic. Remove raw-state snapshot spread separately. Gamma zero is not containment. Complete remaining local scope preserving accepted W09 and prior remedies; full live/customer acceptance remains final authorized batch.",
+  "contract_digest": "c64a29509a8dd68fe84d64ef109e84c5ae2c779be4d33db15d5f656b83a89c1d",
+  "baseline": {
+    "kind": "Current source-confirmed remaining originalW10 design case, existing focused guard evidence reused; no new runtime reproduction claimed.",
+    "case": "Current LearnStats/Ring have admission limits and committed-state cache safety, raw-free snapshot projection and public channel vocabulary. Already-oversized state still refuses, with no complete recoverable useful-coarsening/serving-health/native sustained-restart remedy. W09 adds bounded atomic effect markers, immutable plans, generations and retained cleanup debts that W10 must preserve and include in every bound. Historical audit byte thresholds are not current measurements.",
+    "outputs": [
+      {
+        "path": "src/durable-objects/LearnStats.ts",
+        "exists": true,
+        "sha256": "c9e82a57abcbf648f990247f2ad7a97f3e948f5c5d8ef7501ac929a3f9d1f0d3",
+        "bytes": 27305
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "exists": true,
+        "sha256": "344ebfe5499b3eb28b5080acf2494c638eb18d185d9ded228e24f8abd449b627",
+        "bytes": 33461
+      },
+      {
+        "path": "src/learn/stats.ts",
+        "exists": true,
+        "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+        "bytes": 10062
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "exists": true,
+        "sha256": "d7d2e7d2a5b53a7ad153cb1ef3d3831e0121b931c44a40d4f25da4834f4832ca",
+        "bytes": 23809
+      },
+      {
+        "path": "src/learn/priors.ts",
+        "exists": true,
+        "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad",
+        "bytes": 3936
+      },
+      {
+        "path": "src/content/service.ts",
+        "exists": true,
+        "sha256": "331b4b2cdec75dc056927c25698fb5366c8f16c76c35aec21996432a0613efc4",
+        "bytes": 19603
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "exists": true,
+        "sha256": "b10a9e56ece071b07d4f0211f83a53eaad617b8130bc7fc41f96eaa9900d61ca",
+        "bytes": 57841
+      },
+      {
+        "path": "src/customerBoundary.ts",
+        "exists": true,
+        "sha256": "03ac484f723ca767794f16026dc7d99b7faff8d79f01fd42ffa2f913139a3c1e",
+        "bytes": 8609
+      },
+      {
+        "path": "src/auth/store.ts",
+        "exists": true,
+        "sha256": "25509044f153a00d6fa2ee4c579efa66683cbf4e405cf13f53fb8a5b7ad75422",
+        "bytes": 39150
+      },
+      {
+        "path": "src/auth/subjectAudit.ts",
+        "exists": true,
+        "sha256": "f93f8c08c5f83dd6bff4f6d56e1d9632f057df97d4351118576fa25bb8e1dee5",
+        "bytes": 16925
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "exists": true,
+        "sha256": "157351c47cb5bf7a7949b59f948bd54c19283c33198103b142d928f5c1e91249",
+        "bytes": 135404
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "exists": true,
+        "sha256": "9697562bc4d3563768c051129eedcca2f09a512cf61d4ce21b92f6301c878402",
+        "bytes": 82627
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "exists": true,
+        "sha256": "1de0b950a935ef214fd83d2ae41bb74fbdfbba748f0d7a269e8fcdeecf7455fc",
+        "bytes": 129328
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "exists": true,
+        "sha256": "86390d76dfae067de2c6ebf2c6ab087ac6017c3eecdb4b21ca7f804d1bd6c864",
+        "bytes": 182886
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "exists": true,
+        "sha256": "11f47c7fc915e56ceaa97c1a6f06005e8922421f35cc92975ae803eba187f7af",
+        "bytes": 97638
+      }
+    ],
+    "pins": [
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+        "bytes": 690
+      },
+      {
+        "path": "docs/deployment/01-deploy.md",
+        "sha256": "3c7e64314d33f001adef45d0c046ffe70a11bee2766fa7098beefb5559b5afbe",
+        "bytes": 13774
+      },
+      {
+        "path": "migrations/product/0010_operator_accounts.sql",
+        "sha256": "7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55",
+        "bytes": 1784
+      },
+      {
+        "path": "migrations/product/0011_operator_audit_tenant.sql",
+        "sha256": "d279d332fbc0fdbdcfe5ad1dad2cb8347a056ee85ea9b975127dd3cf40e2074c",
+        "bytes": 284
+      },
+      {
+        "path": "migrations/product/0012_operator_authority.sql",
+        "sha256": "63143e1690f1be2bb331b547cf8d48716d6583fcefacf3353c9274075fd187b7",
+        "bytes": 2589
+      },
+      {
+        "path": "node_modules/esbuild/package.json",
+        "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+        "bytes": 3980
+      },
+      {
+        "path": "node_modules/eslint/package.json",
+        "sha256": "cb3eb0b9246ff4cf36d7f00b76358dc6b1ccab18773ab89c25b9e390041ae9d3",
+        "bytes": 5699
+      },
+      {
+        "path": "node_modules/miniflare/package.json",
+        "sha256": "fd99d43256bda835c65af700c80c3e6b1c3b3ed7af45e81d300fc8db0b9e858b",
+        "bytes": 4009
+      },
+      {
+        "path": "node_modules/typescript/package.json",
+        "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3",
+        "bytes": 3620
+      },
+      {
+        "path": "node_modules/vitest/package.json",
+        "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5",
+        "bytes": 4865
+      },
+      {
+        "path": "node_modules/workerd/package.json",
+        "sha256": "8084ed05eb21eeae0ed35b06435fcb971121a7f15e09d5b72ee80656e7984446",
+        "bytes": 676
+      },
+      {
+        "path": "node_modules/wrangler/package.json",
+        "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+        "bytes": 6501
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+        "bytes": 324615
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+        "bytes": 2696
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "5cf1ba33964d989d4f808c8148b3ae46ae4b56dd5eda584e722713d2ec70022e",
+        "bytes": 69302
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "4564fbff5d05e6b6427b48076e48a3cd23e5977cc5674031c834ebe2cc0c0ecc",
+        "bytes": 72913
+      },
+      {
+        "path": "scripts/build-sdk.mjs",
+        "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79",
+        "bytes": 1663
+      },
+      {
+        "path": "scripts/identity-material.mjs",
+        "sha256": "8a6b67eeb248183412d72b34ea2a883e6c6dbf7ed09e4a22b79d40c2bc4ff9af",
+        "bytes": 15700
+      },
+      {
+        "path": "scripts/operator-seed.mjs",
+        "sha256": "0f81c74682ddf61bda763943bf69404668362ae5dee65a8caeb314a5b1264c3e",
+        "bytes": 17154
+      },
+      {
+        "path": "scripts/stamp-workflow.mjs",
+        "sha256": "cae006ea27aed055bf18ad75c6609615be2381b28eadb4c5b57eb5f167cebb61",
+        "bytes": 75502
+      },
+      {
+        "path": "scripts/stamp-workflow.test.mjs",
+        "sha256": "23fda663170d68fb2f190e0f2322955c971d932e51531c19d0eb9137687072be",
+        "bytes": 48168
+      },
+      {
+        "path": "src/auth/accounts.ts",
+        "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+        "bytes": 6904
+      },
+      {
+        "path": "src/auth/authority.ts",
+        "sha256": "e037a63988db87268a0550833273846ba301217dc016221df089c1f68a3c30fc",
+        "bytes": 14642
+      },
+      {
+        "path": "src/auth/loginBudget.ts",
+        "sha256": "d9fe3a5f82d1f22082c591c66f94c68ea00da0859bdfd4a5c2754c40dbc14ca6",
+        "bytes": 4098
+      },
+      {
+        "path": "src/auth/signingConfig.mjs",
+        "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+        "bytes": 1088
+      },
+      {
+        "path": "src/config/input.ts",
+        "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f",
+        "bytes": 2742
+      },
+      {
+        "path": "src/config/publication.ts",
+        "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+        "bytes": 25528
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+        "bytes": 26438
+      },
+      {
+        "path": "src/connectors/config.ts",
+        "sha256": "8375efba73f8358295c770d6125c5dc06d2d82793cadff6078ecc72b9a9ed9c2",
+        "bytes": 8597
+      },
+      {
+        "path": "src/content/cell.stage.test.ts",
+        "sha256": "e0e0004530fd7ccd852549ea9c01b4d0cf65de284af47ce6cc9f3e60fd91c805",
+        "bytes": 1470
+      },
+      {
+        "path": "src/content/cell.test.ts",
+        "sha256": "030934c8fb3b6d5d1c8464806f32c026a1c9253aeb0b92025f6df88be18873e2",
+        "bytes": 1947
+      },
+      {
+        "path": "src/content/cell.ts",
+        "sha256": "80bc29f98de5e25a17b8d631639c8abfccd247f42582bae808e2f534c783b017",
+        "bytes": 2623
+      },
+      {
+        "path": "src/content/consent.ts",
+        "sha256": "9d69d3dd7644dab4a90a30e7b07f7a8d4bb29a0844bd81d8deb834e9bae740c4",
+        "bytes": 11458
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+        "bytes": 23134
+      },
+      {
+        "path": "src/content/import.ts",
+        "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4",
+        "bytes": 10780
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f",
+        "bytes": 30723
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "ce2465b29f82ed165b7461b250cb47f52ca4a72729271ca3116eca8a3d18d1d0",
+        "bytes": 16515
+      },
+      {
+        "path": "src/durable-objects/PersonalizationWebSocket.ts",
+        "sha256": "ad82294b74abdf8104c5d6088b98dc41dfa14e3b2231c08b2aab8426bff740c3",
+        "bytes": 15087
+      },
+      {
+        "path": "src/durable-objects/RateLimiter.ts",
+        "sha256": "1e03cbb0ab00de857d6dcb209ee81f12b65d0c708ef7d9ede45acf20332f9763",
+        "bytes": 5622
+      },
+      {
+        "path": "src/durable-objects/RegionTrend.ts",
+        "sha256": "1244d0bfd4869a0385b7734694ea88c309a584fb597ae0f2e1b7b6d3503dcc0d",
+        "bytes": 5541
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "2293e3d5089c8e1cf66f0cd2205f7d2281f3f9394a63917aae90a3d07e1e3ac7",
+        "bytes": 225016
+      },
+      {
+        "path": "src/identity/assertion.ts",
+        "sha256": "b1bc560559f68b009dd3152d105282179ae9bdef9ac97300648ae1d5b9407960",
+        "bytes": 5174
+      },
+      {
+        "path": "src/identity/consentContinuity.ts",
+        "sha256": "1c5d3b1c2971b54815bbf3fd36752bb73d0c3e375b483ceab43ed3b2940574c8",
+        "bytes": 4020
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "3134de3064d0302432fb3d01fdf846bce73a7e40aaeb3f8a0e3d67dd421913b4",
+        "bytes": 90737
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "dce46ca1d7cb880e878edd742c25c9702e3301446b4f3a4c705d700519d4d6b3",
+        "bytes": 14682
+      },
+      {
+        "path": "src/identity/material.mjs",
+        "sha256": "c9393df81cbe7afce6b639fe0b21887a634a60151bd7ede29d8b986e109b0e94",
+        "bytes": 2290
+      },
+      {
+        "path": "src/identity/sessionAuthority.ts",
+        "sha256": "6da6fd32514240b4a1b30e724c2677bf5b1ad39f90e716ca030c6b3fb8b8e572",
+        "bytes": 41015
+      },
+      {
+        "path": "src/identity/sessionCapability.ts",
+        "sha256": "1c811214eb5e3613c5cbeb172704ee96689161945e6ee2c55bf332bdee0b3f51",
+        "bytes": 9320
+      },
+      {
+        "path": "src/identity/shopperId.ts",
+        "sha256": "d4c686f13d18e1bab1fb0100bec8c102055584e92e9c9d813118005f5a62c6ab",
+        "bytes": 2869
+      },
+      {
+        "path": "src/identity/store.ts",
+        "sha256": "97536a4c94321d4fc821a8d3b697908587c6d6984a5589b742c7b14a861b437f",
+        "bytes": 9733
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "b300c81fd4b255cf563b5bf07792910daddff05d259c5c01c800b57c5719a148",
+        "bytes": 19454
+      },
+      {
+        "path": "src/learn/autonomy.ts",
+        "sha256": "667a6083d145ab6f4f35944a8b290738396b6fdac006abcc7baaf919903ebc60",
+        "bytes": 4851
+      },
+      {
+        "path": "src/learn/cycle.ts",
+        "sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c",
+        "bytes": 2449
+      },
+      {
+        "path": "src/learn/holdoutArms.test.ts",
+        "sha256": "29fee3f7719743e09d52dd88676fd7d9f5b9a959ae6e663c5dfef33d12b88c0a",
+        "bytes": 23952
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "4762040b772fd47622f2dde11131f3ec9dbf595a1f656effcb73aece11865fa6",
+        "bytes": 82672
+      },
+      {
+        "path": "src/learn/policy.ts",
+        "sha256": "019465dbb7cbe2cdec26a754a02e6aaebc27ec7ad80d16e480559b9cda442bdf",
+        "bytes": 5839
+      },
+      {
+        "path": "src/learn/queue.ts",
+        "sha256": "724bd6caf6332b74d8706c1410531f1a550a13341bbf381326eb96e40429644c",
+        "bytes": 2071
+      },
+      {
+        "path": "src/learn/receipts.ts",
+        "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c",
+        "bytes": 5263
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "0d2dd432f4798c5cf88892be1e2a72786ccff95123ca69c0f7ac2cd7037542c1",
+        "bytes": 18440
+      },
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "1c93c534e71967a84ead589104cdb816aa01333ada48ad9924438f28fd66d600",
+        "bytes": 58501
+      },
+      {
+        "path": "src/learn/route.ts",
+        "sha256": "5348524958e8c0873162b57cb93096dfaffbdefe714c22cc7dd26c96d7350f2b",
+        "bytes": 2476
+      },
+      {
+        "path": "src/learn/rows.ts",
+        "sha256": "5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060",
+        "bytes": 9948
+      },
+      {
+        "path": "src/ledger/consume.ts",
+        "sha256": "f17844d6f8c174a1d2a255f89f2e4aacc069a3bd4a8fa058583e9379ad4caaec",
+        "bytes": 17331
+      },
+      {
+        "path": "src/ledger/delivery.ts",
+        "sha256": "510539e1a93136b82ee98d3ee0c103b7c1d30d71e38462301a2d22ff2a6b68b3",
+        "bytes": 14863
+      },
+      {
+        "path": "src/ledger/enqueue.ts",
+        "sha256": "6bba84c1e0624af20e94a223956322b6ee69c80eee405d4b914bce2ec2ea73d0",
+        "bytes": 13776
+      },
+      {
+        "path": "src/ledger/erasure.test.ts",
+        "sha256": "78295b27d90db374b16018aba6e51b24889f212a6032d77cddef472af17d9939",
+        "bytes": 48994
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "af16c6a11086a9acd5eea9321d9f92e0a7f6dd80ac558c5527c3842403daf70e",
+        "bytes": 54508
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "db3134b81ad63032c34f67a576ea7e6032fff5efa5ffeef47b169027c725acf3",
+        "bytes": 152860
+      },
+      {
+        "path": "src/ledger/productSort.ts",
+        "sha256": "d5e38dd021d5f2e44a1ef5f8c9062f2c5e8a5e7181d4a54335101ea7e4bab0f1",
+        "bytes": 4283
+      },
+      {
+        "path": "src/ledger/quarantine.ts",
+        "sha256": "15516acc45191f42a24c4ba9e9acfcc2cf73221925ade1229d470e4d8368cb14",
+        "bytes": 26894
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "f467f19d6f27738f63d25da9ed2513c435523951bcdf8f37c0581a93d3db443d",
+        "bytes": 12202
+      },
+      {
+        "path": "src/ledger/recovery.ts",
+        "sha256": "957cccdd91e91f84937924df2eeecb2f7993504952fc9e55d09cf8fbe7794f71",
+        "bytes": 25282
+      },
+      {
+        "path": "src/ledger/writer.ts",
+        "sha256": "66266557359ffa57cba0d4a45d0d5be59ccb1a9dfb2b5bd233220101fd8d6f18",
+        "bytes": 31421
+      },
+      {
+        "path": "src/middleware/auth.ts",
+        "sha256": "e0aa49f688df881c4904394a1d73083ca7c2fcb84a09518f57989dc79bde333f",
+        "bytes": 8435
+      },
+      {
+        "path": "src/middleware/edgeAccess.ts",
+        "sha256": "de97226d996fe4607ed2cb301fb82dbfdb65f656942ce973118d631a43800f2f",
+        "bytes": 10252
+      },
+      {
+        "path": "src/middleware/operatorAuth.ts",
+        "sha256": "fbfdbaed152204793b1b5320d53d1ea8a475267077cadca5ea7b22a136807bd1",
+        "bytes": 2524
+      },
+      {
+        "path": "src/ops/monitor.ts",
+        "sha256": "3ec3e2daee729a09a2cecaa8674c2301a0fefd27d5da79b9d9ff011286d33ea4",
+        "bytes": 14994
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145",
+        "bytes": 24748
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+        "bytes": 20624
+      },
+      {
+        "path": "src/reflex/regionTrend.ts",
+        "sha256": "e5ab4379a4fab720fe04eeb1ed1af55e390db033caad91c3afd7e45e7e6430e0",
+        "bytes": 13947
+      },
+      {
+        "path": "src/retention.ts",
+        "sha256": "5cb06af3ffdb8146c105514d211c5c754944fd26afd9da930cf50d629537a5a7",
+        "bytes": 9794
+      },
+      {
+        "path": "src/routes/content.ts",
+        "sha256": "32a45a108eb89000b5ff68bd2700b451e564923e5e1a52e3de51ec7973441b1e",
+        "bytes": 20943
+      },
+      {
+        "path": "src/routes/health.ts",
+        "sha256": "61ba7cfea88f2d23b35c0ec96fc498cb74d61f0d6d3f508066b871d92175618b",
+        "bytes": 3150
+      },
+      {
+        "path": "src/routes/ledgerRecovery.ts",
+        "sha256": "8c7e07c61868e4c5aaf17a778bdddb0a8df3d896798ed2f32b13cedbdc8de291",
+        "bytes": 3264
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "ca98f31e18033f9a3919c477864b672b1abbf24fa4c217079cad998edf4c3d72",
+        "bytes": 511167
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "sha256": "3f46ed88a0d619e0c80b7c506faae3b36416b1177841e5a55edf943179137ce6",
+        "bytes": 40824
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "12db3ef82bc54209e929b3c8cbb9a3bab6fc59d7c537c64e68f0f7b8cf2069c4",
+        "bytes": 47822
+      },
+      {
+        "path": "src/sdk/listen.ts",
+        "sha256": "9843330e5745677054dab851158317c99137990e1169db0143131a01f594cd2d",
+        "bytes": 9964
+      },
+      {
+        "path": "src/sdk/tsconfig.json",
+        "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360",
+        "bytes": 377
+      },
+      {
+        "path": "src/sdk/types.ts",
+        "sha256": "562fbfcb9a7d52c930d31674eb3f2f74e11ea68255860cef15e0e7fdfc10c895",
+        "bytes": 7802
+      },
+      {
+        "path": "src/services/EventDispatcher.ts",
+        "sha256": "0e6894bc832fb84e547d7dd3ff0fd066e80ecb87a3c4b9e7deff31630337b213",
+        "bytes": 9836
+      },
+      {
+        "path": "src/services/RealtimeSegmentEngine.ts",
+        "sha256": "dbe17b344d9aa7791778b1e45f63c3da39a107e8750c1ef4df6cf756345b55c2",
+        "bytes": 63322
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "3e6ffd61d72c67730a1f8992644b92fab29a629dd8369ccd50b535c96b402d7d",
+        "bytes": 49788
+      },
+      {
+        "path": "src/services/odpLoop.ts",
+        "sha256": "1248d68e812f0b851141482464a3946323f27cc6125263a10f28139b6c01b027",
+        "bytes": 25198
+      },
+      {
+        "path": "src/services/visit.ts",
+        "sha256": "9bf380f59633c1eb23cabcec60acf6318ff17eb8898172c71a1fa4ecd3b244d6",
+        "bytes": 12369
+      },
+      {
+        "path": "src/tenancy/middleware.ts",
+        "sha256": "baa6107cb0d0304198c43a50b45b9c6c1620dbc31920d065f450aaad14fca521",
+        "bytes": 5254
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67",
+        "bytes": 2949
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+        "bytes": 11730
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "a6f5c12500b2b05626a4edf61e64a29e7aa2e70afda3de7e1da9f280d3a0f6ed",
+        "bytes": 8958
+      },
+      {
+        "path": "src/utils/context.ts",
+        "sha256": "64969bfb7d22959c072ac2a3425861f20658a502b3590c7205b050cb96231475",
+        "bytes": 4662
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "f65418c549c2b2a2fefe963e18baf3ad37ed7ce2f7a204462f9b986ed9a60001",
+        "bytes": 1058
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+        "bytes": 2314
+      },
+      {
+        "path": "wrangler.toml",
+        "sha256": "2c8e57ddf42fd65bf9d86c9ca4c2aba41cc12c6c84a39b0a6c89223d7cbba956",
+        "bytes": 15696
+      }
+    ]
+  },
+  "acceptance": [
+    {
+      "id": "W10.03-C1",
+      "description": "Preserve W10.01/.02 committed-state/cache safety, full records/receipts, byte/item/counter/ring-index admission limits and raw-state-free snapshot projection. Bound total serialized bytes, keys, items and fine-level cardinality across current learning/ring state, every W09 effect marker/attribution/recovery/reset/cleanup witness and temporary candidate/repair state, not one convenient map. Input/stored/prior/snapshot keys, components and nonnegative finite counts are validated without arbitrary unbounded channel vocabularies. Existing public channel allowlist is preserved, not falsely claimed newly implemented.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W10.03-C2",
+      "description": "Define and implement deterministic useful degraded/coarser statistics when fine cardinality saturates, with explicit completeness/admission/fallback reasons. Preserve acknowledged mass and W23 event-time weighting/W24 configuration semantics; item and slot denominators remain aligned, overlapping ladder counters are never summed as disjoint data. No stale finer estimate may continue masquerading as current complete evidence after coarsening/omission; characterize selection/estimation bias and unavailable versus zero. Capacity or unknown provenance may refuse/neutral-fallback honestly, but blanket permanent413/503 or gamma0 alone does not complete originalW10.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W10.03-C3",
+      "description": "Provide restartable recovery for already oversized valid state and proof-repairable inconsistent state without publishing uncommitted counts. Bounded validation/staging, exact generation/preconditions, conditional durable commit and ambiguous-result readback preserve original state/barriers until replacement is established. No automatic history reset/discard or invented reconstruction when provenance is missing; such state remains recovery-required with a usable safe serving fallback and exact owner action. Actual historical cleanup/data repair needs separate authority; local synthetic proof does not grant it.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W10.03-C4",
+      "description": "Preserve W09 stable effect identities, immutable attribution, technical reset generations, retained replay protection and cross-object privacy cleanup. Do not drop markers for still-retryable work merely to meet a byte cap. Recovery/reset must invalidate stale prepared work and stale serving publication using an authoritative generation/health witness or equivalently proved bound, including other isolate/KV cache copies. Erased/expired/withdrawn data and revoked grants never regain eligibility; original retention periods are not refreshed or guessed.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W10.03-C5",
+      "description": "Serving chooses a coherent current compatible snapshot or explicitly neutral/base fallback on missing/stale/recovery-required/unverifiable state, across cache hit/miss, restart and scope/tenant/brand/slot. Preserve immutable archive identities, no counter/health raw state leak into snapshots or diagnostics, and exact projection/byte/prior-expansion bounds. New health/recovery checks are measured on actual caller path; no inferred customer latency/SLO or new broad telemetry programme.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W10.03-C6",
+      "description": "Any recovery control remains narrow, current-human authorized and audited through existing operator routes/store/subject audit: exact scope, expected generation/digest and bounded supported recovery intent, no arbitrary raw state overwrite/tenant remap/history deletion/reset-by-agent. Preserve W02 role/service/session separation and customer route boundary. Existing concise API contract describes supported repair/refusal, degraded bias and remaining actual data authority; no new framework/migration/dependency/SDK changes.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W10.03-C7",
+      "description": "Prove actual installed SQLite-backed LearnStats/DecisionRing behavior under bounded repeated item×region×affinity waves, stored legacy oversized/inconsistent cases, failed/ambiguous writes, same-isolate publication and persisted process restart/continued traffic. Reuse one existing native fixture/bundle with fixture-only synthetic storage seeding, explicit isolated temporary persistence and clean disposal; no production debug route/Map-only native claim. Count W09 ancillary state, test healthy/degraded/fallback/recovery mass and no uncommitted publication. Preserve old controls and distinct whole-originalW10/F08 source/delta/primary review; historical 2618613 versus2468636 byte fixtures are not current measured capacities.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    },
+    {
+      "id": "W10.03-C8",
+      "description": "Full live/customer/SLO/actual historical data recovery and resource/capacity acceptance stays OPEN for separately authorized finalbatch. No cloud/resource/customer-data/provider/credential/external operation, numerical retention approval, destructive history reset, commit/merge/push/deploy under local mandate. A local finite synthetic workload is not sustained customer throughput or release approval.",
+      "required_evidence_kinds": [
+        "deployed_test"
+      ],
+      "minimum_claim": "deployed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W10.03-K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W10|W09|W23[.]01|W24[.]01|W27[.]01|W06[.]12 expires|W06[.]06|the ring keeps the last 200' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Existing actual class/estimator fixtures with retained W09 controls",
+      "workload": "New groupedW10.03 plus affected idempotency/decay/config/retention/ring controls only; preserve all failures and exact source qualifications."
+    },
+    {
+      "id": "W10.03-K2",
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/routes/content.test.ts -t 'W10|W24[.]01|W25[.]01|W27[.]01' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Existing actual serving/operator route fixtures",
+      "workload": "Health/generation/cache/refusal/recovery authorization and coherent fallback, original serving semantics retained."
+    },
+    {
+      "id": "W10.03-K3",
+      "command": "node node_modules/vitest/vitest.mjs run src/content/cell.test.ts src/content/cell.stage.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Existing bounded vocabulary/pooling seam",
+      "workload": "Confirm unchanged public channel vocabulary and cell hierarchy; no new suite."
+    },
+    {
+      "id": "W10.03-K4",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W10' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local native workerd/Miniflare, SQLite realobjects, outbounddenied",
+      "workload": "One existing native group reuses runtimeBundle; synthetic seeded legacy/native size probe, high-cardinality sustained finite waves, explicit isolated persisted dispose/reopen/continued operations. Exact dimensions/counts/bytes/results reported; no generalized native threshold/SLO."
+    },
+    {
+      "id": "W10.03-K5",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/eslint/bin/eslint.js src/durable-objects/LearnStats.ts src/durable-objects/DecisionRing.ts src/learn/stats.ts src/learn/fan.ts src/learn/priors.ts src/content/service.ts src/routes/decisions.ts src/customerBoundary.ts src/auth/store.ts src/auth/subjectAudit.ts src/learn/learn.test.ts src/content/consent.test.ts src/routes/content.test.ts src/index.api-boundary.test.ts && git diff --check -- src/durable-objects/LearnStats.ts src/durable-objects/DecisionRing.ts src/learn/stats.ts src/learn/fan.ts src/learn/priors.ts src/content/service.ts src/routes/decisions.ts src/customerBoundary.ts src/auth/store.ts src/auth/subjectAudit.ts src/learn/learn.test.ts src/content/consent.test.ts src/routes/content.test.ts src/index.api-boundary.test.ts docs/kit/02-api-reference.md",
+      "runtime": "Installed Worker compiler,14changedTS scopedlint and15filewhitespace",
+      "workload": "Baseline warning comparison; no SDKcompiler/build or broadCI."
+    },
+    {
+      "id": "W10.03-K6",
+      "command": "Independent frozen artifact and complete original W10 requirement review",
+      "runtime": "Distinct gpt-6-astra/xhigh reviewer",
+      "workload": "Whole originalW10/F08, all criteria, actual dirty-baseline changes/currentW09 interplay/native proof and exact primary streams; no scoped-subtask-as-whole completion."
+    },
+    {
+      "id": "W10.03-K7",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/content/consent.test.ts src/routes/content.test.ts src/index.api-boundary.test.ts -t 'W10[.]03' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Distinct exact frozen existing Vitest/native groups",
+      "workload": "NewW10.03 groups only; reuse valid unchanged component/static evidence, no second package/new harness/broad repeat."
+    },
+    {
+      "id": "W10.03-K8",
+      "command": "Separately authorized live bounded learning/recovery and customer workload acceptance",
+      "runtime": "Authorized selected-stamp/privacy/customer/provider owners; not run locally",
+      "workload": "Actual data repair/recovery authority, workload/cardinality/throughput/latency, persistence/history and serving truth; no local fixture substituted."
+    }
+  ],
+  "dependencies": "Whole-originalW09 independently localPASS on final frozen source; exact overlap prospectively qualified. Reuse W01 strict customer profile/W02 shared humans+registeredservices/W03scope/W04grant/W05explicit-choice30days/W06per-category failclosed retention/W07safe telemetry/W08workflow; no new policy/history authority.",
+  "interface": "Deterministic bounded fine-to-coarse degradation with mass/aligned denominator preservation and visible bias; bounded proof-based oversized/inconsistent recovery and authoritative generation/health serving fallback; existing current-human audited exact-scope/generation/digest recovery controls. Preserve W09 idempotency, original lifetimes and privacy/reset debt. Actual SQLite/native fixture reuses one existing bundle with isolated persisted dispose/reopen, bounded high-cardinality waves and separately labelled native ceiling probe.",
+  "rollback": "Save exact dirty originals and reversible admitted hunks. Never reset/delete historical stores, discard unproved mass or remove still-needed retry/privacy barriers. Local candidate-state replacement must be conditional/recoverable; actual historical/customer cleanup requires separate authority.",
+  "ownership": {
+    "worker": "Exactly15 task write_paths plus docs/remediation/evidence/W10.03/worker.json after valid boardGO; no subdelegation. One coherent implementation, focusedK1–K5, source readiness notice for concurrent read-only review, then final frozen evidence after related findings consolidated.",
+    "reviewer": "Read-only whole-originalW10 source review as coherent source becomes ready; exclusive docs/remediation/evidence/W10.03/review.json and exactK7 after final freezeGO; no product/governance edits or further delegation.",
+    "lead": "Existing execution records and acceptance only; no product edits/tests."
+  },
+  "authority": "Reuse explicit ordered W01–W41 local mandate, Astra/xhigh worker/distinctreviewer; live-only acceptance not a blocker to next local item. No broadCI/newframework/docsprogramme/dependency/SQLmigration/SDKregen/packagebuild/commit/merge/push/deploy/cloud/customer/provider/credentials/external ops or numerical retention/historical reset approval."
+}

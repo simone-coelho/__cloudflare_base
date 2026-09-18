@@ -1,0 +1,226 @@
+{
+  "task_id": "W09.07",
+  "at": "2026-09-14T19:44:05.342Z",
+  "contract_digest": "6d5905c73b4435252feb0b4fafdf09605f952403e4ea5aeea8ce7eb56afd48c6",
+  "worker": {
+    "path": "docs/remediation/evidence/W09.07/worker.json",
+    "sha256": "dced45c85dbd1ecabd7a8f3e9d27e0b4425cbbb139f9d5adb7f7bad2aa314361"
+  },
+  "files": [
+    {
+      "path": "src/ledger/delivery.ts",
+      "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d"
+    },
+    {
+      "path": "src/ledger/consume.ts",
+      "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78"
+    },
+    {
+      "path": "src/ledger/ledger.test.ts",
+      "sha256": "f9f642a9c83b4d4c8ea982256cddfa3a96316848814f369d9ef134cf9e1e4793"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "dcd69dc0ad3b50695f1d894bc6ba62914392e94c928350b268876578e03596d5"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "63acd0920b266e7b1eec275b10c40e79f054af5663754b2036301acc8db4e50c"
+    }
+  ],
+  "protected": [
+    {
+      "path": "package.json",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+      "role": "source"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+      "role": "source"
+    },
+    {
+      "path": ".eslintrc.json",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+      "role": "source"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+      "role": "source"
+    },
+    {
+      "path": "vitest.config.ts",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+      "role": "source"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+      "role": "source"
+    },
+    {
+      "path": "src/ledger/enqueue.ts",
+      "sha256": "7874967b3c197812b16aad956f71bf1e93881984ef7ea84f7bba5dcb21b4b156",
+      "role": "source"
+    },
+    {
+      "path": "src/ledger/records.ts",
+      "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+      "role": "source"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+      "role": "source"
+    },
+    {
+      "path": "src/ledger/erasure.test.ts",
+      "sha256": "28c8ed6fb54aa07595767c3a7bb2accc3419efab087a162cceff1c1c5cb6abbf",
+      "role": "source"
+    },
+    {
+      "path": "src/ledger/productSort.ts",
+      "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322",
+      "role": "source"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "sha256": "67e9511393c4aa6f6d45bbb575631b6b00d5a23df3812912915c278666af2ae5",
+      "role": "source"
+    },
+    {
+      "path": "src/types/env.ts",
+      "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+      "role": "source"
+    },
+    {
+      "path": "src/events/actionTypes.ts",
+      "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+      "role": "source"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+      "role": "source"
+    },
+    {
+      "path": "src/content/types.ts",
+      "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/fan.ts",
+      "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/rows.ts",
+      "sha256": "5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "sha256": "cf838dd6bf1cb7946d8b52f8177e0ef4b3d53012eb1735b540e75ce173e3f382",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/report.ts",
+      "sha256": "da430a5a8ed02dca4a9e5db3b925f2e3dbe341265defd465d2e2e71eccac4027",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/replay.ts",
+      "sha256": "d7e830270b1f18962d42555fb6ee8b12c6d446ae5d5fa5937cc579175a1427a4",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/receipts.ts",
+      "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c",
+      "role": "source"
+    },
+    {
+      "path": "src/durable-objects/DecisionRing.ts",
+      "sha256": "6ac4874c35f1dbf0abe0ee32cb7d0605676a32e2b25f7e4ebcb8db2075245c3e",
+      "role": "source"
+    },
+    {
+      "path": "src/durable-objects/LearnStats.ts",
+      "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974",
+      "role": "source"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da",
+      "role": "source"
+    },
+    {
+      "path": "src/config/publication.ts",
+      "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+      "role": "source"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+      "role": "source"
+    },
+    {
+      "path": "src/tenancy/middleware.ts",
+      "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8",
+      "role": "source"
+    },
+    {
+      "path": "src/auth/store.ts",
+      "sha256": "a5dda24c06e5a773de3262702faadcd4b614e3cd0f85edc11f9e2902eafe742a",
+      "role": "source"
+    },
+    {
+      "path": "node_modules/miniflare/package.json",
+      "sha256": "fd99d43256bda835c65af700c80c3e6b1c3b3ed7af45e81d300fc8db0b9e858b",
+      "role": "source"
+    },
+    {
+      "path": "node_modules/miniflare/dist/src/index.js",
+      "sha256": "fb489dfb0eff95a0303f1ac093bd8e6e1f46bb227f65ce105694832f971f3edd",
+      "role": "source"
+    },
+    {
+      "path": "node_modules/esbuild/package.json",
+      "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/22-outcome-learning-design.md",
+      "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+      "role": "source"
+    }
+  ],
+  "root_review": {
+    "actor_id": "w01-lead",
+    "run_id": "/root",
+    "captures": [
+      "91150f",
+      "e4f85e",
+      "4ea11a",
+      "f14993",
+      "430009",
+      "4aaf5c"
+    ],
+    "result": "Complete six baseline-relative deltas read;4ea11a display tail truncated then actual writer213–284 reread f14993.35 protected dependencies unchanged. Positional all-part completion, all-occurrence conflicts, immutable grouping, disjoint failure boundaries and conservative same-key retry traced through real writer/consumer. Initial all-tenant and fresh CAS barriers preserved. Sparse internal proof correction covered before sole fixed10/static executions; final hashes match both command artifacts. Full worker captures read:10 passed/27 deliberately unselected and full compiler1536/scoped lint0 errors0 warnings/tracked whitespace exit0/drained. Index runtime unchanged, one comment. Untracked delivery.ts added subtype whitespace remains independent actual-line inspection, not a tracked diff claim. No whole-pipeline/deployed/customer/SLO acceptance.",
+    "limitations": "Bounded managed per-delivery completion and disjoint delivery/key failure isolation, plus managed/legacy cohort independence only. Shared-key failures may conservatively retry co-resident deliveries; no immutable claim reassignment or per-message object fanout. Legacy partial-write duplication, pre-capture process loss, logical-event/online/export reconciliation, quarantine/outbox, activation/retention/claim lifecycle, atomic erasure fence/ABA/journal/manifest races, historical/fold recovery and full W09/W22/customer/SLO/release scope remain open. Producer flag default-off, existing persisted schema/identifiers and native queue mapping unchanged. D06/D08/W24 boundaries remain. No commit/push/install/emitted build/provision/deploy/cloud/credentials/customer-data/destructive operations."
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "task": "W04.02",
+  "actor": "w0202-reviewer",
+  "role": "independent reviewer",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "recorded_at": "2026-09-07T17:35:41.744Z",
+  "artifact": "docs/remediation/evidence/W04.02/artifact-v1.json",
+  "artifact_digest": "a7e61c32e70c549951f672798f4034aed0d3c10f999a8ceb01180c9844ca2f4d",
+  "contract_digest": "6e17e12bea1e9228f9abad560b3f449e866cdcc3657f06d5359f8769a7f71a8e",
+  "source_frozen_at": "2026-09-07T17:29:01.994Z",
+  "timing_note": "UTC launch and observed completion, not inferred process end. Exact runner local start and durations remain in complete outputs. All three commands launched concurrently after source pin verification.",
+  "checks": {
+    "K1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/routes/sort.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/reflex/shopperReflex.identity.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-07T17:30:57.546Z",
+      "parts": [
+        {
+          "chunk_id": "1b0a66",
+          "wall_time_seconds": 1.000344348,
+          "session_id": 55602,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "82024c",
+          "wall_time_seconds": 5.000754904,
+          "session_id": 55602,
+          "original_token_count": 819,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (22 tests) 100ms\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\nW04.02 owned operation counts {\"host\":\"session\",\"analyticsReads\":1,\"preferencesReads\":3,\"preferencesWrites\":2}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nW04.02 owned operation counts {\"host\":\"do\",\"analyticsReads\":0,\"preferencesReads\":0,\"preferencesWrites\":0}\n\n ✓ src/routes/realtime.sdkContract.test.ts  (4 tests) 126ms\n ✓ src/services/SessionManager.identity.test.ts  (11 tests) 14ms\n ✓ src/content/consent.test.ts  (11 tests) 18ms\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > export → absorb: the person carries what the browser learned, under the person’s id\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > absorb twice, from two devices: counters add and the vector is the sum\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > forward: the browser’s object hands ingest and snapshot to the person’s\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > linkVisitor on the object host > does the whole thing: export, absorb, forward, and answers the person’s audiences\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/reflex/shopperReflex.identity.test.ts  (8 tests) 47ms\nstdout | src/reflex/shopperReflex.identity.test.ts > CW29: the snapshot says the stage > reports the journey stage the object last derived, and null before any event\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n"
+        },
+        {
+          "chunk_id": "454369",
+          "wall_time_seconds": 0.000002131,
+          "exit_code": 0,
+          "original_token_count": 73,
+          "output": " ✓ src/services/sessionDefer.test.ts  (11 tests) 290ms\n ✓ src/routes/sort.test.ts  (5 tests) 36ms\n\n Test Files  7 passed (7)\n      Tests  72 passed (72)\n   Start at  13:31:00\n   Duration  33.35s (transform 4.19s, setup 0ms, collect 14.65s, tests 631ms, environment 1ms, prepare 12.79s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "completed_at": "2026-09-07T17:32:02.093Z"
+    },
+    "K2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/sdk/session.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-07T17:30:57.546Z",
+      "parts": [
+        {
+          "chunk_id": "34d732",
+          "wall_time_seconds": 1.001682424,
+          "session_id": 40519,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "033d5b",
+          "wall_time_seconds": 0.00000168,
+          "exit_code": 0,
+          "original_token_count": 150,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/sdk/identify.test.ts  (8 tests) 16ms\n ✓ src/sdk/core.test.ts  (8 tests) 8ms\n ✓ src/sdk/listen.test.ts  (7 tests) 8ms\n ✓ src/sdk/session.test.ts  (2 tests) 3ms\n\n Test Files  4 passed (4)\n      Tests  25 passed (25)\n   Start at  13:31:00\n   Duration  12.74s (transform 299ms, setup 0ms, collect 920ms, tests 35ms, environment 0ms, prepare 8.22s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "completed_at": "2026-09-07T17:31:20.881Z"
+    },
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t W04.02",
+      "started_at": "2026-09-07T17:30:57.546Z",
+      "parts": [
+        {
+          "chunk_id": "6ad0b0",
+          "wall_time_seconds": 1.001201309,
+          "session_id": 65616,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fe505d",
+          "wall_time_seconds": 0.246212689,
+          "exit_code": 0,
+          "original_token_count": 127,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (27 tests | 25 skipped) 10768ms\n\n Test Files  1 passed (1)\n      Tests  2 passed | 25 skipped (27)\n   Start at  13:31:00\n   Duration  20.18s (transform 1.30s, setup 0ms, collect 6.22s, tests 10.77s, environment 0ms, prepare 1.95s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "completed_at": "2026-09-07T17:31:21.141Z"
+    }
+  },
+  "pre_run_source_pins": {
+    "chunk_id": "c9d9b1",
+    "wall_time_seconds": 0.469061636,
+    "exit_code": 0,
+    "original_token_count": 1723,
+    "output": "{\"at\":\"2026-09-07T17:30:45.083Z\",\"sourceInputsSha256\":\"ecf6b2c8096c4263e38001d23a396c1707f0a2b77d101e145695f7277ed9a816\",\"outputs\":35,\"graph\":189,\"problems\":[],\"graphOptions\":{\"entryPoints\":[\"src/index.ts\",\"src/routes/identity.test.ts\",\"src/routes/realtime.sdkContract.test.ts\",\"src/routes/sort.test.ts\",\"src/services/SessionManager.identity.test.ts\",\"src/services/sessionDefer.test.ts\",\"src/reflex/shopperReflex.identity.test.ts\",\"src/content/consent.test.ts\",\"src/sdk/core.test.ts\",\"src/sdk/identify.test.ts\",\"src/sdk/listen.test.ts\",\"src/sdk/session.test.ts\",\"src/index.api-boundary.test.ts\",\"src/sdk/index.ts\",\"src/sdk/browser.ts\"],\"bundle\":true,\"packages\":\"external\",\"platform\":\"node\",\"format\":\"esm\",\"target\":\"es2022\",\"write\":false,\"metafile\":true,\"logLevel\":\"silent\",\"outdir\":\"/tmp/w0402-graph-unused\",\"outbase\":\".\",\"external\":[\"cloudflare:*\"]},\"entryPoints\":[\"src/index.ts\",\"src/routes/identity.test.ts\",\"src/routes/realtime.sdkContract.test.ts\",\"src/routes/sort.test.ts\",\"src/services/SessionManager.identity.test.ts\",\"src/services/sessionDefer.test.ts\",\"src/reflex/shopperReflex.identity.test.ts\",\"src/content/consent.test.ts\",\"src/sdk/core.test.ts\",\"src/sdk/identify.test.ts\",\"src/sdk/listen.test.ts\",\"src/sdk/session.test.ts\",\"src/index.api-boundary.test.ts\",\"src/sdk/index.ts\",\"src/sdk/browser.ts\"],\"limits\":\"Relevant packages-external local import graph only; not full installed dependency, TypeScript program or deployed graph. Browser/app entries statically bundled for input discovery, not Node runtime acceptance. Runtime wrapper build options are pinned in the existing test source.\"}\n    return this.forwardTo;\n  }\n\n  /** Called INSIDE the same serialized operation as the effect, never before it. */\n  private async assertOwned(principal: SessionCapability, request?: Request): Promise<void> {\n    assertSessionTarget(principal);\n    if (await this.forwardTarget()) throw new SessionAccessError();\n    await this.load();\n    if ((this.affinity && this.affinity.shopperId !== principal.subject)\n      || (this.pipeline?.visitorId && this.pipeline.visitorId !== principal.subject)\n      || (this.pipeline && this.pipeline.sessionId !== principal.sessionId)\n      || (principal.kind === 'recognized' && !this.affinity)) throw new SessionAccessError();\n    // Cookies can restrict this owned object, never select a profile or enable consent.\n    const hints = consentFromCookies(request?.headers.get('Cookie'));\n    if (!hints.tracking || !hints.personalization) await this.setConsent({\n      ...(!hints.tracking ? { tracking: false } : {}),\n      ...(!hints.personalization ? { personalization: false } : {}),\n    });\n  }\n\n  /**\n    let principal: SessionCapability | undefined;\n    if (capabilityToken(request) !== null || request.headers.get('Upgrade') === 'websocket') {\n      try {\n        principal = await verifySessionCapability(this.env, capabilityToken(request), shopperTenant(this.env, request));\n        assertSessionTarget(principal, url.searchParams.get('userId'), url.searchParams.get('sessionId'));\n        if (this.state.id.toString() !== this.env.SHOPPER_REFLEX.idFromName(shopperObjectName(principal.tenant, principal.subject)).toString()) throw new SessionAccessError();\n      } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }\n    }\n\n    if (request.headers.get('Upgrade') === 'websocket') {\n      return this.serialize(async () => {\n        try { await this.assertOwned(principal!, request); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }\n        return this.handleUpgrade(url, principal!);\n      });\n    }\n    if (principal && ['/personalization', '/segments', '/analytics'].includes(url.pathname)) {\n      const p = principal;\n      return this.serialize(async () => {\n        try { await this.assertOwned(p, request); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }\n        const now = Date.now();\n        if (url.pathname === '/analytics') return json({ sessionId: p.sessionId, analytics: {\n          sessionDuration: this.pipeline ? now - this.pipeline.firstSeen : 0,\n          pageViews: this.pipeline?.attributes.page_views ?? 0,\n          engagementScore: calculateEngagementScore(this.pipeline?.attributes ?? {}), segmentHistory: this.pipeline?.segments ?? [],\n        }, timestamp: now });\n        const connectors = getConnectors(this.env);\n        if (url.pathname === '/segments') {\n          if (request.method === 'POST') {\n            const consent = await this.consentNow();\n            if (!consent.tracking || !consent.personalization) return json({ ok: false, error: 'Shopper consent refused segment assignment' }, 403);\n            const body = await request.json() as { segment?: unknown; source?: unknown };\n            if (typeof body.segment !== 'string') return json({ ok: false, error: 'segment required' }, 400);\n            const cfg = await resolveReflexConfig(this.env, this.surface());\n            this.affinity ??= { shopperId: p.subject, reflex: emptyState(cfg), odpSeed: [], odpSeedAt: 0, odpRecentEvents: [], lastSeen: now, configVersion: cfg.version };\n    for (const host of ['session', 'do']) {\n      const f = boundary(host), anon = await newAnonymousSession(f.env, 'meridian');\n      if (host === 'do') {\n        const cold = await newAnonymousSession(f.env, 'meridian');\n        const refused = await f.call('/realtime/action', cold.capability, { userId: cold.subject, sessionId: cold.sessionId, type: 'page_view', data: {}, source: 'sdk' }, 'meridian', 'opt_tracking_consent=false; opt_personalization_enabled=false; opt_segments=private-stale; opt_session_id=victim');\n        expect(refused.status).toBe(200);\n        expect(await refused.json()).toMatchObject({ consent: { tracking: false, personalization: false } });\n        const data = f.objects.get(shopperObjectName('meridian', cold.subject))!.data;\n        expect([...data]).toEqual([['consent', { tracking: false, personalization: false }]]);\n        expect((await f.call(`/realtime/segments/${cold.subject}`, cold.capability, { segment: 'refused' }, 'meridian', 'opt_tracking_consent=true; opt_personalization_enabled=true')).status).toBe(403);\n        expect([...data]).toEqual([['consent', { tracking: false, personalization: false }]]);\n      }\n      if (host === 'session') await new SessionManager(f.env, { tenant: 'meridian', principal: anon }).createOrUpdateSession(anon.sessionId, anon.subject, { segments: ['W0402_OWNED_SEGMENT'] });\n      else expect((await f.call('/realtime/action', anon.capability, { userId: anon.subject, sessionId: anon.sessionId, browsingSessionId: 'browsing-only', type: 'page_view', data: {}, source: 'sdk' })).status).toBe(200);\n      f.sessions.calls.length = 0;\n      const analytics = await f.call(`/realtime/session/${anon.sessionId}/analytics`, anon.capability);\n      expect(analytics.status).toBe(200);\n"
+  },
+  "read_only_graph_and_bundle_reproduction": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport path from 'node:path';\nimport {createHash} from 'node:crypto';\nimport {build} from 'esbuild';\nconst sha = v => createHash('sha256').update(v).digest('hex');\nconst inputs=JSON.parse(fs.readFileSync('docs/remediation/evidence/W04.02/source-inputs-v1.json','utf8'));\nconst graph=await build(inputs.graph.options);\nconst actual=Object.keys(graph.metafile.inputs).filter(p=>fs.existsSync(p)).sort().map(p=>({path:p,sha256:sha(fs.readFileSync(p))}));\nconst expected=[...inputs.graph.files].sort((a,b)=>a.path.localeCompare(b.path));\nconst got=[...actual].sort((a,b)=>a.path.localeCompare(b.path));\nconst graphSame=JSON.stringify(got)===JSON.stringify(expected);\nconst version=fs.readFileSync('src/sdk/version.ts','utf8').match(/'([^']+)'/)[1];\nconst banner=`/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */`;\nconst common={bundle:true,platform:'browser',target:'es2022',minify:false,sourcemap:false,legalComments:'none',logLevel:'info',metafile:true,banner:{js:banner},write:false};\nconst bundles=[];\nfor(const [entry,outfile,format] of [['src/sdk/index.ts','public/sdk/edge-personalization.esm.js','esm'],['src/sdk/browser.ts','public/sdk/edge-personalization.js','iife']]){\nconst b=await build({...common,entryPoints:[path.resolve(entry)],outfile:path.resolve(outfile),format});\nconst bytes=b.outputFiles[0].contents, stored=fs.readFileSync(outfile);\nbundles.push({path:outfile,bytes:bytes.length,sha256:sha(bytes),storedSha256:sha(stored),equal:Buffer.from(bytes).equals(stored),localInputs:Object.keys(b.metafile.inputs).sort()});\n}\nconsole.log(JSON.stringify({at:new Date().toISOString(),graphInputs:got.length,expectedInputs:expected.length,graphSame,missing:expected.filter(f=>!got.some(g=>g.path===f.path)),unexpected:got.filter(f=>!expected.some(g=>g.path===f.path)),bundles},null,2));\nif(!graphSame||bundles.some(b=>!b.equal))process.exit(1);\nNODE",
+    "started_at": "2026-09-07T17:33:02.668Z",
+    "completed_at": "2026-09-07T17:33:04.151Z",
+    "chunk_id": "82439c",
+    "wall_time_seconds": 1.14804967,
+    "exit_code": 0,
+    "original_token_count": 384,
+    "output": "\n  public/sdk/edge-personalization.esm.js  35.0kb\n\n⚡ Done in 51ms\n\n  public/sdk/edge-personalization.js  37.0kb\n\n⚡ Done in 60ms\n{\n  \"at\": \"2026-09-07T17:33:04.137Z\",\n  \"graphInputs\": 189,\n  \"expectedInputs\": 189,\n  \"graphSame\": true,\n  \"missing\": [],\n  \"unexpected\": [],\n  \"bundles\": [\n    {\n      \"path\": \"public/sdk/edge-personalization.esm.js\",\n      \"bytes\": 35795,\n      \"sha256\": \"bb3a6d0386ea95a9ec280fc8505e08a60689a6f818360747cc32fc0f5ca6677f\",\n      \"storedSha256\": \"bb3a6d0386ea95a9ec280fc8505e08a60689a6f818360747cc32fc0f5ca6677f\",\n      \"equal\": true,\n      \"localInputs\": [\n        \"src/sdk/core.ts\",\n        \"src/sdk/emit.ts\",\n        \"src/sdk/host.ts\",\n        \"src/sdk/identify.ts\",\n        \"src/sdk/identity.ts\",\n        \"src/sdk/index.ts\",\n        \"src/sdk/listen.ts\",\n        \"src/sdk/memoryHost.ts\",\n        \"src/sdk/version.ts\",\n        \"src/sdk/wire.ts\"\n      ]\n    },\n    {\n      \"path\": \"public/sdk/edge-personalization.js\",\n      \"bytes\": 37866,\n      \"sha256\": \"90c93376330a7dc0b761bb5f5c760a2d23a015c985ea17d115216fab2966b056\",\n      \"storedSha256\": \"90c93376330a7dc0b761bb5f5c760a2d23a015c985ea17d115216fab2966b056\",\n      \"equal\": true,\n      \"localInputs\": [\n        \"src/sdk/browser.ts\",\n        \"src/sdk/core.ts\",\n        \"src/sdk/emit.ts\",\n        \"src/sdk/host.ts\",\n        \"src/sdk/identify.ts\",\n        \"src/sdk/identity.ts\",\n        \"src/sdk/index.ts\",\n        \"src/sdk/listen.ts\",\n        \"src/sdk/memoryHost.ts\",\n        \"src/sdk/version.ts\",\n        \"src/sdk/wire.ts\"\n      ]\n    }\n  ]\n}\n"
+  },
+  "final_artifact_and_originals": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';import {createHash} from 'node:crypto';\nconst sha=b=>createHash('sha256').update(b).digest('hex'),read=p=>JSON.parse(fs.readFileSync(p,'utf8')),fileSha=p=>sha(fs.readFileSync(p));\nconst base='docs/remediation/evidence/W04.02/',a=read(base+'artifact-v1.json'),c=read('docs/remediation/design/W04.02/task-contract-v2.json'),inputs=read(base+'source-inputs-v1.json'),w=read(base+'worker-checks.json');\nconst digest=sha(JSON.stringify({contract_digest:a.contract_digest,configuration:a.configuration,files:a.files.map(({path,sha256,role})=>({path,sha256,role})).sort((a,b)=>a.path.localeCompare(b.path))}));\nconst contractDigest=sha(JSON.stringify({id:c.id,package_id:c.package_id,kind:c.kind,scope:c.scope,read_paths:c.read_paths,write_paths:c.write_paths,non_goals:c.non_goals,criteria:c.criteria,checks:c.checks.map(({id,required,criterion_ids,command,runtime,workload})=>({id,required,criterion_ids,command,runtime,workload})),dependencies:c.dependencies,assignments:c.assignments}));\nconst bad=a.files.filter(f=>fileSha(f.path)!==f.sha256).map(f=>f.path);\nconst missing=[...inputs.graph.files,...inputs.outputs,...w.frozenFiles].filter(f=>!a.files.some(p=>p.path===f.path&&p.sha256===f.sha256));\nconst originals=[...read(base+'before-sources-v1.json').files,read(base+'before-link-v2.json')].filter(f=>f.exists);\nconst originalBad=originals.filter(f=>sha(f.content)!==f.sha256).map(f=>f.path);\nconst result={at:new Date().toISOString(),artifactFileSha256:fileSha(base+'artifact-v1.json'),artifactDigest:digest,expectedArtifactDigest:a.digest,contractDigest,expectedContractDigest:a.contract_digest,files:a.files.length,outputFiles:inputs.outputs.length,graphFiles:inputs.graph.files.length,pinMismatches:bad,missingInputsOrOutputs:missing,retainedOriginals:originals.length,originalContentMismatches:originalBad,workerFrozenFiles:w.frozenFiles.length,workerPending:w.pendingProcesses,proofs:Object.fromEntries(['worker.md','worker-checks.json','source-inputs-v1.json','baseline.json','baseline-probe.mjs','before-sources-v1.json','before-link-v2.json'].map(p=>[p,fileSha(base+p)]))};\nconsole.log(JSON.stringify(result,null,2));\nif(bad.length||missing.length||originalBad.length||digest!==a.digest||contractDigest!==a.contract_digest)process.exit(1);\nNODE",
+    "started_at": "2026-09-07T17:34:28.751Z",
+    "completed_at": "2026-09-07T17:34:30.263Z",
+    "chunk_id": "f236f6",
+    "wall_time_seconds": 1.1308280800000001,
+    "exit_code": 0,
+    "original_token_count": 349,
+    "output": "{\n  \"at\": \"2026-09-07T17:34:30.193Z\",\n  \"artifactFileSha256\": \"0a4bd1d674ae155e9bc8ec08e2ec2a86919f25e949fe3d43162715798d4b5321\",\n  \"artifactDigest\": \"a7e61c32e70c549951f672798f4034aed0d3c10f999a8ceb01180c9844ca2f4d\",\n  \"expectedArtifactDigest\": \"a7e61c32e70c549951f672798f4034aed0d3c10f999a8ceb01180c9844ca2f4d\",\n  \"contractDigest\": \"6e17e12bea1e9228f9abad560b3f449e866cdcc3657f06d5359f8769a7f71a8e\",\n  \"expectedContractDigest\": \"6e17e12bea1e9228f9abad560b3f449e866cdcc3657f06d5359f8769a7f71a8e\",\n  \"files\": 211,\n  \"outputFiles\": 35,\n  \"graphFiles\": 189,\n  \"pinMismatches\": [],\n  \"missingInputsOrOutputs\": [],\n  \"retainedOriginals\": 34,\n  \"originalContentMismatches\": [],\n  \"workerFrozenFiles\": 35,\n  \"workerPending\": [],\n  \"proofs\": {\n    \"worker.md\": \"009c7018d51e7dee231563a775ea6d31ce3f30a41ddbd0c68e456d57d60ac72a\",\n    \"worker-checks.json\": \"aa7752bad9d60fcdb95b9eb3be0b1223b41ee585ea2c36697e5e04bd33689370\",\n    \"source-inputs-v1.json\": \"ecf6b2c8096c4263e38001d23a396c1707f0a2b77d101e145695f7277ed9a816\",\n    \"baseline.json\": \"ebe493f5b3734687a5647fca6d679d699aea69916806187bb99ce730544c02f1\",\n    \"baseline-probe.mjs\": \"81a7db76279e43bc3103395ee1ca6cb1fed114e2576b31f26d0490ff2b76fef4\",\n    \"before-sources-v1.json\": \"6cb8ae34c06fb9ad70823516bcfdcce8cb4c9eca131dea143e2322c2c927c4ab\",\n    \"before-link-v2.json\": \"2427d862cd85eaf35334af6e8fbaaf8b74b0f700789d187e534377abe43ad17a\"\n  }\n}\n"
+  },
+  "results": {
+    "K1": {
+      "passed": 72,
+      "failed": 0,
+      "files": 7
+    },
+    "K2": {
+      "passed": 25,
+      "failed": 0,
+      "files": 4
+    },
+    "K3": {
+      "passed": 2,
+      "failed": 0,
+      "filtered": 25,
+      "files": 1
+    },
+    "pending_processes": []
+  },
+  "worker_proof_inspection": {
+    "report_sha256": "009c7018d51e7dee231563a775ea6d31ce3f30a41ddbd0c68e456d57d60ac72a",
+    "checks_sha256": "aa7752bad9d60fcdb95b9eb3be0b1223b41ee585ea2c36697e5e04bd33689370",
+    "all_17_records_read": true,
+    "application": "application-consent-final exit0",
+    "sdk": "sdk-typecheck exit0",
+    "build": "sdk-build exit0",
+    "syntax": "bundle-syntax exit0",
+    "diff": "scoped-diff-final exit0",
+    "compiler_reexecuted_by_reviewer": false
+  },
+  "source_findings_and_corrections": [
+    "Public link ownership validated before IdentityStore; exact aliases individually checked; scoped SessionManager refuses forwarding/pointer promotion without weakening trusted internal compatibility.",
+    "DO named owned routes use the selected object, not missing recognized KV records. Actual canonical profile SID is persisted and returned by link, HTTP and frame ingress; browsing correlation retains the separate 30-minute lifecycle.",
+    "Transition-start data pause, persisted401 one-attempt recovery, readiness-inclusive hydrate deadline, failed-logout generation-conditional forgetting, listener/await continuation guards and private-cache reset inspected.",
+    "Final false-only cookie hints forwarded into owned serialized DO operations; true cookies cannot enable refusal. Cold-owned test retains only refusal storage. This is not all-egress consent acceptance."
+  ],
+  "retained_failures": {
+    "worker": [
+      "application-initial TS2345 missing ignoreBOM corrected explicitly",
+      "K1-initial two stale fixture expectations:401 authority priority and canonical DO SID; final passes supersede"
+    ],
+    "independent_required_checks": [],
+    "read_only_review_diagnostics": "An early source comparison used the wrong snapshot property and was discarded/repeated using content. Targeted read searches included nonexistent guessed paths; two sed source-display commands had malformed numeric ranges and were corrected. These were source-display mistakes, not engine/test or artifact failures; no acceptance relies on them."
+  },
+  "limitations": [
+    "Admitted shared shopper lane only. Synthetic KV/connectors and SDK host in K1/K2; SDK synthetic grants do not prove crypto, which actual router tests separately exercise without auto-signing transport.",
+    "K3 actual workerd/Miniflare both-host native101, subject denial, heartbeat and before/after-expiry private delivery;25 unrelated cases deliberately filtered. This does not claim every alarm/hibernation lifecycle or browser/deployed behavior.",
+    "189 packages-external local import inputs and211 relevant pins, not full installed/runtime dependency or TypeScript-program attestation. Both browser bundles reproduce byte-for-byte with write:false.",
+    "Copied unexpired grants, cross-tab/server revocation, admitted in-flight server effects, transactional consent/deletion, KV consistency and forwarding lifecycle remain open.",
+    "Bespoke legacy/CDP/tracking/operator perimeter, full W04/F04/F06/N05/customer/SLO/gate/release and broad historical contract acceptance are not claimed. Baseline was two handlers; selected owned operation counts are not a benchmark."
+  ],
+  "verdict": "C1-C4 pass within admitted local scope; recommend lead acceptance, not lead signoff."
+}

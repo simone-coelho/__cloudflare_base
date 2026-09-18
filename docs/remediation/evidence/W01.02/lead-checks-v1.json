@@ -1,0 +1,65 @@
+{
+  "at": "2026-09-06T23:48:29Z",
+  "actor_id": "w01-lead",
+  "run_id": "/root",
+  "source_index_sha256": "840a34f2ebe134ed3e584870b03034f7bef2c1c9c8203123791546c42419aac7",
+  "test_sha256": "fa0226efd8c6cf5aef7cead7ca20c2a202c56eb3df73fb455dca9274319bf997",
+  "checks": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "chunk_id": "cfc980",
+      "wall_time_seconds": 0.000003519,
+      "exit_code": 0,
+      "original_token_count": 120,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/Users/LAH/Documents/__Development/Optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (20 tests) 6589ms\n\n Test Files  1 passed (1)\n      Tests  20 passed (20)\n   Start at  19:46:43\n   Duration  19.70s (transform 1.32s, setup 0ms, collect 8.37s, tests 6.59s, environment 0ms, prepare 3.02s)\n\n",
+      "summary": "20/20 passed;400 denied requests and11 controls; zero failures/skips;19.70s. Separate lead run."
+    },
+    {
+      "command": "node node_modules/vitest/vitest.mjs run src/middleware/edgeAccess.test.ts src/routes/auth.test.ts src/routes/content.test.ts src/tenancy/middleware.test.ts src/tenancy/routeEscape.test.ts src/tenancy/storeIsolation.test.ts --maxWorkers=1 --minWorkers=1",
+      "chunk_id": "db7145",
+      "wall_time_seconds": 0.000002632,
+      "exit_code": 0,
+      "original_token_count": 278,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/Users/LAH/Documents/__Development/Optimizely/__cloudflare_base\n\n ✓ src/routes/auth.test.ts  (6 tests) 389ms\n ✓ src/tenancy/storeIsolation.test.ts  (19 tests) 159ms\n ✓ src/middleware/edgeAccess.test.ts  (9 tests) 24ms\n ✓ src/routes/content.test.ts  (5 tests) 23ms\nstderr | src/tenancy/middleware.test.ts > reading the stamp configuration > degrades to default-only rather than throwing on rubbish\n[tenancy] TENANTS is not valid JSON; serving the default brand only\n\n ✓ src/tenancy/middleware.test.ts  (11 tests) 7ms\nstderr | src/tenancy/middleware.test.ts > resolving a request > never throws, whatever it is handed\n[tenancy] TENANTS is not valid JSON; serving the default brand only\n\n ✓ src/tenancy/routeEscape.test.ts  (2 tests) 2622ms\n\n Test Files  6 passed (6)\n      Tests  52 passed (52)\n   Start at  19:43:00\n   Duration  36.01s (transform 2.62s, setup 0ms, collect 8.23s, tests 3.22s, environment 1ms, prepare 18.67s)\n\n",
+      "summary": "AFTER code change:52/52 passed across six files;36.01s. Same six suites also passed52/52 before code change in30.96s."
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --composite false --incremental false",
+      "chunk_id": "de3aa4",
+      "wall_time_seconds": 0.000002021,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": "",
+      "summary": "Worker TypeScript check passed after source fix."
+    },
+    {
+      "command": "node --check examples/usage-examples.js",
+      "exit_code": 0,
+      "output": "",
+      "summary": "Example syntax passed; no source modification."
+    },
+    {
+      "command": "git diff --check -- src/index.ts src/routes/api.ts examples/usage-examples.js docs/api/01-rest-endpoints.md",
+      "exit_code": 0,
+      "output": "",
+      "summary": "Scoped diff whitespace check passed."
+    }
+  ],
+  "protected_baseline": {
+    "at": "2026-09-06T23:45:06.751Z",
+    "total": 330,
+    "changed": [
+      {
+        "path": "src/index.ts",
+        "before": "a9ca5ae49c3741d9375bd0245c7e377bfd779021055df9d90671b0f580f9f4f1",
+        "after": "840a34f2ebe134ed3e584870b03034f7bef2c1c9c8203123791546c42419aac7"
+      },
+      {
+        "path": "src/routes/api.ts",
+        "before": "905f2512b23e6639441067a45864fe25634b3fbf2d9fc977b34370fbd90dca58",
+        "after": null
+      }
+    ]
+  },
+  "limitations": "Targeted regressions only; no full application suite, deployment, asset routing, native resource/credentials/customer data, SLO or lift acceptance. OBS-FW01 remains unrelated open framework-fixture work. All deleted material is only obsolete source, recoverable from retained snapshots/HEAD; no stored data deleted."
+}

@@ -1,0 +1,512 @@
+{
+  "before": {
+    "id": "W30.03-E1",
+    "task_id": "W30.03",
+    "check_id": "W30.03-K1",
+    "criterion_ids": [
+      "W30.03-C1",
+      "W30.03-C2",
+      "W30.03-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w3003-reviewer",
+    "run_id": "/root/w3003_review",
+    "file": {
+      "path": "docs/remediation/evidence/W30.03/review.json",
+      "sha256": "b26d1ea080af9f3bc653be215d1a911097d3812cb0ec4682860f15960cf645f5"
+    },
+    "at": "2026-09-14T21:43:38.816Z",
+    "limitations": "Active-lookback aggregate-backed canonical day publication only. No same-hour mutation/late-arrival detection, dependent-hour or partial-shard reconstruction, historical backfill, new retention policy, policy/erasure freshness proof, global canonical CAS/concurrent publication fencing, raw-fallback/nightly durability, complete delivery/export/online reconciliation, customer/scientific/SLO/release acceptance. Summary match only indicates known hour membership. Dates leaving lookback or deferred by custom large lookback need separate recovery. D06/D08/W24 and full W09/W22/W30 remain open. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations. Fixed10 is local correctness, not latency/capacity SLO. Sparse constructed-array test is serialized null entries, not an in-memory hole surviving JSON; dense check independently source-reviewed. Worker handoff static-repeat shorthand is superseded by exact plan: independent fixed10 plus verified same-byte static reuse.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'W30[.]03|W22[.]02 preserves|W31[.]01 captures|W30[.]02 carries|W33[.]01|W32[.]04 stores|the five-minute job|the run continues past|the day report comes' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest actual hourly/report modules and existing synthetic storage/authenticated report route fixtures.",
+    "workload": "Fixed10:9 existing controls and1 grouped publication-recovery case in existing hourly fixture; no new suite, unrelated ledger/DLQ/native/mounted index run.",
+    "result": "pass",
+    "artifact_digest": "dab855b1061967dfe6b9904ebf282f4a913ae890fe8c3091bb4f7ea82256c244",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "888baa98abb8958e2b54b5d6cc95fb7cf8e18d3a1cfc20d34b990a5d56799ead",
+      "configuration": "Active-lookback aggregate-backed canonical day publication only. No same-hour mutation/late-arrival detection, dependent-hour or partial-shard reconstruction, historical backfill, new retention policy, policy/erasure freshness proof, global canonical CAS/concurrent publication fencing, raw-fallback/nightly durability, complete delivery/export/online reconciliation, customer/scientific/SLO/release acceptance. Summary match only indicates known hour membership. Dates leaving lookback or deferred by custom large lookback need separate recovery. D06/D08/W24 and full W09/W22/W30 remain open. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations.",
+      "files": [
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "7cf8afe8e8b980583204976184fd08845128ff0dba146f2adf6b79aa550ca645",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "332ec75c34e962019995347f7fc63423a2b4d23cdebd06380181a08f601c3fe6",
+          "role": "output"
+        },
+        {
+          "path": "src/index.ts",
+          "sha256": "b161958178f76cf997210fd4c4c139671cc26b1fe87a947f6103199c8834eabf",
+          "role": "output"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "17d91ab4b33b7d3d973b6d91c4d548f35e88489d7fa6db9eb1bb1aa9cb9dc630",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "da430a5a8ed02dca4a9e5db3b925f2e3dbe341265defd465d2e2e71eccac4027",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "a0d6ccaac1a501dd362ef83a26326cc3a8a9b232af00525695a617d12ccc443d",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/rows.ts",
+          "sha256": "5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/receipts.ts",
+          "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c",
+          "role": "source"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "3aae86085cb5a461a10c8925732e86e0a6507d9065af9c66e376349247282b70",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/consume.ts",
+          "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/enqueue.ts",
+          "sha256": "7874967b3c197812b16aad956f71bf1e93881984ef7ea84f7bba5dcb21b4b156",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/productSort.ts",
+          "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322",
+          "role": "source"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+          "role": "source"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+          "role": "source"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "sha256": "a5dda24c06e5a773de3262702faadcd4b614e3cd0f85edc11f9e2902eafe742a",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "sha256": "67e9511393c4aa6f6d45bbb575631b6b00d5a23df3812912915c278666af2ae5",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.03/worker.json",
+          "sha256": "948fc5062087f6ce13fc70934b016ce0c1573cac1c2c7be220507bde45baf266",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W30.03/plan.md",
+          "sha256": "bb488d16dc7e0b0c08c635987ed60c4a57ef72d5f8be76890327ba286633afa3",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W30.03/baseline.json",
+          "sha256": "bb21b4ba8fa0762cc842ea6d4ff052886c7be5b54a586c9b583c00b8b1e0c54f",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.03/admission.json",
+          "sha256": "f0e983071c1aab8d8ca8ea1ad726fdf8269638197992e517b93cfcd899e03969",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.03/source-freeze.json",
+          "sha256": "8f94640771b53956169f1ff61a3db2a7f64edf2ad3124b9b41ba2a777b1ed49a",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.03/source-deltas.json",
+          "sha256": "842aad9168614d978f55892ba84ccca5cb73e7dbdb327e41edb6ecc5b1b7c627",
+          "role": "configuration"
+        }
+      ],
+      "digest": "dab855b1061967dfe6b9904ebf282f4a913ae890fe8c3091bb4f7ea82256c244"
+    }
+  },
+  "after": {
+    "id": "W30.03-E1",
+    "task_id": "W30.03",
+    "check_id": "W30.03-K1",
+    "criterion_ids": [
+      "W30.03-C1",
+      "W30.03-C2",
+      "W30.03-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w3003-reviewer",
+    "run_id": "/root/w3003_review",
+    "file": {
+      "path": "docs/remediation/evidence/W30.03/review.json",
+      "sha256": "b26d1ea080af9f3bc653be215d1a911097d3812cb0ec4682860f15960cf645f5"
+    },
+    "at": "2026-09-14T21:43:38.816Z",
+    "limitations": "Active-lookback aggregate-backed canonical day publication only. No same-hour mutation/late-arrival detection, dependent-hour or partial-shard reconstruction, historical backfill, new retention policy, policy/erasure freshness proof, global canonical CAS/concurrent publication fencing, raw-fallback/nightly durability, complete delivery/export/online reconciliation, customer/scientific/SLO/release acceptance. Summary match only indicates known hour membership. Dates leaving lookback or deferred by custom large lookback need separate recovery. D06/D08/W24 and full W09/W22/W30 remain open. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations. Fixed10 is local correctness, not latency/capacity SLO. Sparse constructed-array test is serialized null entries, not an in-memory hole surviving JSON; dense check independently source-reviewed. Worker handoff static-repeat shorthand is superseded by exact plan: independent fixed10 plus verified same-byte static reuse.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'W30[.]03|W22[.]02 preserves|W31[.]01 captures|W30[.]02 carries|W33[.]01|W32[.]04 stores|the five-minute job|the run continues past|the day report comes' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest actual hourly/report modules and existing synthetic storage/authenticated report route fixtures.",
+    "workload": "Fixed10:9 existing controls and1 grouped publication-recovery case in existing hourly fixture; no new suite, unrelated ledger/DLQ/native/mounted index run.",
+    "result": "pass",
+    "artifact_digest": "dab855b1061967dfe6b9904ebf282f4a913ae890fe8c3091bb4f7ea82256c244",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "888baa98abb8958e2b54b5d6cc95fb7cf8e18d3a1cfc20d34b990a5d56799ead",
+      "configuration": "Active-lookback aggregate-backed canonical day publication only. No same-hour mutation/late-arrival detection, dependent-hour or partial-shard reconstruction, historical backfill, new retention policy, policy/erasure freshness proof, global canonical CAS/concurrent publication fencing, raw-fallback/nightly durability, complete delivery/export/online reconciliation, customer/scientific/SLO/release acceptance. Summary match only indicates known hour membership. Dates leaving lookback or deferred by custom large lookback need separate recovery. D06/D08/W24 and full W09/W22/W30 remain open. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations.",
+      "files": [
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "7cf8afe8e8b980583204976184fd08845128ff0dba146f2adf6b79aa550ca645",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "332ec75c34e962019995347f7fc63423a2b4d23cdebd06380181a08f601c3fe6",
+          "role": "output"
+        },
+        {
+          "path": "src/index.ts",
+          "sha256": "b161958178f76cf997210fd4c4c139671cc26b1fe87a947f6103199c8834eabf",
+          "role": "output"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "17d91ab4b33b7d3d973b6d91c4d548f35e88489d7fa6db9eb1bb1aa9cb9dc630",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "da430a5a8ed02dca4a9e5db3b925f2e3dbe341265defd465d2e2e71eccac4027",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "a0d6ccaac1a501dd362ef83a26326cc3a8a9b232af00525695a617d12ccc443d",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/rows.ts",
+          "sha256": "5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/receipts.ts",
+          "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c",
+          "role": "source"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "3aae86085cb5a461a10c8925732e86e0a6507d9065af9c66e376349247282b70",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/consume.ts",
+          "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/enqueue.ts",
+          "sha256": "7874967b3c197812b16aad956f71bf1e93881984ef7ea84f7bba5dcb21b4b156",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/productSort.ts",
+          "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322",
+          "role": "source"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+          "role": "source"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+          "role": "source"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "sha256": "a5dda24c06e5a773de3262702faadcd4b614e3cd0f85edc11f9e2902eafe742a",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "sha256": "67e9511393c4aa6f6d45bbb575631b6b00d5a23df3812912915c278666af2ae5",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.03/worker.json",
+          "sha256": "948fc5062087f6ce13fc70934b016ce0c1573cac1c2c7be220507bde45baf266",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W30.03/plan.md",
+          "sha256": "bb488d16dc7e0b0c08c635987ed60c4a57ef72d5f8be76890327ba286633afa3",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W30.03/baseline.json",
+          "sha256": "bb21b4ba8fa0762cc842ea6d4ff052886c7be5b54a586c9b583c00b8b1e0c54f",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.03/admission.json",
+          "sha256": "f0e983071c1aab8d8ca8ea1ad726fdf8269638197992e517b93cfcd899e03969",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.03/source-freeze.json",
+          "sha256": "8f94640771b53956169f1ff61a3db2a7f64edf2ad3124b9b41ba2a777b1ed49a",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.03/source-deltas.json",
+          "sha256": "842aad9168614d978f55892ba84ccca5cb73e7dbdb327e41edb6ecc5b1b7c627",
+          "role": "configuration"
+        }
+      ],
+      "digest": "dab855b1061967dfe6b9904ebf282f4a913ae890fe8c3091bb4f7ea82256c244"
+    }
+  }
+}

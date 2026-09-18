@@ -1,0 +1,26 @@
+{
+  "at": "2026-09-07T00:45:49.759Z",
+  "actor_id": "w01-lead",
+  "run_id": "/root",
+  "source_sha256": "a3a7be192b89395fed567d59b48aed6076f7e80797c8a6c175bff20ff6fce5ea",
+  "test_sha256": "11628a318420ddb8d2d269373a7f23a46f7ad4b7913648db565b0dedd07ee177",
+  "checks": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run src/middleware/auth.refresh-boundary.test.ts src/routes/auth.test.ts src/auth/accounts.test.ts src/middleware/edgeAccess.test.ts src/routes/content.test.ts src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1",
+      "chunk_id": "c32f80",
+      "wall_time_seconds": 0.000002836,
+      "exit_code": 0,
+      "original_token_count": 545,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (20 tests) 80ms\nstdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration\nW02.01 protected-boundary observation {\"mode\":\"open\",\"state\":\"fresh\",\"statuses\":{\"me\":401,\"patch\":401},\"accountReads\":0,\"kvWrites\":0,\"revision\":[1,1],\"K\":[3,3],\"history\":[1,1]}\n\nstdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration\nW02.01 protected-boundary observation {\"mode\":\"open\",\"state\":\"revoked\",\"statuses\":{\"me\":401,\"patch\":401},\"accountReads\":0,\"kvWrites\":0,\"revision\":[1,1],\"K\":[3,3],\"history\":[1,1]}\n\nstdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration\nW02.01 protected-boundary observation {\"mode\":\"enforced\",\"state\":\"fresh\",\"statuses\":{\"me\":401,\"patch\":401},\"accountReads\":0,\"kvWrites\":0,\"revision\":[1,1],\"K\":[3,3],\"history\":[1,1]}\n\nstdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration\nW02.01 protected-boundary observation {\"mode\":\"enforced\",\"state\":\"revoked\",\"statuses\":{\"me\":401,\"patch\":401},\"accountReads\":0,\"kvWrites\":0,\"revision\":[1,1],\"K\":[3,3],\"history\":[1,1]}\n\n ✓ src/middleware/auth.refresh-boundary.test.ts  (30 tests) 366ms\n ✓ src/routes/auth.test.ts  (6 tests) 389ms\n ✓ src/middleware/edgeAccess.test.ts  (9 tests) 22ms\n ✓ src/routes/content.test.ts  (5 tests) 22ms\n ✓ src/auth/accounts.test.ts  (5 tests) 114ms\n\n Test Files  6 passed (6)\n      Tests  75 passed (75)\n   Start at  20:42:47\n   Duration  35.29s (transform 1.81s, setup 0ms, collect 12.13s, tests 993ms, environment 1ms, prepare 16.69s)\n\n"
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --composite false --incremental false",
+      "chunk_id": "19e5c8",
+      "wall_time_seconds": 0.000001369,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  ],
+  "limitations": "Focused Node integration and regression only; initial preliminary45-test run not used as frozen-artifact evidence. No runtime/deployed/customer/SLO assertion. W01.02 actual-default-export workerd revalidation remains a subsequent episode."
+}

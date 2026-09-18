@@ -1,0 +1,34 @@
+{
+  "currentSource": {
+    "auth": "9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01",
+    "fixture": "307efa307c42d2a3904fc0818ae9afaa95224bcd5c882a8a3f71486a491a77e3"
+  },
+  "observedAt": "2026-09-07T03:35:03.092Z",
+  "checks": [
+    {
+      "command": "git diff --check",
+      "chunk_id": "de1b6e",
+      "wall_time_seconds": 0.95289233,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "command": "git status --short",
+      "chunk_id": "a09861",
+      "wall_time_seconds": 0.883200737,
+      "exit_code": 0,
+      "original_token_count": 316,
+      "output": " D data/optimizely-cache.db-shm\n D data/optimizely-cache.db-wal\n M docs/api/01-rest-endpoints.md\n M docs/architecture/20-scope-truth-ledger.md\n M docs/architecture/35-audit-verification-and-source-of-truth.md\n M examples/usage-examples.js\n M public/meridian/engine.bundle.js\n M scripts/acceptance-run.mjs\n M scripts/console-operator.mjs\n M scripts/dev-token.mjs\n M scripts/holdout-proof.mjs\n M scripts/identity-proof.mjs\n M scripts/import-content.mjs\n M scripts/rehearse-storefront.sh\n M scripts/seed-coach-content.mjs\n M src/index.ts\n M src/middleware/auth.ts\n M src/middleware/edgeAccess.test.ts\n D src/routes/api.ts\n M src/routes/auth.test.ts\n M src/routes/auth.ts\n M src/routes/content.test.ts\n M src/routes/health.ts\n M src/routes/identity.test.ts\n M tsconfig.json\n?? AGENTS.md\n?? docs/Affinity-Outcome-Learning-Design.html\n?? docs/architecture/34-independent-adversarial-audit.md\n?? docs/architecture/35-reconciliation-evidence/\n?? docs/architecture/36-remediation-governance-and-execution.md\n?? docs/remediation/\n?? scripts/lib/\n?? scripts/remediation/\n?? src/auth/signing-config.boundary.test.ts\n?? src/auth/signingConfig.mjs\n?? src/index.api-boundary.test.ts\n?? src/middleware/auth.claims-boundary.test.ts\n?? src/middleware/auth.refresh-boundary.test.ts\n"
+    },
+    {
+      "command": "Read exact HEAD and canonical audit SHA256",
+      "chunk_id": "d714d5",
+      "wall_time_seconds": 0.000002899,
+      "exit_code": 0,
+      "original_token_count": 42,
+      "output": "{\"at\":\"2026-09-07T03:35:03.092Z\",\"head\":\"e49aef83c9a9843dd21479f1b08d53e7709fac41\",\"auditSha256\":\"34b5c7d286650d879223062be352d244b176c9def6d2ebfb543a2dd7e985aedf\"}\n"
+    }
+  ],
+  "limitation": "Source-protection/diff checks only, before final independent disposition; not proof of finding/package/customer/release closure."
+}

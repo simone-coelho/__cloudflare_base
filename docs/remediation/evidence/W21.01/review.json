@@ -1,0 +1,122 @@
+{
+  "task_id": "W21.01",
+  "actor": {
+    "agent": "/root/w2101_review",
+    "actor_id": "w2101-reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "role": "independent_reviewer"
+  },
+  "reviewed_at": "2026-09-09T02:34:20.640Z",
+  "verdict": "pass",
+  "scope": "Bounded local G0 withdrawal of unsupported report inference; C1-C3 only. Independent run from implementer /root/w2101_worker.",
+  "artifact": {
+    "path": "docs/remediation/evidence/W21.01/artifact.json",
+    "sha256": "84fa162b6d7478f149314e0aa02c408ab9d537261e1f5f9ceaa7d4ab195ad369",
+    "digest": "10efd5bee060b93d7d3ebb7a3d748e3de3338456bb3ded1cdf0c3e68b5a1aa74",
+    "contract_digest": "2f26e7a5f476d71bbb9e2c745fce1d6a7dc2f6751d624962be37e066cf0769dc",
+    "frozen_at": "2026-09-09T02:30:16.514Z"
+  },
+  "worker_proof": {
+    "path": "docs/remediation/evidence/W21.01/worker.json",
+    "sha256": "e5372b9971d3b33f47e5bc68c02402bd365011d1d483c88f124365d10251e1e3",
+    "reviewed": "All 12 admission patches, all five complete check records including stdout/stderr/timestamps/exits, implementation notes, three preparation issues and limitations."
+  },
+  "identity": {
+    "initial_at": "2026-09-09T02:31:35.243Z",
+    "final_at": "2026-09-09T02:34:20.640Z",
+    "pins_verified": 307,
+    "pin_mismatches": [],
+    "manifest_and_contract_digests_verified": true,
+    "patches_verified": 12,
+    "method": "Independently reversed each recorded patch in memory from current source, matched admission before SHA-256, reapplied and matched exact current bytes and after SHA-256; no source writes.",
+    "protected_baseline_pins_verified": 286,
+    "protected_baseline_changes": [],
+    "preliminary_reuse": "Final report.ts, hourly.ts, window.ts and decisions.ts hashes equal independently inspected preliminary bytes. Final modern and legacy UI source and all fixture deltas inspected. Modern coverage wording correction verified.",
+    "manifest_coverage": "All 12 changed source/fixture files, actual JSDOM HTML and scripts, report/route dependencies and reused source/toolchain/configuration inventory are pinned; installed dependency provenance remains bounded by the declared manifest."
+  },
+  "criteria": [
+    {
+      "id": "W21.01-C1",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "evidence": "Independent exact K1: 33/33. Actual raw buildReport and buildHour/reportFromHours retain 3 credits for 1 decision; normalized actual stored-day GET preserves raw counts and null intensity at zero denominator, strips historical top-level/row/comparison inference and leaves backing object unchanged with no put/delete/list. Window pools counts, removes inferred comparisons, carries known missing/truncated/hour warnings, and actual route rejects malformed/nonexistent/reversed/over-92-day ranges before storage I/O. Exactly 92 days remains allowed. Source contains no live report import of measure/holdout."
+    },
+    {
+      "id": "W21.01-C2",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "evidence": "Inspected both actual UI scripts, fixture assertions and complete worker K2 proof: 2 selected cases passed, 32 unrelated cases deliberately filtered. Old inference payloads and misleading saved rates are present in fixtures; both UIs derive 3 credits/1 decision and em dash at zero, suppress old words/targets/intervals, expose incomplete coverage, remove confidence controls/query, and distinguish the ranking multiplier from business lift. Worker compiler, scoped ESLint and whitespace exit 0; four lint warnings are unchanged fixture code. No rerun of K2/compiler/lint/whitespace."
+    },
+    {
+      "id": "W21.01-C3",
+      "verdict": "pass",
+      "claim": "source_confirmed",
+      "evidence": "Canonical W21/F07/F25/N09 and linked customer measurement requirements, admitted C1-C3 contract, actual frozen source, all admission patches/pins and full worker proof independently reviewed. Exact K1 ran once. W06 hourly seenAt/seenIncomplete/catch-up safeguards, prior day incomplete-coverage wording and shopper/consent snapshot changes remain preserved. Full package/science/customer residuals are retained below."
+    }
+  ],
+  "checks": [
+    {
+      "id": "W21.01-K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/learn/holdoutArms.test.ts src/measure/window.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-09T02:31:46.149Z",
+      "ended_at": "2026-09-09T02:33:47.474Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (16 tests) 59ms\n ✓ src/learn/holdoutArms.test.ts  (6 tests) 128ms\n ✓ src/learn/report.test.ts  (6 tests) 59ms\n ✓ src/measure/window.test.ts  (5 tests) 18ms\n\n Test Files  4 passed (4)\n      Tests  33 passed (33)\n   Start at  22:31:52\n   Duration  114.17s (transform 12.16s, setup 0ms, collect 33.40s, tests 264ms, environment 1ms, prepare 58.50s)\n\n",
+      "stderr": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n"
+    }
+  ],
+  "inspected_worker_checks": [
+    {
+      "id": "W21.01-K1",
+      "exit_code": 0,
+      "result": "33/33 tests; independently rerun once above."
+    },
+    {
+      "id": "W21.01-K2",
+      "exit_code": 0,
+      "result": "2/2 selected; 32 unrelated filtered; full evidence inspected, not rerun."
+    },
+    {
+      "id": "compiler",
+      "exit_code": 0,
+      "result": "Empty stdout/stderr inspected, not rerun."
+    },
+    {
+      "id": "scoped_lint",
+      "exit_code": 0,
+      "result": "0 errors, 4 unchanged existing fixture warnings; full output inspected, not rerun."
+    },
+    {
+      "id": "scoped_whitespace",
+      "exit_code": 0,
+      "result": "Empty stdout/stderr inspected, not rerun."
+    }
+  ],
+  "findings": [],
+  "resolved_preliminary_observation": "Modern window warning originally said source truncated although counts.truncated also represents conservative erasure visitor uncertainty. Final source says source coverage incomplete; worker K2 asserts the corrected wording.",
+  "preparation_issues": [
+    {
+      "description": "Initial read-only evidence-structure command had an extra closing brace; Node parsing failed before execution. Corrected using the following heredoc; no file or test was touched.",
+      "exit_code": 1,
+      "error": "SyntaxError: Unexpected token '}'",
+      "timestamps": "Exact command start/end not retained; no times invented."
+    },
+    {
+      "description": "Some large read-only source/patch outputs were truncated; selected sections were subsequently read separately to complete review. No required check failed or was rerun."
+    }
+  ],
+  "limitations": [
+    "Local Node/Vitest synthetic route/R2/ledger and worker JSDOM evidence only. Independent K1 wall duration includes module loading and preparation; it is not request CPU, latency, throughput or deployed-runtime evidence.",
+    "Full W21 permanent enrollment/salt/identity/consent eligibility, actual production control, all eligible business outcomes/provenance, CVR/RPV/returns units, allocation/windows/maturity/stopping and cluster-aware inference remain open.",
+    "Known incomplete flags do not establish experimental coverage, maturity or policy compatibility. W30 reconstruction and full W31 summaries/six-month or biannual reporting remain open; over-92 refusal is containment only.",
+    "W33 overlay writes and historical canonical repair remain unchanged. Stored historical inference is retained on disk and suppressed by current GET; legacy math helper remains unconsumed. No cloud/data rewrite occurred.",
+    "Full W21/F07/F25/N09, customer/contractual/scientific acceptance, relevance/latency/business lift, finding/gate/release approval remain open. Lead disposition is separate."
+  ],
+  "handoff": {
+    "next_action": "Lead inspect and register this review, record bounded task disposition and durable checkpoint; no broader acceptance implied.",
+    "pending_processes": [],
+    "writes": "Only docs/remediation/evidence/W21.01/review.json."
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "task_id": "W09.07",
+  "at": "2026-09-14T19:34:02.772Z",
+  "plan": {
+    "path": "docs/remediation/design/W09.07/plan.md",
+    "sha256": "cb9518a99ffd5d631672e41ac74b56c93537ab7b1b8c06238b66daf8fa835619"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W09.07/baseline.json",
+    "sha256": "f996480ddb1cfdb2471c46f0df824f0bbaf900392174d7299bca8c202e9cdd85"
+  },
+  "contract_digest": "6d5905c73b4435252feb0b4fafdf09605f952403e4ea5aeea8ce7eb56afd48c6",
+  "independent_preflight": {
+    "actor_id": "w0907-reviewer",
+    "run_id": "/root/w0907_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "cb9518a99ffd5d631672e41ac74b56c93537ab7b1b8c06238b66daf8fa835619",
+    "scope": "Exact plan only; no implementation acceptance."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-14T19:34:02.772Z",
+    "plan_sha256": "cb9518a99ffd5d631672e41ac74b56c93537ab7b1b8c06238b66daf8fa835619",
+    "rationale": "Root completed full parent/linked scope, existing managed/consumer/erasure source and selected fixture reads; independent Astra/xhigh exact-plan PASS cb9518a9. Coherent per-delivery isolation closes a documented residual without per-message objects, new schema/state or activation. Fixed10 and scoped static only."
+  },
+  "fixed_checks": 10,
+  "limitations": "Bounded managed per-delivery completion and disjoint delivery/key failure isolation, plus managed/legacy cohort independence only. Shared-key failures may conservatively retry co-resident deliveries; no immutable claim reassignment or per-message object fanout. Legacy partial-write duplication, pre-capture process loss, logical-event/online/export reconciliation, quarantine/outbox, activation/retention/claim lifecycle, atomic erasure fence/ABA/journal/manifest races, historical/fold recovery and full W09/W22/customer/SLO/release scope remain open. Producer flag default-off, existing persisted schema/identifiers and native queue mapping unchanged. D06/D08/W24 boundaries remain. No commit/push/install/emitted build/provision/deploy/cloud/credentials/customer-data/destructive operations."
+}

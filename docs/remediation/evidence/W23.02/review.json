@@ -1,0 +1,285 @@
+{
+  "task_id": "W23.02",
+  "actor_id": "w2205-reviewer",
+  "run_id": "/root/late_hour_next_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15 17:28:05 UTC",
+  "verdict": "pass",
+  "claim": "local_runtime",
+  "verification_journal": 1836,
+  "artifact_digest": "454bbfa2ebc607f9cf2c2fc66b60478a6c8390171203a1bf53a2d3e6198db341",
+  "contract_digest": "3ef5aefd63ef099ce8a41b227df9db843a596e74bd2ee348295d4e530a669a07",
+  "references": {
+    "canonical_pin_map": {
+      "path": "docs/remediation/evidence/W23.02/worker.json",
+      "sha256": "054d9a6bff2e0b65784dfa7f0d54993e9e5d3c6fb836d0869d4e520c041030c8",
+      "pointer": "canonical_source.pins",
+      "count": 77,
+      "digest": "cc3600188ddf809d08f7c2088f1cf971adf13d667dac48f53b72fa3ffee4f757"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/tracker.json",
+      "selector": "tasks[id=W23.02].artifact",
+      "count": 29,
+      "digest": "454bbfa2ebc607f9cf2c2fc66b60478a6c8390171203a1bf53a2d3e6198db341"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W23.02/baseline.json",
+      "sha256": "c4a30de5cdcdc07a79347cdfb347b190887966e3d157630956279797b58e3192",
+      "pointers": [
+        "owned_before",
+        "protected",
+        "accepted_dependencies"
+      ]
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W23.02/source-freeze.json",
+      "sha256": "2f9d15fb94e09c305c63f3edf92f43aedbf2d14a44ca1f38066ff3328fc0fa03"
+    },
+    "deltas": {
+      "path": "docs/remediation/evidence/W23.02/source-deltas.json",
+      "sha256": "559052fff42f8ed68ea581ad74195e354acf420161e3befddd419566db53a8c9"
+    },
+    "digest_algorithm": "Snapshot digests: SHA-256 of JSON.stringify(path.localeCompare-sorted {path,sha256} array). Artifact and contract digests independently recomputed using existing board.mjs definitions."
+  },
+  "pin_snapshots": [
+    {
+      "capture": "33a5a0",
+      "exit_code": 0,
+      "at": "2026-09-15T17:26:22.481Z",
+      "artifact_digest": "454bbfa2ebc607f9cf2c2fc66b60478a6c8390171203a1bf53a2d3e6198db341",
+      "contract_digest": "3ef5aefd63ef099ce8a41b227df9db843a596e74bd2ee348295d4e530a669a07",
+      "worker_sha256": "054d9a6bff2e0b65784dfa7f0d54993e9e5d3c6fb836d0869d4e520c041030c8",
+      "source_freeze_sha256": "2f9d15fb94e09c305c63f3edf92f43aedbf2d14a44ca1f38066ff3328fc0fa03",
+      "delta_sha256": "559052fff42f8ed68ea581ad74195e354acf420161e3befddd419566db53a8c9",
+      "verified": {
+        "artifact": {
+          "count": 29,
+          "digest": "4dae8039b79b0a7f3ec385f5428b0969ed33c81467ceb547a690b77ab0dfe168",
+          "mismatches": []
+        },
+        "protected": {
+          "count": 20,
+          "digest": "907b8524aca05755985db656e1905aa7ea8886c0c97e5a97db77c54e4dcf29e1",
+          "mismatches": []
+        },
+        "worker_canonical": {
+          "count": 77,
+          "digest": "cc3600188ddf809d08f7c2088f1cf971adf13d667dac48f53b72fa3ffee4f757",
+          "mismatches": []
+        },
+        "W09.08": {
+          "count": 33,
+          "digest": "d46214fc6d4111e6b571a49d4752315068bf93a14b58be547f40fb2b6e375fae",
+          "mismatches": []
+        },
+        "W09.08_review": {
+          "count": 1,
+          "digest": "2a539ebaf308b0d9fdd993c3911757f838ddf6faabc18e735e723b35b5579138",
+          "mismatches": []
+        },
+        "W22.06": {
+          "count": 44,
+          "digest": "3b76fe82dfc56a0bb75bb7096fd26d9f0157018fe2b43050cbea464b95865363",
+          "mismatches": []
+        },
+        "W22.06_review": {
+          "count": 1,
+          "digest": "a61c4de8db9656e5b840efe67b5408452ea2a847af0cc8a5a6e9a96050b63848",
+          "mismatches": []
+        }
+      },
+      "full_baseline_relative_deltas_match": true,
+      "worker_capture_checks": [
+        {
+          "attempt": "runtime",
+          "hash": "6ab33a9c0f262ebf214b455e55fc00e0c56d9c8070387d84f455fe32d8d696a0",
+          "bytes": 497,
+          "matches": true,
+          "drained": true,
+          "same_bytes": true
+        },
+        {
+          "attempt": "static",
+          "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0,
+          "matches": true,
+          "drained": true,
+          "same_bytes": true
+        }
+      ]
+    },
+    {
+      "capture": "67ba54",
+      "exit_code": 0,
+      "at": "2026-09-15T17:26:57.064Z",
+      "artifact_digest": "454bbfa2ebc607f9cf2c2fc66b60478a6c8390171203a1bf53a2d3e6198db341",
+      "contract_digest": "3ef5aefd63ef099ce8a41b227df9db843a596e74bd2ee348295d4e530a669a07",
+      "worker_sha256": "054d9a6bff2e0b65784dfa7f0d54993e9e5d3c6fb836d0869d4e520c041030c8",
+      "source_freeze_sha256": "2f9d15fb94e09c305c63f3edf92f43aedbf2d14a44ca1f38066ff3328fc0fa03",
+      "delta_sha256": "559052fff42f8ed68ea581ad74195e354acf420161e3befddd419566db53a8c9",
+      "verified": {
+        "artifact": {
+          "count": 29,
+          "digest": "4dae8039b79b0a7f3ec385f5428b0969ed33c81467ceb547a690b77ab0dfe168",
+          "mismatches": []
+        },
+        "protected": {
+          "count": 20,
+          "digest": "907b8524aca05755985db656e1905aa7ea8886c0c97e5a97db77c54e4dcf29e1",
+          "mismatches": []
+        },
+        "worker_canonical": {
+          "count": 77,
+          "digest": "cc3600188ddf809d08f7c2088f1cf971adf13d667dac48f53b72fa3ffee4f757",
+          "mismatches": []
+        },
+        "W09.08": {
+          "count": 33,
+          "digest": "d46214fc6d4111e6b571a49d4752315068bf93a14b58be547f40fb2b6e375fae",
+          "mismatches": []
+        },
+        "W09.08_review": {
+          "count": 1,
+          "digest": "2a539ebaf308b0d9fdd993c3911757f838ddf6faabc18e735e723b35b5579138",
+          "mismatches": []
+        },
+        "W22.06": {
+          "count": 44,
+          "digest": "3b76fe82dfc56a0bb75bb7096fd26d9f0157018fe2b43050cbea464b95865363",
+          "mismatches": []
+        },
+        "W22.06_review": {
+          "count": 1,
+          "digest": "a61c4de8db9656e5b840efe67b5408452ea2a847af0cc8a5a6e9a96050b63848",
+          "mismatches": []
+        }
+      },
+      "full_baseline_relative_deltas_match": true,
+      "worker_capture_checks": [
+        {
+          "attempt": "runtime",
+          "hash": "6ab33a9c0f262ebf214b455e55fc00e0c56d9c8070387d84f455fe32d8d696a0",
+          "bytes": 497,
+          "matches": true,
+          "drained": true,
+          "same_bytes": true
+        },
+        {
+          "attempt": "static",
+          "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0,
+          "matches": true,
+          "drained": true,
+          "same_bytes": true
+        }
+      ]
+    }
+  ],
+  "source_review": {
+    "captures": [
+      "1b577f",
+      "15a5fb",
+      "4c06c7",
+      "33a5a0"
+    ],
+    "exact_plan_sha256": "7701d5e67cadd7efb2cbe396ae395d3bdb3ebe470efefb51c08a72b5add1af07",
+    "result": "Complete three actual baseline-relative deltas and C1-C3 contract read independently, reusing prospective requirement/source context. Recorded patches applied to gzip originals in memory match all final bytes. Existing four controls remain unchanged; fixture changes are vi import and exactly two grouped additions.",
+    "findings": []
+  },
+  "independent_runtime": {
+    "check_id": "W23.02-K3",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/regionTrend.test.ts -t 'accumulates, decays|caps values per dimension|ingests frames, arms|W37[.]02|W23[.]02' --maxWorkers=1 --minWorkers=1",
+    "cwd": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base",
+    "initial": {
+      "chunk_id": "fbfea9",
+      "wall_time_seconds": 1.00098452,
+      "session_id": 18448,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "8f5433",
+        "wall_time_seconds": 0.000001817,
+        "exit_code": 0,
+        "original_token_count": 125,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/reflex/regionTrend.test.ts  (9 tests | 3 skipped) 16ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 3 skipped (9)\n   Start at  13:26:33\n   Duration  2.96s (transform 199ms, setup 0ms, collect 347ms, tests 16ms, environment 0ms, prepare 1.75s)\n\n"
+      }
+    ],
+    "exit_code": 0,
+    "session_drained": true,
+    "result": "pass",
+    "passed": 6,
+    "failed": 0,
+    "deliberately_unselected": 3,
+    "total": 9,
+    "test_files": 1,
+    "runner_seconds": 2.96,
+    "test_seconds": 0.016,
+    "scope": "Literal admitted selection executed once on frozen bytes; no independent static, board, host, native, hourly or broader suite."
+  },
+  "static_reuse": {
+    "worker_reference": "references.canonical_pin_map",
+    "attempt_id": "static",
+    "result": "pass",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/regionTrend.ts src/durable-objects/RegionTrend.ts src/reflex/regionTrend.test.ts --max-warnings 0 && git diff --check -- src/reflex/regionTrend.ts src/durable-objects/RegionTrend.ts src/reflex/regionTrend.test.ts",
+    "before": {
+      "capture": "322d95",
+      "at": "2026-09-15T17:20:10.120Z"
+    },
+    "captures": [
+      "a25774",
+      "6d03d1",
+      "164cb0",
+      "067306"
+    ],
+    "session_id": 8991,
+    "exit_code": 0,
+    "session_drained": true,
+    "after": {
+      "capture": "d07c0e",
+      "at": "2026-09-15T17:21:40.229Z"
+    },
+    "compiler_exit": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace_exit": 0,
+    "source_digest": "cc3600188ddf809d08f7c2088f1cf971adf13d667dac48f53b72fa3ffee4f757",
+    "basis": "Read full command/raw initial/polls/final drained0. Empty combined static output hash verified; && chain completed all checks. Worker before/after77-pin digests match independent before/after snapshots. No static rerun."
+  },
+  "exceptions": {
+    "required_check_failures": [],
+    "source_rework": false,
+    "worker_inspection": "Initial empty diff-inspection capture4b1f1b had no retained child status/stderr and is explicitly not credited. Worker corrected read-only diff captureeaedb0; independent complete actual deltas15a5fb plus in-memory original-to-final verification establish source review. No added acceptance checks.",
+    "runtime_notice": "Existing Vite CJS Node API deprecation warning retained in raw output; not a failed check or suppressed diagnostic."
+  },
+  "criteria": {
+    "C1": {
+      "result": "pass",
+      "finding": "Existing mergeEntries merges retained mass at max(previous.t,incoming.ts), preserving precision and nondecreasing entry time. Common updatedAt evaluates cap candidates consistently. Independent weighted exponential expectations cover all clean fixture permutations, equal times and epoch values; separate cap case distinguishes the old incorrect eviction. Counts,32-value cap,epsilon,generation,rounding,shares,fan-in and publication policy unchanged."
+    },
+    "C2": {
+      "result": "pass",
+      "finding": "Existing isEventTimestamp guards reducer before mutation and object ingress before scope/storage/alarm effects. Invalid direct calls retain exact state; malformed object timestamps return safe400 with zero sink effects. Numeric0 and maximum represented Date survive unchanged with no now comparison. Actual reversed ingress persists correct raw scores, recreates from independent stored bytes and publishes exact rounded snapshots without mutating raw state."
+    },
+    "C3": {
+      "result": "pass",
+      "finding": "Four existing controls plus two grouped additions pass independently; same-byte worker no-emit compiler/scoped lint0/0/whitespace reused. All29artifact/20protected and accepted W09.08 all33pins+review/W22.06 all44pins+review match before/after. No broader suite, scope or policy expansion."
+    }
+  },
+  "limitations": [
+    "Forward arithmetic for valid current-generation retained regional entries only. Cap-evicted/already-corrupted history and old snapshots are not reconstructed; no reset, idempotency or full population-history assurance.",
+    "No change to browser timestamp trust, receipt-time live personalization, visits, ODP activity, geolocation provenance, retention, erasure, lifecycle or experiment policy; no new state/resources or age/future cutoff.",
+    "Local synthetic correctness checks, not deployed regional workload, throughput, customer or SLO evidence.",
+    "No source/governance writes, subdelegation or external operations. Only this review artifact written; lead owns acceptance and remaining W23/F18/W22/W30/customer/release decisions."
+  ],
+  "disposition": {
+    "status": "independent_review_passed",
+    "running_commands": [],
+    "source_stopped": true,
+    "evidence_stopped": true,
+    "lead_acceptance": "pending"
+  }
+}

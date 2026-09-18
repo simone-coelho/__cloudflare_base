@@ -1,0 +1,24 @@
+{
+  "task_id": "W06.12",
+  "at": "2026-09-17T12:07:02.664Z",
+  "before": "9d974a3a75aba01dc4d637672aeee0471c0b66a2591a1a53b0f04b611511b67a",
+  "after": "817668d1f46cab8dfab885e0bca56e7d9d57901a1bd9f162ad0606a367f6118b",
+  "contract_digest": "817668d1f46cab8dfab885e0bca56e7d9d57901a1bd9f162ad0606a367f6118b",
+  "previous_tracker_sha256": "1c610802dc798339915a7af456b8ecc6bfc38d2aa17ba0a1edadb8f91d955a25",
+  "supersedes": {
+    "path": "docs/remediation/evidence/W06.12/admission-compiler-boundary.json",
+    "sha256": "a15cb0923cc63ecaeb2e7e17c837e3a979a7b0b21fd0bf43c4f25b20078fdf21"
+  },
+  "scope": "Reconcile only W06.12-C2 with retained W06.03-C2. Original full W06,47 outputs, all checks/owners and live limits unchanged.",
+  "baseline": "K1.1 retained listed-disappearance positive fails under new blanket refusal. Actual W06.03-C2 requires honest missing-object checkpoints. Transient untested source exception was restored before tests and remains held; no passing artifact includes it.",
+  "change": "Bounded CAS rewrite recovery. Existing ledger rewrite create/resume/checkpoint/anchor/counter/finalization uses exact journal identity and CAS, not stale unconditional replacement/deletion. Preserve per-invocation object caps within dense days, exact before/after ambiguity recovery, once-only credited counters, tenant/subject/cutoff monotonicity, managed empty-object provenance/claims and retained active tombstones. Missing controls, conflicting state and absent managed/unknown-provenance keys fail closed. Preserve W06.03 honest listed-absence progress only for a positively identified ordinary legacy raw key: exact tenant/day/hour/stream and valid timestamp range with a non-managed batch suffix, definite get===null, no saved intent, validated current journal/anchors and CAS, zero deletion/removal credit, and retained monotonic owner barriers. Undefined/read errors and saved-intent exact before/after recovery are unchanged; absence is not claimed as our deletion.",
+  "independent_preflight": {
+    "actor_id": "w0612-reviewer",
+    "run_id": "/root/w01_reviewer",
+    "result": "Source-only safety review supports narrow definite-null known-legacy/no-intent zero-credit CAS checkpoint. Corrects earlier overly broad dismissal of retained oracle; managed/unknown/control/error and saved-intent safeguards remain strict."
+  },
+  "checks": "Preserve original mid-day failure/listed-disappearance zero-credit oracle. Add only discriminating null-versus-error/undefined, managed/unknown and CAS conflict assertions within admitted erasure groups. Same K1-K6; final frozen independent review required.",
+  "dependencies": "Reuse current approved retention choice, original admission and compiler amendment; no new customer or historical-data authority.",
+  "rollback": "Inverse only worker task delta against retained dirty baseline; preserve prior implementation, oracles, grants, barriers and necessary recovery records.",
+  "authority": "Existing local ordered mandate; all other approved W06 work continues. Exception hunk held until valid board checkpoint and lead GO."
+}

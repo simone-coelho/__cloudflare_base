@@ -1,0 +1,114 @@
+{
+  "task_id": "W08.04",
+  "record_kind": "independent_frozen_artifact_review",
+  "verdict": "pass",
+  "at": "2026-09-10T22:40:36Z",
+  "actor": {
+    "id": "w0804-reviewer",
+    "run_id": "/root/w0804_review",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "independence": "Separate from /root/w0804_worker; only this review file written; no implementation/governance edits or subdelegation."
+  },
+  "artifact": {
+    "path": "docs/remediation/evidence/W08.04/artifact.json",
+    "sha256": "0b666c7e06602f68f97eca4476ec54cfa7cd64884ff92f87f616b4d6a4d594b5",
+    "digest": "8242bc1a57c43def04c5733a62e529ad7ff215299556d0f90c647a970ee8b17e",
+    "source_sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+    "source_stopped_at": "2026-09-10T22:36:12Z",
+    "source_frozen_at": "2026-09-10T22:37:52Z"
+  },
+  "basis": {
+    "contract_digest": "fdad1b6c528d6a9e281897aff6852bbc687aa494db9252df53df7cf47cb478b4",
+    "plan_sha256": "6313a1f777084bcd366b3f8a334b8a1fd47559b3a47b3b714e5b7b51efe77f8d",
+    "baseline_sha256": "f5bd5b7a1ed8b07f216a00c6b4fb3afcd94cecb6f99db6a231cf17a40808f9ff",
+    "reads": "AGENTS/README/complete doc36 and checkpoint; full canonical W08 and linked canonical findings/requirements, complete F09/F10 reports; accepted W08.03 actual source/plan/worker/review/acceptance; installed npm run/argument/escaping source; admitted W08.04 full task/plan/baseline and frozen artifact/forward-reverse deltas/full worker evidence.",
+    "board_assurance_reused": "Root entry87088/80804 VALID820 and admission41303 VALID835 exit0/drained before GO. Reviewer did not rerun board. Root owns global worktree preservation and append-only governance assurance."
+  },
+  "criteria": [
+    {
+      "id": "W08.04-C1",
+      "verdict": "pass",
+      "evidence": "Actual before/final package source and retained one-line forward/reverse deltas inspected. Exact K1 independently proves whole-file replacement to bash scripts/deploy.sh, valid JSON, no hardcoded target/direct build/CLI chain and no predeploy/postdeploy hooks. Pre-existing lint/CI bytes are retained."
+    },
+    {
+      "id": "W08.04-C2",
+      "verdict": "pass",
+      "evidence": "Inspected npm run.js forwards remaining main-event args, run-script selects the literal command, make-spawn-args retains args and package cwd, and promise-spawn escapes each POSIX-shell token, including empty/whitespace/metacharacters. Standard npm run deploy -- default|staging|production reaches unchanged accepted guard. K1 verifies nine protected pins and six observed npm-source hashes; all remaining package/dependency bytes and lockfile are unchanged. No npm/guard/deploy execution."
+    },
+    {
+      "id": "W08.04-C3",
+      "verdict": "pass",
+      "evidence": "Independently recomputed artifact/contract/baseline identity, verified all 15 frozen files, read complete primary outputs and verified both command/output hashes, statuses and drains. Independent exact K1 ran once; scoped whitespace reused. Historical package-overlap qualifications inspected; limitations retained."
+    }
+  ],
+  "verification": {
+    "metadata_chunk_id": "f43704",
+    "exit_status": 0,
+    "drained": true,
+    "artifact_pins_verified": 15,
+    "protected_inputs_verified": 9,
+    "observed_npm_source_pins_verified": 6,
+    "completeness": "Manifest includes the sole changed source, selected unchanged dependencies/tools and worker/plan/baseline/freeze/delta records. Six installed npm paths are transitively pinned by baseline and checked by K1; this is a bounded source observation, not exhaustive runtime/toolchain attestation. Root's in-memory bidirectional patch reconstruction is reused, not claimed as independently executed."
+  },
+  "checks": [
+    {
+      "id": "W08.04-K1",
+      "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport assert from 'node:assert/strict';\nimport { gunzipSync } from 'node:zlib';\nimport { createHash } from 'node:crypto';\nconst hash = value => createHash('sha256').update(value).digest('hex');\nconst baseline = JSON.parse(fs.readFileSync('docs/remediation/design/W08.04/baseline.json', 'utf8'));\nconst before = gunzipSync(Buffer.from(baseline.owned[0].content_gzip_base64, 'base64')).toString('utf8');\nconst oldEntry = '\"deploy\": \"npm run build:meridian && npm run build:sdk && wrangler deploy\"';\nassert.equal(before.split(oldEntry).length, 2);\nconst source = fs.readFileSync('package.json', 'utf8');\nassert.equal(source, before.replace(oldEntry, '\"deploy\": \"bash scripts/deploy.sh\"'));\nconst pkg = JSON.parse(source);\nassert.equal(pkg.scripts.deploy, 'bash scripts/deploy.sh');\nassert.equal(Object.hasOwn(pkg.scripts, 'predeploy'), false);\nassert.equal(Object.hasOwn(pkg.scripts, 'postdeploy'), false);\nfor (const pin of baseline.pins.filter(p => p.path !== 'package.json')) {\n  assert.equal(hash(fs.readFileSync(pin.path)), pin.sha256, pin.path);\n}\nfor (const pin of baseline.npm_source_inspection.files) {\n  assert.equal(hash(fs.readFileSync(pin.path)), pin.sha256, 'inspected npm source unchanged');\n}\nconsole.log('PASS: exact one-line deploy delegation; valid JSON; no pre/post deploy hooks; unchanged guard and protected/tool source pins. Source only: npm and deployment body never executed.');\nNODE",
+      "started_at": "2026-09-10T22:39:18Z",
+      "ended_at": "2026-09-10T22:39:18Z",
+      "chunk_id": "57c657",
+      "exit_status": 0,
+      "drained": true,
+      "session_id": null,
+      "wall_time_seconds": 0.214334572,
+      "full_output": "PASS: exact one-line deploy delegation; valid JSON; no pre/post deploy hooks; unchanged guard and protected/tool source pins. Source only: npm and deployment body never executed.\n",
+      "command_sha256": "e53244514b660a7b70e7a296b427e791d5752495a7fca50e192012a290c5011f",
+      "output_sha256": "0acf8a8bf974cb0a44013df86534f3dbbf691ff9830906f61b3c5a7ed409c5b6",
+      "execution_count": 1,
+      "result": "pass",
+      "runtime": "Installed Node source/JSON/hash assertions only; no child CLI or deployment body."
+    }
+  ],
+  "reused_evidence": {
+    "worker": {
+      "path": "docs/remediation/evidence/W08.04/worker.json",
+      "sha256": "33c5c1ee42033eaa1dafba83529483552d6bca32cfd0a60e322ba5a1dfe440ec",
+      "primary_chunk": "a09b52",
+      "primary_exit_status": 0,
+      "primary_drained": true,
+      "command_and_output_hashes_verified": true
+    },
+    "whitespace": {
+      "id": "scoped-whitespace",
+      "command": "git diff --check -- package.json",
+      "started_at": "2026-09-10T22:36:12Z",
+      "ended_at": "2026-09-10T22:36:12Z",
+      "chunk_id": "2d41a5",
+      "exit_status": 0,
+      "drained": true,
+      "wall_time_seconds": 0.00000254,
+      "full_output": "",
+      "command_sha256": "97e7f1cbe2123e864701a9348c52abab27272b77eea727736c5427c419356c80",
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rerun": false
+    },
+    "guard": {
+      "path": "docs/remediation/evidence/W08.03/review.json",
+      "sha256": "47c5a4d1fbccdf342a3e80337475d676a9cb2f3e890c922a32b4eda65fcc556e",
+      "source_sha256": "d5f6bd176028afa02ce4da8661ec2a289d3257eed63dce9a955606cc8d74b21f",
+      "independent_check_chunk": "dbc5bf",
+      "proof": "Accepted exact guard/source/syntax and 11 invalid/3 supported isolated cases reused with current identical deploy.sh. Review full command/output hashes and status/drain checked; no guard rerun. Historical whole-artifact qualification for changed package.json remains explicit."
+    }
+  },
+  "findings": [],
+  "product_failures": [],
+  "diagnostics": "Preflight combined displays were truncated and reread in bounded chunks. Assumed npm run-script.js and not-yet-created W08.04 paths produced read-only missing-path diagnostics, resolved by discovery. No product check failure or rerun.",
+  "limitations": "Only the npm entrypoint bypass is corrected. npm/Bash startup/config/PATH/workspace/overrides and script cwd/account/resource ownership remain trusted operational assumptions; inspected POSIX argument flow is not cross-platform shell or actual npm/deployment proof. Supported tokens deliberately continue into existing checks/build/deploy under future applicable authority. Full desired-state creation/reconcile/add-brand/rotation, secret/identity continuity, migrations/artifact promotion/product-demo separation, alerts/config/registry, second-brand/rollback/restore and D01/D07/D08/customer/gate/release approvals remain open. W02.07/W08.02/W08.03 historical whole-artifact proof is qualified with acceptance history and implemented remedies preserved. No engine/relevance/latency/learning/lift change or claim.",
+  "effects": "Only review.json written. No npm/deploy/provision/seed/Wrangler/build/install/cloud/credentials/customer-data/external messages/cleanup/staging/commit/push operations.",
+  "handoff": {
+    "active_sessions": [],
+    "next_action": "Lead inspects this review, accepts or returns bounded W08.04 and owns tracker/journal/RESUME/final board checks. No further reviewer source changes or product checks planned.",
+    "rollback": "Only root-reviewed exact owned inverse package delta preserving dirty work; none executed."
+  }
+}

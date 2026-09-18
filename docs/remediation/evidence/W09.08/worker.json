@@ -1,0 +1,607 @@
+{
+  "task_id": "W09.08",
+  "actor_id": "w2206-worker",
+  "run_id": "/root/w2206_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15T16:42:09.932Z",
+  "source_go": {
+    "journal": 1823,
+    "contract_digest": "edfe2f6bf671c5fca5b95535f26c789d999c385563fa5f7fdd17a54d7dbd8ae9"
+  },
+  "references": {
+    "docs/remediation/design/W09.08/plan.md": "bf65ebc518b82bf23d12ad9e05ec9fa0e3ed4a6ce0639a026b3bbeb02bc0a2eb",
+    "docs/remediation/design/W09.08/baseline.json": "c6d1a4449bdb065f37ec4dd4ff455ca40a19539c5e03efd6bb218273b3a08bff",
+    "docs/remediation/evidence/W09.08/admission.json": "15cb94b5e7cbaf39ff80c073b9e1ede18b0b457e7a6debf1269e84b40c695b42"
+  },
+  "pre_edit_verification": {
+    "capture": "c3217e",
+    "at": "2026-09-15T16:31:27.581Z",
+    "exit_code": 0,
+    "owned_originals_matched": 2,
+    "protected_matched": 25,
+    "accepted_W22_06_pins_matched": 44,
+    "accepted_W22_06_review_matched": true,
+    "description": "Verified current and gzip-decoded original source hashes against admitted baseline before editing. Reused root entry board VALID1818 and scoped lint baseline 0 errors/0 warnings; no worker board or baseline runtime."
+  },
+  "baseline_case": "Source-confirmed: optional analytics and recovery-mode accessors could reject before receipts; queue binding acquisition escaped capability handling and managed fallback; storage acquisition was incorrectly classified as post-call unknown. No failed baseline runtime claimed.",
+  "implementation": [
+    "Both nonempty producers read recovery mode once before effects; only literal string 'true' opts in. An unreadable mode yields configuration_unavailable, prepared:false, known record notAttempted counts and zero messages. Empty decisions/null outcomes touch no bindings.",
+    "Optional analytics acquisition and scheduling failures cannot abort delivery. Queue acquisition is guarded inside sendAll, at most once after successful nonempty preflight; acquisition failure returns queue_unavailable with all planned records/messages notAttempted and zero acknowledgements/unknown.",
+    "Managed delivery retains frozen identity, original payload/time and existing canonical recovery for all undelivered messages. Missing/throwing storage acquisition reports storage_unavailable/notAttempted, while an unexpected rejection after invoking persistDeliveries remains conservatively unknown.",
+    "Exactly two grouped W09.08 cases cover both producer families, legacy/managed modes, actual queue/canonical bodies, count conservation, effect/getter counts, invalid/oversized preflight and safe diagnostics. Existing four selected controls retain packing bounds, uncertainty, frozen snapshots, default-off, convergence and tombstone checks.",
+    "Lead-approved existing packing-fixture correction separates already-emitted ranking_position bytes from the historical audit projection, asserts actual ranking_position is zero, retains original audit constants and verifies actual serialized bounds and roundtrip. No production dependency or additional test changed."
+  ],
+  "canonical_source": {
+    "pin_count": 59,
+    "pin_digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+    "hash_algorithm": "SHA-256 of JSON.stringify(path-sorted array of {path,sha256}); ordering uses path.localeCompare",
+    "pins": [
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+      },
+      {
+        "path": "docs/api/01-rest-endpoints.md",
+        "sha256": "b68d4bd9f36a605942b40919baeb5cb22a35f780cd8e93c4153d99141220d95a"
+      },
+      {
+        "path": "docs/architecture/22-outcome-learning-design.md",
+        "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+      },
+      {
+        "path": "docs/remediation/design/W22.06/baseline.json",
+        "sha256": "6c18c7d890bebb6184b7ca96255d1828f373dd12fe1e19e5a67bd2e29c731588"
+      },
+      {
+        "path": "docs/remediation/design/W22.06/plan.md",
+        "sha256": "75169999a046b99f3d70fdba012b9d1a94c38387d5cdcf6bce7f525f77db42d5"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.06/admission.json",
+        "sha256": "d3d3768cab77f3f752d30dc1ad1b321f1e4cda822c782a4a2fe578de73f1845b"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.06/review.json",
+        "sha256": "ddf64016cb4a7400624f3202ba317aea294e5e00fca4a7c410cd3b407b745e33"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.06/source-deltas.json",
+        "sha256": "46c684e5529d038548973f28908c80d3313801e230ccaec82742567e5e9ae965"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.06/source-freeze.json",
+        "sha256": "ddf88b5f81a8f13a0be8474068754d6ff90622c6c5aee66719bff65f9ef30649"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.06/worker.json",
+        "sha256": "66af1a8a2f4115891c437f66d145f5fe1f5a99eba3cf75ac30ad7b83027b169e"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+      },
+      {
+        "path": "src/auth/signingConfig.mjs",
+        "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+      },
+      {
+        "path": "src/content/consent.ts",
+        "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db"
+      },
+      {
+        "path": "src/events/actionTypes.ts",
+        "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3"
+      },
+      {
+        "path": "src/identity/consentContinuity.ts",
+        "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af"
+      },
+      {
+        "path": "src/identity/sessionCapability.ts",
+        "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "8dd867f1298f266eafbe8132aec05e456c19e86d3b58c79d8dbca7948eac92b0"
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "b161958178f76cf997210fd4c4c139671cc26b1fe87a947f6103199c8834eabf"
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc"
+      },
+      {
+        "path": "src/learn/receipts.ts",
+        "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c"
+      },
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "da430a5a8ed02dca4a9e5db3b925f2e3dbe341265defd465d2e2e71eccac4027"
+      },
+      {
+        "path": "src/ledger/consume.ts",
+        "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78"
+      },
+      {
+        "path": "src/ledger/delivery.ts",
+        "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf"
+      },
+      {
+        "path": "src/ledger/enqueue.ts",
+        "sha256": "831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9"
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "68b79fdc39420542e928be9ec73f6ff5a5ad498c564fdf4be907d64d739ea7e9"
+      },
+      {
+        "path": "src/ledger/productSort.ts",
+        "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322"
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+      },
+      {
+        "path": "src/ledger/writer.ts",
+        "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d"
+      },
+      {
+        "path": "src/middleware/edgeAccess.ts",
+        "sha256": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342"
+      },
+      {
+        "path": "src/middleware/error.ts",
+        "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da"
+      },
+      {
+        "path": "src/routes/identity.ts",
+        "sha256": "ba760b40f7939cf96f2d8ca485b3b469f34a60260745f22857e40dccafe2be9c"
+      },
+      {
+        "path": "src/routes/pixel.ts",
+        "sha256": "aec450c2f1c33d0f10a121b05d814a278631db038cb69b7f119dad9dc2cab9be"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "48e33a9bc83df2bd84d55364dc16f5922f9adef49c08ecc1bc367a178ed03292"
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b"
+      },
+      {
+        "path": "src/routes/tracking.ts",
+        "sha256": "deb10557fe584019956f500f88ea9382a441826bda9aa3e536f8bfa261643772"
+      },
+      {
+        "path": "src/routes/webhook.ts",
+        "sha256": "cd2ae7d9828119354b998a2638b63ddc5777fb9ed08b75ac11e3ef7749e540cb"
+      },
+      {
+        "path": "src/services/EventDispatcher.ts",
+        "sha256": "0ec061525195f86549e52533db06bb2d7ccda1f4629666e3d54475ab028a24b7"
+      },
+      {
+        "path": "src/services/OptimizelyService.ts",
+        "sha256": "97b7e40f98e2775e3e2b6d7caed0f32e5d0fe1c30a96d4ac5041a62dd4f01951"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "5c87e159b7ca41da139ccef931fbec82cd2013f22f35bb46d0fcec2ffa8823db"
+      },
+      {
+        "path": "src/services/telemetry.boundary.test.ts",
+        "sha256": "c8cbef1082bc82bbcb458d197a1aff738daf953f8ce6450a5c8457c702093d74"
+      },
+      {
+        "path": "src/telemetry.boundary.test.ts",
+        "sha256": "6d3e3e4cb884418d038773ce1c93674d74dabe08f625b8e62d1bec516d38a1fa"
+      },
+      {
+        "path": "src/tenancy/middleware.ts",
+        "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+      },
+      {
+        "path": "src/types/events.ts",
+        "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb"
+      },
+      {
+        "path": "src/utils/context.ts",
+        "sha256": "64969bfb7d22959c072ac2a3425861f20658a502b3590c7205b050cb96231475"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+      },
+      {
+        "path": "wrangler.toml",
+        "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923"
+      }
+    ],
+    "composition": "Unique union of two owned outputs, 25 protected baseline pins, all 44 accepted W22.06 pins and its review; duplicate paths coalesced.",
+    "verification_command": "node - digest <<'NODE'\nconst fs=require('node:fs'),c=require('node:crypto');\nconst b=JSON.parse(fs.readFileSync('docs/remediation/design/W09.08/baseline.json','utf8')),hash=bytes=>c.createHash('sha256').update(bytes).digest('hex'),pin=x=>({path:x.path,sha256:hash(fs.readFileSync(x.path))});\nconst expected=[...b.protected,...b.accepted_dependency.files,b.accepted_dependency.review];\nconst protectedMismatches=expected.filter(x=>pin(x).sha256!==x.sha256);\nconst map=[...new Map([...b.owned_before,...expected].map(x=>[x.path,pin(x)])).values()].sort((a,b)=>a.path.localeCompare(b.path));\nconsole.log(JSON.stringify({at:new Date().toISOString(),pin_count:map.length,pin_digest:hash(JSON.stringify(map)),protected_mismatches:protectedMismatches,...(process.argv[2]==='full'?{pins:map}:{}),owned:b.owned_before.map(pin)}));\nif(protectedMismatches.length)process.exitCode=1;\nNODE",
+    "source_revisions": [
+      {
+        "name": "first_runtime",
+        "pin_digest": "8914a355160cb4c582e228b2d52f8b771240d125416973716aa5ac80ac0354bc",
+        "overrides": {
+          "src/ledger/ledger.test.ts": "80d05d607909b472a86505a6205651fe17de69707bced15b8a3d04a6264f48e4"
+        }
+      },
+      {
+        "name": "packing_corrected",
+        "pin_digest": "743dd8a36a3cdeafea13df558d67f660ddccdeb49fc44868f3694c8358785ea1",
+        "overrides": {
+          "src/ledger/ledger.test.ts": "67868d05b4887bb77de7cc38f117801758e69de6b32ec025798c029547cdd831"
+        }
+      },
+      {
+        "name": "final_fixture_types_corrected",
+        "pin_digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+        "overrides": {}
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "id": "runtime",
+      "kind": "runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts -t 'enqueues a small decision set|W09[.]01 (packs|refuses)|W09[.]02 producer fallback|W09[.]08' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "c53a68",
+        "exit_code": 0,
+        "at": "2026-09-15T16:34:53.180Z",
+        "pin_count": 59,
+        "pin_digest": "8914a355160cb4c582e228b2d52f8b771240d125416973716aa5ac80ac0354bc",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "61b818",
+        "wall_time_seconds": 1.000125468,
+        "session_id": 14978,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "d053ae",
+          "wall_time_seconds": 0.000001754,
+          "exit_code": 1,
+          "original_token_count": 414,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/ledger/ledger.test.ts  (27 tests | 1 failed | 21 skipped) 135ms\n   ❯ src/ledger/ledger.test.ts > producer > W09.01 packs real decision sets by UTF-8 bytes with lossless legacy expansion, storage and receipts\n     → expected 36200 to be 36032 // Object.is equality\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/ledger/ledger.test.ts > producer > W09.01 packs real decision sets by UTF-8 bytes with lossless legacy expansion, storage and receipts\nAssertionError: expected 36200 to be 36032 // Object.is equality\n\n- Expected\n+ Received\n\n- 36032\n+ 36200\n\n ❯ src/ledger/ledger.test.ts:576:83\n    574|       const oldProjection = structuredClone(produced.records);\n    575|       for (const record of oldProjection) delete record.inputs!.replay;\n    576|       expect(size({ kind: 'ledger', type: 'decisions', records: oldPro…\n       |                                                                                   ^\n    577|       const actualBytes = size({ kind: 'ledger', type: 'decisions', re…\n    578|       const manifestBytes = size({ replay: produced.records[0]!.inputs…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed (1)\n      Tests  1 failed | 5 passed | 21 skipped (27)\n   Start at  12:34:55\n   Duration  11.60s (transform 3.50s, setup 0ms, collect 8.54s, tests 135ms, environment 0ms, prepare 1.94s)\n\n"
+        }
+      ],
+      "after": {
+        "capture": "d02a0f",
+        "exit_code": 0,
+        "at": "2026-09-15T16:35:31.423Z",
+        "pin_count": 59,
+        "pin_digest": "8914a355160cb4c582e228b2d52f8b771240d125416973716aa5ac80ac0354bc",
+        "protected_mismatches": []
+      },
+      "result": "failed_existing_packing_fixture",
+      "exit_code": 1,
+      "session_drained": true,
+      "passed": 5,
+      "failed": 1,
+      "deliberately_unselected": 21,
+      "total": 27
+    },
+    {
+      "id": "runtime2",
+      "kind": "runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts -t 'enqueues a small decision set|W09[.]01 (packs|refuses)|W09[.]02 producer fallback|W09[.]08' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "c78927",
+        "exit_code": 0,
+        "at": "2026-09-15T16:36:46.222Z",
+        "pin_count": 59,
+        "pin_digest": "743dd8a36a3cdeafea13df558d67f660ddccdeb49fc44868f3694c8358785ea1",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "18273d",
+        "wall_time_seconds": 1.001124494,
+        "session_id": 26635,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "cf3a7a",
+          "wall_time_seconds": 0.000001742,
+          "exit_code": 0,
+          "original_token_count": 392,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/ledger/ledger.test.ts > producer > W09.01 packs real decision sets by UTF-8 bytes with lossless legacy expansion, storage and receipts\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 36032,\n  manifestBytes: 487,\n  rankingBytes: 21,\n  addedBytes: 4064,\n  actualBytes: 40096,\n  messages: 1,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 135062,\n  manifestBytes: 1321,\n  rankingBytes: 21,\n  addedBytes: 40260,\n  actualBytes: 175322,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 6,\n  values: 24,\n  regional: true,\n  baselineBytes: 188672,\n  manifestBytes: 1321,\n  rankingBytes: 21,\n  addedBytes: 40260,\n  actualBytes: 228932,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 128,\n  regional: true,\n  baselineBytes: 291941,\n  manifestBytes: 487,\n  rankingBytes: 21,\n  addedBytes: 4064,\n  actualBytes: 296005,\n  messages: 3,\n  batches: 2\n}\n\n ✓ src/ledger/ledger.test.ts  (27 tests | 21 skipped) 244ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 21 skipped (27)\n   Start at  12:36:48\n   Duration  10.40s (transform 3.27s, setup 0ms, collect 7.68s, tests 244ms, environment 0ms, prepare 1.65s)\n\n"
+        }
+      ],
+      "after": {
+        "capture": "c1456a",
+        "exit_code": 0,
+        "at": "2026-09-15T16:37:15.802Z",
+        "pin_count": 59,
+        "pin_digest": "743dd8a36a3cdeafea13df558d67f660ddccdeb49fc44868f3694c8358785ea1",
+        "protected_mismatches": []
+      },
+      "result": "passed_superseded_before_fixture_type_correction",
+      "exit_code": 0,
+      "session_drained": true,
+      "passed": 6,
+      "failed": 0,
+      "deliberately_unselected": 21,
+      "total": 27
+    },
+    {
+      "id": "static",
+      "kind": "static",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/enqueue.ts src/ledger/ledger.test.ts --max-warnings 0 && git diff --check -- src/ledger/enqueue.ts src/ledger/ledger.test.ts",
+      "before": {
+        "capture": "a7c865",
+        "exit_code": 0,
+        "at": "2026-09-15T16:37:24.966Z",
+        "pin_count": 59,
+        "pin_digest": "743dd8a36a3cdeafea13df558d67f660ddccdeb49fc44868f3694c8358785ea1",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "c0e85e",
+        "wall_time_seconds": 1.000638409,
+        "session_id": 76032,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "40c3b3",
+          "wall_time_seconds": 0.000001975,
+          "exit_code": 2,
+          "original_token_count": 554,
+          "output": "src/ledger/ledger.test.ts(797,21): error TS2352: Conversion of type '{ readonly LEDGER_RECOVERY_ENABLED: never; readonly ANALYTICS: never; readonly EVENT_QUEUE: never; readonly STORAGE: never; }' to type 'Env' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.\n  Type '{ readonly LEDGER_RECOVERY_ENABLED: never; readonly ANALYTICS: never; readonly EVENT_QUEUE: never; readonly STORAGE: never; }' is missing the following properties from type 'Env': ASSETS, CACHE, SESSIONS, STATE_MANAGER, and 13 more.\nsrc/ledger/ledger.test.ts(811,21): error TS2352: Conversion of type '{ LEDGER_RECOVERY_ENABLED: string; EVENT_QUEUE: never; ANALYTICS: never; readonly STORAGE: never; }' to type 'Env' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.\n  Type '{ LEDGER_RECOVERY_ENABLED: string; EVENT_QUEUE: never; ANALYTICS: never; readonly STORAGE: never; }' is missing the following properties from type 'Env': ASSETS, CACHE, SESSIONS, STATE_MANAGER, and 13 more.\nsrc/ledger/ledger.test.ts(833,72): error TS2345: Argument of type '{ LEDGER_RECOVERY_ENABLED: string | undefined; ANALYTICS: never; STORAGE: never; readonly EVENT_QUEUE: void; }' is not assignable to parameter of type 'ProducerEnv'.\n  Type '{ LEDGER_RECOVERY_ENABLED: string | undefined; ANALYTICS: never; STORAGE: never; readonly EVENT_QUEUE: void; }' is not assignable to type 'Pick<Env, \"EVENT_QUEUE\" | \"ANALYTICS\">'.\n    Types of property 'EVENT_QUEUE' are incompatible.\n      Type 'void' is not assignable to type 'Queue<unknown>'.\nsrc/ledger/ledger.test.ts(833,112): error TS2345: Argument of type '{ LEDGER_RECOVERY_ENABLED: string | undefined; ANALYTICS: never; STORAGE: never; readonly EVENT_QUEUE: void; }' is not assignable to parameter of type 'ProducerEnv'.\n  Type '{ LEDGER_RECOVERY_ENABLED: string | undefined; ANALYTICS: never; STORAGE: never; readonly EVENT_QUEUE: void; }' is not assignable to type 'Pick<Env, \"EVENT_QUEUE\" | \"ANALYTICS\">'.\n    Types of property 'EVENT_QUEUE' are incompatible.\n      Type 'void' is not assignable to type 'Queue<unknown>'.\n"
+        }
+      ],
+      "after": {
+        "capture": "6844ce",
+        "exit_code": 0,
+        "at": "2026-09-15T16:38:32.166Z",
+        "pin_count": 59,
+        "pin_digest": "743dd8a36a3cdeafea13df558d67f660ddccdeb49fc44868f3694c8358785ea1",
+        "protected_mismatches": []
+      },
+      "result": "failed_fixture_compilation",
+      "exit_code": 2,
+      "session_drained": true,
+      "lint": "not reached",
+      "whitespace": "not reached"
+    },
+    {
+      "id": "runtime3",
+      "kind": "runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts -t 'enqueues a small decision set|W09[.]01 (packs|refuses)|W09[.]02 producer fallback|W09[.]08' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "c6ee8e",
+        "exit_code": 0,
+        "at": "2026-09-15T16:40:48.936Z",
+        "pin_count": 59,
+        "pin_digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "a1ad9d",
+        "wall_time_seconds": 1.001150151,
+        "session_id": 67222,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "14b26e",
+          "wall_time_seconds": 0.198301639,
+          "exit_code": 0,
+          "original_token_count": 392,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/ledger/ledger.test.ts > producer > W09.01 packs real decision sets by UTF-8 bytes with lossless legacy expansion, storage and receipts\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 36032,\n  manifestBytes: 487,\n  rankingBytes: 21,\n  addedBytes: 4064,\n  actualBytes: 40096,\n  messages: 1,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 135062,\n  manifestBytes: 1321,\n  rankingBytes: 21,\n  addedBytes: 40260,\n  actualBytes: 175322,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 6,\n  values: 24,\n  regional: true,\n  baselineBytes: 188672,\n  manifestBytes: 1321,\n  rankingBytes: 21,\n  addedBytes: 40260,\n  actualBytes: 228932,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 128,\n  regional: true,\n  baselineBytes: 291941,\n  manifestBytes: 487,\n  rankingBytes: 21,\n  addedBytes: 4064,\n  actualBytes: 296005,\n  messages: 3,\n  batches: 2\n}\n\n ✓ src/ledger/ledger.test.ts  (27 tests | 21 skipped) 241ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 21 skipped (27)\n   Start at  12:40:51\n   Duration  11.29s (transform 3.50s, setup 0ms, collect 8.28s, tests 241ms, environment 0ms, prepare 1.87s)\n\n"
+        }
+      ],
+      "after": {
+        "capture": "6713a7",
+        "exit_code": 0,
+        "at": "2026-09-15T16:41:08.663Z",
+        "pin_count": 59,
+        "pin_digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+        "protected_mismatches": []
+      },
+      "result": "passed_final_source",
+      "exit_code": 0,
+      "session_drained": true,
+      "passed": 6,
+      "failed": 0,
+      "deliberately_unselected": 21,
+      "total": 27
+    },
+    {
+      "id": "static2",
+      "kind": "static",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/enqueue.ts src/ledger/ledger.test.ts --max-warnings 0 && git diff --check -- src/ledger/enqueue.ts src/ledger/ledger.test.ts",
+      "before": {
+        "capture": "07ee54",
+        "exit_code": 0,
+        "at": "2026-09-15T16:41:08.980Z",
+        "pin_count": 59,
+        "pin_digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "aa5505",
+        "wall_time_seconds": 1.001229467,
+        "session_id": 36940,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "d913e5",
+          "wall_time_seconds": 5.001434281,
+          "session_id": 36940,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6d67ec",
+          "wall_time_seconds": 0.000001129,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "after": {
+        "capture": "bd33d4",
+        "exit_code": 0,
+        "at": "2026-09-15T16:42:09.932Z",
+        "pin_count": 59,
+        "pin_digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+        "protected_mismatches": []
+      },
+      "result": "passed_final_source",
+      "exit_code": 0,
+      "session_drained": true,
+      "compiler_exit": 0,
+      "scoped_lint_errors": 0,
+      "scoped_lint_warnings": 0,
+      "whitespace_exit": 0
+    }
+  ],
+  "failures_and_rework": [
+    {
+      "attempt": "runtime",
+      "capture": "d053ae",
+      "failure": "Existing packing fixture expected historical 36032 bytes but received 36200 because protected decide.ts already emits ranking_position:0, adding 21 bytes per row. Five other selected tests, including both new groups, passed.",
+      "source_confirmation": [
+        "0e3bb7",
+        "e3faa8",
+        "root:256a0d"
+      ],
+      "lead_approval": {
+        "from": "/root",
+        "authority": "Direct task message before correction",
+        "instruction": "Remove ranking_position only from historical projection, explicitly assert actual field 0 and account serialized per-row bytes separately alongside replay; derive size, preserve old audit constants and actual bounds/roundtrip. No production/dependency change or new test."
+      },
+      "correction": "Existing selected packing block only: remove replay and ranking_position from cloned historical projection, derive rankingBytes=size({ranking_position:0})-1, assert actual field 0 and include rankingBytes in delta arithmetic/log. Retained historical constants 36032/135062/188672/291941. Same six rerun; no expanded suite."
+    },
+    {
+      "attempt": "static",
+      "capture": "40c3b3",
+      "failure": "TypeScript exit 2: two TS2352 narrow object-to-full Env casts and two TS2345 arguments caused by throwing EVENT_QUEUE getter inferred as void. Chained lint and whitespace did not execute.",
+      "correction": "Within the new grouped fixture only, type helper with Parameters<typeof enqueueDecisions>[0], remove the two Env casts, annotate throwing getter :never. Root acknowledged. No production/runtime-behavior change. Same final six then exact static passed."
+    }
+  ],
+  "criteria": {
+    "C1": "Observed locally: isolated optional analytics and queue acquisition, truthful queue receipt counts, opted-in canonical fallback, frozen payload/identity, packing/preflight and uncertain-send controls.",
+    "C2": "Observed locally: one pre-effect mode read, literal-string opt-in, inert empties, safe configuration refusal, no-storage notAttempted versus post-call unknown distinction, count conservation and safe diagnostics.",
+    "C3": "Final same-byte six selected tests passed, followed by no-emit TypeScript, scoped zero-warning ESLint and owned-file whitespace. Independent review and lead acceptance pending."
+  },
+  "measurement": {
+    "final_selected_tests": 6,
+    "new_grouped_cases": 2,
+    "existing_selected_controls": 4,
+    "deliberately_unselected_tests": 21,
+    "test_files": 1,
+    "vitest_duration_seconds": 11.29,
+    "vitest_test_time_seconds": 0.241,
+    "baseline_lint_errors": 0,
+    "baseline_lint_warnings": 0,
+    "final_lint_errors": 0,
+    "final_lint_warnings": 0,
+    "scope": "Synthetic local acceptance controls, not throughput, deployed-outage or customer/SLO measurements."
+  },
+  "final_source": {
+    "at": "2026-09-15T16:42:09.932Z",
+    "verification_capture": "bd33d4",
+    "pin_digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+    "same_bytes_for_final_runtime_and_static": true,
+    "protected_mismatches": [],
+    "reference_hash_capture": "5269f6"
+  },
+  "delta_inspection": {
+    "captures": [
+      "164286",
+      "root:12d7eb",
+      "root:449fd1"
+    ],
+    "description": "Baseline-relative production and affected fixture deltas inspected; final subsequent correction only narrows fixture types as recorded above."
+  },
+  "limitations": [
+    "Local synthetic binding failures and existing producer/canonical fallback controls only; no live platform binding outages, native suite, hourly suite or broader regression suite.",
+    "Existing literal-string-true managed recovery remains default off; no activation, new queue/R2 resources, retention, outbox, quarantine, raw-data storage, replay or historical repair.",
+    "No changed identity, occurrence-time, tombstone/erasure or lifecycle policy; no cross-sink exactly-once, full erasure fence or global late-event cutoff claim.",
+    "All 25 protected baseline pins plus accepted W22.06 artifact/review remain unchanged. Root entry board and dependency assurance reused; worker did not rerun board or accepted dependency suites.",
+    "No source beyond the two owned files, no shared helpers/routes/API/config edits, no subdelegation/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/commit/push/external actions.",
+    "Worker checks do not independently verify the implementer, close W09/W22 or findings, or grant customer, SLO, package or release acceptance."
+  ],
+  "rollback": "Root-reviewed inverse of the two owned baseline-relative deltas only; preserve inherited worktree and protected dependencies. No rollback performed.",
+  "disposition": {
+    "status": "worker_checks_passed_review_pending",
+    "source_stopped": true,
+    "source_stopped_at": "2026-09-15T16:42:09.932Z",
+    "evidence_stopped": true,
+    "running_commands": [],
+    "independent_reviewer": "/root/late_hour_next_review pending frozen artifact",
+    "lead_acceptance": "pending",
+    "next_action": "Root freezes exact artifact; distinct reviewer inspects source/evidence and runs admitted six once on frozen bytes, reusing same-byte static. Root owns tracker/journal/disposition."
+  }
+}
+

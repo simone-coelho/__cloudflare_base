@@ -1,0 +1,138 @@
+{
+  "at": "2026-09-10T12:48:50Z",
+  "task_id": "W39.02",
+  "contract_digest": "f719d1aaf6e37acd0a3c59a8b37657625045d0be0b7d2f144469c87d4cc3cf93",
+  "source_stop_at": "2026-09-10T12:47:52.647Z",
+  "owned": [
+    "migrations/seed/seed_001.sql",
+    "migrations/seed/seed_002.sql",
+    "migrations/seed/seed_003.sql",
+    "migrations/seed/seed_004.sql",
+    "migrations/seed/seed_005.sql",
+    "migrations/seed/seed_006.sql",
+    "migrations/seed/seed_007.sql",
+    "migrations/seed/seed_008.sql",
+    "migrations/seed/seed_009.sql",
+    "migrations/seed/seed_010.sql",
+    "docs/architecture/10-d1-schema.md",
+    "scripts/seed-d1.test.mjs"
+  ],
+  "pins": [
+    {
+      "path": "migrations/seed/seed_001.sql",
+      "sha256": "89115f493ce1bdf95b3f28f2d889c28f5a89be74545cf2c685a81353a1022906",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_002.sql",
+      "sha256": "c564f44352f9e0cdb7d6d0531fa599813a7230f99d89adc9d6f37c2c09208851",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_003.sql",
+      "sha256": "3ac55bab8c2d4b3ce8b559a62869c5b639657d930d67c59e2a2443dc86f10df3",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_004.sql",
+      "sha256": "76c2759eb2c7005ff31ff9d87ef00a36f865f1a7b4bf504c9b5b503b08931c6c",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_005.sql",
+      "sha256": "0242b8632e451a75343ad2e7449afb4f90807e56d8d4620ea73e6e7a0e268187",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_006.sql",
+      "sha256": "3f0abc6a708c4d49aa5adbb62b983091a7e6022859f740ca480de6a9d78e132f",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_007.sql",
+      "sha256": "5b429c01f3fcc0543a1ce7ba75ab732da4739646c93fee334405b7c37ba6a755",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_008.sql",
+      "sha256": "d77c197c1542395f6609a4f165c6284113b04068dc52ebe7387f47a8659796d9",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_009.sql",
+      "sha256": "0ab550e6db537b1edadd3868a293cfe682075304c32dda15d6edbc72d73f7a80",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_010.sql",
+      "sha256": "413fba1fb8061abcc279d089b37daad06ec0a9b5933efd277c6c3de17221a8e6",
+      "role": "output"
+    },
+    {
+      "path": "docs/architecture/10-d1-schema.md",
+      "sha256": "cb7de4791ea2ef6178c2aa9ff24d907c3b3d28360d735df65a408d899aea600a",
+      "role": "output"
+    },
+    {
+      "path": "scripts/seed-d1.test.mjs",
+      "sha256": "68bf08932093e61fd372ec40a6cabd7b0f151b78792553b02a2c22632b5152bf",
+      "role": "output"
+    },
+    {
+      "path": "migrations/0001_d1_init.sql",
+      "sha256": "30933bc17aa9cbfccf1a59a398ba03cce038b96bd08b7d7add4e7084f9af3531",
+      "role": "source"
+    },
+    {
+      "path": "scripts/seed-d1.mjs",
+      "sha256": "6bf4d92126b432c0b5eef8fe6146c0db75e8a50a0540fabef903ef2a69e2a074",
+      "role": "source"
+    },
+    {
+      "path": "migrations/seed/seed_011_geo.sql",
+      "sha256": "d1195dcc499fab227873e1445996930f0cf971cb3c25729bafdb1e927c09dd98",
+      "role": "source"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+      "role": "source"
+    },
+    {
+      "path": "migrations/0004_geo_census.sql",
+      "sha256": "579117f14a6fb392b630fb7e383ab86ad7ce50e2589bc6c7f6b2248ebfb20c7b",
+      "role": "source"
+    },
+    {
+      "path": "migrations/0008_meridian_geo_cohort.sql",
+      "sha256": "6031d7d362ec7a8c9157740d875fa9651ad7a771f66ace51ae52833931059d86",
+      "role": "source"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+      "role": "source"
+    },
+    {
+      "path": "scripts/provision-stamp.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/provision-staging.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/deploy.sh",
+      "sha256": "14ad032bf8e7f3a9398a7e703def34e62fd41689be085449a8a710e5deb633c2",
+      "role": "source"
+    },
+    {
+      "path": "docs/deployment/01-deploy.md",
+      "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee",
+      "role": "source"
+    }
+  ],
+  "unowned_unchanged": 11
+}

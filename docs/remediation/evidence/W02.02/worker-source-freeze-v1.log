@@ -1,0 +1,37 @@
+2026-09-07T01:56:00Z
+82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084  src/auth/signingConfig.mjs
+71b8bff20c06df6fdcbddd37678a73fcdfe7b0b3dcafbfba49d16b70587c1316  src/middleware/auth.ts
+f69f9d83d15d869fa1685a23550322b28fe023ece00295a694efd2b4355096b1  src/routes/auth.ts
+0ea5b72d026c4964bb8a34fac627a8704c8a0c5f8eed95e3b656b83a8fda3712  src/routes/health.ts
+08a9b3cd87c4dae9de553bc969be3303352da43532a53f62158d5952e536a1ca  src/auth/signing-config.boundary.test.ts
+4a4dea048fef42294fee798d029f7d79aa8b06e8d5909445e0b57c29ae61a64d  src/routes/auth.test.ts
+e722ea4502761dc8012db9621d8557b79d673b2f16c9425b23614488902a8682  src/routes/content.test.ts
+f4e4f04c518b00ea5b91c78967bf555736304156358ab6c4a7bace34deccf35b  src/routes/identity.test.ts
+abe9cfadecbcd011715879062dd2641e89cec140e969163fccc2544140461c82  src/middleware/edgeAccess.test.ts
+727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782  tsconfig.json
+4668486f96cb527ea84ad3295ddea2181edfe2e573e7630c5da6ca48ee773836  scripts/lib/tool-token.mjs
+3ac207b136ac55302d37ad174038344467cdb9931e089e5693555921de653a66  scripts/lib/tool-token.test.mjs
+816f4975c78a87c94b8f97b065211b2057e336e0bc30aa574afd4fcd776dcaae  scripts/dev-token.mjs
+480119d36115f08c3c873f1ace078fde89c8f11a7c812b741cd8def924a856e6  scripts/acceptance-run.mjs
+60cb901ee2d84df16b8c06b9096dded0d678a892b92d1035834a97411c05a4e9  scripts/import-content.mjs
+2581db213e799fbf60c51e66999a59d907238e43bb6dd8045c7c43b27e4004af  scripts/seed-coach-content.mjs
+790f64c8e137764e8e902f60feab1381c68b8a82e702f22aa8dc753b71fc08d0  scripts/console-operator.mjs
+37468d11045f80b7e0bf2ea45ffd937bfaa0339969ddb78cf21ed892f31ffe4d  scripts/holdout-proof.mjs
+fc6772f6cca45f85196b8e10283a2a47a9c248ea4d23dcd923c44dac95121246  scripts/identity-proof.mjs
+d1ce1ed02688f13a821991fd25d62d024c70e1100bcdf76b97c233297bfb5bf8  scripts/rehearse-storefront.sh
+5	13	scripts/acceptance-run.mjs
+8	15	scripts/console-operator.mjs
+4	8	scripts/dev-token.mjs
+3	6	scripts/holdout-proof.mjs
+3	11	scripts/identity-proof.mjs
+5	15	scripts/import-content.mjs
+6	6	scripts/rehearse-storefront.sh
+5	12	scripts/seed-coach-content.mjs
+15	5	src/middleware/auth.ts
+3	3	src/middleware/edgeAccess.test.ts
+1	1	src/routes/auth.test.ts
+18	10	src/routes/auth.ts
+2	2	src/routes/content.test.ts
+6	1	src/routes/health.ts
+2	2	src/routes/identity.test.ts
+2	2	tsconfig.json

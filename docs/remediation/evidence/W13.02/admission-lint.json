@@ -1,0 +1,106 @@
+{
+  "task_id": "W13.02",
+  "at": "2026-09-18T03:18:09.664Z",
+  "before": "fa33493077ffd166e4e9af50eb6ba1132fbf6b236ec309262a390a69b3e62f23",
+  "after": "db314c44beb150dbf381834bf80acf8157bc07e87503c8d135e4610903356fa7",
+  "original_admission": {
+    "path": "docs/remediation/evidence/W13.02/admission.json",
+    "sha256": "573bd5b8bc03dc4d81da05e0e1ed4928fbb91c1debfee8a48b7347805ec33ce4"
+  },
+  "scope": "Complete originalW13/C1–C8 unchanged. Measured exact lint-error ownership and explicit finite warning policy amendment only; no product/live scope reduction.",
+  "baseline": {
+    "primary_sha256": "3ab910ce4df3b7a1244940f54f904e46063253990b6578e398c5f12b07759722",
+    "bytes": 71018,
+    "result": "FAIL50errors582warnings under old503cap",
+    "started_at": "2026-09-18T03:12:08.966Z",
+    "finished_at": "2026-09-18T03:12:37.970Z",
+    "source_pins": "354before=after=original admission; root verified ten saved originals/344protected pins and primary integrity/all50errorlines/aggregate warnings; root did not read all repeated warning lines.",
+    "errors": "40missing browser-context globals;8real owned main-script errors; optional pointer-capture empty catch in compare.js and prefer-const timer in layout.js.",
+    "warnings": {
+      "typescript": 572,
+      "authored_js": 10,
+      "meridian": 5,
+      "compare": 3,
+      "moments": 2,
+      "total": 582,
+      "files": 92
+    },
+    "causality": "No claim that all79 warnings above historical503 arose during W01–12; no historical diagnostic comparison performed."
+  },
+  "added_outputs": [
+    {
+      "path": "public/meridian/compare.js",
+      "sha256": "cc8a8c36aad8836257610963cc031c0a9ce8e1752d7f1cc934dcd74808f4d30a",
+      "bytes": 38280,
+      "exists": true
+    },
+    {
+      "path": "public/meridian/layout.js",
+      "sha256": "74bbf914ce07ac20235d7e2b31a7d3b66fb008b74d606dcd6146cb12c828162a",
+      "bytes": 9408,
+      "exists": true
+    }
+  ],
+  "protected_basis": "Reuse original admission baseline, removing exactly compare.js/layout.js from protected pins:342protected plus12outputs, same354file universe. Worker saves both dirty originals before edits; existing ten originals/deltas remain authoritative.",
+  "policy": "Lead explicitly approves finite ceiling at most582; worker must ratchet down to final measured count after coherent in-scope error fixes, no headroom or useful-rule suppression. Holding503 cannot be met by existing/new editable JS warnings (only8); do not replace this task with unrelated86-protected-file warning cleanup. Zero errors required; inherited warning debt remains explicit.",
+  "independent_preflight": {
+    "agent": "/root/w1202_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "mode": "Read-only actual source/baseline; no checks/writes",
+    "verdict": "Two exact paths and explicit≤582 final-measured ratchet source-supported; not wholeW13 acceptance.",
+    "behavior": "Exact six-file browser env context retains no-undef. compare optional pointer-capture fallback keeps seam/preventDefault/end events; layout const retains transform-only transition and fallback cleanup. Useful core sanitizer remains. Main removes only unreachable server-frame adoption, preserves presenter clock and uses actual forecast reasons; focused behavioral proof remains required."
+  },
+  "checks": [
+    {
+      "id": "W13.02-K1",
+      "command": "npm run lint",
+      "runtime": "Installed actual full declared TS and authored Meridian JS lint gate",
+      "workload": "Exact declared TS plus six authored Meridian JS, zero errors; explicitly approved warning ceiling at most582, ratcheted down to actual final measured count after in-scope fixes. Original503 failure retained; useful rules unchanged, no suppression/headroom/warning-free claim."
+    },
+    {
+      "id": "W13.02-K2",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p src/sdk --noEmit --incremental false --composite false",
+      "runtime": "Installed app and SDK compilers",
+      "workload": "No output/build emission; both applicable TypeScript configurations."
+    },
+    {
+      "id": "W13.02-K3",
+      "command": "node --test --test-name-pattern 'W13|Offline actual Worker|W08[.]05 recovery provenance|W08[.]05 rollback enforcement|W08[.]05 strict intent|W08[.]05 promotion refuses|W08[.]05 protected receipts|W08[.]05 real transport|W08[.]05 product migration|W08[.]05 actual restore|W08[.]05 restore resumes|W09[.]09 both queues|W12[.]02 synthetic physical' scripts/stamp-workflow.test.mjs",
+      "runtime": "Existing injected transport/SQLite and one existing actual package/native fixture; outbound denied/disposed",
+      "workload": "One once-built Worker with shared nonwriting SDK/Meridian checks, positive exact assets and both SDK exports, real successful proof and missing/failed/stale/tamper refusals. Shared validateArtifact directly affects older rollback/restore positives and source/DLQ recovery, requiring these selected preserved fixtures. No real provider/fullCI/repeated Worker build."
+    },
+    {
+      "id": "W13.02-K4",
+      "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W13|W11[.]02 Meridian' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Existing selected rendered Meridian client fixture",
+      "workload": "New lint/presenter behavior checks and original real authored-base remote publisher preserved. Actual forecast reasons without mutating live state, presenter-clock frame rejection, malformed-frame/closed-socket tolerance; equivalent pointer/timer corrections preserve fallback cleanup."
+    },
+    {
+      "id": "W13.02-K5",
+      "command": "node --check scripts/build-sdk.mjs && node --check scripts/build-meridian.mjs && node --check scripts/stamp-workflow.mjs && node --check scripts/stamp-workflow.test.mjs && git diff --check -- .eslintrc.json package.json .github/workflows/ci.yml scripts/build-sdk.mjs scripts/build-meridian.mjs scripts/stamp-workflow.mjs scripts/stamp-workflow.test.mjs public/meridian/meridian.js src/console/console.render.test.ts docs/deployment/01-deploy.md public/meridian/compare.js public/meridian/layout.js",
+      "runtime": "Installed syntax and exact owned-file whitespace",
+      "workload": "Small static boundary only; generated outputs are read-only and no broad pipeline."
+    },
+    {
+      "id": "W13.02-K6",
+      "command": "Independent complete original W13/F10/F35/N18 C1–C8 actual artifact and complete primary-output review",
+      "runtime": "Distinct Astra/xhigh whole originalW13 source/evidence review",
+      "workload": "Inspect exact lint results/policy, CI wiring, build/proof payload, once-built native evidence, older source-basis recovery and all whole-W requirements. Reuse valid installed dependency assurance."
+    },
+    {
+      "id": "W13.02-K7",
+      "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W13|W11[.]02 Meridian' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Distinct frozen selected rendered integration",
+      "workload": "Independent exact focused check; complete worker once-built package/native primaries independently inspected, no second Worker build solely for review."
+    },
+    {
+      "id": "W13.02-K8",
+      "command": "Separately authorized trusted CI/provider/schema/served bytes/recovery/customer release acceptance",
+      "runtime": "Actual separately authorized trusted CI and live stamp/provider resources; NOT_RUN locally",
+      "workload": "Live acceptance remainsOPEN final authorized batch; local fixtures/source wiring not releaseapproval."
+    }
+  ],
+  "rollback": "Retain ten original saved bytes and two new originals/reversible deltas; revert only admitted hunks after lead review. No generated/public cleanup or deployment.",
+  "authority": "Existing ordered local mandate reused. Worker original ten-file implementation continued under priorGO; these two added files and amended checks require valid amendmentboardGO. One Astra/xhigh implementer, distinct reviewer, no subdelegation; root records only. No external/cloud/resource/customer/credential/deployment authority."
+}

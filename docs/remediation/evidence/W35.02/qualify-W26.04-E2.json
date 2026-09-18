@@ -1,0 +1,468 @@
+{
+  "before": {
+    "id": "W26.04-E2",
+    "task_id": "W26.04",
+    "check_id": "W26.04-K2",
+    "criterion_ids": [
+      "W26.04-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w2206-worker",
+    "run_id": "/root/w2206_worker",
+    "file": {
+      "path": "docs/remediation/evidence/W26.04/worker.json",
+      "sha256": "828679500a72b40ef18abfe84ecb7350d2186875d50e8d5b1d647dda26566c20"
+    },
+    "at": "2026-09-15T20:05:01.119Z",
+    "limitations": "Live brand-local fatigue eligibility only. Preserve same-brand cross-slot/page/arm counting, windows/default/timeout, shared optional-brand helper and historical recorded-input replay. No new policy/history/retention, historical ranking repair, full W26/finding/hard-isolation/customer/SLO/release acceptance or external operations. W22.07/W22.09 complete accepted artifacts/reviews preserved.",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/service.ts src/content/consent.test.ts --max-warnings 0 && git diff --check -- src/content/service.ts src/content/consent.test.ts",
+    "runtime": "Existing no-emit compiler1536/two-file lint0/0 and whitespace.",
+    "workload": "Two owned source/fixture files; no emitted build or extra warning comparison needed with zero baseline.",
+    "result": "pass",
+    "artifact_digest": "ffe030e167286f6bad6db2f0b261a396d06ef5143daf90323a107f7ba92bb728",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "8dec7911792e2d0f16be670645e7e4f2a03931cc2c63cc15dd4f6fd0a9d407f3",
+      "configuration": "Live brand-local fatigue eligibility only. Preserve same-brand cross-slot/page/arm counting, windows/default/timeout, shared optional-brand helper and historical recorded-input replay. No new policy/history/retention, historical ranking repair, full W26/finding/hard-isolation/customer/SLO/release acceptance or external operations. W22.07/W22.09 complete accepted artifacts/reviews preserved.",
+      "files": [
+        {
+          "path": "src/content/service.ts",
+          "sha256": "47461ca8909b90718dab66cbe4123cf0b265561d8c5e52b81d4e0f59493b21a3",
+          "role": "output"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "sha256": "ff17cdccdcf2d9b848e353cea035c702ec4a7fddd203d550d3bb6ccb2582f7b2",
+          "role": "output"
+        },
+        {
+          "path": "src/content/freshFatigue.test.ts",
+          "sha256": "1babeb8dacb5c7cdf888be5a1db461acb98143969cb93188d00f05eb45fcd01b",
+          "role": "source"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+          "role": "source"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930",
+          "role": "source"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f",
+          "role": "source"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+          "role": "source"
+        },
+        {
+          "path": "src/content/holdout.ts",
+          "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc",
+          "role": "source"
+        },
+        {
+          "path": "src/content/cell.ts",
+          "sha256": "b3fc57930c43d36681edda47d040f46691c4a442c5d84d816102dc906a203b6c",
+          "role": "source"
+        },
+        {
+          "path": "src/content/import.ts",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "sha256": "d7e830270b1f18962d42555fb6ee8b12c6d446ae5d5fa5937cc579175a1427a4",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98",
+          "role": "source"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "sha256": "fd62f49928ddd8b9176273ea87743231fc6ad75f42b01ca9683fb1bcaa5073b1",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+          "role": "source"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "sha256": "87d88bd5815f18d79a1d53909021edbfe67ceb4039826603ed66310f72ed462e",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/opticon/Tapestry_Scope_of_Services_v8_tracked.docx",
+          "sha256": "ea44cba968b3d235dda184abbfbfe5e2e396cd8317c787846285623efa44ab47",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.04/worker.json",
+          "sha256": "828679500a72b40ef18abfe84ecb7350d2186875d50e8d5b1d647dda26566c20",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W26.04/plan.md",
+          "sha256": "34a04b5f864fc229f142c30c84fe2a3455e8fa9ecfb528f9b1713a5095e32719",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W26.04/baseline.json",
+          "sha256": "c36a93b851949e6fa28ef4f10a6a6ba6cd159619ad7fa24062512661208f1f1f",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.04/admission.json",
+          "sha256": "5d0d0097ac3c650ad5007f69f1a628d1f40ca4a72cdf04f4443294dbba90df51",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.04/source-freeze.json",
+          "sha256": "11dd85a8952c40720159286702e25c53410dc012619df00800c12537844d7ff9",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.04/source-deltas.json",
+          "sha256": "b809e2b4e4b9c74abcf36cd5e4b5e44d446ffd61dc5343d58456f77f34cc6c9d",
+          "role": "configuration"
+        }
+      ],
+      "digest": "ffe030e167286f6bad6db2f0b261a396d06ef5143daf90323a107f7ba92bb728"
+    }
+  },
+  "after": {
+    "id": "W26.04-E2",
+    "task_id": "W26.04",
+    "check_id": "W26.04-K2",
+    "criterion_ids": [
+      "W26.04-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w2206-worker",
+    "run_id": "/root/w2206_worker",
+    "file": {
+      "path": "docs/remediation/evidence/W26.04/worker.json",
+      "sha256": "828679500a72b40ef18abfe84ecb7350d2186875d50e8d5b1d647dda26566c20"
+    },
+    "at": "2026-09-15T20:05:01.119Z",
+    "limitations": "Live brand-local fatigue eligibility only. Preserve same-brand cross-slot/page/arm counting, windows/default/timeout, shared optional-brand helper and historical recorded-input replay. No new policy/history/retention, historical ranking repair, full W26/finding/hard-isolation/customer/SLO/release acceptance or external operations. W22.07/W22.09 complete accepted artifacts/reviews preserved.",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/service.ts src/content/consent.test.ts --max-warnings 0 && git diff --check -- src/content/service.ts src/content/consent.test.ts",
+    "runtime": "Existing no-emit compiler1536/two-file lint0/0 and whitespace.",
+    "workload": "Two owned source/fixture files; no emitted build or extra warning comparison needed with zero baseline.",
+    "result": "pass",
+    "artifact_digest": "ffe030e167286f6bad6db2f0b261a396d06ef5143daf90323a107f7ba92bb728",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "8dec7911792e2d0f16be670645e7e4f2a03931cc2c63cc15dd4f6fd0a9d407f3",
+      "configuration": "Live brand-local fatigue eligibility only. Preserve same-brand cross-slot/page/arm counting, windows/default/timeout, shared optional-brand helper and historical recorded-input replay. No new policy/history/retention, historical ranking repair, full W26/finding/hard-isolation/customer/SLO/release acceptance or external operations. W22.07/W22.09 complete accepted artifacts/reviews preserved.",
+      "files": [
+        {
+          "path": "src/content/service.ts",
+          "sha256": "47461ca8909b90718dab66cbe4123cf0b265561d8c5e52b81d4e0f59493b21a3",
+          "role": "output"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "sha256": "ff17cdccdcf2d9b848e353cea035c702ec4a7fddd203d550d3bb6ccb2582f7b2",
+          "role": "output"
+        },
+        {
+          "path": "src/content/freshFatigue.test.ts",
+          "sha256": "1babeb8dacb5c7cdf888be5a1db461acb98143969cb93188d00f05eb45fcd01b",
+          "role": "source"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+          "role": "source"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930",
+          "role": "source"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f",
+          "role": "source"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+          "role": "source"
+        },
+        {
+          "path": "src/content/holdout.ts",
+          "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc",
+          "role": "source"
+        },
+        {
+          "path": "src/content/cell.ts",
+          "sha256": "b3fc57930c43d36681edda47d040f46691c4a442c5d84d816102dc906a203b6c",
+          "role": "source"
+        },
+        {
+          "path": "src/content/import.ts",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "sha256": "d7e830270b1f18962d42555fb6ee8b12c6d446ae5d5fa5937cc579175a1427a4",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98",
+          "role": "source"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "sha256": "fd62f49928ddd8b9176273ea87743231fc6ad75f42b01ca9683fb1bcaa5073b1",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+          "role": "source"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "sha256": "87d88bd5815f18d79a1d53909021edbfe67ceb4039826603ed66310f72ed462e",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/opticon/Tapestry_Scope_of_Services_v8_tracked.docx",
+          "sha256": "ea44cba968b3d235dda184abbfbfe5e2e396cd8317c787846285623efa44ab47",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.04/worker.json",
+          "sha256": "828679500a72b40ef18abfe84ecb7350d2186875d50e8d5b1d647dda26566c20",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W26.04/plan.md",
+          "sha256": "34a04b5f864fc229f142c30c84fe2a3455e8fa9ecfb528f9b1713a5095e32719",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W26.04/baseline.json",
+          "sha256": "c36a93b851949e6fa28ef4f10a6a6ba6cd159619ad7fa24062512661208f1f1f",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.04/admission.json",
+          "sha256": "5d0d0097ac3c650ad5007f69f1a628d1f40ca4a72cdf04f4443294dbba90df51",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.04/source-freeze.json",
+          "sha256": "11dd85a8952c40720159286702e25c53410dc012619df00800c12537844d7ff9",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.04/source-deltas.json",
+          "sha256": "b809e2b4e4b9c74abcf36cd5e4b5e44d446ffd61dc5343d58456f77f34cc6c9d",
+          "role": "configuration"
+        }
+      ],
+      "digest": "ffe030e167286f6bad6db2f0b261a396d06ef5143daf90323a107f7ba92bb728"
+    }
+  }
+}

@@ -1,0 +1,294 @@
+{
+  "task": "W12.02",
+  "reviewer": {
+    "actor": "w1202-recovery-reviewer",
+    "run": "/root/w1202_review",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "independent_of": "/root/w1202_implement"
+  },
+  "contract": "078fb3af31b292feb584b44f0d0952687122d099ac52d7530b253ca461c65244",
+  "formal_go": "2026-09-18T02:50:23Z",
+  "scope": "Whole original W12 in document 35, linked F10/N19/OD-6 and W12.02 C1–C9; actual 18 dirty-baseline outputs and affected/protected dependencies. Connected mutable-source review reused only after qualification against frozen bytes.",
+  "verdict": "LOCAL_PASS",
+  "full_live_acceptance": "OPEN",
+  "local_blockers": [],
+  "authority": "Independent review recommendation only; no task/package acceptance, finding closure, lead signoff or release approval.",
+  "artifact": {
+    "digest": "d6926be92e29a17106cc1505d9a8074fe7b7d75ccb27cc04cf3c135523d9fa9c",
+    "manifest": "docs/remediation/tracker.json#W12.02.artifact",
+    "freeze": {
+      "path": "docs/remediation/evidence/W12.02/source-freeze.json",
+      "sha256": "0d5ab63c41d50dda0c563bd03c0d102b2beef115e92187f1fcc62219687b13f4"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W12.02/worker.json",
+      "sha256": "20935b3c99f3b39f9b1e7de1952fc710cc183f738084972b6afef13eb5c67064",
+      "bytes": 1395693
+    },
+    "outputs": 18,
+    "protected_pins": 120,
+    "total_pins": 138
+  },
+  "independent_verification": {
+    "requirements": "Standing agreement/checkpoint, entry point, governance, complete task/admissions and original W12/F10/N19/OD-6 read. Review covered whole connected source and original fixture preservation, not only selected passing tests.",
+    "identity": "Independently recomputed tracker artifact digest; all 138 current files match frozen hashes. All 18 saved dirty originals and exact delta hashes/lengths verified; each forward/reverse patch applied in memory reconstructs exact original/final bytes. No restoration or product edit.",
+    "primary_integrity": "All 26 worker gzip primaries independently decoded and SHA-256/byte-length verified. Final K1.4/K2.4/K3.1/K4.6 outputs and relevant diagnostic8–11 outputs fully read. Earlier failure histories retained; no claim that every historical failure was rerun or causally classified.",
+    "qualifications": "Final per-attempt before/after sets checked. K1.4/K2.4 differ from final only by structuredClone(envelope!) versus structuredClone(envelope), independently reverse-hash matched to exact retained source; non-null assertion is compile-erased. Worker records transformed-JavaScript equality; reviewer did not rerun that transform. Exact final K6 removes this qualification for selected new groups. K3.1 workflow checks/scripts/imported MJS dependencies/configuration remain byte-identical; five changed TS/native/fixture files are outside its selected desired-state checks. K4.6 matches all final pins.",
+    "preservation": "Existing W01–W11 authority/retention/immutable recovery/bounded state assurance reused where unaffected. Focused final K1 preserves ordinary serving health/regional ladder and retained default-monitor/alert controls; K2 preserves actual W09 refusal/source-DLQ and W10 native SQLite/restart boundaries.",
+    "mutations": "Only this review.json is written. No product, worker, tracker or governance edits; no subdelegation, external/cloud/customer/credential operations, broad CI, package/SDK build, commit, merge, push or deployment."
+  },
+  "criteria": [
+    {
+      "id": "W12.02-C1",
+      "result": "LOCAL_PASS",
+      "basis": "Existing refusal-only default probe and zero-decision failure remain. Personalized/delivery diagnostics require explicit current per-tenant synthetic descriptor and nine exact binding/purpose/namespace/access-policy retention categories; ordinary CACHE monitor policy cannot authorize synthetic destinations, and synthetic-only categories cannot authorize ordinary monitor persistence. Missing/corrupt/unapproved authority holds or fails without customer capture.",
+      "sources": [
+        "src/ops/monitor.ts",
+        "src/ops/synthetic.ts",
+        "src/connectors/config.ts",
+        "scripts/stamp-workflow.mjs"
+      ],
+      "proof": [
+        "K1.4 qualified",
+        "K3.1 qualified",
+        "K6.1"
+      ]
+    },
+    {
+      "id": "W12.02-C2",
+      "result": "LOCAL_PASS",
+      "basis": "Domain-separated signed scope/native/queue authority binds exact tenant, host, operation, pinned configuration, policy, original expiry, URL/method/effective application headers/body and actual native physical ID. Fixed native slots reconstruct isolated rawEnv dependencies internally across all five constructors/fetch/alarms/restart. Customer capabilities, visitor prefixes, arbitrary headers and id.name do not grant this scope. Ordinary owner/consent/retention guards remain. Lift and regional caches include physical binding/context identities and retain ordinary health/TTL semantics with globally capped 256-entry residency per cache.",
+      "sources": [
+        "src/ops/synthetic.ts",
+        "src/identity/sessionAuthority.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/durable-objects/DecisionRing.ts",
+        "src/durable-objects/LearnStats.ts",
+        "src/durable-objects/RegionTrend.ts",
+        "src/durable-objects/PersonalizationWebSocket.ts",
+        "src/content/service.ts",
+        "src/reflex/regionTrend.ts"
+      ],
+      "proof": [
+        "K1.4 qualified",
+        "K2.4 qualified",
+        "K6.1"
+      ]
+    },
+    {
+      "id": "W12.02-C3",
+      "result": "LOCAL_PASS",
+      "basis": "Real consent choice, personalized serving, click, owner/recovery, source consumer, canonical ledger and learning run within operation-prefixed physical storage. Only authenticated actual successful consumption creates the correlated consumer witness; producer send/fallback/canonical receipt alone cannot make delivery healthy. Exact decision/click and retained exposure/credit effects are checked, then real LearnStats archive/KV publication is read back by digest. Disabled/rejected/empty/paused source, forged/cross-tenant/duplicate messages, failed archive/lift/DLQ and authenticated-consumer timeout retain explicit failures and positional ordinary sibling behavior.",
+      "sources": [
+        "src/ops/synthetic.ts",
+        "src/index.ts",
+        "src/durable-objects/LearnStats.ts",
+        "src/index.api-boundary.test.ts"
+      ],
+      "proof": [
+        "K2.4 qualified",
+        "K6.1"
+      ]
+    },
+    {
+      "id": "W12.02-C4",
+      "result": "LOCAL_PASS",
+      "basis": "Bounded read-only sqlite_master definitions and required migration records verify actual product tables/columns/indexes/trigger rather than SELECT1/404/missing-key liveness. Native positive uses the complete product migrations. Registry-based scheduling and real configured tenant/host continuity remain; both nondefault tenants and both shopper hosts execute the actual pipeline. Strict W11 coherent publication failure and empty decision results remain failures, not implicit initialization or healthy defaults.",
+      "sources": [
+        "src/ops/monitor.ts",
+        "src/index.ts",
+        "src/ops/monitor.test.ts",
+        "src/index.api-boundary.test.ts"
+      ],
+      "proof": [
+        "K1.4 qualified",
+        "K2.4 qualified",
+        "K6.1"
+      ]
+    },
+    {
+      "id": "W12.02-C5",
+      "result": "LOCAL_PASS",
+      "basis": "Stage/total deadlines, slot/body/key/byte ceilings, conditional fixed control records and fixed native pools bound active diagnostic work/residency. Admission and disposal share a transition reservation after awaited validation; exact expected-operation transactions and generation-fenced mirror reset handle committed-but-rejected replacement acknowledgements. Live ambiguous writes are preserved for recovery, not destructively rolled back; original expiry drives operation-exact cleanup, bounded retained write-disposal debt and one in-flight remote disposal. Restart/revocation cannot renew capture; cleanup bypass authenticates native identity. Relay initialization contains refusal only after a bounded authenticated transaction proves a durable original/retry alarm; ordinary and unarmed cleanup-scheduling errors propagate. Late observation uses private candidates/terminal failures. Explicit diagnostic targets are not P95/P99/customer SLO.",
+      "sources": [
+        "src/ops/synthetic.ts",
+        "src/durable-objects/PersonalizationWebSocket.ts",
+        "src/index.api-boundary.test.ts"
+      ],
+      "proof": [
+        "K1.4 qualified",
+        "K2.4 qualified",
+        "K6.1"
+      ]
+    },
+    {
+      "id": "W12.02-C6",
+      "result": "LOCAL_PASS",
+      "basis": "Current exact ordinary alert destination/url hash and redirect refusal remain checked at use; problem/recovery retry/cooldown outcomes remain explicit. Bounded failed or stalled result persistence cannot erase closed-code delivery/resultSaved/recoverySaved logs. Existing safe projection and destination-specific retention remain; HTTP success is not on-call receipt or durable exactly-once outbox proof.",
+      "sources": [
+        "src/ops/monitor.ts",
+        "src/ops/monitor.test.ts",
+        "src/services/telemetry.boundary.test.ts"
+      ],
+      "proof": [
+        "K1.4 qualified",
+        "K3.1 qualified",
+        "K6.1"
+      ]
+    },
+    {
+      "id": "W12.02-C7",
+      "result": "LOCAL_PASS",
+      "basis": "Existing native workerd/SQLite/source+DLQ fixture proves real pipeline across acme/globex and session/do, all non-synthetic KV values and R2 bodies unchanged, all-five valid-work/invalid-no-additional-work, retained original alarms, revoked restart/zero relay row-work, expiry cleanup without next monitor, failed original/retry alarm propagation and ordinary initializer failure. Actual live ambiguous native writes, committed replacement with lost ACK, expired replay/successor exclusion, held remote disposal, late rejected R2 write/debt across restart, held failure-control save/late observation and stalled signed consumer/ordinary sibling are covered. Existing lift/regional fixtures interleave isolated and ordinary contexts. Native runtime and fixture are local and outbound-denied/disposed.",
+      "sources": [
+        "src/index.api-boundary.test.ts",
+        "src/ops/monitor.test.ts",
+        "src/services/telemetry.boundary.test.ts",
+        "scripts/stamp-workflow.test.mjs"
+      ],
+      "proof": [
+        "K1.4 qualified",
+        "K2.4 qualified",
+        "K3.1 qualified",
+        "K6.1 exact final"
+      ]
+    },
+    {
+      "id": "W12.02-C8",
+      "result": "LOCAL_PASS",
+      "basis": "Distinct reviewer inspected actual whole original W12 scope, all connected adapter/native/caller/cache/monitor/workflow changes and preserved or explicitly superseded fixture oracles. Public/forged synthetic messages retain ordinary W09 refusal; authenticated actual source/DLQ is separated before generic handling. Existing W01–W11 immutable inputs/retention/erasure/reset/recovery controls are preserved. Source identity, primary integrity, qualifications and exact frozen independent K6 are retained; no helper or diagnostic subset substitutes for whole local review.",
+      "proof": [
+        "Independent whole original W12/K5 source and evidence review",
+        "K1–K4 qualified",
+        "K6.1"
+      ]
+    },
+    {
+      "id": "W12.02-C9",
+      "result": "OPEN",
+      "basis": "Actual cloud resources/source+DLQ delivery, synthetic namespace/access/retention/activation approval, provider destination receipt, named on-call/escalation and actual workload/threshold/customer SLO acceptance remain in the final separately authorized live batch. No local fixture, URL presence, HTTP success, single sample or local review grants that authority or closes F10/N19/release."
+    }
+  ],
+  "reused_worker_checks": [
+    {
+      "check": "W12.02-K1",
+      "attempt": 4,
+      "result": "QUALIFIED_PASS",
+      "passed": 23,
+      "unselected": 60,
+      "primary_sha256": "81ded0dc97c08ca82111ad14c1be2f9656f657807b720878c3ac9d4e8599d2b3",
+      "bytes": 11781,
+      "qualification": "Only compile-erased one-character index native-fixture assertion differs; selected K1 production/test basis unchanged. Existing serving-health learning_incomplete diagnostics retained, not relabelled full delivery."
+    },
+    {
+      "check": "W12.02-K2",
+      "attempt": 4,
+      "result": "QUALIFIED_PASS",
+      "passed": 5,
+      "unselected": 64,
+      "primary_sha256": "957d3a6fc5a914020f6757dba144635681edff115e1274b3797742cfc1654270",
+      "bytes": 8651,
+      "qualification": "Only compile-erased non-null assertion differs. Final K6 repeats the exact final expanded W12 native group. W09 source/DLQ and W10 native groups use unchanged selected runtime source; original 3 MiB refusal/noncommit, 1200 markers/1201 events/256 items, ambiguous writes and persisted restart retained."
+    },
+    {
+      "check": "W12.02-K3",
+      "attempt": 1,
+      "result": "QUALIFIED_PASS",
+      "passed": 3,
+      "primary_sha256": "183145fbe304e3992fdcc046b8a6f474a65ccb44435f18e857b9525621be5ec7",
+      "bytes": 1004,
+      "qualification": "Selected workflow script/test, imported MJS desired-state/material code, configuration and protected dependencies unchanged; five later TS/native/fixture differences do not participate in these three selected checks."
+    },
+    {
+      "check": "W12.02-K4",
+      "attempt": 6,
+      "result": "PASS",
+      "primary_sha256": "f06b7b588b0295900a506d5c1a1ef1bbdfeb453fb0b0dba42ae2c83698b1a759",
+      "bytes": 8936,
+      "qualification": "Exact final pins, compiler/scoped lint/syntax/whitespace exit0; 0 lint errors and 81 warnings. No warning-free/no-new-warning/W13/release claim."
+    }
+  ],
+  "restored_or_superseded_oracles": [
+    "Original W12.01 refused/default/zero-decision/customer-no-I/O and problem/recovery alert assertions remain; their synthetic completion stub explicitly isolates those retained contracts. Actual synthetic continuity is independently exercised by the native W12.02 group, not certified by the stub.",
+    "Strict W11 coherent publication initialization and actual complete product migration fixture replace obsolete default/KV or SELECT1 assumptions without relaxing actual failure/default/authority assertions.",
+    "Initial customer KV key-name-only comparison was replaced by full values; native invalid-work counter compares before/after to account for legitimate constructor hydration. Positive native work, wrong target/URL/body/header no-work, and original alarm are substantive assertions.",
+    "Original/retry alarm rejection, revoked initializer zero row-work and ordinary initializer read failure are exercised through the actual relay constructor after native restart.",
+    "Native late-write gate promise is created inside the blocked request. The intentional post-deadline consumer-gate release still emits a cross-request cancellation warning, retained without a compatibility flag change."
+  ],
+  "failures_preserved": {
+    "record": "docs/remediation/evidence/W12.02/worker.json#checks",
+    "complete_primaries": 26,
+    "policy": "All failed, diagnostic and superseding attempts remain unchanged. Diagnostic-only selectors do not replace exact K2. Diagnostic6 lacks timings/pins and never supports acceptance; K4.4 source drift remains diagnostic-only; K4.5 type failure is superseded by exact final K4.6. Diagnostic8/9 RetentionUnavailable throwing phase remains unproved; no retrospective causal attribution."
+  },
+  "independent_check": {
+    "id": "W12.02-K6",
+    "attempt": "K6.1",
+    "result": "PASS",
+    "passed": 8,
+    "unselected": 104,
+    "test_files_passed": 2,
+    "test_files_unselected": 1,
+    "session": 42470,
+    "drained": true,
+    "primary": {
+      "sha256": "2602481367d29b9bf371963a0e046af173e45f9b5c1fc8a9945cf7ba2d4244f3",
+      "bytes": 36873,
+      "encoding": "gzip+base64",
+      "gzip_base64": "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",
+      "started_at": "2026-09-18T02:51:16.704Z",
+      "finished_at": "2026-09-18T02:53:18.098Z",
+      "exit_code": 0,
+      "signal": null,
+      "pins_unchanged": true
+    },
+    "primary_format": "gzip of UTF-8 JSON containing exact admitted command/artifact/contract/start/end/exit/signal, ordered complete stdout/stderr base64 chunks, and all 138 before/after pins. SHA-256/bytes refer to decompressed JSON.",
+    "selection": "Exact admitted selector; telemetry.boundary.test.ts has no matching W12.02 test and is unselected, not passed. Its directly affected monitor projection/policy evidence is retained in exact K1.4.",
+    "native_samples": [
+      {
+        "tenant": "acme",
+        "host": "session",
+        "state": "failed",
+        "decisionMs": 252,
+        "eventMs": 273,
+        "latencyExceeded": true
+      },
+      {
+        "tenant": "acme",
+        "host": "do",
+        "state": "failed",
+        "decisionMs": 232,
+        "eventMs": 171,
+        "latencyExceeded": true
+      },
+      {
+        "tenant": "globex",
+        "host": "session",
+        "state": "failed",
+        "decisionMs": 219,
+        "eventMs": 270,
+        "latencyExceeded": true
+      },
+      {
+        "tenant": "globex",
+        "host": "do",
+        "state": "failed",
+        "decisionMs": 215,
+        "eventMs": 179,
+        "latencyExceeded": true
+      }
+    ],
+    "interpretation": "All four recorded native flows had decision/event/producer/consumer/ledger/learning true and dlq false. All four correctly failed the configured diagnostic latency threshold. Test PASS proves behavior and the asserted local safety/continuity cases, not monitor/SLO green.",
+    "notices": "Full primary retains Vite CJS deprecation, intentional post-deadline cross-request continuation cancellation, and a nonfatal missing-file notice from the inherited shell profile. No compatibility flag/environment cleanup was applied."
+  },
+  "limits": [
+    "No deployed runtime/provider/on-call/workload/customer SLO or P95/P99 inference; C9/K7 remains OPEN.",
+    "Unknown original-operation write effects retain bounded fail-closed disposal debt; this is not a guarantee that an unavailable provider completed deletion or an indefinitely unresolved effect can safely admit a successor.",
+    "Review recommends the identified local artifact only. Task/package local disposition, W13 admission and all external approvals belong to the lead/applicable owner.",
+    "No warning-policy cleanup, broader CI, package/SDK generation or historical customer-data operation performed."
+  ],
+  "completion": {
+    "at": "2026-09-18T02:56:17.933Z",
+    "state": "Independent exact frozen check drained; whole-local-W12 review complete, lead disposition pending."
+  }
+}

@@ -1,0 +1,284 @@
+{
+  "before": {
+    "id": "W07",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Inventory and minimize all eight subject-bearing AE route writers and every request/body log path; define permitted aggregate schema, access and retention. Explicitly provision/attest environment datasets. Resolve historic data disposition and correct receipts. Do not substitute a notice for applicable processing/deletion obligations or assume future minimization erases history.",
+      "finding_refs": "F05/F06; N06/N11/N28",
+      "sizing_owner": "S future-write containment → M/L inventory/historic controls; D/OL + S/P/C"
+    },
+    "title": "Telemetry, logs and historic privacy",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F05",
+      "F06",
+      "N06",
+      "N11",
+      "N28"
+    ],
+    "proposed_owner": "D/OL + S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W07-FUTURE-RAW",
+          "description": "Bounded withdrawal of eight raw AE writers, blanket URL/entry queue logs and named raw error-object sites, plus truthful historical receipt limits. Other log paths, permitted aggregate schema/access/retention, explicit environment attestation/provisioning, historic data disposition and privacy/customer obligations remain uncovered."
+        },
+        {
+          "id": "W07-SERVICE-LOGS",
+          "description": "Bounded subject/result/error/body/callback log withdrawal in OptimizelyService, EventDispatcher, sceneGen and PersonalizationWebSocket, with preserved domain effects and targeted current regression. Other log paths and full schema/access/retention/history/dataset/privacy/customer scope remain uncovered."
+        },
+        {
+          "id": "W07-CDP-SESSION-LOGS",
+          "description": "Bounded raw-error/body/dynamic-label withdrawal across CDP, ODP, session, feature and realtime service/router paths; preserve domain behavior except intentional removal of log-only ODP body-read interference with real status receipts. Other log/history/schema/access/retention/dataset/privacy/customer scope remains open."
+        },
+        {
+          "id": "W07-REMAINING-LOGS",
+          "description": "Bounded remaining18-source runtime-console raw-value withdrawal and monitor AE problem-tail minimization; numeric diagnostics and returned/stored/alert/domain behavior preserved. Historical telemetry/diagnostics, complete inventory/schema/access/retention/datasets/customer/privacy scope remains open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W07-FUTURE-RAW",
+          "task_id": "W07.01",
+          "task_criterion_id": "W07.01-C1"
+        },
+        {
+          "criterion_id": "W07-FUTURE-RAW",
+          "task_id": "W07.01",
+          "task_criterion_id": "W07.01-C2"
+        },
+        {
+          "criterion_id": "W07-FUTURE-RAW",
+          "task_id": "W07.01",
+          "task_criterion_id": "W07.01-C3"
+        },
+        {
+          "criterion_id": "W07-SERVICE-LOGS",
+          "task_id": "W07.02",
+          "task_criterion_id": "W07.02-C1"
+        },
+        {
+          "criterion_id": "W07-SERVICE-LOGS",
+          "task_id": "W07.02",
+          "task_criterion_id": "W07.02-C2"
+        },
+        {
+          "criterion_id": "W07-SERVICE-LOGS",
+          "task_id": "W07.02",
+          "task_criterion_id": "W07.02-C3"
+        },
+        {
+          "criterion_id": "W07-CDP-SESSION-LOGS",
+          "task_id": "W07.03",
+          "task_criterion_id": "W07.03-C1"
+        },
+        {
+          "criterion_id": "W07-CDP-SESSION-LOGS",
+          "task_id": "W07.03",
+          "task_criterion_id": "W07.03-C2"
+        },
+        {
+          "criterion_id": "W07-CDP-SESSION-LOGS",
+          "task_id": "W07.03",
+          "task_criterion_id": "W07.03-C3"
+        },
+        {
+          "criterion_id": "W07-REMAINING-LOGS",
+          "task_id": "W07.04",
+          "task_criterion_id": "W07.04-C1"
+        },
+        {
+          "criterion_id": "W07-REMAINING-LOGS",
+          "task_id": "W07.04",
+          "task_criterion_id": "W07.04-C2"
+        },
+        {
+          "criterion_id": "W07-REMAINING-LOGS",
+          "task_id": "W07.04",
+          "task_criterion_id": "W07.04-C3"
+        }
+      ],
+      "task_ids": [
+        "W07.01",
+        "W07.02",
+        "W07.03",
+        "W07.04"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W07",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Inventory and minimize all eight subject-bearing AE route writers and every request/body log path; define permitted aggregate schema, access and retention. Explicitly provision/attest environment datasets. Resolve historic data disposition and correct receipts. Do not substitute a notice for applicable processing/deletion obligations or assume future minimization erases history.",
+      "finding_refs": "F05/F06; N06/N11/N28",
+      "sizing_owner": "S future-write containment → M/L inventory/historic controls; D/OL + S/P/C"
+    },
+    "title": "Telemetry, logs and historic privacy",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F05",
+      "F06",
+      "N06",
+      "N11",
+      "N28"
+    ],
+    "proposed_owner": "D/OL + S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W07-FUTURE-RAW",
+          "description": "Bounded withdrawal of eight raw AE writers, blanket URL/entry queue logs and named raw error-object sites, plus truthful historical receipt limits. Other log paths, permitted aggregate schema/access/retention, explicit environment attestation/provisioning, historic data disposition and privacy/customer obligations remain uncovered."
+        },
+        {
+          "id": "W07-SERVICE-LOGS",
+          "description": "Bounded subject/result/error/body/callback log withdrawal in OptimizelyService, EventDispatcher, sceneGen and PersonalizationWebSocket, with preserved domain effects and targeted current regression. Other log paths and full schema/access/retention/history/dataset/privacy/customer scope remain uncovered."
+        },
+        {
+          "id": "W07-CDP-SESSION-LOGS",
+          "description": "Bounded raw-error/body/dynamic-label withdrawal across CDP, ODP, session, feature and realtime service/router paths; preserve domain behavior except intentional removal of log-only ODP body-read interference with real status receipts. Other log/history/schema/access/retention/dataset/privacy/customer scope remains open."
+        },
+        {
+          "id": "W07-REMAINING-LOGS",
+          "description": "Bounded remaining18-source runtime-console raw-value withdrawal and monitor AE problem-tail minimization; numeric diagnostics and returned/stored/alert/domain behavior preserved. Historical telemetry/diagnostics, complete inventory/schema/access/retention/datasets/customer/privacy scope remains open."
+        },
+        {
+          "id": "W07-COMPLETE-LOCAL-TELEMETRY",
+          "description": "Remaining original-W07 local schema/access/retention, SDK URL minimization, safe monitor diagnostics and truthful destination/history controls; preserve earlier remedies and full/live/customer obligations."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W07-FUTURE-RAW",
+          "task_id": "W07.01",
+          "task_criterion_id": "W07.01-C1"
+        },
+        {
+          "criterion_id": "W07-FUTURE-RAW",
+          "task_id": "W07.01",
+          "task_criterion_id": "W07.01-C2"
+        },
+        {
+          "criterion_id": "W07-FUTURE-RAW",
+          "task_id": "W07.01",
+          "task_criterion_id": "W07.01-C3"
+        },
+        {
+          "criterion_id": "W07-SERVICE-LOGS",
+          "task_id": "W07.02",
+          "task_criterion_id": "W07.02-C1"
+        },
+        {
+          "criterion_id": "W07-SERVICE-LOGS",
+          "task_id": "W07.02",
+          "task_criterion_id": "W07.02-C2"
+        },
+        {
+          "criterion_id": "W07-SERVICE-LOGS",
+          "task_id": "W07.02",
+          "task_criterion_id": "W07.02-C3"
+        },
+        {
+          "criterion_id": "W07-CDP-SESSION-LOGS",
+          "task_id": "W07.03",
+          "task_criterion_id": "W07.03-C1"
+        },
+        {
+          "criterion_id": "W07-CDP-SESSION-LOGS",
+          "task_id": "W07.03",
+          "task_criterion_id": "W07.03-C2"
+        },
+        {
+          "criterion_id": "W07-CDP-SESSION-LOGS",
+          "task_id": "W07.03",
+          "task_criterion_id": "W07.03-C3"
+        },
+        {
+          "criterion_id": "W07-REMAINING-LOGS",
+          "task_id": "W07.04",
+          "task_criterion_id": "W07.04-C1"
+        },
+        {
+          "criterion_id": "W07-REMAINING-LOGS",
+          "task_id": "W07.04",
+          "task_criterion_id": "W07.04-C2"
+        },
+        {
+          "criterion_id": "W07-REMAINING-LOGS",
+          "task_id": "W07.04",
+          "task_criterion_id": "W07.04-C3"
+        },
+        {
+          "criterion_id": "W07-COMPLETE-LOCAL-TELEMETRY",
+          "task_id": "W07.05",
+          "task_criterion_id": "W07.05-C1"
+        },
+        {
+          "criterion_id": "W07-COMPLETE-LOCAL-TELEMETRY",
+          "task_id": "W07.05",
+          "task_criterion_id": "W07.05-C2"
+        },
+        {
+          "criterion_id": "W07-COMPLETE-LOCAL-TELEMETRY",
+          "task_id": "W07.05",
+          "task_criterion_id": "W07.05-C3"
+        },
+        {
+          "criterion_id": "W07-COMPLETE-LOCAL-TELEMETRY",
+          "task_id": "W07.05",
+          "task_criterion_id": "W07.05-C4"
+        },
+        {
+          "criterion_id": "W07-COMPLETE-LOCAL-TELEMETRY",
+          "task_id": "W07.05",
+          "task_criterion_id": "W07.05-C5"
+        },
+        {
+          "criterion_id": "W07-COMPLETE-LOCAL-TELEMETRY",
+          "task_id": "W07.05",
+          "task_criterion_id": "W07.05-C6"
+        },
+        {
+          "criterion_id": "W07-COMPLETE-LOCAL-TELEMETRY",
+          "task_id": "W07.05",
+          "task_criterion_id": "W07.05-C7"
+        }
+      ],
+      "task_ids": [
+        "W07.01",
+        "W07.02",
+        "W07.03",
+        "W07.04",
+        "W07.05"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "at": "2026-09-17T14:48:53.633Z",
+  "reason": "Retain original whole W07 and prior remedies; coherent local successor with explicit full/live/history gate."
+}

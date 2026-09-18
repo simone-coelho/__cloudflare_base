@@ -1,0 +1,492 @@
+{
+  "task_id": "W19.01",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T15:35:25.643Z",
+  "supplemental_source_go_at": "2026-09-13T15:49:48.265Z",
+  "contract_digest": "ff0af9a552112143e6830a55b9176a27cc1fdea3e1a10a7b720f8c4ca5f46c15",
+  "original_contract_digest": "83bdfaedf1798b44e338769ec51d3ecc1d8395f56085bb693d81834cd881f994",
+  "references": [
+    {
+      "path": "docs/remediation/design/W19.01/plan.md",
+      "sha256": "c215795d22413d561de53aef9fdb71e6c5f0eb6f2241fc0e051baf79ab20f27f"
+    },
+    {
+      "path": "docs/remediation/design/W19.01/plan-v2.md",
+      "sha256": "eec80e7be8174c2dc6f227940b1bdc11f98935e62e168a35fa381a3396745a3d"
+    },
+    {
+      "path": "docs/remediation/design/W19.01/baseline.json",
+      "sha256": "efeeeae1fda119d01b7c7f8828d04205f9ad45a8d047f86354da49d6898ebdb8"
+    },
+    {
+      "path": "docs/remediation/design/W19.01/baseline-supplement.json",
+      "sha256": "ef7178a720a26e609d809842b1ff1cf85e8b42b6f3c5ef407e528aa2c6cf8d83"
+    },
+    {
+      "path": "docs/remediation/evidence/W19.01/admission.json",
+      "sha256": "a812616bf11a90d1238970bbe44e84f13fa7b03069eb3eadbc8e842a91673b8a"
+    },
+    {
+      "path": "docs/remediation/evidence/W19.01/admission-v2.json",
+      "sha256": "f7d7144d8103828daa6c32ffd600514ad38d013bfc1a689f57d52f33db42cd36"
+    }
+  ],
+  "baseline": {
+    "kind": "source_confirmed_design_case",
+    "entry": "Root62655/02ab29/b5bfbd check/status VALID1482 exit0/drained; original admission journal1495/direct32111; baseline lint/whitespace10736/56a647/4ed39a/f1ffb0 exit0/drained reused. Root admission board40377/ba33f5/a6ad24/badc53/a1b293 VALID1495 exit0/drained. Supplemental journal1498/direct07cc3a.",
+    "qualification": "Read complete original and supplemental plans/task/admissions before respective edits. Original normalizer dropped merchandising, supplied unsafe defaults and whole-record merge discarded omitted fields. Source-confirmed case only; no newly executed baseline runtime. Root qualified prior-byte W18/W20 proof prospectively; implemented remedies/history remain; W08 unchanged."
+  },
+  "summary": "Preserve supported metadata across JSON/CSV/pull, with CSV-only blank omission and quoted JSON merchandising. Known-ID partial upsert preserves omitted fields and window bounds; current validation accepts promised stage aliases, rejects duplicate exact tags and malformed supported values. Historical catalog/pending receipt validation remains exact; retained raw enrichment proposals accept complete current or historical schema without relaxing new capture/publication.",
+  "criteria": [
+    {
+      "id": "W19.01-C1",
+      "verdict": "local_runtime_pass",
+      "evidence": "Exact supported piece comparisons for JSON and CSV normalization; actual direct PUT/JSON import/CSV import/stubbed pull publication/readback. Zero merchandising, art:null (JSON), stock:false, stage aliases, stable IDs/order, insert-only defaults, omitted metadata and expiry preservation, explicit window/merchandising clears, malformed/null/unknown/nonnumeric fields refusal. Actual deterministic promotion selects 0.72 over rival0.6 with explained delta0.32; merge retry is idempotent, altered/stale retry refuses without writes."
+    },
+    {
+      "id": "W19.01-C2",
+      "verdict": "local_runtime_pass",
+      "evidence": "Current validation/PUT/rollback/initialization refuse exact duplicate tags; actual historical readVersion/replayDecision retains duplicate score0.8 through pending recovery and later correction, with immutable revision bytes preserved and original receipt attribution. Correctly digested retained proposal uses actual GET/human review/export; new duplicate capture and publication refuse422 without catalog/evidence writes. New raw explore alias capture/readback succeeds; existing W14 approved-addition metadata assertions pass with valid current unique-tag fixture."
+    },
+    {
+      "id": "W19.01-C3",
+      "verdict": "worker_checks_pass_independent_review_pending",
+      "evidence": "Exactly three new grouped cases plus ten selected existing controls: final13 pass. Final full compiler, six-source TS lint0 and seven-file whitespace pass on stopped hashes. Four runtime attempts and two static attempts retained; separate frozen review and lead acceptance pending."
+    }
+  ],
+  "source_history": {
+    "original_six": {
+      "at": "2026-09-13T15:45:26.698Z",
+      "files": [
+        {
+          "path": "src/content/import.ts",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/content/import.test.ts",
+          "sha256": "15848205482dc1b282643439610a12762e3fb9a217b79aabfa51d6364d46b3ce"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "sha256": "0ec2a56febd0724943fea9c2ae1b7ee530080664f8995d5b70e743b9d3fd4316"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "sha256": "46474d96c793290fe7caf46ac8389aad23d66c5da7845c75969598ce536e197d"
+        }
+      ],
+      "capture": "313573"
+    },
+    "supplemental_seven": {
+      "at": "2026-09-13T15:51:29.539Z",
+      "files": [
+        {
+          "path": "src/content/import.ts",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/content/import.test.ts",
+          "sha256": "15848205482dc1b282643439610a12762e3fb9a217b79aabfa51d6364d46b3ce"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "sha256": "4cb9591f62ed51d11e3b8b118dcef317df5f1823b0ec37d0b75d126d50d2db48"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "sha256": "46474d96c793290fe7caf46ac8389aad23d66c5da7845c75969598ce536e197d"
+        },
+        {
+          "path": "src/content/enrichment.ts",
+          "sha256": "c4c3e9234102b4ca2e577e141b96a285d5b6a0f2a52fdd663138c7eb50c25daa"
+        }
+      ],
+      "capture": "705d50"
+    },
+    "retained_etag": {
+      "at": "2026-09-13T15:52:20.800Z",
+      "files": [
+        {
+          "path": "src/content/import.ts",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/content/import.test.ts",
+          "sha256": "15848205482dc1b282643439610a12762e3fb9a217b79aabfa51d6364d46b3ce"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "sha256": "f147b318b50f6502e69b65cd1d4ca8c6562c285efc48d9d7b9904056d9de6953"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "sha256": "46474d96c793290fe7caf46ac8389aad23d66c5da7845c75969598ce536e197d"
+        },
+        {
+          "path": "src/content/enrichment.ts",
+          "sha256": "c4c3e9234102b4ca2e577e141b96a285d5b6a0f2a52fdd663138c7eb50c25daa"
+        }
+      ],
+      "capture": "58f6ce"
+    },
+    "typed_final": {
+      "at": "2026-09-13T15:54:10.208Z",
+      "files": [
+        {
+          "path": "src/content/import.ts",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/content/import.test.ts",
+          "sha256": "15848205482dc1b282643439610a12762e3fb9a217b79aabfa51d6364d46b3ce"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "sha256": "7265be662c9aba28c99125209f13a0ab0a75232471814e99ebfe8c57b217e453"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "sha256": "46474d96c793290fe7caf46ac8389aad23d66c5da7845c75969598ce536e197d"
+        },
+        {
+          "path": "src/content/enrichment.ts",
+          "sha256": "c4c3e9234102b4ca2e577e141b96a285d5b6a0f2a52fdd663138c7eb50c25daa"
+        }
+      ],
+      "capture": "a8b2bc"
+    }
+  },
+  "rework": [
+    {
+      "attempt": "runtime1",
+      "result": "11 passed,2 failed,exit1/drained",
+      "cause": "New fixture hardcoded content-empty version root despite prior directPUT stamping content; existing W14 success fixture had duplicate tags and correctly failed new initialization validation.",
+      "resolution": "Derive expected version with existing stamp; current W14 fixture uses unique tag while preserving all metadata assertions. Actual retained-proposal validation regression discovered during diagnosis led to explicit seventh-file supplemental admission; six files stayed stopped during admission."
+    },
+    {
+      "attempt": "runtime2",
+      "result": "12 passed,1 failed,exit1/drained",
+      "cause": "Manually seeded retained proposal omitted the conditional fixture's separate ETag metadata, causing503 before proposal validation.",
+      "resolution": "Seed explicit synthetic retained ETag; no production change."
+    },
+    {
+      "attempt": "runtime3/static1",
+      "result": "Runtime13 passed; compiler exited2 with TS2542; lint and whitespace not reached.",
+      "cause": "Fixture assigned tags.line through ContentPieceLike's readonly tag index signature.",
+      "resolution": "Replace cloned piece/tag object immutably. Repeat exact13 and full static on corrected source; earlier runtime pass is superseded byte-specific evidence."
+    }
+  ],
+  "final_results": {
+    "runtime": {
+      "passed": 13,
+      "unselected": 25,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 24.04
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "new_warnings": 0,
+      "final_bytes": true
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    }
+  },
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/routes/content.test.ts -t 'W19.01|parses quoted fields|replace drops what is not|W38.04|W11.01 catalog operation boundary|W20.01|W28.01|requires explicit initialization|publishes only approved additions' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "363173",
+          "wall_time_seconds": 1.001397491,
+          "session_id": 28056,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "914fd5",
+          "wall_time_seconds": 5.005392415,
+          "session_id": 28056,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "286665",
+          "wall_time_seconds": 0.000002896,
+          "exit_code": 1,
+          "original_token_count": 1198,
+          "output": " ❯ src/routes/content.test.ts  (27 tests | 2 failed | 19 skipped) 591ms\n   ❯ src/routes/content.test.ts > /content routes > W19.01 publishes equivalent JSON CSV pull and direct catalogs with safe merge retries\n     → expected { pieces: [ …(2) ], …(1) } to deeply equal { pieces: [ …(2) ], …(1) }\n   ❯ src/routes/content.test.ts > W14.04 explicit human-approved enrichment publication > publishes only approved additions, preserves current metadata and makes the deterministic selection explain the new tag\n     → Baseline catalog is invalid\nstdout | src/routes/content.test.ts > authenticated reflex administration > W38.04 bounds every consuming route before effects and preserves authority optional rollback and import replay\nW38.04 mounted admission {\"guarded_lanes\":20,\"admitted_pieces\":501,\"remote_refusals\":2,\"writes_before_refusal\":0}\n\nstdout | src/content/import.test.ts > W38.04 input admission > W38.04 counts streamed local and direct remote bytes before parsing and preserves HTTP decoding\nW38.04 stream admission {\"exact_bytes\":2097152,\"overflow_pulls\":2,\"overflow_cancelled\":true,\"oversize_parsed\":false}\n\n ✓ src/content/import.test.ts  (11 tests | 6 skipped) 212ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/routes/content.test.ts > /content routes > W19.01 publishes equivalent JSON CSV pull and direct catalogs with safe merge retries\nAssertionError: expected { pieces: [ …(2) ], …(1) } to deeply equal { pieces: [ …(2) ], …(1) }\n\n- Expected\n+ Received\n\n  Object {\n    \"pieces\": Array [\n      Object {\n        \"art\": null,\n        \"customerContentId\": \"CMP-promoted\",\n        \"excerpt\": \"Copy\",\n        \"featuredProductIds\": Array [\n          \"SKU-1\",\n        ],\n        \"freshnessDate\": \"2026-01-01T00:00:00Z\",\n        \"id\": \"promoted\",\n        \"inStock\": false,\n        \"journeyStageFit\": Array [\n          \"exploring\",\n        ],\n        \"lifecycle\": Object {\n          \"status\": \"expired\",\n        },\n        \"merchandising\": Object {\n          \"margin\": 0,\n          \"promotion\": 1,\n          \"season\": 0.4,\n        },\n        \"renderUrl\": \"/render\",\n        \"runtime\": \"01:30\",\n        \"slotTypes\": Array [\n          \"story\",\n        ],\n        \"subtitle\": \"Sub\",\n        \"tags\": Object {\n          \"line\": Array [\n            \"Drover\",\n          ],\n        },\n        \"title\": \"Refreshed\",\n        \"type\": \"editorial\",\n        \"window\": Object {\n          \"from\": \"2026-01-01T00:00:00Z\",\n          \"to\": \"2026-02-01T00:00:00Z\",\n        },\n      },\n      Object {\n        \"customerContentId\": \"CMP-rival\",\n        \"id\": \"rival\",\n        \"lifecycle\": Object {\n          \"status\": \"live\",\n        },\n        \"slotTypes\": Array [\n          \"story\",\n        ],\n        \"tags\": Object {\n          \"line\": Array [\n            \"Tabby\",\n          ],\n        },\n        \"title\": \"rival\",\n        \"type\": \"editorial\",\n      },\n    ],\n-   \"version\": \"content-empty+r7\",\n+   \"version\": \"content+r7\",\n  }\n\n ❯ src/routes/content.test.ts:115:39\n    113|       expect((await request('/import?mode=merge', 'POST', update, head…\n    114|       const expected = { ...retired, version: `content-empty+r${revisi…\n    115|       expect((await current()).value).toEqual(expected);\n       |                                       ^\n    116|       const puts = storage.puts;\n    117|       expect(await (await request('/import?mode=merge', 'POST', update…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/routes/content.test.ts > W14.04 explicit human-approved enrichment publication > publishes only approved additions, preserves current metadata and makes the deterministic selection explain the new tag\nError: Baseline catalog is invalid\n ❯ Module.initializePublication src/config/publication.ts:342:28\n    340|   const meta = { actor: baseline.actor, note: baseline.note, expectedR…\n    341|   const preconditions = publicationPreconditions(meta, true), validate…\n    342|   if (!validated.ok) throw new PublicationError('Baseline catalog is i…\n       |                            ^\n    343|   const storage = storageOf(env);\n    344|   return invalidating<Revision<T>>(storage, prefix(kind, scope), async…\n ❯ enrichmentPublicationFixture src/routes/content.test.ts:820:73\n ❯ src/routes/content.test.ts:840:15\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { status: 422, code: 'invalid_baseline' }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  1 failed | 1 passed (2)\n      Tests  2 failed | 11 passed | 25 skipped (38)\n   Start at  11:45:34\n   Duration  20.38s (transform 3.31s, setup 0ms, collect 7.31s, tests 803ms, environment 0ms, prepare 8.28s)\n\n"
+        }
+      ],
+      "session_id": 28056,
+      "exit_code": 1,
+      "drained": true,
+      "summary": "Original-contract attempt:11pass2fail; superseded, not acceptance.",
+      "source_capture": "313573",
+      "contract_digest": "83bdfaedf1798b44e338769ec51d3ecc1d8395f56085bb693d81834cd881f994"
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/routes/content.test.ts -t 'W19.01|parses quoted fields|replace drops what is not|W38.04|W11.01 catalog operation boundary|W20.01|W28.01|requires explicit initialization|publishes only approved additions' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "e19fca",
+          "wall_time_seconds": 1.001684245,
+          "session_id": 94148,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "64e1b0",
+          "wall_time_seconds": 0.000002671,
+          "exit_code": 1,
+          "original_token_count": 568,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/content.test.ts > authenticated reflex administration > W38.04 bounds every consuming route before effects and preserves authority optional rollback and import replay\nW38.04 mounted admission {\"guarded_lanes\":20,\"admitted_pieces\":501,\"remote_refusals\":2,\"writes_before_refusal\":0}\n\n ❯ src/routes/content.test.ts  (27 tests | 1 failed | 19 skipped) 452ms\n   ❯ src/routes/content.test.ts > /content routes > W19.01 retains historical duplicate-tag receipts and recovery while new writes refuse duplicate tags\n     → expected 503 to be 200 // Object.is equality\nstdout | src/content/import.test.ts > W38.04 input admission > W38.04 counts streamed local and direct remote bytes before parsing and preserves HTTP decoding\nW38.04 stream admission {\"exact_bytes\":2097152,\"overflow_pulls\":2,\"overflow_cancelled\":true,\"oversize_parsed\":false}\n\n ✓ src/content/import.test.ts  (11 tests | 6 skipped) 116ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/routes/content.test.ts > /content routes > W19.01 retains historical duplicate-tag receipts and recovery while new writes refuse duplicate tags\nAssertionError: expected 503 to be 200 // Object.is equality\n\n- Expected\n+ Received\n\n- 200\n+ 503\n\n ❯ src/routes/content.test.ts:203:62\n    201|     const proposal = { ...basis, digest: hash }, key = `content-enrich…\n    202|     f.storage.objects.set(key, bytes);\n    203|     const read = await f.call(`/${id}`); expect(read.status).toBe(200)…\n       |                                                              ^\n    204|     const reviewed = await f.call(`/${id}/review`, 'POST', { proposalD…\n    205|       dispositions: [{ labelId: 'old-label', action: 'approve' }] }, f…\n\n Test Files  1 failed | 1 passed (2)\n      Tests  1 failed | 12 passed | 25 skipped (38)\n   Start at  11:51:34\n   Duration  21.46s (transform 3.91s, setup 0ms, collect 9.88s, tests 568ms, environment 0ms, prepare 7.51s)\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n"
+        }
+      ],
+      "session_id": 94148,
+      "exit_code": 1,
+      "drained": true,
+      "summary": "Supplemental seven-file attempt:12pass1fail; superseded.",
+      "source_capture": "705d50"
+    },
+    "runtime3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/routes/content.test.ts -t 'W19.01|parses quoted fields|replace drops what is not|W38.04|W11.01 catalog operation boundary|W20.01|W28.01|requires explicit initialization|publishes only approved additions' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "68bbd7",
+          "wall_time_seconds": 1.000808477,
+          "session_id": 70730,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "11d6ba",
+          "wall_time_seconds": 0.000002381,
+          "exit_code": 0,
+          "original_token_count": 286,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/content.test.ts > authenticated reflex administration > W38.04 bounds every consuming route before effects and preserves authority optional rollback and import replay\nW38.04 mounted admission {\"guarded_lanes\":20,\"admitted_pieces\":501,\"remote_refusals\":2,\"writes_before_refusal\":0}\n\n ✓ src/routes/content.test.ts  (27 tests | 19 skipped) 667ms\n ✓ src/content/import.test.ts  (11 tests | 6 skipped) 258ms\nstdout | src/content/import.test.ts > W38.04 input admission > W38.04 counts streamed local and direct remote bytes before parsing and preserves HTTP decoding\nW38.04 stream admission {\"exact_bytes\":2097152,\"overflow_pulls\":2,\"overflow_cancelled\":true,\"oversize_parsed\":false}\n\n\n Test Files  2 passed (2)\n      Tests  13 passed | 25 skipped (38)\n   Start at  11:52:30\n   Duration  21.14s (transform 3.34s, setup 0ms, collect 9.07s, tests 925ms, environment 0ms, prepare 7.89s)\n\n"
+        }
+      ],
+      "session_id": 70730,
+      "exit_code": 0,
+      "drained": true,
+      "summary": "13pass; superseded after compiler-required fixture correction.",
+      "source_capture": "58f6ce"
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts src/content/enrichment.ts --max-warnings 0 && git diff --check -- src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts docs/kit/03-payload-schemas.md src/content/enrichment.ts",
+      "captures": [
+        {
+          "chunk_id": "8a0df0",
+          "wall_time_seconds": 1.000459204,
+          "session_id": 57057,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6378d5",
+          "wall_time_seconds": 5.000706164,
+          "session_id": 57057,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5792d1",
+          "wall_time_seconds": 0.000002376,
+          "exit_code": 2,
+          "original_token_count": 36,
+          "output": "src/routes/content.test.ts(180,51): error TS2542: Index signature in type 'Readonly<Record<string, readonly string[]>>' only permits reading.\n"
+        }
+      ],
+      "session_id": 57057,
+      "exit_code": 2,
+      "drained": true,
+      "summary": "Compiler exit2:one TS2542. Following lint/whitespace skipped by &&.",
+      "compiler": {
+        "exit_code": 2
+      },
+      "lint": {
+        "status": "not_run"
+      },
+      "whitespace": {
+        "status": "not_run"
+      },
+      "source_capture": "58f6ce"
+    },
+    "runtime4": {
+      "command": "node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/routes/content.test.ts -t 'W19.01|parses quoted fields|replace drops what is not|W38.04|W11.01 catalog operation boundary|W20.01|W28.01|requires explicit initialization|publishes only approved additions' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "5556b9",
+          "wall_time_seconds": 1.001763107,
+          "session_id": 17696,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "235e0b",
+          "wall_time_seconds": 0.000001961,
+          "exit_code": 0,
+          "original_token_count": 286,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/content.test.ts > authenticated reflex administration > W38.04 bounds every consuming route before effects and preserves authority optional rollback and import replay\nW38.04 mounted admission {\"guarded_lanes\":20,\"admitted_pieces\":501,\"remote_refusals\":2,\"writes_before_refusal\":0}\n\n ✓ src/routes/content.test.ts  (27 tests | 19 skipped) 432ms\nstdout | src/content/import.test.ts > W38.04 input admission > W38.04 counts streamed local and direct remote bytes before parsing and preserves HTTP decoding\nW38.04 stream admission {\"exact_bytes\":2097152,\"overflow_pulls\":2,\"overflow_cancelled\":true,\"oversize_parsed\":false}\n\n ✓ src/content/import.test.ts  (11 tests | 6 skipped) 122ms\n\n Test Files  2 passed (2)\n      Tests  13 passed | 25 skipped (38)\n   Start at  11:54:16\n   Duration  24.04s (transform 3.61s, setup 0ms, collect 8.77s, tests 554ms, environment 0ms, prepare 10.44s)\n\n"
+        }
+      ],
+      "session_id": 17696,
+      "exit_code": 0,
+      "drained": true,
+      "summary": "Final13pass,25unselected,24.04s.",
+      "source_capture": "a8b2bc",
+      "final_bytes": true
+    },
+    "static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts src/content/enrichment.ts --max-warnings 0 && git diff --check -- src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts docs/kit/03-payload-schemas.md src/content/enrichment.ts",
+      "captures": [
+        {
+          "chunk_id": "169740",
+          "wall_time_seconds": 1.001599591,
+          "session_id": 1174,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d4237f",
+          "wall_time_seconds": 5.012878247,
+          "session_id": 1174,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2c6864",
+          "wall_time_seconds": 5.00078628,
+          "session_id": 1174,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "40d18e",
+          "wall_time_seconds": 5.001515047,
+          "session_id": 1174,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "56df93",
+          "wall_time_seconds": 5.001165871,
+          "session_id": 1174,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2aed3f",
+          "wall_time_seconds": 10.001584518,
+          "session_id": 1174,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "db9ebe",
+          "wall_time_seconds": 0.000001639,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 1174,
+      "exit_code": 0,
+      "drained": true,
+      "summary": "Final full compiler/lint0/whitespace chained with &&:all reached and passed,empty output.",
+      "source_capture": "a8b2bc",
+      "final_bytes": true
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T15:57:14.127Z",
+    "files": [
+      {
+        "path": "src/content/import.ts",
+        "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+      },
+      {
+        "path": "src/config/publication.ts",
+        "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+      },
+      {
+        "path": "src/content/import.test.ts",
+        "sha256": "15848205482dc1b282643439610a12762e3fb9a217b79aabfa51d6364d46b3ce"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "7265be662c9aba28c99125209f13a0ab0a75232471814e99ebfe8c57b217e453"
+      },
+      {
+        "path": "docs/kit/03-payload-schemas.md",
+        "sha256": "46474d96c793290fe7caf46ac8389aad23d66c5da7845c75969598ce536e197d"
+      },
+      {
+        "path": "src/content/enrichment.ts",
+        "sha256": "c4c3e9234102b4ca2e577e141b96a285d5b6a0f2a52fdd663138c7eb50c25daa"
+      }
+    ],
+    "capture": "86a6d8",
+    "checked_against": "a8b2bc;all seven hashes identical after final runtime/static"
+  },
+  "limitations": [
+    "Bounded current supported-field fidelity only; full W19/F27/N15, canonical type/film-video agreement, registry/case/locale/slot vocabulary, unusable taxonomy policy, product-attribute inheritance and full versioned feed/customer acceptance remain open.",
+    "Partial upsert is an explicit documented behavior change. Supplied tags/arrays/merchandising replace whole fields; window bounds merge unless JSON window:{} explicitly clears. CSV blanks cannot clear gates; art:null is JSON-only, while CSV parity uses an explicit asset string. Unknown metadata is not promised retained by catalog normalization.",
+    "Historical duplicates retain their original scoring. New whole-catalog writes, rollback and enrichment containing duplicates refuse until explicit correction. Historical raw proposal read/review/export does not authorize publication; new captures remain strict.",
+    "WeakSet format provenance is local to parseCsv-returned row objects consumed by actual routes; parser row shape and priors behavior/bounds remain unchanged. Copied/deserialized CSV rows are ordinary JSON inputs.",
+    "Synthetic local conditional storage and stubbed remote feed are not native/distributed/cloud/customer acceptance; no actual feed egress, initialization/cutover, deployment, installs, emitted builds, commits or external operations occurred.",
+    "Inherited Vite CJS API deprecation warning appears in runtime captures; scoped lint has zero warnings. Independent review and lead/package/finding/customer/release acceptance are separate and pending."
+  ]
+}

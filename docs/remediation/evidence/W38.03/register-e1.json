@@ -1,0 +1,232 @@
+{
+  "before": null,
+  "after": {
+    "id": "W38.03-E1",
+    "task_id": "W38.03",
+    "check_id": "W38.03-K1",
+    "criterion_ids": [
+      "W38.03-C1",
+      "W38.03-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W38.03/review.json",
+      "sha256": "3a26158d79c20dfb6ddf4ba4aed8965ada69e25a9ce96a9351a433bde0503c63"
+    },
+    "at": "2026-09-13T12:07:30Z",
+    "limitations": "Legacy serialized KV documents only under a 2MiB application per-value cap, not customer/platform capacity or total heap. HTTP input parsing, arbitrary validator expansion, concurrent miss allocations, history retention, KV transaction/CAS/remote consistency, whole-path native workload and full W38/F32/F08/N07 remain open. Keep compatibility value/config fields, existing keys/index50/history bodies, deterministic ranking/candidates/model and serving fallbacks. No customer decisions, deployments/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external operations. W38.02 overlapping byte proof prospectively qualified, actual cache remedy/history retained.",
+    "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase2.test.ts -t 'W38.03|W38.02|W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots|versions, attributes|rolls forward on rollback|serves the fallback|merges nested objects instead|accepts the legacy|writes both field names|keeps every revision body|serves repeat reads from the isolate cache|re-reads once the TTL|a consenting shopper is personalized|the statistics object counts|real authenticated routes refuse all mutations' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest actual legacy/publication store and Reflex wrappers with synthetic KV/R2 hooks.",
+    "workload": "Fixed23:3 new guard groups plus20 source-counted existing compatibility/cache/publication/caller controls; six existing test files, no native/whole-engine replay.",
+    "result": "pass",
+    "artifact_digest": "a416896062da9e36d5784cbfd69c9483e6c643fcad3d1c0d46387036776d0031",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "c2ffe07329d6c7c401b56c8ae12e615582549601efd631399910dcba3d090603",
+      "configuration": "Legacy serialized KV documents only under a 2MiB application per-value cap, not customer/platform capacity or total heap. HTTP input parsing, arbitrary validator expansion, concurrent miss allocations, history retention, KV transaction/CAS/remote consistency, whole-path native workload and full W38/F32/F08/N07 remain open. Keep compatibility value/config fields, existing keys/index50/history bodies, deterministic ranking/candidates/model and serving fallbacks. No customer decisions, deployments/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external operations. W38.02 overlapping byte proof prospectively qualified, actual cache remedy/history retained.",
+      "files": [
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "output",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "output",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "role": "output",
+          "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "output",
+          "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "role": "output",
+          "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+        },
+        {
+          "path": "src/reflex/configStore.test.ts",
+          "role": "output",
+          "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "fde18711caddbd4019a93e9391438b8c0c592f33ad4558b863620a3dcf2ed97e"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "role": "output",
+          "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "role": "output",
+          "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+        },
+        {
+          "path": "src/learn/phase2.test.ts",
+          "role": "output",
+          "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+        },
+        {
+          "path": "src/learn/cycle.ts",
+          "role": "source",
+          "sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c"
+        },
+        {
+          "path": "src/learn/priors.ts",
+          "role": "source",
+          "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "source",
+          "sha256": "659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/33-adversarial-audit-brief.md",
+          "role": "source",
+          "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.01/acceptance.md",
+          "role": "source",
+          "sha256": "1c0076af128b09e23a1ebc556d2fa8abc32ccc18a8c6bdda9f58f62c45dbd7e9"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.01/worker.json",
+          "role": "source",
+          "sha256": "127d3c6303ed1b37b9b193867d329174029569be403b88d40165787afa298ee8"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.02/acceptance.md",
+          "role": "source",
+          "sha256": "baf3ae1375d444a1b92b817a9310e7ad61dbb8092fa7c2b8e758ce22d9c80a2e"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.02/worker.json",
+          "role": "source",
+          "sha256": "9fba0b389282a44f5bb613ca7ff5e1b837d3f04bc9ff7a57a32d799e097934dc"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.03/worker.json",
+          "role": "output",
+          "sha256": "5bb54a75b05bc8f88b2206339ec12f28cfcbf30f6c1a2a3abd3df7ecdf5ebb7b"
+        },
+        {
+          "path": "docs/remediation/design/W38.03/plan.md",
+          "role": "configuration",
+          "sha256": "3a0d5b09e5c041f3d1d9ca68297eec2562044e6bbad8db0a0a642979f76a31df"
+        },
+        {
+          "path": "docs/remediation/design/W38.03/baseline.json",
+          "role": "configuration",
+          "sha256": "3edd93104ddf7061d4e9b9f220af475db1f31fd4f93019904f245db58b52039f"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.03/admission.json",
+          "role": "configuration",
+          "sha256": "02c6b0074935c3117d066547d18b34931349e8b342a616c0fa5689e7c001315e"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.03/source-freeze.json",
+          "sha256": "15b55e713c63806c7419ab1861904b8f5dded1de3cbd708798c3580faeba6c85",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.03/source-deltas.json",
+          "sha256": "3f6274bb3a7f5d378e609a2f9cb847a784738f9cf59e0786beb41f1731d80f4c",
+          "role": "configuration"
+        }
+      ],
+      "digest": "a416896062da9e36d5784cbfd69c9483e6c643fcad3d1c0d46387036776d0031"
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "before": {
+    "id": "W07",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Inventory and minimize all eight subject-bearing AE route writers and every request/body log path; define permitted aggregate schema, access and retention. Explicitly provision/attest environment datasets. Resolve historic data disposition and correct receipts. Do not substitute a notice for applicable processing/deletion obligations or assume future minimization erases history.",
+      "finding_refs": "F05/F06; N06/N11/N28",
+      "sizing_owner": "S future-write containment → M/L inventory/historic controls; D/OL + S/P/C"
+    },
+    "title": "Telemetry, logs and historic privacy",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F05",
+      "F06",
+      "N06",
+      "N11",
+      "N28"
+    ],
+    "proposed_owner": "D/OL + S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W07",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Inventory and minimize all eight subject-bearing AE route writers and every request/body log path; define permitted aggregate schema, access and retention. Explicitly provision/attest environment datasets. Resolve historic data disposition and correct receipts. Do not substitute a notice for applicable processing/deletion obligations or assume future minimization erases history.",
+      "finding_refs": "F05/F06; N06/N11/N28",
+      "sizing_owner": "S future-write containment → M/L inventory/historic controls; D/OL + S/P/C"
+    },
+    "title": "Telemetry, logs and historic privacy",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F05",
+      "F06",
+      "N06",
+      "N11",
+      "N28"
+    ],
+    "proposed_owner": "D/OL + S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W07-FUTURE-RAW",
+          "description": "Bounded withdrawal of eight raw AE writers, blanket URL/entry queue logs and named raw error-object sites, plus truthful historical receipt limits. Other log paths, permitted aggregate schema/access/retention, explicit environment attestation/provisioning, historic data disposition and privacy/customer obligations remain uncovered."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W07-FUTURE-RAW",
+          "task_id": "W07.01",
+          "task_criterion_id": "W07.01-C1"
+        },
+        {
+          "criterion_id": "W07-FUTURE-RAW",
+          "task_id": "W07.01",
+          "task_criterion_id": "W07.01-C2"
+        },
+        {
+          "criterion_id": "W07-FUTURE-RAW",
+          "task_id": "W07.01",
+          "task_criterion_id": "W07.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W07.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

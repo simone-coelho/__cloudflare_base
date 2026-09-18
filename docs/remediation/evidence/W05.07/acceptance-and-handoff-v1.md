@@ -1,0 +1,15 @@
+# W05.07 acceptance and handoff
+
+Accepted by w01-lead (/root) at 2026-09-08T01:32:14Z, following independent Astra/xhigh review completed 2026-09-08T01:22:45.826Z. Frozen v2 artifact: c00718a3e9d9fced0b875539a5f21e43988162ba976aa6350cd42907dc9b287f.
+
+Owned shopper Optimizely tracking/decisions now enforce capability ownership and durable false-only consent before initialization, evaluation or dispatch. Refused decisions return inert defaults. Storefront metrics use the current owned SDK capture lane, guarding before tag collection and transport; affected examples/API guidance carry the owned contract. No shared scorer, service, SDK or infrastructure change.
+
+Worker and independent exact K1 each passed 50/50. Independent reproduced v1 collecting four stale tags after SDK replacement; v2 callback-entry guard passes the corrected 11-case actual caller/core smoke with zero stale reads/requests. TypeScript graph and SDK interfaces/bundles are unchanged: reuse verified assurance, no redundant compiler/K1/build execution. Worker app noEmit, syntax and scoped diff pass. Root inspected actual changes, complete available proof, 126 physical pins and independent review. See [root review](root-review-v1.json), [independent review](review-v1.md) and [exact independent evidence](review-checks-v1.json).
+
+Retain the failed 49/50 cache-precondition fixture run and its unrecoverable truncated middle, superseding complete run, rejected v1 source/proof and narrow rework. No historical rewrite. W05.06 exact acceptance remains historical after shared-fixture overlap; its implemented SDK remedy was not removed or automatically reaccepted.
+
+Limits: local synthetic/source-confirmed only. Actual Optimizely service/cache/dispatcher positives use a synthetic SDK-creation seam, not real FX bucketing or durable delivery. Caller smoke is not a native browser. Consent is a request snapshot, not atomic revocation. Legacy metric remains explicitly unavailable. No workerd/deployed/SLO/customer/full W05/finding/gate/release acceptance. Provider webhook/preview/datafile, global absence, necessary-record retention, historical destinations and D01/D03/D06 remain separate.
+
+Next real remedy: inspect and admit one coherent owned preferences/non-action read consent-before-seeding/evaluation task on both hosts. The preferences route saves refusal then requests personalization; RealtimeSegmentEngine can seed/evaluate despite that refusal. Include affected owned personalization/segments/reflex reads as justified by actual source; distinguish necessary records from behavioral personalization. This is existing W05 scope, not fixed here. No next task or source edit admitted yet.
+
+Final board check/status and trusted tracker277 append-only comparison are pending at this acceptance timestamp; record their actual results in final-checks-v1.json and RESUME.md before handoff. Preserve dirty worktree, pre-existing deletions and current local-only authority. No commit/push/deploy/cloud/credential/customer-data/destructive/unrelated operations. Keep the next remedy and checks proportional.

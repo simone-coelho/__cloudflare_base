@@ -1,0 +1,342 @@
+{
+  "before": {
+    "id": "W05",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "One explicit consent policy across SDK/server calls, hosts, state creation, capture, sort, learning, telemetry/logs and configured ODP/regional egress. Preserve withdrawal through logout and failures. Test all switch combinations and unknown/error states before writes; define necessary consent records separately.",
+      "finding_refs": "F05/F10; N06/N11/N12",
+      "sizing_owner": "S withdrawal/route containment → M/L complete enforcement; D/OL + S/P/C"
+    },
+    "title": "Consent enforcement across paths",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F05",
+      "F10",
+      "N06",
+      "N11",
+      "N12"
+    ],
+    "proposed_owner": "D/OL + S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W05-TRANSITION-CONTINUITY",
+          "description": "Bounded explicit refusal preservation through owned SDK/server logout/reset/link and handled recovery on both hosts. Full unified policy across capture/state/action/sort/learning/telemetry/logs/configured ODP/regional egress, global unknown/absent semantics, necessary-record retention/lifecycle and human D03/D06/customer approval remain uncovered."
+        },
+        {
+          "id": "W05-ACTION-EFFECTS",
+          "description": "Bounded owned action/DO timer effects: strict refusal before behavioral state/capture/outcomes/configured ODP/regional work, both-switch private-update gate and preserved tracking-only measurement. Other ingress/sort/telemetry/snapshot/lifecycle/global policy and human acceptance remain uncovered."
+        },
+        {
+          "id": "W05-PRODUCT-SORT",
+          "description": "Bounded strict owned /sort consent and cold-read containment on both hosts, preserving candidate feed contract and consented deterministic ranking. Other ingress/general snapshots/telemetry/lifecycle/global policy/customer acceptance remain uncovered."
+        },
+        {
+          "id": "W05-CONTENT-DECISIONS",
+          "description": "Bounded owned content decisions: strict durable false-only consent, cold read-only behavior, consent-safe receipt projection and permitted measurement on both hosts. Full cross-ingress/global/lifecycle/privacy/transactional/customer requirements remain uncovered."
+        },
+        {
+          "id": "W05-GENERIC-TRACKING",
+          "description": "Bounded owned generic event/batch consent and temporary inert email pixel. Full SDK/other ingress/privacy/destination/lifecycle/customer policy remains uncovered."
+        },
+        {
+          "id": "W05-SDK-CAPTURE",
+          "description": "Bounded explicit/acknowledged SDK refusal before behavior collection/transport, withdrawal dwell cleanup, safe defaults and deliberate owned preference changes. Full global/other-ingress/destination/lifecycle/privacy/transactional/customer policy remains uncovered."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W05-TRANSITION-CONTINUITY",
+          "task_id": "W05.01",
+          "task_criterion_id": "W05.01-C1"
+        },
+        {
+          "criterion_id": "W05-TRANSITION-CONTINUITY",
+          "task_id": "W05.01",
+          "task_criterion_id": "W05.01-C2"
+        },
+        {
+          "criterion_id": "W05-TRANSITION-CONTINUITY",
+          "task_id": "W05.01",
+          "task_criterion_id": "W05.01-C3"
+        },
+        {
+          "criterion_id": "W05-ACTION-EFFECTS",
+          "task_id": "W05.02",
+          "task_criterion_id": "W05.02-C1"
+        },
+        {
+          "criterion_id": "W05-ACTION-EFFECTS",
+          "task_id": "W05.02",
+          "task_criterion_id": "W05.02-C2"
+        },
+        {
+          "criterion_id": "W05-ACTION-EFFECTS",
+          "task_id": "W05.02",
+          "task_criterion_id": "W05.02-C3"
+        },
+        {
+          "criterion_id": "W05-PRODUCT-SORT",
+          "task_id": "W05.03",
+          "task_criterion_id": "W05.03-C1"
+        },
+        {
+          "criterion_id": "W05-PRODUCT-SORT",
+          "task_id": "W05.03",
+          "task_criterion_id": "W05.03-C2"
+        },
+        {
+          "criterion_id": "W05-PRODUCT-SORT",
+          "task_id": "W05.03",
+          "task_criterion_id": "W05.03-C3"
+        },
+        {
+          "criterion_id": "W05-CONTENT-DECISIONS",
+          "task_id": "W05.04",
+          "task_criterion_id": "W05.04-C1"
+        },
+        {
+          "criterion_id": "W05-CONTENT-DECISIONS",
+          "task_id": "W05.04",
+          "task_criterion_id": "W05.04-C2"
+        },
+        {
+          "criterion_id": "W05-CONTENT-DECISIONS",
+          "task_id": "W05.04",
+          "task_criterion_id": "W05.04-C3"
+        },
+        {
+          "criterion_id": "W05-GENERIC-TRACKING",
+          "task_id": "W05.05",
+          "task_criterion_id": "W05.05-C1"
+        },
+        {
+          "criterion_id": "W05-GENERIC-TRACKING",
+          "task_id": "W05.05",
+          "task_criterion_id": "W05.05-C2"
+        },
+        {
+          "criterion_id": "W05-GENERIC-TRACKING",
+          "task_id": "W05.05",
+          "task_criterion_id": "W05.05-C3"
+        },
+        {
+          "criterion_id": "W05-SDK-CAPTURE",
+          "task_id": "W05.06",
+          "task_criterion_id": "W05.06-C1"
+        },
+        {
+          "criterion_id": "W05-SDK-CAPTURE",
+          "task_id": "W05.06",
+          "task_criterion_id": "W05.06-C2"
+        },
+        {
+          "criterion_id": "W05-SDK-CAPTURE",
+          "task_id": "W05.06",
+          "task_criterion_id": "W05.06-C3"
+        }
+      ],
+      "task_ids": [
+        "W05.01",
+        "W05.02",
+        "W05.03",
+        "W05.04",
+        "W05.05",
+        "W05.06"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W05",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "One explicit consent policy across SDK/server calls, hosts, state creation, capture, sort, learning, telemetry/logs and configured ODP/regional egress. Preserve withdrawal through logout and failures. Test all switch combinations and unknown/error states before writes; define necessary consent records separately.",
+      "finding_refs": "F05/F10; N06/N11/N12",
+      "sizing_owner": "S withdrawal/route containment → M/L complete enforcement; D/OL + S/P/C"
+    },
+    "title": "Consent enforcement across paths",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F05",
+      "F10",
+      "N06",
+      "N11",
+      "N12"
+    ],
+    "proposed_owner": "D/OL + S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W05-TRANSITION-CONTINUITY",
+          "description": "Bounded explicit refusal preservation through owned SDK/server logout/reset/link and handled recovery on both hosts. Full unified policy across capture/state/action/sort/learning/telemetry/logs/configured ODP/regional egress, global unknown/absent semantics, necessary-record retention/lifecycle and human D03/D06/customer approval remain uncovered."
+        },
+        {
+          "id": "W05-ACTION-EFFECTS",
+          "description": "Bounded owned action/DO timer effects: strict refusal before behavioral state/capture/outcomes/configured ODP/regional work, both-switch private-update gate and preserved tracking-only measurement. Other ingress/sort/telemetry/snapshot/lifecycle/global policy and human acceptance remain uncovered."
+        },
+        {
+          "id": "W05-PRODUCT-SORT",
+          "description": "Bounded strict owned /sort consent and cold-read containment on both hosts, preserving candidate feed contract and consented deterministic ranking. Other ingress/general snapshots/telemetry/lifecycle/global policy/customer acceptance remain uncovered."
+        },
+        {
+          "id": "W05-CONTENT-DECISIONS",
+          "description": "Bounded owned content decisions: strict durable false-only consent, cold read-only behavior, consent-safe receipt projection and permitted measurement on both hosts. Full cross-ingress/global/lifecycle/privacy/transactional/customer requirements remain uncovered."
+        },
+        {
+          "id": "W05-GENERIC-TRACKING",
+          "description": "Bounded owned generic event/batch consent and temporary inert email pixel. Full SDK/other ingress/privacy/destination/lifecycle/customer policy remains uncovered."
+        },
+        {
+          "id": "W05-SDK-CAPTURE",
+          "description": "Bounded explicit/acknowledged SDK refusal before behavior collection/transport, withdrawal dwell cleanup, safe defaults and deliberate owned preference changes. Full global/other-ingress/destination/lifecycle/privacy/transactional/customer policy remains uncovered."
+        },
+        {
+          "id": "W05-OPTIMIZELY-SHOPPER",
+          "description": "Bounded owned Optimizely shopper tracking/decisions consent before initialization/evaluation/dispatch and compatible owned storefront/examples. External webhook sender mapping, preview/datafile, global privacy/lifecycle/customer policy remain uncovered."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W05-TRANSITION-CONTINUITY",
+          "task_id": "W05.01",
+          "task_criterion_id": "W05.01-C1"
+        },
+        {
+          "criterion_id": "W05-TRANSITION-CONTINUITY",
+          "task_id": "W05.01",
+          "task_criterion_id": "W05.01-C2"
+        },
+        {
+          "criterion_id": "W05-TRANSITION-CONTINUITY",
+          "task_id": "W05.01",
+          "task_criterion_id": "W05.01-C3"
+        },
+        {
+          "criterion_id": "W05-ACTION-EFFECTS",
+          "task_id": "W05.02",
+          "task_criterion_id": "W05.02-C1"
+        },
+        {
+          "criterion_id": "W05-ACTION-EFFECTS",
+          "task_id": "W05.02",
+          "task_criterion_id": "W05.02-C2"
+        },
+        {
+          "criterion_id": "W05-ACTION-EFFECTS",
+          "task_id": "W05.02",
+          "task_criterion_id": "W05.02-C3"
+        },
+        {
+          "criterion_id": "W05-PRODUCT-SORT",
+          "task_id": "W05.03",
+          "task_criterion_id": "W05.03-C1"
+        },
+        {
+          "criterion_id": "W05-PRODUCT-SORT",
+          "task_id": "W05.03",
+          "task_criterion_id": "W05.03-C2"
+        },
+        {
+          "criterion_id": "W05-PRODUCT-SORT",
+          "task_id": "W05.03",
+          "task_criterion_id": "W05.03-C3"
+        },
+        {
+          "criterion_id": "W05-CONTENT-DECISIONS",
+          "task_id": "W05.04",
+          "task_criterion_id": "W05.04-C1"
+        },
+        {
+          "criterion_id": "W05-CONTENT-DECISIONS",
+          "task_id": "W05.04",
+          "task_criterion_id": "W05.04-C2"
+        },
+        {
+          "criterion_id": "W05-CONTENT-DECISIONS",
+          "task_id": "W05.04",
+          "task_criterion_id": "W05.04-C3"
+        },
+        {
+          "criterion_id": "W05-GENERIC-TRACKING",
+          "task_id": "W05.05",
+          "task_criterion_id": "W05.05-C1"
+        },
+        {
+          "criterion_id": "W05-GENERIC-TRACKING",
+          "task_id": "W05.05",
+          "task_criterion_id": "W05.05-C2"
+        },
+        {
+          "criterion_id": "W05-GENERIC-TRACKING",
+          "task_id": "W05.05",
+          "task_criterion_id": "W05.05-C3"
+        },
+        {
+          "criterion_id": "W05-SDK-CAPTURE",
+          "task_id": "W05.06",
+          "task_criterion_id": "W05.06-C1"
+        },
+        {
+          "criterion_id": "W05-SDK-CAPTURE",
+          "task_id": "W05.06",
+          "task_criterion_id": "W05.06-C2"
+        },
+        {
+          "criterion_id": "W05-SDK-CAPTURE",
+          "task_id": "W05.06",
+          "task_criterion_id": "W05.06-C3"
+        },
+        {
+          "criterion_id": "W05-OPTIMIZELY-SHOPPER",
+          "task_id": "W05.07",
+          "task_criterion_id": "W05.07-C1"
+        },
+        {
+          "criterion_id": "W05-OPTIMIZELY-SHOPPER",
+          "task_id": "W05.07",
+          "task_criterion_id": "W05.07-C2"
+        },
+        {
+          "criterion_id": "W05-OPTIMIZELY-SHOPPER",
+          "task_id": "W05.07",
+          "task_criterion_id": "W05.07-C3"
+        }
+      ],
+      "task_ids": [
+        "W05.01",
+        "W05.02",
+        "W05.03",
+        "W05.04",
+        "W05.05",
+        "W05.06",
+        "W05.07"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

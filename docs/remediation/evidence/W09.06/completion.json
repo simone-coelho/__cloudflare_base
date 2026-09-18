@@ -1,0 +1,54 @@
+{
+  "task_id": "W09.06",
+  "at": "2026-09-14T17:43:51.963Z",
+  "journal_seq": 1742,
+  "artifact_digest": "ce2ee15e0c2078762b7c98867e3f159ed13c05bf33ce7762462ccee682b0dc52",
+  "contract_digest": "2d1760eebb1b6e8dfbd75d53cb65b63c3d374cb4e93e81d086efd6d8c84ffa95",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W09.06/acceptance.md",
+    "sha256": "8b39fc80cb505a5ecf9addeaebbb5fe849e9a200bf9fd797510b7a2cb5e86cf0"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W09.06/review.json",
+    "sha256": "6e43059ae0edcdf0fff9ea0b875852d2eeb1049e8ed21f92eb09778ee9712b17"
+  },
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "initial": {
+      "chunk_id": "a57218",
+      "wall_time_seconds": 1.001289638,
+      "session_id": 69748,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "2126ee",
+        "wall_time_seconds": 5.000838453,
+        "session_id": 69748,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "54067d",
+        "wall_time_seconds": 5.000451884,
+        "session_id": 69748,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "e7cbdb",
+        "wall_time_seconds": 1.750522549,
+        "exit_code": 0,
+        "original_token_count": 594,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=119, closed=2; evidence records=356\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.06 — Continue remaining W09/W22 producer and sink delivery/reconciliation work: inspect enqueue.ts, writer.ts, consume.ts and existing ledger tests against the complete W09/F16/N07/N08/N10 contract, then admit the next coherent locally implementable recovery fix. Existing managed capture is opt-in; do not silently enable it or claim producer rejection is solved by DLQ declarations. DLQ resource creation, activation, retention/access/erasure/alerts ownership and real-data recovery/replay require separate authority. Keep across-call online identity state deferred pending D06 and W24 privacy/accumulation/reset/recovery decisions; no repeated DLQ suite or provisioning revival.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 25065\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=119, closed=2; evidence records=356\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.06 — Continue remaining W09/W22 producer and sink delivery/reconciliation work: inspect enqueue.ts, writer.ts, consume.ts and existing ledger tests against the complete W09/F16/N07/N08/N10 contract, then admit the next coherent locally implementable recovery fix. Existing managed capture is opt-in; do not silently enable it or claim producer rejection is solved by DLQ declarations. DLQ resource creation, activation, retention/access/erasure/alerts ownership and real-data recovery/replay require separate authority. Keep across-call online identity state deferred pending D06 and W24 privacy/accumulation/reset/recovery decisions; no repeated DLQ suite or provisioning revival.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 25065\n"
+      }
+    ],
+    "result": "VALID",
+    "notes_each": 25065,
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;34 exact pins rechecked, no commands running. Only final handoff metadata/checkpoint updated after validated acceptance state. Tracker validity is not engine/customer/release approval.",
+  "next_action": "Continue remaining W09/W22 producer and sink delivery/reconciliation work: inspect enqueue.ts, writer.ts, consume.ts and existing ledger tests against the complete W09/F16/N07/N08/N10 contract, then admit the next coherent locally implementable recovery fix. Existing managed capture is opt-in; do not silently enable it or claim producer rejection is solved by DLQ declarations. DLQ resource creation, activation, retention/access/erasure/alerts ownership and real-data recovery/replay require separate authority. Keep across-call online identity state deferred pending D06 and W24 privacy/accumulation/reset/recovery decisions; no repeated DLQ suite or provisioning revival.",
+  "limitations": "Isolated local DLQ declarations and installed native broker retry-exhaustion forwarding only. Test-only collector proves full-body forwarding, not consumerless retention, restart durability, deployed retry semantics, native concurrency or operational recovery. Queue existence/activation, access/retention/erasure/alerts/recovery ownership and customer/privacy decisions need separate authority. Producer rejection, intentionally acknowledged non-ledger/handled scene failures, replay/reconciliation, partial/legacy duplication, full W09/W22/F16/N10 and release remain open. Retired scripts remain retired. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations. Static command whitespace covers tracked manifest/doc only; inherited untracked fixture106 added lines/unchanged EOF independently source-checked clean. Supplemental no-index command exit1 with empty output is retained, not relabeled exit0."
+}

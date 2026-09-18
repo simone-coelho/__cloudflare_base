@@ -1,0 +1,280 @@
+{
+  "task": "W03.01",
+  "frozenAt": "2026-09-07T06:09:59.102Z",
+  "artifact": {
+    "status": "recorded",
+    "contract_digest": "13c4d74f90c6af5cb74eb7c89995e769685aaffb35eff6399cbc2c7a03c6144c",
+    "configuration": "W03.01 anonymous administrative document disclosure containment. Pin the three actual mounted-router/auth suite local dependency graphs and existing tool fixture graph (packages external), eleven declared outputs, dynamically read adapters/preview/rehearsal, selected type/config/lock files, public Coach CMS/active-console source and actual baseline/plan/worker/source-graph proof. Actual mounted subrouter and selected local tool fixtures; package dependencies external and lockfiles pinned, not installed runner/native binary or full application TypeScript-program identity. Source/syntax review for changed browser callers, static Coach CMS and active console, not browser acceptance. Actual index mount inspection is context, not a frozen full-app/runtime claim; original baseline has retained source bytes but no complete dependency graph. Full W03/membership/tenant propagation, legacy recovery adaptation, private-catalogue publication, historic/deployed/customer/SLO/release and prior-proof reclosure remain outside this task.",
+    "files": [
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "598efa71608c29c1bd1868ffe73d6eb84e8870876fbf5e13cc06f1d5082d3c8b",
+        "role": "output"
+      },
+      {
+        "path": "docs/remediation/design/W03.01/plan-v1.md",
+        "sha256": "4c8fd390108674fc50013b298fb0db0a0b53f3758fd47180db69c102aa924b5d",
+        "role": "source"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.01/baseline-probe.mjs",
+        "sha256": "d65589d1b33327762cf5894e7fb7d5f2e6f1dcd2ddd02aac84df8868403940f8",
+        "role": "output"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.01/baseline.json",
+        "sha256": "c90ddfd8da6c53a5aa7f35a6f86b0688259d27f6583a8479743cca51eafce03a",
+        "role": "output"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.01/before-sources-v1.json",
+        "sha256": "669c4266b6f840be322eea962ee08739d7949e09ea625fbf3c375f335bc0d0d6",
+        "role": "output"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.01/source-inputs-v1.json",
+        "sha256": "10ba75ada7f4147db0eccd7cd4344d33e2f2f4dad0f27cc1c836e824ee2927f0",
+        "role": "output"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.01/worker-checks.json",
+        "sha256": "8579b82d09a14070b5339b98beadc161fd2eb7c6c4186de677240771b3adba4c",
+        "role": "output"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.01/worker.md",
+        "sha256": "179df8622d15da2ddefa451b19d976c896a3e3f46419e9248bfd26b799bfd599",
+        "role": "output"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+        "role": "configuration"
+      },
+      {
+        "path": "package.json",
+        "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c",
+        "role": "configuration"
+      },
+      {
+        "path": "public/console/shell.js",
+        "sha256": "840a1321d0d29be64eb0fc5890d96236115a8a3081bb0a5a5f8146660fe2ed0e",
+        "role": "source"
+      },
+      {
+        "path": "public/data/coach-content.json",
+        "sha256": "f1443a740cf5b99c87c6aa294ec180233c6b99dc8b385ad1cf43bb4fc58afaaf",
+        "role": "source"
+      },
+      {
+        "path": "public/meridian/meridian.js",
+        "sha256": "2d15f1274bd44de22ca691fc88f7a8f1f5456f0dee41e79c9bb894c17a614739",
+        "role": "output"
+      },
+      {
+        "path": "public/storefront.js",
+        "sha256": "6a0c66c18746a27df8a03362d23876bcdef14f07dd9ba09b4a9cf69526ec7403",
+        "role": "output"
+      },
+      {
+        "path": "scripts/acceptance-run.mjs",
+        "sha256": "480119d36115f08c3c873f1ace078fde89c8f11a7c812b741cd8def924a856e6",
+        "role": "source"
+      },
+      {
+        "path": "scripts/console-operator.mjs",
+        "sha256": "790f64c8e137764e8e902f60feab1381c68b8a82e702f22aa8dc753b71fc08d0",
+        "role": "source"
+      },
+      {
+        "path": "scripts/console-preview.sh",
+        "sha256": "cbb4a98864bd9484ba288d855a43c8826afd7b6840c2a6131a3ccc309c3120ba",
+        "role": "output"
+      },
+      {
+        "path": "scripts/dev-token.mjs",
+        "sha256": "816f4975c78a87c94b8f97b065211b2057e336e0bc30aa574afd4fcd776dcaae",
+        "role": "source"
+      },
+      {
+        "path": "scripts/holdout-proof.mjs",
+        "sha256": "37468d11045f80b7e0bf2ea45ffd937bfaa0339969ddb78cf21ed892f31ffe4d",
+        "role": "source"
+      },
+      {
+        "path": "scripts/identity-proof.mjs",
+        "sha256": "fc6772f6cca45f85196b8e10283a2a47a9c248ea4d23dcd923c44dac95121246",
+        "role": "source"
+      },
+      {
+        "path": "scripts/import-content.mjs",
+        "sha256": "f9daf19c75abf83ee641f2550a08df46b67417816d2a4c4f43fc582c29a51e51",
+        "role": "output"
+      },
+      {
+        "path": "scripts/lib/tool-token.mjs",
+        "sha256": "4668486f96cb527ea84ad3295ddea2181edfe2e573e7630c5da6ca48ee773836",
+        "role": "source"
+      },
+      {
+        "path": "scripts/lib/tool-token.test.mjs",
+        "sha256": "fb228968db1eecf7c2dd4dc8aea942a13293277c0491bf42ff2645d0a06c4db8",
+        "role": "output"
+      },
+      {
+        "path": "scripts/rehearse-storefront.sh",
+        "sha256": "d1ce1ed02688f13a821991fd25d62d024c70e1100bcdf76b97c233297bfb5bf8",
+        "role": "source"
+      },
+      {
+        "path": "scripts/seed-coach-content.mjs",
+        "sha256": "2581db213e799fbf60c51e66999a59d907238e43bb6dd8045c7c43b27e4004af",
+        "role": "source"
+      },
+      {
+        "path": "src/auth/accounts.ts",
+        "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+        "role": "source"
+      },
+      {
+        "path": "src/auth/signing-config.boundary.test.ts",
+        "sha256": "4d99a0bf5eefcb148ff0bfc0010beadcd2ecf0c018bc0c35ec7067dcdf88741f",
+        "role": "output"
+      },
+      {
+        "path": "src/auth/signingConfig.mjs",
+        "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+        "role": "source"
+      },
+      {
+        "path": "src/auth/store.ts",
+        "sha256": "7d0513e2456798aff7d448fc79d11ebad4f3b014a74a03b2df1843a2238144cf",
+        "role": "source"
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "a0f4de159c1e83a5f81fd5c75f54f74662ce6e6d35a0e4b72de6a8d870801081",
+        "role": "source"
+      },
+      {
+        "path": "src/content/import.ts",
+        "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc",
+        "role": "source"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b",
+        "role": "source"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06",
+        "role": "source"
+      },
+      {
+        "path": "src/demos/brighthour/reflexConfig.ts",
+        "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf",
+        "role": "source"
+      },
+      {
+        "path": "src/learn/priors.ts",
+        "sha256": "bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f",
+        "role": "source"
+      },
+      {
+        "path": "src/middleware/auth.refresh-boundary.test.ts",
+        "sha256": "aef2f43c339122013007f4e2483117b5544875fdbc787ec56b78a398f5b7982b",
+        "role": "output"
+      },
+      {
+        "path": "src/middleware/auth.ts",
+        "sha256": "9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01",
+        "role": "source"
+      },
+      {
+        "path": "src/middleware/edgeAccess.ts",
+        "sha256": "ef4935e1c8eaf725efb4c7372faa5ea5b09082b0d238b68de09e1d4934375999",
+        "role": "source"
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2",
+        "role": "source"
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db",
+        "role": "source"
+      },
+      {
+        "path": "src/routes/auth.ts",
+        "sha256": "f69f9d83d15d869fa1685a23550322b28fe023ece00295a694efd2b4355096b1",
+        "role": "source"
+      },
+      {
+        "path": "src/routes/config.ts",
+        "sha256": "22beb4d906345afee1267a1c146fcaac003490d360a6ab85d5a5c1ee0e551499",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "bb6a3257ec32648c0b7c4d14add6d540821aa5f0db51def91c7eeccbfea958f6",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/content.ts",
+        "sha256": "4344476c6d9d61db58f243f9e6649b499d2ac029269ea4dfa5fccf4447a8eed8",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/health.ts",
+        "sha256": "0ea5b72d026c4964bb8a34fac627a8704c8a0c5f8eed95e3b656b83a8fda3712",
+        "role": "source"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "e44f357958d91affcd4610c62a8e23a36d48431ddfff16f2b6d7440598bf2d50",
+        "role": "source"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+        "role": "configuration"
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+        "role": "configuration"
+      }
+    ],
+    "digest": "5982b2613f047f71db68f92c2cd679a099e759a27d8dee316181e6148432a16b"
+  },
+  "graphAndWorkerMismatch": [],
+  "protectedPins": [
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "expected": "34b5c7d286650d879223062be352d244b176c9def6d2ebfb543a2dd7e985aedf",
+      "actual": "34b5c7d286650d879223062be352d244b176c9def6d2ebfb543a2dd7e985aedf"
+    },
+    {
+      "path": "src/middleware/auth.ts",
+      "expected": "9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01",
+      "actual": "9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01"
+    },
+    {
+      "path": "src/content/service.ts",
+      "expected": "dff26109e9389cacb1f2bfae4db220f926bbaca6b10376023535e46a3b1a2bf8",
+      "actual": "dff26109e9389cacb1f2bfae4db220f926bbaca6b10376023535e46a3b1a2bf8"
+    },
+    {
+      "path": "src/content/consent.test.ts",
+      "expected": "83bd9de816cb610913a80e45df44ca32742f566a8281ad0961e991a073f37b09",
+      "actual": "83bd9de816cb610913a80e45df44ca32742f566a8281ad0961e991a073f37b09"
+    }
+  ],
+  "head": "e49aef83c9a9843dd21479f1b08d53e7709fac41",
+  "status": " D data/optimizely-cache.db-shm\n D data/optimizely-cache.db-wal\n M docs/api/01-rest-endpoints.md\n M docs/architecture/20-scope-truth-ledger.md\n M docs/architecture/35-audit-verification-and-source-of-truth.md\n M docs/kit/02-api-reference.md\n M examples/usage-examples.js\n M public/meridian/engine.bundle.js\n M public/meridian/meridian.js\n M public/storefront.js\n M scripts/acceptance-run.mjs\n M scripts/console-operator.mjs\n M scripts/console-preview.sh\n M scripts/dev-token.mjs\n M scripts/holdout-proof.mjs\n M scripts/identity-proof.mjs\n M scripts/import-content.mjs\n M scripts/rehearse-storefront.sh\n M scripts/seed-coach-content.mjs\n M src/content/consent.test.ts\n M src/content/service.ts\n M src/index.ts\n M src/middleware/auth.ts\n M src/middleware/edgeAccess.test.ts\n D src/routes/api.ts\n M src/routes/auth.test.ts\n M src/routes/auth.ts\n M src/routes/config.ts\n M src/routes/content.test.ts\n M src/routes/content.ts\n M src/routes/health.ts\n M src/routes/identity.test.ts\n M tsconfig.json\n?? AGENTS.md\n?? docs/Affinity-Outcome-Learning-Design.html\n?? docs/architecture/34-independent-adversarial-audit.md\n?? docs/architecture/35-reconciliation-evidence/\n?? docs/architecture/36-remediation-governance-and-execution.md\n?? docs/remediation/\n?? scripts/lib/\n?? scripts/remediation/\n?? src/auth/signing-config.boundary.test.ts\n?? src/auth/signingConfig.mjs\n?? src/index.api-boundary.test.ts\n?? src/middleware/auth.claims-boundary.test.ts\n?? src/middleware/auth.refresh-boundary.test.ts\n",
+  "limits": "Actual mounted subrouter and selected local tool fixtures; package dependencies external and lockfiles pinned, not installed runner/native binary or full application TypeScript-program identity. Source/syntax review for changed browser callers, static Coach CMS and active console, not browser acceptance. Actual index mount inspection is context, not a frozen full-app/runtime claim; original baseline has retained source bytes but no complete dependency graph. Full W03/membership/tenant propagation, legacy recovery adaptation, private-catalogue publication, historic/deployed/customer/SLO/release and prior-proof reclosure remain outside this task.",
+  "command": "node --input-type=module -e 'import fs from \"node:fs\";import {execFileSync} from \"node:child_process\";import {sha256,artifactDigest,taskContractDigest} from \"./scripts/remediation/board.mjs\";\nconst tracker=JSON.parse(fs.readFileSync(\"docs/remediation/tracker.json\",\"utf8\")),task=tracker.tasks.find(t=>t.id===\"W03.01\");\nconst graph=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W03.01/source-inputs-v1.json\",\"utf8\")).result;\nconst worker=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W03.01/worker-checks.json\",\"utf8\"));\nconst paths=[...new Set([...graph.inputs.map(x=>x.path),...[\"src/routes/config.ts\",\"src/routes/content.ts\",\"src/routes/content.test.ts\",\"src/middleware/auth.refresh-boundary.test.ts\",\"src/auth/signing-config.boundary.test.ts\",\"scripts/import-content.mjs\",\"scripts/console-preview.sh\",\"scripts/lib/tool-token.test.mjs\",\"public/meridian/meridian.js\",\"public/storefront.js\",\"docs/kit/02-api-reference.md\"],...[\"src/types/env.ts\",\"src/content/types.ts\",\"src/middleware/auth.ts\",\"src/auth/signingConfig.mjs\",\"scripts/dev-token.mjs\",\"scripts/acceptance-run.mjs\",\"scripts/import-content.mjs\",\"scripts/seed-coach-content.mjs\",\"scripts/console-operator.mjs\",\"scripts/holdout-proof.mjs\",\"scripts/identity-proof.mjs\",\"scripts/rehearse-storefront.sh\",\"scripts/console-preview.sh\",\"public/data/coach-content.json\",\"public/console/shell.js\",\"package.json\",\"package-lock.json\",\"tsconfig.json\",\"vitest.config.ts\",\"docs/remediation/design/W03.01/plan-v1.md\",\"docs/remediation/evidence/W03.01/baseline.json\",\"docs/remediation/evidence/W03.01/baseline-probe.mjs\",\"docs/remediation/evidence/W03.01/before-sources-v1.json\",\"docs/remediation/evidence/W03.01/source-inputs-v1.json\",\"docs/remediation/evidence/W03.01/worker.md\",\"docs/remediation/evidence/W03.01/worker-checks.json\"]])].sort();\nconst configs=new Set([\"package.json\",\"package-lock.json\",\"tsconfig.json\",\"vitest.config.ts\"]);\nconst files=paths.map(path=>({path,sha256:sha256(fs.readFileSync(path)),role:configs.has(path)?\"configuration\":task.write_paths.some(p=>path===p||path.startsWith(p+\"/\"))?\"output\":\"source\"}));\nconst artifact={status:\"recorded\",contract_digest:taskContractDigest(task),configuration:\"W03.01 anonymous administrative document disclosure containment. Pin the three actual mounted-router/auth suite local dependency graphs and existing tool fixture graph (packages external), eleven declared outputs, dynamically read adapters/preview/rehearsal, selected type/config/lock files, public Coach CMS/active-console source and actual baseline/plan/worker/source-graph proof. Actual mounted subrouter and selected local tool fixtures; package dependencies external and lockfiles pinned, not installed runner/native binary or full application TypeScript-program identity. Source/syntax review for changed browser callers, static Coach CMS and active console, not browser acceptance. Actual index mount inspection is context, not a frozen full-app/runtime claim; original baseline has retained source bytes but no complete dependency graph. Full W03/membership/tenant propagation, legacy recovery adaptation, private-catalogue publication, historic/deployed/customer/SLO/release and prior-proof reclosure remain outside this task.\",files};artifact.digest=artifactDigest(artifact);\nconst actual=new Map(files.map(f=>[f.path,f.sha256])),mismatch=[...graph.inputs,...JSON.parse(worker.sourceFreeze.output)].filter(x=>actual.get(x.path)!==x.sha256);\nconst protectedPins=[[\"docs/architecture/35-audit-verification-and-source-of-truth.md\",\"34b5c7d286650d879223062be352d244b176c9def6d2ebfb543a2dd7e985aedf\"],[\"src/middleware/auth.ts\",\"9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01\"],[\"src/content/service.ts\",\"dff26109e9389cacb1f2bfae4db220f926bbaca6b10376023535e46a3b1a2bf8\"],[\"src/content/consent.test.ts\",\"83bd9de816cb610913a80e45df44ca32742f566a8281ad0961e991a073f37b09\"]].map(([path,expected])=>({path,expected,actual:sha256(fs.readFileSync(path))}));\nconst result={task:\"W03.01\",frozenAt:new Date().toISOString(),artifact,graphAndWorkerMismatch:mismatch,protectedPins,head:execFileSync(\"git\",[\"rev-parse\",\"HEAD\"],{encoding:\"utf8\"}).trim(),status:execFileSync(\"git\",[\"status\",\"--short\"],{encoding:\"utf8\"}),limits:\"Actual mounted subrouter and selected local tool fixtures; package dependencies external and lockfiles pinned, not installed runner/native binary or full application TypeScript-program identity. Source/syntax review for changed browser callers, static Coach CMS and active console, not browser acceptance. Actual index mount inspection is context, not a frozen full-app/runtime claim; original baseline has retained source bytes but no complete dependency graph. Full W03/membership/tenant propagation, legacy recovery adaptation, private-catalogue publication, historic/deployed/customer/SLO/release and prior-proof reclosure remain outside this task.\"};\nconsole.log(JSON.stringify(result));if(mismatch.length||protectedPins.some(x=>x.actual!==x.expected))process.exitCode=1;'"
+}
+

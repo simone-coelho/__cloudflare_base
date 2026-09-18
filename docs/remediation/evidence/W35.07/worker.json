@@ -1,0 +1,117 @@
+{
+  "task_id": "W35.07",
+  "actor_id": "w3507-worker",
+  "run_id": "/root/w3507_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "state": "R1_source_stopped_for_independent_review",
+  "R1_rework": {
+    "review_sha256": "6c5949eccb5f41acbb59a6dccdf6a767635b23c238bc71a7d9edc8a806ad97d7",
+    "lead_approval": "Bounded C2 correction authorized in current task; in_progress journal2000, unchanged contract. Rejected source hashes verified before edits.",
+    "rejected_artifact": "d7e3e508cc78b318260a4d140aa24496e98037553094abe914240b71e8b3ba4c",
+    "rejected_worker_sha256": "384cba111df5f6250c57184d6266ecf07f36a7d8e96d483c052cc8cbd46f5cee",
+    "rejected_source_stop": "2026-09-16 04:52:47 UTC",
+    "superseded_checks": ["K1-attempt-3-final", "K2-attempt-2-final"],
+    "before_files": {
+      "src/durable-objects/ShopperReflex.ts": "2d89b622d27a4cfe2286e11e188a4eff5af3c8947179837580dc5b7c56d4c80b",
+      "src/identity/erase.ts": "ef7dda69725faf139594335e8243dfeed27968357934328d7f5b907f49b3da1b",
+      "src/routes/identity.test.ts": "15e0e3d1d382b199f5769299e4671e7d64904d2a818a070ef412946442927233"
+    },
+    "baseline_rationale": "Review source-confirms a deterministic resume bypass: after a session next-cursor is durable, remaining adjacent steps skip authorization and see unchanged KV ownership tuples. This is distinct from unseen/concurrent legacy KV races.",
+    "change": "Actual barrier transactions alone retain a post-barrier owner epoch. Before each remaining v6 shared-owner destructive effect, serialized /identity/erase/guard requires that same current epoch with empty grants and no profile/pipeline/intent/transfer/forward state. It refuses any observable successor, including a different SID and sessions from compacted scan pages. Relevant raw/SID checks are limited to the target's at-most-two frozen pointer/ownSession records and route to each captured userId. Retired/legacy receipts never backfill epoch authority. Completed effects are not replayed; after all destructive effects checkpoint, final compaction may finish without a global rescan.",
+    "bound": "At most three distinct owner-generation checks (step owner and at most two pointer/ownSession userIds), plus at most two exact SID authorization/snapshot reads per adjacent effect. Existing32-step/page limits remain; no global page collection, new root state or sweep framework.",
+    "regression": "Extended the existing raw-snapshot/restart group only: checkpoint deletion, compact scan references, restart with same- and different-SID successor grants while pointer/link/session compatibility bytes are unchanged, and preserve sessions/cache/adjacent state without false completion. Base/extra retained raw witnesses also reject changed bytes after consumed checkpoints; old-delete lost-ack recovery remains."
+  },
+  "admission": {
+    "journal_sequence": 1998,
+    "task_contract_sha256": "9a474db5475a06e8f567e8a8554405304a93571da93e16a4415d892061a6db02",
+    "plan_sha256": "1d6c08c288b940a871738a8b02669e1d20f6e1b81ec38decdf1644ddd6d48db3",
+    "baseline_sha256": "226081ee689958b87634e2ef7ac03d5bd7fe2654d5f4162b8b369ef96e9c842d",
+    "preflight_sha256": "ff876c466a2d652247634446279f07fd32e5ef7d3fe3db8da2b4403c6b37df65",
+    "baseline_source_hashes_match": true,
+    "lead_approval": "Recorded preflight approval and in_progress assignment; reused lead VALID check/status at sequence 1998 without redundant board runs."
+  },
+  "scope": "Only five assigned TS files and this worker record. Full admitted C1-C3 v6 eligibility/raw snapshot and v5 page-layout safety design.",
+  "baseline": "Actual source confirms session deletion precedes source cleanup, field-only comparisons omit serialized session differences, generic receipts lack exact session eligibility and v5 extra cursors have untagged competing orders. No pre-remediation runtime claim.",
+  "checks": [
+    {
+      "id": "K2-R1-final",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/services/SessionManager.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/services/SessionManager.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts",
+      "session_id": 59404,
+      "exit_code": 0,
+      "result": "Compiler, five-file ESLint and scoped whitespace passed. Zero errors;113 warnings. Parsed final CLI path/rule/message/count multiset matches all13 retained composed-baseline signatures. Session drained; no extra lint invocation."
+    },
+    {
+      "id": "K1-R1-attempt-2-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[34567]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "session_id": 62207,
+      "exit_code": 0,
+      "result": "20 passed,94 skipped;22.88s. Both files pass; session drained. Supersedes failed R1 attempt1 without weakening assertions. Verbose synthetic refusal diagnostics truncated; complete final counts and exit retained."
+    },
+    {
+      "id": "K1-R1-attempt-1",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[34567]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "session_id": 78894,
+      "exit_code": 1,
+      "result": "19 passed, 1 failed, 94 skipped;23.26s. New different-SID canonical-via-visitor continuation assertion observed three KV deletes before later refusal. Lead source review independently identified the same missing canonical owner-generation dependency while this check ran. Corrected by guarding captured userIds as well as step.id, deduplicated and bounded to three owners. Same focused K1 rerun justified; no assertion weakened. Session drained."
+    },
+    {
+      "id": "K1-attempt-1",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[34567]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "session_id": 29826,
+      "exit_code": 1,
+      "result": "3 failed, 17 passed, 94 skipped; 25.38s. New raw-byte and v5 schedules pass. Actual-object negative incorrectly assumed first target SID differed from source SID; v2 fixture entered new v6 flow before reconstructing legacy cursor; v1 fixture expected fresh version4 despite object binding. Fixture corrections required before same-command rerun.",
+      "output_note": "Terminal output included expected synthetic queue/learning refusal diagnostics; an intermediate verbose chunk was truncated, while complete final failure summary and child exit were retained. No pass claimed."
+    },
+    {
+      "id": "K2-attempt-1",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/services/SessionManager.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/services/SessionManager.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts",
+      "session_id": 33323,
+      "exit_code": 2,
+      "result": "Compiler found seven nullable SID fixture annotations in the new actual-object schedule. No production diagnostics. ESLint and whitespace were not reached. Explicit non-null fixture annotations added; same K2 command will rerun."
+    },
+    {
+      "id": "K1-attempt-2",
+      "command": "Same exact admitted K1 command as attempt1",
+      "session_id": 26332,
+      "exit_code": 0,
+      "result": "20 passed, 94 skipped; 24.37s. Superseded by final check after the concrete missing-snapshot C2 correction; not claimed against later bytes."
+    },
+    {
+      "id": "K1-attempt-3-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[34567]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "session_id": 38598,
+      "exit_code": 0,
+      "result": "20 passed, 94 skipped; 26.24s. realtime.sdkContract: 9 selected passed, 60 skipped; identity: 11 selected passed, 34 skipped. Final source hashes below. Session drained.",
+      "output_note": "Verbose synthetic queue/learning refusal diagnostics were truncated by terminal display; final file summaries, test totals and child exit0 retained. No deployed queue or runtime claim."
+    },
+    {
+      "id": "K2-attempt-2-final",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/services/SessionManager.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/services/SessionManager.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts",
+      "session_id": 48149,
+      "exit_code": 0,
+      "result": "No-emit compiler, five-file ESLint and scoped whitespace passed; zero errors, 113 warnings. Session drained.",
+      "warning_comparison": "Final CLI output parsed and compared by path/rule/message/count multiplicity to the composed exact-byte baseline: W35.06 retained four-file final112 plus unchanged admitted SessionManager W35.02 final1. All13 signature multiplicities match; zero new signatures. No extra lint invocation."
+    }
+  ],
+  "source_stop": "2026-09-16 05:16:14 UTC",
+  "warning_signatures": [{"path":"src/durable-objects/ShopperReflex.ts","rule":"@typescript-eslint/no-explicit-any","message":"Unexpected any. Specify a different type","count":9},{"path":"src/durable-objects/ShopperReflex.ts","rule":"@typescript-eslint/no-unused-vars","message":"'_ws' is defined but never used","count":2},{"path":"src/durable-objects/ShopperReflex.ts","rule":"@typescript-eslint/no-unused-vars","message":"'_code' is defined but never used","count":1},{"path":"src/durable-objects/ShopperReflex.ts","rule":"@typescript-eslint/no-unused-vars","message":"'_reason' is defined but never used","count":1},{"path":"src/durable-objects/ShopperReflex.ts","rule":"@typescript-eslint/no-unused-vars","message":"'_wasClean' is defined but never used","count":1},{"path":"src/durable-objects/ShopperReflex.ts","rule":"@typescript-eslint/no-unused-vars","message":"'error' is defined but never used","count":1},{"path":"src/routes/identity.test.ts","rule":"@typescript-eslint/no-explicit-any","message":"Unexpected any. Specify a different type","count":2},{"path":"src/routes/identity.test.ts","rule":"@typescript-eslint/no-unused-vars","message":"'d' is assigned a value but never used","count":1},{"path":"src/routes/realtime.sdkContract.test.ts","rule":"@typescript-eslint/no-empty-function","message":"Unexpected empty method 'passThroughOnException'","count":1},{"path":"src/routes/realtime.sdkContract.test.ts","rule":"@typescript-eslint/no-explicit-any","message":"Unexpected any. Specify a different type","count":89},{"path":"src/routes/realtime.sdkContract.test.ts","rule":"@typescript-eslint/no-empty-function","message":"Unexpected empty arrow function","count":2},{"path":"src/routes/realtime.sdkContract.test.ts","rule":"@typescript-eslint/no-empty-function","message":"Unexpected empty method 'set'","count":2},{"path":"src/services/SessionManager.ts","rule":"@typescript-eslint/no-explicit-any","message":"Unexpected any. Specify a different type","count":1}],
+  "R1_exact_deltas": [{"path":"src/durable-objects/ShopperReflex.ts","before_sha256":"2d89b622d27a4cfe2286e11e188a4eff5af3c8947179837580dc5b7c56d4c80b","final_sha256":"31828b04839833d9e3a4326b1994a338a5e7b602098509d37672bab9d3748ffe","direction":"Apply these sequential zero-based UTF-16 text edits to final bytes to reconstruct rejected bytes","edits":[{"at":91323,"delete":"      if (path === '/identity/erase/guard') {\n        if (body.sessionId !== undefined || body.registration || body.after !== undefined || body.limit !== undefined\n          || !receipt?.continuationEpoch || !this.isActualObject(context.tenant, context.subject)) throw new SessionAccessError();\n        const authority = await this.grantAuthority();\n        if (!authority || authority.epoch !== receipt.continuationEpoch || Object.keys(authority.grants).length) throw new SessionAccessError();\n        const current = await this.state.storage.get(['affinity', 'pipeline', 'identityIntent', 'identityTransfer', 'forwardTo']);\n        if ([...current.values()].some(value => value !== undefined && value !== null)) throw new SessionAccessError();\n        return json({ ok: true });\n      }\n","insert":""},{"at":79013,"delete":"          // Only the transaction that actually removes current owner state may\n          // authorize later shared-key cleanup. A retired receipt is not a barrier.\n          for (const [key, value] of Object.entries(retained)) {\n            if (key.startsWith('identityErasure:') || key.startsWith('identitySourceErasure:')) {\n              additions[key] = { ...erasureReceiptSchema.parse(value), continuationEpoch: grantAuthority.epoch };\n            }\n          }\n          const ownerReceipt = 'identityErasure:' + eligibility.erasureId;\n          if (prior.has(ownerReceipt) && !Object.hasOwn(retained, ownerReceipt)) {\n            additions[ownerReceipt] = { ...erasureReceiptSchema.parse(prior.get(ownerReceipt)), continuationEpoch: grantAuthority.epoch };\n          }\n","insert":""},{"at":10632,"delete":"  highWater: identityTime, witness: z.string().regex(/^[a-f0-9]{64}$/).nullable(), continuationEpoch: z.string().uuid().optional(),","insert":"  highWater: identityTime, witness: z.string().regex(/^[a-f0-9]{64}$/).nullable(),"}]},{"path":"src/identity/erase.ts","before_sha256":"ef7dda69725faf139594335e8243dfeed27968357934328d7f5b907f49b3da1b","final_sha256":"cfb9ed4630a2a03a34ca2a59e11e59209c11a6338d0bf7049217d917dbe58e6c","direction":"Apply these sequential zero-based UTF-16 text edits to final bytes to reconstruct rejected bytes","edits":[{"at":20830,"delete":"  if (exact && step.kind !== 'session' && step.kind !== 'object') {\n    // A completed session cursor cannot authorize later pointer/cache/link/ring\n    // deletion. Shared owner state may now belong to a same- or different-SID\n    // successor, including sessions from already compacted scan capsules.\n    const owner = job.targets.find(target => target.id === step.id)!;\n    const sessions = job.sessions.filter(session => session.sid === owner.pointer || session.sid === owner.ownSessionId);\n    for (const id of new Set([step.id, ...sessions.map(session => session.userId)])) {\n      const response = await shopperObject(env.SHOPPER_REFLEX, id, job.tenant).fetch('https://shopper-reflex/identity/erase/guard',\n        { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Reflex-Tenant': job.tenant, 'X-Reflex-Subject': id },\n          body: JSON.stringify({ erasureId }) });\n      if (!response.ok || (await response.json() as { ok?: unknown })?.ok !== true) unavailable();\n    }\n    const sm = new SessionManager(env, { tenant: job.tenant });\n    for (const session of sessions) {\n      await authorizeSession(env, job.tenant, erasureId!, session);\n      const current = await sm.readSnapshot(session.sid);\n      if (current && current.serialized !== session.serialized) conflict();\n    }\n  }\n","insert":""}]},{"path":"src/routes/identity.test.ts","before_sha256":"15e0e3d1d382b199f5769299e4671e7d64904d2a818a070ef412946442927233","final_sha256":"7647571649d72ffb48f21c3fd256f2bb3e303a940dffe479cbcadee764412c6c","direction":"Apply these sequential zero-based UTF-16 text edits to final bytes to reconstruct rejected bytes","edits":[{"at":102183,"delete":"      // Checkpoint the deletion itself, then stop before shared-key cleanup.\n      // For scan, also consume/compact its capsule and checkpoint the base SID:\n      // the remaining owner guard must still see a successor using the scanned SID.\n      const checkpoint = vi.spyOn(bucket, 'put').mockImplementation(async (path, body, options) => {\n        const value = JSON.parse(body), result = await put(path, body, options);\n        if (branch === 'extra' ? value.plan?.next === 2 : path === key && value.base?.next === 2) {\n          throw new Error('synthetic acknowledged session cursor before adjacent cleanup');\n        }\n        return result;\n      });\n      expect((await erase(f)).status, branch).toBe(503); checkpoint.mockRestore();\n      expect(kv.store.has(sessionKey)).toBe(false);\n      if (branch === 'scan') {\n        expect(JSON.parse(bucket.store.get(key)!).nextSessionPage).toBe(1);\n        expect([...bucket.store].filter(([path]) => path.includes('/sessions/')).every(([, body]) => JSON.parse(body).state === 'compacted')).toBe(true);\n      }\n      const inert = structuredClone([...object.data]), savedKV = [...kv.store];\n      const cacheKV = env.CACHE as unknown as FakeKV, savedCache = [...cacheKV.store];\n      for (const reuse of ['same', 'different']) {\n        const successorSid = reuse === 'same' ? sid : sid + '-successor', successorEpoch = crypto.randomUUID();\n        const grant = { ...grants[0], sessionId: successorSid, grantId: crypto.randomUUID(), authorityEpoch: successorEpoch };\n        object.data.set('grantAuthority', { version: 1, epoch: successorEpoch, grants: { [grant.grantId]: grant } });\n        object.object = new ShopperReflex(object.state, env);\n        kv.store.set(tenantKey(f.tenant, 'session:' + successorSid), serialized); // Same raw compatibility bytes.\n        cacheKV.store.set(tenantKey(f.tenant, 'profile:' + f.sh), 'successor-cache');\n        const preservedKV = [...kv.store], preservedCache = [...cacheKV.store], remove = vi.spyOn(kv, 'delete'), cacheRemove = vi.spyOn(cacheKV, 'delete');\n        const rejected = await erase(f);\n        expect(rejected.status, branch + ':' + reuse).toBe(503); expect(rejected.body.localComplete).toBe(false);\n        expect(remove).not.toHaveBeenCalled(); expect(cacheRemove).not.toHaveBeenCalled();\n        expect([...kv.store]).toEqual(preservedKV); expect([...cacheKV.store]).toEqual(preservedCache);\n        remove.mockRestore(); cacheRemove.mockRestore();\n        object.data.clear(); for (const [name, value] of inert) object.data.set(name, structuredClone(value));\n        object.object = new ShopperReflex(object.state, env);\n        kv.store.clear(); for (const [name, value] of savedKV) kv.store.set(name, value);\n        cacheKV.store.clear(); for (const [name, value] of savedCache) cacheKV.store.set(name, value);\n      }\n      if (branch !== 'scan') {\n        kv.store.set(sessionKey, serialized.replace('\"old\"', '\"new\"'));\n        const remove = vi.spyOn(kv, 'delete');\n        expect((await erase(f)).status, branch).toBe(409); expect(remove).not.toHaveBeenCalled();\n        remove.mockRestore(); kv.store.delete(sessionKey);\n      }\n","insert":""}]}],
+  "final_files": {
+    "src/durable-objects/ShopperReflex.ts": "31828b04839833d9e3a4326b1994a338a5e7b602098509d37672bab9d3748ffe",
+    "src/identity/erase.ts": "cfb9ed4630a2a03a34ca2a59e11e59209c11a6338d0bf7049217d917dbe58e6c",
+    "src/services/SessionManager.ts": "dbfc41128bf1fca16d31053cd6ccc935d5a7472736c862d3b8ba6cdde52041fd",
+    "src/routes/realtime.sdkContract.test.ts": "dda42c2be57a1e7c085eff1685dc6962a64b9d48be19ccbc72126944ee343269",
+    "src/routes/identity.test.ts": "7647571649d72ffb48f21c3fd256f2bb3e303a940dffe479cbcadee764412c6c"
+  },
+  "final_admission_hash_check": "Plan, baseline, preflight and task contract recomputed unchanged at 2026-09-16T04:50:55.151Z.",
+  "implementation_notes": [
+    "Lead approved reusing the generic owner object guard before scanned-session authorization after exact source cleanup; this adds an erasure-path object call, never a serving-path call.",
+    "Legacy v2/v3/v5 fixtures now explicitly freeze their original wire schemas before exercising numeric cursors. Fresh object-bound jobs remain v6 and legacy records are never relabelled in production.",
+    "After K1 attempt2, source inspection found fresh capture still silently skipped missing pointer/ownSession records. Lead approved correcting this concrete C2 gap: fresh v6 now refuses missing snapshots before adjacent effects; post-captured-delete absence remains idempotent for acknowledgement loss. Added missing/malformed assertions only within the admitted raw-snapshot group; this justifies final K1 and K2 reruns."
+  ],
+  "reading_notes": "An initial oversized combined documentation display was truncated and received no complete-read credit; governance, current checkpoint, task and relevant source were subsequently read in bounded sections.",
+  "limitations": "Local prospective DO-authorized containment only; KV read/delete remains nontransactional with legacy writers. No full legacy session-host or socket authority, unseen SID reuse, grantless/legacy cleanup parity, historical discovery, migration, deployment, external/physical erasure, retention/capacity, customer/native/browser/SLO/release acceptance or full W35/F06/F14 closure.",
+  "rollback": "Lead-reviewed inverse of owned deltas against the five admitted hashes; retain compatible v6 and tagged-v5 readers. No rollback, external operation or destructive command authorized.",
+  "handoff": "R1 source STOP. Final focused K1 and K2 pass; failed/superseded attempts and exact reversible three-file R1 deltas retained. No sessions running. Lead freezes and assigns distinct review, then owns tracker/journal/RESUME and acceptance. No self-verification or full authority/release claim."
+}

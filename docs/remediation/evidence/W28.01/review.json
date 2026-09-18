@@ -1,0 +1,185 @@
+{
+  "at": "2026-09-12T16:55:39.277Z",
+  "task_id": "W28.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "43b2070610dd8510cc24e3ffacd83872761f91c6a5d57a91e6a80caac0363f89",
+  "contract_digest": "9bde3a24b7f1884ef4ef74c352f852b5a66808ab687248db6c140d713bcbfb5f",
+  "verdict": "PASS",
+  "summary": "Independent actual-source review and the exact frozen fixed15 pass for local unsupported-Thompson withdrawal, retained read/replay compatibility and the admitted operator boundaries. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W28.01-C1",
+      "verdict": "PASS",
+      "evidence": "The explicit validateStored hook is used only by retained reads; public validation/write and existing patch/rollback still use strict validation. The mounted configuration group rejects Thompson without writes, preserves the full retained current/revision document and accepts an explicit supported replacement. Default exploration/decide suppress Thompson at share 0 and 1 without accepting a request property or string as historical authority. Actual service fresh/cache cases preserve learned receipts and configuration bytes while producing the same supported-only choices; no serving I/O was added."
+    },
+    {
+      "id": "W28.01-C2",
+      "verdict": "PASS",
+      "evidence": "Only the internal Symbol capability enables historical sampling; the production service does not supply it. The exact additive exploration:supported-only marker distinguishes new live choices from absent-marker historical replay without repurposing versions.policy. Present invalid policies refuse, and coupled gamma-zero old/new choices replay with their full context. Both real rendered UIs remove selectable Thompson, show dormant settings and require explicit replacement. Actual operator summaries report effective off. Reset prevalidation refuses the unwritable retained document before DO effects; acknowledged reset followed by revision failure returns 503/resetCompleted/unknown, and the admitted interleaved revision case preserves the subsequent configuration."
+    },
+    {
+      "id": "W28.01-C3",
+      "verdict": "PASS",
+      "evidence": "All 21 exact owned deltas were independently inspected, including scoped kit/doc22/P05 default, Thompson and cooldown corrections. Seven new groups plus eight retained exploration/W27 cases pass in the single fixed15 run; 117 unselected checks are not counted. Final compiler, scoped lint (0 errors, the same four inherited warnings), both JS syntax checks and whitespace were read and reused. All 141 artifact pins, 114 protected pins and 21 forward/reverse deltas match before and after; prior implementation/history is preserved, not promoted to full package/customer/release acceptance."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W28.01/plan.md",
+      "sha256": "80546cb03a862cb5babf0ccbf93a39e2e1bd896f92ef49253ee1705ff18c10d7"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W28.01/artifact.json",
+      "sha256": "549f7bcf78d914e219a2ec86fddf6cc99915822a4f2023129bfe921ac13b17eb"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W28.01/worker.json",
+      "sha256": "273ba8ff5f9558f9ec986280a7d8616321c0bad0f649e69f03685f474427a575"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/phase2.test.ts src/learn/phase3.test.ts src/content/consent.test.ts src/routes/content.test.ts src/ledger/ledger.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts -t 'W28.01|W27.02|W27.03|rotation:|epsilon:|historical Thompson:' --maxWorkers=1 --minWorkers=1",
+    "session_id": 71187,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "0ea728",
+        "wall_time_seconds": 1.001735978,
+        "session_id": 71187,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f9a952",
+        "wall_time_seconds": 5.000948907,
+        "session_id": 71187,
+        "original_token_count": 75,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (23 tests | 22 skipped) 85ms\n"
+      },
+      {
+        "chunk_id": "b960ed",
+        "wall_time_seconds": 5.000473573,
+        "session_id": 71187,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f9cb02",
+        "wall_time_seconds": 5.000562005,
+        "session_id": 71187,
+        "original_token_count": 697,
+        "output": " ✓ src/console/console.render.test.ts  (32 tests | 31 skipped) 1448ms\n ✓ src/routes/content.test.ts  (22 tests | 21 skipped) 31ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (21 tests | 19 skipped) 64ms\n ✓ src/learn/phase3.test.ts  (15 tests | 11 skipped) 28ms\n"
+      },
+      {
+        "chunk_id": "ce6b28",
+        "wall_time_seconds": 5.001277528,
+        "session_id": 71187,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "c69f40",
+        "wall_time_seconds": 2.018490152,
+        "exit_code": 0,
+        "original_token_count": 84,
+        "output": " ✓ src/console/learning.render.test.ts  (9 tests | 8 skipped) 1115ms\n ✓ src/learn/phase2.test.ts  (10 tests | 5 skipped) 41ms\n\n Test Files  7 passed (7)\n      Tests  15 passed | 117 skipped (132)\n   Start at  12:52:12\n   Duration  116.19s (transform 6.51s, setup 0ms, collect 90.85s, tests 2.81s, environment 1ms, prepare 17.04s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 15,
+      "unselected": 117,
+      "total": 132,
+      "test_files": 7,
+      "new_grouped_cases": 7,
+      "retained_selected_cases": 8,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 141,
+    "source_and_output_pins": 135,
+    "protected_pins": 114,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 21,
+    "manifest_sha256": "549f7bcf78d914e219a2ec86fddf6cc99915822a4f2023129bfe921ac13b17eb",
+    "before": {
+      "at": "2026-09-12T16:51:52.549Z",
+      "captures": [
+        "52b57c"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T16:54:26.782Z",
+      "captures": [
+        "1df9e4",
+        "e22404"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "d36da1",
+          "wall_time_seconds": 0.182162469,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T16:51:52.996Z\",\"task\":\"W28.01\",\"state\":\"verification\",\"contract_digest\":\"9bde3a24b7f1884ef4ef74c352f852b5a66808ab687248db6c140d713bcbfb5f\",\"artifact_digest\":\"43b2070610dd8510cc24e3ffacd83872761f91c6a5d57a91e6a80caac0363f89\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "8e8f1c",
+          "wall_time_seconds": 0.123220922,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T16:54:26.584Z\",\"task\":\"W28.01\",\"state\":\"verification\",\"contract_digest\":\"9bde3a24b7f1884ef4ef74c352f852b5a66808ab687248db6c140d713bcbfb5f\",\"artifact_digest\":\"43b2070610dd8510cc24e3ffacd83872761f91c6a5d57a91e6a80caac0363f89\"}\n"
+        }
+      ]
+    },
+    "inspection": "Current plan/task: 9f2d4b. Actual production deltas: 719fe5; UI/document deltas: d34720 with the truncated kit paragraph recovered in 8cdcea; all fixture deltas: ebee8c and 8604e7. Actual replay/dependency boundary and baseline: 8cdcea; production capability/hook callers and existing rollback response: d854e2. Full worker metadata/freeze and every capture: 5915f1, 53d9d5, 02025b, d854e2. Personally completed current governance/checkpoint/full W28/F23/P05 preflight reads are reused; lead entry board51266/8e152f is not rerun."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W28.01/worker.json",
+      "sha256": "273ba8ff5f9558f9ec986280a7d8616321c0bad0f649e69f03685f474427a575"
+    },
+    "command_capture": "w28_static1",
+    "session_id": 69470,
+    "captures": [
+      "3557d3",
+      "02171e",
+      "a8efcf"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 4,
+    "javascript_syntax_files": 2,
+    "whitespace": "pass",
+    "qualification": "The full admitted && chain completed on frozen bytes before source STOP 2026-09-12T16:49:08.007Z. Baseline and final warnings have identical scope/_share/_s/_c signatures (only line movement). No reviewer compiler/lint/syntax/whitespace rerun."
+  },
+  "retained_failures_and_qualifications": [
+    "Worker first runtime 62929/504b7f ended exit1 with 13 passed and 2 failed: historical revision GET was incorrectly asserted as document instead of value, and the operator fixture lacked actual catalog publication authority. Full failures were read and remain in worker.json.",
+    "Corrected fixtures use the actual revision envelope, actual patch helper rather than an invented PATCH route, existing rollback404 refusal, and initialized conditional catalog publication. No production bypass or new API was used. Final worker11793/6ce80a passed15; this separate final-byte run also passed15.",
+    "The four synthetic service learning_incomplete diagnostics and Vite deprecation warning are retained verbatim in independent runtime captures. They are not proof of successful downstream delivery.",
+    "The unselected exact-input fixture was adapted to the marker but is not counted as runtime evidence. The baseline is source-confirmed; no pre-fix runtime probe or broad/native suite is claimed."
+  ],
+  "limitations": [
+    "Withdrawal is containment, not repaired/evaluated Thompson, full W28/F23/N25 closure or customer-policy approval. Rotation/epsilon behavior and reward/context/prior/control/cooldown/propensity quality are not newly validated; configured shares and deterministic replay do not prove exposure rates or causal lift.",
+    "Historical documents and the seeded sampler intentionally remain. The policy marker is not cryptographic integrity; qualified absent-marker compatibility, same-revision body overwrites, historic dependency availability and compiled-code identity remain limitations. Older readers may reject new manifests; rollout/retention/history repair is not established.",
+    "Reset and revision are not transactional. Prevalidation/re-read does not eliminate stale-cache, shared stored-read fallback, concurrent non-CAS writes or unknown post-effect acknowledgements. The interleaving fixture proves only its stated ordering, not an atomic fence or rollback.",
+    "Actual local Hono/service/replay modules and JSDOM UIs use synthetic bindings. This is not deployed/native-provider, customer/browser acceptance, capacity, latency, delivery-completeness or release proof.",
+    "Only review.json was written by this reviewer. No source/governance changes, additional suites, external operations, statistical/business decisions or lead acceptance were performed."
+  ]
+}

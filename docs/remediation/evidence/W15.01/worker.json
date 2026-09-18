@@ -1,0 +1,337 @@
+{
+  "task_id": "W15.01",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "run": "/root/w1404_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-13T23:48:09.401Z",
+  "contract_digest": "1974a51270a1c2079305a03643c84816bf920ecca5de608a3ff0eab9de1c8fbf",
+  "source_go": {
+    "at": "2026-09-13T23:38:59.821Z",
+    "capture": "841af1",
+    "journal": 1622
+  },
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W15.01/plan.md",
+      "sha256": "f651c899694a78fbbae912a8337d698c11f00100df6ea70a5f9131a52e9fb3b9"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W15.01/baseline.json",
+      "sha256": "1354117e2c7f563f444ffe5bc27d15fbba4b19b9a340bd0cd07c3cbdadd575f5"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W15.01/admission.json",
+      "sha256": "faa9f8505f3194c8f57761f4610e738cb1231754e5c7e9ceaeac6938eab4dce2"
+    }
+  },
+  "baseline_reuse": "Source-confirmed design case; root entry check/status VALID1613 and scoped baseline lint retained in admission/baseline. No pre-fix runtime claim or duplicate baseline run.",
+  "final_results": {
+    "runtime": {
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "drained": true,
+      "duration_seconds": 9.39,
+      "test_duration_ms": 383,
+      "evidence": "command_captures.runtime1"
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "full": "passed",
+      "sdk": "passed",
+      "evidence": "command_captures.static2"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 2,
+      "inherited_warnings": 2,
+      "new_errors": 0,
+      "new_warnings": 0,
+      "signatures": [
+        "core.test.ts:178 Unexpected any. Specify a different type (@typescript-eslint/no-explicit-any)",
+        "core.test.ts:204 Unexpected any. Specify a different type (@typescript-eslint/no-explicit-any)"
+      ],
+      "evidence": "command_captures.static2"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "scope": "All six owned paths in exact K2 git diff --check",
+      "evidence": "command_captures.static2"
+    }
+  },
+  "command_captures": {
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=768 node_modules/typescript/bin/tsc -p src/sdk --incremental false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/sdk/core.ts src/sdk/core.test.ts --max-warnings 2 && git diff --check -- src/sdk/core.ts src/sdk/core.test.ts public/sdk/edge-personalization.js public/sdk/edge-personalization.esm.js src/sdk/README.md docs/kit/01-integration-guide.md",
+      "captures": [
+        {
+          "chunk_id": "d951e5",
+          "wall_time_seconds": 1.001251237,
+          "session_id": 27217,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "207a4c",
+          "wall_time_seconds": 5.000949116,
+          "session_id": 27217,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "daee4c",
+          "wall_time_seconds": 0.000001966,
+          "exit_code": 1,
+          "original_token_count": 107,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/core.test.ts\n  178:21  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any\n  204:31  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any\n  340:7   error    Move function declaration to function body root  no-inner-declarations\n\n✖ 3 problems (1 error, 2 warnings)\n\n"
+        }
+      ],
+      "session_id": 27217,
+      "drained": true,
+      "exit_code": 1,
+      "stages": {
+        "full_compiler": {
+          "exit_code": 0
+        },
+        "sdk_compiler": {
+          "exit_code": 0
+        },
+        "lint": {
+          "exit_code": 1,
+          "errors": 1,
+          "inherited_warnings": 2
+        },
+        "whitespace": {
+          "status": "not_reached"
+        }
+      },
+      "disposition": "Retained failed initial attempt; loop-local grouped-fixture function declaration changed to async const after drain. No production/artifact changes."
+    },
+    "static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=768 node_modules/typescript/bin/tsc -p src/sdk --incremental false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/sdk/core.ts src/sdk/core.test.ts --max-warnings 2 && git diff --check -- src/sdk/core.ts src/sdk/core.test.ts public/sdk/edge-personalization.js public/sdk/edge-personalization.esm.js src/sdk/README.md docs/kit/01-integration-guide.md",
+      "captures": [
+        {
+          "chunk_id": "167299",
+          "wall_time_seconds": 1.001098485,
+          "session_id": 20294,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "952a9f",
+          "wall_time_seconds": 5.001289553,
+          "session_id": 20294,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "293a1e",
+          "wall_time_seconds": 0.000002146,
+          "exit_code": 0,
+          "original_token_count": 81,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/core.test.ts\n  178:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  204:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n✖ 2 problems (0 errors, 2 warnings)\n\n"
+        }
+      ],
+      "session_id": 20294,
+      "drained": true,
+      "exit_code": 0,
+      "stages": {
+        "full_compiler": {
+          "exit_code": 0
+        },
+        "sdk_compiler": {
+          "exit_code": 0
+        },
+        "lint": {
+          "exit_code": 0,
+          "errors": 0,
+          "inherited_warnings": 2,
+          "new_errors": 0,
+          "new_warnings": 0
+        },
+        "whitespace": {
+          "exit_code": 0
+        }
+      }
+    },
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/listen.test.ts src/sdk/session.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "4b593e",
+          "wall_time_seconds": 1.001271284,
+          "session_id": 5450,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6f995c",
+          "wall_time_seconds": 0.000002074,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/sdk/core.test.ts  (14 tests) 132ms\n ✓ src/sdk/listen.test.ts  (12 tests) 247ms\n ✓ src/sdk/session.test.ts  (2 tests) 4ms\n\n Test Files  3 passed (3)\n      Tests  28 passed (28)\n   Start at  19:46:28\n   Duration  9.39s (transform 312ms, setup 0ms, collect 977ms, tests 383ms, environment 0ms, prepare 5.66s)\n\n"
+        }
+      ],
+      "session_id": 5450,
+      "drained": true,
+      "exit_code": 0
+    }
+  },
+  "bundle_generation": {
+    "command": "node --input-type=module -e 'import * as esbuild from \"esbuild\"; import {readFileSync} from \"node:fs\"; import {createHash} from \"node:crypto\"; const version=readFileSync(\"src/sdk/version.ts\",\"utf8\").match(/\\x27([^\\x27]+)\\x27/)[1]; const common={bundle:true,platform:\"browser\",target:\"es2022\",minify:false,sourcemap:false,legalComments:\"none\",logLevel:\"silent\",metafile:true,write:false,banner:{js:`/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */`}}; let patch=\"*** Begin Patch\\n\"; const artifacts=[]; for(const [entry,path,format] of [[\"src/sdk/index.ts\",\"public/sdk/edge-personalization.esm.js\",\"esm\"],[\"src/sdk/browser.ts\",\"public/sdk/edge-personalization.js\",\"iife\"]]){ const result=await esbuild.build({...common,entryPoints:[entry],outfile:path,format}); const next=result.outputFiles[0].text,old=readFileSync(path,\"utf8\"); patch+=`*** Update File: ${path}\\n@@\\n`+old.trimEnd().split(\"\\n\").map(l=>\"-\"+l).join(\"\\n\")+\"\\n\"+next.trimEnd().split(\"\\n\").map(l=>\"+\"+l).join(\"\\n\")+\"\\n\"; artifacts.push({path,bytes:Buffer.byteLength(next),sha256:createHash(\"sha256\").update(next).digest(\"hex\"),inputs:Object.keys(result.metafile.inputs)}); } patch+=\"*** End Patch\"; console.log(JSON.stringify({patch,artifacts}));'",
+    "write": false,
+    "application": "apply_patch only; no build script executed",
+    "captures": [
+      {
+        "chunk_id": "c86047",
+        "wall_time_seconds": 0.120250798,
+        "exit_code": 0,
+        "original_token_count": 55484,
+        "output_description": "Actual JSON result contained complete generated apply_patch delta and the following artifact records; large patch retained in tool capture, not duplicated here.",
+        "patch_characters": 213337,
+        "artifacts": [
+          {
+            "path": "public/sdk/edge-personalization.esm.js",
+            "bytes": 51313,
+            "sha256": "2d40227cd42188fe035d5670a8483c52d16ddc6c3f4fe21218981c2f19206e39",
+            "inputs": [
+              "src/sdk/identity.ts",
+              "src/sdk/wire.ts",
+              "src/events/actionTypes.ts",
+              "src/sdk/core.ts",
+              "src/sdk/emit.ts",
+              "src/sdk/listen.ts",
+              "src/sdk/identify.ts",
+              "src/sdk/memoryHost.ts",
+              "src/sdk/host.ts",
+              "src/sdk/version.ts",
+              "src/sdk/index.ts"
+            ]
+          },
+          {
+            "path": "public/sdk/edge-personalization.js",
+            "bytes": 54112,
+            "sha256": "90aded65709ceb8210a9eb05a4795cb660527eccc18ddb0a6eef13f3a412a85c",
+            "inputs": [
+              "src/sdk/identity.ts",
+              "src/sdk/wire.ts",
+              "src/events/actionTypes.ts",
+              "src/sdk/core.ts",
+              "src/sdk/emit.ts",
+              "src/sdk/listen.ts",
+              "src/sdk/identify.ts",
+              "src/sdk/memoryHost.ts",
+              "src/sdk/host.ts",
+              "src/sdk/version.ts",
+              "src/sdk/index.ts",
+              "src/sdk/browser.ts"
+            ]
+          }
+        ]
+      }
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "artifacts": [
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "bytes": 51313,
+        "sha256": "2d40227cd42188fe035d5670a8483c52d16ddc6c3f4fe21218981c2f19206e39",
+        "inputs": [
+          "src/sdk/identity.ts",
+          "src/sdk/wire.ts",
+          "src/events/actionTypes.ts",
+          "src/sdk/core.ts",
+          "src/sdk/emit.ts",
+          "src/sdk/listen.ts",
+          "src/sdk/identify.ts",
+          "src/sdk/memoryHost.ts",
+          "src/sdk/host.ts",
+          "src/sdk/version.ts",
+          "src/sdk/index.ts"
+        ],
+        "final_stopped_bytes_equal": true
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "bytes": 54112,
+        "sha256": "90aded65709ceb8210a9eb05a4795cb660527eccc18ddb0a6eef13f3a412a85c",
+        "inputs": [
+          "src/sdk/identity.ts",
+          "src/sdk/wire.ts",
+          "src/events/actionTypes.ts",
+          "src/sdk/core.ts",
+          "src/sdk/emit.ts",
+          "src/sdk/listen.ts",
+          "src/sdk/identify.ts",
+          "src/sdk/memoryHost.ts",
+          "src/sdk/host.ts",
+          "src/sdk/version.ts",
+          "src/sdk/index.ts",
+          "src/sdk/browser.ts"
+        ],
+        "final_stopped_bytes_equal": true
+      }
+    ]
+  },
+  "authoring_and_rework": [
+    "Before checks, root reviewed production/docs and requested adjacent content_decisions table truthfulness and explicit high-water fingerprint scope; update ownership also rechecked after consent evaluation. These are authoring refinements, not executed failures.",
+    "Static1: both compiler stages passed; lint refused one new no-inner-declarations error plus two inherited any warnings. Whitespace was not reached. After full drain only core.test.ts setup declaration/closing delimiter changed to async const; fixture hash capture a043ac retained.",
+    "Exact static2 passed on corrected final bytes, then the first fixed28 runtime passed. No source edits during any active check; production and both generated outputs remained unchanged through fixture lint correction."
+  ],
+  "assertion_coverage": {
+    "C1": "One new grouped core case runs actual source, shipped IIFE and shipped ESM with synthetic owned HTTP/socket host. Covers HTTP-first/push-first echoes, stale updates from both transports, distinct equal-time updates, repeated missing/NaN/infinite timestamps without watermark reset, FIFO 32-entry eviction, total UTF16 cap, exact 65536 boundary, oversized and cyclic/throwing-serialization bypass with finite high-water advancement.",
+    "C2": "Checks send null on stale/echo and superseded responses while sent/receipt acknowledgments remain; pre-callback fingerprints survive payload mutation; nested newer delivery prevents old remaining callbacks, rejected stale/echo reentry does not invalidate current delivery; serialization reentry and generation transition cannot reclaim old ownership; reconnect and browsing-session idle rotation do not reset high-water, identity generation does.",
+    "C3": "Existing 13 core consent/readiness/ABA/socket controls, 12 accepted listen/default/capture controls and 2 session controls all run unchanged alongside the one new group (28 total). Both generated forms execute the same new grouped assertions. Full+SDK compilers, exact scoped lint and owned whitespace pass; independent review and lead acceptance remain separate."
+  },
+  "limitations": [
+    "Timestamp high-water is advisory, not a server sequence: clock rollback can suppress valid older-clock updates. Equal-time JSON key-order differences, bounded eviction, oversized or unserializable bypass can redeliver echoes; absent/nonfinite timestamps retain legacy delivery. No exactly-once guarantee.",
+    "Generic update containment only: separate audience and content_decisions semantics remain. No refresh scheduler, genuine server content_decisions sender, impression-loop closure, new exposure identity/unit/ack, or server scoring/learning changes.",
+    "Snapshot serving still records served decisions before rendering; a full automatic-refresh contract needs correlated deduplicated exposure semantics. No customer/browser/no-flash/native/SLO/release acceptance.",
+    "Six owned files only, dirty worktree preserved; no delegation, governance writes, external operations, installs, emitted compiler build, build scripts, deployment or commits."
+  ],
+  "final_source_stop": {
+    "at": "2026-09-13T23:47:01.776Z",
+    "files": [
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "d183cc129206527fe5df917502d88904c86728afea3b5a15f8a9058c64c834eb"
+      },
+      {
+        "path": "src/sdk/core.test.ts",
+        "sha256": "03fabdabb697327c07dff18f32057cc727662285019fd13d5706aa35d77b411f"
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "90aded65709ceb8210a9eb05a4795cb660527eccc18ddb0a6eef13f3a412a85c"
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "2d40227cd42188fe035d5670a8483c52d16ddc6c3f4fe21218981c2f19206e39"
+      },
+      {
+        "path": "src/sdk/README.md",
+        "sha256": "0b168c6bff7721d3b36017af1592dde64d7cf806e261198ece8fb8fcdce0cb15"
+      },
+      {
+        "path": "docs/kit/01-integration-guide.md",
+        "sha256": "cd70821538959e2f1d92b6e4f8282b02fa31377415172e73b7a24c230686dba8"
+      }
+    ]
+  },
+  "source_stop_capture": {
+    "command": "node -e 'const fs=require(\"node:fs\"),crypto=require(\"node:crypto\");const files=[\"src/sdk/core.ts\",\"src/sdk/core.test.ts\",\"public/sdk/edge-personalization.js\",\"public/sdk/edge-personalization.esm.js\",\"src/sdk/README.md\",\"docs/kit/01-integration-guide.md\"];const hash=path=>({path,sha256:crypto.createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\")});console.log(JSON.stringify({final_source_stop:{at:new Date().toISOString(),files:files.map(hash)},references:[\"docs/remediation/design/W15.01/plan.md\",\"docs/remediation/design/W15.01/baseline.json\",\"docs/remediation/evidence/W15.01/admission.json\"].map(hash)}))'",
+    "chunk_id": "c5a906",
+    "wall_time_seconds": 0.000003599,
+    "exit_code": 0,
+    "original_token_count": 290,
+    "output": "{\"final_source_stop\":{\"at\":\"2026-09-13T23:47:01.776Z\",\"files\":[{\"path\":\"src/sdk/core.ts\",\"sha256\":\"d183cc129206527fe5df917502d88904c86728afea3b5a15f8a9058c64c834eb\"},{\"path\":\"src/sdk/core.test.ts\",\"sha256\":\"03fabdabb697327c07dff18f32057cc727662285019fd13d5706aa35d77b411f\"},{\"path\":\"public/sdk/edge-personalization.js\",\"sha256\":\"90aded65709ceb8210a9eb05a4795cb660527eccc18ddb0a6eef13f3a412a85c\"},{\"path\":\"public/sdk/edge-personalization.esm.js\",\"sha256\":\"2d40227cd42188fe035d5670a8483c52d16ddc6c3f4fe21218981c2f19206e39\"},{\"path\":\"src/sdk/README.md\",\"sha256\":\"0b168c6bff7721d3b36017af1592dde64d7cf806e261198ece8fb8fcdce0cb15\"},{\"path\":\"docs/kit/01-integration-guide.md\",\"sha256\":\"cd70821538959e2f1d92b6e4f8282b02fa31377415172e73b7a24c230686dba8\"}]},\"references\":[{\"path\":\"docs/remediation/design/W15.01/plan.md\",\"sha256\":\"f651c899694a78fbbae912a8337d698c11f00100df6ea70a5f9131a52e9fb3b9\"},{\"path\":\"docs/remediation/design/W15.01/baseline.json\",\"sha256\":\"1354117e2c7f563f444ffe5bc27d15fbba4b19b9a340bd0cd07c3cbdadd575f5\"},{\"path\":\"docs/remediation/evidence/W15.01/admission.json\",\"sha256\":\"faa9f8505f3194c8f57761f4610e738cb1231754e5c7e9ceaeac6938eab4dce2\"}]}\n"
+  },
+  "handoff": "SOURCE STOP; worker record only after STOP. Await root exact artifact freeze and distinct independent review. No additional source/check work."
+}

@@ -1,0 +1,421 @@
+{
+  "task_id": "W38.05",
+  "actor_id": "w1405-worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T13:34:02.610Z",
+  "contract_digest": "f8032721bc8205ae21a3e862d3a75bb3516e88ff42ad41ff7895f3864eb619c8",
+  "references": [
+    {
+      "path": "docs/remediation/design/W38.05/plan.md",
+      "sha256": "d2b1d81a8313019fb2e6295722c85b95323040a1211c8114111e40b4bd3ff517"
+    },
+    {
+      "path": "docs/remediation/design/W38.05/baseline.json",
+      "sha256": "bcc7f9d575cdbb8167ddd6f52e186d0c67c7246b5dcb1f6f1dbb4c6b0a2bcbdd"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.05/admission.json",
+      "sha256": "9f328214dffe9c05d70f082078ab9e3e63fe8146abecb59f14a26e774da7c675"
+    }
+  ],
+  "baseline": {
+    "kind": "source_confirmed_design_case_with_retained_actual_module_measurement",
+    "before_composer_sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe",
+    "entry": "Root3480/d10ee6 VALID1438 and direct9a350d/3407d6 journal1447 reused",
+    "scoped_lint": "Root56823/5956fd0 errors/0 warnings reused",
+    "qualification": "Before timings executed alongside current after implementation, using SHA-verified original source retained before GO; no claim of a pre-GO runtime. Both variants identically transpiled in memory; evaluated current also compared with actual imported module."
+  },
+  "summary": "Capture original-order primitive driver values in the existing scoring pass. Only served candidates materialize explanation objects and run the unchanged native driver comparator/slice. Scores, complete candidate ranking and callbacks are unchanged.",
+  "criteria": [
+    {
+      "id": "W38.05-C1",
+      "verdict": "local_runtime_pass",
+      "evidence": "Complete before/current/imported output and trace parity including >4 ties, NaN/infinities, mutating prefer/adjust/explore, rejected adjustments, both exploration forms, cold/pins/diversity;12 retained actual composer/decision/merchandising/external/replay controls."
+    },
+    {
+      "id": "W38.05-C2",
+      "verdict": "local_runtime_pass",
+      "evidence": "Both declared workloads have exact output/callback parity and deterministic driver work reduction.1000-piece median161.318633→104.938334ms per20 calls; local larger median criterion met, not a heap/request/native SLO."
+    },
+    {
+      "id": "W38.05-C3",
+      "verdict": "worker_checks_pass_independent_review_pending",
+      "evidence": "Two owned deltas/two groups/fixed14, full compiler/two-file lint0/whitespace passed on stopped bytes. Independent frozen review/lead disposition remain pending."
+    }
+  ],
+  "source_ready": {
+    "at": "2026-09-13T13:38:35.407Z",
+    "files": [
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "sha256": "d4e4ba1f889939e71f096c771437da92354f03102baf9d348604a8b9f18dcf34"
+      },
+      {
+        "path": "src/reflex/contentCompose.test.ts",
+        "sha256": "10c663c2555d816eeb988e705f5b660b265851d9b19992c8a8054f37a74a834c"
+      }
+    ],
+    "root_review": "644698; complete actual two-file review before K2 then K1"
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 14,
+      "unselected": 27,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 24.15
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "final_bytes": true
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "measurement": {
+      "output_parity": true,
+      "callback_parity": true,
+      "driver_work_reduced": true,
+      "larger_median_improved": true,
+      "final_bytes": true
+    }
+  },
+  "command_captures": {
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts --max-warnings 0 && git diff --check -- src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts",
+      "started_at": "2026-09-13T13:40:01.240Z",
+      "captures": [
+        {
+          "chunk_id": "0a4576",
+          "wall_time_seconds": 1.001216003,
+          "session_id": 12747,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f472c8",
+          "wall_time_seconds": 5.000962074,
+          "session_id": 12747,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5ce856",
+          "wall_time_seconds": 5.001254452,
+          "session_id": 12747,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d3882c",
+          "wall_time_seconds": 5.001001299,
+          "session_id": 12747,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "393389",
+          "wall_time_seconds": 5.000193034,
+          "session_id": 12747,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "074786",
+          "wall_time_seconds": 0.000001731,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 12747,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13T13:40:58.718Z"
+    },
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/content/decide.test.ts src/content/merchandisingSeam.test.ts src/content/inventoryDiversity.test.ts src/learn/phase3.test.ts -t 'W38.05|returns exactly the decisions|records the ranked candidates|honours the candidate limit|emits the delivery contract|the default arm serves the defaults|at γ = 1 a strong lift|the combined boost is clamped|sits before the lift|at most max per value|relaxes rather than leave|w_ext × score joins|W27.02 replays coupled' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13T13:41:05.144Z",
+      "captures": [
+        {
+          "chunk_id": "b0018f",
+          "wall_time_seconds": 1.000389859,
+          "session_id": 61170,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "73e10f",
+          "wall_time_seconds": 5.001222015,
+          "session_id": 61170,
+          "original_token_count": 531,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/phase3.test.ts  (15 tests | 13 skipped) 19ms\nstdout | src/reflex/contentCompose.test.ts > W38.05 served explanations > W38.05 measures paired actual composer work and warm timings at 30 and 1000 pieces\nW38.05 measurement {\"pieces\":30,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"cb1d2cb02dd7c2a305e0b92ee7e256d5f22ec6e4a346415ca09e1edc2e5a9b31\",\"callback_sha256\":\"7f124594a1679357171dc46f0ca68b9d8b31926eadbd2b482fd428c48502298b\",\"before\":{\"samples_ms\":[8.775488999999652,5.062669000000824,3.2416180000000168,4.481795000001512,4.023732999999993],\"median_ms\":4.481795000001512,\"driver_sort_calls\":83,\"driver_rows\":1335},\"current\":{\"samples_ms\":[3.7245659999989584,2.887801999999283,3.957621999999901,2.9769259999993665,2.8087199999990844],\"median_ms\":2.9769259999993665,\"driver_sort_calls\":8,\"driver_rows\":129},\"median_improved\":true}\nW38.05 measurement {\"pieces\":1000,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"09f715bff10c96c5fd0a64301bd9052c7c6b045ac69880a58ddf7018e49699ab\",\"callback_sha256\":\"549583a33a126fd2a1c553b508ff371b3c7ff0b4e05570ab0062b95653c0988b\",\"before\":{\"samples_ms\":[195.02162900000076,154.6093980000005,157.84670799999913,165.9754469999989,161.31863300000077],\"median_ms\":161.31863300000077,\"driver_sort_calls\":2993,\"driver_rows\":48218},\"current\":{\"samples_ms\":[104.9383340000004,92.54432699999961,98.19331000000057,105.19696400000066,124.14981400000033],\"median_ms\":104.9383340000004,\"driver_sort_calls\":8,\"driver_rows\":135},\"median_improved\":true}\n\n ✓ src/reflex/contentCompose.test.ts  (5 tests) 1966ms\n ✓ src/content/decide.test.ts  (10 tests | 7 skipped) 5ms\n"
+        },
+        {
+          "chunk_id": "f7d478",
+          "wall_time_seconds": 0.000002065,
+          "exit_code": 0,
+          "original_token_count": 86,
+          "output": " ✓ src/content/merchandisingSeam.test.ts  (5 tests | 3 skipped) 6ms\n ✓ src/content/inventoryDiversity.test.ts  (6 tests | 4 skipped) 3ms\n\n Test Files  5 passed (5)\n      Tests  14 passed | 27 skipped (41)\n   Start at  09:41:07\n   Duration  24.15s (transform 2.90s, setup 0ms, collect 4.74s, tests 2.00s, environment 1ms, prepare 13.10s)\n\n"
+        }
+      ],
+      "session_id": 61170,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13T13:41:34.847Z"
+    }
+  },
+  "failed_attempts": [],
+  "measurements": [
+    {
+      "pieces": 30,
+      "dimensions": 8,
+      "tags_per_dimension": 2,
+      "takes": [
+        1,
+        2,
+        5
+      ],
+      "pins": 1,
+      "candidate_limit": 10,
+      "warmups": 10,
+      "samples": 5,
+      "calls_per_sample": 20,
+      "parity": true,
+      "callback_parity": true,
+      "output_sha256": "cb1d2cb02dd7c2a305e0b92ee7e256d5f22ec6e4a346415ca09e1edc2e5a9b31",
+      "callback_sha256": "7f124594a1679357171dc46f0ca68b9d8b31926eadbd2b482fd428c48502298b",
+      "before": {
+        "samples_ms": [
+          8.775488999999652,
+          5.062669000000824,
+          3.2416180000000168,
+          4.481795000001512,
+          4.023732999999993
+        ],
+        "median_ms": 4.481795000001512,
+        "driver_sort_calls": 83,
+        "driver_rows": 1335
+      },
+      "current": {
+        "samples_ms": [
+          3.7245659999989584,
+          2.887801999999283,
+          3.957621999999901,
+          2.9769259999993665,
+          2.8087199999990844
+        ],
+        "median_ms": 2.9769259999993665,
+        "driver_sort_calls": 8,
+        "driver_rows": 129
+      },
+      "median_improved": true
+    },
+    {
+      "pieces": 1000,
+      "dimensions": 8,
+      "tags_per_dimension": 2,
+      "takes": [
+        1,
+        2,
+        5
+      ],
+      "pins": 1,
+      "candidate_limit": 10,
+      "warmups": 10,
+      "samples": 5,
+      "calls_per_sample": 20,
+      "parity": true,
+      "callback_parity": true,
+      "output_sha256": "09f715bff10c96c5fd0a64301bd9052c7c6b045ac69880a58ddf7018e49699ab",
+      "callback_sha256": "549583a33a126fd2a1c553b508ff371b3c7ff0b4e05570ab0062b95653c0988b",
+      "before": {
+        "samples_ms": [
+          195.02162900000076,
+          154.6093980000005,
+          157.84670799999913,
+          165.9754469999989,
+          161.31863300000077
+        ],
+        "median_ms": 161.31863300000077,
+        "driver_sort_calls": 2993,
+        "driver_rows": 48218
+      },
+      "current": {
+        "samples_ms": [
+          104.9383340000004,
+          92.54432699999961,
+          98.19331000000057,
+          105.19696400000066,
+          124.14981400000033
+        ],
+        "median_ms": 104.9383340000004,
+        "driver_sort_calls": 8,
+        "driver_rows": 135
+      },
+      "median_improved": true
+    }
+  ],
+  "measurement_qualification": "Actual stdout records. Timings are uninstrumented warm in-memory composer batches,10 warmups then5 alternating samples of20 calls per source, with setup/transpilation outside the timed region. Separate isolated sort instrumentation counts nonempty driver-sort calls and materialized rows reaching that boundary, not heap bytes. Output hash uses finite workload JSON; nonfinite parity separately compares full structured-cloned objects.",
+  "final_source_stop": {
+    "at": "2026-09-13T13:41:59.265Z",
+    "files": [
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "sha256": "d4e4ba1f889939e71f096c771437da92354f03102baf9d348604a8b9f18dcf34"
+      },
+      {
+        "path": "src/reflex/contentCompose.test.ts",
+        "sha256": "10c663c2555d816eeb988e705f5b660b265851d9b19992c8a8054f37a74a834c"
+      }
+    ]
+  },
+  "protected_comparison": {
+    "at": "2026-09-13T13:41:59.265Z",
+    "count": 23,
+    "all_match": true,
+    "files": [
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b",
+        "matches": true
+      },
+      {
+        "path": "src/content/decide.test.ts",
+        "sha256": "56946e6ad16abec73520f0dfe79003ec280cc272a062d744b8c766489cb6af6f",
+        "matches": true
+      },
+      {
+        "path": "src/content/merchandisingSeam.test.ts",
+        "sha256": "083968330562f2249ba7fcea1b06fb920a7af431b9354220598e68201cd67b73",
+        "matches": true
+      },
+      {
+        "path": "src/content/inventoryDiversity.test.ts",
+        "sha256": "7fc426419ee9eed15b41f47ab0758e70eb420f4fc019dcdce1dc140431124c74",
+        "matches": true
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "sha256": "5bb9d165bca35887b40309015becb7ab2683008799118adf2be6d2192c4051d2",
+        "matches": true
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a",
+        "matches": true
+      },
+      {
+        "path": "src/learn/explore.ts",
+        "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda",
+        "matches": true
+      },
+      {
+        "path": "src/learn/stats.ts",
+        "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+        "matches": true
+      },
+      {
+        "path": "src/learn/priors.ts",
+        "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad",
+        "matches": true
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8",
+        "matches": true
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df",
+        "matches": true
+      },
+      {
+        "path": "src/content/lifecycle.ts",
+        "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd",
+        "matches": true
+      },
+      {
+        "path": "src/reflex/merchandising.ts",
+        "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48",
+        "matches": true
+      },
+      {
+        "path": "src/services/JourneyStage.ts",
+        "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331",
+        "matches": true
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+        "matches": true
+      },
+      {
+        "path": "docs/architecture/33-adversarial-audit-brief.md",
+        "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028",
+        "matches": true
+      },
+      {
+        "path": "docs/remediation/evidence/W38.04/acceptance.md",
+        "sha256": "7cf05b7ce159d355eb8da48757eb5919bf62a8da6ae70568a7eeb98896086cf3",
+        "matches": true
+      },
+      {
+        "path": "docs/remediation/evidence/W38.04/worker.json",
+        "sha256": "beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757",
+        "matches": true
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+        "matches": true
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+        "matches": true
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+        "matches": true
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+        "matches": true
+      },
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+        "matches": true
+      }
+    ],
+    "capture": "27f88c"
+  },
+  "limitations": [
+    "Composer explanation work only; packed primitive storage, complete scoring and candidate sorts still scale with input. No pruning/top-k, retrieval, model, ranking, envelope/history or retention changes.",
+    "Synthetic30/1000-piece warm Node compute does not prove cold reads/validation, concurrent heap, native/request/browser latency, customer capacity or full W38/F32/F08/N07 acceptance.",
+    "Original input-mutation and unusual numeric semantics preserved; no recomputation after hooks or repeated callbacks. Output driver objects remain ordinary independent objects.",
+    "W38.04 broad composer byte proof prospectively qualified by lead; actual request/import remedy and history retained. W35 transactional/customer/privacy/scientific/release decisions remain separate.",
+    "No subdelegation, external/cloud/install/emitted-build/commit/deploy/customer operations. Lead owns independent frozen review, governance and acceptance."
+  ],
+  "independent_review": {
+    "status": "pending",
+    "owner": "w1405-reviewer"
+  }
+}

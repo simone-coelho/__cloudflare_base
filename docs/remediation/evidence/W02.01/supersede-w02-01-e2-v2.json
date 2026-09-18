@@ -1,0 +1,398 @@
+{
+  "before": {
+    "id": "W02.01-E2",
+    "task_id": "W02.01",
+    "check_id": "W02.01-K2",
+    "criterion_ids": [
+      "W02.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0201-reviewer",
+    "run_id": "/root/w0201_review",
+    "command": "Independent frozen W02.01 code/test/baseline review and K1 rerun with adversarial challenges; inspect actual targeted regression/typecheck evidence and residual/handoff; retain exact commands and verdict in review-v1.md.",
+    "runtime": "Independent local source and focused Node integration checks with synthetic stores; no deployed/customer/credential operations.",
+    "workload": "All W02.01 C1-C3 obligations, exact guard, actual config effects and legitimate controls; prior W01 proof preserved and its revalidation explicitly scheduled.",
+    "result": "pass",
+    "limitations": "Separate K1 30/30 plus original-source replay and real PUT/rollback/HEAD/order/tool/SDK challenges; all33 artifact and23 dependency hashes checked. Lead75-case regression/app-tsc result inspected, SDK tsc independently run. Technical C1-C3 only; final lead handoff separate.",
+    "at": "2026-09-07T00:51:18.715Z",
+    "file": {
+      "path": "docs/remediation/evidence/W02.01/review-v1.md",
+      "sha256": "6f5e2cd6b440bdb391b90f66fda67eabe7122e93c2b4e7ab4860b0b068c90601"
+    },
+    "artifact_digest": "4e20a5d6f511d3e8c36451d14e99318a26e4d7ac126e9e676c3319ace4fa35ef",
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "5e1783439aecaa644f802b0e9c3cdaaa5555ca2f93be7968209a0dd91279063b",
+      "configuration": "W02.01 focused local synthetic Node22.15/Vitest1.6.1 integration on real Hono4.12.27/jose5.10/auth/config/accounts/edge-access. Dependency source traversal uses esbuild with installed packages external, not a substitute test runner. Source/config/lockfile and installed package versions pinned; this is not deployed/native-resource or complete runner binary attestation. No external egress/real data or credentials. Actual before/after logs and baseline source/test pinned.",
+      "files": [
+        {
+          "path": "docs/remediation/evidence/W02.01/.gitignore",
+          "sha256": "9793d4560524120f68360373a7b077e40249d6a5b239255f42b2ed0ca3824d0c",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/baseline-test-v1.ts.txt",
+          "sha256": "321d8a931d9700fd09fb9d0f54392aa30873b932b123825f35aa4ae1ab60261f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/before-auth.ts.txt",
+          "sha256": "34ba6e4b31733f8ea318cad9139c7838a5d2fe83400127d515bdac892cb503cb",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-baseline-v1.log",
+          "sha256": "41336cd596cdf56cabc0f776bf704394350e8bb38d532d0586fabc7091635138",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-final-v1.log",
+          "sha256": "3b5fdb20bc6d6cba22cdfadd09341b30a6c3021e3cb6dd1ac404358e5014db18",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-green-v1.log",
+          "sha256": "73b1b435cc7d632fcb8b1a2d9260a055aec218c0806ffe1ef692985ec8867398",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-type-corrected-v1.log",
+          "sha256": "1e384528f7dee0e739fcc274bdcbaa7477fe4756976805299612e682e54ecdcb",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/regressions-v1.log",
+          "sha256": "5c6cc38a39d80754574b64f7df4e910506ad1c44244ec43acaa1e23871650c36",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/source-test-dependencies-v1.json",
+          "sha256": "15b66b2a0409c2e517be78d3463a2b482382e26e2c670462667c6fb52003d42f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/typecheck-initial-failure-v1.log",
+          "sha256": "2eb4eb1f92525cfdd4888535b532902dd5338703647adfd0b5c82795b43e1670",
+          "role": "output"
+        },
+        {
+          "path": "node_modules/esbuild/package.json",
+          "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/hono/package.json",
+          "sha256": "0190ed73085e7509f652e5877691ea52063628ad633add49e7ffef4a375389cd",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/jose/package.json",
+          "sha256": "3cb0f73674b50b4e99f35c883e10c9e541e3b8d20368825379515547af1d804d",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/typescript/package.json",
+          "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/vitest/package.json",
+          "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/zod/package.json",
+          "sha256": "c630bd10b52dcf71c112a2bf78dbf2734b9db58d62de663b8d86c2ec2c8cda2e",
+          "role": "configuration"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "configuration"
+        },
+        {
+          "path": "package.json",
+          "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c",
+          "role": "configuration"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "sha256": "7d0513e2456798aff7d448fc79d11ebad4f3b014a74a03b2df1843a2238144cf",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "a0f4de159c1e83a5f81fd5c75f54f74662ce6e6d35a0e4b72de6a8d870801081",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/brighthour/reflexConfig.ts",
+          "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf",
+          "role": "source"
+        },
+        {
+          "path": "src/middleware/auth.refresh-boundary.test.ts",
+          "sha256": "11628a318420ddb8d2d269373a7f23a46f7ad4b7913648db565b0dedd07ee177",
+          "role": "output"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "sha256": "a3a7be192b89395fed567d59b48aed6076f7e80797c8a6c175bff20ff6fce5ea",
+          "role": "output"
+        },
+        {
+          "path": "src/middleware/edgeAccess.ts",
+          "sha256": "ef4935e1c8eaf725efb4c7372faa5ea5b09082b0d238b68de09e1d4934375999",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/auth.ts",
+          "sha256": "678fd63e42f5ce93b2cce1eb7f6d7a05ee98cbb33d7f18c3b9e04e279ff8d20e",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "sha256": "2e1d5c1e42c5ceb498b8011de65d495b185afcbe21da8b326a2d8b6ed9b04560",
+          "role": "source"
+        },
+        {
+          "path": "src/sdk/tsconfig.json",
+          "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "e44f357958d91affcd4610c62a8e23a36d48431ddfff16f2b6d7440598bf2d50",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "480c32f5b079b289385b0a0b73cc59a9dba47e318144c4c85ac4b96a9a6472a9",
+          "role": "configuration"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "configuration"
+        }
+      ],
+      "digest": "4e20a5d6f511d3e8c36451d14e99318a26e4d7ac126e9e676c3319ace4fa35ef"
+    },
+    "status": "revalidation_required",
+    "superseded_by": null
+  },
+  "after": {
+    "id": "W02.01-E2",
+    "task_id": "W02.01",
+    "check_id": "W02.01-K2",
+    "criterion_ids": [
+      "W02.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0201-reviewer",
+    "run_id": "/root/w0201_review",
+    "command": "Independent frozen W02.01 code/test/baseline review and K1 rerun with adversarial challenges; inspect actual targeted regression/typecheck evidence and residual/handoff; retain exact commands and verdict in review-v1.md.",
+    "runtime": "Independent local source and focused Node integration checks with synthetic stores; no deployed/customer/credential operations.",
+    "workload": "All W02.01 C1-C3 obligations, exact guard, actual config effects and legitimate controls; prior W01 proof preserved and its revalidation explicitly scheduled.",
+    "result": "pass",
+    "limitations": "Separate K1 30/30 plus original-source replay and real PUT/rollback/HEAD/order/tool/SDK challenges; all33 artifact and23 dependency hashes checked. Lead75-case regression/app-tsc result inspected, SDK tsc independently run. Technical C1-C3 only; final lead handoff separate.",
+    "at": "2026-09-07T00:51:18.715Z",
+    "file": {
+      "path": "docs/remediation/evidence/W02.01/review-v1.md",
+      "sha256": "6f5e2cd6b440bdb391b90f66fda67eabe7122e93c2b4e7ab4860b0b068c90601"
+    },
+    "artifact_digest": "4e20a5d6f511d3e8c36451d14e99318a26e4d7ac126e9e676c3319ace4fa35ef",
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "5e1783439aecaa644f802b0e9c3cdaaa5555ca2f93be7968209a0dd91279063b",
+      "configuration": "W02.01 focused local synthetic Node22.15/Vitest1.6.1 integration on real Hono4.12.27/jose5.10/auth/config/accounts/edge-access. Dependency source traversal uses esbuild with installed packages external, not a substitute test runner. Source/config/lockfile and installed package versions pinned; this is not deployed/native-resource or complete runner binary attestation. No external egress/real data or credentials. Actual before/after logs and baseline source/test pinned.",
+      "files": [
+        {
+          "path": "docs/remediation/evidence/W02.01/.gitignore",
+          "sha256": "9793d4560524120f68360373a7b077e40249d6a5b239255f42b2ed0ca3824d0c",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/baseline-test-v1.ts.txt",
+          "sha256": "321d8a931d9700fd09fb9d0f54392aa30873b932b123825f35aa4ae1ab60261f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/before-auth.ts.txt",
+          "sha256": "34ba6e4b31733f8ea318cad9139c7838a5d2fe83400127d515bdac892cb503cb",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-baseline-v1.log",
+          "sha256": "41336cd596cdf56cabc0f776bf704394350e8bb38d532d0586fabc7091635138",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-final-v1.log",
+          "sha256": "3b5fdb20bc6d6cba22cdfadd09341b30a6c3021e3cb6dd1ac404358e5014db18",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-green-v1.log",
+          "sha256": "73b1b435cc7d632fcb8b1a2d9260a055aec218c0806ffe1ef692985ec8867398",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-type-corrected-v1.log",
+          "sha256": "1e384528f7dee0e739fcc274bdcbaa7477fe4756976805299612e682e54ecdcb",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/regressions-v1.log",
+          "sha256": "5c6cc38a39d80754574b64f7df4e910506ad1c44244ec43acaa1e23871650c36",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/source-test-dependencies-v1.json",
+          "sha256": "15b66b2a0409c2e517be78d3463a2b482382e26e2c670462667c6fb52003d42f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/typecheck-initial-failure-v1.log",
+          "sha256": "2eb4eb1f92525cfdd4888535b532902dd5338703647adfd0b5c82795b43e1670",
+          "role": "output"
+        },
+        {
+          "path": "node_modules/esbuild/package.json",
+          "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/hono/package.json",
+          "sha256": "0190ed73085e7509f652e5877691ea52063628ad633add49e7ffef4a375389cd",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/jose/package.json",
+          "sha256": "3cb0f73674b50b4e99f35c883e10c9e541e3b8d20368825379515547af1d804d",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/typescript/package.json",
+          "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/vitest/package.json",
+          "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/zod/package.json",
+          "sha256": "c630bd10b52dcf71c112a2bf78dbf2734b9db58d62de663b8d86c2ec2c8cda2e",
+          "role": "configuration"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "configuration"
+        },
+        {
+          "path": "package.json",
+          "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c",
+          "role": "configuration"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "sha256": "7d0513e2456798aff7d448fc79d11ebad4f3b014a74a03b2df1843a2238144cf",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "a0f4de159c1e83a5f81fd5c75f54f74662ce6e6d35a0e4b72de6a8d870801081",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/brighthour/reflexConfig.ts",
+          "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf",
+          "role": "source"
+        },
+        {
+          "path": "src/middleware/auth.refresh-boundary.test.ts",
+          "sha256": "11628a318420ddb8d2d269373a7f23a46f7ad4b7913648db565b0dedd07ee177",
+          "role": "output"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "sha256": "a3a7be192b89395fed567d59b48aed6076f7e80797c8a6c175bff20ff6fce5ea",
+          "role": "output"
+        },
+        {
+          "path": "src/middleware/edgeAccess.ts",
+          "sha256": "ef4935e1c8eaf725efb4c7372faa5ea5b09082b0d238b68de09e1d4934375999",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/auth.ts",
+          "sha256": "678fd63e42f5ce93b2cce1eb7f6d7a05ee98cbb33d7f18c3b9e04e279ff8d20e",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "sha256": "2e1d5c1e42c5ceb498b8011de65d495b185afcbe21da8b326a2d8b6ed9b04560",
+          "role": "source"
+        },
+        {
+          "path": "src/sdk/tsconfig.json",
+          "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "e44f357958d91affcd4610c62a8e23a36d48431ddfff16f2b6d7440598bf2d50",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "480c32f5b079b289385b0a0b73cc59a9dba47e318144c4c85ac4b96a9a6472a9",
+          "role": "configuration"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "configuration"
+        }
+      ],
+      "digest": "4e20a5d6f511d3e8c36451d14e99318a26e4d7ac126e9e676c3319ace4fa35ef"
+    },
+    "status": "superseded",
+    "superseded_by": "W02.01-E4"
+  }
+}

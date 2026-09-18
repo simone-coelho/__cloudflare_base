@@ -1,0 +1,169 @@
+{
+  "at": "2026-09-12T18:40:27.662Z",
+  "task_id": "W30.02",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "5103323d945bedef5506a3dc21d8893e7df6b6eaeee5439783191f657e57efd1",
+  "contract_digest": "6cd0933c2623458aa4bb626f58ba47baffef5e70c33a8d91611069346485c5d3",
+  "verdict": "PASS",
+  "summary": "The frozen ten-file change meets the bounded source-coverage contract. Independent fixed12 passed; no acceptance blocker found. Lead disposition remains separate.",
+  "criteria": [
+    {
+      "id": "W30.02-C1",
+      "verdict": "PASS",
+      "evidence": "Actual hourly/report deltas preserve counts, legacy hours and the W30.01 folding algorithm. Versioned coverage retains missing/truncated/unadvanced hours and visitor uncertainty, records every built-hour horizon including zero/null, and computes a minimum only from valid complete contributing horizon detail. Absent/invalid metadata does not inherit the old last-hour scalar; independently known warnings survive. Direct-ledger coverage stays horizon-unverified and remains stable through diagnostic projection. The actual hour/build/rebuild/day/window group and three retained W30.01 cases passed."
+    },
+    {
+      "id": "W30.02-C2",
+      "verdict": "PASS",
+      "evidence": "The existing day GET diagnostic seam and window reader normalize coverage without new storage calls or writeback. The route group verifies stored bytes, exact ten reads, no put/delete/list, raw-count parity, mixed legacy/invalid/new reports, missing dates and repeated normalization. Both real JS views render coverage before empty/no-grid exits, guard malformed new-field entries and derive minima from coherent detail rather than forged scalar minima. Maturity remains unknown; unadvanced progress is not described as all credits lost. Both UI groups and the five retained W21/diagnostic controls passed."
+    },
+    {
+      "id": "W30.02-C3",
+      "verdict": "PASS",
+      "evidence": "Inspected all ten exact baseline-to-current deltas, actual admitted criteria and complete worker record. All44 artifact pins and28 protected pins match before/after; all ten forward and inverse patches reproduce exact bytes. Four new groups plus eight retained cases passed independently once. Final compiler, zero-error/zero-warning scoped lint, both JS syntax checks and whitespace evidence reused from the unchanged frozen artifact. Kit scope is bounded JSON/view honesty; no new infrastructure, CSV rewrite or policy amendment."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W30.02/plan.md",
+      "sha256": "434972b0c90d25f95b96747c438b80cd5dfe8cdd82f43c5a7686871bad06611c"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W30.02/artifact.json",
+      "sha256": "2530761c624fe7f090ef035ffdcf803c37c124a621fd75d2dd2e24897427e5f1"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W30.02/worker.json",
+      "sha256": "c56c4601902097db969b68a1853a7b667f287aa66baf26f677875463bfb7d766"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts -t 'W30.02|W30.01|W21 hourly reports|W21 retains repeated credits|W21 rejects invalid|W21 legacy report|measurement shows raw attribution' --maxWorkers=1 --minWorkers=1",
+    "session_id": 58397,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "df77de",
+        "wall_time_seconds": 1.000474013,
+        "session_id": 58397,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "5a79e4",
+        "wall_time_seconds": 5.000746026,
+        "session_id": 58397,
+        "original_token_count": 78,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/console/console.render.test.ts  (33 tests | 31 skipped) 3349ms\n"
+      },
+      {
+        "chunk_id": "611402",
+        "wall_time_seconds": 5.001601835,
+        "session_id": 58397,
+        "original_token_count": 33,
+        "output": " ✓ src/learn/hourly.test.ts  (21 tests | 16 skipped) 79ms\n ✓ src/console/learning.render.test.ts  (10 tests | 8 skipped) 628ms\n"
+      },
+      {
+        "chunk_id": "a6a158",
+        "wall_time_seconds": 0.000001727,
+        "exit_code": 0,
+        "original_token_count": 65,
+        "output": " ✓ src/learn/report.test.ts  (7 tests | 4 skipped) 15ms\n\n Test Files  4 passed (4)\n      Tests  12 passed | 59 skipped (71)\n   Start at  14:37:58\n   Duration  71.63s (transform 3.36s, setup 0ms, collect 58.41s, tests 4.07s, environment 0ms, prepare 6.77s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 12,
+      "unselected": 59,
+      "total": 71,
+      "test_files": 4,
+      "new_grouped_cases": 4,
+      "retained_selected_cases": 8,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 44,
+    "source_and_output_pins": 38,
+    "protected_pins": 28,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 10,
+    "manifest_sha256": "2530761c624fe7f090ef035ffdcf803c37c124a621fd75d2dd2e24897427e5f1",
+    "before": {
+      "at": "2026-09-12T18:37:43.091Z",
+      "captures": [
+        "8b9e16"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T18:39:29.212Z",
+      "captures": [
+        "31ccaf"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "5fbe72",
+          "wall_time_seconds": 0.00383078,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T18:37:43.330Z\",\"task\":\"W30.02\",\"state\":\"verification\",\"contract_digest\":\"6cd0933c2623458aa4bb626f58ba47baffef5e70c33a8d91611069346485c5d3\",\"artifact_digest\":\"5103323d945bedef5506a3dc21d8893e7df6b6eaeee5439783191f657e57efd1\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "01c029",
+          "wall_time_seconds": 0.092352036,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T18:39:29.543Z\",\"task\":\"W30.02\",\"state\":\"verification\",\"contract_digest\":\"6cd0933c2623458aa4bb626f58ba47baffef5e70c33a8d91611069346485c5d3\",\"artifact_digest\":\"5103323d945bedef5506a3dc21d8893e7df6b6eaeee5439783191f657e57efd1\"}\n"
+        }
+      ]
+    },
+    "inspection": "Personally read current plan/task and applicable canonical/source scope, reusing valid prior governance/dependency reads and root entry board. Actual ten deltas read in60d20b/bbca57/a38d59, matching worker STOP18:35:21.988Z and the frozen source-deltas. Complete worker metadata and every actual command capture read in164b0f/379d9f; actual final task6f242e. In-memory forward/reverse checks bind that inspection to frozen bytes; no moving-source pass substituted."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W30.02/worker.json",
+      "sha256": "c56c4601902097db969b68a1853a7b667f287aa66baf26f677875463bfb7d766"
+    },
+    "command_capture": "w3002_static1",
+    "session_id": 54368,
+    "captures": [
+      "d86fcd",
+      "c00573",
+      "a87f37",
+      "ee3afa"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "javascript_syntax_files": 2,
+    "whitespace": "PASS",
+    "qualification": "The exact admitted K2 && chain completed on the final bytes with terminal exit0 and no diagnostics. Its full retained output was inspected; no static rerun. Worker final runtime7454/03765f also passed12/59unselected; independent evidence above is a distinct invocation."
+  },
+  "retained_failures_and_qualifications": [
+    "No failed worker runtime/static attempt. Initial runtime35512/be20d4 passed12 but is explicitly superseded, not final-byte evidence: root source review found malformed new UI entries, unsupported scalar minima and no-hours projection compatibility. Corrections and assertions remained within the same ten files/four groups; final7454/03765f and static54368/ee3afa cover the corrected bytes.",
+    "Independent runtime retained the existing Vite CJS deprecation notice.59 unselected cases are not asserted to have run. Synthetic R2/Hono and JSDOM exercise actual report/routes/views, not deployed storage, full browser/network or native capacity."
+  ],
+  "limitations": [
+    "Visible incompleteness is not historical reconstruction or full W30/F17/F18/F25/N08/N23 closure. Late/mutable arrivals, same-count changes, checkpoint/manifests, dependent-hour repair, carry-in evicted by caps/horizons, delivery reconciliation and signed-off workload capacity remain unresolved.",
+    "Coverage describes saved/as-at-build evidence. Missing or legacy metadata, source completeness, maturity and policy compatibility remain unverified; age, aggregate existence and an empty warning list do not certify complete/settled outcomes. A reported horizon minimum is not an available-history or completeness guarantee.",
+    "Stored reports are not repaired or rewritten. Existing identity/full-payload validation, read-failure behavior, overlay provenance and persistence acknowledgements are not expanded. CSV/external consumers and historical raw-ledger carry-in remain outside this JSON/view slice.",
+    "W30.01 temporal attribution remains implemented; selected retained controls do not renew every prior whole-artifact assurance. Adjacent dormant Thompson text in legacy renderExploring remains the explicitly recorded W28 residual, not a W30.02 remedy.",
+    "No deployment, cloud/customer-data operation, migration, new retention/maturity/business policy, causal/statistical acceptance, customer acceptance or release approval is claimed."
+  ]
+}

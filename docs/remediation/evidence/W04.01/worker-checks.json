@@ -1,0 +1,146 @@
+{
+  "task": "W04.01",
+  "actor": "w0202-worker",
+  "frozenAt": "2026-09-07T15:56:06.377Z",
+  "pendingProcesses": [],
+  "sourceFiles": [
+    {
+      "path": "src/identity/assertion.ts",
+      "sha256": "46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d"
+    },
+    {
+      "path": "src/sdk/identify.ts",
+      "sha256": "3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f"
+    },
+    {
+      "path": "src/routes/identity.ts",
+      "sha256": "e93247553313d1bff591a6860e0837c079cb61ea3baddaff991584c15b717305"
+    },
+    {
+      "path": "src/types/env.ts",
+      "sha256": "7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f"
+    },
+    {
+      "path": "src/sdk/README.md",
+      "sha256": "06ab04ca779a78d2359167d941531a000f8a01de8e50c62167ef6ebe49b2383b"
+    },
+    {
+      "path": "docs/architecture/25-identity-stitching.md",
+      "sha256": "d8f45c82d1c6c21918aebb52c13ac04db30a6cc0b01ba0b518f3d6089f6607de"
+    },
+    {
+      "path": "src/identity/identity.test.ts",
+      "sha256": "452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc"
+    },
+    {
+      "path": "src/routes/identity.test.ts",
+      "sha256": "0bcffae8de408ea7ac8a432ff47f5ddf62aa598d6d79f8265d7f8aadff930433"
+    },
+    {
+      "path": "src/sdk/identify.test.ts",
+      "sha256": "a5116728df0f639f86d50156979aeb41f3ad0516c9e54c3dd029cb93ba421ca3"
+    },
+    {
+      "path": "public/sdk/edge-personalization.js",
+      "sha256": "53a9bcbaf25c8785d1ecab8d341666dd8bd3268898117c2cb168cf359b2b3b1e"
+    },
+    {
+      "path": "public/sdk/edge-personalization.esm.js",
+      "sha256": "dda77438ee56f5f2833cc058857566a62ffae7f66062137b77858e26f478cccb"
+    }
+  ],
+  "originals": "Root-owned before-sources-v1.json retains exact original 11 files, including pre-existing route-test signing changes and both SDK bundles. All 11 SHA-256 values matched immediately before implementation.",
+  "baseline": "Immutable baseline.json/probe retain actual before behavior, original core bytes/source+fixture hashes, existing40-test success, and two probe-only failures. Not rerun as post-fix proof.",
+  "checks": [
+    {
+      "phase": "Local inspected SDK build after final production/caller-boundary guards: both outputs rebuilt.",
+      "command": "node scripts/build-sdk.mjs",
+      "startedAt": "2026-09-07T15:52:57.986Z",
+      "completedObservedAt": "2026-09-07T15:52:58.936Z",
+      "exitCode": 0,
+      "output": "\n  public/sdk/edge-personalization.esm.js  27.7kb\n\n⚡ Done in 107ms\n\n  public/sdk/edge-personalization.js  29.4kb\n\n⚡ Done in 72ms\npublic/sdk/edge-personalization.esm.js  27.7 KB\npublic/sdk/edge-personalization.js  29.4 KB\n"
+    },
+    {
+      "phase": "Initial46-test pass before fixture-only TypeScript cast correction; superseded by final K1.",
+      "command": "node node_modules/vitest/vitest.mjs run src/identity/identity.test.ts src/routes/identity.test.ts src/sdk/identify.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T15:52:57.985Z",
+      "completedObservedAt": "2026-09-07T15:53:50.043Z",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (22 tests) 69ms\n ✓ src/sdk/identify.test.ts  (8 tests) 13ms\n ✓ src/identity/identity.test.ts  (16 tests) 10ms\n\n Test Files  3 passed (3)\n      Tests  46 passed (46)\n   Start at  11:53:00\n   Duration  11.19s (transform 979ms, setup 0ms, collect 2.87s, tests 92ms, environment 0ms, prepare 5.95s)\n\n"
+    },
+    {
+      "phase": "Initial application compiler failure TS2352: intentionally malformed provider fixtures need explicit unknown boundary cast.",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w0401-typecheck.iWESpn/application.tsbuildinfo",
+      "startedAt": "2026-09-07T15:52:57.985Z",
+      "completedObservedAt": "2026-09-07T15:53:50.049Z",
+      "exitCode": 2,
+      "output": "src/sdk/identify.test.ts(126,104): error TS2352: Conversion of type 'string | (() => undefined) | (() => {})' to type '((claim: { tenant: string; visitorId: string; accountId: string; }) => { assertion: string; exp: number; } | Promise<{ assertion: string; exp: number; }>) | undefined' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.\n  Type '() => {}' is not comparable to type '(claim: { tenant: string; visitorId: string; accountId: string; }) => { assertion: string; exp: number; } | Promise<{ assertion: string; exp: number; }>'.\n    Type '{}' is not comparable to type '{ assertion: string; exp: number; } | Promise<{ assertion: string; exp: number; }>'.\n"
+    },
+    {
+      "phase": "Initial SDK compiler failure on same TS2352 fixture cast, not production.",
+      "command": "node node_modules/typescript/bin/tsc --project src/sdk/tsconfig.json --noEmit",
+      "startedAt": "2026-09-07T15:52:57.986Z",
+      "completedObservedAt": "2026-09-07T15:53:50.043Z",
+      "exitCode": 2,
+      "output": "src/sdk/identify.test.ts(126,104): error TS2352: Conversion of type 'string | (() => undefined) | (() => {})' to type '((claim: { tenant: string; visitorId: string; accountId: string; }) => { assertion: string; exp: number; } | Promise<{ assertion: string; exp: number; }>) | undefined' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.\n  Type '() => {}' is not comparable to type '(claim: { tenant: string; visitorId: string; accountId: string; }) => { assertion: string; exp: number; } | Promise<{ assertion: string; exp: number; }>'.\n    Type '{}' is not comparable to type '{ assertion: string; exp: number; } | Promise<{ assertion: string; exp: number; }>'.\n"
+    },
+    {
+      "phase": "Final K1:46/46 pass (16 assertion/store,22 route,8 SDK).",
+      "command": "node node_modules/vitest/vitest.mjs run src/identity/identity.test.ts src/routes/identity.test.ts src/sdk/identify.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T15:54:06.965Z",
+      "completedObservedAt": "2026-09-07T15:54:47.849Z",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (22 tests) 81ms\n ✓ src/sdk/identify.test.ts  (8 tests) 14ms\n ✓ src/identity/identity.test.ts  (16 tests) 10ms\n\n Test Files  3 passed (3)\n      Tests  46 passed (46)\n   Start at  11:54:09\n   Duration  11.72s (transform 998ms, setup 0ms, collect 2.89s, tests 105ms, environment 0ms, prepare 6.31s)\n\n"
+    },
+    {
+      "phase": "Final application noEmit, task-specific /tmp metadata: exit0.",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w0401-typecheck.iWESpn/application.tsbuildinfo",
+      "startedAt": "2026-09-07T15:54:06.965Z",
+      "completedObservedAt": "2026-09-07T15:54:47.850Z",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "phase": "Final separate browser-SDK noEmit: exit0.",
+      "command": "node node_modules/typescript/bin/tsc --project src/sdk/tsconfig.json --noEmit",
+      "startedAt": "2026-09-07T15:54:06.965Z",
+      "completedObservedAt": "2026-09-07T15:54:47.850Z",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "phase": "Both generated SDK node --check commands emitted no diagnostics; shell exit0.",
+      "command": "node --check public/sdk/edge-personalization.js\nnode --check public/sdk/edge-personalization.esm.js",
+      "startedAt": "2026-09-07T15:54:08.585Z",
+      "completedObservedAt": "2026-09-07T15:54:08.873Z",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "phase": "Scoped11-file git diff --check exit0, no diagnostics; exact final identities recorded.",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\"; import {createHash} from \"node:crypto\"; import {spawnSync} from \"node:child_process\"; const task=JSON.parse(fs.readFileSync(\"docs/remediation/design/W04.01/task-contract-v1.json\",\"utf8\")); const files=task.write_paths.filter(p=>!p.startsWith(\"docs/remediation/evidence/\")); const result=spawnSync(\"git\",[\"diff\",\"--check\",\"--\",...files],{encoding:\"utf8\"}); console.log(JSON.stringify({command:[\"git\",\"diff\",\"--check\",\"--\",...files],exitCode:result.status,stdout:result.stdout,stderr:result.stderr,files:files.map(path=>({path,sha256:createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\")}))},null,2)); process.exitCode=result.status??1;'",
+      "startedAt": "2026-09-07T15:54:47.411Z",
+      "completedObservedAt": "2026-09-07T15:54:47.846Z",
+      "exitCode": 0,
+      "output": "{\n  \"command\": [\n    \"git\",\n    \"diff\",\n    \"--check\",\n    \"--\",\n    \"src/identity/assertion.ts\",\n    \"src/sdk/identify.ts\",\n    \"src/routes/identity.ts\",\n    \"src/types/env.ts\",\n    \"src/sdk/README.md\",\n    \"docs/architecture/25-identity-stitching.md\",\n    \"src/identity/identity.test.ts\",\n    \"src/routes/identity.test.ts\",\n    \"src/sdk/identify.test.ts\",\n    \"public/sdk/edge-personalization.js\",\n    \"public/sdk/edge-personalization.esm.js\"\n  ],\n  \"exitCode\": 0,\n  \"stdout\": \"\",\n  \"stderr\": \"\",\n  \"files\": [\n    {\n      \"path\": \"src/identity/assertion.ts\",\n      \"sha256\": \"46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d\"\n    },\n    {\n      \"path\": \"src/sdk/identify.ts\",\n      \"sha256\": \"3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f\"\n    },\n    {\n      \"path\": \"src/routes/identity.ts\",\n      \"sha256\": \"e93247553313d1bff591a6860e0837c079cb61ea3baddaff991584c15b717305\"\n    },\n    {\n      \"path\": \"src/types/env.ts\",\n      \"sha256\": \"7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f\"\n    },\n    {\n      \"path\": \"src/sdk/README.md\",\n      \"sha256\": \"06ab04ca779a78d2359167d941531a000f8a01de8e50c62167ef6ebe49b2383b\"\n    },\n    {\n      \"path\": \"docs/architecture/25-identity-stitching.md\",\n      \"sha256\": \"d8f45c82d1c6c21918aebb52c13ac04db30a6cc0b01ba0b518f3d6089f6607de\"\n    },\n    {\n      \"path\": \"src/identity/identity.test.ts\",\n      \"sha256\": \"452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc\"\n    },\n    {\n      \"path\": \"src/routes/identity.test.ts\",\n      \"sha256\": \"0bcffae8de408ea7ac8a432ff47f5ddf62aa598d6d79f8265d7f8aadff930433\"\n    },\n    {\n      \"path\": \"src/sdk/identify.test.ts\",\n      \"sha256\": \"a5116728df0f639f86d50156979aeb41f3ad0516c9e54c3dd029cb93ba421ca3\"\n    },\n    {\n      \"path\": \"public/sdk/edge-personalization.js\",\n      \"sha256\": \"53a9bcbaf25c8785d1ecab8d341666dd8bd3268898117c2cb168cf359b2b3b1e\"\n    },\n    {\n      \"path\": \"public/sdk/edge-personalization.esm.js\",\n      \"sha256\": \"dda77438ee56f5f2833cc058857566a62ffae7f66062137b77858e26f478cccb\"\n    }\n  ]\n}\n"
+    }
+  ],
+  "rework": [
+    "Initial implementation checked captured visitor inside async attempt(). Root and independent source review identified the additional promise-continuation boundary before identify() resumes. Added caller-side equality immediately after initial attempt and before processing final response. This was source-review rework before the first K1 run, not a failed test. Compact SDK microtask control covers both409 detach and200 carry adoption.",
+    "Both initial TypeScript programs rejected a direct cast of deliberately malformed provider fixtures. Added only explicit unknown→provider type boundary cast. Production and generated bundles unchanged by this correction; exact K1 and both compiler programs rerun and passed."
+  ],
+  "coverage": [
+    "Absent/empty/unusable/other-tenant-only config denies in all modes and both host choices before successful counting stores, DO namespace/fetch and cookies. Configured missing/forged/expired proof also denies before effects; signed host controls work.",
+    "Existing route merge/idempotency/relink/history/erase and auth assertions preserved, changing only explicit positive link setup to real HMAC and expected signed assurance. Historical site-assurance store cases remain.",
+    "Actual SDK/router transport forwards submitted proof unchanged: valid old-visitor proof encounters409, successful detach, fresh varying visitor, newly signed proof and200; real session identity verified.",
+    "SDK provider precedence/no fallback, invalid/throwing callbacks, static409 no detach, failed transport/application detach, failed fresh proof, second409 bound, and captured visitor across proof/link/detach/caller continuations are covered.",
+    "Both public SDK artifacts rebuilt from current source; only scoped active contract/comments and historical qualifications changed."
+  ],
+  "limits": [
+    "Node local synthetic evidence, not workerd/deployed/browser/customer/performance acceptance. Repetitive SDK failure inputs are grouped; no new framework or broad suites.",
+    "Public logout semantics, SDK session rotation, trusted session capabilities/ownership, forwarding revocation, stale tabs/cookies, ABA/generations, erasure and real customer backend/SSO onboarding remain open. No caller-ID equality shortcut was introduced.",
+    "Identity secret strength/wildcard/rotation/provisioning policy unchanged. Existing HMAC binding/TTL/rotation and historical site-assurance data remain compatible.",
+    "Old unsigned storefront/operational script integrations now fail closed until backend proof integration; no operational script was run or modified. No actual secrets, customer data, external traffic, deployment, installs or git mutation.",
+    "Prior broad task acceptance is not reclosed; root/reviewer alone own independent acceptance and governance."
+  ]
+}

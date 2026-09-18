@@ -1,0 +1,148 @@
+{
+  "task_id": "W25.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T12:31:57.759Z",
+  "verdict": "pass",
+  "artifact_digest": "05654ba0b33e227a82bcc1c95630d1e6e69b9d37abfe09cd0d425872942e47d2",
+  "contract_digest": "f904cc790a7342753c00bf6cf6d03985d6e16faefb0c6daafd40b23136fcf7b9",
+  "summary": "Independent frozen source and fixed11 runtime PASS for the admitted structured-indexing subset. Lead disposition remains separate.",
+  "criteria": [
+    {
+      "id": "W25.01-C1",
+      "verdict": "pass",
+      "evidence": "Reviewed all three production deltas against actual pre-GO bytes: normalized slot/item/cell tuples identify true duplicates; nested item/cell Maps preserve distinct identities without splitting. Builder lookup and materialization use the same nested entries as the LearnStats union guard; existing item/key, row/byte, ancestor-counter and final snapshot limits remain. Fixed runtime covers all six current levels, finer override in either row order, coarser fallback, below-threshold refusal, colliding-but-distinct accepted identities, true duplicates and observed n/s=0 without phantom items. Updated W10.01 cases use 255/256 distinct real items and retain pre-publication capacity refusal and honest post-reset publication failure."
+    },
+    {
+      "id": "W25.01-C2",
+      "verdict": "pass",
+      "evidence": "Inspected and independently executed the actual CSV/JSON validation and versioned write → LearnStats publication → live service/raw record group. In each format a positive-base/reference eventful slot initially serves a, then serves genuinely zero-live-event prior item b. The persisted learning state lacks b before serving; published snapshot and raw record preserve n=0/s=0 separately from n0=200 and prior={p:0.1,n:200}, level5, exact imported revision and snapshot version. Actual KV snapshot equality and final score increase are asserted. Configuration matches the W24 tuple. Document functions and statistics/service are real modules; shopper/ring and storage are synthetic. This is not HTTP/auth, event-free-slot, formatted receipt or deployed acceptance."
+    },
+    {
+      "id": "W25.01-C3",
+      "verdict": "pass",
+      "evidence": "Seven exact bidirectional deltas, 119 artifact pins/113 source-and-output pins and 106 unchanged protected sources verified before and after the one fixed11 invocation. Two grouped additions only; selected W23/W24/W10 compatibility cases passed. Full worker captures inspected, including the initial 8-pass/3-fail attempt and fixture-only corrections. Reused final sequential compiler/scoped ESLint/whitespace session9233, captures fefe3e/18963a/4eba07, exit0/drained: zero errors and the same three existing unused-parameter warnings. No static, broad suite or board replay. Persisted schema and arithmetic remain unchanged; kit explicitly retains canonical and rolling-reader limitations."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W25.01/plan.md",
+      "sha256": "2eeb5359083a1ac1346c5076fe7af5e75dcd117ca0a8d13453f2901a616cef0a"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W25.01/artifact.json",
+      "sha256": "722d99e3bd9aae9d7aa9e8ea0542b7aeed2b9e1ada3236597791d794090e8d61"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W25.01/worker.json",
+      "sha256": "50ac916d41f4c294c2386457eab830be7d96503477bccc092f86985e0abe32e1"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/phase3.test.ts src/content/consent.test.ts -t 'W25.01|W24.01|W23.01|W10.01|validates rows, rejects what is not a prior|an item with a prior and no live events|a prior in force for the served item' --maxWorkers=1 --minWorkers=1",
+    "session_id": 66800,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "captures": [
+      {
+        "chunk_id": "d9b24c",
+        "wall_time_seconds": 1.000783293,
+        "session_id": 66800,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "13fbff",
+        "wall_time_seconds": 5.001822561,
+        "session_id": 66800,
+        "original_token_count": 91,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (22 tests | 17 skipped) 170ms\n ✓ src/content/consent.test.ts  (18 tests | 16 skipped) 88ms\n"
+      },
+      {
+        "chunk_id": "160cbb",
+        "wall_time_seconds": 0.000002477,
+        "exit_code": 0,
+        "original_token_count": 65,
+        "output": " ✓ src/learn/phase3.test.ts  (11 tests | 7 skipped) 9ms\n\n Test Files  3 passed (3)\n      Tests  11 passed | 40 skipped (51)\n   Start at  08:29:49\n   Duration  22.69s (transform 2.12s, setup 0ms, collect 5.14s, tests 267ms, environment 0ms, prepare 10.23s)\n\n"
+      }
+    ],
+    "result": {
+      "passed": 11,
+      "unselected": 40,
+      "total": 51,
+      "test_files": 3,
+      "new_grouped_cases": 2,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "before": {
+      "at": "2026-09-12T12:29:35.392Z",
+      "captures": [
+        "0b72e5"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T12:30:51.615Z",
+      "captures": [
+        "301ee0",
+        "cc47fd"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "artifact_pins": 119,
+    "source_and_output_pins": 113,
+    "protected_pins": 106,
+    "changed_protected": [],
+    "pin_mismatches": [],
+    "exact_forward_and_reverse_deltas": 7,
+    "manifest_sha256": "722d99e3bd9aae9d7aa9e8ea0542b7aeed2b9e1ada3236597791d794090e8d61",
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "f4f8a3",
+          "wall_time_seconds": 0.028730209,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T12:29:35.059Z\",\"task\":\"W25.01\",\"state\":\"verification\",\"contract_digest\":\"f904cc790a7342753c00bf6cf6d03985d6e16faefb0c6daafd40b23136fcf7b9\",\"artifact_digest\":\"05654ba0b33e227a82bcc1c95630d1e6e69b9d37abfe09cd0d425872942e47d2\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "8e4403",
+          "wall_time_seconds": 0.294844469,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T12:30:49.357Z\",\"task\":\"W25.01\",\"state\":\"verification\",\"contract_digest\":\"f904cc790a7342753c00bf6cf6d03985d6e16faefb0c6daafd40b23136fcf7b9\",\"artifact_digest\":\"05654ba0b33e227a82bcc1c95630d1e6e69b9d37abfe09cd0d425872942e47d2\"}\n"
+        }
+      ]
+    },
+    "inspection": {
+      "production_delta_capture": "06dee3",
+      "fixture_and_kit_delta_capture": "2587b2",
+      "actual_criteria_and_freeze_capture": "e99f24",
+      "worker_metadata_capture": "c2401e",
+      "complete_worker_commands_and_baseline_metadata_capture": "a89a12",
+      "basis": "Current plan and complete W25/F20/N20/N22/doc22 requirements read; prior actual-source inspection reconciled against all seven final forward/reverse deltas and hashes. Initial combined artifact display e616dd was truncated; exact manifest verification and focused subsequent criteria/source/evidence reads supplied the complete required basis."
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Worker runtime-1 (4312;8e8e01/f86339) failed3/passed8/unselected40. An owned W23 test manually constructed the old flat Map; an existing phase3 assertion expected rounded2 instead of 1+exp(-1/tau); the new pipeline ring mock omitted required ring:1, correctly producing learning_incomplete. Final owned fixture-only corrections match the new internal index and existing precision/acknowledgement contracts; no production weakening. Full failed captures remain in the pinned worker record.",
+    "Worker final runtime-2 (62456;e30595/9723fd) and static-1 passed on frozen bytes. Independent fixed11 passed once; 40 unselected cases are not claimed as executed or passing.",
+    "Prior W24/W23 implemented remedies and accepted history are reused only within preserved source/dependency assurance and these selected checks; this review does not reaccept their whole historical artifacts."
+  ],
+  "limitations": [
+    "Structured indexing/materialization only, not full W25/F20/N20/N22 closure. Event-free-slot publication, canonical/versioned cell grammar, zero-reference/base modeling, money/unit/currency/refund semantics, formatted receipt provenance and historical reconstruction remain open.",
+    "Prior strength is pseudo-evidence, not observed exposures or causal lift. The demonstrated winner change requires an eventful slot with positive reference/base and a fresh lift-cache read. No change to zero-reference fallback, explicit operator freezes, policy or generation/reset lifecycle.",
+    "Documents and archived snapshot schemas are unchanged; old readers can reject newly accepted delimiter-collision pairs. No mixed-version rollout guarantee, historical snapshot repair or broad replay claim.",
+    "Existing pre-validation KV parsing/import allocations, best-effort KV/archive publication and cache freshness are not repaired. Synthetic local storage and downstream adapters do not prove native/provider capacity, durable delivery, customer acceptance or release readiness.",
+    "Reviewer ran no additional runtime/static suites, cloud/customer-data operations or subdelegations and changed only this review record. Root owns acceptance and governance."
+  ]
+}

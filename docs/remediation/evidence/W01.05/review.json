@@ -1,0 +1,156 @@
+{
+  "task_id": "W01.05",
+  "actor": {
+    "id": "w0105-reviewer",
+    "role": "independent_verifier",
+    "run": "/root/w0105_review",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "implementer_run": "/root/w0105_worker"
+  },
+  "verdict": "PASS",
+  "scope": "Bounded local exact-enforced withdrawal of admitted demo/AI/activation entry families; no package, finding, customer, deployed or release acceptance.",
+  "basis": {
+    "contract_digest": "f6c65a6c46311e5661754d4363189d8072a039cc0bb2a7e2cd8f4a25adc2ec25",
+    "plan": {
+      "path": "docs/remediation/design/W01.05/plan.md",
+      "sha256": "1f4458779df91402f5d8b706d4789a4af34f02a6a1b7589a3a13c91284f5aaf5"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W01.05/baseline.json",
+      "sha256": "c3e9d63284a3fca563203232011f48b11001bebd68ceda5765c25de3294633bb"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W01.05/source-freeze.json",
+      "sha256": "078fa36da35d988a5bc4b15376bc2c58acd58df966ea447ebc1cccc0d44c9164",
+      "at": "2026-09-09T23:38:49Z",
+      "worker_stop": "2026-09-09T23:38:38Z"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W01.05/worker.json",
+      "sha256": "e4c7c4a4fb7529dbefed200bd80eb3f76fb95188eefaae1423efff465ac1922c"
+    },
+    "reads": "Independently read AGENTS, execution README, complete governance36/RESUME, canonical W01/W03/W14 and F01/F03/F30/F33, linked verifier reports with canonical qualifications, accepted-view v8 AI Search clause, customer API kit/SDK defaults, actual mounted routes and applicable shared destinations. Read final admitted plan/task and complete owned baseline-to-frozen diff."
+  },
+  "artifact": {
+    "digest": "0b3e26db5fb3a8eefdc5d8ebe6cc7af18e8edd3d4112d0898a2d90878eb33428",
+    "manifest_file_count": 336,
+    "registered_journal": 686,
+    "owned": [
+      {
+        "path": "src/index.ts",
+        "sha256": "ea31ab30cf0daafceb9374745fe425c0921e3ddf00112a073386a837482d1b45"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "c9c757159411a27d667f89bd73ef67511547e2519ed5634cd81197107775a9b3"
+      }
+    ],
+    "manifest_and_contract_digests_verified": true
+  },
+  "independent_check": {
+    "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+    "attempts": 1,
+    "exit_code": 0,
+    "session_id": 15291,
+    "session_drained": true,
+    "runner_start": "2026-09-09 19:39:22 America/New_York (UTC-04:00), as reported by Vitest",
+    "completion_observed_before": "2026-09-09T23:42:02Z",
+    "tests": 45,
+    "passed": 45,
+    "test_duration_ms": 12750,
+    "total_duration_seconds": 20.31,
+    "runtime": "Actual exported Worker, Hono and installed routing code bundled in memory into local workerd; synthetic bindings and outbound-denying fixture. Existing native shopper sockets exercised on session and DO hosts.",
+    "output_complete": true,
+    "output_format": "Complete exec/write_stdin output chunks concatenated in arrival order, including Vite deprecation warning.",
+    "output_sha256": "7b555f3d016fec91ad8cee077eb1620e01ec610c20d28a980482f4aa76d959f0",
+    "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (45 tests) 12750ms\n\n Test Files  1 passed (1)\n      Tests  45 passed (45)\n   Start at  19:39:22\n   Duration  20.31s (transform 1.06s, setup 0ms, collect 4.82s, tests 12.75s, environment 0ms, prepare 1.82s)\n\n",
+    "measurement_limit": "Local fixture duration only; no latency SLO, throughput, deployed binary or customer acceptance inference."
+  },
+  "criteria": [
+    {
+      "id": "W01.05-C1",
+      "verdict": "PASS",
+      "evidence": "All new mounted families are enumerated through actual Worker entry, including Meridian upgrade, cached/sync/async scene inputs, configured Gemini/FX/SHOT_TOKEN, two nondefault tenants with valid combined authority and representative absent/forged/operator/site/shopper classes. Root/descendant/decoded/empty/dot aliases and unsupported methods/preflights exercise the existing denial oracle: generic404/no-store, empty HEAD, only AUTH_MODE env access, zero body/binding/discovery/state/log/deferred/CORS/cookie effects; outboundAttempts remains zero. Source method-independent guard precedes all Hono dispatch."
+    },
+    {
+      "id": "W01.05-C2",
+      "verdict": "PASS",
+      "evidence": "Existing42 controls retained and passing, including raw/connector/legacy boundaries, scoped operator audience publication/readback and native shopper socket controls. Exactly3 new grouped cases. Open/unset controls cover no-model AI fallback, scene cache/queue and sync no-model refusal, shot no-token route closure, funnel reset preparation, tenant-scoped experiment KV readback, signal response readback, Offer Desk override, Bright Hour status read, Meridian stub dispatch and invalid demo-trigger entry. Static siblings/near prefixes/reserved separators follow ordinary downstream routing; enforced api-info omits precisely the admitted advertisements. Existing internal W07.01 scene queue assertions unchanged."
+    },
+    {
+      "id": "W01.05-C3",
+      "verdict": "PASS",
+      "evidence": "Official336-file manifest/contract digests recomputed. Independently verified two owned current hashes, both admitted snapshot hashes, retained patch hashes and forward/reverse in-memory roundtrips. Compared all332 freeze entries with official manifest and baseline records: only owned2 changed;4 proof/config additions individually hashed. Read and hash-verified all6 full primary outputs, child exits and drained-session metadata; baseline/final lint embedded index sources match respective artifact bytes and exact7-warning lineage remains unchanged. Independent single K1 passed45/45. Lead acceptance remains pending."
+    }
+  ],
+  "integrity_verification": {
+    "protected_dependencies": "Reused lead's frozen332-input/330-unchanged-unowned filesystem attestation as authorized; independently compared all retained records and checked both owned files plus four proof/config additions. No duplicate broad filesystem scan.",
+    "relevant_fixture_dependency": "Existing clearBhExperimentMemo helper remains unchanged and is already pinned at src/demos/brighthour/experiment.ts SHA256 ff85b9a1405970eecc5e130746a7d1d992df675a7efd6ea9f093dda2bf60cb43.",
+    "primary_outputs_verified": [
+      {
+        "name": "lint_baseline",
+        "exit_code": 0,
+        "sha256": "1def6535a21ec2bba2276333fba6e869e6e486c8afb3023c919723ca1581a3b9"
+      },
+      {
+        "name": "runtime_first",
+        "exit_code": 1,
+        "sha256": "053df670a8b55d80cc11117462fbbc7f994e2657f79d6dc343ad3c15a95b3bcb"
+      },
+      {
+        "name": "runtime_final",
+        "exit_code": 0,
+        "sha256": "6b1d2b7cf3a48ee5f99dc76d26f3da6be15558959869a1026ba68ca39e81ca0e"
+      },
+      {
+        "name": "compiler",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "lint",
+        "exit_code": 0,
+        "sha256": "4448c720bb98c679bf758a125bad0416f21bf7ba1d0b1b06fc60aa4ed46fe1de"
+      },
+      {
+        "name": "whitespace",
+        "exit_code": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "compiler_and_lint": "Reviewed primary diagnostics only, as admitted: compiler exit0; scoped baseline/final lint0errors,7unchanged warnings; whitespace exit0. No duplicate compiler/lint run.",
+    "delta_roundtrips": [
+      {
+        "path": "src/index.ts",
+        "patch_sha256": "e61a429698d0ae85d0d8ba43e96fd9279363e16064d172b8f9574b5764f1fd0a",
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "patch_sha256": "043547f363baa01a501913b27fa7105b36364c57846dddafd0763a6fec345707",
+        "forward": true,
+        "reverse": true
+      }
+    ]
+  },
+  "rework": [
+    "Primary first K1 retained44/45: new open/unset Bright Hour control expected a fresh CACHE.get while existing10-second module memo retained null across synthetic binding resets. Final fixture invokes existing clearBhExperimentMemo alongside existing cache resets; product source unchanged. Primary final45/45 and independent45/45 supersede that fixture failure.",
+    "Reviewer read-only diff rendering first used /dev/stdin, unavailable to the spawned diff process (exit1); corrected stdin operand to '-' and successfully read complete diffs. No source write, test failure or extra runtime run resulted."
+  ],
+  "limitations": [
+    "Only the admitted exact-enforced HTTP/upgrade entry families are contained. Static asset serving, bound resources, queue/scheduled/internal consumers and retained geo/operator/health paths are not fully isolated. Open/unset retains legacy/demo behavior.",
+    "D1 funnel reset positive proves DB.prepare was attempted, not SQLite deletion; Meridian positive proves stub dispatch, not object erasure or native Meridian upgrade acceptance. Signals use response readback of module memory outside destination snapshots. No actual model/browser/Optimizely/partner or customer destination execution.",
+    "Generic own-catalog/live-affinity AI Search §1.10 and enrichment/review/publication §1.3 remain W14/W37 delivery work. Demo storefront/rehearsal and same-host Meridian catalog import shortcut are intentionally unavailable enforced; customer catalog pull and operator audience authoring remain. No customer scope amendment.",
+    "W34 external-scoring containment and deterministic ranking/learning/service sources are unchanged. No full W01/W03/W14/F01/F03/F30/F33/finding/gate/release/customer/deployed acceptance or relevance/latency/explainability/lift claim.",
+    "Current absence of successful abuse is not assumed: source-confirmed design case used; some paths already fail downstream. Prior implementation remedies and qualified historical evidence remain distinct.",
+    "No source edits, extra suites, install/build/provision/deploy/cloud/credential/customer-data/external-message/commit/push/destructive operations by reviewer. Preserve existing v4 recovery/v1-v3 semantics and unresolved human decisions."
+  ],
+  "handoff": {
+    "all_sessions_drained": true,
+    "source_edits": false,
+    "remaining_required_work": "Lead inspect this evidence, disposition bounded task, update tracker/journal/checkpoint and run required board check/status. No further reviewer checks pending."
+  },
+  "reviewed_at": "2026-09-09T23:42:26.189Z"
+}

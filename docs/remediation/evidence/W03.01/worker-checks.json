@@ -1,0 +1,158 @@
+{
+  "task": "W03.01",
+  "contractDigest": "13c4d74f90c6af5cb74eb7c89995e769685aaffb35eff6399cbc2c7a03c6144c",
+  "planSha256": "4c8fd390108674fc50013b298fb0db0a0b53f3758fd47180db69c102aa924b5d",
+  "checks": [
+    {
+      "label": "K1 final",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts src/middleware/auth.refresh-boundary.test.ts src/auth/signing-config.boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAtUTC": "2026-09-07 06:00:12 UTC",
+      "collectedAtUTC": "2026-09-07 06:00:57 UTC",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration\nW02.01 protected-boundary observation {\"mode\":\"open\",\"state\":\"fresh\",\"statuses\":{\"me\":401,\"patch\":401},\"accountReads\":0,\"kvWrites\":0,\"revision\":[1,1],\"K\":[3,3],\"history\":[1,1]}\n\nstdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration\nW02.01 protected-boundary observation {\"mode\":\"open\",\"state\":\"revoked\",\"statuses\":{\"me\":401,\"patch\":401},\"accountReads\":0,\"kvWrites\":0,\"revision\":[1,1],\"K\":[3,3],\"history\":[1,1]}\n\nstdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration\nW02.01 protected-boundary observation {\"mode\":\"enforced\",\"state\":\"fresh\",\"statuses\":{\"me\":401,\"patch\":401},\"accountReads\":0,\"kvWrites\":0,\"revision\":[1,1],\"K\":[3,3],\"history\":[1,1]}\n\nstdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration\nW02.01 protected-boundary observation {\"mode\":\"enforced\",\"state\":\"revoked\",\"statuses\":{\"me\":401,\"patch\":401},\"accountReads\":0,\"kvWrites\":0,\"revision\":[1,1],\"K\":[3,3],\"history\":[1,1]}\n\n ✓ src/middleware/auth.refresh-boundary.test.ts  (30 tests) 346ms\n ✓ src/routes/content.test.ts  (14 tests) 51ms\n ✓ src/auth/signing-config.boundary.test.ts  (33 tests) 184ms\n\n Test Files  3 passed (3)\n      Tests  77 passed (77)\n   Start at  02:00:14\n   Duration  16.11s (transform 758ms, setup 0ms, collect 5.28s, tests 581ms, environment 0ms, prepare 7.18s)\n\n",
+      "result": "77/77 passed: content14 + refresh30 + signing33. New router checks cover136 denials before payload/KV/binding/remote effects with valid stored non-default documents; successful administrative flows remain."
+    },
+    {
+      "label": "K2 before final HTTP-status tightening",
+      "command": "node --test scripts/lib/tool-token.test.mjs",
+      "startedAtUTC": "2026-09-07 06:04:03 UTC",
+      "collectedAtUTC": "2026-09-07 06:04:24 UTC",
+      "exitCode": 0,
+      "output": "TAP version 13\n# Subtest: explicit opaque tokens have priority without consulting local signing settings\nok 1 - explicit opaque tokens have priority without consulting local signing settings\n  ---\n  duration_ms: 1.118983\n  type: 'test'\n  ...\n# Subtest: shared signing policy refuses unsafe keys and identity configuration\nok 2 - shared signing policy refuses unsafe keys and identity configuration\n  ---\n  duration_ms: 2.701416\n  type: 'test'\n  ...\n# Subtest: local target policy uses exact parsed loopback names\nok 3 - local target policy uses exact parsed loopback names\n  ---\n  duration_ms: 0.18021\n  type: 'test'\n  ...\n# Subtest: dev-token: unsafe configuration stops before operational or configuration-file effects\nok 4 - dev-token: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 16.783122\n  type: 'test'\n  ...\n# Subtest: dev-token: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 5 - dev-token: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 6.448239\n  type: 'test'\n  ...\n# Subtest: dev-token: OPERATOR_TOKEN passes through without signing configuration\nok 6 - dev-token: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 3.066576\n  type: 'test'\n  ...\n# Subtest: acceptance-run: unsafe configuration stops before operational or configuration-file effects\nok 7 - acceptance-run: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 20.331124\n  type: 'test'\n  ...\n# Subtest: acceptance-run: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 8 - acceptance-run: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 6.324304\n  type: 'test'\n  ...\n# Subtest: acceptance-run: OPERATOR_TOKEN passes through without signing configuration\nok 9 - acceptance-run: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 3.355812\n  type: 'test'\n  ...\n# Subtest: import-content: unsafe configuration stops before operational or configuration-file effects\nok 10 - import-content: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 14.580312\n  type: 'test'\n  ...\n# Subtest: import-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 11 - import-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 3.255607\n  type: 'test'\n  ...\n# Subtest: import-content: OPERATOR_TOKEN passes through without signing configuration\nok 12 - import-content: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.612108\n  type: 'test'\n  ...\n# Subtest: seed-coach-content: unsafe configuration stops before operational or configuration-file effects\nok 13 - seed-coach-content: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 15.624402\n  type: 'test'\n  ...\n# Subtest: seed-coach-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 14 - seed-coach-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 3.26375\n  type: 'test'\n  ...\n# Subtest: seed-coach-content: OPERATOR_TOKEN passes through without signing configuration\nok 15 - seed-coach-content: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.549902\n  type: 'test'\n  ...\n# Subtest: console-operator: unsafe configuration stops before operational or configuration-file effects\nok 16 - console-operator: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 15.985324\n  type: 'test'\n  ...\n# Subtest: console-operator: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 17 - console-operator: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 3.703995\n  type: 'test'\n  ...\n# Subtest: console-operator: OPERATOR_TOKEN passes through without signing configuration\nok 18 - console-operator: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.646475\n  type: 'test'\n  ...\n# Subtest: holdout-proof: unsafe configuration stops before operational or configuration-file effects\nok 19 - holdout-proof: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 16.526788\n  type: 'test'\n  ...\n# Subtest: holdout-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 20 - holdout-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 3.396322\n  type: 'test'\n  ...\n# Subtest: holdout-proof: OPERATOR_TOKEN passes through without signing configuration\nok 21 - holdout-proof: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.707709\n  type: 'test'\n  ...\n# Subtest: identity-proof: unsafe configuration stops before operational or configuration-file effects\nok 22 - identity-proof: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 16.166711\n  type: 'test'\n  ...\n# Subtest: identity-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 23 - identity-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 3.553949\n  type: 'test'\n  ...\n# Subtest: identity-proof: OPERATOR_TOKEN passes through without signing configuration\nok 24 - identity-proof: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.75538\n  type: 'test'\n  ...\n# Subtest: acceptance-run: CLI precedence and remote token path; no ambiguous local mint\nok 25 - acceptance-run: CLI precedence and remote token path; no ambiguous local mint\n  ---\n  duration_ms: 22.727899\n  type: 'test'\n  ...\n# Subtest: import-content: CLI precedence and remote token path; no ambiguous local mint\nok 26 - import-content: CLI precedence and remote token path; no ambiguous local mint\n  ---\n  duration_ms: 22.78226\n  type: 'test'\n  ...\n# Subtest: seed-coach-content: CLI precedence and remote token path; no ambiguous local mint\nok 27 - seed-coach-content: CLI precedence and remote token path; no ambiguous local mint\n  ---\n  duration_ms: 20.162145\n  type: 'test'\n  ...\n# Subtest: console remains local-only, while existing remote-capable proof scripts remain usable\nok 28 - console remains local-only, while existing remote-capable proof scripts remain usable\n  ---\n  duration_ms: 14.203975\n  type: 'test'\n  ...\n# Subtest: rehearsal refuses unsafe/missing configuration visibly before screenshot read or later curl\nok 29 - rehearsal refuses unsafe/missing configuration visibly before screenshot read or later curl\n  ---\n  duration_ms: 3168.067004\n  type: 'test'\n  ...\n# Subtest: rehearsal accepts explicit bearer or custom settings and preserves the historical token\nok 30 - rehearsal accepts explicit bearer or custom settings and preserves the historical token\n  ---\n  duration_ms: 1575.824589\n  type: 'test'\n  ...\n# Subtest: W03.01 importer authenticates its catalogue read and continues through the slot write\nok 31 - W03.01 importer authenticates its catalogue read and continues through the slot write\n  ---\n  duration_ms: 3.423071\n  type: 'test'\n  ...\n# Subtest: W03.01 preview skips stored and seeds only an authenticated compiled default\nok 32 - W03.01 preview skips stored and seeds only an authenticated compiled default\n  ---\n  duration_ms: 75.473098\n  type: 'test'\n  ...\n# Subtest: W03.01 preview fails closed on credential, HTTP, JSON or source failure without leaking responses\nok 33 - W03.01 preview fails closed on credential, HTTP, JSON or source failure without leaking responses\n  ---\n  duration_ms: 243.318074\n  type: 'test'\n  ...\n1..33\n# tests 33\n# suites 0\n# pass 33\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 10017.692449\n",
+      "result": "33/33 passed; superseded for preview/tool fixture by final K2 below."
+    },
+    {
+      "label": "Application TypeScript",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w0301-typecheck.y2y0lM/application.tsbuildinfo",
+      "startedAtUTC": "2026-09-07 06:01:15 UTC",
+      "collectedAtUTC": "2026-09-07 06:04:04 UTC",
+      "exitCode": 0,
+      "output": "",
+      "result": "Passed. Only later shell/tool-test changes followed; TS inputs unchanged. Build metadata confined to task-temporary directory."
+    },
+    {
+      "label": "K2 final",
+      "command": "node --test scripts/lib/tool-token.test.mjs",
+      "startedAtUTC": "2026-09-07 06:06:36 UTC",
+      "collectedAtUTC": "2026-09-07 06:07:14 UTC",
+      "exitCode": 0,
+      "output": "TAP version 13\n# Subtest: explicit opaque tokens have priority without consulting local signing settings\nok 1 - explicit opaque tokens have priority without consulting local signing settings\n  ---\n  duration_ms: 1.097973\n  type: 'test'\n  ...\n# Subtest: shared signing policy refuses unsafe keys and identity configuration\nok 2 - shared signing policy refuses unsafe keys and identity configuration\n  ---\n  duration_ms: 2.662555\n  type: 'test'\n  ...\n# Subtest: local target policy uses exact parsed loopback names\nok 3 - local target policy uses exact parsed loopback names\n  ---\n  duration_ms: 0.150318\n  type: 'test'\n  ...\n# Subtest: dev-token: unsafe configuration stops before operational or configuration-file effects\nok 4 - dev-token: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 13.585444\n  type: 'test'\n  ...\n# Subtest: dev-token: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 5 - dev-token: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 6.010326\n  type: 'test'\n  ...\n# Subtest: dev-token: OPERATOR_TOKEN passes through without signing configuration\nok 6 - dev-token: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.823561\n  type: 'test'\n  ...\n# Subtest: acceptance-run: unsafe configuration stops before operational or configuration-file effects\nok 7 - acceptance-run: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 15.522453\n  type: 'test'\n  ...\n# Subtest: acceptance-run: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 8 - acceptance-run: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 4.538008\n  type: 'test'\n  ...\n# Subtest: acceptance-run: OPERATOR_TOKEN passes through without signing configuration\nok 9 - acceptance-run: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.774909\n  type: 'test'\n  ...\n# Subtest: import-content: unsafe configuration stops before operational or configuration-file effects\nok 10 - import-content: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 12.718922\n  type: 'test'\n  ...\n# Subtest: import-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 11 - import-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 2.955828\n  type: 'test'\n  ...\n# Subtest: import-content: OPERATOR_TOKEN passes through without signing configuration\nok 12 - import-content: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.050981\n  type: 'test'\n  ...\n# Subtest: seed-coach-content: unsafe configuration stops before operational or configuration-file effects\nok 13 - seed-coach-content: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 11.524141\n  type: 'test'\n  ...\n# Subtest: seed-coach-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 14 - seed-coach-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 3.133245\n  type: 'test'\n  ...\n# Subtest: seed-coach-content: OPERATOR_TOKEN passes through without signing configuration\nok 15 - seed-coach-content: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.151897\n  type: 'test'\n  ...\n# Subtest: console-operator: unsafe configuration stops before operational or configuration-file effects\nok 16 - console-operator: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 13.493555\n  type: 'test'\n  ...\n# Subtest: console-operator: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 17 - console-operator: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 3.425136\n  type: 'test'\n  ...\n# Subtest: console-operator: OPERATOR_TOKEN passes through without signing configuration\nok 18 - console-operator: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.267193\n  type: 'test'\n  ...\n# Subtest: holdout-proof: unsafe configuration stops before operational or configuration-file effects\nok 19 - holdout-proof: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 13.749525\n  type: 'test'\n  ...\n# Subtest: holdout-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 20 - holdout-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 2.839185\n  type: 'test'\n  ...\n# Subtest: holdout-proof: OPERATOR_TOKEN passes through without signing configuration\nok 21 - holdout-proof: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 2.155369\n  type: 'test'\n  ...\n# Subtest: identity-proof: unsafe configuration stops before operational or configuration-file effects\nok 22 - identity-proof: unsafe configuration stops before operational or configuration-file effects\n  ---\n  duration_ms: 12.334253\n  type: 'test'\n  ...\n# Subtest: identity-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\nok 23 - identity-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use\n  ---\n  duration_ms: 2.924102\n  type: 'test'\n  ...\n# Subtest: identity-proof: OPERATOR_TOKEN passes through without signing configuration\nok 24 - identity-proof: OPERATOR_TOKEN passes through without signing configuration\n  ---\n  duration_ms: 9.771851\n  type: 'test'\n  ...\n# Subtest: acceptance-run: CLI precedence and remote token path; no ambiguous local mint\nok 25 - acceptance-run: CLI precedence and remote token path; no ambiguous local mint\n  ---\n  duration_ms: 33.251346\n  type: 'test'\n  ...\n# Subtest: import-content: CLI precedence and remote token path; no ambiguous local mint\nok 26 - import-content: CLI precedence and remote token path; no ambiguous local mint\n  ---\n  duration_ms: 18.761441\n  type: 'test'\n  ...\n# Subtest: seed-coach-content: CLI precedence and remote token path; no ambiguous local mint\nok 27 - seed-coach-content: CLI precedence and remote token path; no ambiguous local mint\n  ---\n  duration_ms: 17.362534\n  type: 'test'\n  ...\n# Subtest: console remains local-only, while existing remote-capable proof scripts remain usable\nok 28 - console remains local-only, while existing remote-capable proof scripts remain usable\n  ---\n  duration_ms: 11.748788\n  type: 'test'\n  ...\n# Subtest: rehearsal refuses unsafe/missing configuration visibly before screenshot read or later curl\nok 29 - rehearsal refuses unsafe/missing configuration visibly before screenshot read or later curl\n  ---\n  duration_ms: 3137.294618\n  type: 'test'\n  ...\n# Subtest: rehearsal accepts explicit bearer or custom settings and preserves the historical token\nok 30 - rehearsal accepts explicit bearer or custom settings and preserves the historical token\n  ---\n  duration_ms: 1677.503759\n  type: 'test'\n  ...\n# Subtest: W03.01 importer authenticates its catalogue read and continues through the slot write\nok 31 - W03.01 importer authenticates its catalogue read and continues through the slot write\n  ---\n  duration_ms: 2.963447\n  type: 'test'\n  ...\n# Subtest: W03.01 preview skips stored and seeds only an authenticated compiled default\nok 32 - W03.01 preview skips stored and seeds only an authenticated compiled default\n  ---\n  duration_ms: 80.949378\n  type: 'test'\n  ...\n# Subtest: W03.01 preview fails closed on credential, HTTP, JSON or source failure without leaking responses\nok 33 - W03.01 preview fails closed on credential, HTTP, JSON or source failure without leaking responses\n  ---\n  duration_ms: 296.319106\n  type: 'test'\n  ...\n1..33\n# tests 33\n# suites 0\n# pass 33\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 10222.73767\n",
+      "result": "33/33 passed. Import continuation authenticates all3 calls; exact preview block handles2 successful dispositions,10 fail-before-seed cases including HTTP302, and1 propagated seed-command failure, all with intercepted effects."
+    }
+  ],
+  "syntaxAndScopedDiff": {
+    "startedAt": {
+      "current_time": "2026-09-07 06:04:23 UTC"
+    },
+    "results": [
+      {
+        "command": "node --check scripts/import-content.mjs",
+        "chunk_id": "912da4",
+        "wall_time_seconds": 0.000005111,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "command": "node --check scripts/lib/tool-token.test.mjs",
+        "chunk_id": "ef1180",
+        "wall_time_seconds": 0.000003466,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "command": "node --check public/meridian/meridian.js",
+        "chunk_id": "e6d697",
+        "wall_time_seconds": 0.000002609,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "command": "node --check public/storefront.js",
+        "chunk_id": "71713a",
+        "wall_time_seconds": 0.000001116,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "command": "bash -n scripts/console-preview.sh",
+        "chunk_id": "b10f37",
+        "wall_time_seconds": 0.000002732,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "command": "git diff --check -- src/routes/config.ts src/routes/content.ts src/routes/content.test.ts src/middleware/auth.refresh-boundary.test.ts src/auth/signing-config.boundary.test.ts scripts/import-content.mjs scripts/console-preview.sh scripts/lib/tool-token.test.mjs public/meridian/meridian.js public/storefront.js docs/kit/02-api-reference.md",
+        "chunk_id": "a7a273",
+        "wall_time_seconds": 0.118716619,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    ]
+  },
+  "finalPreviewSyntaxAndDiff": {
+    "startedAtUTC": "2026-09-07 06:06:36 UTC",
+    "results": [
+      {
+        "command": "node --check scripts/lib/tool-token.test.mjs",
+        "chunk_id": "f06b76",
+        "wall_time_seconds": 0.037157366,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "command": "bash -n scripts/console-preview.sh",
+        "chunk_id": "f0f9b0",
+        "wall_time_seconds": 0.020214414,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "command": "git diff --check -- scripts/console-preview.sh scripts/lib/tool-token.test.mjs",
+        "chunk_id": "1e52d4",
+        "wall_time_seconds": 0.000002709,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    ]
+  },
+  "corrections": [
+    {
+      "stage": "Constructing the K2 fixture patch",
+      "error": "SyntaxError: Missing } in template expression",
+      "effect": "functions.exec parsing failed before apply_patch or command execution; no file or test changes occurred."
+    },
+    {
+      "stage": "Final source inspection after initial passing K2",
+      "issue": "curl -f does not reject redirects; HTTP302 carrying compiled-default JSON could reach the seed decision.",
+      "correction": "Sign-in and learn-read now require HTTP200 explicitly, without redirect following. Added one HTTP302 case to the existing shell stub test; reran only K2 and affected syntax/diff checks. No TS/router change.",
+      "disposition": "Final K2 passed; earlier K2 retained as superseded."
+    }
+  ],
+  "sourceFreeze": {
+    "command": "node --input-type=module -e 'import fs from \"node:fs\";import crypto from \"node:crypto\";const {beforeSources}=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W03.01/before-sources-v1.json\"));console.log(JSON.stringify(beforeSources.map(({path})=>({path,sha256:crypto.createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\")})),null,2));'",
+    "chunk_id": "6acca8",
+    "wall_time_seconds": 0.000005142,
+    "exit_code": 0,
+    "original_token_count": 370,
+    "output": "[\n  {\n    \"path\": \"src/routes/config.ts\",\n    \"sha256\": \"22beb4d906345afee1267a1c146fcaac003490d360a6ab85d5a5c1ee0e551499\"\n  },\n  {\n    \"path\": \"src/routes/content.ts\",\n    \"sha256\": \"4344476c6d9d61db58f243f9e6649b499d2ac029269ea4dfa5fccf4447a8eed8\"\n  },\n  {\n    \"path\": \"src/routes/content.test.ts\",\n    \"sha256\": \"bb6a3257ec32648c0b7c4d14add6d540821aa5f0db51def91c7eeccbfea958f6\"\n  },\n  {\n    \"path\": \"src/middleware/auth.refresh-boundary.test.ts\",\n    \"sha256\": \"aef2f43c339122013007f4e2483117b5544875fdbc787ec56b78a398f5b7982b\"\n  },\n  {\n    \"path\": \"src/auth/signing-config.boundary.test.ts\",\n    \"sha256\": \"4d99a0bf5eefcb148ff0bfc0010beadcd2ecf0c018bc0c35ec7067dcdf88741f\"\n  },\n  {\n    \"path\": \"scripts/import-content.mjs\",\n    \"sha256\": \"f9daf19c75abf83ee641f2550a08df46b67417816d2a4c4f43fc582c29a51e51\"\n  },\n  {\n    \"path\": \"scripts/console-preview.sh\",\n    \"sha256\": \"cbb4a98864bd9484ba288d855a43c8826afd7b6840c2a6131a3ccc309c3120ba\"\n  },\n  {\n    \"path\": \"scripts/lib/tool-token.test.mjs\",\n    \"sha256\": \"fb228968db1eecf7c2dd4dc8aea942a13293277c0491bf42ff2645d0a06c4db8\"\n  },\n  {\n    \"path\": \"public/meridian/meridian.js\",\n    \"sha256\": \"2d15f1274bd44de22ca691fc88f7a8f1f5456f0dee41e79c9bb894c17a614739\"\n  },\n  {\n    \"path\": \"public/storefront.js\",\n    \"sha256\": \"6a0c66c18746a27df8a03362d23876bcdef14f07dd9ba09b4a9cf69526ec7403\"\n  },\n  {\n    \"path\": \"docs/kit/02-api-reference.md\",\n    \"sha256\": \"598efa71608c29c1bd1868ffe73d6eb84e8870876fbf5e13cc06f1d5082d3c8b\"\n  }\n]\n",
+    "at": {
+      "current_time": "2026-09-07 06:07:14 UTC"
+    }
+  },
+  "limits": [
+    "Actual mounted Hono/Jose/config modules over synthetic working KV; no native/deployed/runtime/customer/SLO acceptance.",
+    "Tool tests use existing VM and selected shell-block stubs; no preview/import/seed operational workflow, real network or credentials used.",
+    "Meridian existing-token forwarding and Coach existing public-static CMS mapping receive source/syntax review, not browser/customer acceptance; arbitrary private catalog edits are not published.",
+    "Tenant membership/roles/scope authority, legacy recovery-page adaptation and prior-proof reclosure remain outside this task.",
+    "All initiated command sessions collected; no pending processes. Independent review and lead acceptance remain pending."
+  ]
+}

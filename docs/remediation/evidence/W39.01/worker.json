@@ -1,0 +1,143 @@
+{
+  "task_id": "W39.01",
+  "actor": {
+    "role": "implementer",
+    "run_id": "/root/w3901_worker",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "status": "implementation_complete_pending_independent_review_and_lead_acceptance",
+  "source_stop_at": "2026-09-10T11:41:36.003Z",
+  "source_edits_after_stop": false,
+  "approval": {
+    "plan_path": "docs/remediation/design/W39.01/plan.md",
+    "plan_sha256": "533356fa664d553a826281f36730843d7c4063254abeb73ce7a75a644ee1cebe",
+    "task_contract_digest": "0d4c7e0b299ed39d45daf3efda0c4c19e7491f52dd19310d16df17771adbcc12",
+    "go_received_before_source_edits": true,
+    "admission": "Root replacement checker40622 VALID761 exit0/drained; original root metadata error corrected before GO, no source edits under invalid admission."
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W39.01/baseline.json",
+    "claim": "source_confirmed",
+    "observation": "Original seed011 deleted both shared reference tables before five plain inserts, replacing migration0008 NY real census with a proxy and omitting13 of its14NY ZIPs. Original generator read inputs, overwrote seed files, generated five whole-table resets and published stale apply/remote/wildcard instructions.",
+    "execution": "No target generator, seed entrypoint, baseline SQL reproduction or live database operation was executed."
+  },
+  "changes": [
+    "Replaced entire generator with import-free unconditional literal stderr refusal and process.exitCode=2; no argument/environment branch, filesystem operation or executable archive.",
+    "Removed exactly two unscoped shared-reference deletes; changed five shared-reference inserts to INSERT OR IGNORE. Three scoped Coach resets and all first-party generation SQL preserved.",
+    "Withdrew operative commands in seed011 header, doc10 Operations and wrangler D1 comments. Existing primary-key preservation and historical recovery limitations documented; configuration values and unrelated source preserved.",
+    "Added one focused built-in Node fixture: exact generator source plus syntax-only parse, and actual0004 schema/0008 reference statements/011 reference statements in SQLite memory."
+  ],
+  "files": [
+    {
+      "path": "scripts/seed-d1.mjs",
+      "before_sha256": "b73643f2f9f3e038622a8047af8584729ddb8ef0332fe9857cda4962de8b60f6",
+      "after_sha256": "6bf4d92126b432c0b5eef8fe6146c0db75e8a50a0540fabef903ef2a69e2a074"
+    },
+    {
+      "path": "migrations/seed/seed_011_geo.sql",
+      "before_sha256": "6e5896fdd3750da595f4d62b52dcaea1e6572c6c20924126a73b5342c3515925",
+      "after_sha256": "d1195dcc499fab227873e1445996930f0cf971cb3c25729bafdb1e927c09dd98"
+    },
+    {
+      "path": "docs/architecture/10-d1-schema.md",
+      "before_sha256": "1d3169c0b7f978a5af4caab9f3d29a65776c43adb180424e3fcf199c865a9f05",
+      "after_sha256": "73d19bfa9c50de9ca090dc5f690a8e6ee4274d74a72580e52013f8e76d69f8f2"
+    },
+    {
+      "path": "wrangler.toml",
+      "before_sha256": "921dfbb9e5f786144570d01caa5cc98c84e8546832ed72cce5a8949115be931d",
+      "after_sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa"
+    },
+    {
+      "path": "scripts/seed-d1.test.mjs",
+      "before_sha256": null,
+      "before_absent": true,
+      "after_sha256": "06cdd34819846bafdebffe82f13e2d1624f9ee9dbba8dff1d8133f086e1d2f1a"
+    }
+  ],
+  "unchanged_reference_inputs": [
+    {
+      "path": "migrations/0004_geo_census.sql",
+      "sha256": "579117f14a6fb392b630fb7e383ab86ad7ce50e2589bc6c7f6b2248ebfb20c7b"
+    },
+    {
+      "path": "migrations/0008_meridian_geo_cohort.sql",
+      "sha256": "6031d7d362ec7a8c9157740d875fa9651ad7a771f66ace51ae52833931059d86"
+    }
+  ],
+  "checks": [
+    {
+      "command": "node --test scripts/seed-d1.test.mjs",
+      "chunk_id": "d1a68f",
+      "exit_status": 0,
+      "drained": true,
+      "session_id": null,
+      "result": "2/2 passed,0 failed/cancelled/skipped/todo",
+      "output": "TAP version 13\n# Subtest: legacy seed emitter is a literal refusal (source and syntax only)\nok 1 - legacy seed emitter is a literal refusal (source and syntax only)\n  ---\n  duration_ms: 31.305472\n  type: 'test'\n  ...\n# Subtest: 0008 then 011 shared references preserve rows/provenance and repeat in memory\nok 2 - 0008 then 011 shared references preserve rows/provenance and repeat in memory\n  ---\n  duration_ms: 15.166679\n  type: 'test'\n  ...\n# Node v22.15.0; SQLite 3.37.2; NY ZIPs 14 retained; NY 99852/648800 Census ACS 2024 1-yr/2024 retained; 7 census/29 xref existing rows unchanged; missing NC added; repeat 75 census/43 xref rows identical. Reference subset only.\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 93.552597\n",
+      "child_results": {
+        "syntax": {
+          "executable": "process.execPath",
+          "arguments": [
+            "--check",
+            "scripts/seed-d1.mjs"
+          ],
+          "NODE_OPTIONS": "",
+          "status": 0,
+          "signal": null,
+          "stdout": "",
+          "stderr": "",
+          "body_executed": false
+        },
+        "sqlite": {
+          "executable": "/usr/bin/sqlite3",
+          "arguments": [
+            "-batch",
+            "-bail",
+            "-init",
+            "/dev/null",
+            ":memory:"
+          ],
+          "input": "stdin:actual schema5 and0008refs4 including its conditionalDELETE; synthetic reference fixtures; 011refs5 twice with snapshots",
+          "status": 0,
+          "signal": null,
+          "stderr": "",
+          "stdout": "Three parsed complete reference snapshots; all assertions passed. Full rows intentionally omitted from evidence."
+        }
+      }
+    },
+    {
+      "command": "git diff --check -- scripts/seed-d1.mjs migrations/seed/seed_011_geo.sql docs/architecture/10-d1-schema.md wrangler.toml scripts/seed-d1.test.mjs",
+      "chunk_id": "64b5d7",
+      "exit_status": 0,
+      "drained": true,
+      "session_id": null,
+      "output": ""
+    }
+  ],
+  "runtime": {
+    "node": "v22.15.0",
+    "sqlite": "3.37.2",
+    "scope": "Installed built-ins/native SQLite memory; no workerd/D1/deployed/customer/SLO measurement."
+  },
+  "validation_scope": [
+    "Every statement mentioning either shared table is selected before form/count validation; schema5,0008refs4 including exact conditionalDELETE,011refs5. Unexpected destructive statements cannot be filtered out by a safe INSERT prefix.",
+    "NY14 including11215 and exact35620 income99852/home648800/source Census ACS 2024 1-yr/vintage2024 explicitly asserted before and after.",
+    "All7census/29xref pre-existing rows preserved, including unrelated ZZ/99999 and conflicting CA/90001 synthetic reference sentinels.",
+    "Missing county37067 and ZIP27028 inserted with exact expected NC values; full75census/43xref state identical after repeat."
+  ],
+  "failures_or_rework": "No primary or whitespace check failure; each ran once. Preflight oversized source displays were re-read in bounded chunks; an uncredited source-listing command returned2 before W39 directories existed. No implementation occurred during invalid root admission.",
+  "limitations": [
+    "The refused target was inspected and syntax-parsed only; no executed-refusal or observed cloud-zero-call claim.",
+    "Reference subset coverage does not prove complete numbered migrations, seed001–011 order, first-party cohort reset/generation, customer workflow or deployed D1 acceptance.",
+    "INSERT OR IGNORE preserves incorrect existing rows too. Previously lost/wrong references require separately reviewed reference-only recovery and authorized target; replaying all0008 also resets Meridian first-party data.",
+    "Other seed/migration instructions, replacement generator/output ownership, product/demo schema/assets, published backups, fresh-clone/index handoff and D01/D08 remain W39/W08 residuals.",
+    "No full W39, finding, gate, customer, release or measured relevance/latency acceptance."
+  ],
+  "handoff": {
+    "pending_sessions": [],
+    "next_action": "Root freezes exact artifact/deltas; independent /root/w3901_review inspects actual evidence/source and runs the same focused fixture once. Root alone disposes acceptance and updates governance.",
+    "rollback": "Only exact owned inverse deltas under lead review; no rollback or live restoration performed.",
+    "unauthorized_operations_performed": false
+  }
+}

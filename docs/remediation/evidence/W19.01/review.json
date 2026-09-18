@@ -1,0 +1,138 @@
+{
+  "at": "2026-09-13T16:06:28.211Z",
+  "task_id": "W19.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "de9e7386adb6fe63a4790b476ea848adf4141726adb584ad9db6ba1a3bedbdcc",
+  "contract_digest": "ff0af9a552112143e6830a55b9176a27cc1fdea3e1a10a7b720f8c4ca5f46c15",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W19.01-C1",
+      "verdict": "PASS",
+      "evidence": "Personally inspected the actual import/current-validation changes and complete grouped fixtures. Supported JSON/CSV/pull/direct-PUT metadata and zero/false values survive publication/readback; CSV blank omission is format-local. Known-ID merges preserve omitted metadata and expiry, while explicit supplied fields and window clears retain the documented replacement semantics. Malformed present values refuse rather than silently falling back. Actual deterministic selection proves promotion changes score 0.4→0.72 with driver delta0.32; exact retry and changed/stale retry assertions preserve publication boundaries."
+    },
+    {
+      "id": "W19.01-C2",
+      "verdict": "PASS",
+      "evidence": "Current catalog writes reject duplicate exact tags; stored validation preserves historical catalog values and scoring. The R2 envelope uses retained-read validation without weakening current publish/initialize/rollback validation. Actual old duplicate receipt replay, pending recovery, immutable bytes and subsequent explicit correction are covered. Supplemental enrichment load accepts one complete current or historical sample schema without normalizing its raw digest-bearing sample; actual old-proposal read/review/export works while new duplicate capture/publication refuses422 without writes. Existing W14 approved-addition assertions remain, with a valid current seed and separate explicit legacy coverage."
+    },
+    {
+      "id": "W19.01-C3",
+      "verdict": "PASS",
+      "evidence": "Exactly the admitted fixed command ran independently once on frozen bytes:13 passed,25 unselected,exit0/drained. Complete worker metadata and all four runtime/two static capture sequences were read; final static2 is reused, not rerun. All36 artifact pins,20 protected dependencies,current contract and seven exact baseline/supplement forward/reverse reconstructions match before and after. No source edits or expanded checks."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W19.01/plan-v2.md",
+      "sha256": "eec80e7be8174c2dc6f227940b1bdc11f98935e62e168a35fa381a3396745a3d"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W19.01/artifact.json",
+      "sha256": "d7032d9bb5923cc1690509935303b424c7bc96513f77a849cacb93ebcbdd1cc2"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W19.01/worker.json",
+      "sha256": "074ca7b39525f89dbd470c00bc8b9e6c66ea4c425fc3da45a9cfd13e974d8a25"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/routes/content.test.ts -t 'W19.01|parses quoted fields|replace drops what is not|W38.04|W11.01 catalog operation boundary|W20.01|W28.01|requires explicit initialization|publishes only approved additions' --maxWorkers=1 --minWorkers=1",
+    "session_id": 83837,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "a2855f",
+        "wall_time_seconds": 1.000948575,
+        "session_id": 83837,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "2a1fba",
+        "wall_time_seconds": 0.000002037,
+        "exit_code": 0,
+        "original_token_count": 286,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/content.test.ts > authenticated reflex administration > W38.04 bounds every consuming route before effects and preserves authority optional rollback and import replay\nW38.04 mounted admission {\"guarded_lanes\":20,\"admitted_pieces\":501,\"remote_refusals\":2,\"writes_before_refusal\":0}\n\n ✓ src/routes/content.test.ts  (27 tests | 19 skipped) 368ms\n ✓ src/content/import.test.ts  (11 tests | 6 skipped) 78ms\nstdout | src/content/import.test.ts > W38.04 input admission > W38.04 counts streamed local and direct remote bytes before parsing and preserves HTTP decoding\nW38.04 stream admission {\"exact_bytes\":2097152,\"overflow_pulls\":2,\"overflow_cancelled\":true,\"oversize_parsed\":false}\n\n\n Test Files  2 passed (2)\n      Tests  13 passed | 25 skipped (38)\n   Start at  12:01:24\n   Duration  11.75s (transform 2.02s, setup 0ms, collect 4.01s, tests 446ms, environment 0ms, prepare 5.25s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 13,
+      "unselected": 25,
+      "total": 38,
+      "files_passed": 2,
+      "duration_seconds": 11.75
+    },
+    "timing": "Actual runner start12:01:24 America/New_York; terminal result was collected in capture2a1fba before post-pin verification at2026-09-13T16:05:22.194Z. No reconstructed completion timestamp."
+  },
+  "source_review": {
+    "inspected": "Complete original plan and plan-v2, actual tracker criteria, applicable governing/W19/F27/N15 sources, seven actual production/fixture/kit deltas and relevant retained-read/publication/enrichment/replay consumers; complete final worker record. Final readonly fixture replacement preserves values and resolves TS2542.",
+    "source_stop": "2026-09-13T15:57:14.127Z",
+    "freeze_journal": 1500,
+    "artifact_pins": 36,
+    "source_and_output_pins": 27,
+    "protected_pins": 20,
+    "owned_deltas": 7,
+    "pre": {
+      "capture": "b57fe9",
+      "exit_status": 0,
+      "at": "2026-09-13T16:01:21.108Z"
+    },
+    "post": {
+      "capture": "3bfadc",
+      "exit_status": 0,
+      "at": "2026-09-13T16:05:22.194Z"
+    },
+    "result": "All actual file hashes and manifest digest match; protected files unchanged. Each of seven original/supplement before hashes and final hashes matches, and both unified-delta directions reconstruct exact bytes.",
+    "contract_checks": {
+      "before": "54cd36",
+      "after": "1799b9",
+      "exit_status": 0,
+      "state": "verification"
+    },
+    "evidence_reads": [
+      "1912b9 complete production/kit deltas",
+      "9921fb complete fixture deltas",
+      "f745b9 complete worker metadata",
+      "26b9c0 complete worker command captures"
+    ],
+    "qualification": "Root-owned entry/admission and valid protected dependency assurance reused. Prior W18/W20 overlapping byte proofs were prospectively qualified; remedies and historical evidence remain, not a claim those old whole artifacts match current bytes. W08 remains unchanged."
+  },
+  "static_reuse": {
+    "worker_record": "docs/remediation/evidence/W19.01/worker.json",
+    "entry": "command_captures.static2",
+    "session_id": 1174,
+    "captures": [
+      "169740",
+      "d4237f",
+      "2c6864",
+      "40d18e",
+      "56df93",
+      "2aed3f",
+      "db9ebe"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "reruns": 0,
+    "result": "Final full compiler, six-TS-file scoped lint (0 errors/0 warnings) and seven-file whitespace command chained by && all passed with empty output on final stopped source. Complete actual captures inspected26b9c0."
+  },
+  "retained_history": [
+    "Worker runtime1:11pass/2fail,exit1. Wrong synthetic version expectation and invalid current W14 duplicate-tag seed were corrected; investigation exposed the real retained-proposal compatibility dependency, explicitly admitted as the seventh source file before editing it.",
+    "Worker runtime2:12pass/1fail,exit1. Synthetic retained proposal omitted fixture ETag metadata and failed503 before validation; fixture ETag was added without production change.",
+    "Worker runtime3:13pass,then static1 compiler exit2 TS2542; lint/whitespace did not run. Immutable fixture piece/tag replacement corrected typing; this passing runtime remains superseded byte-specific evidence. Final runtime4:13pass/25unselected; static2 passed.",
+    "Independent read-only verifier401145 initially assumed supplement.pins existed and exited1. The supplemental schema has owned before-bytes, not a pins array. Corrected inspection uses original baseline pins plus supplemental ownership/before bytes; b57fe9 and3bfadc verify every actual pin/delta. No product/source rework or runtime repetition resulted."
+  ],
+  "limitations": [
+    "Bounded supported-field fidelity, omission-preserving partial upsert and current-write/historical-read compatibility only. Full W19/F27/N15, canonical type/film-video agreement, registry/case/locale/slot vocabulary, unusable taxonomy policy, product-attribute inheritance, versioned feed/customer acceptance and release remain open.",
+    "Partial upsert is an explicit behavior change: supplied tags/arrays/merchandising replace whole fields; supplied window bounds merge except explicit JSON window:{} clears. CSV blanks cannot clear gates and JSON art:null has no blank-cell equivalent. Unknown metadata is not promised preserved.",
+    "CSV omission provenance belongs only to exact parseCsv-returned row objects; copied/deserialized rows are ordinary JSON. This does not change the shared parser shape or priors contract.",
+    "Historical duplicates intentionally retain historical scoring and are not silently repaired. Current whole-catalog publication/rollback/enrichment containing them refuses pending explicit correction. Retained proposal read/review/export does not grant publication authority or loosen new capture validation.",
+    "Synthetic local conditional storage, stubbed feed and actual local helper/mounted-route modules are not native/distributed/cloud/customer acceptance. No live feed egress, deployment, initialization/cutover, installs, emitted builds, credentials, commits or external operations were performed.",
+    "The inherited Vite CJS deprecation warning is visible in runtime captures; scoped lint is clean. No broad suite, native test, static replay or board command was added. Independent bounded PASS is not package/finding/customer/release acceptance; lead disposition is separate."
+  ]
+}

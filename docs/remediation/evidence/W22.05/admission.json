@@ -1,0 +1,30 @@
+{
+  "task_id": "W22.05",
+  "at": "2026-09-15T13:24:58.390Z",
+  "plan": {
+    "path": "docs/remediation/design/W22.05/plan.md",
+    "sha256": "c50df6aaa4401b8dbc3e100e359c7e87796eb3960caa36a70a73d80376a51818"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W22.05/baseline.json",
+    "sha256": "d555a14b6d77c2b4461b2c4725e66f7d3b441edc5a157c9d5f94a4e22e1de97b"
+  },
+  "contract_digest": "b5871d3e160137093f0291862962022418b1949a67e3bd6b0c0521fb1d55cb27",
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "c50df6aaa4401b8dbc3e100e359c7e87796eb3960caa36a70a73d80376a51818",
+    "scope": "Exact prospective plan only; raw1e400 test must exercise parsed nonfinite numeric rather than JSON-stringifiednull."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T13:24:58.390Z",
+    "plan_sha256": "c50df6aaa4401b8dbc3e100e359c7e87796eb3960caa36a70a73d80376a51818",
+    "rationale": "Root actual-source case and distinct Astra/xhigh exact-plan PASS. Preserve provided occurrence time and validate representation before current consent/dispatch, no new age policy. Fixed6 plus same-byte static; inherited94 lint signatures explicitly recorded before implementation."
+  },
+  "fixed_checks": 6,
+  "limitations": "Owned generic tracking occurrence-time preservation only. Not the realtime decision/outcome ledger; no new consumer, downstream experiment eligibility, time authenticity/fraud protection, skew/age policy, buffering, delivery/idempotency, historical reconstruction, live affinity ordering, new retention/reset or customer/SLO/release acceptance. Keep W30.04 exact accepted artifact unchanged. No install/build/commit/push/deploy/provision/cloud/credentials/customer-data/destructive/external operations."
+}

@@ -1,0 +1,56 @@
+{
+  "observed_complete_by": "2026-09-07T01:56:00Z",
+  "checks": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run src/auth/signing-config.boundary.test.ts src/middleware/auth.refresh-boundary.test.ts src/routes/auth.test.ts src/auth/accounts.test.ts src/middleware/edgeAccess.test.ts src/routes/content.test.ts src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1",
+      "exit_code": 0,
+      "tests": 108,
+      "log": "k1-final-v1.log"
+    },
+    {
+      "command": "node docs/remediation/evidence/W02.02/workerd-boundary.mjs",
+      "exit_code": 0,
+      "fixtures": 35,
+      "denials": 200,
+      "valid_flows": 5,
+      "outbound": 0,
+      "log": "k2-final-v1.log"
+    },
+    {
+      "command": "node --test scripts/lib/tool-token.test.mjs",
+      "exit_code": 0,
+      "tests": 30,
+      "log": "k3-final-v1.log"
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w0202-typecheck.joIqBf/application.tsbuildinfo",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc -p src/sdk --tsBuildInfoFile /tmp/w0202-typecheck.joIqBf/sdk.tsbuildinfo",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "command": "git diff --check && bash -n scripts/rehearse-storefront.sh && node --check scripts/lib/tool-token.mjs && node --check scripts/dev-token.mjs && node --check scripts/acceptance-run.mjs && node --check scripts/import-content.mjs && node --check scripts/seed-coach-content.mjs && node --check scripts/console-operator.mjs && node --check scripts/holdout-proof.mjs && node --check scripts/identity-proof.mjs",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "failures": [
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false",
+      "exit_code": 2,
+      "log": "typecheck-command-failure-v1.log",
+      "resolution": "Removed incompatible --incremental false; ordinary composite configuration retained."
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit",
+      "exit_code": 2,
+      "log": "typecheck-initial-failure-v1.log",
+      "resolution": "Explicit shared helper include as admitted; type-only annotations for new test header records. Final app and SDK checks pass."
+    }
+  ],
+  "limitations": "All credentials and data synthetic. Selected actual routers in workerd with memory adapters; actual JS adapters run in isolated VM until intercepted operation, shell exact credential prelude only with screenshot-read stub. No native-resource, deployed, complete operational script, customer, SLO or release acceptance."
+}

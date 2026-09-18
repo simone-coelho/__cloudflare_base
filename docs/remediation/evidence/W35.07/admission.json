@@ -1,0 +1,31 @@
+{
+  "task_id": "W35.07",
+  "at": "2026-09-16T04:25:00.000Z",
+  "plan": {
+    "path": "docs/remediation/design/W35.07/plan.md",
+    "sha256": "1d6c08c288b940a871738a8b02669e1d20f6e1b81ec38decdf1644ddd6d48db3"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W35.07/baseline.json",
+    "sha256": "226081ee689958b87634e2ef7ac03d5bd7fe2654d5f4162b8b369ef96e9c842d"
+  },
+  "contract_digest": "9a474db5475a06e8f567e8a8554405304a93571da93e16a4415d892061a6db02",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T04:25:00.000Z",
+    "plan_sha256": "1d6c08c288b940a871738a8b02669e1d20f6e1b81ec38decdf1644ddd6d48db3",
+    "rationale": "Complete source review and distinct Astra/xhigh preflight PASS after replacing permanent receipt trust with atomic SID/epoch eligibility, exact raw snapshots and explicit v5 layout handling. Reuse D03, W35.06 and W06.09; no legacy-host authority or migration claim."
+  },
+  "independent_preflight": {
+    "actor_id": "w3507-reviewer",
+    "run_id": "/root/w3507_preflight",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "record": {
+      "path": "docs/remediation/evidence/W35.07/preflight.json",
+      "sha256": "ff876c466a2d652247634446279f07fd32e5ef7d3fe3db8da2b4403c6b37df65"
+    },
+    "result": "PASS after atomic SID/epoch eligibility, exact one-read session witnesses, phase/order corrections and fail-closed tagged-v5 compatibility."
+  },
+  "limitations": "Prospective DO-authorized eligibility and exact snapshots only; legacy concurrent KV writers/session-host authority, unseen SID reuse, legacy/grantless cleanup, migration/cutover/deployment, external/physical erasure, retention/capacity, customer/native/browser/SLO/release and full W35/F06/F14 remain open."
+}

@@ -1,0 +1,1064 @@
+{
+  "status": "recorded",
+  "contract_digest": "6e17e12bea1e9228f9abad560b3f449e866cdcc3657f06d5359f8769a7f71a8e",
+  "configuration": "W04.02 shared SDK shopper lane, v2. Server-generated anonymous subject/profile SID; bounded24h purpose-separated HMAC capability from validated signing configuration, exact tenant/subject/SID guards before protected effects, backend proof plus owned anonymous source for link, no public cookie/pointer/forward promotion. Both hosts and named HTTP/real native WS boundaries; SDK bootstrap/coalescing/scoped persistence/header/subprotocol/keepalive, separate30-minute browsing correlation, local generations/cache/socket/async guards. Restrictive false cookie hints reach owned serialized DO operations; not a full consent policy.35 declared source/test/guidance/bundle outputs,189 packages-external local import inputs plus selected config/build/lock/type and exact baseline/original/worker-proof pins. Worker72+25+2 focused checks, app/SDK noEmit/build/syntax/diff; initial2 fixture failures and TextDecoder compiler failure plus source-review rework retained. No full installed/TS/deployed graph, copied-grant or cross-tab/server revocation, in-flight server effects, transactional consent/deletion, legacy perimeter, W04/finding/customer/SLO/lift/gate/release or historical-contract acceptance.",
+  "files": [
+    {
+      "path": "docs/architecture/25-identity-stitching.md",
+      "role": "output",
+      "sha256": "f31ba54426d095d291251f54b597a3003e95be3d0b1cad8232a5314bea3cd87b"
+    },
+    {
+      "path": "docs/remediation/design/W04.02/plan-v2.md",
+      "role": "source",
+      "sha256": "3c40c6857a8856bae56d9e67ae5a3bc73abb8a1d9fd55bd08f06f178d6582a9c"
+    },
+    {
+      "path": "docs/remediation/design/W04.02/task-contract-v2.json",
+      "role": "source",
+      "sha256": "e2a3d5751a6767468d49465abe4916ff22473b4a31e8104ca8da0409995ec875"
+    },
+    {
+      "path": "docs/remediation/evidence/W04.02/baseline-probe.mjs",
+      "role": "output",
+      "sha256": "81a7db76279e43bc3103395ee1ca6cb1fed114e2576b31f26d0490ff2b76fef4"
+    },
+    {
+      "path": "docs/remediation/evidence/W04.02/baseline.json",
+      "role": "output",
+      "sha256": "ebe493f5b3734687a5647fca6d679d699aea69916806187bb99ce730544c02f1"
+    },
+    {
+      "path": "docs/remediation/evidence/W04.02/before-link-v2.json",
+      "role": "output",
+      "sha256": "2427d862cd85eaf35334af6e8fbaaf8b74b0f700789d187e534377abe43ad17a"
+    },
+    {
+      "path": "docs/remediation/evidence/W04.02/before-sources-v1.json",
+      "role": "output",
+      "sha256": "6cb8ae34c06fb9ad70823516bcfdcce8cb4c9eca131dea143e2322c2c927c4ab"
+    },
+    {
+      "path": "docs/remediation/evidence/W04.02/entry-checks-v1.json",
+      "role": "output",
+      "sha256": "e02628346db1de7772378d7b8ecd8a57efcf7db3add8b2edc077b6b03e5d912a"
+    },
+    {
+      "path": "docs/remediation/evidence/W04.02/source-inputs-v1.json",
+      "role": "output",
+      "sha256": "ecf6b2c8096c4263e38001d23a396c1707f0a2b77d101e145695f7277ed9a816"
+    },
+    {
+      "path": "docs/remediation/evidence/W04.02/worker-checks.json",
+      "role": "output",
+      "sha256": "aa7752bad9d60fcdb95b9eb3be0b1223b41ee585ea2c36697e5e04bd33689370"
+    },
+    {
+      "path": "docs/remediation/evidence/W04.02/worker.md",
+      "role": "output",
+      "sha256": "009c7018d51e7dee231563a775ea6d31ce3f30a41ddbd0c68e456d57d60ac72a"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "configuration",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "package.json",
+      "role": "configuration",
+      "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c"
+    },
+    {
+      "path": "public/sdk/edge-personalization.esm.js",
+      "role": "output",
+      "sha256": "bb3a6d0386ea95a9ec280fc8505e08a60689a6f818360747cc32fc0f5ca6677f"
+    },
+    {
+      "path": "public/sdk/edge-personalization.js",
+      "role": "output",
+      "sha256": "90c93376330a7dc0b761bb5f5c760a2d23a015c985ea17d115216fab2966b056"
+    },
+    {
+      "path": "scripts/build-sdk.mjs",
+      "role": "configuration",
+      "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79"
+    },
+    {
+      "path": "src/agents/OpalAgent.ts",
+      "role": "source",
+      "sha256": "1fe4bfea369c8937e57169ae205f76f7ead393cda6a298433f84d97a33c4daab"
+    },
+    {
+      "path": "src/agents/tools.ts",
+      "role": "source",
+      "sha256": "f6c4b44c36e38b4799da35b6657035e65345e521d9e3598c079aefce981e5d8a"
+    },
+    {
+      "path": "src/agents/tools/diagnoseFunnel.ts",
+      "role": "source",
+      "sha256": "44d3bb43084508959a1b3656491b586efb5c64eaa938f8fdbf9d053c2cb0ebe8"
+    },
+    {
+      "path": "src/agents/tools/experimentTools.ts",
+      "role": "source",
+      "sha256": "145fea74bd33c8efd3875dffc558055949542979742578f5ca16d7f65afe4ac3"
+    },
+    {
+      "path": "src/agents/tools/geoCohort.ts",
+      "role": "source",
+      "sha256": "6742792d8be2b1fcf71f025a0a3e70b17455a56f92e5b0015c1ecd077858a8e9"
+    },
+    {
+      "path": "src/auth/accounts.ts",
+      "role": "source",
+      "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+    },
+    {
+      "path": "src/auth/signingConfig.mjs",
+      "role": "source",
+      "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+    },
+    {
+      "path": "src/auth/store.ts",
+      "role": "source",
+      "sha256": "7d0513e2456798aff7d448fc79d11ebad4f3b014a74a03b2df1843a2238144cf"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "source",
+      "sha256": "c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3"
+    },
+    {
+      "path": "src/connectors/AudienceAuthoring.ts",
+      "role": "source",
+      "sha256": "58757744a3bfbb5d7d9f64ed15a1c0837aac97be57bb7e1906742fa09087ce42"
+    },
+    {
+      "path": "src/connectors/AudienceStore.ts",
+      "role": "source",
+      "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf"
+    },
+    {
+      "path": "src/connectors/DecisionProvider.ts",
+      "role": "source",
+      "sha256": "5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f"
+    },
+    {
+      "path": "src/connectors/evaluateCondition.ts",
+      "role": "source",
+      "sha256": "55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59"
+    },
+    {
+      "path": "src/connectors/index.ts",
+      "role": "source",
+      "sha256": "efa519931607a1319d33fcbb5b1b9c1526a7e164845a99cd9e6e60878d935871"
+    },
+    {
+      "path": "src/connectors/SegmentProvider.ts",
+      "role": "source",
+      "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359"
+    },
+    {
+      "path": "src/connectors/SignalProvider.ts",
+      "role": "source",
+      "sha256": "81936e5cf88c48ad7e31fddbb631ae24717c1e3d2ef9dab3fd921616a47e2965"
+    },
+    {
+      "path": "src/connectors/types.ts",
+      "role": "source",
+      "sha256": "b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3"
+    },
+    {
+      "path": "src/content/cell.ts",
+      "role": "source",
+      "sha256": "b3fc57930c43d36681edda47d040f46691c4a442c5d84d816102dc906a203b6c"
+    },
+    {
+      "path": "src/content/consent.test.ts",
+      "role": "output",
+      "sha256": "22f06bdcd9e230a6608d31ea11200b61d60fe6a898ff03431bf03670790b2304"
+    },
+    {
+      "path": "src/content/consent.ts",
+      "role": "source",
+      "sha256": "987fca9a029f08e0fbd98fa3e201dac3062a5a0bef562aecabfd724031e0fbad"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "role": "source",
+      "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+    },
+    {
+      "path": "src/content/holdout.ts",
+      "role": "source",
+      "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc"
+    },
+    {
+      "path": "src/content/import.ts",
+      "role": "source",
+      "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b"
+    },
+    {
+      "path": "src/content/lifecycle.ts",
+      "role": "source",
+      "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+    },
+    {
+      "path": "src/content/service.ts",
+      "role": "output",
+      "sha256": "8e7990af92db0cf2d2ad85a19b5bf633ef2bd392d8b06dc7557adc990caddb68"
+    },
+    {
+      "path": "src/data/coach-catalog.json",
+      "role": "source",
+      "sha256": "43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e"
+    },
+    {
+      "path": "src/data/insights.json",
+      "role": "source",
+      "sha256": "e6b29448440dd4e4712feb38c99ce485e6badee2aaee1f14401f40211caf3bf9"
+    },
+    {
+      "path": "src/data/seed-audiences.ts",
+      "role": "source",
+      "sha256": "3e8e23f7cf778e27c76b67025d3c734624bf801627a6a864830725e6cd449f78"
+    },
+    {
+      "path": "src/data/signals.json",
+      "role": "source",
+      "sha256": "3dfc6d73e161483092232fadecfc66ed5747daeb8aa57147b118a6a5529877c3"
+    },
+    {
+      "path": "src/demos/brighthour/catalog.data.json",
+      "role": "source",
+      "sha256": "a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6"
+    },
+    {
+      "path": "src/demos/brighthour/catalog.ts",
+      "role": "source",
+      "sha256": "c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd"
+    },
+    {
+      "path": "src/demos/brighthour/composer.ts",
+      "role": "source",
+      "sha256": "3fe956de6e702ae8f4e6c005136ff334aa61d14349a5da41ff800208f4d7cebf"
+    },
+    {
+      "path": "src/demos/brighthour/demoClock.ts",
+      "role": "source",
+      "sha256": "a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce"
+    },
+    {
+      "path": "src/demos/brighthour/experiment.ts",
+      "role": "source",
+      "sha256": "ff85b9a1405970eecc5e130746a7d1d992df675a7efd6ea9f093dda2bf60cb43"
+    },
+    {
+      "path": "src/demos/brighthour/geoCohort.ts",
+      "role": "source",
+      "sha256": "a06df0433f449b7f71dd14eb1085b52c79fdf040aca4911ca486bbe0ce4b16c9"
+    },
+    {
+      "path": "src/demos/brighthour/offerDesk.ts",
+      "role": "source",
+      "sha256": "c059fe2721117dfab7eca00209a21eec0fc58d2d20e6821c142d7fe80c79d238"
+    },
+    {
+      "path": "src/demos/brighthour/offerLifecycle.ts",
+      "role": "source",
+      "sha256": "7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82"
+    },
+    {
+      "path": "src/demos/brighthour/reflexConfig.ts",
+      "role": "source",
+      "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf"
+    },
+    {
+      "path": "src/demos/brighthour/staging.data.json",
+      "role": "source",
+      "sha256": "95f6947b89fe85d18e8a979fc9105aad3f0b4ed385614f4527533c4f40d5344f"
+    },
+    {
+      "path": "src/demos/meridian/catalog.blocks.json",
+      "role": "source",
+      "sha256": "f8476c64d3713979cf395143dd356ae52d0baf97002a7e6ca85e277847c6d86b"
+    },
+    {
+      "path": "src/demos/meridian/catalog.financial.json",
+      "role": "source",
+      "sha256": "86c0f45c8e6d38f313d17ea7473a7a0c1424b11d73362e3604be37911de99870"
+    },
+    {
+      "path": "src/demos/meridian/catalog.retail.json",
+      "role": "source",
+      "sha256": "51cd7b127e715c2ccb012f2bcb7d7b338020d844c628f6c7154543939698e8e3"
+    },
+    {
+      "path": "src/demos/meridian/catalog.ts",
+      "role": "source",
+      "sha256": "f3c743ecbca547d21148abe0f58cf301647e504dc6a5aef634aeaacab66b60e4"
+    },
+    {
+      "path": "src/demos/meridian/coldstart.ts",
+      "role": "source",
+      "sha256": "4e408e09ea89565a2e9357c24a6d74064216407a70fa50cdda41bcb67108fe92"
+    },
+    {
+      "path": "src/demos/meridian/concierge.ts",
+      "role": "source",
+      "sha256": "bf05bb6a7ae7d0878851fed256895c7b9e6bcc62bbbdfebec4e8522597af6757"
+    },
+    {
+      "path": "src/demos/meridian/content.catalog.json",
+      "role": "source",
+      "sha256": "31a161ab69338f05bdbc698d2dda7c4e7eba73366ccd5fc9e6751a3053a33f7d"
+    },
+    {
+      "path": "src/demos/meridian/content.ts",
+      "role": "source",
+      "sha256": "6577a357b3e742eafd66ad90407780bba1ccc8b382b3ea052b4f789252368dfb"
+    },
+    {
+      "path": "src/demos/meridian/experiment.ts",
+      "role": "source",
+      "sha256": "81079e86b59e053e7ad4dd9a43f394c443956b332cc8e17e98e7fbdbfa46cd4f"
+    },
+    {
+      "path": "src/demos/meridian/funnel.ts",
+      "role": "source",
+      "sha256": "b6ba3ec7e1ff1857c573b782cbb137046c6f92b867c75b2f5cfa3ef6e022688b"
+    },
+    {
+      "path": "src/demos/meridian/geoCohort.ts",
+      "role": "source",
+      "sha256": "17449b3e0dd74db2ab0654b4c3878bb4dfae86f81190f2dffb1debf9b32f7859"
+    },
+    {
+      "path": "src/demos/meridian/MeridianReflex.ts",
+      "role": "source",
+      "sha256": "1cd3e0351474e66c5c5aa174c8cbd2c22b447da4a3fbf7393f3798a7231364b6"
+    },
+    {
+      "path": "src/demos/meridian/moment.ts",
+      "role": "source",
+      "sha256": "d00904a84bad1bda4476c362184fec0927f3c2ad7068bcc15a2b0cdabf84d162"
+    },
+    {
+      "path": "src/demos/meridian/opal.ts",
+      "role": "source",
+      "sha256": "0e8fbc9e6b8276c6517cba8ac26345418f5c4a995209087b5c7121705dd78456"
+    },
+    {
+      "path": "src/demos/meridian/receipts.ts",
+      "role": "source",
+      "sha256": "19e52898e0641f75270fcf0e05eb893ede39270b49ffdb6f8020db0f9a1d44e1"
+    },
+    {
+      "path": "src/demos/meridian/reflexConfig.ts",
+      "role": "source",
+      "sha256": "241294f7064739d7dc5b651c9d64c749f68bf5ebeb312b8e0ab385b42cb89d65"
+    },
+    {
+      "path": "src/demos/meridian/routes.ts",
+      "role": "source",
+      "sha256": "329258ef3f746357f97d67f3e04150694d30dc3ea1a8af615165e65e34a82a2b"
+    },
+    {
+      "path": "src/demos/meridian/scenes.ts",
+      "role": "source",
+      "sha256": "f481673970a3926db48d25554b02ddad2d9fd7253e1a0d87f65391baed924215"
+    },
+    {
+      "path": "src/demos/meridian/search.ts",
+      "role": "source",
+      "sha256": "b8bc51aafbf95a1b59d45a507a333a150a86f61de5ca096e26c44df90678dc43"
+    },
+    {
+      "path": "src/demos/registry.ts",
+      "role": "source",
+      "sha256": "18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb"
+    },
+    {
+      "path": "src/durable-objects/DecisionRing.ts",
+      "role": "source",
+      "sha256": "018c947b601c7dad7df6ebe0c5bf93b034d6f012e3df3a4c4ef746043c16a012"
+    },
+    {
+      "path": "src/durable-objects/LearnStats.ts",
+      "role": "source",
+      "sha256": "c98d68408ecd641b7d31819fde525fb21cc19125636c08ef6d143bdc1271437b"
+    },
+    {
+      "path": "src/durable-objects/PersonalizationWebSocket.ts",
+      "role": "output",
+      "sha256": "6e7ab3fc0c6a0204656f2dd718d2c40d40ae9fc45e4b8ccc876718af7f1108d4"
+    },
+    {
+      "path": "src/durable-objects/RateLimiter.ts",
+      "role": "source",
+      "sha256": "9a03f0a7130af02596748f378d0f2c64634a0f2d399c6c1e943e75a56e8ee5b7"
+    },
+    {
+      "path": "src/durable-objects/RegionTrend.ts",
+      "role": "source",
+      "sha256": "08f0a17c19b3b4d9ba6a05627a71727f655d6bdd37369f9e9f338acae4aab1bc"
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "role": "output",
+      "sha256": "1e62baf9a685fa24aff48721f9ffd898a83246af875589e15ca9385411ef6d85"
+    },
+    {
+      "path": "src/durable-objects/StateManager.ts",
+      "role": "source",
+      "sha256": "e02905bb4843fd4d9bb68534bb098891cde7f28e64e74b13bc3ff01dc41c594a"
+    },
+    {
+      "path": "src/events/actionTypes.ts",
+      "role": "source",
+      "sha256": "865d11512ca0af01c6104789b2e2155cb5272deeafd12bd890ccff6e9064712a"
+    },
+    {
+      "path": "src/identity/assertion.ts",
+      "role": "source",
+      "sha256": "46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d"
+    },
+    {
+      "path": "src/identity/erase.ts",
+      "role": "source",
+      "sha256": "e2d348577a5295430b5f85cb3f685b7eda8d8a1e7f806508e44aee6ed2e9f802"
+    },
+    {
+      "path": "src/identity/history.ts",
+      "role": "source",
+      "sha256": "010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21"
+    },
+    {
+      "path": "src/identity/link.ts",
+      "role": "output",
+      "sha256": "3c526f1db971c080d310e21799d94f2f68a232b2a7cfeae34e8fd1e67e1646b9"
+    },
+    {
+      "path": "src/identity/sessionCapability.ts",
+      "role": "output",
+      "sha256": "7d5a2b4e2da2400705c8346041c8a650c479ee680531d65a6fc332b5e82a598c"
+    },
+    {
+      "path": "src/identity/shopperId.ts",
+      "role": "source",
+      "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+    },
+    {
+      "path": "src/identity/store.ts",
+      "role": "source",
+      "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "role": "output",
+      "sha256": "00fc6f4e6377d2d42584c73c02a6d7ed2eb3364a71211a9c2a4c7564a109754c"
+    },
+    {
+      "path": "src/index.ts",
+      "role": "output",
+      "sha256": "4f3ed7ab4eb8e0016f09931b794041c1aea649e7eccacab076e7da1dc943fcfb"
+    },
+    {
+      "path": "src/learn/autonomy.ts",
+      "role": "source",
+      "sha256": "667a6083d145ab6f4f35944a8b290738396b6fdac006abcc7baaf919903ebc60"
+    },
+    {
+      "path": "src/learn/cycle.ts",
+      "role": "source",
+      "sha256": "708c1702ed09dc70adb3a3ee9744b41d896183cbe969e0c5b73d70be2ebec34c"
+    },
+    {
+      "path": "src/learn/explore.ts",
+      "role": "source",
+      "sha256": "90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c"
+    },
+    {
+      "path": "src/learn/external.ts",
+      "role": "source",
+      "sha256": "af5bb4cb5ec6a4080d3aeec190bdf9c1fe67c69b4f1a2a9905618ad330efda0d"
+    },
+    {
+      "path": "src/learn/fan.ts",
+      "role": "source",
+      "sha256": "13d090c8e11c42916b01ec81e4c5b7ccc2cbedc93ee97fe8f4be4d1a25150496"
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "role": "source",
+      "sha256": "2959c467763850b5de6d7c904d6bc5ec8ffd2c56e440753f3a284488cd0279e1"
+    },
+    {
+      "path": "src/learn/policy.ts",
+      "role": "source",
+      "sha256": "6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73"
+    },
+    {
+      "path": "src/learn/priors.ts",
+      "role": "source",
+      "sha256": "bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f"
+    },
+    {
+      "path": "src/learn/queue.ts",
+      "role": "source",
+      "sha256": "47411c4358b60caac52a36c0e8bacc8a678334bac7d3cedc2555af33ccc6246c"
+    },
+    {
+      "path": "src/learn/receipts.ts",
+      "role": "source",
+      "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c"
+    },
+    {
+      "path": "src/learn/replay.ts",
+      "role": "source",
+      "sha256": "2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5"
+    },
+    {
+      "path": "src/learn/report.ts",
+      "role": "source",
+      "sha256": "ace43a542d4f5ef96ecc5d7eb17256cb391390832092c319bd0a0e01c3ab57ff"
+    },
+    {
+      "path": "src/learn/route.ts",
+      "role": "source",
+      "sha256": "fb7ba5e29cc20de154510626f7250632adf62e568cb353a9174d2f8bf1eb592e"
+    },
+    {
+      "path": "src/learn/rows.ts",
+      "role": "source",
+      "sha256": "3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "role": "source",
+      "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a"
+    },
+    {
+      "path": "src/ledger/consume.ts",
+      "role": "source",
+      "sha256": "046f3fb3b2938aaced340ab74576fbdace4341ffade548d1d8d56e07d1e3cf28"
+    },
+    {
+      "path": "src/ledger/enqueue.ts",
+      "role": "source",
+      "sha256": "1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "role": "source",
+      "sha256": "410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c"
+    },
+    {
+      "path": "src/ledger/records.ts",
+      "role": "source",
+      "sha256": "73f8fbd34413425c34c3ac64a9ef853e302a18278f84b5df8bfb58073235f11e"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "role": "source",
+      "sha256": "c1d51c467ae6a8623677a36c7df43750b28c85a945d85278e68ad6900742b002"
+    },
+    {
+      "path": "src/measure/holdout.ts",
+      "role": "source",
+      "sha256": "cd421bae32093f09b37c2d36e3253d85ce9c4cfad9cb8d5913730e92098ace9b"
+    },
+    {
+      "path": "src/measure/window.ts",
+      "role": "source",
+      "sha256": "652f123b5f28f2907f7cf831a24f6e5afe8b80c025d93d0f32634fd42a8ff6ba"
+    },
+    {
+      "path": "src/middleware/auth.ts",
+      "role": "source",
+      "sha256": "9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01"
+    },
+    {
+      "path": "src/middleware/edgeAccess.ts",
+      "role": "source",
+      "sha256": "ef4935e1c8eaf725efb4c7372faa5ea5b09082b0d238b68de09e1d4934375999"
+    },
+    {
+      "path": "src/middleware/error.ts",
+      "role": "source",
+      "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b"
+    },
+    {
+      "path": "src/middleware/request-id.ts",
+      "role": "source",
+      "sha256": "ac0d8806f2fdd9cde3074bf86375563a1ebd1c102f97f5a2834e71a6f1689465"
+    },
+    {
+      "path": "src/ops/monitor.ts",
+      "role": "source",
+      "sha256": "3553d6aaef8e9f1ced60a7521daf55230f86baeacb423093665bd5f791ce8aad"
+    },
+    {
+      "path": "src/reflex/audienceGenerator.ts",
+      "role": "source",
+      "sha256": "663c87b162c7373c138d0c40ce50c16051c0d31ce5e34d2a8e3aa366f2bd8940"
+    },
+    {
+      "path": "src/reflex/configStore.ts",
+      "role": "source",
+      "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2"
+    },
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "role": "source",
+      "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+    },
+    {
+      "path": "src/reflex/contentTelemetry.ts",
+      "role": "source",
+      "sha256": "ec6ef52dd9800f7488bcb03d6def18f2fe084208dca0b0f48ca604d9a74c5e41"
+    },
+    {
+      "path": "src/reflex/core.ts",
+      "role": "source",
+      "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+    },
+    {
+      "path": "src/reflex/identityMerge.ts",
+      "role": "source",
+      "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+    },
+    {
+      "path": "src/reflex/merchandising.ts",
+      "role": "source",
+      "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+    },
+    {
+      "path": "src/reflex/regionTrend.ts",
+      "role": "source",
+      "sha256": "94c0fa6e51313f8a361e05088cc20c04563f40a37b8fb5a6a2db9382302d0531"
+    },
+    {
+      "path": "src/reflex/shopperReflex.identity.test.ts",
+      "role": "output",
+      "sha256": "fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced"
+    },
+    {
+      "path": "src/reflex/sortCandidates.ts",
+      "role": "source",
+      "sha256": "e7e195583c7e96452a646108e6eca583b2d59a88f77f95721a2607cecf900bbe"
+    },
+    {
+      "path": "src/routes/ai.ts",
+      "role": "source",
+      "sha256": "1ea7f73d384130794d43fb034a02eae4351a4295e5b394412882f0f2630e7fda"
+    },
+    {
+      "path": "src/routes/aiScene.ts",
+      "role": "source",
+      "sha256": "fd32de1dd9f263640362921f24d97210c518f44ed91ee54595f79c06503d1f44"
+    },
+    {
+      "path": "src/routes/auth.ts",
+      "role": "source",
+      "sha256": "f69f9d83d15d869fa1685a23550322b28fe023ece00295a694efd2b4355096b1"
+    },
+    {
+      "path": "src/routes/cdp.ts",
+      "role": "source",
+      "sha256": "a654bfa36298ddcd85ebf9622a0cfd6e858097babf1754581beb775196650de0"
+    },
+    {
+      "path": "src/routes/config.ts",
+      "role": "source",
+      "sha256": "22beb4d906345afee1267a1c146fcaac003490d360a6ab85d5a5c1ee0e551499"
+    },
+    {
+      "path": "src/routes/content.ts",
+      "role": "source",
+      "sha256": "4344476c6d9d61db58f243f9e6649b499d2ac029269ea4dfa5fccf4447a8eed8"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "role": "output",
+      "sha256": "e85a6737bfdda20d3b73d229240280923328bf100c7dda7a328ce49aa1c57180"
+    },
+    {
+      "path": "src/routes/experiment.ts",
+      "role": "source",
+      "sha256": "896f6ad917396dced06e50c0cd4c7f99800bcc6a7cf708375f8fe048c99b8fb6"
+    },
+    {
+      "path": "src/routes/funnel.ts",
+      "role": "source",
+      "sha256": "1e4bc6aac216b93ebad77e9c73cb30ac5e2df8030abc8fbd7c62d1f110167892"
+    },
+    {
+      "path": "src/routes/funnelSim.ts",
+      "role": "source",
+      "sha256": "7df45aa331766a4a058570db59c4fa5522164de9e48f6c9d697650c77ff5321d"
+    },
+    {
+      "path": "src/routes/geo.ts",
+      "role": "source",
+      "sha256": "5836b61ca7336edb27d1f5568f118f8325f11510d169250cd09439dcfba467ed"
+    },
+    {
+      "path": "src/routes/health.ts",
+      "role": "source",
+      "sha256": "0ea5b72d026c4964bb8a34fac627a8704c8a0c5f8eed95e3b656b83a8fda3712"
+    },
+    {
+      "path": "src/routes/identity.test.ts",
+      "role": "output",
+      "sha256": "6e3f71b619ccf997adda6350dcfa0375c1323b8770aff044df9d8e6cf076e88d"
+    },
+    {
+      "path": "src/routes/identity.ts",
+      "role": "output",
+      "sha256": "8c0bd782c37ee57ea941e8b85d0838512886fd694c58e3a56253640ccf392d22"
+    },
+    {
+      "path": "src/routes/live.ts",
+      "role": "source",
+      "sha256": "cad7b8c41068e697d074ce3dcd0ad95d7f4dca9e65bbd8d7fab2ca5dc6cbf411"
+    },
+    {
+      "path": "src/routes/liveOps.ts",
+      "role": "source",
+      "sha256": "55b1acce38f7e7045dfa6ed6be358dbedc60ab259a2710c8812d0d6bc41cf382"
+    },
+    {
+      "path": "src/routes/operator.ts",
+      "role": "source",
+      "sha256": "118134249a86efcf6ae14cb503819d2e375ffa3144ddfe0110ee4b0fb73c30cd"
+    },
+    {
+      "path": "src/routes/optimizely.ts",
+      "role": "source",
+      "sha256": "3f85a23330bcabb3263882e4c559ae47b2019d138a994ca2d27fdaf9dd80dd6c"
+    },
+    {
+      "path": "src/routes/pixel.ts",
+      "role": "source",
+      "sha256": "058e8755b14d7313277c411e67c6fccde12695f47c9cb0b2a226412248ef3524"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "role": "output",
+      "sha256": "d8c89a9a5a5d10d6289807da381701f5cdb18d2a5a9168f176b3eb0540ef2710"
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "role": "output",
+      "sha256": "ce1d31ec6b1312d059249834ed12112b6403fd47e76bfb9c5f68bc4b30e976c8"
+    },
+    {
+      "path": "src/routes/shot.ts",
+      "role": "source",
+      "sha256": "b889bbb38b6a171484525ccf49c9b958f560c5177d267aa413d325fe10f1fbc2"
+    },
+    {
+      "path": "src/routes/signals.ts",
+      "role": "source",
+      "sha256": "159a1e961043940a6404bdb170ea98e920b9532ec3f8a076618f7a8476194504"
+    },
+    {
+      "path": "src/routes/sort.test.ts",
+      "role": "output",
+      "sha256": "021590d09ffafdf929379f03d8bcaefba03a215a5db7ccb2578aeeae634256e5"
+    },
+    {
+      "path": "src/routes/sort.ts",
+      "role": "output",
+      "sha256": "ed3af85d4e3bce814b26e000e0e92a4fcf969b7e62558be455d8f8ebb196e9c3"
+    },
+    {
+      "path": "src/routes/tracking.ts",
+      "role": "source",
+      "sha256": "40e3267f75d9e036886e1238331fbfc8a4d995a14825354c9201b0674057e352"
+    },
+    {
+      "path": "src/routes/webhook.ts",
+      "role": "source",
+      "sha256": "fa7d963dda226e9632c171a86baf3a82433b138492c241689480f75405c40a83"
+    },
+    {
+      "path": "src/sdk/browser.ts",
+      "role": "source",
+      "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+    },
+    {
+      "path": "src/sdk/core.test.ts",
+      "role": "output",
+      "sha256": "0f4b5e87edefc9062b9c27884c55ca8277c1f933550018b9fc2ad9fc1af7874d"
+    },
+    {
+      "path": "src/sdk/core.ts",
+      "role": "output",
+      "sha256": "6fdcf3a5a762f6eec915973c606997f31139e89931e6d3263fa44c6f1665a24a"
+    },
+    {
+      "path": "src/sdk/emit.ts",
+      "role": "source",
+      "sha256": "537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731"
+    },
+    {
+      "path": "src/sdk/host.ts",
+      "role": "output",
+      "sha256": "89be6a22cfc7932a74ba2ae68c0596569bed7d599caa0fb103ac9b8b75d11c03"
+    },
+    {
+      "path": "src/sdk/identify.test.ts",
+      "role": "output",
+      "sha256": "2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333"
+    },
+    {
+      "path": "src/sdk/identify.ts",
+      "role": "output",
+      "sha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1"
+    },
+    {
+      "path": "src/sdk/identity.ts",
+      "role": "output",
+      "sha256": "a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f"
+    },
+    {
+      "path": "src/sdk/index.ts",
+      "role": "source",
+      "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+    },
+    {
+      "path": "src/sdk/listen.test.ts",
+      "role": "output",
+      "sha256": "f75f3637528b5ffbe3c086ac078895cc63b408030d506bdae5764e6a2aed8fcc"
+    },
+    {
+      "path": "src/sdk/listen.ts",
+      "role": "output",
+      "sha256": "133d551d4ede19bb8db6830d05e0a924e0967ecbfe0feb2b40152b9e8093e33a"
+    },
+    {
+      "path": "src/sdk/memoryHost.ts",
+      "role": "source",
+      "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+    },
+    {
+      "path": "src/sdk/README.md",
+      "role": "output",
+      "sha256": "e502bff8e310313c06750e03fd66ff7fb509d3b39f35b1283a82c29e30340cc9"
+    },
+    {
+      "path": "src/sdk/session.test.ts",
+      "role": "output",
+      "sha256": "40d4540b8c41750030ace414b4e4b957c201868f9b59b98064bd98cd02210adf"
+    },
+    {
+      "path": "src/sdk/testHost.ts",
+      "role": "output",
+      "sha256": "5104d089455694ef802507f8188af6e9fedcfa3604f8a2e5226da6b249ac7842"
+    },
+    {
+      "path": "src/sdk/tsconfig.json",
+      "role": "configuration",
+      "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360"
+    },
+    {
+      "path": "src/sdk/types.ts",
+      "role": "output",
+      "sha256": "57a26cbbf8e8ddfddf4d55fb59854a172a016c71943743a6704d9144c1ae9d2b"
+    },
+    {
+      "path": "src/sdk/version.ts",
+      "role": "source",
+      "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+    },
+    {
+      "path": "src/sdk/wire.ts",
+      "role": "source",
+      "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+    },
+    {
+      "path": "src/services/CatalogIntent.ts",
+      "role": "source",
+      "sha256": "6bbb93b6fbfb2528c4d2864787a0dd85820ce755b4ff68e05176bdb1c70d8bdc"
+    },
+    {
+      "path": "src/services/CatalogService.ts",
+      "role": "source",
+      "sha256": "da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff"
+    },
+    {
+      "path": "src/services/CDPService.ts",
+      "role": "source",
+      "sha256": "9a0838646f20beaab753aeaf1ffddcac21b0cb3d7f3a93df01b36667bbb4a033"
+    },
+    {
+      "path": "src/services/cmab.ts",
+      "role": "source",
+      "sha256": "0846b6352912c0ec3546036c3ab4583ea02bf5ca3afce731cc06e4dba9742bc8"
+    },
+    {
+      "path": "src/services/EventDispatcher.ts",
+      "role": "source",
+      "sha256": "8205adb855e120afe83bb33944114483428a3289401efe8ac89bebb7c8094b1a"
+    },
+    {
+      "path": "src/services/experimentFx.ts",
+      "role": "source",
+      "sha256": "eca1a25a02188b419340ff27a3ee8948191f74e5f5fa26d6c10a6027926ed7c4"
+    },
+    {
+      "path": "src/services/experimentRun.ts",
+      "role": "source",
+      "sha256": "83b3886b26afaeaf454074cb9e1fe9cbaf9dd8896c84df7d122ca628ba54d006"
+    },
+    {
+      "path": "src/services/experimentScenarios.ts",
+      "role": "source",
+      "sha256": "6f0cf44c27c637e1b162811129e7b1f848922c532eafbcbfa3a0c1b160579cb3"
+    },
+    {
+      "path": "src/services/FeatureVariableManager.ts",
+      "role": "source",
+      "sha256": "42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357"
+    },
+    {
+      "path": "src/services/funnel/compute.ts",
+      "role": "source",
+      "sha256": "11264dcab83275c5a163b45d42097ded85fc2a395bfcf44d136070933bd9551d"
+    },
+    {
+      "path": "src/services/funnel/contract.ts",
+      "role": "source",
+      "sha256": "8b2ab459d4f3889c652ea929a3346e3ab418f508c8355cbf46a50ea94878242e"
+    },
+    {
+      "path": "src/services/funnel/diagnose.ts",
+      "role": "source",
+      "sha256": "91c619834f0d80f0dc27b61e3ef89f136e260f3ac36e9fe96ae8b841f96c3395"
+    },
+    {
+      "path": "src/services/funnel/sim.ts",
+      "role": "source",
+      "sha256": "5df1c1d9b5859324492d6f1a3e331aadbb603720fbeafe50b991f517465d5346"
+    },
+    {
+      "path": "src/services/fxEnv.ts",
+      "role": "source",
+      "sha256": "0d4c7bd1aa077cb6790eed95578f445396ddb188387d6dca15aa2c662db421fd"
+    },
+    {
+      "path": "src/services/geo/cohort.ts",
+      "role": "source",
+      "sha256": "925076a0a7cda8fbd5bed44150702bdf21f2e71cf19cf905b3099aa8f2b89fe2"
+    },
+    {
+      "path": "src/services/JourneyStage.ts",
+      "role": "source",
+      "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+    },
+    {
+      "path": "src/services/odpLoop.ts",
+      "role": "source",
+      "sha256": "98728815a95026843840ea4c4443790485cdf1899eddd26a99da02964bf5e63b"
+    },
+    {
+      "path": "src/services/optimizelyFx.ts",
+      "role": "source",
+      "sha256": "89a8683a5980d830e64768ed755a061d345a2bf7a7de1f11b8795d97694af0c3"
+    },
+    {
+      "path": "src/services/OptimizelyService.ts",
+      "role": "source",
+      "sha256": "97b7e40f98e2775e3e2b6d7caed0f32e5d0fe1c30a96d4ac5041a62dd4f01951"
+    },
+    {
+      "path": "src/services/PixelDecoder.ts",
+      "role": "source",
+      "sha256": "547961dcbc091d2cb24fe10021d3fa4617fc33e49895f6081084da2e17ef6889"
+    },
+    {
+      "path": "src/services/RealtimeSegmentEngine.ts",
+      "role": "output",
+      "sha256": "718f8737a39e3fdb66754d253fb024db89ae2eed967a0cc240931974d074fa75"
+    },
+    {
+      "path": "src/services/sceneGen.ts",
+      "role": "source",
+      "sha256": "81f64caf0e818e557c9ce4a80b90d0d7fdeb09e2d1882f467f492c5447f5428f"
+    },
+    {
+      "path": "src/services/sessionDefer.test.ts",
+      "role": "output",
+      "sha256": "7c61a083b9edd6cfceef5aef4ba8006b8b86359924241230be663fd9aba435a6"
+    },
+    {
+      "path": "src/services/SessionManager.identity.test.ts",
+      "role": "output",
+      "sha256": "fb5bb65d7af96124367545977ca17014f3b5af03a94cdb097d42255972b82d1b"
+    },
+    {
+      "path": "src/services/SessionManager.ts",
+      "role": "output",
+      "sha256": "3847b6edbd6a7ec91302cd4eb9451b7c5a265fad6880d961d73b1b85bba68845"
+    },
+    {
+      "path": "src/services/visit.ts",
+      "role": "source",
+      "sha256": "27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d"
+    },
+    {
+      "path": "src/tenancy/middleware.ts",
+      "role": "source",
+      "sha256": "70e3a8f242ebaa540ee09b6e3cf803c34c044623cd617747a91380c3d11631be"
+    },
+    {
+      "path": "src/tenancy/objects.ts",
+      "role": "source",
+      "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "role": "source",
+      "sha256": "2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072"
+    },
+    {
+      "path": "src/types/env.ts",
+      "role": "source",
+      "sha256": "7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f"
+    },
+    {
+      "path": "src/types/events.ts",
+      "role": "source",
+      "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb"
+    },
+    {
+      "path": "src/utils/context.ts",
+      "role": "source",
+      "sha256": "64969bfb7d22959c072ac2a3425861f20658a502b3590c7205b050cb96231475"
+    },
+    {
+      "path": "src/utils/pixel.ts",
+      "role": "source",
+      "sha256": "a54f03bb984f590ceb22fbe9dcb15fd959d1f6ebcdb297ac50b37b4ec21420f8"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "configuration",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "configuration",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    }
+  ],
+  "digest": "a7e61c32e70c549951f672798f4034aed0d3c10f999a8ceb01180c9844ca2f4d"
+}
+

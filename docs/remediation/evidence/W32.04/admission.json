@@ -1,0 +1,49 @@
+{
+  "at": "2026-09-12T22:38:10.242Z",
+  "source_go_at": "2026-09-12T22:38:10.242Z",
+  "actor_id": "w01-lead",
+  "task_id": "W32.04",
+  "worker": "w1405-worker",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "c470e26db44f8a4b3d8dc5ce6404477a7f2c9be6e2ca6d33085e84c59a781722",
+  "plan": {
+    "path": "docs/remediation/design/W32.04/plan.md",
+    "sha256": "de9bdf039cd65d4c9de063f32e9e5499cc7bc179fa2330c4ad6f8f5d3874f0d6"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "2770a8",
+        "wall_time_seconds": 1.001760463,
+        "session_id": 72607,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "af675a",
+        "wall_time_seconds": 0.000001887,
+        "exit_code": 0,
+        "original_token_count": 581,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=28, unscoped=13\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=92, closed=2; evidence records=273\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W32.03 — Implement consistent lightweight saved-report summaries so day-window reporting stops reading and validating every full attribution grid. Inspect actual canonical raw/aggregate writers and GET/window consumers against full W31/W32/F34/F25 before choosing the smallest single-source or version-bound summary format; preserve canonical overlay isolation, conservative coverage and explicit oversize/unavailable refusals. Useful grid paging and remaining aggregate/fold/native workload qualification stay explicit; policy compatibility, six-month scientific/customer acceptance, model objectives, historical repair and release authority remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19572\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=28, unscoped=13\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=92, closed=2; evidence records=273\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W32.03 — Implement consistent lightweight saved-report summaries so day-window reporting stops reading and validating every full attribution grid. Inspect actual canonical raw/aggregate writers and GET/window consumers against full W31/W32/F34/F25 before choosing the smallest single-source or version-bound summary format; preserve canonical overlay isolation, conservative coverage and explicit oversize/unavailable refusals. Useful grid paging and remaining aggregate/fold/native workload qualification stay explicit; policy compatibility, six-month scientific/customer acceptance, model objectives, historical repair and release authority remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19572\n"
+      }
+    ],
+    "session_id": 72607,
+    "drained": true,
+    "exit_code": 0
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1335,
+    "pins": 39,
+    "protected": 32,
+    "authority": true,
+    "actual_package_matches": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true,
+    "remaining_closed_no_planned_overlap": true
+  },
+  "limitations": "Bounded consistent lightweight summaries for newly generated canonical reports only, not full W31/W32/F34 acceptance. Single-object framing is additive persisted format; public day/POST shapes and custom-array response-only behavior stay unchanged. Managed window reads validate the summary, not unread grids/tail or historical full-body consistency; day GET retains bounded full validation. Legacy reports remain bounded full-read fallback and may require an additional prefix transfer charged to the existing16MiB request budget; no migration/history rewrite or large-window availability guarantee for legacy writers. Window92days and row/output limits remain; cheap reads are not policy compatibility, experimental maturity, six-month/customer/model/SLO or release proof. One installed Miniflare R2 range smoke proves only local storage primitive behavior, not deployed engine capacity. Existing canonical acknowledgement swallowing/concurrent canonical races, fold/shard/config/tombstone scope, paging and native workload qualification remain separate. No new store/sidecar/framework/serving change, cloud/deploy/credentials/customer-data/commit/push/destructive/external or customer-policy authority."
+}

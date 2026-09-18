@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-13T14:32:52.664Z",
+  "source_go_at": "2026-09-13T14:32:52.664Z",
+  "task_id": "W20.01",
+  "actor_id": "w01-lead",
+  "worker": "w1404-reviewer",
+  "reviewer": "w1405-reviewer",
+  "supersedes": "docs/remediation/evidence/W20.01/admission-v2.json",
+  "contract_digest": "f97f18fdacd9181bd32cfd54129f7e8310afce4fbbda92b6e39c23eeb5859d0c",
+  "plan": {
+    "path": "docs/remediation/design/W20.01/plan-v2.md",
+    "sha256": "ac679008361f2f9d29ec8bea25dc82f3b2b734b654b435d1258e887fef8cd6cb"
+  },
+  "supplemental_baseline": {
+    "path": "docs/remediation/design/W20.01/baseline-supplement.json",
+    "sha256": "d9c3020945a36cc32bddbbbf9615e2953865bfb31bc28ed820575c88d6d37fd9"
+  },
+  "journal_seq": 1467,
+  "protected_baseline_pins_match": true,
+  "remaining_accepted_pins_match": true,
+  "scope": "Nine source/test files; only supplemental consent marker expectation added, production behavior unchanged",
+  "runtime": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/content/decide.test.ts src/content/inventoryDiversity.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts -t 'W20.01|W38.05 preserves|returns exactly the decisions|records the ranked candidates|honours the candidate limit|emits the delivery contract|the default arm serves the defaults|a piece marked out of stock|at most max per value|relaxes rather than leave|W27.02|W27.03|W28.01|authenticated validation runs|w_ext × score joins' --maxWorkers=1 --minWorkers=1",
+  "stat": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts src/content/decide.ts src/content/types.ts src/content/kinds.ts src/learn/replay.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts --max-warnings 3 && git diff --check -- src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts src/content/decide.ts src/content/types.ts src/content/kinds.ts src/learn/replay.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts",
+  "limitations": "Bounded W20 pin reservation, publication contradictions, refusal diagnostics and replay compatibility only. Full W20/F28/F26 activation/reference warnings, exclusions/off-limits, customer fallback/priority/multi-position design, actual merchandiser walkthrough and customer acceptance remain open. Legacy invalid pins remain readable but are refused without arbitrary fill in new runtime; retained receipts use recorded legacy semantics. No cross-page dedupe, ranking/model or exploration-policy change; W38.05 explanation optimization retained. Local synthetic checks are not deployed/runtime/SLO or release acceptance. Existing slot KV transaction/propagation limitations and W35 authority remain separate. No deploy/cloud/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external operations or customer-policy amendments."
+}

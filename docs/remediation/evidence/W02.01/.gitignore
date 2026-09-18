@@ -1,0 +1,2 @@
+# Preserve the synthetic verification records when this task is committed.
+!*.log

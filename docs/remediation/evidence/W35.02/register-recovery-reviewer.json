@@ -1,0 +1,26 @@
+{
+  "status": "rejected_tracker_encoding",
+  "attempted_at": "2026-09-15T22:28:36.362Z",
+  "checker_capture": "7a04eb",
+  "checker_result": "INVALID schema before status ran",
+  "reason": "Actor is not a supported record_change subject, and mutating its canonical run_id would invalidate historical episode bindings. The malformed journal entry was removed in the same acceptance correction before handoff.",
+  "attempted_record": {
+    "before": {
+      "id": "w2205-reviewer",
+      "kind": "agent",
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "run_id": "/root/late_hour_next_review",
+      "description": "Read-only prospective and distinct frozen-source independent reviewer, never source implementer."
+    },
+    "after": {
+      "id": "w2205-reviewer",
+      "kind": "agent",
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "run_id": "/root/w3502_recovery_review",
+      "description": "Assigned independent reviewer role; original run hit a provider usage limit before verdict, and distinct Astra/xhigh recovery run /root/w3502_recovery_review completed frozen review without source ownership or subdelegation."
+    }
+  },
+  "disposition": "Restored the frozen assigned reviewer orchestration identity. W35.02-E3 uses that admitted identity; review.json retains the actual distinct recovery run, provider-limit interruption, checks and pins. Product artifact and runtime evidence were unchanged."
+}

@@ -1,0 +1,197 @@
+{
+  "at": "2026-09-13 02:30:34 UTC",
+  "task_id": "W31.02",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "65901dc24cc72b0d89f9a93bc0bab0ca81cc5eb87732047bf11beec6aa7cd56b",
+  "contract_digest": "ea6f84834d9c456e6f633f6c28edf60c883e6ef4665b00826957672b508a4874",
+  "verdict": "PASS",
+  "summary": "Independent source and final-byte runtime review passes the bounded 184-day diagnostic date envelope. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W31.02-C1",
+      "verdict": "PASS",
+      "evidence": "Actual production delta changes only MAX_WINDOW_DAYS from 92 to 184; complete real-date/reversed/range validation still precedes storage. The fixed check verifies exact consecutive 92/181/182/184-day arrays and endpoints, pre-I/O 185-day refusal, previously refused 93/181 requests, and the actual route's complete 184-key traversal with Dec 30 missing and Dec 31 retained. Synthetic 183 found days yield 183 decisions/549 repeated credits, no writes, no-store and unknown maturity/unverified experiment."
+    },
+    {
+      "id": "W31.02-C2",
+      "verdict": "PASS",
+      "evidence": "Exact 28/92/184-day window parity against independent legacy full-field projections passes; 184 canonical prefix reads deliver 12,058,624 bytes. Retained cumulative byte/cell/overflow/refusal and mixed/unknown/unrepresented withholding checks pass. Actual console DOM forwards July 1–December 31 without shortening, displays 184-day and residual-budget wording, and retains diagnostic-only labels. Summary readers, 16 MiB input/16,384-cell/8 MiB output guards and compatibility implementation are unchanged."
+    },
+    {
+      "id": "W31.02-C3",
+      "verdict": "PASS",
+      "evidence": "Personally inspected all six baseline-to-final deltas and applicable admitted plan/criteria; all pre-read hashes match frozen source. Before/after verification confirms 58 artifact pins, 46 protected files, current contract and six exact forward/reverse reconstructions. Independent K3 ran once: 6 passed/54 unselected, exit 0, drained. Complete final worker compiler/four-file zero-warning lint/JS syntax/whitespace captures were inspected and reused, not replayed. No failed or superseded worker candidate; no extra source, governance or test edits."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W31.02/plan.md",
+      "sha256": "7b4e08152482f96f68c9aee2902f3891ecc447585b26d6fe362ddbff5648e2d5"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W31.02/artifact.json",
+      "sha256": "bc81c9ada09024d1c8bb0236dc298be713a712306ab6495f75e5a68d0681f279"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W31.02/worker.json",
+      "sha256": "44fb544ab37f48921181a69043b5c74e680664e34a952ab871e240bb98c6a7a5"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/measure/window.test.ts src/learn/report.test.ts src/console/console.render.test.ts -t 'allows exactly 184 days|W32.04 reads|W32.03 bounds cumulative|W21 rejects invalid|measurement shows raw attribution diagnostics|W31.01 pools' --maxWorkers=1 --minWorkers=1",
+    "session_id": 36459,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "e76c1f",
+        "wall_time_seconds": 1.000417976,
+        "session_id": 36459,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "da38a2",
+        "wall_time_seconds": 5.000851067,
+        "session_id": 36459,
+        "original_token_count": 60,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+      },
+      {
+        "chunk_id": "087b75",
+        "wall_time_seconds": 5.000429458,
+        "session_id": 36459,
+        "original_token_count": 33,
+        "output": " ✓ src/console/console.render.test.ts  (35 tests | 34 skipped) 1127ms\n ✓ src/learn/report.test.ts  (17 tests | 16 skipped) 52ms\n"
+      },
+      {
+        "chunk_id": "9e4481",
+        "wall_time_seconds": 3.430102123,
+        "exit_code": 0,
+        "original_token_count": 249,
+        "output": "W31.01 counts {\"compatible\":{\"decisions\":2,\"credited\":6},\"mixed_unknown_or_unrepresented_pooled_rows\":0,\"reads_per_two_days\":2}\nW32.04 byte_measurement [{\"days\":28,\"requests\":28,\"full_canonical_bytes\":18226262,\"delivered_and_charged_prefix_bytes\":1835008,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":92,\"requests\":92,\"full_canonical_bytes\":59886296,\"delivered_and_charged_prefix_bytes\":6029312,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":184,\"requests\":184,\"full_canonical_bytes\":119772592,\"delivered_and_charged_prefix_bytes\":12058624,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"}]\n ✓ src/measure/window.test.ts  (8 tests | 4 skipped) 4034ms\n\n Test Files  3 passed (3)\n      Tests  6 passed | 54 skipped (60)\n   Start at  22:28:31\n   Duration  41.67s (transform 3.24s, setup 1ms, collect 28.67s, tests 5.21s, environment 0ms, prepare 5.57s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 6,
+      "unselected": 54,
+      "total": 60,
+      "test_files": 3,
+      "new_grouped_cases": 0,
+      "final_bytes": true,
+      "duration_seconds": 41.67
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 58,
+    "source_and_output_pins": 52,
+    "protected_pins": 46,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 6,
+    "manifest_sha256": "bc81c9ada09024d1c8bb0236dc298be713a712306ab6495f75e5a68d0681f279",
+    "before": {
+      "at": "2026-09-13T02:28:17.795Z",
+      "capture": "37405a",
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-13T02:29:29.663Z",
+      "capture": "331bc0",
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_before": {
+      "chunk_id": "93afc7",
+      "wall_time_seconds": 0.011998297,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T02:28:18.065Z\",\"task\":\"W31.02\",\"state\":\"verification\",\"contract_digest\":\"ea6f84834d9c456e6f633f6c28edf60c883e6ef4665b00826957672b508a4874\",\"artifact_digest\":\"65901dc24cc72b0d89f9a93bc0bab0ca81cc5eb87732047bf11beec6aa7cd56b\"}\n"
+    },
+    "contract_after": {
+      "chunk_id": "bf850a",
+      "wall_time_seconds": 0.024411137,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T02:29:29.931Z\",\"task\":\"W31.02\",\"state\":\"verification\",\"contract_digest\":\"ea6f84834d9c456e6f633f6c28edf60c883e6ef4665b00826957672b508a4874\",\"artifact_digest\":\"65901dc24cc72b0d89f9a93bc0bab0ca81cc5eb87732047bf11beec6aa7cd56b\"}\n"
+    },
+    "source_stopped_at": "2026-09-13T02:25:50.744Z",
+    "inspection": {
+      "actual_six_deltas": "713269",
+      "affected_fixture_and_reader_inspection": "dbfa24",
+      "final_task": "9c40cc",
+      "plan_and_admission": "bb8078",
+      "frozen_manifest_and_worker_metadata": "8febed",
+      "full_worker_command_captures": "35f08a",
+      "qualification": "Reused valid personal governance/parent/linked-requirement reads and accepted unchanged dependency assurance. Root entry check/status is reused; the admission stores a concise result summary referring to raw root capture 652749, not a verbatim board transcript. No reviewer board replay."
+    }
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W31.02/worker.json",
+      "sha256": "44fb544ab37f48921181a69043b5c74e680664e34a952ab871e240bb98c6a7a5"
+    },
+    "command_capture": "command_captures.static1",
+    "session_id": 25618,
+    "captures": [
+      "15a235",
+      "1292ac",
+      "c7f7b9"
+    ],
+    "inspection_capture": "35f08a",
+    "started_at": "2026-09-13 02:25:01 UTC",
+    "finished_at": "2026-09-13 02:25:37 UTC",
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "javascript_syntax": "PASS",
+    "whitespace": "PASS",
+    "reviewer_reruns": 0,
+    "qualification": "The admitted sequential && compound reached terminal exit 0 with no diagnostics, proving all four stages completed on the six unchanged frozen hashes."
+  },
+  "byte_evidence": {
+    "source": "Independent runtime final capture 9e4481; matching worker runtime1/a25c72",
+    "samples": [
+      {
+        "days": 28,
+        "requests": 28,
+        "full_canonical_bytes": 18226262,
+        "delivered_and_charged_prefix_bytes": 1835008
+      },
+      {
+        "days": 92,
+        "requests": 92,
+        "full_canonical_bytes": 59886296,
+        "delivered_and_charged_prefix_bytes": 6029312
+      },
+      {
+        "days": 184,
+        "requests": 184,
+        "full_canonical_bytes": 119772592,
+        "delivered_and_charged_prefix_bytes": 12058624
+      }
+    ],
+    "parity": "Exact window output against original full fields with unused grids removed to keep the independent legacy reference within the existing byte budget; not a reference derived from embedded summaries.",
+    "qualification": "Canonical bodies are synthesized on demand. The retained one-day installed Miniflare R2 range case is not a 184-day native capacity or latency measurement."
+  },
+  "retained_failures_and_qualifications": [
+    "Worker candidate1 and reviewer execution both pass; there are no failed/reworked/superseded W31.02 runtime or static attempts in the inspected record.",
+    "Vitest emits the existing Vite CJS Node API deprecation notice; scoped ESLint has zero warnings. The 54 unselected cases are not new passing evidence.",
+    "Existing obsolete 93/181-day rejection assertions were deliberately replaced with admitted-range and 185-day assertions, not hidden as failures."
+  ],
+  "limitations": [
+    "184 inclusive UTC days covers the longest six consecutive full calendar months, not every inclusive rolling anniversary-to-anniversary six-month interval or six-plus-month experimental follow-up.",
+    "Valid date ranges can still refuse on unchanged input/cell/output budgets, particularly legacy full-read fallbacks or high cardinality. The reader does not truncate dates or turn failure into missing coverage.",
+    "Missing, incomplete, unknown or incompatible contributors remain visible or withheld; this does not repair historical coverage, prove unread summary tails, or establish serving control/allocation/enrollment, metric/target versions, causal lift or valid experimental inference.",
+    "Route storage/session and DOM responses are synthetic local fixtures; no deployed authentication, native 184-day capacity/SLO, customer/business/release acceptance or full W31/F25/F07/F34 closure is claimed.",
+    "Only this review record was written. No source/governance changes, broader suites, static replay, benchmark, delegation, external/cloud/customer operation or commit."
+  ]
+}

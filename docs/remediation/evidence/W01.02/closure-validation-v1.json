@@ -1,0 +1,114 @@
+{
+  "at": "2026-09-06T23:57:22.749Z",
+  "tracker_sha256": "ee37174c3faad8c7d9761d00d529b5345f68892a1ca5495c96a90098b1df3843",
+  "journal_seq": 21,
+  "task": "closed",
+  "comparisons": [
+    {
+      "prior_path": "docs/remediation/evidence/W01.02/tracker-before-verification.json",
+      "prior_sha256": "eabd83244d41923bc821e5755062cad3aaa2af9632d1ef6d41ee7fa64e3f05a8",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        {
+          "code": "stale_proof",
+          "message": "W01.01 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01 artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01 artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01-E1 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01-E1 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+        },
+        {
+          "code": "revalidation_required",
+          "message": "W01.01-E1 is retained historical proof awaiting a replacement; it cannot support acceptance"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01-E2 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01-E2 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+        },
+        {
+          "code": "revalidation_required",
+          "message": "W01.01-E2 is retained historical proof awaiting a replacement; it cannot support acceptance"
+        },
+        {
+          "code": "limits",
+          "message": "Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker."
+        }
+      ]
+    },
+    {
+      "prior_path": "docs/remediation/evidence/W01.02/tracker-before.json",
+      "prior_sha256": "f758af6b7822d19537bf74899b94be9865941acff5c6f8c172d6c08fff4bee5c",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        {
+          "code": "stale_proof",
+          "message": "W01.01 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01 artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01 artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01-E1 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01-E1 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+        },
+        {
+          "code": "revalidation_required",
+          "message": "W01.01-E1 is retained historical proof awaiting a replacement; it cannot support acceptance"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01-E2 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+        },
+        {
+          "code": "stale_proof",
+          "message": "W01.01-E2 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+        },
+        {
+          "code": "revalidation_required",
+          "message": "W01.01-E2 is retained historical proof awaiting a replacement; it cannot support acceptance"
+        },
+        {
+          "code": "limits",
+          "message": "Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker."
+        }
+      ]
+    }
+  ],
+  "procedure": "Actual validateTracker(current, { rootDir: process.cwd(), previousTracker }) against each retained prior listed below; both results returned exit0. No tracker/source mutation by validation.",
+  "interpretation": "W01.02 is consistently registered closed at seq21. W01.01 historical index/api warnings are expected and retained; no new stale current W01.02 proof, source drift or errors. This is local tracker consistency, not deployment/customer/gate acceptance."
+}

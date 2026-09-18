@@ -1,0 +1,64 @@
+{
+  "task_id": "W22.02",
+  "at": "2026-09-14T13:23:18.105Z",
+  "artifact_digest": "0aafbe28b3ad1be7ea2811b7433f920c4ac0ea162ed499ff91a0aff274238cb6",
+  "contract_digest": "8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2",
+  "journal_seq": 1691,
+  "review": {
+    "path": "docs/remediation/evidence/W22.02/review.json",
+    "sha256": "9546635e29abdbb67e0250ada96ba2e4b4356c6657af70cd90295d310b2827dc"
+  },
+  "acceptance": {
+    "path": "docs/remediation/evidence/W22.02/acceptance.md",
+    "sha256": "c5a6c3776e4bf925bf4dbf479e6fa8c026c51a5c288c060a1dca657911813eda"
+  },
+  "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+  "failed_check_retained_in": {
+    "path": "docs/remediation/evidence/W22.02/journal-reconciliation.json",
+    "sha256": "58db65be2acc31050a9b74c04097557bf17cf1d185f5774f7085186af08f71ea"
+  },
+  "reconciliation_review": {
+    "actor_id": "w2202-reviewer",
+    "run_id": "/root/w2202_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "capture": "b94ed0",
+    "before_capture": "afbbf8",
+    "journal_reconciliation_sha256": "58db65be2acc31050a9b74c04097557bf17cf1d185f5774f7085186af08f71ea",
+    "authority_reconciled_sha256": "ef34c0db76b88fa301008e7c045a05ca08386b8109679ac966ea2adc650ac08c",
+    "finding": "Independent comparison: validated1677-entry prefix unchanged, rejected suffix exactly retained, actual authority unchanged; whole before snapshot matches prior event1664, repaired chain/ref hashes match; only1678 representation fixed and omitted draft registration inserted1684 at actual admission timestamp, later events identical except declared+1 seq. All38 artifact pins/original review unchanged. No new execution, source writes or tests."
+  },
+  "final_captures": [
+    {
+      "chunk_id": "54f9bb",
+      "wall_time_seconds": 1.001726897,
+      "session_id": 67410,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "97d01c",
+      "wall_time_seconds": 5.001352741,
+      "session_id": 67410,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "23894f",
+      "wall_time_seconds": 0.000015822,
+      "exit_code": 0,
+      "original_token_count": 623,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=116, closed=2; evidence records=345\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.02 — Continue next bounded W22/W09 ledger lookup/replay reconciliation: current src/ledger/writer.ts candidateKeys/findById returns the first matching logical ID, skips missing/malformed candidate inputs and accepts incomplete pagination. Read complete parent scope, actual route/replay/erasure/product-sort callers and accepted identity dependencies before admission; reconcile relevant candidates without mistaking legacy ambiguity for an exact retry. Preserve authentication and validated product-sort behavior. Broader producer/online/export guarantees, late-arrival manifests, existing partial aggregates/shards, retention and customer/exposure policies remain open; no historical data or external/deployment operation is authorized.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 24536\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=116, closed=2; evidence records=345\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.02 — Continue next bounded W22/W09 ledger lookup/replay reconciliation: current src/ledger/writer.ts candidateKeys/findById returns the first matching logical ID, skips missing/malformed candidate inputs and accepts incomplete pagination. Read complete parent scope, actual route/replay/erasure/product-sort callers and accepted identity dependencies before admission; reconcile relevant candidates without mistaking legacy ambiguity for an exact retry. Preserve authentication and validated product-sort behavior. Broader producer/online/export guarantees, late-arrival manifests, existing partial aggregates/shards, retention and customer/exposure policies remain open; no historical data or external/deployment operation is authorized.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 24536\n"
+    }
+  ],
+  "result": {
+    "check": "VALID",
+    "status": "VALID",
+    "exit_code": 0,
+    "drained": true,
+    "historical_notes_each": 24536
+  },
+  "scope": "Tracker consistency only, not engine/package/customer/release acceptance. Required code evidence is in independently reviewed W22.02 artifact.",
+  "next_action": "Continue next bounded W22/W09 ledger lookup/replay reconciliation: current src/ledger/writer.ts candidateKeys/findById returns the first matching logical ID, skips missing/malformed candidate inputs and accepts incomplete pagination. Read complete parent scope, actual route/replay/erasure/product-sort callers and accepted identity dependencies before admission; reconcile relevant candidates without mistaking legacy ambiguity for an exact retry. Preserve authentication and validated product-sort behavior. Broader producer/online/export guarantees, late-arrival manifests, existing partial aggregates/shards, retention and customer/exposure policies remain open; no historical data or external/deployment operation is authorized."
+}

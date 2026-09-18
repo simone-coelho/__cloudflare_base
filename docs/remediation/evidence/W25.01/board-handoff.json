@@ -1,0 +1,91 @@
+{
+  "at": "2026-09-12T12:34:23.018Z",
+  "task_id": "W25.01",
+  "artifact_digest": "05654ba0b33e227a82bcc1c95630d1e6e69b9d37abfe09cd0d425872942e47d2",
+  "journal_seq": 1153,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "b02bdd",
+        "wall_time_seconds": 1.001500948,
+        "session_id": 16719,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "3e4839",
+        "wall_time_seconds": 5.001500951,
+        "session_id": 16719,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "15f1a3",
+        "wall_time_seconds": 5.000958012,
+        "session_id": 16719,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b9be2b",
+        "wall_time_seconds": 5.000846811,
+        "session_id": 16719,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "7c131f",
+        "wall_time_seconds": 30.00351207,
+        "session_id": 16719,
+        "original_token_count": 277,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=22, unscoped=19\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=81, closed=2; evidence records=237\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W25.01 — Next inspect and admit bounded W26 named-placement attribution containment against F21: a direct outcome explicitly naming one slot must not credit another matching item/product slot. Read complete W26/F21/F16/F34 and actual policy/ring/online/recompute/SDK consumers before setting ownership and focused checks. Preserve explicitly unnamed legacy behavior pending policy choice; do not invent a fatigue axis or claim full correlated page/brand/position identity, rendered/viewable exposure, SDK/replay/dedup acceptance. No customer-policy/history/reset/external/deployment authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 16846\n"
+      },
+      {
+        "chunk_id": "ea39b3",
+        "wall_time_seconds": 0.000001931,
+        "exit_code": 0,
+        "original_token_count": 277,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=22, unscoped=19\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=81, closed=2; evidence records=237\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W25.01 — Next inspect and admit bounded W26 named-placement attribution containment against F21: a direct outcome explicitly naming one slot must not credit another matching item/product slot. Read complete W26/F21/F16/F34 and actual policy/ring/online/recompute/SDK consumers before setting ownership and focused checks. Preserve explicitly unnamed legacy behavior pending policy choice; do not invent a fatigue axis or claim full correlated page/brand/position identity, rendered/viewable exposure, SDK/replay/dedup acceptance. No customer-policy/history/reset/external/deployment authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 16846\n"
+      }
+    ],
+    "session_id": 16719,
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      16846,
+      16846
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module -e 'import fs from'\\''node:fs'\\'';import assert from'\\''node:assert/strict'\\'';import{gunzipSync}from'\\''node:zlib'\\'';import{applyPatch}from'\\''diff'\\'';import{sha256,artifactDigest,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';const j=p=>JSON.parse(fs.readFileSync(p)),t=j('\\''docs/remediation/tracker.json'\\''),task=t.tasks.find(x=>x.id==='\\''W25.01'\\''),b=j('\\''docs/remediation/design/W25.01/baseline.json'\\''),a=j('\\''docs/remediation/evidence/W25.01/artifact.json'\\''),d=j('\\''docs/remediation/evidence/W25.01/source-deltas.json'\\'');assert.deepEqual(task.artifact,a);assert.equal(a.digest,artifactDigest(a));assert.equal(a.contract_digest,taskContractDigest(task));for(const f of a.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);for(const x of d.deltas){const before=gunzipSync(Buffer.from(b.owned.find(f=>f.path===x.path).content_gzip_base64,'\\''base64'\\'')).toString(),after=fs.readFileSync(x.path,'\\''utf8'\\'');assert.equal(applyPatch(before,x.forward),after,x.path);assert.equal(applyPatch(after,x.reverse),before,x.path);}console.log(JSON.stringify({ok:true,at:new Date().toISOString(),artifact:a.digest,files:a.files.length,source:b.pins.length,protected:b.pins.filter(f=>f.role==='\\''source'\\'').length,deltas:d.deltas.length,contract:a.contract_digest}));'",
+    "captures": [
+      {
+        "chunk_id": "5e75dd",
+        "wall_time_seconds": 0.483933125,
+        "exit_code": 0,
+        "original_token_count": 63,
+        "output": "{\"ok\":true,\"at\":\"2026-09-12T12:28:43.522Z\",\"artifact\":\"05654ba0b33e227a82bcc1c95630d1e6e69b9d37abfe09cd0d425872942e47d2\",\"files\":119,\"source\":113,\"protected\":106,\"deltas\":7,\"contract\":\"f904cc790a7342753c00bf6cf6d03985d6e16faefb0c6daafd40b23136fcf7b9\"}\n"
+      }
+    ],
+    "exit_code": 0,
+    "drained": true
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_structured_prior_identity",
+    "package_W25": "open",
+    "finding_F20": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Next inspect and admit bounded W26 named-placement attribution containment against F21: a direct outcome explicitly naming one slot must not credit another matching item/product slot. Read complete W26/F21/F16/F34 and actual policy/ring/online/recompute/SDK consumers before setting ownership and focused checks. Preserve explicitly unnamed legacy behavior pending policy choice; do not invent a fatigue axis or claim full correlated page/brand/position identity, rendered/viewable exposure, SDK/replay/dedup acceptance. No customer-policy/history/reset/external/deployment authority is inferred."
+  },
+  "next_read_only_inspection": {
+    "status": "read_only_candidate_not_admitted",
+    "canonical": "Doc35 W26/F21/F16/F34 named-placement attribution; full exposure/SDK/model scope remains separate.",
+    "inspection": "Read full W26 row and F21 canonical entry plus current fan source and policy named-slot matching. No W26 changes, runtime probes or authorization expansion. Confirmed current policy.attribute direct branch ignores outcome.slot; named-slot containment is source-confirmed candidate only, not admitted.",
+    "retained_read_failure": "Initial guessed src/learn/attribution.ts read exited2 because path does not exist; located actual src/learn/policy.ts with rg. No tool/source state changed."
+  },
+  "limitations": "Structured indexing/materialization subset only. Full W25/F20/N20/N22 remain open: event-free slot publication, canonical/versioned cell grammar, zero base/reference behavior and model choice, unit/revenue/margin/currency/refund compatibility, human receipt provenance and historical repair are not delivered. Prior strength is not observed exposure or causal lift. Pipeline is actual validated CSV/JSON document-write functions through local DO publication and live service/raw receipt with synthetic storage, an eventful slot and positive reference/base; not HTTP authentication, deployed runtime or customer acceptance. Persisted documents/snapshots unchanged, but old readers may reject newly accepted delimiter-collision pairs: no rolling-version compatibility claim. Preserve W23 arithmetic and W24 forward tuple guard, no extra network hop. No external/cloud/resource/credential/customer-data/deployment/commit/push/destructive cleanup or customer-policy authority."
+}

@@ -1,0 +1,152 @@
+{
+  "at": "2026-09-13T19:11:05Z",
+  "task_id": "W20.02",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "43bc511a55fad4159efa3c486dac1d300806b66db29c6426faac79f3d0ea202f",
+  "contract_digest": "bae4db1ab1ddb252733b81ba6a46262c2ac5338d1d265ab660f57e0dafdfec92",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W20.02-C1",
+      "verdict": "PASS",
+      "evidence": "Actual helper/routes and first mounted group verify exact supplied slot/current-catalog basis, missing piece, slot type and current lifecycle/window/stock warnings without rejecting scheduled pins. Canonical typed identity, all-mode grant, selector consistency and exact slot-scope equality precede every optional R2 read. Unbound/unauthorized scopes, legacy slot fallback and catalog failure yield unavailable, not empty assurance; authorized zero-pin candidates are not_required/no-read. Sixty occurrences produce fifty numeric-coordinate samples and ten omitted, without raw names/IDs. Final ID Map is coherent with the retained catalog validator's duplicate-ID rejection."
+    },
+    {
+      "id": "W20.02-C2",
+      "verdict": "PASS",
+      "evidence": "Actual PUT/rollback/current/validate integrations use their exact returned or checked document, with no second slot read and no stored diagnostic metadata. Tests retain historical bytes, forbid diagnostic reads on structural refusal, preserve successful slot PUT during catalog outage, and report missing/corrupt heads as unavailable. Later catalog stock changes update advisory feedback while actual decideContent refuses the pin without arbitrary fill in both arms. Selected W20.01 composer/HTTP/replay and W19.03 diagnostic controls remain passing."
+    },
+    {
+      "id": "W20.02-C3",
+      "verdict": "PASS",
+      "evidence": "Final Rules/History code and grouped JSDOM assertions verify immediate stale-feedback clearing, edit-generation/load/tenant fencing, advisory save, malformed available-report fallback, exact save feedback despite failed GET, rollback feedback during delayed history refresh, and pre-write refusal of old History buttons during tenant transitions. The two provisional visibility/scope findings are corrected. Independent exact K3 ran once: 12 passed/80 unselected, exit 0/drained. Final static proof and all seven frozen deltas/pins were inspected; no broader acceptance claim."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W20.02/plan.md",
+      "sha256": "4079d666f5e9b7d13268a9380d91ecb1c241d422d7a89ad048f34041a28d30d1"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W20.02/artifact.json",
+      "sha256": "02bebe5a7f47c36d623f542cf81be20fa7f0656741ae66d56dde4b1396227663"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W20.02/worker.json",
+      "sha256": "cc4f51dc32513687aeec1ac5bcb4843d04d36f94d308ce6119fe70518841efba"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts src/console/console.render.test.ts src/reflex/contentCompose.test.ts src/learn/phase3.test.ts -t 'W20.02|W20.01|W18.01|W19.03 reports bounded|history shows every document|W03.03 carries named auth context|never leaves a screen' --maxWorkers=1 --minWorkers=1",
+    "session_id": 14551,
+    "invocations": 1,
+    "launched_at": "2026-09-13 19:09:51 UTC",
+    "drained_at": "2026-09-13 19:10:54 UTC",
+    "captures": [
+      {
+        "chunk_id": "75ad90",
+        "wall_time_seconds": 1.000976412,
+        "session_id": 14551,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "a83d5f",
+        "wall_time_seconds": 5.001681455,
+        "session_id": 14551,
+        "original_token_count": 175,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority\n[config] read failed, serving fallback\n\nstderr | src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n[config] stored document is invalid and was ignored\n\n ✓ src/routes/content.test.ts  (32 tests | 28 skipped) 82ms\n"
+      },
+      {
+        "chunk_id": "71b48c",
+        "wall_time_seconds": 1.718529616,
+        "exit_code": 0,
+        "original_token_count": 101,
+        "output": " ✓ src/console/console.render.test.ts  (38 tests | 32 skipped) 24180ms\n ✓ src/learn/phase3.test.ts  (16 tests | 15 skipped) 26ms\n ✓ src/reflex/contentCompose.test.ts  (6 tests | 5 skipped) 2ms\n\n Test Files  4 passed (4)\n      Tests  12 passed | 80 skipped (92)\n   Start at  15:09:54\n   Duration  60.31s (transform 2.73s, setup 0ms, collect 26.02s, tests 24.29s, environment 0ms, prepare 7.36s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 12,
+      "failed": 0,
+      "unselected": 80,
+      "total": 92,
+      "files_passed": 4,
+      "duration_seconds": 60.31
+    }
+  },
+  "source_review": {
+    "inspected": "Complete admitted plan/current task, full W20/F28/F26 and applicable sources personally read; provisional actual source inspection reconciled against all seven frozen deltas. Final backend Map, renderer guards, Rules/History early-return and pre-write corrections, fixtures and kit text read directly. Full worker primary captures and retained baseline/admission inspected.",
+    "source_stopped_at": "2026-09-13T19:06:40.202Z",
+    "freeze_at": "2026-09-13T19:08:45Z",
+    "journal": 1538,
+    "artifact_files": 42,
+    "source_and_output_pins": 36,
+    "pre_go_protected_unchanged": 28,
+    "bidirectional_deltas": 7,
+    "additional_dependency": {
+      "path": "public/console/index.html",
+      "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3",
+      "qualification": "Current-only freeze pin, not a pre-GO comparison. Personally inspected actual script order (0e693d): views-config precedes views-measure; no mixed-version deployment claim."
+    },
+    "before": {
+      "at": "2026-09-13T19:09:51.674Z",
+      "pins_capture": "37ae0a",
+      "contract_capture": "d6a76f",
+      "exit_status": 0
+    },
+    "after": {
+      "at": "2026-09-13T19:11:05.433Z",
+      "pins_capture": "bdcf75",
+      "contract_capture": "2e1205",
+      "exit_status": 0
+    },
+    "result": "All 42 current hashes and artifact/current-contract digests match before/after. Seven forward reconstructions equal current bytes; seven reverse reconstructions equal retained baseline bytes, including the originally absent helper. No source writes.",
+    "inspection_captures": [
+      "0863e6",
+      "943d2c",
+      "cc1f02",
+      "8e76e0",
+      "f8d15a",
+      "bd4322",
+      "764a0a"
+    ],
+    "dependency_reuse": "Root's pre-admission 96 accepted-pin check and unchanged W19.02/W08.04 61-pin assurance reused as permitted. W19.03 overlapping byte proof was prospectively qualified; its implementation/history and selected control remain. Prior W20.01/W18.01 implementation assurance is not whole-artifact or customer reacceptance."
+  },
+  "static_reuse": {
+    "reference": "worker.json command_captures.static1",
+    "session_id": 29931,
+    "captures": [
+      "48fded",
+      "d8ea62",
+      "404905",
+      "0471b6"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "reruns": 0,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 2,
+    "new_warnings": 0,
+    "warning_signature": "views-config.js:19:29 when and :19:35 plural, @typescript-eslint/no-unused-vars, exactly match corrected baseline c9bc06.",
+    "whitespace": "Final declared whitespace check passed. source-freeze.json records direct zero-new-trailing-whitespace inspection for all seven owned files, including the untracked helper."
+  },
+  "retained_history": [
+    "Root baseline plain lint sessions 75246 and 20383 failed with eight plus six existing browser no-undef errors and two unused-binding warnings. Full captures remain in baseline.json. Corrected browser-scoped command (--env browser --global OperatorSession --max-warnings 2) was admitted before source changes; no configuration/source rewrite concealed the errors.",
+    "Pre-runtime source review corrected lookup work, malformed available feedback, hidden save/rollback response rendering, History pre-write tenant guard, immediate-delivery wording and kit placement. These were authoring corrections, not failed executed tests.",
+    "Worker first runtime session 38187/f323ac through e15284 passed 12/80, 76.63s; final static session 29931/0471b6 passed. No worker runtime/static rework or failed final candidate is claimed.",
+    "Expected corrupt/invalid legacy-document logs and inherited Vite CJS warning remain visible in the independent captures."
+  ],
+  "limitations": [
+    "Advisory HTTP/Rules/History reference feedback only, not hard cross-document admission, atomic activation, persisted receipt metadata or serving-cache attestation. Independent catalog and slots can change immediately after inspection.",
+    "Scheduled/draft/missing/out-of-stock pins remain authorable under existing structural validation. Runtime reservation/eligibility/refusal and historical replay are unchanged; no arbitrary fill, new exclusion/off-limits, priority/multi-position or customer fallback policy.",
+    "Generic library/seed writers and later catalog publications have no new guard. Legacy slot scope behavior is preserved; unavailable means no catalog assurance, while not_required means no pins were checked and no catalog was read.",
+    "Mounted-route tests use synthetic KV/conditional R2; JSDOM uses real UI/validator with synthetic HTTP persistence and controlled diagnostic responses. No native/distributed/SLO, mixed-asset rollout, actual customer walkthrough or release proof; 80 unselected cases are not claimed passing.",
+    "Full W20/F28/F26 and related W19/customer/gate/release obligations remain open. No extra test suite, static rerun, source/governance mutation, external operation or subdelegation. Lead acceptance remains separate."
+  ]
+}

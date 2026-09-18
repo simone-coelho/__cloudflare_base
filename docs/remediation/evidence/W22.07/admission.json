@@ -1,0 +1,28 @@
+{
+  "task_id": "W22.07",
+  "at": "2026-09-15T18:19:21.404Z",
+  "plan": {
+    "path": "docs/remediation/design/W22.07/plan.md",
+    "sha256": "d57a14dde34afb8d662f54149ba38326a8c380663b0cda5b2a87cd35963c784e"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W22.07/baseline.json",
+    "sha256": "091a30fd9adedc20b05cde6369ec919cf6aaa2c073f41ad75bbf8db0997fe279"
+  },
+  "contract_digest": "9388bfa39bb92b5b39951df4cfb146f390a9cbce76c90f76dc7dc6666bf67b83",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T18:19:21.404Z",
+    "plan_sha256": "d57a14dde34afb8d662f54149ba38326a8c380663b0cda5b2a87cd35963c784e",
+    "rationale": "Root read complete parent scope/current source, recorded actual user choice; independent source challenge incorporated expiry/stale-membership safeguards. One coherent HTTP path, fixed6, no broader infrastructure or policy."
+  },
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "scope": "Read-only source design challenge; exact frozen artifact still independently required",
+    "result": "HTTP-only coherent seam; preserve absolute expiry and clean current derived memberships, failclosed observed tombstones, no concurrent/idempotent/historical policy proof."
+  },
+  "limitations": "Explicit HTTP buffered-action purpose/occurrence-time current interest and original-time evidence only. Live traffic unchanged. No SDK offline queue, across-call personal dedup, atomic KV/erasure fence, new retention, original-policy/experiment lifecycle reconstruction, historical report repair, generation reset or full W22/W23/W30/customer/SLO/release claim. Preserve all unowned accepted dependencies; overlapping exact proofs qualified with history retained. No installs/emitted build/commit/stage/push/deploy/cloud/credentials/customer-data/destructive/external operations."
+}

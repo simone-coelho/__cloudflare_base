@@ -1,0 +1,21 @@
+{
+  "at": "2026-09-15T23:46:48.715Z",
+  "reason": "W35.03 intentionally changes three paths pinned by accepted W35.02. Preserve the accepted snapshot and mark its exact proofs for revalidation; the visit/channel implementation is retained, not refuted or removed.",
+  "task": {
+    "id": "W35.02",
+    "before": { "state": "closed", "artifact_status": "recorded", "artifact_digest": "c4442102d5c844c0bfaef2ea67c92f1ebfafe4e059b2a50ec55f6746c05c160c" },
+    "after": { "state": "reopened", "artifact_status": "revalidation_required", "artifact_digest": "c4442102d5c844c0bfaef2ea67c92f1ebfafe4e059b2a50ec55f6746c05c160c" },
+    "changed_pins": [
+      "src/durable-objects/ShopperReflex.ts",
+      "src/routes/realtime.sdkContract.test.ts",
+      "src/identity/link.ts"
+    ]
+  },
+  "evidence": [
+    { "id": "W35.02-E1", "before_sha256": "198f10967180eb3b98ed7a8370b34391f7da23cedb8a2efbdecd9e773d0a87e5", "after_sha256": "9ddb64a0f87d91a478ca5637a59dfc14c1d8f963079a4d90ff777b090dcd7851", "before": "current", "after": "revalidation_required" },
+    { "id": "W35.02-E2", "before_sha256": "8f3cb0ef1e917fab0f0d7399da529b121936af91c7b8fcfa5b2a50c29a5f29f9", "after_sha256": "28fd07c6c31e7a1687fa0fd55e91b26e7a25b2c822f7583d0fc9629caca6c193", "before": "current", "after": "revalidation_required" },
+    { "id": "W35.02-E3", "before_sha256": "e9d0f829f478b46b597721ca71e1ba1d959dd6f3d949e98877bba3c1b8652e55", "after_sha256": "845eea91d5e6731fa80144c2a76678a840934c755692d1bfc841c8e3e1fdca8b", "before": "current", "after": "revalidation_required" },
+    { "id": "W35.02-E4", "before_sha256": "68703f936a08eead7474d4648e733ee5de3c4791ffae03e816ea289e8d8cc27c", "after_sha256": "0e3cea48b3c9b55c6a6b4718f52094f684c99add65fa7513abc8de8a2614c2db", "before": "current", "after": "revalidation_required" }
+  ],
+  "qualification": "W35.03 final focused evidence covers link-time preservation of current visit/channel/enrichment and prior W35.01 recovery. It does not automatically re-close full W35.02; its broader exact proof remains historical until a future coherent revalidation/acceptance."
+}

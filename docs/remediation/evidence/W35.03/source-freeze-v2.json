@@ -1,0 +1,52 @@
+{
+  "task_id": "W35.03",
+  "at": "2026-09-16T00:09:57.473Z",
+  "contract_digest": "0046f1b04a0e82a0388d32bec7300870adc7dded8c16a69b7408fb639bcd35b1",
+  "supersedes": {
+    "artifact_digest": "111ac5bfdfe72e8aa80200fdc72bae95686668d7a642b68a42432b97956b0659",
+    "review": {
+      "path": "docs/remediation/evidence/W35.03/review.json",
+      "sha256": "bf3ecf393d58b856968fa5889d6f93055ad3546ad64607dd1fdbece6a8ea9e94",
+      "verdict": "REWORK"
+    }
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W35.03/worker.json",
+    "sha256": "9e68b247e517ce2f157372e6a6030f8d6ee44c1ee56d7afe9fcb857107d352aa"
+  },
+  "files": [
+    { "path": "src/identity/link.ts", "sha256": "dea9305e971ca2913fee2c70f4d23d3404e7044addded63bcafe33bb69e94978", "role": "output" },
+    { "path": "src/identity/store.ts", "sha256": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24", "role": "output" },
+    { "path": "src/durable-objects/ShopperReflex.ts", "sha256": "9693e8071e14a5ffc3ca5e75a198ff0e7e40e3a3d39b3fd26f35c520e322c444", "role": "output" },
+    { "path": "src/routes/realtime.sdkContract.test.ts", "sha256": "452940cea677fad2a6294ae48fbf51ccccc12198fd7c0e6d04f8e0d869458a63", "role": "output" },
+    { "path": "src/routes/identity.ts", "sha256": "ba760b40f7939cf96f2d8ca485b3b469f34a60260745f22857e40dccafe2be9c", "role": "source" },
+    { "path": "src/identity/sessionCapability.ts", "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49", "role": "source" },
+    { "path": "src/content/consent.ts", "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930", "role": "source" },
+    { "path": "src/services/SessionManager.ts", "sha256": "19faab942934a61c7ef13db67e62fcb06228346be85abed9d3b71ac00d37d186", "role": "source" },
+    { "path": "src/reflex/identityMerge.ts", "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508", "role": "source" },
+    { "path": "src/identity/profileEnrichment.ts", "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5", "role": "source" },
+    { "path": "src/services/visit.ts", "sha256": "9bf380f59633c1eb23cabcec60acf6318ff17eb8898172c71a1fa4ecd3b244d6", "role": "source" },
+    { "path": "src/tenancy/objects.ts", "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67", "role": "source" },
+    { "path": "src/tenancy/tenant.ts", "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3", "role": "source" },
+    { "path": "src/types/env.ts", "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab", "role": "source" },
+    { "path": "docs/architecture/35-audit-verification-and-source-of-truth.md", "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4", "role": "source" },
+    { "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json", "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c", "role": "configuration" },
+    { "path": "docs/remediation/design/W35.03/plan.md", "sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d", "role": "configuration" },
+    { "path": "docs/remediation/design/W35.03/baseline.json", "sha256": "4f42d52a8aa4687b88182708ea3e3da85d61b09f8a8dc5b42db41f3dae87054f", "role": "configuration" },
+    { "path": "package.json", "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3", "role": "configuration" },
+    { "path": "package-lock.json", "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f", "role": "configuration" },
+    { "path": ".eslintrc.json", "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39", "role": "configuration" },
+    { "path": "tsconfig.json", "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782", "role": "configuration" },
+    { "path": "vitest.config.ts", "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc", "role": "configuration" },
+    { "path": "wrangler.toml", "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923", "role": "configuration" },
+    { "path": "docs/remediation/evidence/W35.03/worker.json", "sha256": "9e68b247e517ce2f157372e6a6030f8d6ee44c1ee56d7afe9fcb857107d352aa", "role": "output" },
+    { "path": "docs/remediation/evidence/W35.03/review.json", "sha256": "bf3ecf393d58b856968fa5889d6f93055ad3546ad64607dd1fdbece6a8ea9e94", "role": "configuration" }
+  ],
+  "root_review": {
+    "result": "PASS_PENDING_DISTINCT_REVIEW",
+    "basis": "R1 source inspected: refused first transfer with an existing affinity/pipeline retains both exact objects, leaves audienceOwner storage and the existing alarm unchanged, avoids target configuration resolution and records only receipt/current membership/tightened consent atomically. Cold-target establishment and the session host are unchanged.",
+    "checks": "Worker final K1 passed 13/13 with 93 skipped. K2 compiler, owned ESLint and scoped whitespace passed with zero errors and the unchanged 109-warning signature multiset.",
+    "history": "Superseded artifact 111ac5bfdfe72e8aa80200fdc72bae95686668d7a642b68a42432b97956b0659 and its REWORK review remain pinned; final worker evidence retains the exact earlier worker bytes and all superseded attempts."
+  },
+  "limitations": "Local DO link-transfer unit only. No host toggle, migration, historical repair, deployment, native/customer/SLO or release claim. Prepared/in-flight erasure, complete deletion epochs, stale bearer revocation and pushed-frame revocation remain open."
+}

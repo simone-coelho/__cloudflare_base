@@ -1,0 +1,14 @@
+{
+  "task_id": "W14.05",
+  "source_go_at": "2026-09-11T11:33:15Z",
+  "direct_admission": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';import assert from 'node:assert/strict';import {sha256,taskContractDigest} from './scripts/remediation/board.mjs';\nconst d=JSON.parse(fs.readFileSync('docs/remediation/tracker.json'));const t=d.tasks.find(t=>t.id==='W14.05');const b=JSON.parse(fs.readFileSync('docs/remediation/design/W14.05/baseline.json'));\nassert.equal(t.state,'in_progress');assert.equal(d.tasks.filter(t=>t.state==='in_progress').length,1);\nassert.equal(sha256(fs.readFileSync(t.preflight.plan.path)),t.preflight.plan.sha256);assert.equal(taskContractDigest(t),t.preflight.contract_digest);\nconst e=d.journal.at(-1);assert.equal(e.seq,923);assert.equal(e.task_id,t.id);assert.equal(e.to,'in_progress');assert.deepEqual(e.plan_snapshot,t.preflight);assert.equal(e.plan_approved_at,t.preflight.approval.at);\nfor(const [role,id]of Object.entries(t.assignments)){const a=d.actors.find(a=>a.id===id);assert.equal(a.model,'gpt-6-astra');assert.ok(['xhigh','max','ultra'].includes(a.effort));assert.deepEqual(e.assignments[role],{actor_id:id,run_id:a.run_id});}\nassert.notEqual(t.assignments.implementer,t.assignments.independent_reviewer);\nassert.equal(d.authority.local_engine_changes,true);assert.equal(d.authority.deployment,false);assert.ok(d.authority.local_authorization.scope_package_ids.includes('W14'));\nassert.equal(b.pins.length,44);for(const p of b.pins)assert.equal(sha256(fs.readFileSync(p.path)),p.sha256,p.path);\nfor(const p of b.owned)if(p.absent)assert.equal(fs.existsSync(p.path),false,p.path);else assert.equal(sha256(fs.readFileSync(p.path)),p.sha256,p.path);\nfor(const id of ['W08.04','W14.04']){const prior=d.tasks.find(t=>t.id===id);assert.equal(prior.state,'closed');for(const p of prior.artifact.files)assert.equal(sha256(fs.readFileSync(p.path)),p.sha256,id+':'+p.path);}\nconsole.log(JSON.stringify({result:'PASS direct admitted task/contract/start/authority and44 pre-edit pins; W08.04/W14.04 unchanged',journal:d.journal.length,plan:t.preflight.plan,contract:t.preflight.contract_digest,source_go_pending:true}));\nNODE",
+    "chunk_id": "26eecb",
+    "wall_time_seconds": 1.894307591,
+    "exit_code": 0,
+    "original_token_count": 90,
+    "output": "{\"result\":\"PASS direct admitted task/contract/start/authority and44 pre-edit pins; W08.04/W14.04 unchanged\",\"journal\":923,\"plan\":{\"path\":\"docs/remediation/design/W14.05/plan.md\",\"sha256\":\"9162c3a774ae0945dc2af648d104549d0efcdc7e3d9126d7c162357d04757469\"},\"contract\":\"bd98e9ccf11107a71166935088a09f4e5b3cf3031559fb543d8b8b080d65614b\",\"source_go_pending\":true}\n",
+    "drained": true
+  },
+  "entry_reused": "Full actual checker/status VALID915 session82176, retained in admitted baseline; not replayed before coding."
+}

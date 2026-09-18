@@ -1,0 +1,13 @@
+{
+  "task_id": "W30.04",
+  "at": "2026-09-15 07:48:17 UTC",
+  "kind": "implementation_detail_within_unchanged_C2",
+  "lead": "/root",
+  "reviewer": "/root/w30_recovery_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "finding": "Content ETags can repeat if a later participating write restores exactly an older body. Coordinator fencing alone does not stop a helper already paused at a nonzero shard or aggregate conditional put.",
+  "direction": "Retain the unique transaction-generation marker in every actually changed shard and every published aggregate body, included in exact prepared fingerprints/bytes. Unchanged nonzero shards preserve existing bytes and skip writes. This prevents participating-writer ABA; do not strip aggregate generation on completed replay.",
+  "scope": "Existing four files and original C2 stale-helper guarantee; no change to task contract, test commands, criteria count, retention, computation policy or external authority. Exercise ordering in existing third grouped recovery case.",
+  "approval": "Lead approved this concrete algorithm detail before frozen artifact; worker notified. Prior plan and admission remain unchanged."
+}

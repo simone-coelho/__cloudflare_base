@@ -1,0 +1,59 @@
+{
+  "at": "2026-09-12T21:12:18.620Z",
+  "task_id": "W32.02",
+  "actor_id": "w01-lead",
+  "before_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W32.02/plan.md",
+      "sha256": "9ff5b4516e6e5a0803e2563f60d4cc56fddcab469d7b8db2501bcf4512c29cf3"
+    },
+    "contract_digest": "61a2d54d608eb5525991b612c92b220d9f0eccf7f3685140a5034e22c1463250",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-12T21:03:34.155Z",
+      "plan_sha256": "9ff5b4516e6e5a0803e2563f60d4cc56fddcab469d7b8db2501bcf4512c29cf3",
+      "rationale": "VALID1295 entry, actualsource/source-confirmed case, distinct Astra/xhigh estimator challenge and explicit application budgets, not customer/native threshold. Five-file coherent slice/fixed9."
+    }
+  },
+  "new_plan": {
+    "path": "docs/remediation/design/W32.02/plan-r2.md",
+    "sha256": "2885e740b617bbac4cd30c2d05d4d76946c65d074d68d5cf6a44e335247847da"
+  },
+  "inspection": {
+    "path": "public/learning.js",
+    "sha256": "6dbb1b51969b9fbd4a78347ac7ab95657bbe17f7f728b872d6c66cf5fcc189f7",
+    "capture": "9bd587",
+    "behavior": "presets4 plus optional custom1 reporting overlays, hence6total with learning"
+  },
+  "worker_pause": "Only report.ts/hourly.ts changed; no runtime/static invocation; worker message retained in root turn.",
+  "partial_files": [
+    {
+      "path": "src/learn/report.ts",
+      "sha256": "05e7be548dc50eb5a960139a7fbd5d359d3aa6470b69088db3631ce1e42c010c",
+      "changed": true
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "sha256": "6ac092272a367af274f1d0c281075dc6ecfdca64cdd23ae529777f28a318d773",
+      "changed": true
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "sha256": "4d890aa841d57e07d8b00eb46f65217b2287274655c02e1c9e0231c20a4128ae",
+      "changed": false
+    },
+    {
+      "path": "src/learn/report.test.ts",
+      "sha256": "c5dd0444eee89a18bd807e5b5294e07d556c13e3886cb9891fae2c235599084d",
+      "changed": false
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "94f180647f94692d505b6520c4ae4ab71be6708130355845bae9596f476cf640",
+      "changed": false
+    }
+  ],
+  "contract_unchanged": "61a2d54d608eb5525991b612c92b220d9f0eccf7f3685140a5034e22c1463250",
+  "scope": "Change policy budget5to6 only to preserve current UI flow. Other raw budgets, ownership/fixed9 unchanged; no external/customer amendment."
+}

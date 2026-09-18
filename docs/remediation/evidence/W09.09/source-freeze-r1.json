@@ -1,0 +1,169 @@
+{
+  "task_id": "W09.09",
+  "at": "2026-09-17T21:29:10.275Z",
+  "source_state": "SOURCE/EVIDENCE STOP; all worker/native processes drained. Distinct reviewer source-only pending corrected boardGO for review-r1.json/exactK8.",
+  "worker": {
+    "path": "docs/remediation/evidence/W09.09/worker-r1.json",
+    "sha256": "44d2523511e5b593b946edec49dea5c23408ee0b512062b1ddc94cbced526d81",
+    "bytes": 841956
+  },
+  "admission": {
+    "path": "docs/remediation/evidence/W09.09/admission-review-rework.json",
+    "sha256": "f69f53ef2e8c9d211775a234d46c612c743c0d440c04b366bc13a1e837d508f2",
+    "bytes": 24731
+  },
+  "rejected_review": {
+    "path": "docs/remediation/evidence/W09.09/review.json",
+    "sha256": "ebd5428a8a4397a0ae65df39377bed14486a09121648e8b21c6c1578ed35863d",
+    "bytes": 22670
+  },
+  "original_freeze": {
+    "path": "docs/remediation/evidence/W09.09/source-freeze.json",
+    "sha256": "ef2becfaf999bc953b3aff52c5a113a8fff23cce597504f5023026e06cff837d",
+    "bytes": 5243
+  },
+  "artifact": {
+    "digest": "38e097e3c3496e766bc774c043a181781e30b1c96425b9f1a14b69c5b01e71a9",
+    "contract_digest": "ea9b09b82fe2a51aff057120bac7c3cc0b2067f54eed3356af0ba137cfd6a70b",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W09.09",
+    "files": 102,
+    "worker_pin_digest": "d7844eab99a3c86b9da49efcd2c5f2d81d4e90324059160fbb2425e6242e6a6f"
+  },
+  "identity": {
+    "rework_originals": 15,
+    "reversible_deltas": 15,
+    "changed_outputs": 13,
+    "protected_unchanged": 87,
+    "complete_primaries": 11,
+    "root_verification": "All15 dirty baselines and forward/reverse patches independently verified; all102current/87protected pins,11complete primary hashes/lengths, exactK1–K6 commands/qualification and174inherited warning source lines."
+  },
+  "results": [
+    {
+      "check": "K1",
+      "attempt": "R.K1.1",
+      "pass": 23,
+      "unselected": 34,
+      "status": "PASS_source_qualified",
+      "primary_sha256": "242681686418df6d22f0fa370396065515b9e80a181ca29c75972183c5fd3abc",
+      "primary_bytes": 17984,
+      "started_at": "2026-09-17T21:22:30.286Z",
+      "finished_at": "2026-09-17T21:23:10.141Z",
+      "source_differences": [
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "before_sha256": "29ef02166e5866bc9412b7aa6ae9fb6435fd109dfa1b5ff38b466a2edf6a0382",
+          "after_sha256": "ca98f31e18033f9a3919c477864b672b1abbf24fa4c217079cad998edf4c3d72"
+        }
+      ]
+    },
+    {
+      "check": "K2",
+      "attempt": "R.K2.1",
+      "pass": 22,
+      "unselected": 23,
+      "status": "PASS_source_qualified",
+      "primary_sha256": "8063cb7f9b5d4fa6b3116c41f0ab56b105d02b81c6ecd86c41b4f54bd6fccc10",
+      "primary_bytes": 16405,
+      "started_at": "2026-09-17T21:22:31.805Z",
+      "finished_at": "2026-09-17T21:22:43.594Z",
+      "source_differences": [
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "before_sha256": "29ef02166e5866bc9412b7aa6ae9fb6435fd109dfa1b5ff38b466a2edf6a0382",
+          "after_sha256": "ca98f31e18033f9a3919c477864b672b1abbf24fa4c217079cad998edf4c3d72"
+        }
+      ]
+    },
+    {
+      "check": "K3",
+      "attempt": "R.K3.2",
+      "pass": 11,
+      "unselected": 134,
+      "status": "PASS_exact_final_source",
+      "primary_sha256": "42adf355d57be1853e27cc72b6952ebbfdd60a93f3b8a8ab51aab309039373b4",
+      "primary_bytes": 116923,
+      "started_at": "2026-09-17T21:24:11.755Z",
+      "finished_at": "2026-09-17T21:24:31.421Z",
+      "source_differences": []
+    },
+    {
+      "check": "K4",
+      "attempt": "R.K4.1",
+      "pass": 5,
+      "unselected": 62,
+      "status": "PASS_source_qualified",
+      "primary_sha256": "92b39291321075c1fb8d939cf76d687ea65410ffeda5be6d4b8cf78591715236",
+      "primary_bytes": 16079,
+      "started_at": "2026-09-17T21:23:12.172Z",
+      "finished_at": "2026-09-17T21:23:52.834Z",
+      "source_differences": [
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "before_sha256": "29ef02166e5866bc9412b7aa6ae9fb6435fd109dfa1b5ff38b466a2edf6a0382",
+          "after_sha256": "ca98f31e18033f9a3919c477864b672b1abbf24fa4c217079cad998edf4c3d72"
+        }
+      ]
+    },
+    {
+      "check": "K5",
+      "attempt": "R.K5.1",
+      "pass": 7,
+      "status": "PASS_source_qualified",
+      "primary_sha256": "4d5bcd7a281e0fa7ebbaccbdbfa2db98ec5fe8d3da220b34b501f55d30f99c2d",
+      "primary_bytes": 18306,
+      "started_at": "2026-09-17T21:22:34.812Z",
+      "finished_at": "2026-09-17T21:22:40.457Z",
+      "source_differences": [
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "before_sha256": "29ef02166e5866bc9412b7aa6ae9fb6435fd109dfa1b5ff38b466a2edf6a0382",
+          "after_sha256": "ca98f31e18033f9a3919c477864b672b1abbf24fa4c217079cad998edf4c3d72"
+        }
+      ]
+    },
+    {
+      "check": "K6",
+      "attempt": "R.K6.2",
+      "result": "Server compiler, scoped lint 0 errors/174 unchanged warnings, two JS syntax checks and owned-file whitespace passed.",
+      "status": "PASS_exact_final_source",
+      "primary_sha256": "325013cfc491c5d9e8cd78f2781383bee5b8a4e389d8028b938e2c0c27a383b2",
+      "primary_bytes": 42440,
+      "started_at": "2026-09-17T21:24:13.965Z",
+      "finished_at": "2026-09-17T21:25:08.842Z",
+      "source_differences": []
+    }
+  ],
+  "source_qualification": "K1/K2/K4/K5 have only the later unrelated realtime.sdkContract.test.ts delta: release?.() typing plus explicit failed-projection KV-read oracle. Their selected fixtures and production dependencies are unchanged. K3/K6 match all final pins exactly; no claim of rerunning every command on final bytes.",
+  "warning_counts": {
+    "baseline": 174,
+    "final": 174,
+    "inherited": 174,
+    "new": 0,
+    "resolved": 0,
+    "errors": 0
+  },
+  "native": {
+    "attempt": "R.K4.1",
+    "bundle_sha256": "ad6cf1a430985a3cf73238ba0b99aad3920ff32f91a6bd84dbe4ff24e3f9a24c",
+    "source_attempts": [
+      1,
+      2,
+      3
+    ],
+    "healthy_attempts": [
+      1
+    ],
+    "forwarded_bodies": 1,
+    "persisted_records": 1,
+    "outbound": {
+      "source": 0,
+      "collector": 0
+    },
+    "disposed": true
+  },
+  "limitations": [
+    "Independent corrected full-original-W09 review/K8 and lead local disposition pending. C9/K9/live/customer/provider/resource/policy/disposal/history/activation remains OPEN.",
+    "Three expected red failures and fixture TS2722 failure retained; all original evidence immutable. No old W08 packaged Worker relabelled, package/SDK rebuild, broadCI or external operation."
+  ]
+}

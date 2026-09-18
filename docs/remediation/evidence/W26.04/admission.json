@@ -1,0 +1,28 @@
+{
+  "task_id": "W26.04",
+  "at": "2026-09-15T19:56:29.604Z",
+  "plan": {
+    "path": "docs/remediation/design/W26.04/plan.md",
+    "sha256": "34a04b5f864fc229f142c30c84fe2a3455e8fa9ecfb528f9b1713a5095e32719"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W26.04/baseline.json",
+    "sha256": "c36a93b851949e6fa28ef4f10a6a6ba6cd159619ad7fa24062512661208f1f1f"
+  },
+  "contract_digest": "8dec7911792e2d0f16be670645e7e4f2a03931cc2c63cc15dd4f6fd0a9d407f3",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T19:56:29.604Z",
+    "plan_sha256": "34a04b5f864fc229f142c30c84fe2a3455e8fa9ecfb528f9b1713a5095e32719",
+    "rationale": "Root read complete W26/linked findings/relevant W15/doc22/current service/helper/replay/fixtures and accepted-view v8§1.7. Independent exact-plan PASS. Two files/fixed4, no new science/privacy policy."
+  },
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "plan_sha256": "34a04b5f864fc229f142c30c84fe2a3455e8fa9ecfb528f9b1713a5095e32719",
+    "result": "PASS exact plan; live brand filter excludes unknown brand without whole-response failure, preserves shared/global-item and replay behavior. Fixed4; no writes/runtime."
+  },
+  "limitations": "Live brand-local fatigue eligibility only. Preserve same-brand cross-slot/page/arm counting, windows/default/timeout, shared optional-brand helper and historical recorded-input replay. No new policy/history/retention, historical ranking repair, full W26/finding/hard-isolation/customer/SLO/release acceptance or external operations. W22.07/W22.09 complete accepted artifacts/reviews preserved."
+}

@@ -1,0 +1,21 @@
+{
+  "at": "2026-09-16T21:21:01.464Z",
+  "continues": {
+    "path": "docs/remediation/evidence/W01.08/admission-demo-fixtures-narrowed.json",
+    "sha256": "86f214840c0170b2607eae2f71845e7c099379a595b9e518041b524ecbdca3fa"
+  },
+  "contract_digest": "e2ded875c514ed45ae3d186ada13916040454c5435448fc9d840b02218f77082",
+  "reason": "K3 current ownership validation returns 401 before the legacy demo fixture reaches audience seeding: makeDO lacks state.id and matching env.SHOPPER_REFLEX.idFromName. This fixture mismatch predates W01; the existing admitted demo-compatibility assertion must exercise real current ownership rather than be skipped.",
+  "baseline": {
+    "path": "src/reflex/shopperReflex.test.ts",
+    "sha256": "a77371890a04d202d40f94c3c9e20470b0f64d96213a07303a8595a850cb50fa"
+  },
+  "scope": "Already-owned shopperReflex.test.ts makeDO setup only: provide matching state.id and namespace idFromName using the canonical object identity. No production ownership change, bypass, mocked authorization verdict or weakened seed/socket oracle.",
+  "verification": "Unchanged K1/K2/K3; retain three selected K3 cases and exact existing assertions. Failed runs remain in worker evidence.",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T21:21:01.464Z",
+    "scope": "Narrow synthetic fixture identity correction within the existing W01 demo-compatibility requirement."
+  },
+  "limits": "No deployment, customer operation, broader suite or full W01 acceptance."
+}

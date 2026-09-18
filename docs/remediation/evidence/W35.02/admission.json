@@ -1,0 +1,28 @@
+{
+  "task_id": "W35.02",
+  "at": "2026-09-15T21:26:32.878Z",
+  "plan": {
+    "path": "docs/remediation/design/W35.02/plan.md",
+    "sha256": "e0693da5be43dd28a487f4f1aaab73887be3d68e23060ad5d4635ed269832ebf"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W35.02/baseline.json",
+    "sha256": "1af92fa70ad142fb490ff838e5b1fc399cd5405d0eaf91e7ccebd1c638d47027"
+  },
+  "contract_digest": "82863e33a7cdd31c3c6c0eb212ff57c91872675430080e85c98ac4be6c5ea319",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T21:26:32.878Z",
+    "plan_sha256": "e0693da5be43dd28a487f4f1aaab73887be3d68e23060ad5d4635ed269832ebf",
+    "rationale": "Complete W35 and linked findings/source read; current board VALID. Distinct Astra/xhigh exact-plan PASS, bounded context contract with unknown/read-only/consent controls; existing D03 choice reused."
+  },
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "plan_sha256": "e0693da5be43dd28a487f4f1aaab73887be3d68e23060ad5d4635ed269832ebf",
+    "result": "PASS exact plan; fixed12 correct; read-only/consent/ownership/policy and bounded SDK transport retained."
+  },
+  "limitations": "Local W35 visit/channel/SDK wiring only under approved DO target. No host toggle/migration/deployment, seeded gamma-zero influence, classifier/memory/journey calibration, distinct-visit dedup, new privacy/retention/science, native/customer/SLO/release acceptance or full W35/F14 closure. Existing W35.01 commit, W22.07 buffered and W26.04 fatigue implementations retained; overlapping exact proofs qualified with history/unowned assurance. W22.09 unchanged. No install/stage/commit/push/unrelated build/cloud/credentials/customer-data/destructive/external operations."
+}

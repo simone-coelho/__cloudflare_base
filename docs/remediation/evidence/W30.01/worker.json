@@ -1,0 +1,221 @@
+{
+  "task_id": "W30.01",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12 17:47:50 UTC",
+  "source_go_at": "2026-09-12T17:40:25.812Z",
+  "contract_digest": "ab5cba3191239452ec1b0da84d67c0481e066779bd9d5911d9c6b2a87cda49b6",
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W30.01/plan.md",
+      "sha256": "5bd349259e87847392477b79a59b723fa35744128e6eabd698e932dced9bac30"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W30.01/baseline.json",
+      "sha256": "ff3222d3b2c64063c8f139938ddca5747d88e9483898714774d748e88c6b11c8"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W30.01/admission.json",
+      "sha256": "1fa3726b54b1df9058e2373c6b1b1c63bdce2856866b2d1c74eae107d0452653"
+    }
+  },
+  "implementation_summary": [
+    "Attribution now uses transient per-visitor rings from surviving pre-hour carry-in and loaded current-hour decisions, rather than the end-of-hour persisted ring.",
+    "Stable timestamp ordering puts decisions before equal-time outcomes. Existing hour-start horizon and cross-brand cap apply before brand/session/named-slot/reward policy.",
+    "Forward and repeated hours use the same calculation. Persisted append/through/seen, erasure cleanup, date refusal and final retained ring behavior are unchanged; no additional storage reads or schema.",
+    "Three grouped additions prove restored early credit, same-hour reconstruction, actual hourly/raw-report results, next-hour restart retention, timestamp ties, erasure and tenant/brand boundaries. Preceding-cap and evicted carry-in limits remain explicit."
+  ],
+  "criterion_verdicts": {
+    "W30.01-C1": {
+      "worker_result": "pass",
+      "basis": "Later decisions no longer erase an earlier outcome's eligible exposure; stable timestamp ties, current-hour boundaries and the retained-cap counterexample are tested."
+    },
+    "W30.01-C2": {
+      "worker_result": "pass",
+      "basis": "Same-hour rebuild preserves restored current-hour credit without persisted append/rewind; actual report/retained200 restart and inclusive erasure/cross-brand/tenant boundaries, plus all five existing W06.07 and W26.01 checks."
+    },
+    "W30.01-C3": {
+      "worker_result": "worker_checks_pass_independent_review_pending",
+      "basis": "Two-file delta, fixed12, compiler, zero-warning scoped lint, whitespace and22 protected pins; separate frozen review and lead acceptance pending."
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 12,
+      "unselected": 8,
+      "files": 1,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 93332,
+      "chunk_id": "70b359",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w30_static1"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "command_capture": "w30_static1"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w30_static1"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 71389,
+      "chunk_id": "38d974",
+      "component_semantics": "The exact admitted && chain completed with exit0; all components ran and returned0."
+    }
+  },
+  "execution_history": [
+    {
+      "attempt": "w30_runtime1",
+      "result": "11passed/1failed/8unselected; exit1/drained",
+      "failure": "The next-hour click fixture was54m36s after its12:06:24 exposure, beyond the existing30-minute click policy.",
+      "correction": "Moved only205 later fixture decisions to12:58+n*100ms; preserved policy, within-hour ordering, cap and test count."
+    },
+    {
+      "attempt": "w30_runtime2",
+      "result": "12passed/8unselected; exit0/drained on final bytes"
+    },
+    {
+      "attempt": "w30_static1",
+      "result": "Compiler/scopedlint0errors0warnings/whitespace exit0/drained"
+    },
+    {
+      "attempt": "w30_stop_capture",
+      "result": "Two source hashes frozen;22/22 protected dependency pins unchanged"
+    }
+  ],
+  "command_captures": [
+    {
+      "id": "w30_runtime1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts -t 'W30.01|W06.07|W26.01|the day from its hours|an hour built again|the rings forget' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12 17:44:19 UTC",
+      "captures": [
+        {
+          "chunk_id": "be0e6e",
+          "wall_time_seconds": 1.001719719,
+          "session_id": 49845,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "11097e",
+          "wall_time_seconds": 0.000002083,
+          "exit_code": 1,
+          "original_token_count": 409,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/learn/hourly.test.ts  (20 tests | 1 failed | 8 skipped) 84ms\n   ❯ src/learn/hourly.test.ts > the hourly fold > W30.01 restores early credits in actual hourly reports and retains the bounded ring across the next hour\n     → expected +0 to be 1 // Object.is equality\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/learn/hourly.test.ts > the hourly fold > W30.01 restores early credits in actual hourly reports and retains the bounded ring across the next hour\nAssertionError: expected +0 to be 1 // Object.is equality\n\n- Expected\n+ Received\n\n- 1\n+ 0\n\n ❯ src/learn/hourly.test.ts:122:61\n    120|     const later = out('v', 's', T12 + 61 * MIN, 'click', 'later-204');…\n    121|     const second = await buildHour(restart, 'coach', { date: ids.date,…\n    122|     expect(second.brands.coach!.policies.learning!.credits).toBe(1);\n       |                                                             ^\n    123|     const folded = reportFromHours([repeated, second], ids, learn, NOW…\n    124|     const raw = buildReport({ ...ids, learning, reporting: policiesOf(…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed (1)\n      Tests  1 failed | 11 passed | 8 skipped (20)\n   Start at  13:44:21\n   Duration  3.63s (transform 534ms, setup 0ms, collect 1.09s, tests 84ms, environment 0ms, prepare 1.65s)\n\n"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "ended_at": "2026-09-12 17:45:24 UTC",
+      "session_id": 49845
+    },
+    {
+      "id": "w30_runtime2",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts -t 'W30.01|W06.07|W26.01|the day from its hours|an hour built again|the rings forget' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12 17:45:37 UTC",
+      "captures": [
+        {
+          "chunk_id": "118f6a",
+          "wall_time_seconds": 1.000875971,
+          "session_id": 93332,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "70b359",
+          "wall_time_seconds": 0.00000202,
+          "exit_code": 0,
+          "original_token_count": 124,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (20 tests | 8 skipped) 83ms\n\n Test Files  1 passed (1)\n      Tests  12 passed | 8 skipped (20)\n   Start at  13:45:43\n   Duration  4.60s (transform 558ms, setup 0ms, collect 1.18s, tests 83ms, environment 0ms, prepare 2.41s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "ended_at": "2026-09-12 17:45:53 UTC",
+      "session_id": 93332
+    },
+    {
+      "id": "w30_static1",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/hourly.ts src/learn/hourly.test.ts --max-warnings 0 && git diff --check -- src/learn/hourly.ts src/learn/hourly.test.ts",
+      "started_at": "2026-09-12 17:46:00 UTC",
+      "captures": [
+        {
+          "chunk_id": "6143ca",
+          "wall_time_seconds": 1.001498103,
+          "session_id": 71389,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "38d974",
+          "wall_time_seconds": 0.00000127,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "ended_at": "2026-09-12 17:46:42 UTC",
+      "session_id": 71389
+    },
+    {
+      "id": "w30_stop_capture",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=path=>createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\");const b=JSON.parse(fs.readFileSync(\"docs/remediation/design/W30.01/baseline.json\",\"utf8\"));const owned=new Set(b.owned.map(x=>x.path));const protectedPins=b.pins.filter(x=>!owned.has(x.path));const mismatches=protectedPins.filter(x=>hash(x.path)!==x.sha256);const references=Object.fromEntries([[\"plan\",\"docs/remediation/design/W30.01/plan.md\"],[\"baseline\",\"docs/remediation/design/W30.01/baseline.json\"],[\"admission\",\"docs/remediation/evidence/W30.01/admission.json\"]].map(([name,path])=>[name,{path,sha256:hash(path)}]));console.log(JSON.stringify({final_source_stop:{at:new Date().toISOString(),files:b.owned.map(x=>({path:x.path,sha256:hash(x.path)}))},protected_source_comparison:{expected:22,matched:protectedPins.length-mismatches.length,mismatches},references},null,2));if(protectedPins.length!==22||mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12 17:46:59 UTC",
+      "captures": [
+        {
+          "chunk_id": "924ad1",
+          "wall_time_seconds": 0.00946748,
+          "exit_code": 0,
+          "original_token_count": 251,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T17:46:59.713Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/hourly.ts\",\n        \"sha256\": \"f90a57425c5960179aa9855d03706d9ac85a65e14420af39efe5ef05e788d653\"\n      },\n      {\n        \"path\": \"src/learn/hourly.test.ts\",\n        \"sha256\": \"5e3b46d225bd05390f46205f53c1a47c8f1dbd94485b6173e27dc23e4315e726\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 22,\n    \"matched\": 22,\n    \"mismatches\": []\n  },\n  \"references\": {\n    \"plan\": {\n      \"path\": \"docs/remediation/design/W30.01/plan.md\",\n      \"sha256\": \"5bd349259e87847392477b79a59b723fa35744128e6eabd698e932dced9bac30\"\n    },\n    \"baseline\": {\n      \"path\": \"docs/remediation/design/W30.01/baseline.json\",\n      \"sha256\": \"ff3222d3b2c64063c8f139938ddca5747d88e9483898714774d748e88c6b11c8\"\n    },\n    \"admission\": {\n      \"path\": \"docs/remediation/evidence/W30.01/admission.json\",\n      \"sha256\": \"1fa3726b54b1df9058e2373c6b1b1c63bdce2856866b2d1c74eae107d0452653\"\n    }\n  }\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "session_id": null
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T17:46:59.713Z",
+    "files": [
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "f90a57425c5960179aa9855d03706d9ac85a65e14420af39efe5ef05e788d653"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "5e3b46d225bd05390f46205f53c1a47c8f1dbd94485b6173e27dc23e4315e726"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 22,
+    "matched": 22,
+    "mismatches": []
+  },
+  "limitations": [
+    "Bounded attribution over already-loaded current-hour rows and surviving retained carry-in, not full W30/F17/F18/F25/N08/N23 reconstruction or online/batch parity.",
+    "Original F17P2 remains: decisions preceding the outcome can still exhaust the cap. Evicted pre-hour carry-in cannot be recovered; its absence on rebuild is explicitly tested. No arbitrary higher-cap repair or automatic refolding of later dependent hours.",
+    "Aggregate/ring persistence remains nontransactional. Existing non-forward ringsFolded:false and newer-date refusal remain; no checkpoint/maturity/delivery watermark, extra storage read or raw-data retention.",
+    "Fixed synthetic Node/R2 tests are not native/deployed capacity, multi-hour catch-up, seven-day history, policy/coverage/window quality, customer or release acceptance.",
+    "Accepted W06 privacy, W23 arithmetic, W26 named-slot and W28 withdrawal implementations are preserved. No other source, kit, governance, infrastructure, cloud/customer-data repair, deployment, commit or external operations.",
+    "Baseline is the admitted source-confirmed design case, not a claimed baseline runtime probe. Independent frozen review and lead acceptance remain pending."
+  ]
+}

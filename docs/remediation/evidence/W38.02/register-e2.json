@@ -1,0 +1,196 @@
+{
+  "before": null,
+  "after": {
+    "id": "W38.02-E2",
+    "task_id": "W38.02",
+    "check_id": "W38.02-K2",
+    "criterion_ids": [
+      "W38.02-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-worker",
+    "run_id": "/root/w1405_design",
+    "file": {
+      "path": "docs/remediation/evidence/W38.02/worker.json",
+      "sha256": "9fba0b389282a44f5bb613ca7ff5e1b837d3f04bc9ff7a57a32d799e097934dc"
+    },
+    "at": "2026-09-13T04:30:04.407Z",
+    "limitations": "Legacy configuration-cache residency and isolation only, not full W38/F32/F08/N07, legacy KV transactional authority, customer workload or release acceptance. Its independent 32-entry/8 MiB charged-serialization budget is not total JS heap or a platform capacity claim; the separate content cache retains its own budget. Mutable values use detached private snapshots and caller-owned clones; this adds bounded cloning work, not per-hit parsing/validation or I/O. Expiry is opportunistic. Provided nowMs semantics remain, with separate elapsed-read safeguards. Original in-flight calls may return original values but cannot refill after local invalidation. Concurrent miss allocation, oversized-document parsing/validation, immutable-history retention, compatibility cutover and whole read/validate/compose/native latency qualification remain separate. No ranking, candidate, model, schema, customer policy, cloud/deploy/install/emitted-build/provision/seed/credential/customer-data/commit/push/destructive/external operations. Prior W31.02/W38.01 byte-specific proof is retained with prospective revalidation qualification; their implemented remedies are preserved. The admitted exact command selects 17 tests: the 16 planned cases plus the existing Reflex history/diffing case matched by the same regex. Root detected this count-label error before runtime (a01dcf); no command or fixture was changed and no extra suite was introduced. The extra existing case covers the same changed legacy store. Actual counts, not the earlier fixed16 label, govern reported execution.",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/versionedStore.ts src/config/versionedStore.test.ts --max-warnings 1 && git diff --check -- src/config/versionedStore.ts src/config/versionedStore.test.ts",
+    "runtime": "Installed full compiler/two-file ESLint/scoped tracked whitespace.",
+    "workload": "Zero errors/new warnings; only inherited coerce scope warning admitted. No config changes.",
+    "result": "pass",
+    "artifact_digest": "899e0bafea407f510c2e577f7fe8504b5b6e540340c32dd792b36f096830d7b0",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "028d1e7b2371c445cbab8149ebd755611f5a6699ff8f9fe1118a9074363a71e7",
+      "configuration": "Legacy configuration-cache residency and isolation only, not full W38/F32/F08/N07, legacy KV transactional authority, customer workload or release acceptance. Its independent 32-entry/8 MiB charged-serialization budget is not total JS heap or a platform capacity claim; the separate content cache retains its own budget. Mutable values use detached private snapshots and caller-owned clones; this adds bounded cloning work, not per-hit parsing/validation or I/O. Expiry is opportunistic. Provided nowMs semantics remain, with separate elapsed-read safeguards. Original in-flight calls may return original values but cannot refill after local invalidation. Concurrent miss allocation, oversized-document parsing/validation, immutable-history retention, compatibility cutover and whole read/validate/compose/native latency qualification remain separate. No ranking, candidate, model, schema, customer policy, cloud/deploy/install/emitted-build/provision/seed/credential/customer-data/commit/push/destructive/external operations. Prior W31.02/W38.01 byte-specific proof is retained with prospective revalidation qualification; their implemented remedies are preserved. The admitted exact command selects 17 tests: the 16 planned cases plus the existing Reflex history/diffing case matched by the same regex. Root detected this count-label error before runtime (a01dcf); no command or fixture was changed and no extra suite was introduced. The extra existing case covers the same changed legacy store. Actual counts, not the earlier fixed16 label, govern reported execution.",
+      "files": [
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "output",
+          "sha256": "906928a653f79dd395c03a30b1bd6b0ca59fdab62204adb98e085664dfb5f0b2"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "role": "output",
+          "sha256": "178aae18f1634b6eb641924638a22c8be4667ae12b9db0473b8a7ebbc1b6453a"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53"
+        },
+        {
+          "path": "src/reflex/configStore.test.ts",
+          "role": "source",
+          "sha256": "a65c44dc36816a11c9c47c2e28eacbd555ecc9e0bd7bb19ffbbbcd9e0d7ba05d"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+        },
+        {
+          "path": "src/learn/cycle.ts",
+          "role": "source",
+          "sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c"
+        },
+        {
+          "path": "src/learn/priors.ts",
+          "role": "source",
+          "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "source",
+          "sha256": "659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "38ca715650d602fb7ce07316494911dad6a657a614114f3b00ccca850b69e0ee"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/33-adversarial-audit-brief.md",
+          "role": "source",
+          "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.01/acceptance.md",
+          "role": "source",
+          "sha256": "1c0076af128b09e23a1ebc556d2fa8abc32ccc18a8c6bdda9f58f62c45dbd7e9"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.01/worker.json",
+          "role": "source",
+          "sha256": "127d3c6303ed1b37b9b193867d329174029569be403b88d40165787afa298ee8"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.02/worker.json",
+          "role": "output",
+          "sha256": "9fba0b389282a44f5bb613ca7ff5e1b837d3f04bc9ff7a57a32d799e097934dc"
+        },
+        {
+          "path": "docs/remediation/design/W38.02/plan.md",
+          "role": "configuration",
+          "sha256": "04a439782cb9360b92b18ba01730a7e1cc61eaf6c9e3e73d7a4615f0f96f5105"
+        },
+        {
+          "path": "docs/remediation/design/W38.02/baseline.json",
+          "role": "configuration",
+          "sha256": "1486f45e0f9b60f3554a2cd18e89bd39d2dc405894e665190e195adb2ccbf4f1"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.02/admission.json",
+          "role": "configuration",
+          "sha256": "25e75a450bed6df75b897a290502d4e74e452b820973c5ee6ed2ce0825d6caa9"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.02/source-freeze.json",
+          "sha256": "7937dce212015d4cfd807b6b395fdffedcbd1f3910a3d8dc4df2ca8e907f7cc2",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.02/source-deltas.json",
+          "sha256": "1941064e1e4c7ed1f4445a95533bdcdecbc83c6335dd02194ed4884d1755a7ea",
+          "role": "configuration"
+        }
+      ],
+      "digest": "899e0bafea407f510c2e577f7fe8504b5b6e540340c32dd792b36f096830d7b0"
+    }
+  }
+}

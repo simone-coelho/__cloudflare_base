@@ -1,0 +1,210 @@
+{
+  "task_id": "W10.03",
+  "at": "2026-09-17T22:44:03.846Z",
+  "source_state": "SOURCE/EVIDENCE STOP; all worker/native sessions drained. Connected source findings corrected and read-only reviewer supported; final frozen whole-W10/K6/K7 pending boardGO.",
+  "worker": {
+    "path": "docs/remediation/evidence/W10.03/worker.json",
+    "sha256": "798d92e948976fdcfc9f0699fe0bf7fb391b9bcfdcd72ea536b624fadf432686",
+    "bytes": 734616
+  },
+  "admission": {
+    "path": "docs/remediation/evidence/W10.03/admission.json",
+    "sha256": "88daf3f37f38f37b5a1550a7b79b097a460b75ceb1820294648acf7c117df3f8",
+    "bytes": 34268
+  },
+  "artifact": {
+    "digest": "b32b2ee285f059b0f48636b45bc541a2d76fc63ab8df368b0b7bd7be6e55aa02",
+    "contract_digest": "c64a29509a8dd68fe84d64ef109e84c5ae2c779be4d33db15d5f656b83a89c1d",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W10.03",
+    "files": 118,
+    "worker_pin_digest": "31d8f6fbbe243bd7d691fa1b68d39ddbb32fe8a5cce17d7f285f954dffc25278"
+  },
+  "identity": {
+    "originals": 15,
+    "reversible_deltas": 15,
+    "changed_outputs": 15,
+    "protected_unchanged": 103,
+    "complete_primary_integrities": 20,
+    "root_verification": "Matched15dirty baselines to admission; verified15reversible patches/118currentpins/103protected. All20compressed primary hashes/lengths checked. Complete passing and native-failure outputs read; K5.2 repetitive failed typing output summarized explicitly, not falsely claimed full root read. Three exact validation-spelling reversals independently produce prior ee1dc175bd7ca155c7f64d954d5dabb4ed01bd271c8992de6d70fbe27a86cb27; all7warning original/final source lines identical."
+  },
+  "results": [
+    {
+      "id": "K1.3",
+      "result": "PASS",
+      "passed": 26,
+      "unselected": 16,
+      "qualification": "source_qualification",
+      "check_id": "W10.03-K1",
+      "primary_sha256": "75b052726b2a0469089aa6beed587c4ad4f62cca81e35e69f244f548a18f6016",
+      "primary_bytes": 18729,
+      "started_at": "2026-09-17T22:27:28.048Z",
+      "finished_at": "2026-09-17T22:27:36.034Z",
+      "exit_code": 0
+    },
+    {
+      "id": "K2.2",
+      "result": "PASS",
+      "passed": 5,
+      "unselected": 62,
+      "qualification": "source_qualification",
+      "check_id": "W10.03-K2",
+      "primary_sha256": "426b431c82483553c7d18d1dab1b023ba7aa4b10b7b089ef88b9d754ba6d0d59",
+      "primary_bytes": 26338,
+      "started_at": "2026-09-17T22:27:26.292Z",
+      "finished_at": "2026-09-17T22:27:39.539Z",
+      "exit_code": 0
+    },
+    {
+      "id": "K3.1",
+      "result": "PASS",
+      "passed": 7,
+      "qualification": "source_qualification",
+      "check_id": "W10.03-K3",
+      "primary_sha256": "451aca6480fa97c1bd408564078377ec7f2c03bc53c1cfd40a214b26f66b599a",
+      "primary_bytes": 17838,
+      "started_at": "2026-09-17T22:22:14.136Z",
+      "finished_at": "2026-09-17T22:22:22.710Z",
+      "exit_code": 0
+    },
+    {
+      "id": "K4.8",
+      "result": "PASS",
+      "passed": 1,
+      "unselected": 67,
+      "qualification": "exact final pins",
+      "check_id": "W10.03-K4",
+      "primary_sha256": "19d67fc91684879cdb920fe8a6e0220c3a95ac670d68b454172bc4db911f93bc",
+      "primary_bytes": 24783,
+      "started_at": "2026-09-17T22:37:29.541Z",
+      "finished_at": "2026-09-17T22:37:53.523Z",
+      "exit_code": 0
+    },
+    {
+      "id": "K5.5",
+      "result": "PASS",
+      "compiler": 0,
+      "lint_errors": 0,
+      "lint_warnings": 7,
+      "whitespace": 0,
+      "qualification": "exact final pins",
+      "check_id": "W10.03-K5",
+      "primary_sha256": "eda436ff7edf837ee935e02cd9f65076d81d2f2432a6b46f9083d283bed32eba",
+      "primary_bytes": 19085,
+      "started_at": "2026-09-17T22:38:10.712Z",
+      "finished_at": "2026-09-17T22:38:51.495Z",
+      "exit_code": 0
+    }
+  ],
+  "source_qualification": [
+    {
+      "id": "K1.3",
+      "source_differences": [
+        {
+          "path": "src/durable-objects/LearnStats.ts",
+          "before_sha256": "ee1dc175bd7ca155c7f64d954d5dabb4ed01bd271c8992de6d70fbe27a86cb27",
+          "after_sha256": "fc40213a846905cf4cfd3bcdc99c43a57d457d0cc8b4689159086237e19734c7"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "before_sha256": "137ebf3818bf182e48b6f66cc875bc84ee45a7881a2a0976897366e4e57ef00b",
+          "after_sha256": "ff38cd227d26e16d60fde20b42497e6d0dc0c790c352a901e9762b52c9d8cd2f"
+        }
+      ],
+      "basis": "Reused passing command, not rerun on final bytes: the only production difference is equivalent U+0000–U+001F and delimiter validation spelling. Reversing the three exact substitutions yields prior LearnStats SHA ee1dc175bd7ca155c7f64d954d5dabb4ed01bd271c8992de6d70fbe27a86cb27 for both attempts. Other delta is the unselected native fixture."
+    },
+    {
+      "id": "K2.2",
+      "source_differences": [
+        {
+          "path": "src/durable-objects/LearnStats.ts",
+          "before_sha256": "ee1dc175bd7ca155c7f64d954d5dabb4ed01bd271c8992de6d70fbe27a86cb27",
+          "after_sha256": "fc40213a846905cf4cfd3bcdc99c43a57d457d0cc8b4689159086237e19734c7"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "before_sha256": "137ebf3818bf182e48b6f66cc875bc84ee45a7881a2a0976897366e4e57ef00b",
+          "after_sha256": "ff38cd227d26e16d60fde20b42497e6d0dc0c790c352a901e9762b52c9d8cd2f"
+        }
+      ],
+      "basis": "Reused passing command, not rerun on final bytes: the only production difference is equivalent U+0000–U+001F and delimiter validation spelling. Reversing the three exact substitutions yields prior LearnStats SHA ee1dc175bd7ca155c7f64d954d5dabb4ed01bd271c8992de6d70fbe27a86cb27 for both attempts. Other delta is the unselected native fixture."
+    },
+    {
+      "id": "K3.1",
+      "source_differences": [
+        {
+          "path": "src/durable-objects/LearnStats.ts",
+          "before_sha256": "127628c51911bf22511dd0c0b59b4cc61150ca3756a2b861dda9eb06d330f64a",
+          "after_sha256": "fc40213a846905cf4cfd3bcdc99c43a57d457d0cc8b4689159086237e19734c7"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "before_sha256": "5e956c72e3e6fb3cf6c8fea69f2a965e8f3dd23d5f1cd2c0d83199310cc8447f",
+          "after_sha256": "d59c88b7155f5fe1cd55abdced9a445f70e1d4e2e3bea8649b80f4946364471e"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "before_sha256": "44168db8312e3dec504c6d069facd3fa61a3146a558b430151b320df68047ff7",
+          "after_sha256": "ad28ffcf791a78735a300c0c17ad32f57cf059056d6b83d7a9db93a181efbce5"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "before_sha256": "54d3d7cde77999423446fc97f9f776ddad13925d2d03eb7c2c5e5cbf4fecd3dd",
+          "after_sha256": "766cea490a173085b3d0754f56b5d06c81721fc8c0c901bc4690097ccd324671"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "before_sha256": "68562eca14c4813ef17bac9785a16228b0c2e75e74934b73fafda8c343f440aa",
+          "after_sha256": "ff38cd227d26e16d60fde20b42497e6d0dc0c790c352a901e9762b52c9d8cd2f"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "before_sha256": "11f47c7fc915e56ceaa97c1a6f06005e8922421f35cc92975ae803eba187f7af",
+          "after_sha256": "e7526215da99e12f7fce455fc5a7a2a87eedd1842b79d592173a01d7a53f2159"
+        }
+      ],
+      "basis": "Reused unchanged cell/channel component proof: selected fixtures and their cell/reflex configuration/entry-channel dependencies are unchanged; later changes are learning DOs, other fixtures and API guidance, not this command's exercised dependency paths."
+    },
+    {
+      "id": "K4.8",
+      "source_differences": [],
+      "basis": "Exact final 118 pins; native DO-to-Worker full body consumption, not a claim that prior Node proxy stream failures are fixed."
+    },
+    {
+      "id": "K5.5",
+      "source_differences": [],
+      "basis": "Exact final 118 pins; Worker compiler, all14 owned TypeScript lint and all15 owned-file whitespace."
+    }
+  ],
+  "warning_counts": {
+    "baseline": 7,
+    "final": 7,
+    "inherited": 7,
+    "new": 0,
+    "resolved": 0,
+    "errors": 0
+  },
+  "native": {
+    "primary": "K4.8",
+    "actual_SQLite": true,
+    "managed_effects": 1200,
+    "events": 1201,
+    "items": 256,
+    "serialized_bytes": 280570,
+    "persisted_restart": true,
+    "ring": 200,
+    "index": 241,
+    "owner_health_ms": {
+      "positive": 7,
+      "held_fallback": 52
+    },
+    "outbound_attempts": 0,
+    "disposal": true,
+    "limit_probe": "3MiB synthetic write rejected with explicit SQLITE_TOOBIG; key absent, not universal threshold."
+  },
+  "limitations": [
+    "K1.3/K2.2 are qualified reuse after equivalent validation spelling and unselected native fixture change; K3.1 unchanged cell dependencies. Not falsely labeled final reruns. K4.8/K5.5 match exact118finalpins.",
+    "K4.1/.2/.5/.6/.7 DO-to-Node proxy stream termination remains unexplained/retained. K4.8 fully consumes and parses real native DO responses within Worker; proves that caller path, not Node bridge fix or live HTTP delivery acceptance. Withdrawn missing-await hypothesis preserved as error, not a product remedy.",
+    "Independent whole-W10/K6/K7 still required; no local acceptance. FullC8/K8/customer/live/SLO/real historic repair remains OPEN final separately authorized batch. No deployment/cloud/resource/customer/credential/commit/merge/push/new framework/broadCI/package/SDKbuild."
+  ]
+}

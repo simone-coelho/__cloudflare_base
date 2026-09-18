@@ -1,0 +1,127 @@
+{
+  "at": "2026-09-13T03:31:06.916Z",
+  "task_id": "W38.01",
+  "contract_digest": "837a994a11c3e933d1128edf1ef4fa3fb8095aee518e90fd0c191f0fd6f7a25e",
+  "source": "Root inspected two actual deltas and complete final worker captures. Final-byte fixed5/static passed, protected pins match pre-GO; distinct frozen review remains required. Actual global residency/charges/hits/misses, cache invalidation races and unchanged publication authority are checked in fixed5; no native capacity or total heap claim.",
+  "source_stopped_at": "2026-09-13T03:29:23.684Z",
+  "owned_whitespace": {
+    "method": "Direct final source line check, including inherited untracked publication.ts; git diff alone is insufficient for that file.",
+    "results": [
+      {
+        "path": "src/config/publication.ts",
+        "trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/config/versionedStore.test.ts",
+        "trailing_whitespace_lines": []
+      }
+    ]
+  },
+  "owned": [
+    "src/config/publication.ts",
+    "src/config/versionedStore.test.ts"
+  ],
+  "pins": [
+    {
+      "path": "src/config/publication.ts",
+      "role": "output",
+      "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+    },
+    {
+      "path": "src/config/versionedStore.test.ts",
+      "role": "output",
+      "sha256": "0a1882688ed530b58cf6e6c33ad03df3cc94ae8f8a86134442216a7cb0239b93"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "source",
+      "sha256": "b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "source",
+      "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+    },
+    {
+      "path": "src/content/service.ts",
+      "role": "source",
+      "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "role": "source",
+      "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+    },
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "role": "source",
+      "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+    },
+    {
+      "path": "src/routes/content.ts",
+      "role": "source",
+      "sha256": "38ca715650d602fb7ce07316494911dad6a657a614114f3b00ccca850b69e0ee"
+    },
+    {
+      "path": "src/types/env.ts",
+      "role": "source",
+      "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "role": "source",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F32.md",
+      "role": "source",
+      "sha256": "cb855f278bd500f51567f2f5c3cb7c0988c3c1e309987d9ca1c7f7a9b3748df4"
+    },
+    {
+      "path": "docs/architecture/33-adversarial-audit-brief.md",
+      "role": "source",
+      "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+    },
+    {
+      "path": "docs/remediation/design/W11.01/plan-v2.md",
+      "role": "source",
+      "sha256": "5ee066b9c819c187d4d23627f39994bc0cc2a61689bdc6946d486f14a0f4eeaf"
+    },
+    {
+      "path": "docs/remediation/evidence/W11.01/acceptance.md",
+      "role": "source",
+      "sha256": "5acbcfec49a0de4ce81465f23b1d72db925a5c5679c65a501bbe1ecd7b157695"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    }
+  ],
+  "unowned_unchanged": 18
+}

@@ -1,0 +1,31 @@
+{
+  "task_id": "W22.04",
+  "at": "2026-09-14T15:50:37.917Z",
+  "plan": {
+    "path": "docs/remediation/design/W22.04/plan.md",
+    "sha256": "ae83df765514550f2ab99b0163b3b5f810a2498b76388e816c2c68ffecf950cf"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W22.04/baseline.json",
+    "sha256": "30822fe2a8da48bc947d2c8a5102a3d558ee9217d64252bbb9b0687e6332460e"
+  },
+  "contract_digest": "654a5f53b1631379685824545d9f57c6270d041ead2d57e3dbc4863cae941020",
+  "independent_preflight": {
+    "actor_id": "w2204-reviewer",
+    "run_id": "/root/w2204_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "ae83df765514550f2ab99b0163b3b5f810a2498b76388e816c2c68ffecf950cf",
+    "read_capture": "303297",
+    "scope": "Exact plan only; no implementation acceptance."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-14T15:50:37.917Z",
+    "plan_sha256": "ae83df765514550f2ab99b0163b3b5f810a2498b76388e816c2c68ffecf950cf",
+    "rationale": "Root completed requirements/source reads; distinct Astra/xhigh exact-plan PASS ae83df7655 (read303297). Fixed12 and source-confirmed fixture repairs, original-own metadata validation and cutoff-before-comparison; no durable identity state."
+  },
+  "fixed_checks": 12,
+  "limitations": "Same-invocation decision coalescing and malformed online outcome identity refusal only. Separate invocations still increment exposure/credit counters, and retained ring collisions can still coexist with statistics acceptance. No durable sink idempotency, completeness, historical repair, accumulation/reset transition, served/rendered/viewable denominator or customer policy change. LearnStats remains identifier-free; any persistent event token, including a linkable hash, needs the D06 privacy/retention/erasure decision and W24 transition/recovery design. Existing cross-store erasure races and stricter retained ring full-payload comparison remain. New fan physical/work caps are conservative local admission limits, not native/SLO/customer/release acceptance. No commits/push/build/install/deploy/cloud/credentials/customer-data/destructive/external operations."
+}

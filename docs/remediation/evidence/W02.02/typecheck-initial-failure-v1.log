@@ -1,0 +1,24 @@
+src/auth/signing-config.boundary.test.ts(130,45): error TS2322: Type '{ Authorization: string; } | { Authorization?: undefined; }' is not assignable to type 'HeadersInit | undefined'.
+  Type '{ Authorization?: undefined; }' is not assignable to type 'HeadersInit | undefined'.
+    Type '{ Authorization?: undefined; }' is not assignable to type 'Record<string, string>'.
+      Property 'Authorization' is incompatible with index signature.
+        Type 'undefined' is not assignable to type 'string'.
+src/auth/signing-config.boundary.test.ts(131,52): error TS2322: Type '{ Authorization: string; } | { Authorization?: undefined; }' is not assignable to type 'HeadersInit | undefined'.
+  Type '{ Authorization?: undefined; }' is not assignable to type 'HeadersInit | undefined'.
+    Type '{ Authorization?: undefined; }' is not assignable to type 'Record<string, string>'.
+      Property 'Authorization' is incompatible with index signature.
+        Type 'undefined' is not assignable to type 'string'.
+src/auth/signing-config.boundary.test.ts(134,51): error TS2322: Type '{ 'X-SDK-Key': string; Authorization?: undefined; } | { 'X-SDK-Key': string; Authorization: string; }' is not assignable to type 'HeadersInit | undefined'.
+  Type '{ 'X-SDK-Key': string; Authorization?: undefined; }' is not assignable to type 'HeadersInit | undefined'.
+    Type '{ 'X-SDK-Key': string; Authorization?: undefined; }' is not assignable to type 'Record<string, string>'.
+      Property 'Authorization' is incompatible with index signature.
+        Type 'undefined' is not assignable to type 'string'.
+src/middleware/auth.ts(5,70): error TS6307: File '/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/auth/signingConfig.mjs' is not listed within the file list of project '/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via '@/auth/signingConfig.mjs' from file '/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/middleware/auth.ts'
+    Imported via '@/auth/signingConfig.mjs' from file '/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/auth.ts'
+    Imported via '@/auth/signingConfig.mjs' from file '/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/health.ts'
+    Imported via './signingConfig.mjs' from file '/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/auth/signing-config.boundary.test.ts'
+
+exit_code=2
+

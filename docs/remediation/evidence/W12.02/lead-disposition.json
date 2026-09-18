@@ -1,0 +1,46 @@
+{
+  "task_id": "W12.02",
+  "at": "2026-09-18T03:06:36.685Z",
+  "actor_id": "w01-lead",
+  "verdict": "LOCAL_W12_IMPLEMENTED_AND_INDEPENDENTLY_VERIFIED; full acceptance withheld",
+  "artifact_digest": "d6926be92e29a17106cc1505d9a8074fe7b7d75ccb27cc04cf3c135523d9fa9c",
+  "contract_digest": "078fb3af31b292feb584b44f0d0952687122d099ac52d7530b253ca461c65244",
+  "review": {
+    "path": "docs/remediation/evidence/W12.02/review.json",
+    "sha256": "ca95fba260399e844f5a13a80e2bccfbdcbf9637de2e1f4dad3842bf53bb6724"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W12.02/worker.json",
+    "sha256": "20935b3c99f3b39f9b1e7de1952fc710cc183f738084972b6afef13eb5c67064"
+  },
+  "source_freeze": {
+    "path": "docs/remediation/evidence/W12.02/source-freeze.json",
+    "sha256": "0d5ab63c41d50dda0c563bd03c0d102b2beef115e92187f1fcc62219687b13f4"
+  },
+  "results": {
+    "K1": "K1.4 PASS23; exact type-only final fixture delta qualified.",
+    "K2": "K2.4 PASS5; exact type-only final fixture delta qualified.",
+    "K3": "K3.1 PASS3; unchanged selected workflow source/configuration basis qualified.",
+    "K4": "K4.6 exact final compiler/lint0errors81warnings/syntax/whitespacePASS.",
+    "K5": "Distinct whole-originalW12/F10/N19/C1–C8 LOCAL_PASS; C9OPEN; no local blockers.",
+    "K6": "Exact frozen independent PASS8/104unselected; session42470 drained; primary2602481367d29b9bf371963a0e046af173e45f9b5c1fc8a9945cf7ba2d4244f3/36873B; root decoded/read/metadata/hash/138before-after-current pins verified.",
+    "K7": "NOT_RUN; separately authorized final live batch."
+  },
+  "lead_checks": "Standing agreement and whole originalW12 checked. Root verified18dirty originals/reversible deltas,138current/120protected pins,all26worker primaries, final exact independent primary and distinct whole review. Root checker initially referenced nonexistent task.contract_digest; corrected artifact.contract_digest matches, no evidence mismatch. No product edits/tests by root.",
+  "limits": "All four native flows prove decision/event/producer/consumer/ledger/learning with dlqfalse, but correctly fail diagnostic latency thresholds; not SLOgreen. Retain81lintwarnings, diagnostic6missingtimings/pins never acceptance, diagnostic8–9 unprovedcause and postdeadline cancellation. FullC9 resource/policy/activation/actualqueues/provider/oncall/workload/customerSLO/live acceptance OPEN; no release/finding closure.",
+  "next_action": "OriginalW13 local implementation and independent review, then W14–W41 in order; live checks batched separately.",
+  "prospective_overlap": {
+    "next_task": "W13.02",
+    "paths": [
+      "scripts/stamp-workflow.mjs",
+      "scripts/stamp-workflow.test.mjs",
+      ".eslintrc.json",
+      "docs/deployment/01-deploy.md",
+      "package.json",
+      "public/meridian/meridian.js",
+      "scripts/build-sdk.mjs",
+      "src/console/console.render.test.ts"
+    ],
+    "qualification": "Only named shared-source/configuration pins prospectively revalidate; immutable W12 localPASS and unchanged dependencies retained."
+  }
+}

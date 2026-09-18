@@ -1,0 +1,21 @@
+{
+  "at": "2026-09-13T15:49:48.265Z",
+  "task_id": "W19.01",
+  "actor_id": "w01-lead",
+  "source_go_at": "2026-09-13T15:49:48.265Z",
+  "contract_digest": "ff0af9a552112143e6830a55b9176a27cc1fdea3e1a10a7b720f8c4ca5f46c15",
+  "plan": {
+    "path": "docs/remediation/design/W19.01/plan-v2.md",
+    "sha256": "eec80e7be8174c2dc6f227940b1bdc11f98935e62e168a35fa381a3396745a3d"
+  },
+  "supplement": {
+    "path": "docs/remediation/design/W19.01/baseline-supplement.json",
+    "sha256": "ef7178a720a26e609d809842b1ff1cf85e8b42b6f3c5ef407e528aa2c6cf8d83"
+  },
+  "source_admission": "Protected source hash unchanged, remaining closed no overlap, old six stopped pins captured; prior journal preserved.",
+  "initial_failure": "Fixed13 exit1/drained11pass2fail; retained as superseded proof, not a pass.",
+  "worker": "w1404-reviewer",
+  "reviewer": "w1405-reviewer",
+  "runtime": "node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/routes/content.test.ts -t 'W19.01|parses quoted fields|replace drops what is not|W38.04|W11.01 catalog operation boundary|W20.01|W28.01|requires explicit initialization|publishes only approved additions' --maxWorkers=1 --minWorkers=1",
+  "static": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts src/content/enrichment.ts --max-warnings 0 && git diff --check -- src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts docs/kit/03-payload-schemas.md src/content/enrichment.ts"
+}

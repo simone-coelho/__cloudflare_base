@@ -1,0 +1,49 @@
+{
+  "at": "2026-09-07T02:01:10.094Z",
+  "actor_id": "w01-lead",
+  "run_id": "/root",
+  "artifact_digest": "e96e57fa6b2fa46bbe92e7caac450c70e6d5340b500fbd8d91eb4f9b5960202b",
+  "checks": [
+    {
+      "command": "node docs/remediation/evidence/W02.02/lead-artifact-v1.mjs --verify",
+      "started_at": "2026-09-07T01:59:36.833Z",
+      "chunk_id": "5b8988",
+      "wall_time_seconds": 0.000003199,
+      "original_token_count": 68,
+      "output": "{\"at\":\"2026-09-07T01:59:40.485Z\",\"result\":\"pass\",\"digest\":\"e96e57fa6b2fa46bbe92e7caac450c70e6d5340b500fbd8d91eb4f9b5960202b\",\"files\":348,\"localInputs\":43,\"nodeTokenInputs\":85,\"runtimeInputs\":[{\"phase\":\"before-inputs\",\"count\":196},{\"phase\":\"current-inputs\",\"count\":197}]}\n",
+      "exit_code": 0,
+      "collected_at": "2026-09-07T02:00:35.803Z"
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w0202-lead.pl6ELQ/application.tsbuildinfo",
+      "started_at": "2026-09-07T01:59:36.833Z",
+      "chunk_id": "6dcb7f",
+      "wall_time_seconds": 0.00000236,
+      "original_token_count": 0,
+      "output": "",
+      "exit_code": 0,
+      "collected_at": "2026-09-07T02:00:35.812Z"
+    },
+    {
+      "command": "git diff --check",
+      "started_at": "2026-09-07T01:59:36.833Z",
+      "chunk_id": "528e41",
+      "wall_time_seconds": 0.000001482,
+      "original_token_count": 0,
+      "output": "",
+      "exit_code": 0,
+      "collected_at": "2026-09-07T02:00:35.814Z"
+    },
+    {
+      "command": "node --input-type=module -e 'import{readFileSync,existsSync}from\"node:fs\";import{createHash}from\"node:crypto\";const b=JSON.parse(readFileSync(\"docs/remediation/evidence/W01.01/source-baseline.json\"));const t=JSON.parse(readFileSync(\"docs/remediation/tracker.json\"));const allowed=new Set([...t.tasks.find(x=>x.id===\"W02.02\").write_paths,\"src/index.ts\",\"src/routes/api.ts\",\"src/middleware/auth.ts\"]);const sha=x=>createHash(\"sha256\").update(x).digest(\"hex\");const delta=b.files.flatMap(f=>{const h=existsSync(f.path)?sha(readFileSync(f.path)):null;return h===f.sha256?[]:[{path:f.path,before:f.sha256,after:h,authorized:allowed.has(f.path)}]});console.log(JSON.stringify({at:new Date().toISOString(),files:b.files.length,delta,unexpected:delta.filter(d=>!d.authorized),auditSha256:sha(readFileSync(\"docs/architecture/35-audit-verification-and-source-of-truth.md\")),priorFocusedTests:[\"src/index.api-boundary.test.ts\",\"src/middleware/auth.refresh-boundary.test.ts\"].map(path=>({path,sha256:sha(readFileSync(path))}))},null,2));if(delta.some(d=>!d.authorized))process.exitCode=1'",
+      "chunk_id": "a3508f",
+      "wall_time_seconds": 0.997128994,
+      "exit_code": 0,
+      "original_token_count": 1162,
+      "output": "{\n  \"at\": \"2026-09-07T02:01:10.079Z\",\n  \"files\": 330,\n  \"delta\": [\n    {\n      \"path\": \"scripts/acceptance-run.mjs\",\n      \"before\": \"ebdb11e28a48963c50d60ea1341f6214bf11bf9dafdf1dfa9aea04ebed7203ff\",\n      \"after\": \"480119d36115f08c3c873f1ace078fde89c8f11a7c812b741cd8def924a856e6\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"scripts/console-operator.mjs\",\n      \"before\": \"fbe91566c15d466069be13073412b79ecbabb75d706095cd56adf737c9c0eba5\",\n      \"after\": \"790f64c8e137764e8e902f60feab1381c68b8a82e702f22aa8dc753b71fc08d0\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"scripts/dev-token.mjs\",\n      \"before\": \"79ace053ec7a39cfb30629baa82ddcc6e7edf16c95770666f70d26552b9f9869\",\n      \"after\": \"816f4975c78a87c94b8f97b065211b2057e336e0bc30aa574afd4fcd776dcaae\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"scripts/holdout-proof.mjs\",\n      \"before\": \"5ce2244ac63f2e1adf74f5b0a74564f93cf49d7cc3f602678fb723c6e2030061\",\n      \"after\": \"37468d11045f80b7e0bf2ea45ffd937bfaa0339969ddb78cf21ed892f31ffe4d\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"scripts/identity-proof.mjs\",\n      \"before\": \"c09ac92e6fa16ef9bbca45d2e2881ea20f8ed98cb1f483d7b346f0be29dbcc1f\",\n      \"after\": \"fc6772f6cca45f85196b8e10283a2a47a9c248ea4d23dcd923c44dac95121246\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"scripts/import-content.mjs\",\n      \"before\": \"7122a9035ddca283479ddd9598a7a8214bf365d2aa7395fd6b0215b54eb2470d\",\n      \"after\": \"60cb901ee2d84df16b8c06b9096dded0d678a892b92d1035834a97411c05a4e9\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"scripts/rehearse-storefront.sh\",\n      \"before\": \"8f729d77103fa5d11c9eba046e27349a364104aed9cff8dffe95ff73b87c3c2d\",\n      \"after\": \"d1ce1ed02688f13a821991fd25d62d024c70e1100bcdf76b97c233297bfb5bf8\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"scripts/seed-coach-content.mjs\",\n      \"before\": \"cd3d2250dd3f7f450250b29fbd2d3eee5b18e77b5cbea540d16da1e72482e34e\",\n      \"after\": \"2581db213e799fbf60c51e66999a59d907238e43bb6dd8045c7c43b27e4004af\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"src/index.ts\",\n      \"before\": \"a9ca5ae49c3741d9375bd0245c7e377bfd779021055df9d90671b0f580f9f4f1\",\n      \"after\": \"840a34f2ebe134ed3e584870b03034f7bef2c1c9c8203123791546c42419aac7\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"src/middleware/auth.ts\",\n      \"before\": \"65a1553ae0d93627f82f5c6dd3f5acb8ee3a8b94b7d82955c15098d3c1317492\",\n      \"after\": \"71b8bff20c06df6fdcbddd37678a73fcdfe7b0b3dcafbfba49d16b70587c1316\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"src/middleware/edgeAccess.test.ts\",\n      \"before\": \"2f75b62f4b6cd7a793c916c1a04a27c0ed38b4b5b4981d1565eaa2a967de08af\",\n      \"after\": \"abe9cfadecbcd011715879062dd2641e89cec140e969163fccc2544140461c82\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"src/routes/api.ts\",\n      \"before\": \"905f2512b23e6639441067a45864fe25634b3fbf2d9fc977b34370fbd90dca58\",\n      \"after\": null,\n      \"authorized\": true\n    },\n    {\n      \"path\": \"src/routes/auth.test.ts\",\n      \"before\": \"73f89b620baa51c03f6beaa57e0dbd51722c4d05b7980a91006dfb9c12e15fc6\",\n      \"after\": \"4a4dea048fef42294fee798d029f7d79aa8b06e8d5909445e0b57c29ae61a64d\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"src/routes/auth.ts\",\n      \"before\": \"678fd63e42f5ce93b2cce1eb7f6d7a05ee98cbb33d7f18c3b9e04e279ff8d20e\",\n      \"after\": \"f69f9d83d15d869fa1685a23550322b28fe023ece00295a694efd2b4355096b1\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"src/routes/content.test.ts\",\n      \"before\": \"5b391e70766f1463f75226478afb6328ca68541da6a9d35aa27f210d5f835436\",\n      \"after\": \"e722ea4502761dc8012db9621d8557b79d673b2f16c9425b23614488902a8682\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"src/routes/health.ts\",\n      \"before\": \"aff5a4bd2eff3caf35136f4550dbc85e5f1647fb7bbc0f662b71dc5ee65e3d6e\",\n      \"after\": \"0ea5b72d026c4964bb8a34fac627a8704c8a0c5f8eed95e3b656b83a8fda3712\",\n      \"authorized\": true\n    },\n    {\n      \"path\": \"src/routes/identity.test.ts\",\n      \"before\": \"9edddef0f18f23dc2c12b7c54cbb43a834250360f4d0408689541f5d9d5c8ae7\",\n      \"after\": \"f4e4f04c518b00ea5b91c78967bf555736304156358ab6c4a7bace34deccf35b\",\n      \"authorized\": true\n    }\n  ],\n  \"unexpected\": [],\n  \"auditSha256\": \"34b5c7d286650d879223062be352d244b176c9def6d2ebfb543a2dd7e985aedf\",\n  \"priorFocusedTests\": [\n    {\n      \"path\": \"src/index.api-boundary.test.ts\",\n      \"sha256\": \"fa0226efd8c6cf5aef7cead7ca20c2a202c56eb3df73fb455dca9274319bf997\"\n    },\n    {\n      \"path\": \"src/middleware/auth.refresh-boundary.test.ts\",\n      \"sha256\": \"11628a318420ddb8d2d269373a7f23a46f7ad4b7913648db565b0dedd07ee177\"\n    }\n  ]\n}\n",
+      "collected_at": "2026-09-07T02:01:10.094Z"
+    }
+  ],
+  "inspected_worker_checks": "docs/remediation/evidence/W02.02/worker-checks-v1.json",
+  "limitations": "Actual independent lead app TypeScript/artifact/diff/protected-source checks; worker regression/SDK/tool syntax evidence inspected directly. Local-only checks; unrelated preexisting work preserved, generated compiler metadata not a release artifact."
+}

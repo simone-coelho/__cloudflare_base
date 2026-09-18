@@ -1,0 +1,20 @@
+{
+  "task_id": "W06.06",
+  "recorded_at": "2026-09-08T19:26:39.296Z",
+  "basis": "Source-confirmed before state: /recent returns raw cached ring/index; outcome maps all stored personalized decisions; append persists records without checking erasure. Root and independent Astra/xhigh source reviews concur.",
+  "files": [
+    {
+      "path": "src/durable-objects/DecisionRing.ts",
+      "sha256": "018c947b601c7dad7df6ebe0c5bf93b034d6f012e3df3a4c4ef746043c16a012"
+    },
+    {
+      "path": "src/learn/learn.test.ts",
+      "sha256": "889107495fc02e616b74a1f88d4d1e8639e2bd3188e2a78dffde4a256e939ef3"
+    },
+    {
+      "path": "src/learn/holdoutArms.test.ts",
+      "sha256": "1ffabd622521b181662fc6271fa5602db4ad1ab3f6a446c32ddae50ef7c4ea8d"
+    }
+  ],
+  "limitations": "Source baseline, no baseline test run. Existing helper exact-key behavior and reader timeout retained."
+}

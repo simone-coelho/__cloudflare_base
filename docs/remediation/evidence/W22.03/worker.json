@@ -1,0 +1,368 @@
+{
+  "task_id": "W22.03",
+  "actor": {
+    "actor_id": "w2203-worker",
+    "run_id": "/root/w2203_worker",
+    "role": "implementer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "provenance": "Parent assigned Astra/xhigh; no subdelegation."
+  },
+  "plan": {
+    "path": "docs/remediation/design/W22.03/plan-rework-1.md",
+    "sha256": "223fecd6ec0654388708ab041f8190ee85a181d392c774c91aa801cd49142642"
+  },
+  "contract_digest": "5b7a8662e20d87e9771e6090773912524f389e84d7b3785e70525d5ebe88a39e",
+  "baseline": {
+    "path": "docs/remediation/design/W22.03/baseline.json",
+    "sha256": "827f8cf9cd497533f317635d69f1b5632f91702992a437cac5c2dab5ac85d3de",
+    "case": "Source-confirmed first-match and skipped missing/malformed inputs; no failed runtime baseline claimed.",
+    "initial_pin_check": "04ddd5: all40 owned/protected source pins matched before edits."
+  },
+  "changes": [
+    "Complete bounded observed-candidate inventory with exact prefix/range/page/continuation checks; selected physical-key echoes coalesce.",
+    "Every selected row is parsed and checked for carrier/tenant/range and existing provenance/nonce validity; no target is returned before full scan.",
+    "Shared report metadata/nonce policy and iterative full-JSON comparison reconcile exact decision and nonce-outcome retries; legacy outcome repetition and any target payload collision refuse.",
+    "Shared bounded body primitive retains report error/budget semantics and fatal UTF-8/cancellation lifecycle; incremental point-reader line scan bounds pre-row allocation.",
+    "Valid product-sort schema/readback/erasure controls remain; invalid stored product rows now refuse. API states bounds, observed-inventory/concurrency limits and no whole-pipeline acceptance."
+  ],
+  "rework": [
+    {
+      "approval": "docs/remediation/design/W22.03/plan-rework-1.md",
+      "change": "Lead identified newline-array allocation before work budget; replaced split with incremental indexOf iteration. Existing grouped work case covers refusal."
+    },
+    {
+      "approval": "docs/remediation/evidence/W22.03/fixture-correction-approval.json",
+      "change": "Corrected only W27.03 local KV fake to provider null/fresh Response(raw).body, asserting/forwarding stream mode. All original replay success/missing/mismatch/auth/audit/no-write expectations retained; assertion reason added."
+    },
+    {
+      "approval": "docs/remediation/design/W22.03/plan-rework-1.md",
+      "change": "Same full compiler rerun with approved1536MiB heap after actual768MiB OOM; no check or suite expansion."
+    }
+  ],
+  "criteria": {
+    "W22.03-C1": "Worker local runtime checks pass: exact/colliding logical IDs, transport provenance, nested object/array order, nonce/legacy policy, all later selected inputs, pagination and product strictness.",
+    "W22.03-C2": "Worker local runtime checks pass:800-candidate boundary, metadata/line/comparison work refusals, exact16MiB and UTF-8/total/stream bounds with awaited cancellation, complete absence/restoration and actual enforced audit/no-disclosure/no-dependency/no-write controls.",
+    "W22.03-C3": "Worker fixed9/full compiler/scopedlint0errors0warnings/whitespace pass; direct raw/hourly/bounded-read extraction controls included. Distinct review and lead acceptance are pending."
+  },
+  "attempts": [
+    {
+      "id": "runtime-1",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22\\.03|writes one range-named|W27\\.03 enforces|W03\\.04 acknowledges|W14\\.02 validates|W09\\.02 preserves grouped|W22\\.01 deduplicates complete raw|W22\\.01 folds exact retries|W32\\.02 bounds actual raw reads' --maxWorkers=1 --minWorkers=1",
+      "result": "fail",
+      "selected": 9,
+      "passed": 8,
+      "failed": 1,
+      "deliberately_unselected": 63,
+      "source_state": "Initial implementation, before incremental line scan and fixture correction; superseded and not accepted.",
+      "cause": "W27.03 stale parsed-object KV fixture is incompatible with existing protected legacyJson stream-only API.",
+      "capture": {
+        "started": "2026-09-14T14:43:37.667Z",
+        "result": {
+          "chunk_id": "419a57",
+          "wall_time_seconds": 1.001342667,
+          "session_id": 1636,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "polls": [
+          {
+            "chunk_id": "91c703",
+            "wall_time_seconds": 5.001163752,
+            "session_id": 1636,
+            "original_token_count": 60,
+            "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+          },
+          {
+            "chunk_id": "5f216c",
+            "wall_time_seconds": 0.000002522,
+            "exit_code": 1,
+            "original_token_count": 451,
+            "output": " ❯ src/ledger/ledger.test.ts  (24 tests | 1 failed | 18 skipped) 243ms\n   ❯ src/ledger/ledger.test.ts > W27.03 enforces exact retained dependency identity through authenticated audited replay without customer-store writes\n     → expected { ok: false, equal: false, …(6) } to match object { ok: true, equal: true, …(1) }\n(27 matching properties omitted from actual)\n ✓ src/learn/hourly.test.ts  (29 tests | 28 skipped) 186ms\n ✓ src/learn/report.test.ts  (19 tests | 17 skipped) 434ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/ledger/ledger.test.ts > W27.03 enforces exact retained dependency identity through authenticated audited replay without customer-store writes\nAssertionError: expected { ok: false, equal: false, …(6) } to match object { ok: true, equal: true, …(1) }\n(27 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  Object {\n-   \"equal\": true,\n-   \"ok\": true,\n-   \"used\": Object {\n-     \"catalog\": 1,\n-     \"learn\": 1,\n-     \"lift\": 1789397032942,\n-     \"slots\": 1,\n-   },\n+   \"equal\": false,\n+   \"ok\": false,\n+   \"used\": null,\n  }\n\n ❯ src/ledger/ledger.test.ts:257:27\n    255|     return response.json() as Promise<{ ok: boolean; equal: boolean; r…\n    256|   };\n    257|   expect(await request()).toMatchObject({ ok: true, equal: true, used:…\n       |                           ^\n    258|   for (const kind of ['slots', 'learn']) {\n    259|     const key = `${kind}:config:${tenant}:rev:1`, saved = values.get(k…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed | 2 passed (3)\n      Tests  1 failed | 8 passed | 63 skipped (72)\n   Start at  10:43:40\n   Duration  22.00s (transform 3.55s, setup 0ms, collect 13.38s, tests 863ms, environment 0ms, prepare 5.34s)\n\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "static-1",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/writer.ts src/ledger/delivery.ts src/learn/report.ts src/ledger/ledger.test.ts && git diff --check -- src/ledger/writer.ts src/ledger/delivery.ts src/learn/report.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+      "result": "fail",
+      "source_state": "Initial implementation, superseded and not accepted.",
+      "cause": "Full compiler reached 768 MiB heap limit and aborted exit134. Lint/whitespace were not reached.",
+      "capture": {
+        "started": "2026-09-14T14:44:01.627Z",
+        "result": {
+          "chunk_id": "d6b926",
+          "wall_time_seconds": 1.00117955,
+          "session_id": 3636,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "polls": [
+          {
+            "chunk_id": "23809f",
+            "wall_time_seconds": 0.000001424,
+            "exit_code": 134,
+            "original_token_count": 638,
+            "output": "\n<--- Last few GCs --->\n\n[4582:0x42816000]    20199 ms: Scavenge (reduce) (interleaved) 765.5 (781.3) -> 765.1 (781.6) MB, pooled: 0 MB, 4.33 / 0.00 ms  (average mu = 0.361, current mu = 0.046) allocation failure; \n[4582:0x42816000]    20307 ms: Mark-Compact (reduce) 765.8 (781.6) -> 765.5 (782.6) MB, pooled: 0 MB, 105.71 / 0.00 ms  (+ 0.5 ms in 0 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 205 ms) (average mu = 0.482, current \n\n<--- JS stacktrace --->\n\nFATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory\n----- Native stack trace -----\n\n 1: 0xe09a56 node::OOMErrorHandler(char const*, v8::OOMDetails const&) [node]\n 2: 0x11ba250 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]\n 3: 0x11ba527 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]\n 4: 0x13e7f55  [node]\n 5: 0x14017e9 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [node]\n 6: 0x13d5e98 v8::internal::HeapAllocator::AllocateRawWithLightRetrySlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]\n 7: 0x13d6dc5 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]\n 8: 0x13af1be v8::internal::Factory::AllocateRaw(int, v8::internal::AllocationType, v8::internal::AllocationAlignment) [node]\n 9: 0x139d81c v8::internal::FactoryBase<v8::internal::Factory>::AllocateRawArray(int, v8::internal::AllocationType) [node]\n10: 0x139d976 v8::internal::FactoryBase<v8::internal::Factory>::NewFixedArrayWithFiller(v8::internal::Handle<v8::internal::Map>, int, v8::internal::Handle<v8::internal::HeapObject>, v8::internal::AllocationType) [node]\n11: 0x16d1027 v8::internal::OrderedHashTable<v8::internal::OrderedHashMap, 2>::Allocate(v8::internal::Isolate*, int, v8::internal::AllocationType) [node]\n12: 0x16d10b2 v8::internal::OrderedHashTable<v8::internal::OrderedHashMap, 2>::Rehash(v8::internal::Isolate*, v8::internal::Handle<v8::internal::OrderedHashMap>, int) [node]\n13: 0x18065c6 v8::internal::Runtime_MapGrow(int, unsigned long*, v8::internal::Isolate*) [node]\n14: 0x1d6d476  [node]\n/bin/bash: line 1:  4582 Aborted                 (core dumped) node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "runtime-2",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22\\.03|writes one range-named|W27\\.03 enforces|W03\\.04 acknowledges|W14\\.02 validates|W09\\.02 preserves grouped|W22\\.01 deduplicates complete raw|W22\\.01 folds exact retries|W32\\.02 bounds actual raw reads' --maxWorkers=1 --minWorkers=1",
+      "result": "fail",
+      "selected": 9,
+      "passed": 8,
+      "failed": 1,
+      "deliberately_unselected": 63,
+      "source_state": "Incremental line scan and diagnostic reason added; before approved fixture correction; superseded and not accepted.",
+      "cause": "Unchanged assertions reveal slots revision1 missing because the fixture still supplied parsed objects.",
+      "capture": {
+        "started": "2026-09-14T14:45:23.372Z",
+        "result": {
+          "chunk_id": "6e4740",
+          "wall_time_seconds": 1.000387782,
+          "session_id": 91562,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "polls": [
+          {
+            "chunk_id": "aad443",
+            "wall_time_seconds": 5.000754926,
+            "session_id": 91562,
+            "original_token_count": 163,
+            "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/ledger/ledger.test.ts  (24 tests | 1 failed | 18 skipped) 278ms\n   ❯ src/ledger/ledger.test.ts > W27.03 enforces exact retained dependency identity through authenticated audited replay without customer-store writes\n     → slots revision 1 is not in the store: expected { ok: false, equal: false, …(6) } to match object { ok: true, equal: true, …(1) }\n(27 matching properties omitted from actual)\n"
+          },
+          {
+            "chunk_id": "425531",
+            "wall_time_seconds": 0.000002372,
+            "exit_code": 1,
+            "original_token_count": 364,
+            "output": " ✓ src/learn/hourly.test.ts  (29 tests | 28 skipped) 222ms\n ✓ src/learn/report.test.ts  (19 tests | 17 skipped) 431ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/ledger/ledger.test.ts > W27.03 enforces exact retained dependency identity through authenticated audited replay without customer-store writes\nAssertionError: slots revision 1 is not in the store: expected { ok: false, equal: false, …(6) } to match object { ok: true, equal: true, …(1) }\n(27 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  Object {\n-   \"equal\": true,\n-   \"ok\": true,\n-   \"used\": Object {\n-     \"catalog\": 1,\n-     \"learn\": 1,\n-     \"lift\": 1789397137474,\n-     \"slots\": 1,\n-   },\n+   \"equal\": false,\n+   \"ok\": false,\n+   \"used\": null,\n  }\n\n ❯ src/ledger/ledger.test.ts:258:47\n    256|   };\n    257|   const initialReplay = await request();\n    258|   expect(initialReplay, initialReplay.reason).toMatchObject({ ok: true…\n       |                                               ^\n    259|   for (const kind of ['slots', 'learn']) {\n    260|     const key = `${kind}:config:${tenant}:rev:1`, saved = values.get(k…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed | 2 passed (3)\n      Tests  1 failed | 8 passed | 63 skipped (72)\n   Start at  10:45:26\n   Duration  21.31s (transform 4.03s, setup 0ms, collect 11.88s, tests 931ms, environment 0ms, prepare 6.06s)\n\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "runtime-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22\\.03|writes one range-named|W27\\.03 enforces|W03\\.04 acknowledges|W14\\.02 validates|W09\\.02 preserves grouped|W22\\.01 deduplicates complete raw|W22\\.01 folds exact retries|W32\\.02 bounds actual raw reads' --maxWorkers=1 --minWorkers=1",
+      "result": "pass",
+      "selected": 9,
+      "passed": 9,
+      "failed": 0,
+      "deliberately_unselected": 63,
+      "source_state": "Exact source_stop hashes below.",
+      "capture": {
+        "started": "2026-09-14T14:47:56.378Z",
+        "cmd": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22\\.03|writes one range-named|W27\\.03 enforces|W03\\.04 acknowledges|W14\\.02 validates|W09\\.02 preserves grouped|W22\\.01 deduplicates complete raw|W22\\.01 folds exact retries|W32\\.02 bounds actual raw reads' --maxWorkers=1 --minWorkers=1",
+        "result": {
+          "chunk_id": "b2d291",
+          "wall_time_seconds": 1.007875185,
+          "session_id": 23654,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "polls": [
+          {
+            "chunk_id": "9799a0",
+            "wall_time_seconds": 5.001955081,
+            "session_id": 23654,
+            "original_token_count": 60,
+            "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+          },
+          {
+            "chunk_id": "79d082",
+            "wall_time_seconds": 5.000861863,
+            "session_id": 23654,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "9c9dc9",
+            "wall_time_seconds": 5.002980447,
+            "session_id": 23654,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "af445c",
+            "wall_time_seconds": 5.034320636,
+            "session_id": 23654,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "e80122",
+            "wall_time_seconds": 5.001749444,
+            "session_id": 23654,
+            "original_token_count": 16,
+            "output": " ✓ src/ledger/ledger.test.ts  (24 tests | 18 skipped) 1043ms\n"
+          },
+          {
+            "chunk_id": "7e0fec",
+            "wall_time_seconds": 5.001172297,
+            "session_id": 23654,
+            "original_token_count": 16,
+            "output": " ✓ src/learn/hourly.test.ts  (29 tests | 28 skipped) 444ms\n"
+          },
+          {
+            "chunk_id": "fe9c0b",
+            "wall_time_seconds": 28.328786976,
+            "exit_code": 0,
+            "original_token_count": 67,
+            "output": " ✓ src/learn/report.test.ts  (19 tests | 17 skipped) 1719ms\n\n Test Files  3 passed (3)\n      Tests  9 passed | 63 skipped (72)\n   Start at  10:48:05\n   Duration  181.22s (transform 36.79s, setup 1ms, collect 102.41s, tests 3.21s, environment 1ms, prepare 55.25s)\n\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "static-final",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/writer.ts src/ledger/delivery.ts src/learn/report.ts src/ledger/ledger.test.ts && git diff --check -- src/ledger/writer.ts src/ledger/delivery.ts src/learn/report.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+      "result": "pass",
+      "compiler": "Full no-emit compiler completed;1536MiB heap approved for observed prior OOM.",
+      "eslint": {
+        "files": 4,
+        "errors": 0,
+        "warnings": 0
+      },
+      "whitespace": {
+        "files": 5,
+        "result": "pass"
+      },
+      "source_state": "Exact source_stop hashes below.",
+      "capture": {
+        "started": "2026-09-14T14:47:56.378Z",
+        "cmd": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/writer.ts src/ledger/delivery.ts src/learn/report.ts src/ledger/ledger.test.ts && git diff --check -- src/ledger/writer.ts src/ledger/delivery.ts src/learn/report.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+        "result": {
+          "chunk_id": "a4c049",
+          "wall_time_seconds": 1.001585882,
+          "session_id": 28244,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "polls": [
+          {
+            "chunk_id": "6f9426",
+            "wall_time_seconds": 5.001615296,
+            "session_id": 28244,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "44dbc9",
+            "wall_time_seconds": 5.001220883,
+            "session_id": 28244,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "74a5fe",
+            "wall_time_seconds": 5.00302817,
+            "session_id": 28244,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "e7c239",
+            "wall_time_seconds": 5.033640111,
+            "session_id": 28244,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "fcb5b6",
+            "wall_time_seconds": 5.002209888,
+            "session_id": 28244,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "d2469a",
+            "wall_time_seconds": 5.001431157,
+            "session_id": 28244,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "21090b",
+            "wall_time_seconds": 30.000999746,
+            "session_id": 28244,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "4abf61",
+            "wall_time_seconds": 0.198106061,
+            "exit_code": 0,
+            "original_token_count": 0,
+            "output": ""
+          }
+        ]
+      }
+    }
+  ],
+  "measurement": {
+    "classification": "Local synthetic actual-module Node/Vitest workload; no provider/deployed/customer data.",
+    "final_tests": 9,
+    "unselected": 63,
+    "files": 3,
+    "vitest_duration_seconds": 181.22,
+    "reported_test_execution_seconds": 3.21,
+    "limits": {
+      "unique_candidates": 800,
+      "object_and_total_utf8_bytes": 16777216,
+      "work": 1000000,
+      "key_or_cursor_utf8_bytes": 2048
+    },
+    "performance_claim": "Application refusal checks only; transform/collection/preparation dominate final wall time. No measured native-capacity, latency or SLO claim."
+  },
+  "source_stop": "2026-09-14T14:51:42.064Z",
+  "versions": {
+    "node": "v22.15.0",
+    "vitest": "1.6.1",
+    "typescript": "5.9.2",
+    "eslint": "8.57.1"
+  },
+  "owned": [
+    {
+      "path": "src/ledger/writer.ts",
+      "sha256": "ab36da893a42b1cc27d2f39810c387cff5c246c81cc3448bd4f638481b3d1f2a"
+    },
+    {
+      "path": "src/ledger/delivery.ts",
+      "sha256": "35907738604b099ea4ab4155be8c1b3049147e53b41777732cb4c01059875e06"
+    },
+    {
+      "path": "src/learn/report.ts",
+      "sha256": "da430a5a8ed02dca4a9e5db3b925f2e3dbe341265defd465d2e2e71eccac4027"
+    },
+    {
+      "path": "src/ledger/ledger.test.ts",
+      "sha256": "7047877a0794d9bf419c105f5046d7483d4cc08f869d443cb9d59d99f9067db1"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "00e88fb0d9bdcc0cf29230823bb61a78f87a8345f4af4c67527ec3e90a6c138a"
+    }
+  ],
+  "protected_count": 35,
+  "protected_mismatches": [],
+  "source_stop_capture": {
+    "chunk_id": "6b1f01",
+    "wall_time_seconds": 0.268936105,
+    "exit_code": 0,
+    "original_token_count": 231,
+    "output": "{\n  \"source_stop\": \"2026-09-14T14:51:42.064Z\",\n  \"versions\": {\n    \"node\": \"v22.15.0\",\n    \"vitest\": \"1.6.1\",\n    \"typescript\": \"5.9.2\",\n    \"eslint\": \"8.57.1\"\n  },\n  \"owned\": [\n    {\n      \"path\": \"src/ledger/writer.ts\",\n      \"sha256\": \"ab36da893a42b1cc27d2f39810c387cff5c246c81cc3448bd4f638481b3d1f2a\"\n    },\n    {\n      \"path\": \"src/ledger/delivery.ts\",\n      \"sha256\": \"35907738604b099ea4ab4155be8c1b3049147e53b41777732cb4c01059875e06\"\n    },\n    {\n      \"path\": \"src/learn/report.ts\",\n      \"sha256\": \"da430a5a8ed02dca4a9e5db3b925f2e3dbe341265defd465d2e2e71eccac4027\"\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"sha256\": \"7047877a0794d9bf419c105f5046d7483d4cc08f869d443cb9d59d99f9067db1\"\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"sha256\": \"00e88fb0d9bdcc0cf29230823bb61a78f87a8345f4af4c67527ec3e90a6c138a\"\n    }\n  ],\n  \"protected_count\": 35,\n  \"protected_mismatches\": []\n}\n"
+  },
+  "limitations": "Bounded local point-lookup/replay input reconciliation only. Discovery relies on truthful range names and returned inventory, without snapshot isolation or detection of unlisted/out-of-range hidden rows. Physical work/body caps can refuse legitimate histories; text-only adapters materialize before checking actual bytes. No durable producer, online statistics or export reconciliation, historical/late-arrival repair, attribution/retention/customer-policy change or full W22/W09/F16/F22 closure. Existing erasure races and report/serving semantics remain. No native/SLO/customer/release approval or external/customer-data/cloud/deploy/install/build/commit/push/destructive operation.",
+  "disposition": {
+    "worker": "pass",
+    "independent_review": "pending",
+    "lead_acceptance": "pending",
+    "next": "Root freezes exact five-file artifact and hands off to separate reviewer; source and worker evidence STOP.",
+    "running_commands": []
+  }
+}

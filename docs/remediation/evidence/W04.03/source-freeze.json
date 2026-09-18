@@ -1,0 +1,665 @@
+{
+  "task_id": "W04.03",
+  "at": "2026-09-17T02:29:38.127Z",
+  "source_state": "All43 outputs and worker evidence STOP; all worker commands/helpers drained. Independent whole-W04 K4/K5 and lead local disposition pending.",
+  "worker": {
+    "path": "docs/remediation/evidence/W04.03/worker.json",
+    "sha256": "a37ad70681a911ce579ecc12051bbfd87ea599425b36216dcfec6a8eebe49435"
+  },
+  "reviewer": {
+    "actor_id": "w0403-reviewer",
+    "run_id": "/root/w01_reviewer"
+  },
+  "artifact": {
+    "status": "recorded",
+    "contract_digest": "dfbbecbf7135869e6b481ca27a0bab25f49d9056437739bac99d71540990c392",
+    "configuration": "Local customer/enforced identity material and existing-ShopperReflex both-host serialized session authority; recoverable grant/forward/import/raw-erasure protocol; SDK source and both reproducible bundles with shared authority coordination; synthetic exact-base nondeploying provisioning adapter. Real classes with synthetic bindings plus native local both-host sockets. No actual provisioning/resources/credentials, browser/customer/deployed timing, migration/cutover, SLO or release acceptance.",
+    "files": [
+      {
+        "path": "src/identity/sessionAuthority.ts",
+        "sha256": "230c68a707c14cc8fc85670a41ce05057dae7f072cecf48cc78dfb7f1bca0c86",
+        "role": "output"
+      },
+      {
+        "path": "src/identity/sessionCapability.ts",
+        "sha256": "1c811214eb5e3613c5cbeb172704ee96689161945e6ee2c55bf332bdee0b3f51",
+        "role": "output"
+      },
+      {
+        "path": "src/identity/consentContinuity.ts",
+        "sha256": "1c5d3b1c2971b54815bbf3fd36752bb73d0c3e375b483ceab43ed3b2940574c8",
+        "role": "output"
+      },
+      {
+        "path": "src/identity/link.ts",
+        "sha256": "f948dd63cf7e9748bd9c4a62122929015716a0e0b0e6b6e48b3816a28ff3bb2d",
+        "role": "output"
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "e27834bfa9e412e329ed2d8c05b52ea36388d3c4f5bd5630225ca85b816985ff",
+        "role": "output"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "cf649c0d23cdc89f000de83835d53596e2d8e89b399de715be1799eab7c2c935",
+        "role": "output"
+      },
+      {
+        "path": "src/services/RealtimeSegmentEngine.ts",
+        "sha256": "6633561e6b5274abc26f922bc5a7a88f7239eb59ecdf8f0140a92f27fac86698",
+        "role": "output"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "446e38746abdea63ed24d5cc70dab8c6479bcb59c15d1e6c2da51de7d5045c60",
+        "role": "output"
+      },
+      {
+        "path": "src/durable-objects/PersonalizationWebSocket.ts",
+        "sha256": "9a205bda1dae77be4f9b7729fe7e344c95f033fa4cfd0efaa908cee6a96c9cd2",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/identity.ts",
+        "sha256": "603e06e7ae1c21636c3c7205c2f1281ef31b318d8146da6c06ddc378cbd8d43d",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "sha256": "d26570adf493d0ecc3efcbbbc7cd3e74aa21c55ae57e3d5d3543655e626523a1",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "874bdc4de63a5af7258718a55b2d45067576d2f2d37fbb1bd1a7b260eb78ee7d",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/sort.ts",
+        "sha256": "f41238f99a40fca924f6e22cb93ea08d6c857af0bfe9b0c933b285517ed9f484",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/tracking.ts",
+        "sha256": "deb10557fe584019956f500f88ea9382a441826bda9aa3e536f8bfa261643772",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/optimizely.ts",
+        "sha256": "a2aee846c17cd744adae9fb82850927fe7f7b0ddc6b261cc7518a417cbe4bac0",
+        "role": "output"
+      },
+      {
+        "path": "src/content/service.ts",
+        "sha256": "320d585e2f695af839fe6516974597da8b321d16ae30b3f5ba5c6e51276fe272",
+        "role": "output"
+      },
+      {
+        "path": "src/identity/material.mjs",
+        "sha256": "c9393df81cbe7afce6b639fe0b21887a634a60151bd7ede29d8b986e109b0e94",
+        "role": "output"
+      },
+      {
+        "path": "src/identity/assertion.ts",
+        "sha256": "b1bc560559f68b009dd3152d105282179ae9bdef9ac97300648ae1d5b9407960",
+        "role": "output"
+      },
+      {
+        "path": "src/identity/shopperId.ts",
+        "sha256": "d4c686f13d18e1bab1fb0100bec8c102055584e92e9c9d813118005f5a62c6ab",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/health.ts",
+        "sha256": "54e7a7a1f842ed7d08d0ed1c0a4e61d36eb274947f4014cb78e34e2061e122bd",
+        "role": "output"
+      },
+      {
+        "path": "src/ops/monitor.ts",
+        "sha256": "940debe2a963f75d70a4e80a87b5eea85bcbab5ac509fa94026db63e5e6d99d8",
+        "role": "output"
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "e1e901a5e16c6d3ebaeba98d71feeb96b90196b1ff92fe6cb51d520f8b7c269b",
+        "role": "output"
+      },
+      {
+        "path": "src/sdk/types.ts",
+        "sha256": "021713c583f90ebcb56bbb5c5f7a7db4d5ef27282e255d69d64ce9e0eca95c09",
+        "role": "output"
+      },
+      {
+        "path": "src/sdk/host.ts",
+        "sha256": "4720f26f52f903eb8636390e6ee34c493a5e2097efca48ffc9aae1368ec28bd2",
+        "role": "output"
+      },
+      {
+        "path": "src/sdk/listen.ts",
+        "sha256": "6b15ad59d99da9ef2ca0ea56421e161de99116133d4fe37f6b4bc7c7454eead3",
+        "role": "output"
+      },
+      {
+        "path": "src/sdk/testHost.ts",
+        "sha256": "05adfe807c272a8e9ae3909819508ee16130334971fb4f822d1a5c58b1b4eb01",
+        "role": "output"
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "2612da5a91fe9db0356a422265b251a5aa743644f8ac0c340bf8da0981c18310",
+        "role": "output"
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "0840c3f51e85c5479ce08bb4f86fc80ddf00dfe7da68a5125d317b4a4835aded",
+        "role": "output"
+      },
+      {
+        "path": "scripts/identity-material.mjs",
+        "sha256": "8a6b67eeb248183412d72b34ea2a883e6c6dbf7ed09e4a22b79d40c2bc4ff9af",
+        "role": "output"
+      },
+      {
+        "path": "scripts/identity-material.test.mjs",
+        "sha256": "47b8cc2bb043c7244dc1cff100c0a213781ce9cd7181dd9c680b514743778df8",
+        "role": "output"
+      },
+      {
+        "path": "src/identity/identity.test.ts",
+        "sha256": "a332a0e96e1fc5093817f113c2fd451785aa89763c12a21f2dc874d539301cea",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "9ee4764b9a441aa2faa5036141dcd0d374db73f30ac66e46a1d18d17abb91ce5",
+        "role": "output"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "43903c3169ee78ff9498bfbdb57e701b6b3f4e75b94a32a1215073b0a534f197",
+        "role": "output"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "7be5071eeb3885918235c24c85b9748d33ea621535a70e36f4e3cb9ac8430c49",
+        "role": "output"
+      },
+      {
+        "path": "src/services/SessionManager.identity.test.ts",
+        "sha256": "3ee48221af12846c78efe5fb75e8d389bcc1ca6b950efc9faaa0d7d9ca0210e2",
+        "role": "output"
+      },
+      {
+        "path": "src/services/sessionDefer.test.ts",
+        "sha256": "f8eaa01d77a16e128059acd65a32ff0f55fd9b4df6f3675c33d878a422c93a03",
+        "role": "output"
+      },
+      {
+        "path": "src/sdk/core.test.ts",
+        "sha256": "373c211c6b55ad0d02c9499e0ae389fada77c8ea41928f993703331e81969544",
+        "role": "output"
+      },
+      {
+        "path": "src/sdk/identify.test.ts",
+        "sha256": "e8096494f4c34a30fc0d76e65f0aac040afc8d2b6e5c855eb778cd4ff7a09fae",
+        "role": "output"
+      },
+      {
+        "path": "src/sdk/listen.test.ts",
+        "sha256": "5cbd4a436922aa9682da454acb2c056de2c6e3a892141c2037ca3b4b53416429",
+        "role": "output"
+      },
+      {
+        "path": "src/ops/monitor.test.ts",
+        "sha256": "f7c8c2bb5a9527643ace5df813ed8b1fdfa7eefa982903bb437dc60fdc951b9d",
+        "role": "output"
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "8d455bcb0f7523a0832c0544f1ed1a83e5da1e3cbda6fb1f0355168729206a16",
+        "role": "output"
+      },
+      {
+        "path": "src/services/OptimizelyService.ts",
+        "sha256": "399dc7e77040fef98ca5b7b10b1301cb8fd841ef281f1fa9d30f5610c530c350",
+        "role": "output"
+      },
+      {
+        "path": "src/services/odpLoop.ts",
+        "sha256": "f8b9cb42d8e589539744c4278f6082a1b152ec470b8ebbdb364c1003f1ec4661",
+        "role": "output"
+      },
+      {
+        "path": "AGENTS.md",
+        "sha256": "15e5643ef7e32170c8a4be0d744430b2c9393a6cebd3502bd3466410bbc54162",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/remediation/README.md",
+        "sha256": "8846927ff60da260ab69190e6df271e1ca48ab0edeb6e9b6e3f21035538b85aa",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/architecture/36-remediation-governance-and-execution.md",
+        "sha256": "4c33a598ee1c033720f003065ac4b277d7722d5eb51f1edb180520949befaac3",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/handover/HANDOFF-2026-09-16.md",
+        "sha256": "4aa96e8ffe5f834ac05750650e8c9cbbd14e551d269ad44b47185c8f4ffd5acc",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/architecture/35-verification-reports/F04.md",
+        "sha256": "327e4efd0a863301c1d9fc77af4b22d9973039a13421b401a8b68724b1b97329",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/architecture/35-verification-reports/F06.md",
+        "sha256": "df1179e964c53fad6e77b950fe70da791b61f3747765456b6038e461ed3b84ad",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/remediation/decisions/local-in-order-batched-live-2026-09-16.json",
+        "sha256": "c7819a5dd491c92a8cacd41382c7d9956d3b10b53cda2edede4afff39cd780bc",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+        "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.07/lead-disposition.json",
+        "sha256": "f9cd4f1ae8a52ac5bc531f688a2427a284a7dd05ba3d716ac11a40f8d80f0c20",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/remediation/evidence/W03.07/review.json",
+        "sha256": "94e209c9761a7c21f735b5a86968eaed47c398c1bf1e58195a30d03f62712a5f",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/remediation/evidence/W35.08/acceptance.md",
+        "sha256": "650ff0b4239f996872ffe6837d7247a0ee1172ada52c5ada9fee6da88f88ca51",
+        "role": "configuration"
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "b9064c20947828c3a008fe7fd95f604358eb95cf29b6616ca3f806a47c35f31c",
+        "role": "source"
+      },
+      {
+        "path": "src/customerBoundary.ts",
+        "sha256": "df2f6c13559a27ca601c9bc8f2813808ffdfbaf96bb637bf5dcfb709408050c7",
+        "role": "source"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "d5810557734b56f19e18a9393c85777433321c2d22a3b25a8ce8c187900aef97",
+        "role": "source"
+      },
+      {
+        "path": "src/types/events.ts",
+        "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb",
+        "role": "source"
+      },
+      {
+        "path": "src/auth/signingConfig.mjs",
+        "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+        "role": "source"
+      },
+      {
+        "path": "src/auth/accounts.ts",
+        "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+        "role": "source"
+      },
+      {
+        "path": "src/auth/store.ts",
+        "sha256": "14a2009f44b5af8c0ef987faee989b284eb0d279ceae41da00878ebcf870ab66",
+        "role": "source"
+      },
+      {
+        "path": "src/auth/authority.ts",
+        "sha256": "e037a63988db87268a0550833273846ba301217dc016221df089c1f68a3c30fc",
+        "role": "source"
+      },
+      {
+        "path": "src/auth/subjectAudit.ts",
+        "sha256": "a57ef271c50d137f1ca3926f6582e74e89c19e1745641ae6b3e09099d8b0b9a4",
+        "role": "source"
+      },
+      {
+        "path": "src/middleware/auth.ts",
+        "sha256": "e0aa49f688df881c4904394a1d73083ca7c2fcb84a09518f57989dc79bde333f",
+        "role": "source"
+      },
+      {
+        "path": "src/middleware/operatorAuth.ts",
+        "sha256": "fbfdbaed152204793b1b5320d53d1ea8a475267077cadca5ea7b22a136807bd1",
+        "role": "source"
+      },
+      {
+        "path": "src/middleware/edgeAccess.ts",
+        "sha256": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342",
+        "role": "source"
+      },
+      {
+        "path": "src/middleware/error.ts",
+        "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b",
+        "role": "source"
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+        "role": "source"
+      },
+      {
+        "path": "src/tenancy/middleware.ts",
+        "sha256": "baa6107cb0d0304198c43a50b45b9c6c1620dbc31920d065f450aaad14fca521",
+        "role": "source"
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67",
+        "role": "source"
+      },
+      {
+        "path": "src/identity/store.ts",
+        "sha256": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24",
+        "role": "source"
+      },
+      {
+        "path": "src/identity/profileEnrichment.ts",
+        "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5",
+        "role": "source"
+      },
+      {
+        "path": "src/content/consent.ts",
+        "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930",
+        "role": "source"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+        "role": "source"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+        "role": "source"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f",
+        "role": "source"
+      },
+      {
+        "path": "src/reflex/identityMerge.ts",
+        "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508",
+        "role": "source"
+      },
+      {
+        "path": "src/reflex/bufferedAction.ts",
+        "sha256": "eca32ee073c9eff920f6396bc17ec533f0c12b3a2d05236ecaaa52852b14ae12",
+        "role": "source"
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+        "role": "source"
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145",
+        "role": "source"
+      },
+      {
+        "path": "src/reflex/sortCandidates.ts",
+        "sha256": "e7e195583c7e96452a646108e6eca583b2d59a88f77f95721a2607cecf900bbe",
+        "role": "source"
+      },
+      {
+        "path": "src/reflex/searchCandidates.ts",
+        "sha256": "70a1b115d9b733dd7e9c6f0f104001bb2ff4faa0db97106e642048d99313056e",
+        "role": "source"
+      },
+      {
+        "path": "src/demos/registry.ts",
+        "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b",
+        "role": "source"
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+        "role": "source"
+      },
+      {
+        "path": "src/config/publication.ts",
+        "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+        "role": "source"
+      },
+      {
+        "path": "src/connectors/config.ts",
+        "sha256": "8fa2f7b6d80e78563e57ae0ea6ffaec74ff6b78ebe4ed6ae8bb642e65a88cf9d",
+        "role": "source"
+      },
+      {
+        "path": "src/connectors/index.ts",
+        "sha256": "c1cbe8a0d3e5a45bdb891647db4db8d11d982524f68b12dda417df92f7cd25f5",
+        "role": "source"
+      },
+      {
+        "path": "src/connectors/DecisionProvider.ts",
+        "sha256": "9ed9bfd0e16d981d5de249d7fb3bd5b4e39f40727562b5cae1bbe2408084f107",
+        "role": "source"
+      },
+      {
+        "path": "src/services/FeatureVariableManager.ts",
+        "sha256": "66e36a0678b8c03e1cfbd0f8bc658b2d90a2af642bca624855a64362d49e7c99",
+        "role": "source"
+      },
+      {
+        "path": "src/services/JourneyStage.ts",
+        "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331",
+        "role": "source"
+      },
+      {
+        "path": "src/services/visit.ts",
+        "sha256": "9bf380f59633c1eb23cabcec60acf6318ff17eb8898172c71a1fa4ecd3b244d6",
+        "role": "source"
+      },
+      {
+        "path": "src/services/EventDispatcher.ts",
+        "sha256": "0ec061525195f86549e52533db06bb2d7ccda1f4629666e3d54475ab028a24b7",
+        "role": "source"
+      },
+      {
+        "path": "src/services/demoEventCapture.ts",
+        "sha256": "eb64be869e76f3db40288e4a1da135f62de84806dc8a0b9dc0de653eb8ff5456",
+        "role": "source"
+      },
+      {
+        "path": "src/ledger/enqueue.ts",
+        "sha256": "831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9",
+        "role": "source"
+      },
+      {
+        "path": "src/ledger/productSort.ts",
+        "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322",
+        "role": "source"
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+        "role": "source"
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+        "role": "source"
+      },
+      {
+        "path": "src/ledger/writer.ts",
+        "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d",
+        "role": "source"
+      },
+      {
+        "path": "src/ledger/delivery.ts",
+        "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf",
+        "role": "source"
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+        "role": "source"
+      },
+      {
+        "path": "src/learn/route.ts",
+        "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad",
+        "role": "source"
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "fd62f49928ddd8b9176273ea87743231fc6ad75f42b01ca9683fb1bcaa5073b1",
+        "role": "source"
+      },
+      {
+        "path": "src/sdk/identify.ts",
+        "sha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1",
+        "role": "source"
+      },
+      {
+        "path": "src/sdk/identity.ts",
+        "sha256": "a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f",
+        "role": "source"
+      },
+      {
+        "path": "src/sdk/emit.ts",
+        "sha256": "188cb582218166ceac62005e20e32be068cae03f2b8d99195167bafb3de636a5",
+        "role": "source"
+      },
+      {
+        "path": "src/sdk/wire.ts",
+        "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6",
+        "role": "source"
+      },
+      {
+        "path": "src/sdk/memoryHost.ts",
+        "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1",
+        "role": "source"
+      },
+      {
+        "path": "src/sdk/index.ts",
+        "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa",
+        "role": "source"
+      },
+      {
+        "path": "src/sdk/browser.ts",
+        "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321",
+        "role": "source"
+      },
+      {
+        "path": "src/sdk/version.ts",
+        "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f",
+        "role": "source"
+      },
+      {
+        "path": "scripts/build-sdk.mjs",
+        "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79",
+        "role": "configuration"
+      },
+      {
+        "path": "src/sdk/tsconfig.json",
+        "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360",
+        "role": "source"
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+        "role": "configuration"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+        "role": "configuration"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+        "role": "configuration"
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+        "role": "configuration"
+      },
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+        "role": "configuration"
+      },
+      {
+        "path": "wrangler.toml",
+        "sha256": "667d7680fec61856abb51e50427a0f341d59280afbc4157a76d0843c48c57a20",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/remediation/evidence/W04.03/admission.json",
+        "sha256": "1f18cf2342cc8ce7839de54a47d88f7089c51a90bd01d6dcabe0f8cd3ca87c27",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/remediation/evidence/W04.03/admission-v2.json",
+        "sha256": "777620e37f93e38e8c948c779eacd4d63b4c5bd6cf4aa019bb70b44a727a928b",
+        "role": "configuration"
+      },
+      {
+        "path": "docs/remediation/evidence/W04.03/admission-v3.json",
+        "sha256": "9a1dc9a428ca5adbd300849c1557083d3dfeb1304bf595cf77ff5569ef4451e2",
+        "role": "configuration"
+      }
+    ],
+    "digest": "8a4c6ab00594b239ad56e4007808abcb99cf9bf3d6e475bf5d436c5153af42bd"
+  },
+  "checks_reported": [
+    {
+      "id": "K1.6",
+      "exit_code": 0,
+      "result": "63 passed /175 unselected; seven files;121.63s; includes actual native Miniflare/workerd both-host sockets and actual decision/sort/FX/ODP caller schedules."
+    },
+    {
+      "id": "K2.5",
+      "exit_code": 0,
+      "result": "Both SDK bundles generated;39 source/ESM/IIFE SDK tests plus4 synthetic provisioning tests passed. Tool portion superseded by K2.tool-final only."
+    },
+    {
+      "id": "K3.8",
+      "exit_code": 0,
+      "result": "Server+SDK compiler, scoped lint0 errors/201 warnings, syntax and whitespace passed. Only the two subsequently changed tool files required the focused syntax/whitespace recheck."
+    },
+    {
+      "id": "K1.supplement3",
+      "exit_code": 0,
+      "result": "One explicitly approved affected W35.02 case passed /77 unselected;16.80s; genuine verified socket principal, prepared import and signed absorb preserve visit/merge and rejected-commit oracles."
+    },
+    {
+      "id": "K2.tool-final",
+      "exit_code": 0,
+      "result": "All4 synthetic provisioning tests plus both changed tool syntax/whitespace checks passed, including directory-sync ordering and upload refusal on sync failure."
+    },
+    {
+      "id": "K3.bundle-repro",
+      "exit_code": 0,
+      "result": "Required second identical SDK generator run produced exactly identical ESM/IIFE hashes; direct trailing-whitespace inspection of all4 new files found none."
+    }
+  ],
+  "lead_identity_checks": "All43 current output hashes, admitted dirty baselines and forward/reverse task-only patches verified;38 changed. All64 protected read pins unchanged;29 captured attempt output hashes verified. Required command strings and final primary summaries checked. Only tool2 inputs changed after K1.6/K2.5/K3.8; affected tool/syntax/whitespace actually rerun, and SDK generator byte identity verified. Inherited/new warning and missing-capture/reporting limitations preserved. No independent acceptance implied.",
+  "remaining": "Required C7/K6 stays open for final separately authorized batch. Local acceptance requires distinct whole-W04 source/evidence review and fixed K5. Preserve earlier failures and exact consumed-input reuse qualifications."
+}

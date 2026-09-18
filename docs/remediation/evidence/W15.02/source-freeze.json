@@ -1,0 +1,97 @@
+{
+  "task_id": "W15.02",
+  "at": "2026-09-18T18:54:23.903Z",
+  "source_state": "SOURCE/EVIDENCE STOP2026-09-18T18:50:05.203Z; all sessions drained. Not acceptance.",
+  "worker": {
+    "path": "docs/remediation/evidence/W15.02/worker.json",
+    "sha256": "87d5e3e0b8e4af061b28a322f3abfbcab470a8677397347c32222d40cb24ad37",
+    "bytes": 19682342
+  },
+  "artifact": {
+    "digest": "851b205284912e0383666deaf4ab0caa890f8124c58de6b89b47e88691b18b9c",
+    "contract_digest": "a6f51718893ca7c585de995e3db8b6d952991672a6b20f665486e25d5a09846a",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W15.02"
+  },
+  "identity": {
+    "candidate": "6062754dc935e0f8a211a60cf4b786fe638d878a80fea5e493157ac3c869bd53",
+    "outputs": 95,
+    "changed": 90,
+    "protected_original": 293,
+    "frozen_files": 1219,
+    "expanded_package_source_pins": 1208,
+    "virtual_pins": 4,
+    "root_verification": "All1219 current physical pins,95 originals/absences,95 forward+reverse deltas and293protected unchanged verified; all29 retained primary stream identities checked. K3/K6/K9 complete semantic outputs, K4 component summaries, K7 TAP and nested integrity/compiler/rendered read; lint aggregate read, not every warning/manifest visually read. Raw retained package and14 payloads verified. Distinct whole-original/full-primary semantic review required."
+  },
+  "results": [
+    {
+      "check": "W15.02-K1.4",
+      "result": "PASS",
+      "sourceRelation": "qualified_reuse"
+    },
+    {
+      "check": "W15.02-K2.3",
+      "result": "PASS",
+      "sourceRelation": "qualified_reuse"
+    },
+    {
+      "check": "W15.02-K3.4",
+      "result": "PASS",
+      "sourceRelation": "exact_current_388_basis"
+    },
+    {
+      "check": "W15.02-K4.7",
+      "result": "PASS",
+      "sourceRelation": "exact_current_388_basis"
+    },
+    {
+      "check": "W15.02-K5.1",
+      "result": "PASS",
+      "sourceRelation": "qualified_reuse"
+    },
+    {
+      "check": "W15.02-K6.4",
+      "result": "PASS",
+      "sourceRelation": "exact_current_388_basis"
+    },
+    {
+      "check": "W15.02-K7.3",
+      "result": "PASS",
+      "sourceRelation": "exact_current_388_basis"
+    },
+    {
+      "check": "W15.02-K8.2",
+      "result": "PASS",
+      "sourceRelation": "qualified_reuse"
+    },
+    {
+      "check": "W15.02-K9.1",
+      "result": "PASS",
+      "sourceRelation": "exact_current_388_basis"
+    }
+  ],
+  "reuse_record": "worker.json finalCheckQualification + postCheckCorrections + compilerCorrectionBasis; distinct semantic review pending",
+  "retained_package": {
+    "check": "W15.02-K7.3",
+    "raw_bytes": 11350807,
+    "raw_sha256": "2a8b255d65f3e9b811974b75ffb7b42efd95efa67072a8c34d776f2ae22d6f91",
+    "digest": "bc30b41a5fb64aaa9b5ee12d15b4e75ba25515872f18594f25ae66db9c1ceea7",
+    "worker_bytes": 7408702,
+    "assets": 13,
+    "source_pins": 1208,
+    "check_basis": 478,
+    "native_outbound": 0,
+    "build_count": 1,
+    "schema_contract": "operator-oidc-v2",
+    "qualification": "Exact canonical artifact bytes recovered from successful K7.3 primary, not regenerated/resealed. Single memoized offline Worker package; local-v1 actual fixed checks plus native payload/asset/SDK proof, not full CI, trusted CI, release, deployment or customer acceptance."
+  },
+  "limitations": [
+    "C12 live/customer/provider/commercial acceptance OPEN; no external effects authorized.",
+    "No full CI, trusted CI, deployment, provider or customer-browser execution. Actual package proof is local-v1 only; K7 selected20 is not the full Node/CI programme.",
+    "Native W12.02 pipeline controls pass but measured decision/event latency thresholds failed; retained warnings include cross-request promise handling. No SLO/latency/customer acceptance claim.",
+    "Renderer ACK proves durable owner admission (pending or recovered), not completed sinks or human viewability. Real first-paint/no-flash/browser/layout remains customer acceptance-open.",
+    "All29 attempts and historical failures retained; K1.1 separate streams/completion/pins unavailable remain explicitly unavailable. Current supersession does not rewrite history.",
+    "OIDC remains disabled absent exact owner-approved configuration/material/links/memberships/account mode and policy. Browser localStorage token risk and local-only logout remain qualified; no IdP-wide logout/deprovision claim."
+  ],
+  "failures_preserved": "All29 attempts retained, including early missing metadata, native latency/cross-request warnings and all superseding failures. No second Worker build."
+}

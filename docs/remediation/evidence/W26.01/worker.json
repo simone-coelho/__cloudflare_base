@@ -1,0 +1,323 @@
+{
+  "task_id": "W26.01",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T13:00:28.879Z",
+  "source_go_at": "2026-09-12T12:51:57.867Z",
+  "contract_digest": "7c050cd8dd81d7c3450dd484eb09ef0a2ba3675e68ca651336fd74702f3c2c88",
+  "references": [
+    {
+      "path": "docs/remediation/design/W26.01/baseline.json",
+      "sha256": "620998e8a3e0aef1e4d86d93a60d1dac04a20ab96a7e1d874b717cc8c86c2050"
+    },
+    {
+      "path": "docs/remediation/design/W26.01/plan.md",
+      "sha256": "5784ed610ce3114ca098265b5a8ec4eb81213b0a5d21cf4934656527a6605b03"
+    },
+    {
+      "path": "docs/remediation/evidence/W26.01/admission.json",
+      "sha256": "9f027197dc16f332325a887820407296ec9c6aede5d107a3e0f9d39e70959134"
+    }
+  ],
+  "implementation_summary": [
+    "Shared direct attribution checks an exact usable named slot before item/product match for every reward, then preserves the existing first/last, scope and time rules. A named miss cannot fall back to another slot.",
+    "Missing/null/blank and literal unknown retain broad legacy direct behavior; match:any stays broad. No schema, policy axis, consumer I/O, fatigue or arithmetic changes.",
+    "Exactly two grouped additions exercise all rewards and boundaries plus actual ring→LearnStats zero/one acknowledged processing and unchanged other-slot state, and actual cross-hour reconstruction versus raw-record buildReport for clicks/purchases, unchanged exposures and broad overlays."
+  ],
+  "criterion_verdicts": {
+    "W26.01-C1": {
+      "worker_result": "local runtime passed",
+      "evidence": "K1 final runtime: exact item/product named-slot containment across all reward types, first/last, miss/case/legacy/any/session/window/time assertions"
+    },
+    "W26.01-C2": {
+      "worker_result": "local runtime passed",
+      "evidence": "K1 final runtime: real action mapping, ring and statistics objects with clone-boundary synthetic storage; only named destination changes; actual hourly/raw reports agree exactly"
+    },
+    "W26.01-C3": {
+      "worker_result": "worker fixed7/static/protected checks passed; independent review pending",
+      "evidence": "K1 final runtime; K2 final compiler, scoped lint and whitespace; Final source STOP and protected comparison"
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 7,
+      "unselected": 33,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 45473,
+      "chunk_id": "908389",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "K2 final compiler, scoped lint and whitespace"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 3,
+      "inherited_warnings": 3,
+      "command_capture": "K2 final compiler, scoped lint and whitespace"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "K2 final compiler, scoped lint and whitespace"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 55805,
+      "chunk_id": "de7c45",
+      "final_bytes": true
+    }
+  },
+  "execution_history": [
+    {
+      "event": "K1 runtime candidate 1 failed",
+      "session_id": 9116,
+      "chunk_id": "88af4f",
+      "passed": 6,
+      "failed": 1,
+      "unselected": 33,
+      "detail": "New purchase cascade fixture used unsupported action.data.products. Actual outcomeFromAction correctly produced no product match; the hourly group and existing strict full-grid parity passed. Production guard unchanged."
+    },
+    {
+      "event": "owned fixture correction",
+      "detail": "Use supported items:[{productId:'bag-1'}] and assert constructed outcome type/products. Existing mapper supports literal click. No schema or production change."
+    },
+    {
+      "event": "K1 runtime candidate 2 passed, superseded",
+      "session_id": 23434,
+      "chunk_id": "de783e",
+      "passed": 7,
+      "unselected": 33,
+      "detail": "Superseded only by subsequent required LearnConfig fixture typing correction."
+    },
+    {
+      "event": "K2 candidate failed",
+      "session_id": 13918,
+      "chunk_id": "a0460a",
+      "exit_code": 2,
+      "detail": "TS2741: new hourly fixture omitted required LearnConfig.holdout. Compiler stopped the compound before lint/whitespace."
+    },
+    {
+      "event": "owned fixture correction",
+      "detail": "Root approved reusing existing learn.holdout in synthetic config; no production types/defaults changed."
+    },
+    {
+      "event": "final validation",
+      "detail": "Exact fixed7 passed on final bytes, followed by exact sequential compiler/scopedlint/whitespace. No numerical tolerance or rounding correction was needed. All 110 protected pins matched; no further source edits or checks after STOP."
+    }
+  ],
+  "command_captures": [
+    {
+      "label": "K1 runtime candidate 1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/hourly.test.ts -t 'W26.01|direct match, last credit|respects the window|match any credits|W09.04 reports acknowledged|the day from its hours is the day from its records' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T12:55:30.076Z",
+      "captures": [
+        {
+          "chunk_id": "c9c1f7",
+          "wall_time_seconds": 1.000925108,
+          "session_id": 9116,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "88af4f",
+          "wall_time_seconds": 0.000001918,
+          "exit_code": 1,
+          "original_token_count": 689,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ❯ src/learn/learn.test.ts  (23 tests | 1 failed | 18 skipped) 61ms\n   ❯ src/learn/learn.test.ts > the objects > W26.01 contains named direct item and product credits through the actual ring and statistics objects\n     → expected { ok: true, credits: +0, …(1) } to match object { ok: true, credits: 1, …(1) }\n(6 matching properties omitted from actual)\n ✓ src/learn/hourly.test.ts  (17 tests | 15 skipped) 16ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/learn/learn.test.ts > the objects > W26.01 contains named direct item and product credits through the actual ring and statistics objects\nAssertionError: expected { ok: true, credits: +0, …(1) } to match object { ok: true, credits: 1, …(1) }\n(6 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  Object {\n-   \"credits\": 1,\n+   \"credits\": 0,\n    \"ok\": true,\n    \"receipt\": Object {\n-     \"attributed\": 1,\n+     \"attributed\": 0,\n      \"credits\": Object {\n-       \"acknowledged\": 1,\n+       \"acknowledged\": 0,\n        \"alarmsUnknown\": 0,\n-       \"destinations\": 1,\n+       \"destinations\": 0,\n        \"notAttempted\": 0,\n-       \"processed\": 1,\n-       \"received\": 1,\n+       \"processed\": 0,\n+       \"received\": 0,\n        \"skipped\": 0,\n        \"unknown\": 0,\n      },\n-     \"eligible\": 1,\n+     \"eligible\": 0,\n      \"weightSkipped\": 0,\n    },\n  }\n\n ❯ src/learn/learn.test.ts:500:34\n    498|         const res = await request('/outcome', { tenant: 'coach', brand…\n    499|         expect(res.status).toBe(200);\n    500|         expect(await res.json()).toMatchObject({ ok: true, credits: i,…\n       |                                  ^\n    501|           credits: { destinations: i, acknowledged: i, received: i, pr…\n    502|         if (i === 0) {\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed | 1 passed (2)\n      Tests  1 failed | 6 passed | 33 skipped (40)\n   Start at  08:55:33\n   Duration  11.19s (transform 1.63s, setup 0ms, collect 3.00s, tests 77ms, environment 0ms, prepare 6.60s)\n\n"
+        }
+      ],
+      "session_id": 9116,
+      "drained": true,
+      "exit_code": 1,
+      "finished_at": "2026-09-12T12:55:48.815Z"
+    },
+    {
+      "label": "K1 runtime candidate 2",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/hourly.test.ts -t 'W26.01|direct match, last credit|respects the window|match any credits|W09.04 reports acknowledged|the day from its hours is the day from its records' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T12:56:20.644Z",
+      "captures": [
+        {
+          "chunk_id": "1c3e78",
+          "wall_time_seconds": 1.001429519,
+          "session_id": 23434,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "de783e",
+          "wall_time_seconds": 0.610969393,
+          "exit_code": 0,
+          "original_token_count": 251,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (23 tests | 18 skipped) 46ms\n ✓ src/learn/hourly.test.ts  (17 tests | 15 skipped) 20ms\n\n Test Files  2 passed (2)\n      Tests  7 passed | 33 skipped (40)\n   Start at  08:56:23\n   Duration  9.37s (transform 1.29s, setup 0ms, collect 3.13s, tests 66ms, environment 0ms, prepare 4.35s)\n\n"
+        }
+      ],
+      "session_id": 23434,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T12:56:33.314Z"
+    },
+    {
+      "label": "K2 compiler, scoped lint and whitespace",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/policy.ts src/learn/learn.test.ts src/learn/hourly.test.ts --max-warnings 3 && git diff --check -- src/learn/policy.ts src/learn/learn.test.ts src/learn/hourly.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T12:56:49.238Z",
+      "captures": [
+        {
+          "chunk_id": "037441",
+          "wall_time_seconds": 1.000765428,
+          "session_id": 13918,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "a0460a",
+          "wall_time_seconds": 4.781492896,
+          "exit_code": 2,
+          "original_token_count": 56,
+          "output": "src/learn/hourly.test.ts(81,13): error TS2741: Property 'holdout' is missing in type '{ slots: { hero: { reward: \"click\" | \"purchase\"; }; rail: { reward: \"click\" | \"purchase\"; }; }; }' but required in type 'LearnConfig'.\n"
+        }
+      ],
+      "session_id": 13918,
+      "drained": true,
+      "exit_code": 2,
+      "finished_at": "2026-09-12T12:57:16.854Z"
+    },
+    {
+      "label": "K1 final runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/hourly.test.ts -t 'W26.01|direct match, last credit|respects the window|match any credits|W09.04 reports acknowledged|the day from its hours is the day from its records' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T12:57:32.442Z",
+      "captures": [
+        {
+          "chunk_id": "85ff7f",
+          "wall_time_seconds": 1.001278475,
+          "session_id": 45473,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9e041d",
+          "wall_time_seconds": 5.001231454,
+          "session_id": 45473,
+          "original_token_count": 187,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (23 tests | 18 skipped) 51ms\n"
+        },
+        {
+          "chunk_id": "908389",
+          "wall_time_seconds": 0.000002305,
+          "exit_code": 0,
+          "original_token_count": 65,
+          "output": " ✓ src/learn/hourly.test.ts  (17 tests | 15 skipped) 17ms\n\n Test Files  2 passed (2)\n      Tests  7 passed | 33 skipped (40)\n   Start at  08:57:35\n   Duration  21.58s (transform 2.49s, setup 0ms, collect 6.72s, tests 68ms, environment 0ms, prepare 11.31s)\n\n"
+        }
+      ],
+      "session_id": 45473,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T12:58:05.017Z"
+    },
+    {
+      "label": "K2 final compiler, scoped lint and whitespace",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/policy.ts src/learn/learn.test.ts src/learn/hourly.test.ts --max-warnings 3 && git diff --check -- src/learn/policy.ts src/learn/learn.test.ts src/learn/hourly.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T12:58:05.017Z",
+      "captures": [
+        {
+          "chunk_id": "8e2cf0",
+          "wall_time_seconds": 1.001094115,
+          "session_id": 55805,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "eac091",
+          "wall_time_seconds": 5.000856718,
+          "session_id": 55805,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6ab1b7",
+          "wall_time_seconds": 5.000768963,
+          "session_id": 55805,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "32f308",
+          "wall_time_seconds": 5.000326712,
+          "session_id": 55805,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "de7c45",
+          "wall_time_seconds": 0.000002329,
+          "exit_code": 0,
+          "original_token_count": 100,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  520:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  521:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  521:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 55805,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T12:59:06.794Z"
+    },
+    {
+      "label": "Final source STOP and protected comparison",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const sha=p=>createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\");const baselinePath=\"docs/remediation/design/W26.01/baseline.json\",b=JSON.parse(fs.readFileSync(baselinePath,\"utf8\")),owned=new Set(b.owned.map(x=>x.path)),protectedPins=b.pins.filter(x=>!owned.has(x.path));const mismatches=protectedPins.flatMap(x=>{const actual=sha(x.path);return actual===x.sha256?[]:[{path:x.path,expected:x.sha256,actual}];});const result={final_source_stop:{at:new Date().toISOString(),files:b.owned.map(x=>({path:x.path,sha256:sha(x.path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},references:[baselinePath,\"docs/remediation/design/W26.01/plan.md\",\"docs/remediation/evidence/W26.01/admission.json\"].map(path=>({path,sha256:sha(path)}))};console.log(JSON.stringify(result,null,2));if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T12:59:24.427Z",
+      "captures": [
+        {
+          "chunk_id": "215422",
+          "wall_time_seconds": 0.126604949,
+          "exit_code": 0,
+          "original_token_count": 317,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T12:59:24.746Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/policy.ts\",\n        \"sha256\": \"b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5\"\n      },\n      {\n        \"path\": \"src/learn/learn.test.ts\",\n        \"sha256\": \"08483173c53474a1876b831fe623404c3fe994373e226cf9267c58a04c6bf92b\"\n      },\n      {\n        \"path\": \"src/learn/hourly.test.ts\",\n        \"sha256\": \"997f3bc38ad97b11bb76db972c9d25942aaf7b2718cd8db90d61fbb5e2762026\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"4ec1611c6b85abaed8c7b4827643a5068ee11888c361d026cb6d86a66cbdb7f2\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 110,\n    \"matched\": 110,\n    \"mismatches\": []\n  },\n  \"references\": [\n    {\n      \"path\": \"docs/remediation/design/W26.01/baseline.json\",\n      \"sha256\": \"620998e8a3e0aef1e4d86d93a60d1dac04a20ab96a7e1d874b717cc8c86c2050\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W26.01/plan.md\",\n      \"sha256\": \"5784ed610ce3114ca098265b5a8ec4eb81213b0a5d21cf4934656527a6605b03\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W26.01/admission.json\",\n      \"sha256\": \"9f027197dc16f332325a887820407296ec9c6aede5d107a3e0f9d39e70959134\"\n    }\n  ]\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T12:59:24.780Z"
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T12:59:24.746Z",
+    "files": [
+      {
+        "path": "src/learn/policy.ts",
+        "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "08483173c53474a1876b831fe623404c3fe994373e226cf9267c58a04c6bf92b"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "997f3bc38ad97b11bb76db972c9d25942aaf7b2718cd8db90d61fbb5e2762026"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "4ec1611c6b85abaed8c7b4827643a5068ee11888c361d026cb6d86a66cbdb7f2"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 110,
+    "matched": 110,
+    "mismatches": []
+  },
+  "limitations": [
+    "Named-slot direct-attribution containment only; full W26/F21/F16/F34 remain open. Local actual-module checks use synthetic storage, not deployed/customer/scientific/release acceptance.",
+    "Null/missing/blank and literal unknown remain broad legacy direct inputs; a real slot literally named unknown is indistinguishable from the SDK sentinel. match:any intentionally remains broad.",
+    "No correlated decision/outcome, page/brand/position identity, SDK lifecycle/refresh/dedup or served/rendered/viewable-unit migration. Same-named slots across pages/brands/positions remain ambiguous; fatigue remains global-item.",
+    "No policy-version migration, reset/rebuild or historical repair. Existing counters, snapshots and stored hour/day reports remain unchanged; recomputation may differ under the same policy label.",
+    "No extra network hop, automatic retry, scoring/reward arithmetic or model-policy change. Existing fallback warnings in selected W09.04 fixture remain reported; no new configuration/deployed-read assurance.",
+    "No subdelegation, external/cloud/resource/credential/customer-data/deployment/commit actions. Separate frozen review and lead acceptance pending."
+  ]
+}

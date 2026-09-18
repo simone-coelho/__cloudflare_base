@@ -1,0 +1,226 @@
+{
+  "before": null,
+  "after": {
+    "id": "W33.01-E3",
+    "task_id": "W33.01",
+    "check_id": "W33.01-K3",
+    "criterion_ids": [
+      "W33.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W33.01/review.json",
+      "sha256": "6fcbf19defdfdfc3935d8423f0f2b39ae7311b69d547b80e2c7f9b860e519075"
+    },
+    "at": "2026-09-12T19:32:26.582Z",
+    "limitations": "Forward isolation of explicit custom policy arrays, including empty and built-in-equivalent arrays, from canonical day report persistence in the upgraded writer. Not full W33/N09/F17/F25 closure: historical overwrite detection/provenance and safe authorized repair remain open; no existing report is scanned, deleted or reconstructed. Old binaries and canonical-vs-canonical races/write acknowledgements remain unproved. Existing malformed non-array POST coercion/request validation remains unchanged; this is not a write-authorization boundary. Canonical raw fallback retains its existing history/cap limits. W30.01 attribution and W30.02 coverage remain implemented; broad shared artifact proof is explicitly qualified with accepted history preserved, not silently renewed. Legacy UI custom results/CSV are response-only; reload GET reads canonical, while ordinary console/scheduler null requests retain publication. No serving/attribution policy, report schema, identity/key format, additional I/O, new infrastructure, external/cloud/credential/customer-data/deployment/destructive/commit/push or customer-policy authority.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W33.01|W30.02|W21 retains repeated credits|the day report comes from the hours' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Separate Astra/xhigh frozen actual artifact review and fixed6 once.",
+    "workload": "Three exact deltas/protected dependencies, full W33 residuals; reuse final static.",
+    "result": "pass",
+    "artifact_digest": "bc19233788aa10e5070f564c8ea9996e2ad3225de5139667b914a630aaadd93a",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "2bec65459bb26297566c5ec273fb9fca3910fc5771c9183c5e025bc9f37aeb2e",
+      "configuration": "Forward isolation of explicit custom policy arrays, including empty and built-in-equivalent arrays, from canonical day report persistence in the upgraded writer. Not full W33/N09/F17/F25 closure: historical overwrite detection/provenance and safe authorized repair remain open; no existing report is scanned, deleted or reconstructed. Old binaries and canonical-vs-canonical races/write acknowledgements remain unproved. Existing malformed non-array POST coercion/request validation remains unchanged; this is not a write-authorization boundary. Canonical raw fallback retains its existing history/cap limits. W30.01 attribution and W30.02 coverage remain implemented; broad shared artifact proof is explicitly qualified with accepted history preserved, not silently renewed. Legacy UI custom results/CSV are response-only; reload GET reads canonical, while ordinary console/scheduler null requests retain publication. No serving/attribution policy, report schema, identity/key format, additional I/O, new infrastructure, external/cloud/credential/customer-data/deployment/destructive/commit/push or customer-policy authority.",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "role": "output",
+          "sha256": "40c6a18bc0c65aa562ca9ee905bef07854adb6b97d4d4f97574add652b9bc7ca"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "role": "output",
+          "sha256": "0572e307386608bbfdbcfcd1c4595505dea181302fac7ebe5e970a8889eb2763"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "94f180647f94692d505b6520c4ae4ab71be6708130355845bae9596f476cf640"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "source",
+          "sha256": "0f7cb03abfca3202fb02b49588049163c18d007c7bfd47e9598ca9237b4638da"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "source",
+          "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "role": "source",
+          "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "4d890aa841d57e07d8b00eb46f65217b2287274655c02e1c9e0231c20a4128ae"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b"
+        },
+        {
+          "path": "public/learning.js",
+          "role": "source",
+          "sha256": "6dbb1b51969b9fbd4a78347ac7ab95657bbe17f7f728b872d6c66cf5fcc189f7"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "role": "source",
+          "sha256": "060a3b660d63b0153a54870c32febccb70660d7385331724be177a5718d9f80f"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-learning-and-statistics.md",
+          "role": "source",
+          "sha256": "0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F17.md",
+          "role": "source",
+          "sha256": "84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F25.md",
+          "role": "source",
+          "sha256": "2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W33.01/worker.json",
+          "role": "output",
+          "sha256": "32b7ce7510b6e3a0a5aab36b92362ba0b94b1d6f1535b0dcc0e9454ed2b18454"
+        },
+        {
+          "path": "docs/remediation/design/W33.01/plan.md",
+          "role": "configuration",
+          "sha256": "179492d94b54bfb45dca513f806a8557ffcc6f7198128e38f4b21bfb055b4551"
+        },
+        {
+          "path": "docs/remediation/design/W33.01/baseline.json",
+          "role": "configuration",
+          "sha256": "9361f7c72349b70484665ae180d578fc081e00786ad69b394879e9c971edb40b"
+        },
+        {
+          "path": "docs/remediation/evidence/W33.01/admission.json",
+          "role": "configuration",
+          "sha256": "d2341d910d069569010e4dd3e302c1a485a487d4a7c82002df9a00f02c12f465"
+        },
+        {
+          "path": "docs/remediation/evidence/W33.01/source-freeze.json",
+          "sha256": "b2e31bd4d75018fe876e526127179757fa1989dd5c55ec44760c70ac2af4590c",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W33.01/source-deltas.json",
+          "sha256": "8175ed50369652de476708ead2811ba659cd8d53bca72e11040111d0cc4fd806",
+          "role": "configuration"
+        }
+      ],
+      "digest": "bc19233788aa10e5070f564c8ea9996e2ad3225de5139667b914a630aaadd93a"
+    }
+  }
+}

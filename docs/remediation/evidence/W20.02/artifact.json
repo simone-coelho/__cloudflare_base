@@ -1,0 +1,218 @@
+{
+  "status": "recorded",
+  "contract_digest": "bae4db1ab1ddb252733b81ba6a46262c2ac5338d1d265ab660f57e0dafdfec92",
+  "configuration": "Bounded advisory catalog-reference checks on slot HTTP current/preview/PUT/rollback and existing Rules/History only. Full W20/F28/F26 exclusions/off-limits, priority/multi-position policy, customer fallback and actual customer acceptance remain open. Independent catalog and slots may change after inspection; feedback is not atomic activation, serving-cache attestation or immutable receipt metadata. Existing runtime pin reservation, eligibility, refusal/no-fill and historical replay remain authoritative and unchanged. Scheduled, draft, missing or temporarily out-of-stock pins remain authorable under existing structural validation; warnings are not a new rejection policy. Generic library/seed writers and later catalog publications have no added cross-document guard. Unavailable/unauthorized/legacy-fallback feedback is not zero-warning assurance. No serving/model/schema/store/SDK changes, new pin editor/framework/broad suite or native/SLO claim. No deploy/cloud/install/build/provision/seed/credential/customer-data/destructive/commit/push/external operations or customer-policy amendment. W19.03 overlapping exact-byte proof is prospectively qualified with its implemented diagnostics/history retained; W19.02/W08.04 accepted artifacts remain unchanged.",
+  "files": [
+    {
+      "path": "src/routes/content.ts",
+      "role": "output",
+      "sha256": "06c2ea4f18954bf919314afef75c18ec4b5a51c2ed0f8b8023ea0567d72d90fc"
+    },
+    {
+      "path": "src/routes/content.test.ts",
+      "role": "output",
+      "sha256": "024a50a2ca3f8c4634ff58eba33e2976cbdb6665d19bf90d63055e89e2d70598"
+    },
+    {
+      "path": "public/console/views-config.js",
+      "role": "output",
+      "sha256": "0a6106a0a8899038a0bb64d149a4e0df0c1fae93ec087bf0214cf82148420d53"
+    },
+    {
+      "path": "public/console/views-measure.js",
+      "role": "output",
+      "sha256": "e69b1cbde91aa894f44fe480316340b7317a8aee88c81a52629627e09ad464b3"
+    },
+    {
+      "path": "src/console/console.render.test.ts",
+      "role": "output",
+      "sha256": "c37d9d6d4fa893b8fd61baf5d873a090eaa4d11474cd5e2eebd5a5b1a5c0e823"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "role": "output",
+      "sha256": "be666d2d38173005017c97f7952cbc7fd9cf562b9b9a0c38cb10d943e23d858c"
+    },
+    {
+      "path": "src/content/catalogDiagnostics.ts",
+      "role": "source",
+      "sha256": "799d71550ae29c10c3947b00da4fd6962b93f04a5eaf699ec789deaa013e4a9d"
+    },
+    {
+      "path": "src/content/lifecycle.ts",
+      "role": "source",
+      "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "source",
+      "sha256": "d2655c524599c346fe9c70be050d2d9a8eee073538af6ffc0a8b921e183150ca"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "role": "source",
+      "sha256": "e694ea191d5fbbc32c3fbfe7bcf1c48fe1202ca1d6f58082d3f13e3f5970bbdd"
+    },
+    {
+      "path": "src/content/service.ts",
+      "role": "source",
+      "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+    },
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "role": "source",
+      "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+    },
+    {
+      "path": "src/reflex/contentCompose.test.ts",
+      "role": "source",
+      "sha256": "f7b701a167c5d1e73a2c42cd1d195747a5aca06a300f5a28e4089207f4de10b5"
+    },
+    {
+      "path": "src/learn/replay.ts",
+      "role": "source",
+      "sha256": "39c738558649397814fb8dcb66c7a13ffced8546f6e13ae0e1847483ad1800a1"
+    },
+    {
+      "path": "src/learn/phase3.test.ts",
+      "role": "source",
+      "sha256": "883930220e131097796a3fe75283438eb8266f601927cf35909d204cedf46d8e"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "source",
+      "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+    },
+    {
+      "path": "src/config/publication.ts",
+      "role": "source",
+      "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+    },
+    {
+      "path": "src/config/input.ts",
+      "role": "source",
+      "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "role": "source",
+      "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+    },
+    {
+      "path": "src/middleware/operatorAuth.ts",
+      "role": "source",
+      "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+    },
+    {
+      "path": "public/console/shell.js",
+      "role": "source",
+      "sha256": "6ed7abd4a5d20226109d12910f003645fd22620d116d2caead344b9b85d7916e"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "role": "source",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F28.md",
+      "role": "source",
+      "sha256": "121a07ed372126d8e1741d374865e8af6eef55357b76a955b4db18fba236da9f"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F26.md",
+      "role": "source",
+      "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+    },
+    {
+      "path": "docs/content-personalization-design-tapestry.html",
+      "role": "source",
+      "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+    },
+    {
+      "path": "docs/architecture/18-content-affinity-engine.md",
+      "role": "source",
+      "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+    },
+    {
+      "path": "docs/kit/03-payload-schemas.md",
+      "role": "source",
+      "sha256": "d9a75879b1c760831bb930c4893aac9115147fcffc9ac757a086513bdff0af56"
+    },
+    {
+      "path": "docs/PS-Implementation-Delivery-Guide.md",
+      "role": "source",
+      "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    },
+    {
+      "path": "src/content/slotDiagnostics.ts",
+      "role": "output",
+      "sha256": "d03715b2e48b432517c7c3791fe42d1c03a1a8d155825343275e35d172b576b1"
+    },
+    {
+      "path": "public/console/index.html",
+      "role": "source",
+      "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.02/worker.json",
+      "role": "output",
+      "sha256": "cc4f51dc32513687aeec1ac5bcb4843d04d36f94d308ce6119fe70518841efba"
+    },
+    {
+      "path": "docs/remediation/design/W20.02/plan.md",
+      "role": "configuration",
+      "sha256": "4079d666f5e9b7d13268a9380d91ecb1c241d422d7a89ad048f34041a28d30d1"
+    },
+    {
+      "path": "docs/remediation/design/W20.02/baseline.json",
+      "role": "configuration",
+      "sha256": "cb4e2642da2f258e65307672b81dbc5571bd92ffbcc3a2acd9d7e14660e0aaac"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.02/admission.json",
+      "role": "configuration",
+      "sha256": "a1ee903c1f7fc00eb638af316912fff65db52e771867c337ab64ceb434b99eb4"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.02/source-freeze.json",
+      "sha256": "f130e07dc6b21eec02496a1ae30a1c3ba6bff3ca1ee8a8df80aeb0dbbef5056e",
+      "role": "configuration"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.02/source-deltas.json",
+      "sha256": "43c53838b5fe0417bb1dc85cf41d5e106648edaec1a0df8e9498833951af6853",
+      "role": "configuration"
+    }
+  ],
+  "digest": "43bc511a55fad4159efa3c486dac1d300806b66db29c6426faac79f3d0ea202f"
+}

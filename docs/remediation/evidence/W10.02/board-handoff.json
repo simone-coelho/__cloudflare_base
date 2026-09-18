@@ -1,0 +1,115 @@
+{
+  "at": "2026-09-12T03:33:07.504Z",
+  "task_id": "W10.02",
+  "artifact_digest": "dedc13bae3bf33bbce5fa3642d290ddd2d93d786d00f9f126af63937caa66653",
+  "journal_seq": 1103,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "8cb9cc",
+        "wall_time_seconds": 1.00153006,
+        "session_id": 57731,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "837014",
+        "wall_time_seconds": 5.000764019,
+        "session_id": 57731,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "41921f",
+        "wall_time_seconds": 5.001105265,
+        "session_id": 57731,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ed80f7",
+        "wall_time_seconds": 5.001376281,
+        "session_id": 57731,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "e00af9",
+        "wall_time_seconds": 5.001543795,
+        "session_id": 57731,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "7ac80d",
+        "wall_time_seconds": 5.001871734,
+        "session_id": 57731,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "047c26",
+        "wall_time_seconds": 30.000738362,
+        "session_id": 57731,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "690b97",
+        "wall_time_seconds": 16.850828095,
+        "exit_code": 0,
+        "original_token_count": 565,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=19, unscoped=22\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=78, closed=2; evidence records=228\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W10.02 — Next inspect and admit the bounded W23 forward counter-arithmetic correction against F18: order-invariant decay and exact internal rates before historical rebuild work. Read complete W23/W24 scope and actual live/hourly consumers first; do not silently choose a lateness policy, reset/rewrite old statistics, or claim repaired historical evidence. W10 statistics/ring application guards are implemented; native sustained capacity, full-record storage redesign and oversized-object reconstruction remain open with W22/W24/W30 recovery dependencies. No external/resource/deployment/customer-policy authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 16259\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=19, unscoped=22\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=78, closed=2; evidence records=228\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W10.02 — Next inspect and admit the bounded W23 forward counter-arithmetic correction against F18: order-invariant decay and exact internal rates before historical rebuild work. Read complete W23/W24 scope and actual live/hourly consumers first; do not silently choose a lateness policy, reset/rewrite old statistics, or claim repaired historical evidence. W10 statistics/ring application guards are implemented; native sustained capacity, full-record storage redesign and oversized-object reconstruction remain open with W22/W24/W30 recovery dependencies. No external/resource/deployment/customer-policy authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 16259\n"
+      }
+    ],
+    "session_id": 57731,
+    "exit_code": 0,
+    "drained": true,
+    "valid": true,
+    "note_counts": [
+      16259,
+      16259
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module -e 'import fs from'\\''node:fs'\\'';import assert from'\\''node:assert/strict'\\'';import{gunzipSync}from'\\''node:zlib'\\'';import{applyPatch}from'\\''diff'\\'';import{sha256,artifactDigest,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';const j=p=>JSON.parse(fs.readFileSync(p)),t=j('\\''docs/remediation/tracker.json'\\''),task=t.tasks.find(x=>x.id==='\\''W10.02'\\''),b=j('\\''docs/remediation/design/W10.02/baseline.json'\\''),a=j('\\''docs/remediation/evidence/W10.02/artifact.json'\\''),d=j('\\''docs/remediation/evidence/W10.02/source-deltas.json'\\'');assert.deepEqual(task.artifact,a);assert.equal(a.digest,artifactDigest(a));assert.equal(a.contract_digest,taskContractDigest(task));for(const f of a.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);for(const x of d.deltas){const before=gunzipSync(Buffer.from(b.owned.find(f=>f.path===x.path).content_gzip_base64,'\\''base64'\\'')).toString(),after=fs.readFileSync(x.path,'\\''utf8'\\'');assert.equal(applyPatch(before,x.forward),after,x.path);assert.equal(applyPatch(after,x.reverse),before,x.path);}console.log(JSON.stringify({ok:true,at:new Date().toISOString(),artifact:a.digest,files:a.files.length,source:b.pins.length,protected:b.pins.filter(f=>f.role==='\\''source'\\'').length,deltas:d.deltas.length,contract:a.contract_digest}));'",
+    "captures": [
+      {
+        "chunk_id": "2705af",
+        "wall_time_seconds": 0.539042994,
+        "exit_code": 0,
+        "original_token_count": 63,
+        "output": "{\"ok\":true,\"at\":\"2026-09-12T03:26:32.775Z\",\"artifact\":\"dedc13bae3bf33bbce5fa3642d290ddd2d93d786d00f9f126af63937caa66653\",\"files\":110,\"source\":104,\"protected\":101,\"deltas\":3,\"contract\":\"4d9a0eec9a42d1724ecd79a1a3d3bca4208e463731e6a8a3ead53950b5a4df7c\"}\n"
+      }
+    ]
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_local_application_guard",
+    "package_W10": "open",
+    "finding_F08": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Next inspect and admit the bounded W23 forward counter-arithmetic correction against F18: order-invariant decay and exact internal rates before historical rebuild work. Read complete W23/W24 scope and actual live/hourly consumers first; do not silently choose a lateness policy, reset/rewrite old statistics, or claim repaired historical evidence. W10 statistics/ring application guards are implemented; native sustained capacity, full-record storage redesign and oversized-object reconstruction remain open with W22/W24/W30 recovery dependencies. No external/resource/deployment/customer-policy authority is inferred."
+  },
+  "next_read_only_inspection": {
+    "status": "read_only_no_task_or_source_go",
+    "sources_read": [
+      "docs/architecture/35-audit-verification-and-source-of-truth.md: W23/W24 and F18/F19",
+      "docs/architecture/35-verification-reports/F18.md (complete; historical claims qualified by canonical F18)",
+      "docs/architecture/22-outcome-learning-design.md: section 5",
+      "src/learn/stats.ts (complete)",
+      "src/learn/hourly.ts: mergeStats and fold consumers",
+      "src/durable-objects/LearnStats.ts: bounded ingestion, writeRows, snapshot call"
+    ],
+    "confirmed": [
+      "bump still overwrites reference time with incoming ts; late contributions can age prior mass again.",
+      "buildSnapshot still memoizes rounded slot rates; liftFor gates and returns published rounded fields.",
+      "Actual online, records report and hourly fold share stats.ts; hourly merge already uses maximum reference time.",
+      "LearnStats finite/date validation is not a customer lateness policy; no timestamp policy or historical repair authorized by W10.02."
+    ],
+    "next": "Set the smallest arithmetic/precision scope after inspecting exact affected serving/receipt and historical compatibility requirements. Keep forward correction separate from historical reconstruction, duplicate idempotency and lateness-policy decisions."
+  },
+  "limitations": "Bounded local application-budget DecisionRing guard only; not native/provider-limit or sustained capacity proof,200-full-record capacity guarantee, historical oversized/inconsistent-object reconstruction, complete history/fatigue/attribution/learning, or full W10/F08/customer/release acceptance. Large ordinary records may hit bytes before200 entries. Ring refusal does not roll back concurrent statistics exposures; existing fan reports incomplete, no automatic retry. Preserve full records and existing200/7-day ring and90-day index retention; no new pruning, lossy projection, automatic reset, seen-state/idempotency, policy/Env/storage-schema programme, cloud/resource/credential/customer-data/deploy/commit/push/cleanup or customer-policy authority."
+}

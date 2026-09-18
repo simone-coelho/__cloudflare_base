@@ -1,0 +1,169 @@
+{
+  "at": "2026-09-18T00:53:43.508Z",
+  "before": {
+    "id": "W12",
+    "canonical": {
+      "gate_scope": "G0/G1",
+      "full_scope": "Consent-safe, non-polluting monitor with zero-decision detection, delivery/schema/tenant continuity, justified thresholds and visible alert result. Isolate synthetic receipts/state from customer measurement. Verify disabled/failed/empty queues, destination failure, both hosts and each configured tenant. An alert URL merely being present is not on-call acceptance.",
+      "finding_refs": "F10; N19",
+      "sizing_owner": "S isolated checks → M operational proof; OL/D"
+    },
+    "title": "Consent-safe monitoring and alerts",
+    "gates": [
+      "G0",
+      "G1"
+    ],
+    "source_findings": [
+      "F10",
+      "N19"
+    ],
+    "proposed_owner": "OL/D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W12-MONITOR-TRUTHFULNESS",
+          "description": "Fail empty default decisions and expose alert delivery/recovery retry in existing monitor; bounded local containment, not complete monitoring continuity or deployed on-call acceptance."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+          "task_id": "W12.01",
+          "task_criterion_id": "W12.01-C1"
+        },
+        {
+          "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+          "task_id": "W12.01",
+          "task_criterion_id": "W12.01-C2"
+        },
+        {
+          "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+          "task_id": "W12.01",
+          "task_criterion_id": "W12.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W12.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W12",
+    "canonical": {
+      "gate_scope": "G0/G1",
+      "full_scope": "Consent-safe, non-polluting monitor with zero-decision detection, delivery/schema/tenant continuity, justified thresholds and visible alert result. Isolate synthetic receipts/state from customer measurement. Verify disabled/failed/empty queues, destination failure, both hosts and each configured tenant. An alert URL merely being present is not on-call acceptance.",
+      "finding_refs": "F10; N19",
+      "sizing_owner": "S isolated checks → M operational proof; OL/D"
+    },
+    "title": "Consent-safe monitoring and alerts",
+    "gates": [
+      "G0",
+      "G1"
+    ],
+    "source_findings": [
+      "F10",
+      "N19"
+    ],
+    "proposed_owner": "OL/D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W12-MONITOR-TRUTHFULNESS",
+          "description": "Fail empty default decisions and expose alert delivery/recovery retry in existing monitor; bounded local containment, not complete monitoring continuity or deployed on-call acceptance."
+        },
+        {
+          "id": "W12-COMPLETE-LOCAL-MONITOR",
+          "description": "Complete remaining originalW12 local isolated consent-safe personalized/delivery/schema/tenant monitoring, bounded truthful thresholds and visible alert outcomes, preserving prior remedies and full live/on-call/customer acceptance."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+          "task_id": "W12.01",
+          "task_criterion_id": "W12.01-C1"
+        },
+        {
+          "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+          "task_id": "W12.01",
+          "task_criterion_id": "W12.01-C2"
+        },
+        {
+          "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+          "task_id": "W12.01",
+          "task_criterion_id": "W12.01-C3"
+        },
+        {
+          "criterion_id": "W12-COMPLETE-LOCAL-MONITOR",
+          "task_id": "W12.02",
+          "task_criterion_id": "W12.02-C1"
+        },
+        {
+          "criterion_id": "W12-COMPLETE-LOCAL-MONITOR",
+          "task_id": "W12.02",
+          "task_criterion_id": "W12.02-C2"
+        },
+        {
+          "criterion_id": "W12-COMPLETE-LOCAL-MONITOR",
+          "task_id": "W12.02",
+          "task_criterion_id": "W12.02-C3"
+        },
+        {
+          "criterion_id": "W12-COMPLETE-LOCAL-MONITOR",
+          "task_id": "W12.02",
+          "task_criterion_id": "W12.02-C4"
+        },
+        {
+          "criterion_id": "W12-COMPLETE-LOCAL-MONITOR",
+          "task_id": "W12.02",
+          "task_criterion_id": "W12.02-C5"
+        },
+        {
+          "criterion_id": "W12-COMPLETE-LOCAL-MONITOR",
+          "task_id": "W12.02",
+          "task_criterion_id": "W12.02-C6"
+        },
+        {
+          "criterion_id": "W12-COMPLETE-LOCAL-MONITOR",
+          "task_id": "W12.02",
+          "task_criterion_id": "W12.02-C7"
+        },
+        {
+          "criterion_id": "W12-COMPLETE-LOCAL-MONITOR",
+          "task_id": "W12.02",
+          "task_criterion_id": "W12.02-C8"
+        },
+        {
+          "criterion_id": "W12-COMPLETE-LOCAL-MONITOR",
+          "task_id": "W12.02",
+          "task_criterion_id": "W12.02-C9"
+        }
+      ],
+      "task_ids": [
+        "W12.01",
+        "W12.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

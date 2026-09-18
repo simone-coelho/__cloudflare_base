@@ -1,0 +1,412 @@
+{
+  "task": "W09.04",
+  "actor": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "source_stopped_pending_independent_review",
+  "authority": {
+    "contract_digest": "504fa293e91fcae2a9c16f003374086884451a872997b5aec435073c1d4dd651",
+    "plan": "docs/remediation/design/W09.04/plan.md",
+    "plan_sha256": "59cad39c43a05eb1712a762faf291ec5f05a180f7fb000d3a435da504a00c811",
+    "admission_sha256": "7dc70e13579eb6bfc065a01375a883c2c43ba08de81a0c3c563fb62318f07a78",
+    "baseline_lint_sha256": "67891b3ec2d72b80980c05a65b6dec3fc0edf84884751bb7d2bb3ebca9322c96",
+    "admission": "docs/remediation/evidence/W09.04/admission.json",
+    "journal": 1056,
+    "baseline": "docs/remediation/design/W09.04/baseline.json",
+    "baseline_lint": "docs/remediation/design/W09.04/baseline-lint.json",
+    "entry": "Root-owned40388 VALID1047 check/status reused; no worker board or baseline rerun."
+  },
+  "implemented": [
+    "Version/kind/HTTP/body/expected-count validation across ring append, statistics processing and nested outcome credit cascade; distinct destination, input, attributed, eligible, suppression, retained-depth and processed counts.",
+    "LearnStats returns processed/skipped only after acknowledged save; failed mutation/save clears cached state for serialized reload, including ambiguous commit. Alarm acknowledgement is separate and never promises publication. Existing arithmetic and fallbacks preserved.",
+    "DecisionRing prepares attribution and credit destinations under its existing fresh-barrier serialization, then awaits downstream statistics outside the ring lock. Legacy depth/attributed fields remain; no non-idempotent retry added.",
+    "Current content afterResponse and outcomeToLearning consume incomplete reports through one fixed numeric nonthrowing diagnostic. Existing consent, holdout and cutoff behavior retained; no raw target/body/error metadata.",
+    "Three grouped additions in existing fixtures. Narrow root-approved consent setup repair uses actual acknowledged synthetic catalog initialization and retains publication capabilities/non-tombstone reads during barrier overrides."
+  ],
+  "final_results": {
+    "runtime": {
+      "command": "runtime-final",
+      "session_id": 28858,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "95e0b7",
+      "passed": 24,
+      "failed": 0,
+      "intentionally_skipped": 13,
+      "new_groups": 3,
+      "components": [
+        {
+          "fixture": "src/learn/learn.test.ts",
+          "passed": 15,
+          "new_groups": 1
+        },
+        {
+          "fixture": "src/learn/holdoutArms.test.ts",
+          "passed": 7,
+          "new_groups": 1
+        },
+        {
+          "fixture": "src/content/consent.test.ts",
+          "passed": 2,
+          "new_groups": 1,
+          "intentionally_skipped": 13
+        }
+      ]
+    },
+    "compiler": {
+      "command": "static-final",
+      "session_id": 80768,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "7fa458",
+      "basis": "First component of exact successful sequential && compound; no separate invocation claimed."
+    },
+    "lint": {
+      "command": "static-final",
+      "session_id": 80768,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "7fa458",
+      "errors": 0,
+      "warnings": 8,
+      "baseline_warnings": 8,
+      "new_warnings": 0,
+      "comparison": "Same baseline files, rules, messages and line/column positions: StatsConfig unused; three holdout any and one empty setAlarm; three learn fixture unused parameters."
+    },
+    "whitespace": {
+      "command": "static-final",
+      "session_id": 80768,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "7fa458",
+      "basis": "Final component of exact successful sequential && compound."
+    },
+    "protected_sources": {
+      "command": "source-stop",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "e88037",
+      "checked": 73,
+      "mismatches": []
+    }
+  },
+  "failures_and_superseding_validation": [
+    {
+      "command": "runtime-candidate-1",
+      "session_id": 34148,
+      "exit_code": 1,
+      "drained": true,
+      "result": "22 learning tests passed; both selected consent cases failed before behavioral assertions because old fixture used legacy catalog write without required publication preconditions.",
+      "correction": "Root approved actual synthetic initializePublication setup, preserving production guards and original selected barrier assertions."
+    },
+    {
+      "command": "static-candidate-1",
+      "session_id": 8760,
+      "exit_code": 1,
+      "drained": true,
+      "result": "Compiler passed; lint had0errors/10warnings (8 inherited +2 new empty logger callbacks); whitespace not reached.",
+      "correction": "Only two added mock callbacks changed to return undefined; no inherited warning cleanup."
+    },
+    {
+      "command": "runtime-candidate-2",
+      "session_id": 37953,
+      "exit_code": 1,
+      "drained": true,
+      "result": "22 learning tests passed; selected consent failed because barrier override omitted publication-required put capability and because new config assertion incorrectly expected strict failure instead of existing fallback.",
+      "correction": "Preserved catalog capabilities and non-tombstone reads. Asserted actual legacy KV failure fallback separately; injected one-shot readRevision rejection solely to exercise the real wrapper's propagated-preparation catch, explicitly a dependency mock."
+    },
+    {
+      "command": "static-candidate-2",
+      "session_id": 82387,
+      "exit_code": 2,
+      "drained": true,
+      "result": "Compiler reported two TS2741 fixture catalog pieces lacking required lifecycle; lint/whitespace not reached.",
+      "correction": "Initialized synthetic publication with explicit live lifecycle on its two pieces."
+    },
+    {
+      "commands": [
+        "runtime-final",
+        "static-final"
+      ],
+      "result": "Supersede all candidate failures on final source bytes:24PASS and compiler/scopedlint/whitespace PASS. No source edit after2026-09-12T00:44:23.288Z STOP."
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T00:44:23.288Z",
+    "files": [
+      {
+        "path": "src/learn/fan.ts",
+        "sha256": "75525fd6f79949563ff77144a8a8bb5c64eaa2514f26480b22fb8b8e3d915671"
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "491539a2f48cce07ae89dc8055988252e5c9f98a693c977c5615471535b9c7a9"
+      },
+      {
+        "path": "src/durable-objects/LearnStats.ts",
+        "sha256": "c1a785ed0cede827145266dc999e55bb8f10791ad97bf2dc6cee58851c11af70"
+      },
+      {
+        "path": "src/content/service.ts",
+        "sha256": "6690ba33d7f79552be967ab35e894179729a4c10009dc62cbd7b0ea7b51d5193"
+      },
+      {
+        "path": "src/learn/route.ts",
+        "sha256": "3f39e74a1ac391a8e3b5a905a6d7f0cc69b717ebda044bf28de02c6491d23b41"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "e05e4491ed6837636118643880eb59855063efc37b11e17ec92d4de8370f2fa0"
+      },
+      {
+        "path": "src/learn/holdoutArms.test.ts",
+        "sha256": "3e2ff5bd121e4bdad5a3c21351a7bbae272ea7597b6ef0e60c213414b8a0d947"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "f3bbd96edde29758d4a65327ef77ec633646c92cfbda13cc19adcd730f8cd1ca"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "c7241e9f4b74b0006ec8a0af676b8d73390505417e377ac37b086630ae5b4e9d"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "baseline": "docs/remediation/design/W09.04/baseline.json",
+    "baseline_sha256": "38f99817c9866646767327303fce52072775f677858ab465c4b3d6cae1e969e1",
+    "checked": 73,
+    "mismatches": []
+  },
+  "limitations": [
+    "Local downstream handler acknowledgement only, not full W09/F16/N10/W22 closure, customer acceptance, release or deployed latency/completeness assurance.",
+    "Non-idempotent exposure/credit writes are never automatically retried. Failed HTTP/body/save acknowledgement may follow effects; missing outcomes do not establish zero applied rows. No raw outbox, DLQ/quarantine or new recovery/retention resources.",
+    "Processed counts preserve existing eligibility predicates, numeric/time fallbacks and accumulator semantics. They are not unique logical events, correctness of model units, displayed exposures or published lift.",
+    "Alarm acknowledged means scheduling call succeeded or an alarm already existed; actual alarm execution, KV/R2 publication and aggregate repair remain separate.",
+    "Fresh fan/ring barriers are not an atomic fence against erasure after admission. Existing bounded ring retention, logical-event duplication and attribution/fold horizons remain.",
+    "Legacy readRevision deliberately logs fixed failure and returns default on KV read failure. This task preserves that policy. Propagated configuration-preparation exception coverage uses a one-shot dependency rejection, not a new strict KV-read guarantee.",
+    "Only fixed24 ran;13 other consent cases intentionally unselected. Unchanged protected source/dependency assurance reused; no broader lifecycle/core/queue or provider suite."
+  ],
+  "capture_notes": [
+    "Required runtime/static/source-stop captures below retain complete raw tool output, exit status, session/chunk identity and drain status, including failed and superseded executions. No required capture was truncated.",
+    "Runtime/static candidate compounds initially ran concurrently on unchanged candidate bytes. After concrete fixture failures, both drained before corrections. Final runtime passed before final static began; final static ran on source-stopped bytes.",
+    "Source-stop capture uses captured_at (recorded after tool completion), while final_source_stop.at is the actual timestamp generated by its hashing command. Root owns all tracker/checkpoint/artifact/review records.",
+    "Source-confirmed design baseline and root-owned lint/admission captures are referenced by exact hashes; no independent customer/deployed proof or implementer self-acceptance claimed."
+  ],
+  "command_captures": [
+    {
+      "kind": "runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/consent.test.ts -t 'W06.05 checks erasure in the background|W09.04' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T00:37:38.828Z",
+      "captures": [
+        {
+          "chunk_id": "fa69c9",
+          "wall_time_seconds": 1.001041226,
+          "session_id": 34148,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e301fe",
+          "wall_time_seconds": 5.000432266,
+          "session_id": 34148,
+          "original_token_count": 131,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (15 tests) 105ms\n ✓ src/learn/holdoutArms.test.ts  (7 tests) 46ms\n\n Test Files  2 passed (2)\n      Tests  22 passed (22)\n   Start at  20:37:50\n   Duration  31.68s (transform 3.06s, setup 0ms, collect 8.10s, tests 151ms, environment 0ms, prepare 18.22s)\n\n"
+        },
+        {
+          "chunk_id": "9629a5",
+          "wall_time_seconds": 0.000003113,
+          "exit_code": 1,
+          "original_token_count": 840,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/content/consent.test.ts  (15 tests | 2 failed | 13 skipped) 93ms\n   ❯ src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\n     → If-Match and Idempotency-Key are required\n   ❯ src/content/consent.test.ts > CW31 consent on the content service > W09.04 current callers consume incomplete learning receipts off the shopper response\n     → If-Match and Idempotency-Key are required\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nError: If-Match and Idempotency-Key are required\n ❯ publicationPreconditions src/config/publication.ts:65:84\n     63| \n     64| export function publicationPreconditions(meta: WriteMeta, initializati…\n     65|   if (meta.expectedRevision === undefined || meta.operationId === unde…\n       |                                                                                    ^\n     66|   if (!integer(meta.expectedRevision) || (!initialization && meta.expe…\n     67|     throw new PublicationError('Invalid publication preconditions', 40…\n ❯ Module.publish src/config/publication.ts:254:25\n ❯ Module.write src/config/versionedStore.ts:242:39\n ❯ envWith src/content/consent.test.ts:45:17\n ❯ src/content/consent.test.ts:122:33\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { status: 428, code: 'precondition_required' }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/content/consent.test.ts > CW31 consent on the content service > W09.04 current callers consume incomplete learning receipts off the shopper response\nError: If-Match and Idempotency-Key are required\n ❯ publicationPreconditions src/config/publication.ts:65:84\n     63| \n     64| export function publicationPreconditions(meta: WriteMeta, initializati…\n     65|   if (meta.expectedRevision === undefined || meta.operationId === unde…\n       |                                                                                    ^\n     66|   if (!integer(meta.expectedRevision) || (!initialization && meta.expe…\n     67|     throw new PublicationError('Invalid publication preconditions', 40…\n ❯ Module.publish src/config/publication.ts:254:25\n ❯ Module.write src/config/versionedStore.ts:242:39\n ❯ envWith src/content/consent.test.ts:45:17\n ❯ src/content/consent.test.ts:145:29\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { status: 428, code: 'precondition_required' }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  1 failed (1)\n      Tests  2 failed | 13 skipped (15)\n   Start at  20:38:28\n   Duration  18.26s (transform 4.29s, setup 0ms, collect 8.89s, tests 93ms, environment 0ms, prepare 6.82s)\n\n"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "finished_at": "2026-09-12T00:38:57.476Z",
+      "id": "runtime-candidate-1"
+    },
+    {
+      "kind": "static",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/fan.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/content/service.ts src/learn/route.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts --max-warnings 8 && git diff --check -- src/learn/fan.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/content/service.ts src/learn/route.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T00:38:00.052Z",
+      "captures": [
+        {
+          "chunk_id": "028b68",
+          "wall_time_seconds": 1.001679402,
+          "session_id": 8760,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2f23bc",
+          "wall_time_seconds": 5.000575347,
+          "session_id": 8760,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ae8567",
+          "wall_time_seconds": 5.001561368,
+          "session_id": 8760,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "feb7cc",
+          "wall_time_seconds": 5.001531371,
+          "session_id": 8760,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e4f820",
+          "wall_time_seconds": 0.000002313,
+          "exit_code": 1,
+          "original_token_count": 352,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/consent.test.ts\n  143:69  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  177:37  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/durable-objects/LearnStats.ts\n  11:88  warning  'StatsConfig' is defined but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/holdoutArms.test.ts\n   98:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  124:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  129:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  131:63  warning  Unexpected empty async method 'setAlarm'  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  110:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  111:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  111:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 10 problems (0 errors, 10 warnings)\n\nESLint found too many warnings (maximum: 8).\n"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "finished_at": "2026-09-12T00:40:08.930Z",
+      "id": "static-candidate-1"
+    },
+    {
+      "kind": "runtime",
+      "candidate": "final-corrected-fixture",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/consent.test.ts -t 'W06.05 checks erasure in the background|W09.04' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T00:40:55.124Z",
+      "captures": [
+        {
+          "chunk_id": "5ef667",
+          "wall_time_seconds": 1.000873381,
+          "session_id": 37953,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "994fd1",
+          "wall_time_seconds": 0.000002634,
+          "exit_code": 1,
+          "original_token_count": 894,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (15 tests) 57ms\n ✓ src/learn/holdoutArms.test.ts  (7 tests) 33ms\n\n Test Files  2 passed (2)\n      Tests  22 passed (22)\n   Start at  20:40:58\n   Duration  12.82s (transform 1.75s, setup 0ms, collect 4.53s, tests 90ms, environment 0ms, prepare 5.89s)\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/content/consent.test.ts  (15 tests | 2 failed | 13 skipped) 71ms\n   ❯ src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\n     → Catalog publication authority unavailable\n   ❯ src/content/consent.test.ts > CW31 consent on the content service > W09.04 current callers consume incomplete learning receipts off the shopper response\n     → expected \"spy\" to be called 2 times, but got 3 times\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nError: Catalog publication authority unavailable\n ❯ unavailable src/config/publication.ts:20:27\n     18|     readonly code = 'publication_unavailable') { super(message); }\n     19| }\n     20| const unavailable = () => new PublicationError('Catalog publication au…\n       |                           ^\n     21| const conflict = () => new PublicationError('Catalog publication confl…\n     22| function requireStored(condition: unknown): asserts condition { if (!c…\n ❯ storageOf src/config/publication.ts:44:17\n ❯ Module.readPublication src/config/publication.ts:175:41\n ❯ Module.readRevision src/config/versionedStore.ts:155:39\n ❯ Module.serveContentDecisions src/content/service.ts:163:5\n ❯ serve src/content/consent.test.ts:70:10\n ❯ src/content/consent.test.ts:145:17\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { status: 503, code: 'publication_unavailable' }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/content/consent.test.ts > CW31 consent on the content service > W09.04 current callers consume incomplete learning receipts off the shopper response\nAssertionError: expected \"spy\" to be called 2 times, but got 3 times\n ❯ src/content/consent.test.ts:192:20\n    190|       env.CACHE = { get: async () => { throw new Error('private config…\n    191|       await outcomeToLearning(env, 'coach', event);\n    192|       expect(ring).toHaveBeenCalledTimes(2); expect(warn).toHaveBeenCa…\n       |                    ^\n    193|       expect(warn.mock.calls[0]).toEqual(['learning_incomplete', expec…\n    194|       warn.mockImplementation(() => { throw new Error('private logger'…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  1 failed (1)\n      Tests  2 failed | 13 skipped (15)\n   Start at  20:41:16\n   Duration  11.04s (transform 3.05s, setup 0ms, collect 4.50s, tests 71ms, environment 0ms, prepare 3.68s)\n\n"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "finished_at": "2026-09-12T00:41:48.811Z",
+      "id": "runtime-candidate-2"
+    },
+    {
+      "kind": "static",
+      "candidate": "final-corrected-fixture",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/fan.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/content/service.ts src/learn/route.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts --max-warnings 8 && git diff --check -- src/learn/fan.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/content/service.ts src/learn/route.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T00:41:00.996Z",
+      "captures": [
+        {
+          "chunk_id": "561fed",
+          "wall_time_seconds": 1.001407979,
+          "session_id": 82387,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "30ff52",
+          "wall_time_seconds": 0.000002405,
+          "exit_code": 2,
+          "original_token_count": 125,
+          "output": "src/content/consent.test.ts(63,23): error TS2741: Property 'lifecycle' is missing in type '{ id: string; customerContentId: string; type: string; title: string; tags: { line: string[]; }; slotTypes: string[]; }' but required in type 'ContentPiece'.\nsrc/content/consent.test.ts(63,35): error TS2741: Property 'lifecycle' is missing in type '{ id: string; customerContentId: string; type: string; title: string; tags: { line: string[]; }; slotTypes: string[]; }' but required in type 'ContentPiece'.\n"
+        }
+      ],
+      "exit_code": 2,
+      "drained": true,
+      "finished_at": "2026-09-12T00:42:01.325Z",
+      "id": "static-candidate-2"
+    },
+    {
+      "kind": "runtime",
+      "candidate": "corrected-publication-and-config-fixture",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/consent.test.ts -t 'W06.05 checks erasure in the background|W09.04' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T00:42:52.550Z",
+      "captures": [
+        {
+          "chunk_id": "34d51d",
+          "wall_time_seconds": 1.003717049,
+          "session_id": 28858,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "30d348",
+          "wall_time_seconds": 5.001558581,
+          "session_id": 28858,
+          "original_token_count": 71,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (15 tests) 67ms\n"
+        },
+        {
+          "chunk_id": "32c64c",
+          "wall_time_seconds": 5.001224094,
+          "session_id": 28858,
+          "original_token_count": 120,
+          "output": " ✓ src/learn/holdoutArms.test.ts  (7 tests) 52ms\n\n Test Files  2 passed (2)\n      Tests  22 passed (22)\n   Start at  20:43:00\n   Duration  25.09s (transform 2.64s, setup 0ms, collect 7.11s, tests 119ms, environment 0ms, prepare 14.24s)\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "95e0b7",
+          "wall_time_seconds": 0.000002603,
+          "exit_code": 0,
+          "original_token_count": 546,
+          "output": "stderr | src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 2,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 2,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (15 tests | 13 skipped) 78ms\n\n Test Files  1 passed (1)\n      Tests  2 passed | 13 skipped (15)\n   Start at  20:43:33\n   Duration  14.28s (transform 2.85s, setup 0ms, collect 5.22s, tests 78ms, environment 0ms, prepare 6.22s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T00:44:03.705Z",
+      "id": "runtime-final"
+    },
+    {
+      "kind": "static",
+      "candidate": "final",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/fan.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/content/service.ts src/learn/route.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts --max-warnings 8 && git diff --check -- src/learn/fan.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/content/service.ts src/learn/route.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T00:44:09.141Z",
+      "captures": [
+        {
+          "chunk_id": "5f14fe",
+          "wall_time_seconds": 1.001869993,
+          "session_id": 80768,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "7fa458",
+          "wall_time_seconds": 0.000002483,
+          "exit_code": 0,
+          "original_token_count": 271,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/durable-objects/LearnStats.ts\n  11:88  warning  'StatsConfig' is defined but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/holdoutArms.test.ts\n   98:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  124:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  129:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  131:63  warning  Unexpected empty async method 'setAlarm'  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  110:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  111:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  111:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 8 problems (0 errors, 8 warnings)\n\n"
+        }
+      ],
+      "id": "static-final",
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T00:45:24.773Z"
+    },
+    {
+      "kind": "source-stop",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=p=>createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\");const baselinePath=\"docs/remediation/design/W09.04/baseline.json\";const b=JSON.parse(fs.readFileSync(baselinePath)),owned=new Set(b.owned.map(x=>x.path)),protectedFiles=b.pins.filter(x=>!owned.has(x.path));const mismatches=protectedFiles.filter(x=>hash(x.path)!==x.sha256);const result={final_source_stop:{at:new Date().toISOString(),files:b.owned.map(x=>({path:x.path,sha256:hash(x.path)}))},protected_source_comparison:{baseline:baselinePath,baseline_sha256:hash(baselinePath),checked:protectedFiles.length,mismatches},authority:{plan_sha256:hash(\"docs/remediation/design/W09.04/plan.md\"),admission_sha256:hash(\"docs/remediation/evidence/W09.04/admission.json\"),baseline_lint_sha256:hash(\"docs/remediation/design/W09.04/baseline-lint.json\")}};console.log(JSON.stringify(result,null,2));if(mismatches.length)process.exitCode=1;'",
+      "captures": [
+        {
+          "chunk_id": "e88037",
+          "wall_time_seconds": 0.199212851,
+          "exit_code": 0,
+          "original_token_count": 488,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T00:44:23.288Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/fan.ts\",\n        \"sha256\": \"75525fd6f79949563ff77144a8a8bb5c64eaa2514f26480b22fb8b8e3d915671\"\n      },\n      {\n        \"path\": \"src/durable-objects/DecisionRing.ts\",\n        \"sha256\": \"491539a2f48cce07ae89dc8055988252e5c9f98a693c977c5615471535b9c7a9\"\n      },\n      {\n        \"path\": \"src/durable-objects/LearnStats.ts\",\n        \"sha256\": \"c1a785ed0cede827145266dc999e55bb8f10791ad97bf2dc6cee58851c11af70\"\n      },\n      {\n        \"path\": \"src/content/service.ts\",\n        \"sha256\": \"6690ba33d7f79552be967ab35e894179729a4c10009dc62cbd7b0ea7b51d5193\"\n      },\n      {\n        \"path\": \"src/learn/route.ts\",\n        \"sha256\": \"3f39e74a1ac391a8e3b5a905a6d7f0cc69b717ebda044bf28de02c6491d23b41\"\n      },\n      {\n        \"path\": \"src/learn/learn.test.ts\",\n        \"sha256\": \"e05e4491ed6837636118643880eb59855063efc37b11e17ec92d4de8370f2fa0\"\n      },\n      {\n        \"path\": \"src/learn/holdoutArms.test.ts\",\n        \"sha256\": \"3e2ff5bd121e4bdad5a3c21351a7bbae272ea7597b6ef0e60c213414b8a0d947\"\n      },\n      {\n        \"path\": \"src/content/consent.test.ts\",\n        \"sha256\": \"f3bbd96edde29758d4a65327ef77ec633646c92cfbda13cc19adcd730f8cd1ca\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"c7241e9f4b74b0006ec8a0af676b8d73390505417e377ac37b086630ae5b4e9d\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"baseline\": \"docs/remediation/design/W09.04/baseline.json\",\n    \"baseline_sha256\": \"38f99817c9866646767327303fce52072775f677858ab465c4b3d6cae1e969e1\",\n    \"checked\": 73,\n    \"mismatches\": []\n  },\n  \"authority\": {\n    \"plan_sha256\": \"59cad39c43a05eb1712a762faf291ec5f05a180f7fb000d3a435da504a00c811\",\n    \"admission_sha256\": \"7dc70e13579eb6bfc065a01375a883c2c43ba08de81a0c3c563fb62318f07a78\",\n    \"baseline_lint_sha256\": \"67891b3ec2d72b80980c05a65b6dec3fc0edf84884751bb7d2bb3ebca9322c96\"\n  }\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "id": "source-stop",
+      "captured_at": "2026-09-12T00:44:23.340Z"
+    }
+  ]
+}

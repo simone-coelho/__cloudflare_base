@@ -1,0 +1,63 @@
+{
+  "at": "2026-09-13T23:38:34Z",
+  "task_id": "W15.01",
+  "journal": 1622,
+  "contract_digest": "1974a51270a1c2079305a03643c84816bf920ecca5de608a3ff0eab9de1c8fbf",
+  "plan": {
+    "path": "docs/remediation/design/W15.01/plan.md",
+    "sha256": "f651c899694a78fbbae912a8337d698c11f00100df6ea70a5f9131a52e9fb3b9"
+  },
+  "scope": "Six-file local generic update freshness, bounded exact-payload echo suppression and reentrant delivery/returned-response ownership; paired SDK outputs and existing transport wording only.",
+  "owned": [
+    "src/sdk/core.ts",
+    "src/sdk/core.test.ts",
+    "public/sdk/edge-personalization.js",
+    "public/sdk/edge-personalization.esm.js",
+    "src/sdk/README.md",
+    "docs/kit/01-integration-guide.md"
+  ],
+  "source_pins": 42,
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "aa7ca5",
+        "wall_time_seconds": 1.000985235,
+        "session_id": 2651,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "586e9e",
+        "wall_time_seconds": 5.001210697,
+        "session_id": 2651,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0032f7",
+        "wall_time_seconds": 5.001630116,
+        "session_id": 2651,
+        "original_token_count": 252,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=111, closed=2; evidence records=330\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.06 — Inspect the remaining W15 supported refresh/no-flash integration gap and W20 customer-default mappings against existing SDK/kit and actual customer contract. Keep delivered absence, pins, constraints, replay and capture fixes; do not repeat unchanged assurance or invent customer defaults. Admit the next decision-independent code remedy with existing focused checks, or identify the precise customer-owned input. W19 vocabulary/inheritance and W35 native/latency/customer/release remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 23427\n"
+      },
+      {
+        "chunk_id": "31f1b3",
+        "wall_time_seconds": 0.00000208,
+        "exit_code": 0,
+        "original_token_count": 253,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=111, closed=2; evidence records=330\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.06 — Inspect the remaining W15 supported refresh/no-flash integration gap and W20 customer-default mappings against existing SDK/kit and actual customer contract. Keep delivered absence, pins, constraints, replay and capture fixes; do not repeat unchanged assurance or invent customer defaults. Admit the next decision-independent code remedy with existing focused checks, or identify the precise customer-owned input. W19 vocabulary/inheritance and W35 native/latency/customer/release remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 23427\n"
+      }
+    ],
+    "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=111, closed=2; evidence records=330\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.06 — Inspect the remaining W15 supported refresh/no-flash integration gap and W20 customer-default mappings against existing SDK/kit and actual customer contract. Keep delivered absence, pins, constraints, replay and capture fixes; do not repeat unchanged assurance or invent customer defaults. Admit the next decision-independent code remedy with existing focused checks, or identify the precise customer-owned input. W19 vocabulary/inheritance and W35 native/latency/customer/release remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 23427\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=111, closed=2; evidence records=330\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.06 — Inspect the remaining W15 supported refresh/no-flash integration gap and W20 customer-default mappings against existing SDK/kit and actual customer contract. Keep delivered absence, pins, constraints, replay and capture fixes; do not repeat unchanged assurance or invent customer defaults. Admit the next decision-independent code remedy with existing focused checks, or identify the precise customer-owned input. W19 vocabulary/inheritance and W35 native/latency/customer/release remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 23427\n",
+    "session_id": 2651,
+    "drained": true,
+    "exit_code": 0
+  },
+  "prior_journal_length": 1613,
+  "prior_journal_sha256": "a0d5dfb943379d124834996df4865496672c3f3a09e22645748e6e6531be5bca",
+  "closed_pins_verified": 57,
+  "qualification": "Bounded local generic update-event freshness and echo containment only. Timestamp high-water is advisory, not an authoritative causal sequence; clock rollback may suppress valid older-clock updates. Untimed/nonfinite timestamps retain legacy delivery without resetting high-water. Exact wire-JSON fingerprints have a32-entry/65536-UTF16-unit cap at the high-water; eviction/oversize/unserializable bypass can redeliver echoes, never global exactly-once. Sent/receipt and separate audience events retain existing semantics. No automatic refresh/polling, content_decisions server, new exposure identity/unit/ack, first-paint/server-render/no-flash/customer/SSO/experimental/native/SLO/release acceptance. Snapshot serving currently counts decision records before rendering and content_impression lacks the correlated exposure join; full W15/W17/W21/W26 remains open. Existing W20.06 absence/stale hydration/actual-paint fixes remain, with overlapping exact-byte proof prospectively qualified; W08.04 unchanged. No server/model/identity authority changes, new assets, new suite/infrastructure, deployment/cloud/customer-data/credentials/install/build-script/commit/push/destructive/external operations. Both SDK outputs generated using installed esbuild write:false then apply_patch.",
+  "lead": "w01-lead",
+  "source_go": "Pending direct pins/contract verification; no source edits before GO."
+}

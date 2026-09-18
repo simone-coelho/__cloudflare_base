@@ -1,0 +1,110 @@
+{
+  "task_id": "W03.07",
+  "at": "2026-09-16T23:46:57.059Z",
+  "supersedes": {
+    "path": "docs/remediation/evidence/W03.07/admission-v3.json",
+    "sha256": "3988248a3e6455280fe3bc8575cad4f5ba7a0d247570a40e33d8b7a2226523e9"
+  },
+  "scope": "Complete original W03 provenance consumers in the same paused implementation batch; all prior criteria/dependencies/baselines/rollback retained. Add only content service stage consumer.",
+  "baseline": {
+    "inherited": {
+      "path": "docs/remediation/evidence/W03.07/admission-v3.json",
+      "sha256": "3988248a3e6455280fe3bc8575cad4f5ba7a0d247570a40e33d8b7a2226523e9"
+    },
+    "added_files": [
+      {
+        "path": "src/content/service.ts",
+        "sha256": "f07bef278a99a54ebbc968cd3e66f0db9482160f1427cab0d0cf4606942042db"
+      }
+    ],
+    "source_case": "Distinct reviewer and lead confirmed content/service readShopper consumes raw stored journeyStage for session host and DO content snapshot; DO general snapshot also exposes raw pipeline stage. Thus rejected foreign/unpinned ODP labels can retain late-stage influence despite corrected personalization reads. Reviewer also found combined old-seed filtering drops a valid same-named local segment from the other identity-merge source.",
+    "worker_state": "Sole writer remains paused at same drained safe boundary; no GO or product edits/tests after admission-v3. Added content file untouched.",
+    "prior_evidence": "All existing exact proofs consuming added file already revalidation_required or superseded; no further current proof invalidated."
+  },
+  "implementation": "Project current ODP context before content/general-snapshot derived stage use; reuse existing pure derivation and valid local/reflex/enrichment membership. Filter each identity-merge source against its own old ODP labels before union. Preserve raw readSnapshot/readRaw witnesses and existing consent/authority, no read-time fetch, seed, state mutation, retention or fresh activity. No scoring/stage policy change.",
+  "exclusive_added_outputs": [
+    "src/content/service.ts"
+  ],
+  "exclusive_outputs": [
+    "src/connectors/config.ts",
+    "src/connectors/index.ts",
+    "src/connectors/DecisionProvider.ts",
+    "src/services/OptimizelyService.ts",
+    "src/services/FeatureVariableManager.ts",
+    "src/services/odpLoop.ts",
+    "src/services/RealtimeSegmentEngine.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/routes/realtime.ts",
+    "src/tenancy/middleware.ts",
+    "src/types/env.ts",
+    "src/ledger/consume.ts",
+    "src/index.ts",
+    "src/reflex/odpLoop.test.ts",
+    "src/tenancy/middleware.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/index.api-boundary.test.ts",
+    "src/ledger/ledger.test.ts",
+    "src/reflex/bufferedAction.ts",
+    "src/services/SessionManager.ts",
+    "src/identity/assertion.ts",
+    "src/identity/identity.test.ts",
+    "src/routes/identity.test.ts",
+    "src/content/service.ts"
+  ],
+  "changed_checks": [
+    {
+      "id": "W03.07-K2",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C4",
+        "W03.07-C5"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/routes/identity.test.ts -t 'W03[.](02|04|05|06|07)|W37[.](06|07|08|09)|W22[.]07|W05[.]02|W09[.](03|07)|consumer and lookup|one message per decision set|cleans both actual bound reset hosts' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd; synthetic bindings/intercepted endpoints only",
+      "workload": "New W03.07 and affected existing both-host/consent/buffered/audit/SDK/customer ingress/cron/queue assertions. Explicitly configure existing two-brand consumer erasure fixture, preserving destination/suppression oracles; correct only the two existing positive erasure groups to authentic current SID/epoch authority, preserving explicit unregistered-legacy refusal and exact tenant/deletion/audit/ring-retry/barrier oracles. Include previously approved actual both-host/two-brand erasure supplement and mounted identity wildcard refusal before state effects. Extend the existing W03.07 both-host group to actual content projection/reflex stage and cross-source same-label merge collision; keep no read-time network or state effects.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W03.07-K3",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C2",
+        "W03.07-C3",
+        "W03.07-C4",
+        "W03.07-C5"
+      ],
+      "required": true,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/connectors/config.ts src/connectors/index.ts src/connectors/DecisionProvider.ts src/services/OptimizelyService.ts src/services/FeatureVariableManager.ts src/services/odpLoop.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.ts src/tenancy/middleware.ts src/types/env.ts src/ledger/consume.ts src/index.ts src/reflex/odpLoop.test.ts src/tenancy/middleware.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/reflex/bufferedAction.ts src/services/SessionManager.ts src/identity/assertion.ts src/identity/identity.test.ts src/routes/identity.test.ts src/content/service.ts && git diff --check -- src/connectors/config.ts src/connectors/index.ts src/connectors/DecisionProvider.ts src/services/OptimizelyService.ts src/services/FeatureVariableManager.ts src/services/odpLoop.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.ts src/tenancy/middleware.ts src/types/env.ts src/ledger/consume.ts src/index.ts src/reflex/odpLoop.test.ts src/tenancy/middleware.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/reflex/bufferedAction.ts src/services/SessionManager.ts src/identity/assertion.ts src/identity/identity.test.ts src/routes/identity.test.ts src/content/service.ts",
+      "runtime": "Installed compiler and scoped lint",
+      "workload": "Compiler plus24-output lint/whitespace only; inspect new-file whitespace and distinguish old/new warnings. No broad build/CI.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W03.07-K5",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C2",
+        "W03.07-C3",
+        "W03.07-C4",
+        "W03.07-C5"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/odpLoop.test.ts src/identity/identity.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/routes/identity.test.ts -t 'W03[.]07' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd; synthetic bindings/intercepted endpoints only",
+      "workload": "Independent new W03.07 grouped factory/both-host/mounted queue assertions on stopped bytes; reuse valid broader worker checks. Include new backend proof authority refusal and named rotation positives. Include explicit unregistered-legacy erasure refusal; source-review corrected positive erasure groups and reuse final K2 actual deletion/audit evidence. Existing W03.07 group also exercises actual content and general snapshot stage projection plus same-label two-source merge.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "rollback": "Capture content service exact dirty baseline and reversible task-only delta; all earlier baselines retained. No restore/reset or external operation.",
+  "review": "Distinct stopped-artifact whole-W03 review checks actual content/reflex outputs and same-label merge behavior, not only helper or personalization results. Live C7/K6 remains open.",
+  "contract_digest": "e76d21836ee7ef906636a71e37c71de5695a6cc9f582479745cfebb4496460ae",
+  "approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T23:46:57.059Z",
+    "rationale": "Approve concrete remaining original-W03 derived-state consumer defect and one output; reuse focused both-host group and existing acceptance contract."
+  }
+}

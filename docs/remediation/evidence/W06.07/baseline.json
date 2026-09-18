@@ -1,0 +1,16 @@
+{
+  "task_id": "W06.07",
+  "recorded_at": "2026-09-08T20:31:02.320Z",
+  "basis": "Source-confirmed: foldShard removes tombstoned ring entries but retains seen IDs; old array membership has no timestamp. Exact source read by root and independent reviewer; no baseline test run.",
+  "files": [
+    {
+      "path": "src/learn/hourly.ts",
+      "sha256": "2959c467763850b5de6d7c904d6bc5ec8ffd2c56e440753f3a284488cd0279e1"
+    },
+    {
+      "path": "src/learn/hourly.test.ts",
+      "sha256": "fc2a15bdc8d5731f535dca48ca4bd1614587cc7eadf81d61ac41a263e692fc6e"
+    }
+  ],
+  "limitations": "Existing historical aggregates and D03/D06 remain outside task."
+}

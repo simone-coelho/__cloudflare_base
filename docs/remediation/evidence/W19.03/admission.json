@@ -1,0 +1,33 @@
+{
+  "task_id": "W19.03",
+  "entry_board": {
+    "session_id": 16348,
+    "captures": [
+      "1ff5ec",
+      "ab580f",
+      "133a78"
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "notes_each": 22163
+  },
+  "direct": {
+    "chunk_id": "ccd113",
+    "wall_time_seconds": 0.626611268,
+    "exit_code": 0,
+    "original_token_count": 45,
+    "output": "{\"at\":\"2026-09-13T18:04:06.860Z\",\"source_GO\":true,\"task\":\"W19.03\",\"journal\":1522,\"pins\":28,\"owned\":4,\"contract\":\"38af40b3ed91502fbc838e44a163cfa6e0cfd1f8b30b850b4fca11a401d7a7de\"}\n"
+  },
+  "baseline_static": {
+    "session_id": 7036,
+    "captures": [
+      "f00735",
+      "33b16d"
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "warnings": 0
+  },
+  "decision": "Warning-only exact registry membership; strict read-only mutation-base reader avoids serving fallback trap. Independent Astra/xhigh review reconciled exact-result, post-commit failure containment, bounds and no-unscorable claim. Four files, fixed11; W19.02/W08.04 accepted61pins verified without planned overlap.",
+  "preparation": "Unapplied generator asserted a nonexistent W14.10 dependency; corrected to actual W14.04 and valid blocks_acceptance kind before admission/source GO. No source edits or passing evidence claimed for that preparation failure."
+}

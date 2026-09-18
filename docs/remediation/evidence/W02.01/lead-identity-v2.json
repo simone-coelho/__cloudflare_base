@@ -1,0 +1,9 @@
+{
+  "command": "node docs/remediation/evidence/W02.01/lead-artifact-v2.mjs --verify",
+  "collected_at": "2026-09-07T02:17:30.127Z",
+  "chunk_id": "88c27c",
+  "wall_time_seconds": 0.00000302,
+  "exit_code": 0,
+  "original_token_count": 66,
+  "output": "{\"at\":\"2026-09-07T02:16:47.788Z\",\"result\":\"pass\",\"digest\":\"7fdffd2cd80790ce59805565314dfbab1138b054c93fb3dce1d2a798232ac009\",\"files\":224,\"focusedInputs\":12,\"replayInputs\":199,\"changedPriorInputs\":[\"src/middleware/auth.ts\",\"src/routes/auth.ts\",\"tsconfig.json\"]}\n"
+}

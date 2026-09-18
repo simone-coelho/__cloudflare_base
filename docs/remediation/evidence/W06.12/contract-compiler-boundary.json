@@ -1,0 +1,11 @@
+{
+  "before": "3e933b8a2c294d21b572d2263a1fcd51526d49766aef95b900c571f86c95bc42",
+  "after": "9d974a3a75aba01dc4d637672aeee0471c0b66a2591a1a53b0f04b611511b67a",
+  "at": "2026-09-17T08:04:42.107Z",
+  "reason": "Add exactly src/sdk/listen.test.ts to existing root tsconfig exclusions. Keep fixture/browser/SDK source and all server source/fixtures unchanged; do not use import/typecheck bypass, broad SDK-tree exclusion or Worker DOM globals.",
+  "previous_tracker_sha256": "6b476966fa3aecde9be66dcdc7d8974993b5311e624b0fc463fa88d28c56f3b1",
+  "plan": {
+    "path": "docs/remediation/evidence/W06.12/admission-compiler-boundary.json",
+    "sha256": "a15cb0923cc63ecaeb2e7e17c837e3a979a7b0b21fd0bf43c4f25b20078fdf21"
+  }
+}

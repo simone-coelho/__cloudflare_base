@@ -1,0 +1,93 @@
+{
+  "at": "2026-09-13T18:54:02Z",
+  "task_id": "W20.02",
+  "journal": 1536,
+  "contract_digest": "bae4db1ab1ddb252733b81ba6a46262c2ac5338d1d265ab660f57e0dafdfec92",
+  "plan": {
+    "path": "docs/remediation/design/W20.02/plan.md",
+    "sha256": "4079d666f5e9b7d13268a9380d91ecb1c241d422d7a89ad048f34041a28d30d1"
+  },
+  "scope": "Seven-file advisory slot catalog-reference feedback on current/preview/publication and existing Rules/History, preserving runtime refusal and replay.",
+  "owned": [
+    "src/content/slotDiagnostics.ts",
+    "src/routes/content.ts",
+    "src/routes/content.test.ts",
+    "public/console/views-config.js",
+    "public/console/views-measure.js",
+    "src/console/console.render.test.ts",
+    "docs/kit/02-api-reference.md"
+  ],
+  "source_pins": 34,
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "090583",
+        "wall_time_seconds": 1.001618684,
+        "session_id": 3614,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "858c2b",
+        "wall_time_seconds": 5.001250598,
+        "session_id": 3614,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "cd7fa9",
+        "wall_time_seconds": 5.001088126,
+        "session_id": 3614,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "7a3bc0",
+        "wall_time_seconds": 0.000002148,
+        "exit_code": 0,
+        "original_token_count": 553,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=105, closed=3; evidence records=315\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W19.03 — Inspect and admit W20's remaining catalog-dependent slot/pin reference checks at activation, using the existing catalog/slot validators and operator responses. Preserve the accepted valid-pin reservation/runtime refusal contract and historical replay; do not invent exclusions, fallback, priority or customer policy. W19 value/case/locale/slot vocabulary, inheritance and full customer feed acceptance remain open; W18/W20 customer walkthrough and W35 native authority/latency/release stay separate. One bounded source-confirmed implementation with focused existing checks, not a new framework.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 22198\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=105, closed=3; evidence records=315\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W19.03 — Inspect and admit W20's remaining catalog-dependent slot/pin reference checks at activation, using the existing catalog/slot validators and operator responses. Preserve the accepted valid-pin reservation/runtime refusal contract and historical replay; do not invent exclusions, fallback, priority or customer policy. W19 value/case/locale/slot vocabulary, inheritance and full customer feed acceptance remain open; W18/W20 customer walkthrough and W35 native authority/latency/release stay separate. One bounded source-confirmed implementation with focused existing checks, not a new framework.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 22198\n"
+      }
+    ],
+    "chunk_id": "090583",
+    "wall_time_seconds": 1.001618684,
+    "session_id": 3614,
+    "original_token_count": 0,
+    "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=105, closed=3; evidence records=315\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W19.03 — Inspect and admit W20's remaining catalog-dependent slot/pin reference checks at activation, using the existing catalog/slot validators and operator responses. Preserve the accepted valid-pin reservation/runtime refusal contract and historical replay; do not invent exclusions, fallback, priority or customer policy. W19 value/case/locale/slot vocabulary, inheritance and full customer feed acceptance remain open; W18/W20 customer walkthrough and W35 native authority/latency/release stay separate. One bounded source-confirmed implementation with focused existing checks, not a new framework.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 22198\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=105, closed=3; evidence records=315\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W19.03 — Inspect and admit W20's remaining catalog-dependent slot/pin reference checks at activation, using the existing catalog/slot validators and operator responses. Preserve the accepted valid-pin reservation/runtime refusal contract and historical replay; do not invent exclusions, fallback, priority or customer policy. W19 value/case/locale/slot vocabulary, inheritance and full customer feed acceptance remain open; W18/W20 customer walkthrough and W35 native authority/latency/release stay separate. One bounded source-confirmed implementation with focused existing checks, not a new framework.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 22198\n",
+    "drained": true,
+    "exit_code": 0
+  },
+  "baseline_static": {
+    "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/routes/content.ts src/routes/content.test.ts src/console/console.render.test.ts && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js public/console/views-config.js public/console/views-measure.js --env browser --global OperatorSession --max-warnings 2",
+    "captures": [
+      {
+        "chunk_id": "3d2d0e",
+        "wall_time_seconds": 1.001462873,
+        "session_id": 85186,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "c9bc06",
+        "wall_time_seconds": 0.000002227,
+        "exit_code": 0,
+        "original_token_count": 84,
+        "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views-config.js\n  19:29  warning  'when' is assigned a value but never used    @typescript-eslint/no-unused-vars\n  19:35  warning  'plural' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n✖ 2 problems (0 errors, 2 warnings)\n\n"
+      }
+    ],
+    "chunk_id": "3d2d0e",
+    "wall_time_seconds": 1.001462873,
+    "session_id": 85186,
+    "original_token_count": 0,
+    "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views-config.js\n  19:29  warning  'when' is assigned a value but never used    @typescript-eslint/no-unused-vars\n  19:35  warning  'plural' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n✖ 2 problems (0 errors, 2 warnings)\n\n",
+    "drained": true,
+    "exit_code": 0
+  },
+  "prior_journal_length": 1527,
+  "prior_journal_sha256": "a41661878e8f557ca8f7c34a1db0084a05d9f60837946abe604379ec89b6d49a",
+  "closed_pins_verified": 96,
+  "qualification": "Bounded advisory catalog-reference checks on slot HTTP current/preview/PUT/rollback and existing Rules/History only. Full W20/F28/F26 exclusions/off-limits, priority/multi-position policy, customer fallback and actual customer acceptance remain open. Independent catalog and slots may change after inspection; feedback is not atomic activation, serving-cache attestation or immutable receipt metadata. Existing runtime pin reservation, eligibility, refusal/no-fill and historical replay remain authoritative and unchanged. Scheduled, draft, missing or temporarily out-of-stock pins remain authorable under existing structural validation; warnings are not a new rejection policy. Generic library/seed writers and later catalog publications have no added cross-document guard. Unavailable/unauthorized/legacy-fallback feedback is not zero-warning assurance. No serving/model/schema/store/SDK changes, new pin editor/framework/broad suite or native/SLO claim. No deploy/cloud/install/build/provision/seed/credential/customer-data/destructive/commit/push/external operations or customer-policy amendment. W19.03 overlapping exact-byte proof is prospectively qualified with its implemented diagnostics/history retained; W19.02/W08.04 accepted artifacts remain unchanged.",
+  "lead": "w01-lead",
+  "source_go": "Pending direct retained pins/contract check; no source edits before GO."
+}

@@ -1,0 +1,732 @@
+{
+  "task": "W37.03",
+  "actor": "w3703-worker",
+  "run_id": "/root/w3703_worker",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "recorded_at": "2026-09-09 05:06:00 UTC",
+  "status": "implemented_for_independent_review",
+  "contract_digest": "f6fed634cd704096eebb3870d8c05e358db8fa2fccc046d37b545e5f07e437d2",
+  "preflight": "Read actual AGENTS/README/governance36/RESUME, admitted plan/task C1-C3/K1-K3, complete canonical W37/F31/F33/F03/N29 and reports/OD-8, customer implementation plan and delivery-ledger stamp/staging/regional requirements, direct DO/connector/session-capability/identity-merge/fixture source. Root check/status VALID516 and admission/historical qualification VALID524 before GO; worker did not duplicate governance writes or board execution.",
+  "scope": "Only ShopperReflex and existing SDK contract fixture changed. Tenant-owned authored audience routing across signed HTTP/read/WS and restart alarms; legacy alarm and unsigned-forward containment; no generic catalog/config/reflex/ODP authority redesign.",
+  "changes": [
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "before_sha256": "0a02daf94aa51926be3a221db3537cc2d0d514ea4b6e66c995719ab185fd4b8a",
+      "after_sha256": "01315764e85d0f0c3f1405f43420ccd5abd79ce9525605e85ca8f3e3fd6fc975",
+      "patch": "===================================================================\n--- a/src/durable-objects/ShopperReflex.ts\t\n+++ b/src/durable-objects/ShopperReflex.ts\t\n@@ -53,9 +53,9 @@\n import type { Env } from '@/types/env';\n import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes } from '@/content/consent';\n import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_PROTOCOL, SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';\n import { shopperObjectName } from '@/tenancy/objects';\n-import { DEFAULT_TENANT } from '@/tenancy/tenant';\n+import { DEFAULT_TENANT, isValidTenantId, type TenantId } from '@/tenancy/tenant';\n import { ACTION_EVENT_TYPE_SET } from '@/events/actionTypes';\n import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';\n import { fanInRegionTrend } from '@/reflex/regionTrend';\n import type { PersonalizationUpdate } from './PersonalizationWebSocket';\n@@ -145,8 +145,12 @@\n       Persisted because the alarm/snapshot paths have no event to resolve from. */\n   surface?: DemoSurface;\n }\n \n+/** Routing authority for audiences, not provenance for pre-existing behavior. */\n+type AudienceOwner = Pick<SessionCapability, 'tenant' | 'subject' | 'sessionId'>;\n+const UNCOMMITTED_AUDIENCE_OWNER = Symbol('uncommitted-audience-owner');\n+\n interface IngestOutcome {\n   status: number;\n   body: Record<string, unknown>;\n   update: PersonalizationUpdate | null;\n@@ -220,8 +224,11 @@\n \n   /** In-memory mirrors of storage; rehydrated from ctx.storage on wake. */\n   private affinity: AffinityRecord | null = null;\n   private pipeline: PipelineRecord | null = null;\n+  // Missing means legacy; null means explicitly invalidated by an identity write.\n+  // Keep malformed/uncommitted values distinct so they cannot regain authority.\n+  private audienceOwner: unknown = undefined;\n   private loaded = false;\n   private seeded = new Set<DemoSurface>();\n \n   /** Serializes ingest/alarm runs — the reducer is strictly sequential even when\n@@ -288,29 +295,33 @@\n             : json({ userId: p.subject, segments: [], timestamp: now });\n           return json({ userId: p.subject, sessionId: p.sessionId, isNewSession: !this.pipeline,\n             config: { segments: [], featureVariables: {}, featureFlags: {}, experiments: {} }, cookiesSet: false, timestamp: now });\n         }\n-        const connectors = getConnectors(this.env);\n+        let tenant: TenantId;\n+        try { tenant = this.audienceTenant(p); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }\n+        const connectors = getConnectors(this.env, tenant);\n         if (url.pathname === '/segments') {\n           if (request.method === 'POST') {\n             const body = await request.json() as { segment?: unknown; source?: unknown };\n             if (typeof body.segment !== 'string') return json({ ok: false, error: 'segment required' }, 400);\n             const cfg = await resolveReflexConfig(this.env, this.surface());\n             assertSessionTarget(p);\n+            this.audienceOwner = UNCOMMITTED_AUDIENCE_OWNER;\n             this.affinity ??= { shopperId: p.subject, reflex: emptyState(cfg), odpSeed: [], odpSeedAt: 0, odpRecentEvents: [], lastSeen: now, configVersion: cfg.version };\n             this.pipeline ??= { attributes: {}, segments: [], journeyStage: 'early', sessionId: p.sessionId, visitorId: p.subject, firstSeen: now, sessionCount: 0 };\n             this.pipeline.segments = [...new Set([...this.pipeline.segments, body.segment])];\n-            await this.state.storage.put({ affinity: this.affinity, pipeline: this.pipeline });\n+            await this.persistAudienceState({ tenant, subject: p.subject, sessionId: p.sessionId });\n             assertSessionTarget(p);\n             const update = await this.buildUpdate(connectors, now, typeof body.source === 'string' ? body.source : 'manual', null, calculateEngagementScore(this.pipeline.attributes), p);\n             assertSessionTarget(p);\n             this.pushFrame(update);\n             return json({ success: true, userId: p.subject, segment: body.segment, timestamp: now });\n           }\n-          await this.ensureSeeded(this.surface());\n+          await this.ensureSeeded(this.surface(), tenant);\n           assertSessionTarget(p);\n           const segments = await connectors.segments.fetchQualifiedSegments(p.subject, {\n-            userId: p.subject, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...this.pipeline?.attributes }, segments: this.pipeline?.segments ?? [], surface: this.surface(),\n+            userId: p.subject, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...this.pipeline?.attributes }, segments: this.pipeline?.segments ?? [],\n+            ...(tenant === DEFAULT_TENANT ? { surface: this.surface() } : {}),\n           });\n           assertSessionTarget(p);\n           return json({ userId: p.subject, segments, timestamp: now });\n         }\n@@ -325,11 +336,11 @@\n       });\n     }\n \n     // CW25. A browser that was recognised forwards to the person's object: the\n-    // same ingest, the same snapshot, one hop. Nothing else is forwarded; the\n-    // identity doors below act on THIS object by design.\n-    if (!principal && (url.pathname === '/ingest' || url.pathname === '/snapshot')) {\n+    // same snapshot, one hop. Ingest must enforce THIS object's ownership before\n+    // any effect; linked legacy browsers cannot forward unsigned mutations.\n+    if (!principal && url.pathname === '/snapshot') {\n       const forwarded = await this.forwardIfLinked(request);\n       if (forwarded) return forwarded;\n     }\n     if (request.method === 'POST' && url.pathname === '/ingest') {\n@@ -431,8 +442,9 @@\n         try { if (principal) await this.assertOwned(principal, request); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }\n         await this.state.storage.deleteAll();\n         this.affinity = null;\n         this.pipeline = null;\n+        this.audienceOwner = undefined;\n         this.forwardTo = null;\n         this.consent = null;\n         this.loaded = true;\n         return json({ ok: true });\n@@ -544,8 +556,14 @@\n     };\n     const outcome = await this.serialize(async () => {\n       try {\n         if (principal) { assertSessionTarget(principal, event.userId, body.sessionId); await this.assertOwned(principal, request); }\n+        else {\n+          await this.load();\n+          if (this.audienceOwner !== undefined || !this.isActualObject(DEFAULT_TENANT, event.userId) || await this.forwardTarget()\n+            || (this.affinity && this.affinity.shopperId !== event.userId)\n+            || (this.pipeline?.visitorId && this.pipeline.visitorId !== event.userId)) throw new SessionAccessError();\n+        }\n       } catch { return { body: { success: false, error: 'Shopper session unavailable' }, status: 401, update: null }; }\n       return this.ingest(event, principal);\n     });\n     return json(outcome.body, outcome.status);\n@@ -609,8 +627,12 @@\n       status: 200,\n       body: { success: true, message: 'Action not tracked: shopper consent refused', sessionId: principal?.sessionId ?? this.pipeline?.sessionId ?? null, cookiesUpdated: false, consent },\n       update: null,\n     };\n+    let tenant: TenantId;\n+    try { tenant = principal ? this.audienceTenant(principal) : DEFAULT_TENANT; }\n+    catch { return { status: 401, body: { success: false, error: 'Shopper session unavailable' }, update: null }; }\n+    const owner = principal ? { tenant, subject: principal.subject, sessionId: principal.sessionId } : undefined;\n \n     // Which demo posted this — resolved from the event alone (explicit field, else\n     // `source`, else coach), so the trust gate below can consult the RIGHT catalog\n     // before any storage read.\n@@ -645,10 +667,11 @@\n         update: null,\n       };\n     }\n \n-    await this.ensureSeeded(surface);\n-    const connectors = getConnectors(this.env); // fresh per run — mirrors the per-request triad\n+    await this.ensureSeeded(surface, tenant);\n+    const connectors = getConnectors(this.env, tenant); // fresh per run — mirrors the per-request triad\n+    this.audienceOwner = UNCOMMITTED_AUDIENCE_OWNER;\n \n     const aff: AffinityRecord = this.affinity ?? {\n       shopperId: event.userId,\n       reflex: emptyState(cfg),\n@@ -714,9 +737,9 @@\n       userId: aff.shopperId,\n       anonymousId: event.anonymousId,\n       attributes: ctxAttrs,\n       segments: pipe.segments,\n-      surface, // qualification evaluates only THIS surface's audiences\n+      ...(tenant === DEFAULT_TENANT ? { surface } : {}),\n     };\n     const journeyStage = personalizes(consent) ? deriveStage(qualCtx) : pipe.journeyStage;\n     ctxAttrs.journey_stage = journeyStage;\n     // Reflex scores are computed FRESH into the context (they decay by construction —\n@@ -814,9 +837,9 @@\n \n     // 8. Persist (single coalesced SQLite write, output-gated) + closed-form alarm.\n     // Refused actions returned before the reducer; only tracked work reaches here.\n     const sessionIdOut = this.pipeline.sessionId;\n-    await this.state.storage.put({ affinity: this.affinity, pipeline: this.pipeline });\n+    await this.persistAudienceState(owner);\n     await this.scheduleNextCrossing(now);\n \n     return {\n       status: 200,\n@@ -959,43 +982,46 @@\n       await this.load();\n       if (!this.affinity) return; // already erased\n       const now = Date.now();\n       const surface = this.surface();\n-      const cfg = await resolveReflexConfig(this.env, surface);\n \n       // Retention (§12): idle past N days with no live sockets → self-expire.\n       if (now - this.affinity.lastSeen >= this.retentionMs() && this.state.getWebSockets().length === 0) {\n         await this.state.storage.deleteAll();\n         this.affinity = null;\n         this.pipeline = null;\n+        this.audienceOwner = undefined;\n         return;\n       }\n \n       // Necessary retention cleanup stays above this gate. A pending timer may\n       // not qualify, seed, personalize or mutate behavioral state after refusal.\n-      if (!personalizes(await this.consentNow())) {\n+      const owner = this.trustedAudienceOwner();\n+      if (!owner || await this.forwardTarget() || !personalizes(await this.consentNow())) {\n         await this.state.storage.setAlarm(Math.max(this.affinity.lastSeen + this.retentionMs(), now + MIN_ALARM_DELAY_MS));\n         return;\n       }\n \n       // Lazy re-evaluation: tick() NEVER accumulates — decay is read-time math, so\n       // the alarm never mutates scores; it only re-reads them at `now` and applies\n       // the θ_out exits the closed form predicted.\n+      const cfg = await resolveReflexConfig(this.env, surface);\n       const res = tickReflex(this.affinity.reflex, now, cfg);\n+      this.audienceOwner = UNCOMMITTED_AUDIENCE_OWNER;\n       this.affinity = { ...this.affinity, reflex: res.state, configVersion: cfg.version };\n \n       const exited = res.changes.exited.length > 0 || res.changes.entered.length > 0;\n       if (exited && this.pipeline) {\n-        await this.ensureSeeded(surface);\n-        const connectors = getConnectors(this.env);\n+        await this.ensureSeeded(surface, owner.tenant);\n+        const connectors = getConnectors(this.env, owner.tenant);\n         // Re-run the qualification tail with the decayed memberships — the union\n         // shrinks, decisions revert, and the \"they wandered off\" push goes out.\n         const ctxAttrs: Record<string, any> = { ...RETAIL_SIGNAL_DEFAULTS, ...this.pipeline.attributes };\n         const qualCtx = {\n           userId: this.affinity.shopperId,\n           attributes: ctxAttrs,\n           segments: this.pipeline.segments,\n-          surface,\n+          ...(owner.tenant === DEFAULT_TENANT ? { surface } : {}),\n         };\n         const journeyStage = deriveStage(qualCtx);\n         ctxAttrs.journey_stage = journeyStage;\n         Object.assign(ctxAttrs, reflexAttributes(res.state, now, cfg));\n@@ -1037,12 +1063,9 @@\n           this.pushFrame({ ...update, serverTimestamp: Date.now() });\n         }\n       }\n \n-      await this.state.storage.put({\n-        affinity: this.affinity,\n-        ...(this.pipeline ? { pipeline: this.pipeline } : {}),\n-      });\n+      await this.persistAudienceState(owner);\n       await this.scheduleNextCrossing(now); // next exit, or the retention horizon\n     });\n   }\n \n@@ -1125,8 +1148,9 @@\n \n   /** Called INSIDE the same serialized operation as the effect, never before it. */\n   private async assertOwned(principal: SessionCapability, request?: Request): Promise<void> {\n     assertSessionTarget(principal);\n+    if (!this.isActualObject(principal.tenant, principal.subject)) throw new SessionAccessError();\n     if (await this.forwardTarget()) throw new SessionAccessError();\n     await this.load();\n     if ((this.affinity && this.affinity.shopperId !== principal.subject)\n       || (this.pipeline?.visitorId && this.pipeline.visitorId !== principal.subject)\n@@ -1181,8 +1205,9 @@\n       const from = body.affinity ?? null;\n       const fromPipe = body.pipeline ?? null;\n       const merged = mergeReflexStates(this.affinity?.reflex, from?.reflex, now, cfg);\n \n+      this.audienceOwner = UNCOMMITTED_AUDIENCE_OWNER;\n       this.affinity = {\n         shopperId,\n         reflex: merged.state,\n         odpSeed: this.affinity?.odpSeed ?? from?.odpSeed ?? [],\n@@ -1205,9 +1230,9 @@\n         firstSeen: Math.min(this.pipeline?.firstSeen ?? now, fromPipe?.firstSeen ?? now),\n         sessionCount: (this.pipeline?.sessionCount ?? 0) + (fromPipe?.sessionCount ?? 0),\n         surface: this.pipeline?.surface ?? fromPipe?.surface,\n       };\n-      await this.state.storage.put({ affinity: this.affinity, pipeline: this.pipeline });\n+      await this.persistAudienceState(null);\n       await this.scheduleNextCrossing(now);\n       return json({ ok: true, shopperId, sessionId: this.pipeline.sessionId, audiences: merged.state.audiences, changes: merged.changes, ...(body.consent !== undefined ? { consent: await this.consentNow() } : {}) });\n     });\n   }\n@@ -1228,8 +1253,9 @@\n       let state = this.affinity?.reflex ?? null;\n       for (const r of rows) state = applyHistorical(state, { action: r.action, touches: r.touches }, r.at, cfg);\n       const evaluated = tickReflex(state, now, cfg);\n       const shopperId = typeof body.shopperId === 'string' && body.shopperId ? body.shopperId : (this.affinity?.shopperId ?? '');\n+      this.audienceOwner = UNCOMMITTED_AUDIENCE_OWNER;\n       this.affinity = {\n         shopperId,\n         reflex: evaluated.state,\n         odpSeed: this.affinity?.odpSeed ?? [],\n@@ -1245,33 +1271,69 @@\n         };\n       } else {\n         this.pipeline = { ...this.pipeline, segments: [...new Set([...this.pipeline.segments, ...evaluated.state.audiences])].sort() };\n       }\n-      await this.state.storage.put({ affinity: this.affinity, pipeline: this.pipeline });\n+      await this.persistAudienceState(null);\n       await this.scheduleNextCrossing(now);\n       return json({ ok: true, applied: rows.length, audiences: evaluated.state.audiences, changes: evaluated.changes });\n     });\n   }\n \n   private async load(): Promise<void> {\n     if (this.loaded) return;\n-    const stored = await this.state.storage.get(['affinity', 'pipeline']);\n+    const stored = await this.state.storage.get(['affinity', 'pipeline', 'audienceOwner']);\n     this.affinity = (stored.get('affinity') as AffinityRecord | undefined) ?? null;\n     this.pipeline = (stored.get('pipeline') as PipelineRecord | undefined) ?? null;\n+    this.audienceOwner = stored.get('audienceOwner');\n     this.loaded = true;\n   }\n \n   /** Same audiences the request path seeds (idempotent; version-gated to one KV read). */\n-  private async ensureSeeded(surface: DemoSurface = DEFAULT_SURFACE): Promise<void> {\n+  private async ensureSeeded(surface: DemoSurface, tenant: TenantId): Promise<void> {\n+    if (tenant !== DEFAULT_TENANT) return;\n     if (this.seeded.has(surface)) return;\n     try {\n-      await ensureAudiencesSeeded(this.env, await catalogFor(surface), surface);\n+      await ensureAudiencesSeeded(this.env, await catalogFor(surface), surface, tenant);\n       this.seeded.add(surface);\n     } catch (error) {\n       console.error('ShopperReflex: audience seeding failed');\n     }\n   }\n \n+  private isActualObject(tenant: TenantId, subject: string): boolean {\n+    try { return this.state.id.toString() === this.env.SHOPPER_REFLEX.idFromName(shopperObjectName(tenant, subject)).toString(); }\n+    catch { return false; }\n+  }\n+\n+  private trustedAudienceOwner(): AudienceOwner | null {\n+    const owner = this.audienceOwner as Partial<AudienceOwner> | null | undefined;\n+    if (!owner || typeof owner !== 'object' || !isValidTenantId(owner.tenant)\n+      || typeof owner.subject !== 'string' || !/^[A-Za-z0-9_.-]{1,200}$/.test(owner.subject)\n+      || typeof owner.sessionId !== 'string' || !/^[A-Za-z0-9_.-]{1,200}$/.test(owner.sessionId)\n+      || !this.affinity || !this.pipeline || this.affinity.shopperId !== owner.subject\n+      || this.pipeline.sessionId !== owner.sessionId\n+      || (this.pipeline.visitorId && this.pipeline.visitorId !== owner.subject)\n+      || !this.isActualObject(owner.tenant, owner.subject)) return null;\n+    return owner as AudienceOwner;\n+  }\n+\n+  /** Signed reads may route an unbound legacy record, but never bless it in storage. */\n+  private audienceTenant(principal: SessionCapability): TenantId {\n+    if (this.audienceOwner !== undefined && this.audienceOwner !== null) {\n+      const owner = this.trustedAudienceOwner();\n+      if (!owner || owner.tenant !== principal.tenant || owner.subject !== principal.subject\n+        || owner.sessionId !== principal.sessionId) throw new SessionAccessError();\n+    }\n+    return principal.tenant;\n+  }\n+\n+  private async persistAudienceState(owner: AudienceOwner | null | undefined): Promise<void> {\n+    await this.state.storage.put({ affinity: this.affinity, pipeline: this.pipeline,\n+      ...(owner === undefined ? {} : { audienceOwner: owner }),\n+    });\n+    this.audienceOwner = owner;\n+  }\n+\n   /** The surface this shopper object belongs to (persisted; absent ⇒ coach). */\n   private surface(): DemoSurface {\n     return this.pipeline?.surface ?? DEFAULT_SURFACE;\n   }\n",
+      "patch_sha256": "dda9a43acabb3c64998b931453f215772eb3d1df66b344f5ab782feba2697d32",
+      "reversible": true
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "before_sha256": "32116782ff0d16244ad35bd4a5a5bc20f47a2d14d7f48f31510dcc5c8b4ba214",
+      "after_sha256": "272a8ced81d2eec5a743374e8b546c4cca8b64d9d84f43472223ffe9ed0103ac",
+      "patch": "===================================================================\n--- a/src/routes/realtime.sdkContract.test.ts\t\n+++ b/src/routes/realtime.sdkContract.test.ts\t\n@@ -19,9 +19,9 @@\n import { decisionRoutes } from './decisions';\n import { sortRoutes } from './sort';\n import { tenantMiddleware } from '@/tenancy/middleware';\n import { SessionManager } from '@/services/SessionManager';\n-import { ShopperReflex } from '@/durable-objects/ShopperReflex';\n+import { ShopperReflex, type AffinityRecord, type PipelineRecord } from '@/durable-objects/ShopperReflex';\n import { newAnonymousSession, issueSessionCapability, SHOPPER_HEADER, verifySessionCapability, SessionAccessError } from '@/identity/sessionCapability';\n import { SignJWT } from 'jose';\n import { shopperObjectName } from '@/tenancy/objects';\n import { signAssertion } from '@/identity/assertion';\n@@ -60,9 +60,9 @@\n function boundary(host = 'session') {\n   const cache = new BoundaryKV(), sessions = new BoundaryKV(), effects: string[] = [];\n   const pending: Promise<unknown>[] = [];\n   const faults = { read: false, write: false };\n-  const objects = new Map<string, { shopper: ShopperReflex; data: Map<string, unknown> }>();\n+  const objects = new Map<string, { shopper: ShopperReflex; data: Map<string, unknown>; state: DurableObjectState; alarms: number[]; sockets: WebSocket[] }>();\n   const env = { CACHE: cache, SESSIONS: sessions, CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', REFLEX_HOST: host,\n     // Learning requires an explicit erasure-state read; this synthetic store has no tombstones.\n     STORAGE: { get: async () => null },\n     JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', IDENTITY_SECRETS: 'meridian:backend-proof',\n@@ -76,14 +76,16 @@\n       effects.push(`object:${name}`);\n       let item = objects.get(name);\n       if (!item) {\n         const data = new Map<string, unknown>();\n+        const alarms: number[] = [], sockets: WebSocket[] = [];\n         const storage = {\n-          get: async (k: string | string[]) => { if (faults.read) throw new Error('synthetic read failure'); return Array.isArray(k) ? new Map(k.map(v => [v, data.get(v)])) : data.get(k); },\n+          get: async (k: string | string[]) => { if (faults.read) throw new Error('synthetic read failure'); return structuredClone(Array.isArray(k) ? new Map(k.map(v => [v, data.get(v)])) : data.get(k)); },\n           put: async (k: string | Record<string, unknown>, v?: unknown) => { effects.push(typeof k === 'string' ? `store:${k}` : 'store:behavior'); if (faults.write) throw new Error('synthetic write failure'); if (typeof k === 'string') data.set(k, structuredClone(v)); else for (const [key, value] of Object.entries(k)) data.set(key, structuredClone(value)); },\n-          deleteAll: async () => data.clear(), delete: async (k: string) => data.delete(k), setAlarm: async () => {}, getAlarm: async () => null,\n+          deleteAll: async () => data.clear(), delete: async (k: string) => data.delete(k), setAlarm: async (at: number) => { alarms.push(at); }, getAlarm: async () => alarms.at(-1) ?? null,\n         };\n-        item = { data, shopper: new ShopperReflex({ id: name, storage, getWebSockets: () => [], waitUntil: (p: Promise<unknown>) => pending.push(p) } as unknown as DurableObjectState, env) };\n+        const state = { id: name, storage, getWebSockets: () => sockets, waitUntil: (p: Promise<unknown>) => pending.push(p) } as unknown as DurableObjectState;\n+        item = { data, state, alarms, sockets, shopper: new ShopperReflex(state, env) };\n         objects.set(name, item);\n       }\n       return item.shopper.fetch(new Request(input, init));\n     } }),\n@@ -154,11 +156,12 @@\n         const socket = { deserializeAttachment: () => ({ shopperId: a.subject, principal: a }), close: vi.fn() };\n         await item.shopper.webSocketMessage(socket as unknown as WebSocket, JSON.stringify({ type: 'action', event: content(a) }));\n         expect(socket.close).not.toHaveBeenCalled();\n         expect((item.data.get('affinity') as { reflex: { dims: Record<string, Record<string, { s: number }>> } }).reflex.dims.contentType!.video!.s).toBeGreaterThan(2.9);\n-        // The internal legacy door still accepts unsigned actions; they cannot\n-        // populate the new tenant regional namespace.\n-        expect((await item.shopper.fetch(new Request('https://shopper-reflex/ingest', { method: 'POST', body: JSON.stringify(content(a)) }))).status).toBe(200);\n+        // W37.03 refuses unsigned actions against an owned non-default object.\n+        const beforeUnsigned = structuredClone([...item.data]);\n+        expect((await item.shopper.fetch(new Request('https://shopper-reflex/ingest', { method: 'POST', body: JSON.stringify(content(a)) }))).status).toBe(401);\n+        expect([...item.data]).toEqual(beforeUnsigned);\n       }\n       expect((await f.call('/realtime/action', undefined, content(a), a.tenant, undefined, { country: 'US', regionCode: 'NY' })).status).toBe(401);\n       await new RealtimeSegmentEngine(f.env).processActionEvent({ type: 'custom', userId: 'w3702-unsigned', source: 'sdk', timestamp: Date.now(), data: { event: 'content_click', contentType: 'video' }, geo: { country: 'US', regionCode: 'NY' } });\n       await f.drain(); expect(frames).toHaveLength(2);\n@@ -184,8 +187,264 @@\n     expect(remote).not.toHaveBeenCalled();\n   } finally { vi.unstubAllGlobals(); }\n });\n \n+describe('W37.03 tenant-owned DO audiences', () => {\n+  type Grant = Awaited<ReturnType<typeof newAnonymousSession>>;\n+  const owner = (g: Grant) => ({ tenant: g.tenant, subject: g.subject, sessionId: g.sessionId });\n+  const itemFor = (f: ReturnType<typeof boundary>, g: Grant) => f.objects.get(shopperObjectName(g.tenant, g.subject))!;\n+  const restart = (f: ReturnType<typeof boundary>, g: Grant) => {\n+    const item = itemFor(f, g); item.shopper = new ShopperReflex(item.state, f.env); return item;\n+  };\n+  const event = (g: Grant, surface = 'brighthour') => ({ userId: g.subject, sessionId: g.sessionId, type: 'page_view', source: 'sdk', surface, data: {} });\n+  const direct = (item: ReturnType<typeof itemFor>, path: string, body?: unknown, g?: Grant) => item.shopper.fetch(new Request(`https://shopper-reflex${path}`, {\n+    method: body === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', ...(g ? { [SHOPPER_HEADER]: g.capability, 'X-Tenant': g.tenant } : {}) },\n+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),\n+  }));\n+  const socket = (g: Grant) => ({ deserializeAttachment: () => ({ shopperId: g.subject, principal: g }), send: vi.fn(), close: vi.fn() });\n+  const audience = (views: number, surface?: 'coach' | 'brighthour'): AudienceDef => ({\n+    key: 'w3703_shared', name: 'Synthetic authored rule', description: 'Same key, divergent tenant rule',\n+    conditions: { attribute: 'page_views', operator: 'eq', value: views }, evaluation: 'realtime', source: 'manual', status: 'published', createdAt: 1,\n+    ...(surface ? { surface } : {}),\n+  });\n+\n+  it('qualifies signed HTTP/read/WS and real restarted crossing alarms in two physical non-default stores', async () => {\n+    invalidateCache();\n+    const f = boundary('do'); f.env.TENANTS = JSON.stringify({ provisioned: ['coach', 'meridian', 'kate-spade'] });\n+    const remote = vi.fn(async () => { throw new Error('Unexpected external request'); }); vi.stubGlobal('fetch', remote);\n+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());\n+    const seed = vi.spyOn(KvAudienceStore.prototype, 'seed'), qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments');\n+    const config = vi.spyOn(demoRegistry, 'resolveReflexConfig'), catalog = vi.spyOn(demoRegistry, 'catalogServiceFor');\n+    try {\n+      await getConnectors(f.env).audiences.createAudience(audience(99));\n+      await getConnectors(f.env, 'meridian').audiences.createAudience(audience(1));\n+      await getConnectors(f.env, 'kate-spade').audiences.createAudience(audience(2, 'coach'));\n+      const authored = [...f.cache.data];\n+      const a = await newAnonymousSession(f.env, 'meridian');\n+      const b = await issueSessionCapability(f.env, { ...owner(a), tenant: 'kate-spade', kind: 'anonymous' });\n+      for (const g of [a, b]) {\n+        config.mockClear(); catalog.mockClear();\n+        const cold = await f.call(`/realtime/segments/${g.subject}`, g.capability, undefined, g.tenant);\n+        expect(cold.status).toBe(200); expect(await cold.json()).toMatchObject({ segments: [] });\n+        expect(itemFor(f, g).data.size).toBe(0);\n+        expect(config).not.toHaveBeenCalled(); expect(catalog).not.toHaveBeenCalled();\n+        const put = vi.spyOn(itemFor(f, g).state.storage, 'put');\n+        expect((await f.call('/realtime/action', g.capability, { ...event(g), audienceOwner: owner(b) }, g.tenant)).status).toBe(200);\n+        expect(put).toHaveBeenCalledTimes(1); expect(put).toHaveBeenCalledWith(expect.objectContaining({ audienceOwner: owner(g), affinity: expect.any(Object), pipeline: expect.any(Object) }));\n+        expect(itemFor(f, g).data.get('audienceOwner')).toEqual(owner(g));\n+        expect((itemFor(f, g).data.get('pipeline') as PipelineRecord).segments).toEqual(g === a ? ['w3703_shared'] : []);\n+        const ws = socket(g); itemFor(f, g).sockets.push(ws as unknown as WebSocket);\n+        await itemFor(f, g).shopper.webSocketMessage(ws as unknown as WebSocket, JSON.stringify({ type: 'action', event: event(g) }));\n+        expect(ws.close).not.toHaveBeenCalled();\n+        expect((itemFor(f, g).data.get('pipeline') as PipelineRecord).segments).toEqual(g === a ? [] : ['w3703_shared']);\n+        const read = await f.call(`/realtime/segments/${g.subject}`, g.capability, undefined, g.tenant);\n+        expect(await read.json()).toMatchObject({ segments: g === a ? [] : ['w3703_shared'] });\n+      }\n+      const aBefore = structuredClone([...itemFor(f, a).data]);\n+      expect((await direct(itemFor(f, a), '/ingest', event(b), b)).status).toBe(401);\n+      const crossed = socket(b);\n+      await itemFor(f, a).shopper.webSocketMessage(crossed as unknown as WebSocket, JSON.stringify({ type: 'action', event: event(b) }));\n+      expect(crossed.close).toHaveBeenCalledWith(1008, 'Shopper session unavailable'); expect([...itemFor(f, a).data]).toEqual(aBefore);\n+\n+      for (const g of [a, b]) {\n+        const peer = g === a ? b : a, peerBefore = structuredClone([...itemFor(f, peer).data]);\n+        for (let n = 0; n < 3; n++) expect((await f.call('/realtime/action', g.capability, {\n+          ...event(g, 'coach'), type: 'custom', data: { event: 'content_click', contentType: 'video' },\n+        }, g.tenant)).status).toBe(200);\n+        const item = restart(f, g), before = item.data.get('affinity') as AffinityRecord;\n+        expect(before.reflex.audiences.length).toBeGreaterThan(0);\n+        const crossing = item.alarms.at(-1)!;\n+        expect(crossing).toBeGreaterThan(Date.now()); expect(crossing).toBeLessThan(before.lastSeen + 30 * 86400000);\n+        clock.mockReturnValue(crossing + 5); qualified.mockClear();\n+        const ws = item.sockets[0] as unknown as ReturnType<typeof socket>; ws.send.mockClear();\n+        await item.shopper.alarm();\n+        expect(qualified).toHaveBeenCalledTimes(1);\n+        expect(qualified.mock.calls[0]![1]).not.toHaveProperty('surface');\n+        expect((item.data.get('affinity') as AffinityRecord).reflex.audiences).toEqual([]);\n+        expect((item.data.get('pipeline') as PipelineRecord).segments).toEqual(g === a ? [] : ['w3703_shared']);\n+        expect(ws.send).toHaveBeenCalled();\n+        expect(JSON.parse(ws.send.mock.calls.at(-1)![0])).toMatchObject({ data: { source: 'reflex_alarm', segments: g === a ? [] : ['w3703_shared'] } });\n+        expect(item.data.get('audienceOwner')).toEqual(owner(g)); expect([...itemFor(f, peer).data]).toEqual(peerBefore);\n+      }\n+      expect([...f.cache.data]).toEqual(authored); expect(f.sessions.data.size).toBe(0);\n+      expect(seed).not.toHaveBeenCalled(); expect(remote).not.toHaveBeenCalled();\n+    } finally { await f.drain(); vi.restoreAllMocks(); vi.unstubAllGlobals(); }\n+  });\n+\n+  it('contains unbound/corrupt/forwarded/refused alarms and preserves consent, signed adoption, reset and retention', async () => {\n+    invalidateCache();\n+    const f = boundary('do'), g = await newAnonymousSession(f.env, 'meridian');\n+    expect((await f.call('/realtime/action', g.capability, event(g), g.tenant)).status).toBe(200);\n+    const item = itemFor(f, g), baseline = structuredClone([...item.data]);\n+    const seed = vi.spyOn(KvAudienceStore.prototype, 'seed'), qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments');\n+    const config = vi.spyOn(demoRegistry, 'resolveReflexConfig');\n+    try {\n+      for (const condition of ['missing', 'null', 'invalid', 'foreign', 'subject', 'sid', 'visitor', 'actual-object', 'forward', 'refusal'] as const) {\n+        item.data.clear(); for (const [k, v] of structuredClone(baseline)) item.data.set(k, v);\n+        if (condition === 'missing') item.data.delete('audienceOwner');\n+        else if (condition === 'null') item.data.set('audienceOwner', null);\n+        else if (condition === 'invalid') item.data.set('audienceOwner', { tenant: 17 });\n+        else if (condition === 'foreign') item.data.set('audienceOwner', { ...owner(g), tenant: 'coach' });\n+        else if (condition === 'subject') item.data.set('audienceOwner', { ...owner(g), subject: 'different' });\n+        else if (condition === 'sid') item.data.set('audienceOwner', { ...owner(g), sessionId: 'different' });\n+        else if (condition === 'visitor') (item.data.get('pipeline') as PipelineRecord).visitorId = 'different';\n+        else if (condition === 'forward') item.data.set('forwardTo', 'linked-person');\n+        else if (condition === 'refusal') item.data.set('consent', { tracking: true, personalization: false });\n+        restart(f, g);\n+        if (condition === 'actual-object') item.shopper = new ShopperReflex({ ...item.state, id: 'wrong-object' } as unknown as DurableObjectState, f.env);\n+        const before = structuredClone([...item.data]);\n+        qualified.mockClear(); seed.mockClear(); config.mockClear(); item.alarms.length = 0;\n+        await item.shopper.alarm();\n+        expect([...item.data], condition).toEqual(before); expect(item.alarms, condition).toHaveLength(1);\n+        expect(qualified, condition).not.toHaveBeenCalled(); expect(seed, condition).not.toHaveBeenCalled(); expect(config, condition).not.toHaveBeenCalled();\n+        if (['invalid', 'foreign', 'subject', 'sid'].includes(condition)) {\n+          expect((await direct(item, '/segments', undefined, g)).status).toBe(401);\n+          expect((await direct(item, '/consent/refusal', { tracking: false }, g)).status).toBe(200);\n+          expect(item.data.get('audienceOwner')).toEqual(before.find(([k]) => k === 'audienceOwner')![1]);\n+        }\n+      }\n+      for (const marker of [undefined, null]) {\n+        item.data.clear(); for (const [k, v] of structuredClone(baseline)) item.data.set(k, v);\n+        if (marker === undefined) item.data.delete('audienceOwner'); else item.data.set('audienceOwner', marker);\n+        restart(f, g);\n+        const before = structuredClone([...item.data]);\n+        expect((await direct(item, '/segments', undefined, g)).status).toBe(200); expect([...item.data]).toEqual(before);\n+        const put = vi.spyOn(item.state.storage, 'put'); put.mockClear();\n+        expect((await direct(item, '/segments', { segment: 'manual-owned', audienceOwner: { tenant: 'coach' } }, g)).status).toBe(200);\n+        expect(put).toHaveBeenCalledTimes(1); expect(item.data.get('audienceOwner')).toEqual(owner(g));\n+        expect((item.data.get('pipeline') as PipelineRecord).segments).toContain('manual-owned');\n+      }\n+      expect((await direct(item, '/reset', {}, g)).status).toBe(200); expect(item.data.size).toBe(0);\n+      expect((await direct(item, '/segments', { segment: 'after-reset' }, g)).status).toBe(200);\n+      expect(item.data.get('audienceOwner')).toEqual(owner(g));\n+      f.env.REFLEX_RETENTION_DAYS = '0.00000001';\n+      (item.data.get('affinity') as AffinityRecord).lastSeen = Date.now() - 1000; restart(f, g);\n+      await item.shopper.alarm(); expect(item.data.size).toBe(0);\n+      expect((await direct(item, '/segments', { segment: 'after-retention' }, g)).status).toBe(200);\n+      expect(item.data.get('audienceOwner')).toEqual(owner(g));\n+\n+      const cold = await newAnonymousSession(f.env, 'meridian');\n+      expect((await f.call('/realtime/action', cold.capability, { ...event(cold), data: { consent: { tracking: false } } }, cold.tenant)).status).toBe(200);\n+      const coldItem = itemFor(f, cold);\n+      expect([...coldItem.data]).toEqual([['consent', { tracking: false, personalization: true }]]);\n+      expect((await direct(coldItem, '/segments', { segment: 'refused' }, cold)).status).toBe(403);\n+      expect(coldItem.data.has('audienceOwner')).toBe(false);\n+    } finally { await f.drain(); vi.restoreAllMocks(); }\n+  });\n+\n+  it('invalidates internal import/absorb authority including failed writes and allows only absent-marker legacy default ingest', async () => {\n+    invalidateCache();\n+    const f = boundary('do'), g = await newAnonymousSession(f.env, 'coach');\n+    expect((await f.call('/realtime/action', g.capability, event(g, 'coach'), g.tenant)).status).toBe(200);\n+    const item = itemFor(f, g), baseline = structuredClone([...item.data]);\n+    const qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments'), seed = vi.spyOn(KvAudienceStore.prototype, 'seed');\n+    try {\n+      for (const path of ['/identity/import', '/identity/absorb']) for (const fails of [false, true]) {\n+        item.data.clear(); for (const [k, v] of structuredClone(baseline)) item.data.set(k, v); restart(f, g);\n+        const body = path.endsWith('import') ? { shopperId: g.subject, rows: [{ action: 'content_click', at: Date.now(), touches: [{ dim: 'contentType', value: 'video' }] }], audienceOwner: owner(g) }\n+          : { shopperId: g.subject, affinity: item.data.get('affinity'), pipeline: { ...(item.data.get('pipeline') as PipelineRecord), audienceOwner: owner(g) }, audienceOwner: owner(g) };\n+        f.faults.write = fails;\n+        if (fails) await expect(direct(item, path, body)).rejects.toThrow('synthetic write failure');\n+        else expect((await direct(item, path, body)).status).toBe(200);\n+        f.faults.write = false;\n+        if (fails) expect([...item.data]).toEqual(baseline);\n+        else {\n+          expect(item.data.get('audienceOwner')).toBeNull();\n+          if (path.endsWith('import')) expect((item.data.get('affinity') as AffinityRecord).reflex.dims.contentType!.video!.s).toBe(1);\n+          else expect((item.data.get('pipeline') as PipelineRecord).attributes.page_views).toBe(2);\n+        }\n+        qualified.mockClear(); seed.mockClear();\n+        const before = structuredClone([...item.data]);\n+        await item.shopper.alarm();\n+        expect([...item.data]).toEqual(before); expect(qualified).not.toHaveBeenCalled(); expect(seed).not.toHaveBeenCalled();\n+        expect((await direct(item, '/ingest', event(g, 'coach'))).status).toBe(401);\n+        restart(f, g);\n+        expect((await direct(item, '/ingest', event(g, 'coach'))).status).toBe(401);\n+        expect((await direct(item, '/segments', { segment: 'owned-again' }, g)).status).toBe(200);\n+        expect(item.data.get('audienceOwner')).toEqual(owner(g));\n+      }\n+      // A failed signed event/manual write must also revoke the altered mirrors.\n+      for (const path of ['/ingest', '/segments']) {\n+        item.data.clear(); for (const [k, v] of structuredClone(baseline)) item.data.set(k, v); restart(f, g);\n+        f.faults.write = true;\n+        await expect(direct(item, path, path === '/ingest' ? event(g, 'coach') : { segment: 'uncommitted' }, g)).rejects.toThrow('synthetic write failure');\n+        f.faults.write = false; expect([...item.data]).toEqual(baseline);\n+        qualified.mockClear(); const before = structuredClone([...item.data]); await item.shopper.alarm();\n+        expect(qualified).not.toHaveBeenCalled(); expect([...item.data]).toEqual(before);\n+        expect((await direct(item, '/segments', undefined, g)).status).toBe(401);\n+        restart(f, g); expect((await direct(item, '/segments', undefined, g)).status).toBe(200);\n+      }\n+      // Only genuinely old default records retain the unsigned compatibility door.\n+      item.data.delete('audienceOwner'); restart(f, g);\n+      expect((await direct(item, '/ingest', { ...event(g, 'coach'), audienceOwner: owner(g) })).status).toBe(200);\n+      expect(item.data.has('audienceOwner')).toBe(false);\n+      qualified.mockClear(); const legacy = structuredClone([...item.data]); await item.shopper.alarm();\n+      expect([...item.data]).toEqual(legacy); expect(qualified).not.toHaveBeenCalled();\n+      const other = await newAnonymousSession(f.env, 'meridian');\n+      expect((await f.call(`/realtime/segments/${other.subject}`, other.capability, undefined, other.tenant)).status).toBe(200);\n+      expect((await direct(itemFor(f, other), '/ingest', event(other))).status).toBe(401);\n+      expect(itemFor(f, other).data.size).toBe(0);\n+\n+      // The forwarding door must not bypass the source object's unsigned gate.\n+      const target = await newAnonymousSession(f.env, 'coach');\n+      expect((await f.call(`/realtime/segments/${target.subject}`, target.capability, undefined, target.tenant)).status).toBe(200);\n+      expect(itemFor(f, target).data.size).toBe(0);\n+      expect((await direct(item, '/segments', { segment: 'bind-source' }, g)).status).toBe(200);\n+      for (const source of [item, itemFor(f, other)]) {\n+        expect((await direct(source, '/identity/forward', { to: shopperObjectName(target.tenant, target.subject) })).status).toBe(200);\n+        const before = structuredClone([...source.data]); f.effects.length = 0; f.cache.calls.length = 0;\n+        expect((await direct(source, '/ingest', event(target, 'coach'))).status).toBe(401);\n+        expect(f.effects).toEqual([]); expect(f.cache.calls).toEqual([]);\n+        expect([...source.data]).toEqual(before); expect(itemFor(f, target).data.size).toBe(0);\n+      }\n+      item.data.delete('audienceOwner'); restart(f, g);\n+      const forwardedLegacy = structuredClone([...item.data]); f.effects.length = 0;\n+      expect((await direct(item, '/ingest', event(g, 'coach'))).status).toBe(401);\n+      expect([...item.data]).toEqual(forwardedLegacy); expect(f.effects).toEqual([]);\n+    } finally { f.faults.write = false; await f.drain(); vi.restoreAllMocks(); }\n+  });\n+\n+  it('retains signed default Coach and BrightHour demo generation and separate surface qualification', async () => {\n+    invalidateCache();\n+    const f = boundary('do');\n+    await getConnectors(f.env).audiences.createAudience({ ...audience(1), key: 'w3703_coach', surface: 'coach' });\n+    await getConnectors(f.env).audiences.createAudience({ ...audience(1), key: 'w3703_brighthour', surface: 'brighthour' });\n+    const seed = vi.spyOn(KvAudienceStore.prototype, 'seed');\n+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());\n+    try {\n+      for (const surface of ['coach', 'brighthour'] as const) {\n+        const g = await newAnonymousSession(f.env, 'coach');\n+        expect((await f.call('/realtime/action', g.capability, event(g, surface), g.tenant)).status).toBe(200);\n+        const item = restart(f, g);\n+        expect(item.data.get('audienceOwner')).toEqual(owner(g));\n+        expect((item.data.get('pipeline') as PipelineRecord).segments.filter(k => k.startsWith('w3703_'))).toEqual([`w3703_${surface}`]);\n+        const read = await direct(item, '/segments', undefined, g); expect(read.status).toBe(200);\n+        expect((await read.json() as { segments: string[] }).segments.filter(k => k.startsWith('w3703_'))).toEqual([`w3703_${surface}`]);\n+        const before = structuredClone([...item.data]);\n+        expect((await direct(item, '/ingest', event(g, surface))).status).toBe(401); expect([...item.data]).toEqual(before);\n+        const product = (await demoRegistry.catalogServiceFor(surface)).getAllProducts()[0]!;\n+        for (let n = 0; n < 4; n++) expect((await direct(item, '/ingest', { ...event(g, surface), type: 'product_view', data: { productId: product.id } }, g)).status).toBe(200);\n+        const memberships = [...(item.data.get('affinity') as AffinityRecord).reflex.audiences];\n+        expect(memberships.length).toBeGreaterThan(0);\n+        restart(f, g);\n+        const ws = socket(g); item.sockets.push(ws as unknown as WebSocket);\n+        const crossing = item.alarms.at(-1)!; expect(crossing).toBeGreaterThan(Date.now());\n+        clock.mockReturnValue(crossing + 5);\n+        const qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments'); qualified.mockClear();\n+        await item.shopper.alarm();\n+        expect(qualified).toHaveBeenCalledTimes(1); expect(qualified.mock.calls[0]![1]).toHaveProperty('surface', surface);\n+        expect(memberships.some(k => !(item.data.get('affinity') as AffinityRecord).reflex.audiences.includes(k))).toBe(true);\n+        expect((item.data.get('pipeline') as PipelineRecord).segments.filter(k => k.startsWith('w3703_'))).toEqual([`w3703_${surface}`]);\n+        expect(ws.send).toHaveBeenCalled(); expect(JSON.parse(ws.send.mock.calls.at(-1)![0])).toMatchObject({ data: { source: 'reflex_alarm' } });\n+      }\n+      expect(seed).toHaveBeenCalled();\n+      expect([...f.cache.data.keys()].some(k => k === 'reflex:audgen:v1')).toBe(true);\n+      expect([...f.cache.data.keys()].some(k => k.includes('audgen') && k.includes('brighthour'))).toBe(true);\n+      expect([...f.cache.data.keys()].some(k => k.startsWith('t:'))).toBe(false);\n+    } finally { await f.drain(); vi.restoreAllMocks(); }\n+  });\n+});\n+\n describe('W37.01 tenant-owned local audiences', () => {\n   const audience = (views: number): AudienceDef => ({\n     key: 'w3701_shared_key', name: `Owned audience at ${views} views`, description: 'Synthetic tenant-owned rule',\n     conditions: { attribute: 'page_views', operator: 'eq', value: views },\n",
+      "patch_sha256": "45f6222b47daa78197c0ade7ed056b7311b461c43a50b7fcf264b4b642f78818",
+      "reversible": true
+    }
+  ],
+  "implementation": [
+    "All three qualification paths pass trusted tenant to connectors and seeding, and only default tenant retains demo surface filtering. Non-default ensureSeeded returns before catalog/config/seed access; signed reads do not persist ownership.",
+    "Separate audienceOwner contains only tenant/subject/sessionId and loads with affinity/pipeline. Actual DO id, tenant shape, affinity subject and pipeline session/visitor must match. Signed owned tracked/manual writes coalesce marker with state, publishing trusted cache only after storage success.",
+    "Absent marker allows legacy signed adoption and unsigned default compatibility only at the actual default object; explicit null from internal identity writes is not legacy unsigned authority. Corrupt/foreign/inflight marker refuses signed audience use. Necessary consent remains accessible.",
+    "Import/absorb invalidate cache before mirror changes and persist null in same write; body/donor markers never become authority. Failed mutation leaves untrusted in-memory marker; restart rehydrates previous coherent committed state.",
+    "Unbound/corrupt/foreign/linked/refused alarms retain retention handling without config/tick/qualification/seeding/personalization. Reset/retention clear cached owner. Unsigned ingest never forwards and linked legacy local ingest refuses; unsigned snapshot forwarding preserved."
+  ],
+  "criteria": {
+    "W37.03-C1": "Final K1: two non-default tenants use same shopper/session IDs and divergent same-key authored rules with misleading BrightHour hints; actual signed route ingest, read and WS frames, physical audience stores, coalesced owner persistence and real restarted crossing/push asserted. Signed Coach/BrightHour each retain generation/filtering and real restarted membership-exit alarm/push.",
+    "W37.03-C2": "Final K1: missing/null/invalid/foreign/subject/SID/visitor/actual-object/forward/refusal alarm variants; owned manual legacy adoption, cold consent-only refusal, reset/retention, actual import/absorb mutation and failure, failed signed state writes/restart, unsigned-owned/default/nondefault and forwarding bypass refusals. W37.02 actual regional/no-fan-in and W05.02 all consent switches/ODP/regional positives retained. Compiler/lint/whitespace pass.",
+    "W37.03-C3": "Pending independent reviewer and separate lead disposition. Worker does not self-accept."
+  },
+  "checks": [
+    {
+      "id": "K1v3",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --testNamePattern=\"W37.03|W37.02|uses stored switches for both hosts\" --maxWorkers=1 --minWorkers=1",
+      "status": "passed",
+      "chunk_id": "942fd6",
+      "wall_time_seconds": 0.000001132,
+      "exit_code": 0,
+      "original_token_count": 1634,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > invalidates internal import/absorb authority including failed writes and allows only absent-marker legacy default ingest\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > retains signed default Coach and BrightHour demo generation and separate surface qualification\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > retains signed default Coach and BrightHour demo generation and separate surface qualification\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":4}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":4}\n\n ✓ src/routes/realtime.sdkContract.test.ts  (32 tests | 26 skipped) 840ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 26 skipped (32)\n   Start at  01:03:13\n   Duration  11.03s (transform 4.32s, setup 0ms, collect 7.21s, tests 840ms, environment 0ms, prepare 2.04s)\n\n",
+      "artifact": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "01315764e85d0f0c3f1405f43420ccd5abd79ce9525605e85ca8f3e3fd6fc975"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "272a8ced81d2eec5a743374e8b546c4cca8b64d9d84f43472223ffe9ed0103ac"
+        }
+      ],
+      "summary": "6 passed; 26 excluded by declared name filter; 11.03s runner duration, 840ms test bodies."
+    },
+    {
+      "id": "compilerv3",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "status": "passed",
+      "chunk_id": "98a551",
+      "wall_time_seconds": 0.000001663,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": "",
+      "artifact": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "01315764e85d0f0c3f1405f43420ccd5abd79ce9525605e85ca8f3e3fd6fc975"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "272a8ced81d2eec5a743374e8b546c4cca8b64d9d84f43472223ffe9ed0103ac"
+        }
+      ]
+    },
+    {
+      "id": "lintv3",
+      "command": "node node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+      "status": "passed",
+      "chunk_id": "90a9d4",
+      "wall_time_seconds": 0.000001327,
+      "exit_code": 0,
+      "original_token_count": 2975,
+      "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/durable-objects/ShopperReflex.ts\n   127:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   491:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   528:24  warning  '_ws' is defined but never used           @typescript-eslint/no-unused-vars\n   528:40  warning  '_code' is defined but never used         @typescript-eslint/no-unused-vars\n   528:55  warning  '_reason' is defined but never used       @typescript-eslint/no-unused-vars\n   528:72  warning  '_wasClean' is defined but never used     @typescript-eslint/no-unused-vars\n   533:24  warning  '_ws' is defined but never used           @typescript-eslint/no-unused-vars\n   533:40  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars\n   540:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   576:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   735:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   879:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   902:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  1018:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  1219:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts\n   102:129  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n   554:30   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   555:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   556:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   556:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   559:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   562:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   573:40   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   601:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   620:95   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   626:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   627:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   664:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   676:173  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   684:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   685:76   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   715:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   716:24   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   717:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   725:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   725:36   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   733:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   746:55   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n   747:57   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n   753:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   780:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   839:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   843:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   844:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   845:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   858:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   861:47   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n   907:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   911:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   914:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   917:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   917:37   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1009:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1013:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1014:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1015:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1031:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1034:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1038:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1046:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1054:25   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1072:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1078:60   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1091:71   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1098:100  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1116:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1123:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1140:110  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1146:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1147:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1148:68   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1159:52   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1160:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1160:109  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1161:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1164:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1175:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1177:119  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1192:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1197:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1199:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1222:112  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1228:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1229:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1230:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1233:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1262:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1263:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1281:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1332:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1345:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1368:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1383:101  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1390:65   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1428:153  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1462:55   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1487:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1497:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1514:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1516:77   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1528:64   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1532:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1545:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1548:41   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1553:130  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1556:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1567:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1598:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1599:71   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  1616:125  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1619:122  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n\n✖ 111 problems (0 errors, 111 warnings)\n\n",
+      "artifact": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "01315764e85d0f0c3f1405f43420ccd5abd79ce9525605e85ca8f3e3fd6fc975"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "272a8ced81d2eec5a743374e8b546c4cca8b64d9d84f43472223ffe9ed0103ac"
+        }
+      ],
+      "warning_classification": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "count": 15,
+          "all_on_unchanged_lines": true,
+          "admission_line_mapping": [
+            [
+              127,
+              127
+            ],
+            [
+              491,
+              479
+            ],
+            [
+              528,
+              516
+            ],
+            [
+              528,
+              516
+            ],
+            [
+              528,
+              516
+            ],
+            [
+              528,
+              516
+            ],
+            [
+              533,
+              521
+            ],
+            [
+              533,
+              521
+            ],
+            [
+              540,
+              528
+            ],
+            [
+              576,
+              558
+            ],
+            [
+              735,
+              712
+            ],
+            [
+              879,
+              856
+            ],
+            [
+              902,
+              879
+            ],
+            [
+              1018,
+              992
+            ],
+            [
+              1219,
+              1194
+            ]
+          ]
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "count": 96,
+          "all_on_unchanged_lines": true,
+          "admission_line_mapping": [
+            [
+              102,
+              100
+            ],
+            [
+              554,
+              295
+            ],
+            [
+              555,
+              296
+            ],
+            [
+              556,
+              297
+            ],
+            [
+              556,
+              297
+            ],
+            [
+              559,
+              300
+            ],
+            [
+              562,
+              303
+            ],
+            [
+              573,
+              314
+            ],
+            [
+              601,
+              342
+            ],
+            [
+              620,
+              361
+            ],
+            [
+              626,
+              367
+            ],
+            [
+              627,
+              368
+            ],
+            [
+              664,
+              405
+            ],
+            [
+              676,
+              417
+            ],
+            [
+              684,
+              425
+            ],
+            [
+              685,
+              426
+            ],
+            [
+              715,
+              456
+            ],
+            [
+              716,
+              457
+            ],
+            [
+              717,
+              458
+            ],
+            [
+              725,
+              466
+            ],
+            [
+              725,
+              466
+            ],
+            [
+              733,
+              474
+            ],
+            [
+              746,
+              487
+            ],
+            [
+              747,
+              488
+            ],
+            [
+              753,
+              494
+            ],
+            [
+              780,
+              521
+            ],
+            [
+              839,
+              580
+            ],
+            [
+              843,
+              584
+            ],
+            [
+              844,
+              585
+            ],
+            [
+              845,
+              586
+            ],
+            [
+              858,
+              599
+            ],
+            [
+              861,
+              602
+            ],
+            [
+              907,
+              648
+            ],
+            [
+              911,
+              652
+            ],
+            [
+              914,
+              655
+            ],
+            [
+              917,
+              658
+            ],
+            [
+              917,
+              658
+            ],
+            [
+              1009,
+              750
+            ],
+            [
+              1013,
+              754
+            ],
+            [
+              1014,
+              755
+            ],
+            [
+              1015,
+              756
+            ],
+            [
+              1031,
+              772
+            ],
+            [
+              1034,
+              775
+            ],
+            [
+              1038,
+              779
+            ],
+            [
+              1046,
+              787
+            ],
+            [
+              1054,
+              795
+            ],
+            [
+              1072,
+              813
+            ],
+            [
+              1078,
+              819
+            ],
+            [
+              1091,
+              832
+            ],
+            [
+              1098,
+              839
+            ],
+            [
+              1116,
+              857
+            ],
+            [
+              1123,
+              864
+            ],
+            [
+              1140,
+              881
+            ],
+            [
+              1146,
+              887
+            ],
+            [
+              1147,
+              888
+            ],
+            [
+              1148,
+              889
+            ],
+            [
+              1159,
+              900
+            ],
+            [
+              1160,
+              901
+            ],
+            [
+              1160,
+              901
+            ],
+            [
+              1161,
+              902
+            ],
+            [
+              1164,
+              905
+            ],
+            [
+              1175,
+              916
+            ],
+            [
+              1177,
+              918
+            ],
+            [
+              1192,
+              933
+            ],
+            [
+              1197,
+              938
+            ],
+            [
+              1199,
+              940
+            ],
+            [
+              1222,
+              963
+            ],
+            [
+              1228,
+              969
+            ],
+            [
+              1229,
+              970
+            ],
+            [
+              1230,
+              971
+            ],
+            [
+              1233,
+              974
+            ],
+            [
+              1262,
+              1003
+            ],
+            [
+              1263,
+              1004
+            ],
+            [
+              1281,
+              1022
+            ],
+            [
+              1332,
+              1073
+            ],
+            [
+              1345,
+              1086
+            ],
+            [
+              1368,
+              1109
+            ],
+            [
+              1383,
+              1124
+            ],
+            [
+              1390,
+              1131
+            ],
+            [
+              1428,
+              1169
+            ],
+            [
+              1462,
+              1203
+            ],
+            [
+              1487,
+              1228
+            ],
+            [
+              1497,
+              1238
+            ],
+            [
+              1514,
+              1255
+            ],
+            [
+              1516,
+              1257
+            ],
+            [
+              1528,
+              1269
+            ],
+            [
+              1532,
+              1273
+            ],
+            [
+              1545,
+              1286
+            ],
+            [
+              1548,
+              1289
+            ],
+            [
+              1553,
+              1294
+            ],
+            [
+              1556,
+              1297
+            ],
+            [
+              1567,
+              1308
+            ],
+            [
+              1598,
+              1339
+            ],
+            [
+              1599,
+              1340
+            ],
+            [
+              1616,
+              1357
+            ],
+            [
+              1619,
+              1360
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "whitespacev3",
+      "command": "git diff --check -- src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+      "status": "passed",
+      "chunk_id": "bfe2c6",
+      "wall_time_seconds": 0.000002026,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": "",
+      "artifact": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "01315764e85d0f0c3f1405f43420ccd5abd79ce9525605e85ca8f3e3fd6fc975"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "272a8ced81d2eec5a743374e8b546c4cca8b64d9d84f43472223ffe9ed0103ac"
+        }
+      ]
+    }
+  ],
+  "history": [
+    {
+      "stage": "initial implementation",
+      "artifact": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "3fe0e7863b27c2731e3c2b922ce5f809b0562cd845df8a058fe76c4933b76176"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "5962585bb17e1277e49c6b506b3ebe8f4aa30cab4405495aa52ab1506a552069"
+        }
+      ],
+      "artifact_identity_note": "First fixture SHA reconstructed in memory from the exact own fixture correction and known superseded artifact; no source restore/write.",
+      "checks": [
+        {
+          "id": "K1v1",
+          "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --testNamePattern=\"W37.03|W37.02|uses stored switches for both hosts\" --maxWorkers=1 --minWorkers=1",
+          "status": "superseded",
+          "chunk_id": "6fb54e",
+          "wall_time_seconds": 0.000001567,
+          "exit_code": 0,
+          "original_token_count": 1635,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > invalidates internal import/absorb authority including failed writes and allows only absent-marker legacy default ingest\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > retains signed default Coach and BrightHour demo generation and separate surface qualification\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > retains signed default Coach and BrightHour demo generation and separate surface qualification\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":4}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":4}\n\n ✓ src/routes/realtime.sdkContract.test.ts  (32 tests | 26 skipped) 1272ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 26 skipped (32)\n   Start at  00:57:09\n   Duration  19.29s (transform 6.86s, setup 0ms, collect 11.35s, tests 1.27s, environment 0ms, prepare 5.27s)\n\n"
+        },
+        {
+          "id": "compilerv1",
+          "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+          "status": "superseded",
+          "chunk_id": "18d92f",
+          "wall_time_seconds": 0.000001562,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "id": "lintv1",
+          "command": "node node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+          "status": "superseded",
+          "chunk_id": "e1f1e3",
+          "wall_time_seconds": 0.000002255,
+          "exit_code": 0,
+          "original_token_count": 2975,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/durable-objects/ShopperReflex.ts\n   127:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   491:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   528:24  warning  '_ws' is defined but never used           @typescript-eslint/no-unused-vars\n   528:40  warning  '_code' is defined but never used         @typescript-eslint/no-unused-vars\n   528:55  warning  '_reason' is defined but never used       @typescript-eslint/no-unused-vars\n   528:72  warning  '_wasClean' is defined but never used     @typescript-eslint/no-unused-vars\n   533:24  warning  '_ws' is defined but never used           @typescript-eslint/no-unused-vars\n   533:40  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars\n   540:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   576:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   735:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   879:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   902:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  1018:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  1219:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts\n   102:129  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n   517:30   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   518:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   519:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   519:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   522:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   525:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   536:40   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   564:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   583:95   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   589:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   590:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   627:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   639:173  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   647:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   648:76   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   678:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   679:24   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   680:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   688:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   688:36   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   696:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   709:55   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n   710:57   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n   716:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   743:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   802:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   806:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   807:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   808:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   821:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   824:47   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n   870:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   874:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   877:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   880:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   880:37   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   972:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   976:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   977:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   978:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   994:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   997:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1001:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1009:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1017:25   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1035:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1041:60   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1054:71   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1061:100  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1079:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1086:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1103:110  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1109:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1110:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1111:68   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1122:52   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1123:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1123:109  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1124:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1127:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1138:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1140:119  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1155:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1160:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1162:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1185:112  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1191:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1192:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1193:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1196:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1225:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1226:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1244:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1295:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1308:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1331:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1346:101  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1353:65   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1391:153  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1425:55   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1450:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1460:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1477:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1479:77   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1491:64   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1495:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1508:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1511:41   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1516:130  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1519:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1530:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1561:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1562:71   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  1579:125  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1582:122  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n\n✖ 111 problems (0 errors, 111 warnings)\n\n"
+        },
+        {
+          "id": "whitespacev1",
+          "command": "git diff --check -- src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+          "status": "superseded",
+          "chunk_id": "2e8046",
+          "wall_time_seconds": 0.099459078,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "disposition": "K1 passed 6/6, compiler/lint/whitespace0. Fixture strengthened from empty import rows to actual historical content-click plus persisted-score/counter assertions before freeze."
+    },
+    {
+      "stage": "first freeze before independent rework",
+      "artifact": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "3fe0e7863b27c2731e3c2b922ce5f809b0562cd845df8a058fe76c4933b76176"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "9786250bd504fba49934dc5bf91b26801b5c8a678d59704adeff3073e0be09a4"
+        }
+      ],
+      "checks": [
+        {
+          "id": "K1v2",
+          "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --testNamePattern=\"W37.03|W37.02|uses stored switches for both hosts\" --maxWorkers=1 --minWorkers=1",
+          "status": "superseded",
+          "chunk_id": "cd33a2",
+          "wall_time_seconds": 0.000002373,
+          "exit_code": 0,
+          "original_token_count": 1634,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.02 sends scored content to two verified tenant populations on both hosts with server geo and excludes demo/unsigned/client geo\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > invalidates internal import/absorb authority including failed writes and allows only absent-marker legacy default ingest\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > retains signed default Coach and BrightHour demo generation and separate surface qualification\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > retains signed default Coach and BrightHour demo generation and separate surface qualification\n[reflex] catalog audiences regenerated: +43 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":false,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":false,\"requests\":2,\"reads\":2,\"writes\":4}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.02 resolved action consent > uses stored switches for both hosts with ledger/learning and ODP positives; event/cookie true cannot override refusal\nW05.02 action I/O {\"tracking\":true,\"personalization\":true,\"requests\":2,\"reads\":2,\"writes\":4}\n\n ✓ src/routes/realtime.sdkContract.test.ts  (32 tests | 26 skipped) 907ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 26 skipped (32)\n   Start at  00:58:34\n   Duration  14.48s (transform 6.15s, setup 0ms, collect 9.91s, tests 907ms, environment 0ms, prepare 2.61s)\n\n"
+        },
+        {
+          "id": "compilerv2",
+          "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+          "status": "superseded",
+          "chunk_id": "bf7e6e",
+          "wall_time_seconds": 5.78e-7,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "id": "whitespacev2",
+          "command": "git diff --check -- src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+          "status": "superseded",
+          "chunk_id": "135af6",
+          "wall_time_seconds": 0.000002098,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "id": "lintv2",
+          "command": "node node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+          "status": "superseded",
+          "exit_code": 0,
+          "tool_chunk_id": "fa7ff6",
+          "summary": "111 warnings, 0 errors observed in actual tool output; intermediate full stdout not separately retained. Final full lint stdout retained above."
+        }
+      ],
+      "disposition": "K1 passed6/6; reviewer then found unsigned ingest forwarding before ownership gate. Lead authorized same-task runtime rework plus signed default crossing evidence. Previous independent check/freeze superseded; no failed command hidden."
+    },
+    {
+      "stage": "independent rework",
+      "reason": "Unsigned forwarding could bypass the source object's marker/default-id gate and reach an unbound default target. Withdraw unsigned ingest forwarding and reject forwarded legacy sources inside serialized guard. Add concrete no-effect crossing probes and default-surface real alarms.",
+      "changes": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "before_sha256": "3fe0e7863b27c2731e3c2b922ce5f809b0562cd845df8a058fe76c4933b76176",
+          "after_sha256": "01315764e85d0f0c3f1405f43420ccd5abd79ce9525605e85ca8f3e3fd6fc975",
+          "patch": "===================================================================\n--- a/src/durable-objects/ShopperReflex.ts\t\n+++ b/src/durable-objects/ShopperReflex.ts\t\n@@ -336,11 +336,11 @@\n       });\n     }\n \n     // CW25. A browser that was recognised forwards to the person's object: the\n-    // same ingest, the same snapshot, one hop. Nothing else is forwarded; the\n-    // identity doors below act on THIS object by design.\n-    if (!principal && (url.pathname === '/ingest' || url.pathname === '/snapshot')) {\n+    // same snapshot, one hop. Ingest must enforce THIS object's ownership before\n+    // any effect; linked legacy browsers cannot forward unsigned mutations.\n+    if (!principal && url.pathname === '/snapshot') {\n       const forwarded = await this.forwardIfLinked(request);\n       if (forwarded) return forwarded;\n     }\n     if (request.method === 'POST' && url.pathname === '/ingest') {\n@@ -558,9 +558,9 @@\n       try {\n         if (principal) { assertSessionTarget(principal, event.userId, body.sessionId); await this.assertOwned(principal, request); }\n         else {\n           await this.load();\n-          if (this.audienceOwner !== undefined || !this.isActualObject(DEFAULT_TENANT, event.userId)\n+          if (this.audienceOwner !== undefined || !this.isActualObject(DEFAULT_TENANT, event.userId) || await this.forwardTarget()\n             || (this.affinity && this.affinity.shopperId !== event.userId)\n             || (this.pipeline?.visitorId && this.pipeline.visitorId !== event.userId)) throw new SessionAccessError();\n         }\n       } catch { return { body: { success: false, error: 'Shopper session unavailable' }, status: 401, update: null }; }\n",
+          "patch_sha256": "dd0b8945ee11149baa51823ad3688150fbc88e8c5eb5bf01cb61eaf0937bbe69"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "before_sha256": "9786250bd504fba49934dc5bf91b26801b5c8a678d59704adeff3073e0be09a4",
+          "after_sha256": "272a8ced81d2eec5a743374e8b546c4cca8b64d9d84f43472223ffe9ed0103ac",
+          "patch": "===================================================================\n--- a/src/routes/realtime.sdkContract.test.ts\t\n+++ b/src/routes/realtime.sdkContract.test.ts\t\n@@ -382,8 +382,25 @@\n       const other = await newAnonymousSession(f.env, 'meridian');\n       expect((await f.call(`/realtime/segments/${other.subject}`, other.capability, undefined, other.tenant)).status).toBe(200);\n       expect((await direct(itemFor(f, other), '/ingest', event(other))).status).toBe(401);\n       expect(itemFor(f, other).data.size).toBe(0);\n+\n+      // The forwarding door must not bypass the source object's unsigned gate.\n+      const target = await newAnonymousSession(f.env, 'coach');\n+      expect((await f.call(`/realtime/segments/${target.subject}`, target.capability, undefined, target.tenant)).status).toBe(200);\n+      expect(itemFor(f, target).data.size).toBe(0);\n+      expect((await direct(item, '/segments', { segment: 'bind-source' }, g)).status).toBe(200);\n+      for (const source of [item, itemFor(f, other)]) {\n+        expect((await direct(source, '/identity/forward', { to: shopperObjectName(target.tenant, target.subject) })).status).toBe(200);\n+        const before = structuredClone([...source.data]); f.effects.length = 0; f.cache.calls.length = 0;\n+        expect((await direct(source, '/ingest', event(target, 'coach'))).status).toBe(401);\n+        expect(f.effects).toEqual([]); expect(f.cache.calls).toEqual([]);\n+        expect([...source.data]).toEqual(before); expect(itemFor(f, target).data.size).toBe(0);\n+      }\n+      item.data.delete('audienceOwner'); restart(f, g);\n+      const forwardedLegacy = structuredClone([...item.data]); f.effects.length = 0;\n+      expect((await direct(item, '/ingest', event(g, 'coach'))).status).toBe(401);\n+      expect([...item.data]).toEqual(forwardedLegacy); expect(f.effects).toEqual([]);\n     } finally { f.faults.write = false; await f.drain(); vi.restoreAllMocks(); }\n   });\n \n   it('retains signed default Coach and BrightHour demo generation and separate surface qualification', async () => {\n@@ -391,8 +408,9 @@\n     const f = boundary('do');\n     await getConnectors(f.env).audiences.createAudience({ ...audience(1), key: 'w3703_coach', surface: 'coach' });\n     await getConnectors(f.env).audiences.createAudience({ ...audience(1), key: 'w3703_brighthour', surface: 'brighthour' });\n     const seed = vi.spyOn(KvAudienceStore.prototype, 'seed');\n+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());\n     try {\n       for (const surface of ['coach', 'brighthour'] as const) {\n         const g = await newAnonymousSession(f.env, 'coach');\n         expect((await f.call('/realtime/action', g.capability, event(g, surface), g.tenant)).status).toBe(200);\n@@ -402,8 +420,22 @@\n         const read = await direct(item, '/segments', undefined, g); expect(read.status).toBe(200);\n         expect((await read.json() as { segments: string[] }).segments.filter(k => k.startsWith('w3703_'))).toEqual([`w3703_${surface}`]);\n         const before = structuredClone([...item.data]);\n         expect((await direct(item, '/ingest', event(g, surface))).status).toBe(401); expect([...item.data]).toEqual(before);\n+        const product = (await demoRegistry.catalogServiceFor(surface)).getAllProducts()[0]!;\n+        for (let n = 0; n < 4; n++) expect((await direct(item, '/ingest', { ...event(g, surface), type: 'product_view', data: { productId: product.id } }, g)).status).toBe(200);\n+        const memberships = [...(item.data.get('affinity') as AffinityRecord).reflex.audiences];\n+        expect(memberships.length).toBeGreaterThan(0);\n+        restart(f, g);\n+        const ws = socket(g); item.sockets.push(ws as unknown as WebSocket);\n+        const crossing = item.alarms.at(-1)!; expect(crossing).toBeGreaterThan(Date.now());\n+        clock.mockReturnValue(crossing + 5);\n+        const qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments'); qualified.mockClear();\n+        await item.shopper.alarm();\n+        expect(qualified).toHaveBeenCalledTimes(1); expect(qualified.mock.calls[0]![1]).toHaveProperty('surface', surface);\n+        expect(memberships.some(k => !(item.data.get('affinity') as AffinityRecord).reflex.audiences.includes(k))).toBe(true);\n+        expect((item.data.get('pipeline') as PipelineRecord).segments.filter(k => k.startsWith('w3703_'))).toEqual([`w3703_${surface}`]);\n+        expect(ws.send).toHaveBeenCalled(); expect(JSON.parse(ws.send.mock.calls.at(-1)![0])).toMatchObject({ data: { source: 'reflex_alarm' } });\n       }\n       expect(seed).toHaveBeenCalled();\n       expect([...f.cache.data.keys()].some(k => k === 'reflex:audgen:v1')).toBe(true);\n       expect([...f.cache.data.keys()].some(k => k.includes('audgen') && k.includes('brighthour'))).toBe(true);\n",
+          "patch_sha256": "79271ce876a8e81ba542725a3cf4ac5786bb8616f592f2874624ef645fd20a4e"
+        }
+      ],
+      "disposition": "All final declared checks pass; source frozen for independent review."
+    }
+  ],
+  "measurements": "Existing Node/Vitest synthetic boundary only: actual route/DO/WS/alarm modules, fake local KV/DO storage and signed synthetic capabilities. Cold read has no owner/behavior write; tracked owned write is one coalesced storage put; non-default qualification performs no demo seeding. Four new cases plus two selected affected cases. No workerd/deployed/customer/shared-load or production latency/SLO claim. Runner durations measure this synthetic runner only.",
+  "limitations": [
+    "An uncommitted owner sentinel refuses further signed audience work in that isolate until object recreation/restart; necessary consent remains usable. Restart recovers previous coherent committed state after failed persistence. No automatic in-memory recovery redesign.",
+    "Owner is routing assurance only, not clean-history/event-provenance certification. Existing unbound historical memberships may be adopted by a later owned signed mutation. Legacy/import/absorb and linked-away background personalization is withdrawn until suitable owned state is established.",
+    "Generic customer catalog/config/reflex-derived memberships/automatic generation, live ODP authority, identity/history/link/sort, ingress/operator membership/broadcast discovery, managed registry/stamp/provisioning/resources/shared load/export/erasure remain open.",
+    "No mixed deployed-version or unsafe rollback acceptance, history repair, privacy/customer/finding/package/gate/release or North Star latency/lift acceptance."
+  ],
+  "rollback": "Lead may inspect/reverse only exact owned admission deltas; do not restore unsafe legacy routing/fan-in or other user changes. Reconstructed admission text was validated in memory against both authoritative hashes and reversible forward/reverse patches; no source restore, temp source write, git commit/push or external action.",
+  "handoff": {
+    "source_frozen": true,
+    "active_command_sessions": [],
+    "next_action": "Root/reviewer inspect final exact source, two reversible admission patches, full final outputs, warning mapping and rework history; independent exact K1 and lead disposition. Only root edits tracker/journal/RESUME."
+  }
+}

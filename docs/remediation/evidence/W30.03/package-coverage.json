@@ -1,0 +1,198 @@
+{
+  "before": {
+    "id": "W30",
+    "canonical": {
+      "gate_scope": "G1 capacity / G3 reconstruction",
+      "full_scope": "Correct late/mutable hours with event-time checkpoints/manifests and retained history; handle higher-cap repairs, date-scoped visitors and maturity explicitly. Propagate all missing/truncated/unfolded/horizon flags. Prove the real queue-to-object rate, multi-hour catch-up and seven-day policy at a signed-off workload. Timeout tuning/count comparisons alone are not closure.",
+      "finding_refs": "F17/F18/F25; N08/N23",
+      "sizing_owner": "S visible incompleteness/batch containment → L reliable bounded reconstruction; OL"
+    },
+    "title": "Complete event-time reconstruction",
+    "gates": [
+      "G1",
+      "G3"
+    ],
+    "source_findings": [
+      "F17",
+      "F18",
+      "F25",
+      "N08",
+      "N23"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W30-ORDER",
+          "description": "Event-time attribution/checkpoints correct ordering without future-decision eviction; current loaded hours reproducible within explicit available history."
+        },
+        {
+          "id": "W30-MUTABLE",
+          "description": "Detect/correct late and mutable objects using event-time checkpoints/manifests and retained history; counts alone never closure."
+        },
+        {
+          "id": "W30-REPAIR",
+          "description": "Higher-cap repairs reconstruct affected dependent hours, preserving date-scoped visitors and truthful non-forward state."
+        },
+        {
+          "id": "W30-COVERAGE",
+          "description": "Propagate missing/truncated/unfolded/horizon and explicit maturity throughout reporting."
+        },
+        {
+          "id": "W30-CAPACITY",
+          "description": "Prove actual queue-to-object growth, bounded multi-hour catch-up and seven-day policy at signed-off workload; tuning alone insufficient."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W30-ORDER",
+          "task_id": "W30.01",
+          "task_criterion_id": "W30.01-C1"
+        },
+        {
+          "criterion_id": "W30-ORDER",
+          "task_id": "W30.01",
+          "task_criterion_id": "W30.01-C2"
+        },
+        {
+          "criterion_id": "W30-COVERAGE",
+          "task_id": "W30.02",
+          "task_criterion_id": "W30.02-C1"
+        },
+        {
+          "criterion_id": "W30-COVERAGE",
+          "task_id": "W30.02",
+          "task_criterion_id": "W30.02-C2"
+        },
+        {
+          "criterion_id": "W30-COVERAGE",
+          "task_id": "W30.02",
+          "task_criterion_id": "W30.02-C3"
+        }
+      ],
+      "task_ids": [
+        "W30.01",
+        "W30.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W30",
+    "canonical": {
+      "gate_scope": "G1 capacity / G3 reconstruction",
+      "full_scope": "Correct late/mutable hours with event-time checkpoints/manifests and retained history; handle higher-cap repairs, date-scoped visitors and maturity explicitly. Propagate all missing/truncated/unfolded/horizon flags. Prove the real queue-to-object rate, multi-hour catch-up and seven-day policy at a signed-off workload. Timeout tuning/count comparisons alone are not closure.",
+      "finding_refs": "F17/F18/F25; N08/N23",
+      "sizing_owner": "S visible incompleteness/batch containment → L reliable bounded reconstruction; OL"
+    },
+    "title": "Complete event-time reconstruction",
+    "gates": [
+      "G1",
+      "G3"
+    ],
+    "source_findings": [
+      "F17",
+      "F18",
+      "F25",
+      "N08",
+      "N23"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W30-ORDER",
+          "description": "Event-time attribution/checkpoints correct ordering without future-decision eviction; current loaded hours reproducible within explicit available history."
+        },
+        {
+          "id": "W30-MUTABLE",
+          "description": "Detect/correct late and mutable objects using event-time checkpoints/manifests and retained history; counts alone never closure."
+        },
+        {
+          "id": "W30-REPAIR",
+          "description": "Higher-cap repairs reconstruct affected dependent hours, preserving date-scoped visitors and truthful non-forward state."
+        },
+        {
+          "id": "W30-COVERAGE",
+          "description": "Propagate missing/truncated/unfolded/horizon and explicit maturity throughout reporting."
+        },
+        {
+          "id": "W30-CAPACITY",
+          "description": "Prove actual queue-to-object growth, bounded multi-hour catch-up and seven-day policy at signed-off workload; tuning alone insufficient."
+        },
+        {
+          "id": "W30-PUBLICATION",
+          "description": "Bounded retry/visibility for failed saved-day publication from available hours, without refolding; full mutable-input reconstruction/history/capacity remain open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W30-ORDER",
+          "task_id": "W30.01",
+          "task_criterion_id": "W30.01-C1"
+        },
+        {
+          "criterion_id": "W30-ORDER",
+          "task_id": "W30.01",
+          "task_criterion_id": "W30.01-C2"
+        },
+        {
+          "criterion_id": "W30-COVERAGE",
+          "task_id": "W30.02",
+          "task_criterion_id": "W30.02-C1"
+        },
+        {
+          "criterion_id": "W30-COVERAGE",
+          "task_id": "W30.02",
+          "task_criterion_id": "W30.02-C2"
+        },
+        {
+          "criterion_id": "W30-COVERAGE",
+          "task_id": "W30.02",
+          "task_criterion_id": "W30.02-C3"
+        },
+        {
+          "criterion_id": "W30-PUBLICATION",
+          "task_id": "W30.03",
+          "task_criterion_id": "W30.03-C1"
+        },
+        {
+          "criterion_id": "W30-PUBLICATION",
+          "task_id": "W30.03",
+          "task_criterion_id": "W30.03-C2"
+        },
+        {
+          "criterion_id": "W30-PUBLICATION",
+          "task_id": "W30.03",
+          "task_criterion_id": "W30.03-C3"
+        }
+      ],
+      "task_ids": [
+        "W30.01",
+        "W30.02",
+        "W30.03"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

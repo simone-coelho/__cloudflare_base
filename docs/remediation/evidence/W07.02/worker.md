@@ -1,0 +1,11 @@
+# W07.02 worker handoff
+
+Frozen at 2026-09-07T12:36:20.531Z, contract `cad91b6161d2a439e9b870a7edc78f7122887ac8c26626e2481e2d26caa195bf`. Four production files and one new direct-service fixture only; independent review pending. Exact commands, full outputs, initial failure, source hashes and unchanged regression hashes are in worker-checks.json. Original four source bytes remain in immutable baseline.json.
+
+Production landed first after exact original-byte assertion. Removed Optimizely subject/result success logs and socket lifecycle IDs; raw callback/error/destination/type logs now use fixed labels. Initialize retains threshold3 and string-only missing-datafile suppression; fresh retains threshold4/no suppression and no-op dispatcher/error handler. Scene non-OK logs numeric status without reading its body. Domain results/payloads/callbacks, retries, socket state and storage remain unchanged.
+
+Final K1:47/47 pass (9 new services,28 unchanged telemetry,10 unchanged consent),16.24s. K2:5/5 selected actual-workerd entry cases pass,11.86s;19 unrelated historical cases intentionally excluded. K2 inputs unchanged since execution. Application noEmit with task-temporary build metadata and scoped diff check pass. All processes collected.
+
+Initial tests passed; initial TypeScript found two fixture-only errors: incomplete Event cast and undefined key where Env declares string. Replaced with complete valid synthetic Event and blank-string unconfigured-model fixture; unchanged fallback assertion. Exact K1/noEmit reruns pass; original compiler output retained. No production rework or waived check.
+
+Limits: SDK construction/client, fetch, storage and socket endpoints are synthetic. Actual socket callback registration uses a small pair/Response101 shim, not native transport acceptance. Scene generation uses intercepted three-byte output, not an external model. Baseline socket IDs/types were reproduced; raw socket error branches were source-confirmed before and empirically checked after. Other logs and public error contents, domain/consent policy, historical data/retention/disposition, dataset isolation and full W07/finding/gate/customer/SLO/deployed/release obligations remain open. Current regression is not old W07.01/W34.01 full-contract reclosure. Lead owns artifact, independent review and acceptance.

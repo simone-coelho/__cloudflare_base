@@ -1,0 +1,47 @@
+{
+  "at": "2026-09-13T02:16:53.464Z",
+  "source_go_at": "2026-09-13T02:16:53.464Z",
+  "actor_id": "w01-lead",
+  "task_id": "W31.02",
+  "worker": "w1405-worker",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "ea6f84834d9c456e6f633f6c28edf60c883e6ef4665b00826957672b508a4874",
+  "plan": {
+    "path": "docs/remediation/design/W31.02/plan.md",
+    "sha256": "7b4e08152482f96f68c9aee2902f3891ecc447585b26d6fe362ddbff5648e2d5"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "9b9d45",
+        "wall_time_seconds": 1.000865988,
+        "session_id": 98352,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "652749",
+        "exit_code": 0,
+        "output": "Tracker VALID check/status, 41 scope-open packages; 95 reopened/2 closed tasks; journal1368 checkpoint W31.01; check/status exit0, NOTE19736 each. See direct tool capture652749."
+      }
+    ],
+    "session_id": 98352,
+    "drained": true,
+    "exit_code": 0
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1377,
+    "pins": 52,
+    "protected": 46,
+    "authority": true,
+    "actual_package_matches": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true,
+    "remaining_closed_no_planned_overlap": true
+  },
+  "limitations": "Bounded 184-day diagnostic reporting, not full W31/F25/F07/F34, six-plus-month experimental measurement, causal lift, native capacity or customer/release acceptance. Existing 16MiB input, 16,384-cell, 8MiB output, coverage/maturity and recorded-basis withholding remain; legacy fallbacks or cardinality may explicitly refuse even within184 days. No history repair, metric/target/control-policy decision, serving-path change, new framework, deployment/cloud/install/build/provision/seed/credential/customer-data/commit/push/destructive/external authority."
+}

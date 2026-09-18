@@ -1,0 +1,82 @@
+{
+  "task_id": "W08.01",
+  "actor": {
+    "id": "w0801-reviewer",
+    "run_id": "/root/w0801_review",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "recorded_at": "2026-09-08 23:23:05 UTC",
+  "verdict": "pass",
+  "evidence_kind": "design_review",
+  "claim": "source_confirmed",
+  "artifact": {
+    "path": "docs/remediation/evidence/W08.01/artifact.json",
+    "digest": "10a6ba0af7a1af5196c50c408e17060741c338a81576720ad63cec70cf88fd1b",
+    "contract_digest": "01667e6ac0c7aef478be358c99941b12080c71ccf3b9398171f8adfb5a152871",
+    "verified_file_pins": 10
+  },
+  "scope_review": "Read AGENTS, remediation README/doc36/RESUME, complete canonical W08 and linked F09/F10/F33/F35/N02/N18/N19/N27/N28/N29, customer isolation/release requirements, actual provisioners/direct deployment references, approved plan/contract, baseline, package scope and complete worker proof. Source/diff reviewed independently on frozen five-file implementation; historical raw-verifier remedy overclaims were not adopted.",
+  "criteria": [
+    {
+      "id": "W08.01-C1",
+      "verdict": "pass",
+      "basis": "All three original mutating bodies are removed. Each actual file contains only preserved shebang, retirement comment, a single builtin printf with three single-quoted literal diagnostic arguments redirected to stderr, and unconditional exit 2. No parameter/environment reads, expansions, subprocesses, optional bypass, unsafe tail or executable archive introduced. Messages clearly state retirement and pending W08; no functioning replacement is claimed."
+    },
+    {
+      "id": "W08.01-C2",
+      "verdict": "pass",
+      "basis": "Exact K1 independently passes all four bash -n parses with an empty-PATH child environment, restrictive refusal syntax, unchanged deployment non-comment/non-diagnostic lines, literal changed diagnostics and retired operative advice. Actual diff confirms deploy control flow/commands unchanged. Existing runbook withdraws safe/verified/source-of-truth claims, old provision/auth workarounds, and labels remaining commands/descriptions historical and non-operative, including an explicit unsafe first-run/rerun seed warning. Recorded worker five-file whitespace exit0/empty output inspected without rerunning."
+    },
+    {
+      "id": "W08.01-C3",
+      "verdict": "pass",
+      "basis": "Independent exact K1 ran once. All 10 artifact file hashes and canonical artifact digest verified; all five baseline hashes/byte counts and final bytes/hashes match retained proof and exact Git patches. Worker K1 command equals admitted command and required results are retained. Complete canonical W08 is unchanged and remains open/partial. Review found no required change within admitted scope."
+    }
+  ],
+  "checks": [
+    {
+      "id": "W08.01-K1-independent",
+      "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport assert from 'node:assert/strict';\nimport { spawnSync } from 'node:child_process';\nconst baseline = JSON.parse(fs.readFileSync('docs/remediation/evidence/W08.01/baseline.json', 'utf8'));\nconst scripts = ['scripts/provision-stamp.sh', 'scripts/provision-staging.sh', 'scripts/setup.sh', 'scripts/deploy.sh'];\nconst active = s => s.split(/\\r?\\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));\nfor (const path of scripts) {\n  const checked = spawnSync('/bin/bash', ['--noprofile', '--norc', '-n', path], { encoding: 'utf8', env: { PATH: '' } });\n  assert.equal(checked.error, undefined); assert.equal(checked.status, 0, checked.stderr);\n  if (path !== 'scripts/deploy.sh') {\n    const lines = active(fs.readFileSync(path, 'utf8'));\n    assert.equal(lines.length, 2, path);\n    assert.match(lines[0], /^builtin printf '%s\\\\n'(?: '[^'\\n]*')+ >&2$/);\n    assert.equal(lines[1], 'exit 2');\n    assert.match(lines[0], /W08/);\n  }\n}\nconst deploy = fs.readFileSync(scripts[3], 'utf8'), before = baseline.files.find(f => f.path === scripts[3]).content;\nconst logic = s => active(s).filter(l => !/^echo(?:\\s|$)/.test(l));\nassert.deepEqual(logic(deploy), logic(before), 'deploy execution logic changed');\nconst oldLines = new Set(before.split(/\\r?\\n/));\nfor (const line of deploy.split(/\\r?\\n/)) if (!oldLines.has(line) && /^\\s*echo(?:\\s|$)/.test(line)) {\n  assert.match(line, /^\\s*echo \"[^\"$`\\\\]*\"\\s*$/, 'changed diagnostics must be literal');\n}\nassert.doesNotMatch(deploy, /Run: bash scripts\\/provision-|printf '\\*:demo-site'|set AUTH_MODE.*open/);\nconst runbook = fs.readFileSync('docs/deployment/01-deploy.md', 'utf8');\nassert.doesNotMatch(runbook, /Status:\\*\\* verified|## The one safe path|bash scripts\\/provision-|printf '\\*:demo-site'|open.*one-line.*rollback/);\nassert.match(runbook, /W08/);\nconsole.log('PASS: four scripts parse; three exact literal refusal bodies; deploy executable logic unchanged; operative recovery guidance retired. Source-only, no target script executed.');\n\nNODE",
+      "started_at": "2026-09-08 23:21:33 UTC",
+      "finished_at": "2026-09-08 23:21:33 UTC",
+      "chunk_id": "713a16",
+      "wall_time_seconds": 0.000003186,
+      "exit_code": 0,
+      "original_token_count": 44,
+      "output": "PASS: four scripts parse; three exact literal refusal bodies; deploy executable logic unchanged; operative recovery guidance retired. Source-only, no target script executed.\n"
+    },
+    {
+      "id": "W08.01-K2-pins-and-proof",
+      "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport assert from 'node:assert/strict';\nimport { createHash } from 'node:crypto';\nimport { spawnSync } from 'node:child_process';\nconst sha = data => createHash('sha256').update(data).digest('hex');\nconst read = path => JSON.parse(fs.readFileSync(path, 'utf8'));\nconst artifact = read('docs/remediation/evidence/W08.01/artifact.json');\nconst worker = read('docs/remediation/evidence/W08.01/worker.json');\nconst baseline = read('docs/remediation/evidence/W08.01/baseline.json');\nconst contract = read('docs/remediation/design/W08.01/task-contract-v1.json');\nassert.equal(artifact.digest, sha(JSON.stringify({ contract_digest: artifact.contract_digest, configuration: artifact.configuration, files: artifact.files.map(({path,sha256,role}) => ({path,sha256,role})).sort((a,b)=>a.path.localeCompare(b.path)) })));\nassert.equal(artifact.contract_digest, contract.preflight.contract_digest);\nassert.equal(artifact.files.length,10);\nfor (const pin of artifact.files) assert.equal(sha(fs.readFileSync(pin.path)),pin.sha256,pin.path);\nassert.equal(worker.implementation.files.length,5);\nfor (const final of worker.implementation.files) {\n  const original = baseline.files.find(f=>f.path===final.path);\n  const initial = worker.baseline.initial_files.find(f=>f.path===final.path);\n  assert.equal(sha(original.content),original.sha256);\n  assert.equal(initial.sha256,original.sha256);\n  assert.equal(initial.bytes,Buffer.byteLength(original.content));\n  const actual=fs.readFileSync(final.path);\n  assert.equal(actual.toString('utf8'),final.content_utf8);\n  assert.equal(actual.length,final.bytes);\n  assert.equal(sha(actual),final.sha256);\n  const diff=spawnSync('git',['diff','--',final.path],{encoding:'utf8'});\n  assert.equal(diff.status,0); assert.equal(diff.stdout,final.admission_diff,final.path);\n}\nassert.equal(worker.checks[0].command,contract.checks[0].command);\nassert.equal(worker.checks[0].exit_code,0);\nassert.equal(worker.checks[1].exit_code,0);\nassert.equal(worker.checks[1].output,'');\nconst scope=read('docs/remediation/evidence/W08.01/package-scope.json');\nassert.deepEqual(scope.before.canonical,scope.after.canonical);\nassert.equal(scope.after.scope_status,'open');\nassert.equal(scope.after.decomposition.status,'partial');\nconsole.log('PASS: 10 artifact pins and canonical manifest digest; five original/final byte/hash records and exact Git patches; worker K1 command/result and recorded scoped whitespace; canonical W08 retained open/partial. No target script or whitespace check executed.');\nNODE",
+      "started_at": "2026-09-08 23:22:17 UTC",
+      "finished_at": "2026-09-08 23:22:17 UTC",
+      "chunk_id": "288303",
+      "wall_time_seconds": 0.200208253,
+      "exit_code": 0,
+      "original_token_count": 64,
+      "output": "PASS: 10 artifact pins and canonical manifest digest; five original/final byte/hash records and exact Git patches; worker K1 command/result and recorded scoped whitespace; canonical W08 retained open/partial. No target script or whitespace check executed.\n"
+    }
+  ],
+  "worker_proof": {
+    "path": "docs/remediation/evidence/W08.01/worker.json",
+    "sha256": "6ee61e7bd58eb5ccad1e0cc2764c04568e97734af6e99e40ae2a67479c55e13b",
+    "reviewed": "Full record including original/final source and patches, exact K1, scoped whitespace and two terminated duplicate board attempts. Exit143/no-output attempts are not passes; timestamp absence is explicitly retained. Entry VALID430 and global protected-worktree assurance are lead-owned."
+  },
+  "findings": [],
+  "limits": [
+    "Source inventory and syntax proof only: no target provisioning/deployment/seed script body was executed; no observed rerun, runtime refusal or remote-zero-call result.",
+    "Guarantee concerns these literal script bodies. Caller interpreter selection, startup hooks/functions and caller redirections are outside this assurance.",
+    "Other deploy/CLI/migration/seed entrypoints remain executable outside containment. No global provisioning/learning-ingestion kill switch or deployed-resource attestation.",
+    "Safe desired state; creation/reconcile/add-brand/rotation; account/resource/tenant ownership; secret continuity and historical recovery; idempotent scoped seeds; product/demo schema separation; required alerts/configuration/identity; artifact/migration promotion and tested rollback/restore remain W08 work.",
+    "D01/D07/D08 and applicable customer authority remain pending. No topology, privacy, identity onboarding or commercial decision was made.",
+    "No runtime engine/scoring/ranking/learning change or measured relevance, latency, SLO, customer-isolation, full-W08, finding, gate or release acceptance.",
+    "Independent review verified the admitted five-file diff and artifact evidence. The lead retains responsibility for global protected-worktree assurance, tracker history, acceptance and durable handoff."
+  ],
+  "handoff": {
+    "owner": "/root",
+    "next_action": "Lead inspect this review, record bounded task disposition and preserve full W08 residuals in tracker/journal/RESUME. No further implementation or checks requested by this review.",
+    "pending_processes": [],
+    "source_frozen": true
+  }
+}

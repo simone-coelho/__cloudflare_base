@@ -1,0 +1,363 @@
+{
+  "status": "recorded",
+  "contract_digest": "4f0e219a937975ade25206e39c30db08bc44a7aee52943fb858e3e4443936557",
+  "configuration": "Local operator recent/receipt reader correctness only. Existing DecisionRing inclusive cutoff projection retained unchanged; no transactional cross-store/erase race, physical deletion, cursor snapshot consistency, comprehensive access audit/N13, historical reconstruction, customer/SLO/full W06/findings/gates/release acceptance. W14 Snowflake D10/D06/D08 hold remains pending. No external/cloud/credentials/customer-data/build/install/commit/push/deploy/cleanup or scope-policy amendment.",
+  "files": [
+    {
+      "path": "src/routes/identity.ts",
+      "role": "source",
+      "sha256": "f60a4f69160f6a335c5966a1a1a155d5ed529a2fa8236bc58c4501e62745e5aa"
+    },
+    {
+      "path": "src/identity/history.ts",
+      "role": "source",
+      "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7"
+    },
+    {
+      "path": "src/identity/link.ts",
+      "role": "source",
+      "sha256": "0898b366fe2a07450dd1fb779c0a2688e5476e1ecd7ebe9eb0555d46df50069b"
+    },
+    {
+      "path": "src/services/SessionManager.ts",
+      "role": "source",
+      "sha256": "5c87e159b7ca41da139ccef931fbec82cd2013f22f35bb46d0fcec2ffa8823db"
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "role": "source",
+      "sha256": "14fff343f56dd8814454ba3f3fea21c7636da198553a43ff48701deaba2d9a5e"
+    },
+    {
+      "path": "src/services/RealtimeSegmentEngine.ts",
+      "role": "source",
+      "sha256": "785f610c5bfbb8f95077c533253fd86875cd9030bba1874280ac67db2a92866b"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "role": "source",
+      "sha256": "9ed921e8f6a1469ef0e06fb214adb8d14ffe8476fe71879a8690a77a5024e671"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "role": "output",
+      "sha256": "4d655be1be24f7ab89a08609838cebe6e97766a3bbcf5c30a6fdfdbce407082f"
+    },
+    {
+      "path": "src/identity/store.ts",
+      "role": "source",
+      "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+    },
+    {
+      "path": "src/identity/shopperId.ts",
+      "role": "source",
+      "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+    },
+    {
+      "path": "src/identity/sessionCapability.ts",
+      "role": "source",
+      "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+    },
+    {
+      "path": "src/identity/consentContinuity.ts",
+      "role": "source",
+      "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af"
+    },
+    {
+      "path": "src/identity/erase.ts",
+      "role": "source",
+      "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "role": "source",
+      "sha256": "e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7"
+    },
+    {
+      "path": "src/content/consent.ts",
+      "role": "source",
+      "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+    },
+    {
+      "path": "src/reflex/core.ts",
+      "role": "source",
+      "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+    },
+    {
+      "path": "src/reflex/identityMerge.ts",
+      "role": "source",
+      "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+    },
+    {
+      "path": "src/reflex/configStore.ts",
+      "role": "source",
+      "sha256": "a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53"
+    },
+    {
+      "path": "src/demos/registry.ts",
+      "role": "source",
+      "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+    },
+    {
+      "path": "src/connectors/index.ts",
+      "role": "source",
+      "sha256": "656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67"
+    },
+    {
+      "path": "src/connectors/SegmentProvider.ts",
+      "role": "source",
+      "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359"
+    },
+    {
+      "path": "src/connectors/evaluateCondition.ts",
+      "role": "source",
+      "sha256": "55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59"
+    },
+    {
+      "path": "src/connectors/AudienceStore.ts",
+      "role": "source",
+      "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf"
+    },
+    {
+      "path": "src/connectors/types.ts",
+      "role": "source",
+      "sha256": "b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3"
+    },
+    {
+      "path": "src/connectors/DecisionProvider.ts",
+      "role": "source",
+      "sha256": "5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f"
+    },
+    {
+      "path": "src/services/FeatureVariableManager.ts",
+      "role": "source",
+      "sha256": "42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357"
+    },
+    {
+      "path": "src/services/JourneyStage.ts",
+      "role": "source",
+      "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+    },
+    {
+      "path": "src/content/service.ts",
+      "role": "source",
+      "sha256": "8f3aac28cf969f9b11591a9c324cdbacdf290407d8b429d543e2090de720caad"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "role": "source",
+      "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "role": "source",
+      "sha256": "f049dcac8b6bf8d702bdfd20d6589bca2801876af55746737ccf7e9f8f0b104a"
+    },
+    {
+      "path": "src/routes/identity.test.ts",
+      "role": "source",
+      "sha256": "b32694c52e1f95b4fda48a6d08da9a468778acbbdc07e77bd887fa60ce60c213"
+    },
+    {
+      "path": "src/services/SessionManager.identity.test.ts",
+      "role": "source",
+      "sha256": "a6d5d16b44a6adeb02c9a84cfaafd7676fba5a12a0803cb8645f59fbbec9ef14"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "role": "source",
+      "sha256": "88708ef67688bd95e44b9b9a4e92e339fd37ae943849766cfc3776ae839c2162"
+    },
+    {
+      "path": "src/middleware/operatorAuth.ts",
+      "role": "source",
+      "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+    },
+    {
+      "path": "src/middleware/auth.ts",
+      "role": "source",
+      "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "role": "source",
+      "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+    },
+    {
+      "path": "src/tenancy/middleware.ts",
+      "role": "source",
+      "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+    },
+    {
+      "path": "src/tenancy/objects.ts",
+      "role": "source",
+      "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+    },
+    {
+      "path": "src/index.ts",
+      "role": "source",
+      "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+    },
+    {
+      "path": "src/types/env.ts",
+      "role": "source",
+      "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    },
+    {
+      "path": "src/identity/profileEnrichment.ts",
+      "role": "source",
+      "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5"
+    },
+    {
+      "path": "src/durable-objects/DecisionRing.ts",
+      "role": "source",
+      "sha256": "712d51a2d337f4cbbb1bfa91e23edd728efe4e3c04c57b2938bf5719a8d19b3e"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "role": "source",
+      "sha256": "da7743fdfec69d2f549fff954435a273b14d90493255efba9f4f74a08c5901e9"
+    },
+    {
+      "path": "src/ledger/records.ts",
+      "role": "source",
+      "sha256": "f0a6285ae7371d4dc1e2830c8133d25ff72885ececff77641c282a52673473d7"
+    },
+    {
+      "path": "src/ledger/consume.ts",
+      "role": "source",
+      "sha256": "bea6cc737317a20033372e73df2f58e91b79751c0fc8cd6980de4ae1a16ac5c5"
+    },
+    {
+      "path": "src/ledger/enqueue.ts",
+      "role": "source",
+      "sha256": "1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830"
+    },
+    {
+      "path": "src/ledger/productSort.ts",
+      "role": "source",
+      "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322"
+    },
+    {
+      "path": "src/learn/receipts.ts",
+      "role": "source",
+      "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c"
+    },
+    {
+      "path": "src/learn/rows.ts",
+      "role": "source",
+      "sha256": "3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614"
+    },
+    {
+      "path": "src/learn/fan.ts",
+      "role": "source",
+      "sha256": "110192a195b7d18d001e17ba657ddd54adb96d30823262ee74ef9ddeabaf3273"
+    },
+    {
+      "path": "src/learn/policy.ts",
+      "role": "source",
+      "sha256": "6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "role": "source",
+      "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a"
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "role": "source",
+      "sha256": "c120ae2ef6391495429debf8139a9d41f8060462f17087893bc3c759c760048b"
+    },
+    {
+      "path": "src/learn/report.ts",
+      "role": "source",
+      "sha256": "faa9211fe078e6069e095e556a1d34cf05569ff96ae52be2dee7d7add3bb1b65"
+    },
+    {
+      "path": "src/config/publication.ts",
+      "role": "source",
+      "sha256": "d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "source",
+      "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457"
+    },
+    {
+      "path": "src/auth/accounts.ts",
+      "role": "source",
+      "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+    },
+    {
+      "path": "src/auth/store.ts",
+      "role": "source",
+      "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "role": "output",
+      "sha256": "afe442c0d3779963b382fe366f18beef9e148f3e77d77567948520b6f316549d"
+    },
+    {
+      "path": "src/ledger/ledger.test.ts",
+      "role": "output",
+      "sha256": "f882fcc019bb42ec7b27949b215d6e24186745d98a5060cba137a4f066960f53"
+    },
+    {
+      "path": "docs/remediation/evidence/W06.11/worker.json",
+      "role": "output",
+      "sha256": "c66ad7764b5e39853f86a42f1efa4df6bef03084b7fbd82b29114c5277b88266"
+    },
+    {
+      "path": "docs/remediation/design/W06.11/plan.md",
+      "role": "configuration",
+      "sha256": "50e056b9a2859af0c60e94f5cbc36733b9212a8258b46b13ab7e73f831a0cd88"
+    },
+    {
+      "path": "docs/remediation/design/W06.11/baseline.json",
+      "role": "configuration",
+      "sha256": "5c4a1339882ad30741fef01b77ba40860d294db518d59d1ff6072a2bf8b42325"
+    },
+    {
+      "path": "docs/remediation/evidence/W06.11/source-freeze.json",
+      "role": "configuration",
+      "sha256": "c408fc64288b4feb16df2800631ed1165df7529a7189140e2904ca367bef1926"
+    },
+    {
+      "path": "docs/remediation/evidence/W06.11/source-deltas.json",
+      "role": "configuration",
+      "sha256": "071f51827409f47c82b15fb23203b1e63516715e8d5755220a90c95912e30838"
+    }
+  ],
+  "digest": "ebc43b31fbc8955ebe9f57b95fecce54c7ad26c065b543a62e4d954d4a3602b5"
+}

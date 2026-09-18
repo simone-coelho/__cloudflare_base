@@ -1,0 +1,94 @@
+{
+  "task_id": "W08.05",
+  "at": "2026-09-17T18:57:17.000Z",
+  "source_state": "SOURCE/EVIDENCE STOP18:52:20Z; all worker/native sessions drained. Reviewer owns review-r1.json only after board GO.",
+  "worker": {
+    "path": "docs/remediation/evidence/W08.05/worker-r1.json",
+    "sha256": "9d3f154b69e31ee7e5283b773274ec42c71603a6ca7316024aacd3dcb42943c3",
+    "bytes": 285091
+  },
+  "admission": {
+    "path": "docs/remediation/evidence/W08.05/admission-lifecycle-recovery.json",
+    "sha256": "c9e2af366975c334b4815c14a3fe3c44afde01ba7ec3b4c4de7dd53706339b1c"
+  },
+  "prior_immutable": {
+    "worker": {
+      "path": "docs/remediation/evidence/W08.05/worker.json",
+      "sha256": "85b80a3ddc53409a5e125096d8162e78eae5927f72e47c09c0ab41e1ccb8b745",
+      "bytes": 467167
+    },
+    "review": {
+      "path": "docs/remediation/evidence/W08.05/review.json",
+      "sha256": "1574cca49eb58e4b02ec413083346a2eb7d5252af98c3183ccc258bdbb1b1895",
+      "bytes": 217799
+    },
+    "freeze": {
+      "path": "docs/remediation/evidence/W08.05/source-freeze.json",
+      "sha256": "c3b0a09e97da77a7d229ce47e4413f4bfc5734755b88549468be808fa1c6fa91"
+    },
+    "rejected_artifact_digest": "0f8926d6124a40e9d0d61cb0b7e779cad51cb6b7a467b44f920229c215ab0a02"
+  },
+  "artifact": {
+    "digest": "4a6048227ba05e1a72be6c12f148b05173b74ffe53083298505f376f5696e5ed",
+    "contract_digest": "19a5a684f4cdf78a065a9d255bdba6be73edceb1ffcbe246205233f0e41a67d2",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W08.05",
+    "files": 969
+  },
+  "identity": {
+    "rework_outputs": 3,
+    "final_test_pins": 62,
+    "protected_pins": 966,
+    "actual_package_inputs": 936,
+    "virtual_inputs": [
+      {
+        "bytes": 47,
+        "imports": [],
+        "path": "stamp-node-builtins:path",
+        "sha256": "9e8c63df72b81375da040cd4628fe8e4fd6ba2aedfc0dccebd3ee186399c47c1"
+      },
+      {
+        "bytes": 46,
+        "imports": [
+          "node_modules/unenv/dist/runtime/node/tty.mjs"
+        ],
+        "path": "stamp-node-builtins:tty",
+        "sha256": "8ccf40d3eced5ded6bc9f5f761458e551eba55f39afec528141dec426204d7d0"
+      },
+      {
+        "bytes": 47,
+        "imports": [],
+        "path": "stamp-node-builtins:util",
+        "sha256": "2f5211bd848caa1237a03428030c5746e30bf4c7c9959566f1070abf2a73f89c"
+      },
+      {
+        "bytes": 211,
+        "imports": [
+          "node_modules/@cloudflare/unenv-preset/dist/runtime/node/process.mjs",
+          "node_modules/@cloudflare/unenv-preset/dist/runtime/node/console.mjs",
+          "node_modules/@cloudflare/unenv-preset/dist/runtime/polyfill/performance.mjs"
+        ],
+        "path": "stamp-virtual:globals",
+        "sha256": "0059f5636d12fa080fd58551cc1e5a3df4ef9843b67212bcb8caf0c67d167880"
+      }
+    ],
+    "package_digest": "ad18e9851b65bcb00164a8f99894e0f47b741764f209e578b3431c97204c5763",
+    "safe_manifest_sha256": "e3b7432e1cd5838d835d614b385c3b49570ecffacb117ae0a532653693106fe4",
+    "safe_manifest_bytes": 344293,
+    "package_primary_sha256": "d164135a52077990fb0119016ab5110a779ab1f4d30b00efe31eb80b72a070a0",
+    "qualification": "Root independently verified3baseline forward/reverse deltas,62current/966protected pins,8primary integrities,finalK2 exact pins,K4 comment-only workflow change,936package inputs and exact narrow post-package workflow reversehash. Original12-delta/review/source assurance retained; builder/closure/engine/SDK/config/tool inputs unchanged after package."
+  },
+  "results": {
+    "pre_fix": "R.red.1 fails all 3 groups; R.red.2 fails added completed-quarantine continuation; R.red.3 fails both visible concurrent resume-drift cases. All complete actual failures retained.",
+    "runtime": "R.K4.2 PASS 11/11; final executable workflow and fixture, comment/document wording qualification only.",
+    "static": "R.K2.2 PASS exact admitted four JS syntax checks, three shell parses and 12-path whitespace on final bytes.",
+    "package": "R.package.1 PASS one actual package/native probe, immutable artifact/337 enforcement pins retained; exact narrow post-package workflow qualification below. No rebuild.",
+    "full_K1": "Not rerun or claimed passing. Original five attempts and valid unchanged seed/material assurance remain in immutable worker.json; final coverage is qualified component reuse."
+  },
+  "limits": [
+    "Independent review/lead local acceptance remains pending. Full C8/K5/live/customer/release acceptance remains open.",
+    "No cloud/resource/credential/customer/external operation, commit, push, deploy, broadCI or subdelegation performed.",
+    "This transport provides no cross-operation CAS; visible drift refuses, but concurrent changes after the final read cannot be made atomic by a local receipt lock.",
+    "Real ownership, current secret/asset/provider state, quiescence, alert delivery, retention/access and deployed restore remain owner-authorized live evidence, never inferred from local fixtures."
+  ]
+}

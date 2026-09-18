@@ -1,0 +1,101 @@
+{
+  "before": {
+    "id": "W06",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Durable erasure job with preserved discovery, per-object checkpoints and honest destination status; both hosts, orphans, caches/rings/seen, D1, telemetry/logs and external reconciliation. Server-enforced deletion epoch/replay barrier prevents stale-cookie and delayed/concurrent ingestion resurrection. Retention and physical progress must be tested; operator Set-Cookie alone is not a subject-browser remedy.",
+      "finding_refs": "F04/F06/F18; N05/N12/N13",
+      "sizing_owner": "M/L; OL/D + S/P"
+    },
+    "title": "Durable erasure and replay barrier",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F04",
+      "F06",
+      "F18",
+      "N05",
+      "N12",
+      "N13"
+    ],
+    "proposed_owner": "OL/D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W06",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Durable erasure job with preserved discovery, per-object checkpoints and honest destination status; both hosts, orphans, caches/rings/seen, D1, telemetry/logs and external reconciliation. Server-enforced deletion epoch/replay barrier prevents stale-cookie and delayed/concurrent ingestion resurrection. Retention and physical progress must be tested; operator Set-Cookie alone is not a subject-browser remedy.",
+      "finding_refs": "F04/F06/F18; N05/N12/N13",
+      "sizing_owner": "M/L; OL/D + S/P"
+    },
+    "title": "Durable erasure and replay barrier",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F04",
+      "F06",
+      "F18",
+      "N05",
+      "N12",
+      "N13"
+    ],
+    "proposed_owner": "OL/D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W06-LOCAL-RETRY",
+          "description": "Durable exact discovered-target recovery for the existing operator erasure's bounded immediate local stages; truthful partial/local versus physical/external status. Full W06 replay/epoch/concurrent ingestion, uncapped/orphan discovery, CACHE/seen/D1/history/external/physical rewrite/lifecycle/accountability and D03/D06 acceptance remain uncovered."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W06-LOCAL-RETRY",
+          "task_id": "W06.01",
+          "task_criterion_id": "W06.01-C1"
+        },
+        {
+          "criterion_id": "W06-LOCAL-RETRY",
+          "task_id": "W06.01",
+          "task_criterion_id": "W06.01-C2"
+        },
+        {
+          "criterion_id": "W06-LOCAL-RETRY",
+          "task_id": "W06.01",
+          "task_criterion_id": "W06.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W06.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

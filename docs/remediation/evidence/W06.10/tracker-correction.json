@@ -1,0 +1,33 @@
+{
+  "before": "a9f0d2ff83e820f9a7d18c89dfa0a496e3e88665daaf7b4532b738fb591f55ce",
+  "after": "a9f0d2ff83e820f9a7d18c89dfa0a496e3e88665daaf7b4532b738fb591f55ce",
+  "schema_correction": {
+    "before": {
+      "blocked": "absent",
+      "acceptance_history": "absent"
+    },
+    "after": {
+      "blocked": null,
+      "acceptance_history": []
+    }
+  },
+  "failed_checks": [
+    {
+      "command": "check",
+      "chunk_id": "eab01c",
+      "wall_time_seconds": 0.000002149,
+      "exit_code": 1,
+      "original_token_count": 194,
+      "output": "Tracker INVALID | mode=local_remediation_authorized\nTasks: reopened=30, closed=1; evidence records=82\nResume: W06.10 — Inspect/admit W08 local dangerous-script containment in scripts/provision-stamp.sh, scripts/provision-staging.sh and scripts/setup.sh after complete W08 and linked findings. Existing stamp flow re-creates/overwrites secrets and mixes migrations/seeding; separate or contain unsafe reruns with the smallest local fix. Never execute provisioning/seed/deploy scripts, recover secret values via listing, or mutate cloud resources under this mandate. W06 historic D1/D01/D06/full-scope obligations remain open.\nERROR blocked: W06.10 nonblocked task must set blocked:null and preserve history in journal\nERROR schema: W06.10 acceptance_history must be explicit\n"
+    },
+    {
+      "command": "status",
+      "chunk_id": "d3d043",
+      "wall_time_seconds": 0.00000106,
+      "exit_code": 1,
+      "original_token_count": 194,
+      "output": "Tracker INVALID | mode=local_remediation_authorized\nTasks: reopened=30, closed=1; evidence records=82\nResume: W06.10 — Inspect/admit W08 local dangerous-script containment in scripts/provision-stamp.sh, scripts/provision-staging.sh and scripts/setup.sh after complete W08 and linked findings. Existing stamp flow re-creates/overwrites secrets and mixes migrations/seeding; separate or contain unsafe reruns with the smallest local fix. Never execute provisioning/seed/deploy scripts, recover secret values via listing, or mutate cloud resources under this mandate. W06 historic D1/D01/D06/full-scope obligations remain open.\nERROR blocked: W06.10 nonblocked task must set blocked:null and preserve history in journal\nERROR schema: W06.10 acceptance_history must be explicit\n"
+    }
+  ],
+  "reason": "Root omitted two explicit nonsemantic task fields at admission. Final board check/status at429 failed; preserve failure and correct metadata only. Artifact, evidence, acceptance and semantic contract remain unchanged; no engine/test changes or reruns."
+}

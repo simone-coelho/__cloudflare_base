@@ -1,0 +1,86 @@
+{
+  "task_id": "W35.01",
+  "authority_direction": {
+    "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+    "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c"
+  },
+  "next_inspection": {
+    "status": "source-confirmed candidate; not yet admitted or implemented",
+    "captures": [
+      "5b2f5b",
+      "09c957",
+      "600424",
+      "29f746",
+      "f283ff",
+      "64c821",
+      "bd2849"
+    ],
+    "scope": "SessionManager existing visit boundary/count/start/channel; ShopperReflex entry normalization and persisted visit context; read-only content decision projection and SDK first paint. Share existing policy rather than manufacturing fresh activity.",
+    "consumer_seams": "src/content/service.ts omits stored visit/channel and currently only offers visit 1 when isNewSession is true; src/services/RealtimeSegmentEngine.ts:747-761 supplies legacy defaults 1/direct; src/sdk/listen.ts:108 supplies only explicit hydrate channel.",
+    "guard": "Preserve a stored paid-entry channel across internal navigation. Do not always classify SDK entry into an authoritative request channel. Inspect optional raw entry transport and apply only at new visit or missing context; do not persist raw URL/referrer. Preserve live versus buffered separation, link merge, consent and read-only behavior. First-paint parity remains required, not claimed here."
+  },
+  "at": "2026-09-15T21:06:26.968Z",
+  "journal_seq": 1912,
+  "artifact_digest": "3cb9e6ae1ddbc63374a95b21b10b9d7c2b3ea6f2a5bfc252ae7f7c363f9c56ee",
+  "contract_digest": "bc1a3df39ea29c77a75dec4bd6d9e8909a5115c2b3dace55ff7b865d16ed14ed",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W35.01/acceptance.md",
+    "sha256": "107c4de118b4079edc8bb240a2ab363f4e63b2d89756347a6bd7431361034055"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W35.01/review.json",
+    "sha256": "19235ba8efacef39d789c81943063d72fac955e1f389c99b63164b9df8533848"
+  },
+  "root_review_capture": "5b8abb full independent review; 23f9e0 complete two-file delta; 989007 structured worker fields and 79c6a1 failure stacks",
+  "board": {
+    "initial": {
+      "chunk_id": "9b2b65",
+      "wall_time_seconds": 1.000568771,
+      "session_id": 70164,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "4892ef",
+        "wall_time_seconds": 5.001018534,
+        "session_id": 70164,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "536c21",
+        "wall_time_seconds": 5.001226721,
+        "session_id": 70164,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "4f9958",
+        "wall_time_seconds": 5.000966458,
+        "session_id": 70164,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ba912f",
+        "wall_time_seconds": 5.000204628,
+        "session_id": 70164,
+        "original_token_count": 349,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=36, unscoped=5\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=130, closed=3; evidence records=392\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W35.01 — Continue W35 local implementation using the existing per-shopper Durable Object as the single shopper-state authority, explicitly approved in docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json. Do not re-ask the target choice. Next admit a coherent session/visit/channel parity step against current SessionManager semantics and content/read/SDK consumption, with identity/consent/link/erase/sort/fatigue parity and old-writer fencing/rollback retained in complete W35 coverage. W35.01 is only existing object commit/recovery/publication, not full F14 or selected production readiness. No production host toggle, deployment or migration of existing data; no new privacy/retention/science policy. D03 configuration-authority/W11 and full acceptance remain separate. Reuse accepted buffered purpose/lifetime, ordering, online brand and fatigue remedies.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 26721\n"
+      },
+      {
+        "chunk_id": "0ef60e",
+        "wall_time_seconds": 0.000002069,
+        "exit_code": 0,
+        "original_token_count": 349,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=36, unscoped=5\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=130, closed=3; evidence records=392\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W35.01 — Continue W35 local implementation using the existing per-shopper Durable Object as the single shopper-state authority, explicitly approved in docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json. Do not re-ask the target choice. Next admit a coherent session/visit/channel parity step against current SessionManager semantics and content/read/SDK consumption, with identity/consent/link/erase/sort/fatigue parity and old-writer fencing/rollback retained in complete W35 coverage. W35.01 is only existing object commit/recovery/publication, not full F14 or selected production readiness. No production host toggle, deployment or migration of existing data; no new privacy/retention/science policy. D03 configuration-authority/W11 and full acceptance remain separate. Reuse accepted buffered purpose/lifetime, ordering, online brand and fatigue remedies.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 26721\n"
+      }
+    ],
+    "result": "VALID",
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;58 artifact pins and all unowned accepted-dependency pins/reviews unchanged. W22.07 shared exact proof qualified; buffered remedy retained. W22.09/W26.04 unchanged. No worker/reviewer commands running. Tracker consistency is not engine/customer/SLO/release acceptance.",
+  "next_action": "Continue W35 local implementation using the existing per-shopper Durable Object as the single shopper-state authority, explicitly approved in docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json. Do not re-ask the target choice. Next admit a coherent session/visit/channel parity step against current SessionManager semantics and content/read/SDK consumption, with identity/consent/link/erase/sort/fatigue parity and old-writer fencing/rollback retained in complete W35 coverage. W35.01 is only existing object commit/recovery/publication, not full F14 or selected production readiness. No production host toggle, deployment or migration of existing data; no new privacy/retention/science policy. D03 configuration-authority/W11 and full acceptance remain separate. Reuse accepted buffered purpose/lifetime, ordering, online brand and fatigue remedies.",
+  "limitations": "Candidate-host local commit/recovery and personalization publication ordering only. D03 pending, no production authority selection, REFLEX_HOST change, migration, schema/retention/identity/consent policy, retry activation or exactly-once external delivery. W35 full parity/races/browser/server/runtime tails and F14 default KV race remain open. W22.07 overlapping exact proof qualified with history/unowned assurance retained; W22.09/W26.04 unchanged. No installs/emitted build/stage/commit/push/deploy/cloud/credentials/customer-data/destructive/external operations. Worker and independent reviewer each passed fixed8 local synthetic checks. Same-byte compiler1536/two-file lint0errors/no new warning signatures/whitespace passed. Not native/cloud failure, customer or SLO evidence."
+}

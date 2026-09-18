@@ -1,0 +1,31 @@
+{
+  "task_id": "W12.02",
+  "at": "2026-09-18T01:06:16.061Z",
+  "before": "186fbb15dec04d3abb4172c5d8c4853c71b1c6cc75e75c1c5e66f791ab56b13b",
+  "after": "078fb3af31b292feb584b44f0d0952687122d099ac52d7530b253ca461c65244",
+  "parent_admission": {
+    "path": "docs/remediation/evidence/W12.02/admission.json",
+    "sha256": "80245e0e79b46daf445e868125cd5ac89809a5533ae87ddd80ba773864daede3"
+  },
+  "change": "Actor/run replacement only after interruption; whole W12 scope,18outputs/120protected baseline, C1–C9, exactK1–K7, design, rollback, limits and user authority unchanged.",
+  "prior_assignments": {
+    "implementer": "w1202-worker",
+    "independent_reviewer": "w1202-reviewer",
+    "lead": "w01-lead"
+  },
+  "recovered_assignments": {
+    "implementer": "w1202-recovery-worker",
+    "independent_reviewer": "w1202-recovery-reviewer",
+    "lead": "w01-lead"
+  },
+  "baseline_verification": "Root verified17existing output hashes/lengths, synthetic.ts still absent and120protected pins all match original admission; no worker.json or active test/compiler/native process. Prior agents absent from live tree.",
+  "ownership": {
+    "worker": "/root/w1202_implement exclusively owns original18 task write_paths and docs/remediation/evidence/W12.02/worker.json after validGO; no subdelegation.",
+    "reviewer": "/root/w1202_review read-only wholeW12/C1–C9/source preparation; exclusive review.json/exactK6 only after finalfreezeGO.",
+    "lead": "Records/coordination only. Earlier temporary full-fork /root/w1202_worker_recovered interrupted before task work and has no authority."
+  },
+  "approval": {
+    "actor_id": "w01-lead",
+    "rationale": "Reuse unchanged approved local implementation mandate and complete original preflight; only bind actual distinct explicit gpt-6-astra/xhigh sessions."
+  }
+}

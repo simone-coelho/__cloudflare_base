@@ -1,0 +1,181 @@
+{
+  "before": null,
+  "after": {
+    "id": "W23.02-E2",
+    "task_id": "W23.02",
+    "check_id": "W23.02-K2",
+    "criterion_ids": [
+      "W23.02-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w2206-worker",
+    "run_id": "/root/w2206_worker",
+    "file": {
+      "path": "docs/remediation/evidence/W23.02/worker.json",
+      "sha256": "054d9a6bff2e0b65784dfa7f0d54993e9e5d3c6fb836d0869d4e520c041030c8"
+    },
+    "at": "2026-09-15T17:21:40.229Z",
+    "limitations": "Forward regional retained-counter arithmetic and numeric timestamp integrity only. Preserve browser/server clock purpose, current personal affinity/visit/ODP/geo policy, existing generation/cap/rounding/fan-in and accepted W09.08/W22.06. No evicted/corrupted-state reconstruction, reset/idempotency/lifecycle/retention/age cutoff or full W23/F18/customer/SLO/release claim. No install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/commit/push/external actions.",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/regionTrend.ts src/durable-objects/RegionTrend.ts src/reflex/regionTrend.test.ts --max-warnings 0 && git diff --check -- src/reflex/regionTrend.ts src/durable-objects/RegionTrend.ts src/reflex/regionTrend.test.ts",
+    "runtime": "Existing no-emit compiler1536 and three-file lint0/0/whitespace.",
+    "workload": "No emitted build/new diagnostics/unrelated cleanup.",
+    "result": "pass",
+    "artifact_digest": "454bbfa2ebc607f9cf2c2fc66b60478a6c8390171203a1bf53a2d3e6198db341",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "3ef5aefd63ef099ce8a41b227df9db843a596e74bd2ee348295d4e530a669a07",
+      "configuration": "Forward regional retained-counter arithmetic and numeric timestamp integrity only. Preserve browser/server clock purpose, current personal affinity/visit/ODP/geo policy, existing generation/cap/rounding/fan-in and accepted W09.08/W22.06. No evicted/corrupted-state reconstruction, reset/idempotency/lifecycle/retention/age cutoff or full W23/F18/customer/SLO/release claim. No install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/commit/push/external actions.",
+      "files": [
+        {
+          "path": "src/reflex/regionTrend.ts",
+          "sha256": "e5ab4379a4fab720fe04eeb1ed1af55e390db033caad91c3afd7e45e7e6430e0",
+          "role": "output"
+        },
+        {
+          "path": "src/durable-objects/RegionTrend.ts",
+          "sha256": "1244d0bfd4869a0385b7734694ea88c309a584fb597ae0f2e1b7b6d3503dcc0d",
+          "role": "output"
+        },
+        {
+          "path": "src/reflex/regionTrend.test.ts",
+          "sha256": "d12fb0c7d3a230a3d8a8a22c191018b627fd941f9f2fb89b09117d9962ae231f",
+          "role": "output"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/identityMerge.ts",
+          "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508",
+          "role": "source"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+          "role": "source"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "sha256": "9dfec44e96b4bcbaeac12042bebb1d12dbf71614a1d42c31349449baa474b424",
+          "role": "source"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/history.ts",
+          "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/16-edge-affinity-reflex.md",
+          "sha256": "b30b96e1edb2ee468742b180c0dba544d3f21ddb30cb2404f62e12509605de43",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F18.md",
+          "sha256": "f4305909762cdb691c46ae8f9db55b560bf19fc60b8a37b5c202da95fe934bb9",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+          "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W23.02/worker.json",
+          "sha256": "054d9a6bff2e0b65784dfa7f0d54993e9e5d3c6fb836d0869d4e520c041030c8",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W23.02/plan.md",
+          "sha256": "7701d5e67cadd7efb2cbe396ae395d3bdb3ebe470efefb51c08a72b5add1af07",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W23.02/baseline.json",
+          "sha256": "c4a30de5cdcdc07a79347cdfb347b190887966e3d157630956279797b58e3192",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W23.02/admission.json",
+          "sha256": "aa996b15863fd26a37949eb4b510d62ce393e289d7eed74865d74a393c60d8e1",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W23.02/source-freeze.json",
+          "sha256": "2f9d15fb94e09c305c63f3edf92f43aedbf2d14a44ca1f38066ff3328fc0fa03",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W23.02/source-deltas.json",
+          "sha256": "559052fff42f8ed68ea581ad74195e354acf420161e3befddd419566db53a8c9",
+          "role": "configuration"
+        }
+      ],
+      "digest": "454bbfa2ebc607f9cf2c2fc66b60478a6c8390171203a1bf53a2d3e6198db341"
+    }
+  }
+}

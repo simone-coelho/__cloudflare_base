@@ -1,0 +1,2 @@
+# Retain synthetic verification output in a future separately authorized commit.
+!*.log

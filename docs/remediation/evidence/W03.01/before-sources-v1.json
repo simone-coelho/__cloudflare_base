@@ -1,0 +1,50 @@
+{
+  "contract": "13c4d74f90c6af5cb74eb7c89995e769685aaffb35eff6399cbc2c7a03c6144c",
+  "beforeSources": [
+    {
+      "path": "src/routes/config.ts",
+      "sha256": "2e1d5c1e42c5ceb498b8011de65d495b185afcbe21da8b326a2d8b6ed9b04560"
+    },
+    {
+      "path": "src/routes/content.ts",
+      "sha256": "e23b7b7bd03116dcaeb65a35b01d67e0da36015a90b6b7a240e4b5fb663ae531"
+    },
+    {
+      "path": "src/routes/content.test.ts",
+      "sha256": "e722ea4502761dc8012db9621d8557b79d673b2f16c9425b23614488902a8682"
+    },
+    {
+      "path": "src/middleware/auth.refresh-boundary.test.ts",
+      "sha256": "11628a318420ddb8d2d269373a7f23a46f7ad4b7913648db565b0dedd07ee177"
+    },
+    {
+      "path": "src/auth/signing-config.boundary.test.ts",
+      "sha256": "08a9b3cd87c4dae9de553bc969be3303352da43532a53f62158d5952e536a1ca"
+    },
+    {
+      "path": "scripts/import-content.mjs",
+      "sha256": "60cb901ee2d84df16b8c06b9096dded0d678a892b92d1035834a97411c05a4e9"
+    },
+    {
+      "path": "scripts/console-preview.sh",
+      "sha256": "2567463ab4b81f8aa1af40ff11d38272cd79146db1dfb6d5c2cddcfb03346a00"
+    },
+    {
+      "path": "scripts/lib/tool-token.test.mjs",
+      "sha256": "3ac207b136ac55302d37ad174038344467cdb9931e089e5693555921de653a66"
+    },
+    {
+      "path": "public/meridian/meridian.js",
+      "sha256": "a61bb0c3dc458b05406c2f3ee708f772b1c032534f94bf4ae0417e3c5d930957"
+    },
+    {
+      "path": "public/storefront.js",
+      "sha256": "5cf2c29ced16f802fda4bac97be8fb903bb7b3cfa1513e20ea36f1a896a866de"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "d7ea2bcb03eba0b1ef67cf40daeece13ff12c21b763462ab0446b33fe8534fdd"
+    }
+  ],
+  "baselineSha256": "c90ddfd8da6c53a5aa7f35a6f86b0688259d27f6583a8479743cca51eafce03a"
+}

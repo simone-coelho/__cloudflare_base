@@ -1,0 +1,30 @@
+{
+  "task_id": "W22.06",
+  "at": "2026-09-15T16:02:40.272Z",
+  "plan": {
+    "path": "docs/remediation/design/W22.06/plan.md",
+    "sha256": "75169999a046b99f3d70fdba012b9d1a94c38387d5cdcf6bce7f525f77db42d5"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W22.06/baseline.json",
+    "sha256": "6c18c7d890bebb6184b7ca96255d1828f373dd12fe1e19e5a67bd2e29c731588"
+  },
+  "contract_digest": "186f2c82d3f3e9de3e762488babe4a340982585b68351a41bca2cdae703ca3ec",
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "75169999a046b99f3d70fdba012b9d1a94c38387d5cdcf6bce7f525f77db42d5",
+    "qualification": "Original exact45 preservation promise corrected before source GO; review approves revised75169999 plan."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T16:02:40.272Z",
+    "plan_sha256": "75169999a046b99f3d70fdba012b9d1a94c38387d5cdcf6bce7f525f77db42d5",
+    "rationale": "Root actual source and distinct exact-plan PASS after correcting shared W30.04 fixture overlap. One coherent all-caller receipt fix, fixed23 and no extra data retention/activation."
+  },
+  "fixed_checks": 23,
+  "limitations": "Synchronous generic event/webhook acknowledgement only. Not decision/outcome ledger recovery, destination durable processing, tenant-isolated destination configuration, background retry/outbox/dedup, historical repair/erasure, lifecycle/retention/age policy or customer/SLO/release acceptance. Stop new unsupported generic queue writes; existing queued bodies unchanged. Preserve W22.05 occurrence-time/current authority/consent and W30.04 hourly implementation; overlapping exact proofs qualified, acceptance histories retained. No install/emitted build/commit/push/deploy/cloud/credentials/customer-data/destructive/external operations; existing memory-only native fixture permitted."
+}

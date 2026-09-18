@@ -1,0 +1,35 @@
+{
+  "task_id": "W07.05",
+  "at": "2026-09-17T15:13:25.524Z",
+  "before": "7d5e864929aa32d80ba48e8aa625c791fee860d014ee2250623843581abb76cd",
+  "after": "945b920064ee63ff8557bd7d8fbdaa012823cc3cbd5962bad2631ae1690aaf5c",
+  "contract_digest": "945b920064ee63ff8557bd7d8fbdaa012823cc3cbd5962bad2631ae1690aaf5c",
+  "previous_tracker_sha256": "00ad07ccdf4861f7c7b6749ea715b43d319e42e80d9b888e6fb0f2a92a0241d9",
+  "supersedes": {
+    "path": "docs/remediation/evidence/W07.05/admission.json",
+    "sha256": "5d6b928fd2d02d95434427f16da9f1184dfdc69b34805ab8295e9cbcb9089ea0"
+  },
+  "scope": "Same whole original W07/C1–C7, now33exclusiveoutputs. Add only existing SDK identify fixture to reconcile its URL oracle; no product scope reduction.",
+  "baseline": {
+    "path": "src/sdk/identify.test.ts",
+    "bytes": 12458,
+    "sha256": "e8096494f4c34a30fc0d76e65f0aac040afc8d2b6e5c855eb778cd4ff7a09fae",
+    "same_as_initial_admission": true,
+    "worker_stop": {
+      "path": "docs/remediation/evidence/W07.05/worker.json",
+      "sha256": "1c8f8f4ebcd6ee078b8f3bfeac1d563f9761bca724d69ad7737a4dde8ae4d6ac"
+    },
+    "observed": "K3.1 retains83pass/2fail: identify link/reconnect expects userId in WebSocket URL, directly contradicted by required W07 removal. InitialK1.1 retains33pass/32fail, compiler.1 retains two typing failures. Complete original primaries remain immutable prior-contract execution, not relabeled passes."
+  },
+  "change": "Only identify link/reconnect assertion may change to exact tenant-only URL and preserved site-key/shopper protocols/current linked identity. Keep all identity proof, ownership, session, retry and logout oracles. Capture this dirty baseline before edits; combine its baseline lint signatures with unchanged initial27-file baseline.",
+  "acceptance": "Reuse original admission complete C1–C7, dependencies/decisions and rollback. K3 already covers this file; K4 adds only its lint/whitespace. K2 additionally selects the one existing W01.07 health case affected by held optional AE. No new fixtures/framework/broad checks. Distinct whole-W07 frozen review and new-group rerun remain mandatory.",
+  "historical_assurance": "All29prior artifacts containing this added path already revalidation_required; no current proof promoted or rewritten. W06 exact localPASS remains historical with affected SDK controls covered by W07 K3.",
+  "ownership": "Sole w0705-worker owns original32outputs plus src/sdk/identify.test.ts and worker.json. Distinct w0705-reviewer owns review.json only after frozenGO. Root records only.",
+  "rollback": "Reverse only task deltas against exact dirty originals; never restore unrelated files or live data.",
+  "authority": "Existing ordered local implementation/focused checks only. No external operations, deployment, credential/resource mutation or full/live closure.",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-17T15:13:25.524Z",
+    "rationale": "Concrete K3 failure requires one already-consumed fixture ownership extension. GO held for valid board."
+  }
+}

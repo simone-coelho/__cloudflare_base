@@ -1,0 +1,116 @@
+{
+  "task_id": "W08.03",
+  "record_kind": "worker_implementation_and_primary_evidence",
+  "actor": {
+    "id": "w0803-worker",
+    "kind": "agent",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "run_id": "/root/w0803_worker",
+    "description": "Sole bounded deploy target guard implementer; no subdelegation."
+  },
+  "recorded_at": "2026-09-10T18:18:31.217Z",
+  "source_stop_at": "2026-09-10T18:17:23.569Z",
+  "implementation_started_at": "2026-09-10T18:17:07.884Z",
+  "source_edit_completed_at": "2026-09-10T18:17:07.904Z",
+  "status": "implementation_complete_pending_independent_review_and_lead_acceptance",
+  "scope": "Exactly one case-sensitive explicit default|staging|production argument before any deployment work; default secret-list/deploy use --env ''. Entire admitted suffix preserved except those two argv additions.",
+  "ownership": [
+    "scripts/deploy.sh",
+    "docs/remediation/evidence/W08.03/worker.json"
+  ],
+  "admission": {
+    "plan": {
+      "path": "docs/remediation/design/W08.03/plan.md",
+      "sha256": "1102b968d8e247a1eb06813bc673dcca8fa92be7592c12d6f30150482bc8400b"
+    },
+    "contract_digest": "3c02b427f334928af227ad95e1abdd438a7ced6e383556047281706af085e01b",
+    "lead_go": "Root GO received before source edit. Admission check6470 VALID816 exit0/drained,9078 historical notes, chunkf78819; root-owned proof reused.",
+    "entry_board": "Root check1277/status6374 VALID805 exit0/drained; reused without duplicate worker board execution.",
+    "authority": "Existing bounded local G0 implementation authority only; tracker/journal/source-of-truth/freeze and final acceptance remain root-owned."
+  },
+  "baseline": {
+    "record": {
+      "path": "docs/remediation/design/W08.03/baseline.json",
+      "sha256": "8e5888113a220e52d889d9d0bea7acb0d4ae05939914184221668b27d4963474"
+    },
+    "source_sha256": "14ad032bf8e7f3a9398a7e703def34e62fd41689be085449a8a710e5deb633c2",
+    "source_confirmed_case": "ENVIRONMENT=${1:-default} permits omitted/empty target; any unrecognized target reaches generic else after checks. Default Wrangler target arguments omitted. No baseline deployment executed.",
+    "pre_edit_identity_check": {
+      "chunk_id": "8f1e1b",
+      "exit_code": 0,
+      "source_matched": true,
+      "dirty_worktree": "scripts/deploy.sh already modified before task; admitted bytes preserved except exact three hunks."
+    },
+    "required_reads": "Read AGENTS.md, execution README, complete document36/RESUME, canonical W08 and F09/F10 meaning plus complete raw F09/F10 reports, accepted W08.01 scope/criteria, actual deploy.sh, admitted W08.03 plan/task/K1 and baseline.",
+    "accepted_assurance": "W08.01 and W39.02 overlapping whole-artifact proof qualified by root before GO; retirement diagnostics and all remaining suffix bytes retained."
+  },
+  "artifact": {
+    "path": "scripts/deploy.sh",
+    "sha256": "d5f6bd176028afa02ce4da8661ec2a289d3257eed63dce9a955606cc8d74b21f"
+  },
+  "changes": [
+    "Replace implicit ENVIRONMENT assignment with exact admitted builtin-only arity/case guard: literal stderr usage and exit2 on invalid input.",
+    "Default secret list: wrangler secret list --env '' 2>/dev/null.",
+    "Default deployment: wrangler deploy --env ''."
+  ],
+  "runtime": {
+    "node": "v22.15.0",
+    "bash": "/bin/bash --noprofile --norc",
+    "isolated_environment": {
+      "PATH": "",
+      "CLOUDFLARE_ENV": "production"
+    },
+    "measurement": "Source equality, one whole-file syntax parse and isolated exact builtin guard only; no timing or engine-performance claim."
+  },
+  "checks": [
+    {
+      "id": "W08.03-K1",
+      "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport assert from 'node:assert/strict';\nimport { gunzipSync } from 'node:zlib';\nimport { spawnSync } from 'node:child_process';\nconst source = fs.readFileSync('scripts/deploy.sh', 'utf8');\nconst guard = \"#!/bin/bash\\n\\nset -e\\n\\nif [ \\\"$#\\\" -ne 1 ]; then\\n    builtin printf '%s\\\\n' 'Usage: bash scripts/deploy.sh default|staging|production' >&2\\n    exit 2\\nfi\\n\\ncase \\\"$1\\\" in\\n    default|staging|production) ENVIRONMENT=$1 ;;\\n    *)\\n        builtin printf '%s\\\\n' 'Usage: bash scripts/deploy.sh default|staging|production' >&2\\n        exit 2\\n        ;;\\nesac\\n\";\nassert.equal(source.slice(0, guard.length), guard, 'exact builtin-only first guard');\nconst baseline = JSON.parse(fs.readFileSync('docs/remediation/design/W08.03/baseline.json', 'utf8'));\nconst before = gunzipSync(Buffer.from(baseline.owned[0].content_gzip_base64, 'base64')).toString('utf8');\nconst oldPrefix = '#!/bin/bash\\n\\nset -e\\n\\nENVIRONMENT=${1:-default}\\n';\nassert.ok(before.startsWith(oldPrefix));\nconst suffix = before.slice(oldPrefix.length)\n  .replace('wrangler secret list 2>/dev/null', \"wrangler secret list --env '' 2>/dev/null\")\n  .replace('    wrangler deploy\\n', \"    wrangler deploy --env ''\\n\");\nassert.equal(source.slice(guard.length), suffix, 'only two admitted default argv changes');\nconst env = { PATH: '', CLOUDFLARE_ENV: 'production' };\nconst parsed = spawnSync('/bin/bash', ['--noprofile', '--norc', '-n', 'scripts/deploy.sh'], { env, encoding: 'utf8' });\nassert.equal(parsed.error, undefined); assert.equal(parsed.status, 0, parsed.stderr);\nconst isolated = source.slice(0, guard.length) + '\\nbuiltin printf \\'%s\\\\n\\' \"$ENVIRONMENT\"\\n';\nconst rejected = [[], [''], ['prodution'], ['unknown'], ['Production'], [' default'], ['default '], ['--help'], ['default', 'extra'], ['staging', ''], ['production', 'default']];\nfor (const args of rejected) {\n  const r = spawnSync('/bin/bash', ['--noprofile', '--norc', '-c', isolated, 'guard-only', ...args], { env, encoding: 'utf8' });\n  assert.equal(r.error, undefined); assert.equal(r.status, 2); assert.equal(r.stdout, '');\n  assert.equal(r.stderr, 'Usage: bash scripts/deploy.sh default|staging|production\\n');\n}\nfor (const selected of ['default', 'staging', 'production']) {\n  const r = spawnSync('/bin/bash', ['--noprofile', '--norc', '-c', isolated, 'guard-only', selected], { env, encoding: 'utf8' });\n  assert.equal(r.error, undefined); assert.equal(r.status, 0); assert.equal(r.stdout, selected + '\\n'); assert.equal(r.stderr, '');\n}\nconsole.log('PASS: exact first guard; 11 rejected/3 selected isolated cases; bash syntax; entire suffix preserved except two explicit default argv changes. Deployment body and Wrangler never executed.');\nNODE",
+      "started_at": "2026-09-10T18:17:16.850Z",
+      "completed_at": "2026-09-10T18:17:16.965Z",
+      "chunk_id": "863b16",
+      "wall_time_seconds": 0.000007037,
+      "exit_code": 0,
+      "original_token_count": 47,
+      "output": "PASS: exact first guard; 11 rejected/3 selected isolated cases; bash syntax; entire suffix preserved except two explicit default argv changes. Deployment body and Wrangler never executed.\n",
+      "command_sha256": "3c4570ea3d3686a44b5bc7d73bc2d1eeb182092ff8dfeb0c6785cae397cbe7cb",
+      "output_sha256": "4650d94f0d192bc899516227f153edf554742af5b124e8cb2207dc6b043a1f0a",
+      "result": "pass",
+      "complete_output": true,
+      "drained": true,
+      "session_id": null,
+      "scope": "Exact first-prefix/suffix assertions, bash -n whole script,11 invalid/3 valid cases executing only verified builtin guard plus synthetic selected-value printf."
+    },
+    {
+      "id": "scoped_whitespace",
+      "command": "git diff --check -- scripts/deploy.sh",
+      "started_at": "2026-09-10T18:17:23.442Z",
+      "completed_at": "2026-09-10T18:17:23.569Z",
+      "chunk_id": "9d4247",
+      "wall_time_seconds": 0.000003623,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": "",
+      "command_sha256": "45cf295363dea717f6d28eb2c979cab4cd7045e11191cc1a91a22e4def884f86",
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "pass",
+      "complete_output": true,
+      "drained": true,
+      "session_id": null
+    }
+  ],
+  "failures_and_diagnostics": {
+    "product_check_failures": [],
+    "read_only_diagnostics": "Initial combined instruction/checkpoint display was truncated; required content reread completely in bounded chunks before edits. Initial rg evidence-directory inventory exit2 because W08.03 did not exist before admission; no implementation/check failure or write. Later all admitted sources/evidence read successfully.",
+    "rework": "None. One source patch and one exact K1/whitespace execution after valid GO."
+  },
+  "limitations": "Source/syntax and isolated builtin fragment evidence only. Deployment body and actual Wrangler never executed. Empty --env relies on the installed Wrangler semantics inspected by root/reviewer, not runtime CLI proof. Trusted interpreter/startup/cwd/PATH/toolchain and configured account/resource ownership remain operational assumptions. Other deploy paths, complete desired-state provisioning, schema/artifact promotion, identity/secret values and ownership, alert/readiness, recovery/rollback and customer decisions remain open. No full W08/finding/gate/customer/deployed/release acceptance or engine relevance/latency/lift claim.",
+  "safety": "No npm/build/install/deploy/provision/seed/Wrangler execution, cloud/resource/credential/customer-data operations, external messages, cleanup, staging, commit or push; no subdelegation/new fixture/new suite.",
+  "handoff": {
+    "source_frozen": true,
+    "active_sessions": [],
+    "next_action": "Root freezes exact artifact and worker evidence; independent /root/w0803_review inspects actual deltas/pins/full output and runs exact K1 once. Root retains governance/handoff/acceptance ownership.",
+    "rollback": "Only root-reviewed exact inverse delta to owned source against retained admitted baseline; preserve pre-existing worktree changes."
+  }
+}

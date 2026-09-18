@@ -1,0 +1,186 @@
+{
+  "task_id": "W27.03",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T16:02:31.748Z",
+  "source_go_at": "2026-09-12T15:54:41.019Z",
+  "contract_digest": "dfb704bd384177fadcb26cfe36072c7f0e308090b66fc6af0282e61d52498ecb",
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W27.03/plan.md",
+      "sha256": "ab0bd921591a76dca15bd734200d4fb19806d732b9cca90a256c2a399b8064b6"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W27.03/baseline.json",
+      "sha256": "774aba0e9a4aaa1d8d22ccc22a18360df92781b79e19db86a1c120c2df2d6b4f"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W27.03/admission.json",
+      "sha256": "b51adff1fc7cfb3a8433d4ff4e507bf458500b7246756f3fe3303153da943ad1"
+    }
+  },
+  "implementation_summary": [
+    "Replay refuses malformed versions objects and non-safe/noninteger/negative catalog, slots, learn, lift or prior identities before configuration/archive dependency reads. Missing pre-Phase3 document fields retain their explicit historical refusal; explicit zero and valid unused legacy pin identities remain supported.",
+    "Actual replayDeps.doc compares the returned historical envelope revision with the requested revision before exposing its value. A local typed error identifies a mismatch without raw upstream errors or changes to shared reader/writer/route/audit contracts.",
+    "Two grouped additions exercise no-read refusals/compiled-zero behavior and actual authenticated retained replay, wrong slots/learn envelope identities, absent/failed dependencies, malformed persisted tuple, grants, audit/no-store and no customer-store writes. Synthetic R2 helper only gains json()."
+  ],
+  "criterion_verdicts": {
+    "W27.03-C1": "Local runtime PASS: all consumed tuple identity guards precede dependency reads; exact returned-envelope match; missing legacy reason and integer-zero semantics retained.",
+    "W27.03-C2": "Local runtime PASS: authenticated Hono route/actual retained configuration and archive/ledger paths distinguish valid equality from refused dependencies, maintain audit/no-store/grant protection and no customer-store writes. Existing W27.02 three groups and W03.04 six-reader group pass.",
+    "W27.03-C3": "Worker checks PASS: fixed6, compiler, scoped lint with one inherited warning, whitespace, four source STOP hashes and 113 protected matches. Independent frozen review and lead acceptance pending."
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 6,
+      "unselected": 51,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 81711,
+      "chunk_id": "e7403d",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "K2 compiler, scoped lint and whitespace"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 1,
+      "inherited_warnings": 1,
+      "command_capture": "K2 compiler, scoped lint and whitespace"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "K2 compiler, scoped lint and whitespace"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 61125,
+      "chunk_id": "49515f",
+      "final_bytes": true
+    }
+  },
+  "execution_history": [
+    {
+      "capture": "K1 candidate 1",
+      "outcome": "First exact runtime passed6/51unselected, exit0/drained. No failed or superseded runtime."
+    },
+    {
+      "capture": "K2 compiler, scoped lint and whitespace",
+      "outcome": "First exact static compound passed, exit0/drained; one inherited replay _c warning. No source changes after this final-byte runtime/static pair."
+    },
+    {
+      "capture": "Final source STOP and protected comparison",
+      "outcome": "Four final hashes and all113 protected pins match; no source edits after STOP."
+    }
+  ],
+  "command_captures": [
+    {
+      "label": "K1 candidate 1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/phase3.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts -t 'W27.03|W27.02|W03.04 acknowledges' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T15:59:33.485Z",
+      "captures": [
+        {
+          "chunk_id": "539e36",
+          "wall_time_seconds": 1.001363023,
+          "session_id": 81711,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e7403d",
+          "wall_time_seconds": 0.000002983,
+          "exit_code": 0,
+          "original_token_count": 156,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (23 tests | 21 skipped) 83ms\n ✓ src/content/consent.test.ts  (20 tests | 19 skipped) 45ms\n ✓ src/learn/phase3.test.ts  (14 tests | 11 skipped) 27ms\n\n Test Files  3 passed (3)\n      Tests  6 passed | 51 skipped (57)\n   Start at  11:59:36\n   Duration  20.18s (transform 4.36s, setup 0ms, collect 11.54s, tests 155ms, environment 0ms, prepare 6.26s)\n\n"
+        }
+      ],
+      "session_id": 81711,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T16:00:10.321Z"
+    },
+    {
+      "label": "K2 compiler, scoped lint and whitespace",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/replay.ts src/learn/phase3.test.ts src/ledger/ledger.test.ts --max-warnings 1 && git diff --check -- src/learn/replay.ts src/learn/phase3.test.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T16:00:23.198Z",
+      "captures": [
+        {
+          "chunk_id": "ab2318",
+          "wall_time_seconds": 1.001635588,
+          "session_id": 61125,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "49515f",
+          "wall_time_seconds": 28.473420401,
+          "exit_code": 0,
+          "original_token_count": 54,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  166:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 1 problem (0 errors, 1 warning)\n\n"
+        }
+      ],
+      "session_id": 61125,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T16:01:19.564Z"
+    },
+    {
+      "label": "Final source STOP and protected comparison",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\"; import {createHash} from \"node:crypto\"; const b=JSON.parse(fs.readFileSync(\"docs/remediation/design/W27.03/baseline.json\",\"utf8\")); const hash=p=>createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\"); const owned=new Set(b.owned.map(x=>x.path)); const protectedPins=b.pins.filter(x=>!owned.has(x.path)); const mismatches=protectedPins.filter(x=>hash(x.path)!==x.sha256).map(x=>({path:x.path,expected:x.sha256,actual:hash(x.path)})); const at=new Date().toISOString(); console.log(JSON.stringify({final_source_stop:{at,files:b.owned.map(x=>({path:x.path,sha256:hash(x.path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},plan_sha256:hash(\"docs/remediation/design/W27.03/plan.md\"),baseline_sha256:hash(\"docs/remediation/design/W27.03/baseline.json\"),admission_sha256:hash(\"docs/remediation/evidence/W27.03/admission.json\")},null,2)); if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T16:01:35.138Z",
+      "captures": [
+        {
+          "chunk_id": "eaac1a",
+          "wall_time_seconds": 0.120318783,
+          "exit_code": 0,
+          "original_token_count": 261,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T16:01:35.457Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/replay.ts\",\n        \"sha256\": \"843a8709d58ed1b95bda2d9cab61c738501a3f115490ebe3352258ce0a0e6934\"\n      },\n      {\n        \"path\": \"src/learn/phase3.test.ts\",\n        \"sha256\": \"9ec1e5a90eb68f39eada284603204f6676372dc33c37536471de0c61322af6b7\"\n      },\n      {\n        \"path\": \"src/ledger/ledger.test.ts\",\n        \"sha256\": \"2a2f61f845a9152b6e72b61adbdf75ef5e1dceb9d34de719d518476c6df8b35d\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"0b677ce7a5b456fc58e0af53c1e3823b070b55c34704816e7f87ec40f591197b\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 113,\n    \"matched\": 113,\n    \"mismatches\": []\n  },\n  \"plan_sha256\": \"ab0bd921591a76dca15bd734200d4fb19806d732b9cca90a256c2a399b8064b6\",\n  \"baseline_sha256\": \"774aba0e9a4aaa1d8d22ccc22a18360df92781b79e19db86a1c120c2df2d6b4f\",\n  \"admission_sha256\": \"b51adff1fc7cfb3a8433d4ff4e507bf458500b7246756f3fe3303153da943ad1\"\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T16:01:35.491Z"
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T16:01:35.457Z",
+    "files": [
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "843a8709d58ed1b95bda2d9cab61c738501a3f115490ebe3352258ce0a0e6934"
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "sha256": "9ec1e5a90eb68f39eada284603204f6676372dc33c37536471de0c61322af6b7"
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "2a2f61f845a9152b6e72b61adbdf75ef5e1dceb9d34de719d518476c6df8b35d"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "0b677ce7a5b456fc58e0af53c1e3823b070b55c34704816e7f87ec40f591197b"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 113,
+    "matched": 113,
+    "mismatches": []
+  },
+  "limitations": [
+    "Replay-local identity containment, not full W27/F22 closure or immutable configuration publication. A different valid body overwritten under the same revision cannot be detected; slots/learn writer authority remains W11 work.",
+    "Compiled revision zero and legacy reader normalization remain unchanged. Existing generic read failures can normalize to absent dependencies; no missing-versus-outage completeness claim is added.",
+    "Historical defaults/code versions, unavailable/corrupt archives, mixed-version rollout, retention/history repair and native resource/SLO/customer acceptance remain unproven.",
+    "Actual authenticated route tests use synthetic bindings and local Hono, not deployed HTTP/cloud assurance. W27.01 publisher and W27.02 producer/transport implementations remain unchanged; relevant accepted assurance reused.",
+    "No schema, scoring, attribution, consent, live serving I/O, retries, resets, backfill, retention/customer policy, governance, subdelegation, external resources/credentials/customer data/deployments or commits changed. Deterministic replay is not W28/F23 statistical correctness."
+  ]
+}

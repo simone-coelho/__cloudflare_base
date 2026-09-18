@@ -1,0 +1,150 @@
+{
+  "before": {
+    "id": "W16",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "Carry validated visit/channel through both hosts, read-time visit boundaries and SDK; no invented direct source. Then implement/accept seeded behavior at gamma zero, journey/new-visit/post-purchase reset, days/weeks memory and contextual cold-start behavior. Tests use actual customer taxonomy/events and unknown cases, not just fields present in a record.",
+      "finding_refs": "F13/F14; N15/N20",
+      "sizing_owner": "S wiring subset → M/L behavioral contract; D + C"
+    },
+    "title": "Context, journeys and return memory",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F13",
+      "F14",
+      "N15",
+      "N20"
+    ],
+    "proposed_owner": "D + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W16",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "Carry validated visit/channel through both hosts, read-time visit boundaries and SDK; no invented direct source. Then implement/accept seeded behavior at gamma zero, journey/new-visit/post-purchase reset, days/weeks memory and contextual cold-start behavior. Tests use actual customer taxonomy/events and unknown cases, not just fields present in a record.",
+      "finding_refs": "F13/F14; N15/N20",
+      "sizing_owner": "S wiring subset → M/L behavioral contract; D + C"
+    },
+    "title": "Context, journeys and return memory",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F13",
+      "F14",
+      "N15",
+      "N20"
+    ],
+    "proposed_owner": "D + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W16-CONTEXT",
+          "description": "Validated visit and entry-channel context through both hosts, read-time boundaries and SDK without invented direct/first values."
+        },
+        {
+          "id": "W16-BEHAVIOR",
+          "description": "Versioned gamma-zero contextual seeds, journey/new-visit/post-purchase resets and honest zero-base cold behavior using canonical taxonomy."
+        },
+        {
+          "id": "W16-MEMORY",
+          "description": "Consent/retention-bound days/weeks anonymous return continuity with fixed lifetime, rotation, exact retry and lifecycle retirement."
+        },
+        {
+          "id": "W16-CUSTOMER",
+          "description": "Actual customer taxonomy/feed/calibration/browser/deployed/privacy/quality/business acceptance remains separately authorized."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W16-CONTEXT",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C2"
+        },
+        {
+          "criterion_id": "W16-CONTEXT",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C5"
+        },
+        {
+          "criterion_id": "W16-BEHAVIOR",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C3"
+        },
+        {
+          "criterion_id": "W16-BEHAVIOR",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C4"
+        },
+        {
+          "criterion_id": "W16-BEHAVIOR",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C7"
+        },
+        {
+          "criterion_id": "W16-BEHAVIOR",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C8"
+        },
+        {
+          "criterion_id": "W16-MEMORY",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C6"
+        },
+        {
+          "criterion_id": "W16-MEMORY",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C8"
+        },
+        {
+          "criterion_id": "W16-CUSTOMER",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C1"
+        },
+        {
+          "criterion_id": "W16-CUSTOMER",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C9"
+        },
+        {
+          "criterion_id": "W16-CUSTOMER",
+          "task_id": "W16.01",
+          "task_criterion_id": "W16.01-C10"
+        }
+      ],
+      "task_ids": [
+        "W16.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "reason": "Register one complete original-W16 local task with all context, behavior, bounded-memory and live-customer criteria; no package closure or external authority."
+}

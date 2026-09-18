@@ -1,0 +1,102 @@
+{
+  "at": "2026-09-13T20:24:26Z",
+  "task_id": "W20.04",
+  "journal": 1568,
+  "contract_digest": "584d53caf48ab7956db9b69a21d04c560708249ea77db7443ba0391bd050a622",
+  "plan": {
+    "path": "docs/remediation/design/W20.04/plan.md",
+    "sha256": "fcd438b3f6da7f33648af0e1c61adc411a0314158f10507569f414463d7b5583"
+  },
+  "scope": "Fifteen-file customer-neutral tag/type hard constraints and pin editing, versioned parsing/replay and existing Rules/History workflow.",
+  "owned": [
+    "src/content/types.ts",
+    "src/content/kinds.ts",
+    "src/reflex/contentCompose.ts",
+    "src/content/decide.ts",
+    "src/learn/replay.ts",
+    "src/content/slotDiagnostics.ts",
+    "src/content/slotConstraints.ts",
+    "public/console/views-config.js",
+    "src/reflex/contentCompose.test.ts",
+    "src/learn/phase3.test.ts",
+    "src/routes/content.test.ts",
+    "src/console/console.render.test.ts",
+    "src/content/consent.test.ts",
+    "docs/kit/02-api-reference.md",
+    "docs/kit/03-payload-schemas.md"
+  ],
+  "source_pins": 43,
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "f850c1",
+        "wall_time_seconds": 1.001243464,
+        "session_id": 16624,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "1ef443",
+        "wall_time_seconds": 5.000886598,
+        "session_id": 16624,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "9caf7e",
+        "wall_time_seconds": 0.000002357,
+        "exit_code": 0,
+        "original_token_count": 515,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=108, closed=2; evidence records=321\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.03 — Finish the remaining policy-independent W20 operator pin editing and tag-exclusion contract, after checking the existing W20 coverage and customer constraints. Preserve hard gates, deterministic ordering, historical replay and existing Rules/History; do not invent priority rules, customer slot lists or fallback assets. Surface only a concrete customer decision that blocks implementation. W19 vocabulary/inheritance, actual customer walkthroughs, W35 native authority/latency and release acceptance remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 22452\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=108, closed=2; evidence records=321\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.03 — Finish the remaining policy-independent W20 operator pin editing and tag-exclusion contract, after checking the existing W20 coverage and customer constraints. Preserve hard gates, deterministic ordering, historical replay and existing Rules/History; do not invent priority rules, customer slot lists or fallback assets. Surface only a concrete customer decision that blocks implementation. W19 vocabulary/inheritance, actual customer walkthroughs, W35 native authority/latency and release acceptance remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 22452\n"
+      }
+    ],
+    "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=108, closed=2; evidence records=321\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.03 — Finish the remaining policy-independent W20 operator pin editing and tag-exclusion contract, after checking the existing W20 coverage and customer constraints. Preserve hard gates, deterministic ordering, historical replay and existing Rules/History; do not invent priority rules, customer slot lists or fallback assets. Surface only a concrete customer decision that blocks implementation. W19 vocabulary/inheritance, actual customer walkthroughs, W35 native authority/latency and release acceptance remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 22452\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=108, closed=2; evidence records=321\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.03 — Finish the remaining policy-independent W20 operator pin editing and tag-exclusion contract, after checking the existing W20 coverage and customer constraints. Preserve hard gates, deterministic ordering, historical replay and existing Rules/History; do not invent priority rules, customer slot lists or fallback assets. Surface only a concrete customer decision that blocks implementation. W19 vocabulary/inheritance, actual customer walkthroughs, W35 native authority/latency and release acceptance remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 22452\n",
+    "exit_code": 0,
+    "drained": true,
+    "session_id": 16624
+  },
+  "baseline_static": {
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/service.ts src/content/slotDiagnostics.ts src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js public/console/views-config.js --env browser --global OperatorSession --max-warnings 2 && git diff --check -- src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/service.ts src/content/slotDiagnostics.ts public/console/views-config.js src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md docs/kit/03-payload-schemas.md",
+    "session_id": 86666,
+    "captures": [
+      {
+        "chunk_id": "e3ed42",
+        "wall_time_seconds": 1.001780353,
+        "session_id": 86666,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "92b8f5",
+        "wall_time_seconds": 5.001228684,
+        "session_id": 86666,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "23d41b",
+        "wall_time_seconds": 20.00103332,
+        "session_id": 86666,
+        "original_token_count": 127,
+        "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/decide.ts\n  220:20  warning  '_share' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  312:62  warning  '_s' is defined but never used               @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  181:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+      },
+      {
+        "chunk_id": "e65af7",
+        "wall_time_seconds": 0.000002176,
+        "exit_code": 0,
+        "original_token_count": 84,
+        "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views-config.js\n  19:29  warning  'when' is assigned a value but never used    @typescript-eslint/no-unused-vars\n  19:35  warning  'plural' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n✖ 2 problems (0 errors, 2 warnings)\n\n"
+      }
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "final_bytes": true
+  },
+  "prior_journal_length": 1559,
+  "prior_journal_sha256": "5342fff8791685b3085be73d441ecc0f0a9dd2d3b76896b2bbf9aaf6d5f90695",
+  "closed_pins_verified": 63,
+  "qualification": "Bounded customer-neutral pin editing, exact OR tag exclusions and allowed rendering-type constraints only. No customer vocabulary/aliases, lists/default assets, priority/multi-position policy or full W20/F28/F26/customer acceptance. Literal explicit tags are preserved; only absent contentType uses the existing safe render-kind fallback identically on every arm. Rendering types remain distinct from format-affinity tags. Old stored unversioned/v1 parsing and absent/v1 receipt meanings remain; new v2 is explicit. No migration/history rewrite, scoring/model/SDK/service/cache/store/auth change. Existing30-second cache, independent catalog/slot revisions and non-atomic publication remain; catalog-dependent pin feedback advisory with authoritative runtime refusal and no arbitrary fill. Old v1 readers reject v2 documents, but mixed old cached readers remain possible: compatible readers/UI before controlled publication; no immediate rollout/native/SLO/default-rendering proof. W20.03 prior exact-byte evidence is prospectively qualified with implemented controls/history retained; W08.04 unchanged. No deploy/cloud/build/install/provision/seed/credentials/customer-data/destructive/commit/push/external operations. No package/finding/gate/release promotion.",
+  "lead": "w01-lead",
+  "source_go": "Pending direct pins/contract check; no source edits before GO."
+}

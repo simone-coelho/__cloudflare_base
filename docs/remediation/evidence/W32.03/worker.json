@@ -1,0 +1,276 @@
+{
+  "task_id": "W32.03",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T22:16:34.803Z",
+  "source_go_at": "2026-09-12T22:00:08.828Z",
+  "contract_digest": "1cc76d8108d879e88105dc51f09636eb046d9eb5dbbf341788db09fe41c91297",
+  "references": {
+    "baseline": {
+      "path": "docs/remediation/design/W32.03/baseline.json",
+      "sha256": "a4a75868a7cffb81a33cc726cc9cc032cd45e9d2da74e3cbd2876a4d295d85fc"
+    },
+    "plan": {
+      "path": "docs/remediation/design/W32.03/plan.md",
+      "sha256": "34d0631258ffa33dd36a672959af057865ea847acec7633b8ea517f8ac69b06f"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W32.03/admission.json",
+      "sha256": "ac3269a63318dbb15e370490dafd915b5ee2c521039476d40a152480caeae6d1"
+    }
+  },
+  "implementation_summary": [
+    "Bounded aggregate listing/identity/body reads and direct aggregate-to-day admission before merge/snapshot allocation; guarded final finite arithmetic and report bytes before canonical publication.",
+    "Shared native-size/actual-stream saved JSON reader; exact requested owner/date and bounded consumed structure; null-only missing, cumulative window bytes/cells and finite pooled intensities.",
+    "Actual operator day/window routes enforce 8MiB wrapped responses and sanitized no-store 413/503; request identifiers reject before storage. Existing raw budgets, strict-null canonical isolation and conservative legacy coverage retained."
+  ],
+  "criterion_verdicts": {
+    "W32.03-C1": {
+      "worker_verdict": "local checks passed",
+      "evidence": "fixed11 aggregate grouped case and retained actual aggregate/raw/canonical controls"
+    },
+    "W32.03-C2": {
+      "worker_verdict": "local checks passed",
+      "evidence": "fixed11 authenticated saved-route/direct-window groups and retained coverage/zero-denominator controls"
+    },
+    "W32.03-C3": {
+      "worker_verdict": "source/checks complete; independent review pending",
+      "evidence": "eight STOP hashes,28 protected matches,compiler/lint/whitespace PASS; no self-acceptance"
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 11,
+      "unselected": 31,
+      "exit_code": 0,
+      "drained": true,
+      "capture": "runtime_final"
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "capture": "static_final"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "capture": "static_final"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "capture": "static_final"
+    }
+  },
+  "execution_history": [
+    {
+      "kind": "editing_context_mismatch",
+      "at": "2026-09-12T22:01:57.104Z",
+      "output": "apply_patch verification failed: rawReportJson expected compact body differs; no files changed."
+    },
+    {
+      "kind": "editing_context_mismatch",
+      "at": "2026-09-12T22:04:42.740Z",
+      "output": "apply_patch verification failed on loadHours exact context; no hourly source changed."
+    },
+    {
+      "kind": "superseded_candidate",
+      "runtime": "runtime_candidate",
+      "passed": 11,
+      "static": "static_candidate",
+      "compiler": "passed",
+      "lint": "failed: one new unused _key fixture parameter",
+      "whitespace": "not reached",
+      "reason": "Root found finite pooled totals can still overflow derived intensity; added pooled positive-denominator finite-ratio guard and assertion inside existing window group. Removed unused fixture parameter."
+    },
+    {
+      "kind": "final_candidate",
+      "runtime": "runtime_final",
+      "static": "static_final",
+      "runtime_failures": 0,
+      "statement": "Same fixed11 selection rerun on corrected bytes; no added group, suite or benchmark."
+    }
+  ],
+  "command_captures": {
+    "runtime_candidate": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts -t 'W32.03|W32.02|W33.01 authenticated|W30.02|the day report comes from the hours|preserves repeated credits and zero-denominator' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T22:12:50.774Z",
+      "captures": [
+        {
+          "chunk_id": "f80b23",
+          "wall_time_seconds": 1.000701839,
+          "session_id": 9099,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "513017",
+          "wall_time_seconds": 0.00000217,
+          "exit_code": 0,
+          "original_token_count": 155,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (22 tests | 19 skipped) 181ms\n ✓ src/learn/report.test.ts  (14 tests | 8 skipped) 493ms\n ✓ src/measure/window.test.ts  (6 tests | 4 skipped) 74ms\n\n Test Files  3 passed (3)\n      Tests  11 passed | 31 skipped (42)\n   Start at  18:12:53\n   Duration  12.71s (transform 2.00s, setup 0ms, collect 4.90s, tests 748ms, environment 0ms, prepare 5.12s)\n\n"
+        }
+      ],
+      "session_id": 9099,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T22:13:06.608Z"
+    },
+    "static_candidate": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/measure/window.ts src/routes/decisions.ts src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts --max-warnings 0 && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/measure/window.ts src/routes/decisions.ts src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T22:13:18.866Z",
+      "captures": [
+        {
+          "chunk_id": "0aaf1c",
+          "wall_time_seconds": 1.000503316,
+          "session_id": 92935,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "52fdcb",
+          "wall_time_seconds": 5.001731621,
+          "session_id": 92935,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "bc4d2d",
+          "wall_time_seconds": 0.000002177,
+          "exit_code": 1,
+          "original_token_count": 67,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/report.test.ts\n  71:41  warning  '_key' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 1 problem (0 errors, 1 warning)\n\nESLint found too many warnings (maximum: 0).\n"
+        }
+      ],
+      "session_id": 92935,
+      "drained": true,
+      "exit_code": 1,
+      "finished_at": "2026-09-12T22:13:57.951Z"
+    },
+    "runtime_final": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts -t 'W32.03|W32.02|W33.01 authenticated|W30.02|the day report comes from the hours|preserves repeated credits and zero-denominator' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T22:14:25.714Z",
+      "captures": [
+        {
+          "chunk_id": "aa80bc",
+          "wall_time_seconds": 1.001599014,
+          "session_id": 29705,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ecd095",
+          "wall_time_seconds": 0.000002346,
+          "exit_code": 0,
+          "original_token_count": 155,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (22 tests | 19 skipped) 178ms\n ✓ src/learn/report.test.ts  (14 tests | 8 skipped) 491ms\n ✓ src/measure/window.test.ts  (6 tests | 4 skipped) 69ms\n\n Test Files  3 passed (3)\n      Tests  11 passed | 31 skipped (42)\n   Start at  18:14:26\n   Duration  12.08s (transform 1.93s, setup 0ms, collect 4.53s, tests 738ms, environment 0ms, prepare 5.00s)\n\n"
+        }
+      ],
+      "session_id": 29705,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T22:14:40.138Z"
+    },
+    "static_final": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/measure/window.ts src/routes/decisions.ts src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts --max-warnings 0 && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/measure/window.ts src/routes/decisions.ts src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T22:14:46.757Z",
+      "captures": [
+        {
+          "chunk_id": "b8768c",
+          "wall_time_seconds": 1.001003043,
+          "session_id": 64271,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "777e2e",
+          "wall_time_seconds": 5.000606447,
+          "session_id": 64271,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d24374",
+          "wall_time_seconds": 0.000001523,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 64271,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T22:15:26.135Z"
+    },
+    "source_stop": {
+      "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport { createHash } from 'node:crypto';\nconst hash = p => createHash('sha256').update(fs.readFileSync(p)).digest('hex');\nconst basePath = 'docs/remediation/design/W32.03/baseline.json';\nconst base = JSON.parse(fs.readFileSync(basePath, 'utf8'));\nconst owned = new Set(base.owned.map(x => x.path));\nconst files = base.owned.map(x => ({ path: x.path, sha256: hash(x.path) }));\nconst protectedFiles = base.pins.filter(x => !owned.has(x.path)).map(x => ({ path:x.path, expected:x.sha256, actual:hash(x.path) }));\nconst changed = protectedFiles.filter(x => x.expected !== x.actual);\nconst out = { final_source_stop: { at: new Date().toISOString(), files }, protected_source_comparison: { checked:protectedFiles.length, matched:protectedFiles.length-changed.length, mismatches:changed }, references: { baseline:{path:basePath,sha256:hash(basePath)}, plan:{path:'docs/remediation/design/W32.03/plan.md',sha256:hash('docs/remediation/design/W32.03/plan.md')}, admission:{path:'docs/remediation/evidence/W32.03/admission.json',sha256:hash('docs/remediation/evidence/W32.03/admission.json')} } };\nconsole.log(JSON.stringify(out,null,2));\nif(changed.length)process.exitCode=1;\nNODE",
+      "captures": [
+        {
+          "chunk_id": "9a4758",
+          "wall_time_seconds": 0.000003672,
+          "exit_code": 0,
+          "original_token_count": 469,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T22:15:43.878Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/report.ts\",\n        \"sha256\": \"7b2e74954249a3875ea700982276ee9bde0ac7a714dc9cc27bda392399ad4266\"\n      },\n      {\n        \"path\": \"src/learn/hourly.ts\",\n        \"sha256\": \"8b7cb33189105513f132b5cc8c7068d4e9f8d460a3191efe806e1783ea68c352\"\n      },\n      {\n        \"path\": \"src/measure/window.ts\",\n        \"sha256\": \"bfe02b738f0a25dba72a4cc50d15359b67d3369ee615261ec364236ce84e123f\"\n      },\n      {\n        \"path\": \"src/routes/decisions.ts\",\n        \"sha256\": \"e0d4bbd253ce73cd55ad3961239c68602dd3d8449bf70b6018da97f11607e924\"\n      },\n      {\n        \"path\": \"src/learn/report.test.ts\",\n        \"sha256\": \"b8c7cc3f3ed162774e19e0dc227c0d5f94011877fa18af9d161b452004fb191e\"\n      },\n      {\n        \"path\": \"src/learn/hourly.test.ts\",\n        \"sha256\": \"aeed1a4645f2e329d9750d720106eca151b74de09358b4e6a7d4419dd82a8c16\"\n      },\n      {\n        \"path\": \"src/measure/window.test.ts\",\n        \"sha256\": \"58d7d5557e2ad05031b5df4f2c2459df31553d67b6506e0ab5e0df012c402853\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"4107f4e510331d442d6be1df725dba9f9484c0812c375ca0db99af8daa55855e\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"checked\": 28,\n    \"matched\": 28,\n    \"mismatches\": []\n  },\n  \"references\": {\n    \"baseline\": {\n      \"path\": \"docs/remediation/design/W32.03/baseline.json\",\n      \"sha256\": \"a4a75868a7cffb81a33cc726cc9cc032cd45e9d2da74e3cbd2876a4d295d85fc\"\n    },\n    \"plan\": {\n      \"path\": \"docs/remediation/design/W32.03/plan.md\",\n      \"sha256\": \"34d0631258ffa33dd36a672959af057865ea847acec7633b8ea517f8ac69b06f\"\n    },\n    \"admission\": {\n      \"path\": \"docs/remediation/evidence/W32.03/admission.json\",\n      \"sha256\": \"ac3269a63318dbb15e370490dafd915b5ee2c521039476d40a152480caeae6d1\"\n    }\n  }\n}\n"
+        }
+      ],
+      "session_id": null,
+      "drained": true,
+      "exit_code": 0
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-12T22:15:43.878Z",
+    "files": [
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "7b2e74954249a3875ea700982276ee9bde0ac7a714dc9cc27bda392399ad4266"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "8b7cb33189105513f132b5cc8c7068d4e9f8d460a3191efe806e1783ea68c352"
+      },
+      {
+        "path": "src/measure/window.ts",
+        "sha256": "bfe02b738f0a25dba72a4cc50d15359b67d3369ee615261ec364236ce84e123f"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "e0d4bbd253ce73cd55ad3961239c68602dd3d8449bf70b6018da97f11607e924"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "b8c7cc3f3ed162774e19e0dc227c0d5f94011877fa18af9d161b452004fb191e"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "aeed1a4645f2e329d9750d720106eca151b74de09358b4e6a7d4419dd82a8c16"
+      },
+      {
+        "path": "src/measure/window.test.ts",
+        "sha256": "58d7d5557e2ad05031b5df4f2c2459df31553d67b6506e0ab5e0df012c402853"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "4107f4e510331d442d6be1df725dba9f9484c0812c375ca0db99af8daa55855e"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "checked": 28,
+    "matched": 28,
+    "mismatches": []
+  },
+  "limitations": [
+    "Application refusal budgets, not measured native Worker capacity, SLO, customer acceptance or full W32/W31/F34 closure.",
+    "Existing full-object reads remain; no cheap persisted summary, sidecar, paging protocol, history rewrite or long-window availability guarantee.",
+    "Hour-fold/shard ingestion and configuration/tombstone load bounds remain outside this slice; no policy compatibility, estimator, target, maturity or scientific inference change.",
+    "Native size and streamed bytes checked before JSON; text-only synthetic/adaptor text is checked after materialization. No unchecked json-only reader fallback.",
+    "Large windows may refuse below92 days. Existing canonical write acknowledgement semantics and concurrent canonical publication races remain unchanged.",
+    "Root entry VALID1312 and accepted W32.02 raw arithmetic/timing/static preflight reused as admitted; no new before-fix runtime or benchmark claimed.",
+    "Independent frozen review and lead acceptance pending. No source writes after final_source_stop."
+  ]
+}

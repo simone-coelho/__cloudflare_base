@@ -1,0 +1,181 @@
+{
+  "task_id": "W09.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "at": "2026-09-11T22:01:40.705Z",
+  "verdict": "pass",
+  "artifact_digest": "0c91b4503537f7bc3a151c88dbfdf9baceb8b8a9a18943a823f927d23ed6921c",
+  "contract_digest": "e1971a1e36ac5fc9b961e322005811312ea6d23024b1acbde2e75137724f055b",
+  "summary": "Independent review passes the admitted four-file oversized-envelope and producer-visibility containment. Complete source/delta review reconciles to frozen bytes; the exact 17-case fixture passed once. Lead acceptance and full W09 remain separate.",
+  "criteria": [
+    {
+      "id": "W09.01-C1",
+      "verdict": "pass",
+      "evidence": [
+        "Producer snapshots each record through JSON serialization/parse before any queue await, retaining complete JSON-normalized records, IDs, replay inputs and explanations. Per-record UTF-8 size plus exact wrapper/comma framing bounds standalone decisions envelopes at 120000 bytes, batches at 240000 body bytes and 100 messages. Explicit JSON sends use object bodies, not double-encoded strings.",
+        "All chunks are preflighted before the first send. An indivisible oversized or unserializable record refuses the complete invocation without trimming or sending a partial set. The additive version:1 marker preserves legacy decisions/outcome envelope shapes; unchanged expansion, R2 writer and lookup retain full records.",
+        "Independent grouped fixture passes actual generated 36032/135062/188672/291941-byte baseline shapes, bounded multi-batch packing, full record and receipt parity through the unchanged reader/R2 path, exact multibyte limits for decisions/outcomes, and mutation of caller rows/shared inputs while later chunks await."
+      ]
+    },
+    {
+      "id": "W09.01-C2",
+      "verdict": "pass",
+      "evidence": [
+        "Acknowledged, unknown and notAttempted counts conserve both input records and finalized planned messages. Resolved calls count queue acceptance only. Rejected attempted groups remain unknown, preceding acknowledgements remain intact, and the tail is not attempted; no automatic retry or fallback follows rejection. Preflight refusal has prepared:false and zero hypothetical message counts.",
+        "Guarded capability capture occurs once, binds the original queue receiver and precedes attempt accounting. Missing/throwing capability yields all-not-attempted queue_unavailable. Serialization, queue rejection and diagnostic failures do not reject the producer promise in the admitted cases.",
+        "The helper emits one fixed-code/numeric-only failure summary for callers that ignore receipts. Actual tests cover absent queue, throwing capability, cyclic/BigInt/throwing serialization, oversized tail, first/later batch failure, sequential-send partial acceptance and throwing/sanitized logger. Existing Analytics points remain independent; original erasure and carrier tests pass unchanged."
+      ]
+    },
+    {
+      "id": "W09.01-C3",
+      "verdict": "pass",
+      "evidence": [
+        "Before/after captures f4b275/de001b verify 78 artifact pins, 68 unchanged protected files and four exact bidirectional deltas. Reconciliation b9a3a2 shows only the three approved fixture mock returns changed after the complete moving-source review; production/types/API documentation remain the reviewed bytes. Final contract e69ca0 matches the registered artifact.",
+        "Exact K3 command ran once in independent session 67108; final cd5df8 exit 0 and drained, 17 passed with no skipped cases. The existing fixture contains its 15 prior cases and only the two admitted grouped additions.",
+        "Full worker evidence inspected in bc7742/e5868b. Reused final compiler 71879/b0aa2c, scoped lint 28619/967787 and whitespace 67b6a7: all exit 0/drained, compiler/whitespace without diagnostics and lint zero errors/zero warnings, matching the zero-warning baseline. Initial three-warning lint criterion failure and superseded runtime/compiler passes are retained."
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "W09.01-R1",
+      "status": "resolved",
+      "issue": "Moving source read queue.sendBatch repeatedly, including outside the send catch; a throwing or changing capability could bypass the no-throw signal or disagree with packing.",
+      "resolution": "Final sendAll resolves and binds the capability once inside a guarded block before attempted counts change. Failure yields prepared, all-not-attempted queue_unavailable; the grouped fixture verifies this without an extra suite.",
+      "evidence": "83a5a6 initial production review; 48d85a corrected four-file review; b9a3a2 frozen reconciliation; independent 17-case pass."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W09.01/plan.md",
+      "sha256": "4f0b8f93752260a4b3a64b0c0cf7b2eca21bd9731b78718c0d1bc3402142959b"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W09.01/artifact.json",
+      "sha256": "7f412c99fe419e41238477aaeab942296aabf1020e2d5907b751aa1f58db0494"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W09.01/worker.json",
+      "sha256": "8dacd77db11c4be460669ded1f9bba35e544729bb76ce79fcebc488736e5dd12"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+    "session_id": 67108,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "fixture": "src/ledger/ledger.test.ts",
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0,
+      "new_groups": 2
+    },
+    "captures": [
+      {
+        "chunk_id": "c27c71",
+        "wall_time_seconds": 1.001600349,
+        "session_id": 67108,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "cd5df8",
+        "wall_time_seconds": 0.000001819,
+        "exit_code": 0,
+        "original_token_count": 119,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (17 tests) 293ms\n\n Test Files  1 passed (1)\n      Tests  17 passed (17)\n   Start at  17:59:44\n   Duration  7.76s (transform 2.38s, setup 0ms, collect 4.34s, tests 293ms, environment 0ms, prepare 2.08s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "before": {
+      "chunk_id": "f4b275",
+      "wall_time_seconds": 0.25048735,
+      "exit_code": 0,
+      "original_token_count": 342,
+      "output": "{\n  \"at\": \"2026-09-11T21:59:19.177Z\",\n  \"artifact_digest\": \"0c91b4503537f7bc3a151c88dbfdf9baceb8b8a9a18943a823f927d23ed6921c\",\n  \"manifest_sha256\": \"7f412c99fe419e41238477aaeab942296aabf1020e2d5907b751aa1f58db0494\",\n  \"pins\": 78,\n  \"bad\": [],\n  \"protected_count\": 68,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/ledger/enqueue.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/records.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W09.01/plan.md\",\n      \"sha256\": \"4f0b8f93752260a4b3a64b0c0cf7b2eca21bd9731b78718c0d1bc3402142959b\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.01/artifact.json\",\n      \"sha256\": \"7f412c99fe419e41238477aaeab942296aabf1020e2d5907b751aa1f58db0494\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.01/worker.json\",\n      \"sha256\": \"8dacd77db11c4be460669ded1f9bba35e544729bb76ce79fcebc488736e5dd12\"\n    }\n  ]\n}\n"
+    },
+    "after": {
+      "chunk_id": "de001b",
+      "wall_time_seconds": 0.186904495,
+      "exit_code": 0,
+      "original_token_count": 342,
+      "output": "{\n  \"at\": \"2026-09-11T22:00:33.260Z\",\n  \"artifact_digest\": \"0c91b4503537f7bc3a151c88dbfdf9baceb8b8a9a18943a823f927d23ed6921c\",\n  \"manifest_sha256\": \"7f412c99fe419e41238477aaeab942296aabf1020e2d5907b751aa1f58db0494\",\n  \"pins\": 78,\n  \"bad\": [],\n  \"protected_count\": 68,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/ledger/enqueue.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/records.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W09.01/plan.md\",\n      \"sha256\": \"4f0b8f93752260a4b3a64b0c0cf7b2eca21bd9731b78718c0d1bc3402142959b\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.01/artifact.json\",\n      \"sha256\": \"7f412c99fe419e41238477aaeab942296aabf1020e2d5907b751aa1f58db0494\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.01/worker.json\",\n      \"sha256\": \"8dacd77db11c4be460669ded1f9bba35e544729bb76ce79fcebc488736e5dd12\"\n    }\n  ]\n}\n"
+    },
+    "reviewed_source_reconciliation": {
+      "chunk_id": "b9a3a2",
+      "wall_time_seconds": 0.168933582,
+      "exit_code": 0,
+      "original_token_count": 1034,
+      "output": "{\"path\":\"src/ledger/enqueue.ts\",\"reviewed_sha256\":\"16dae83570fb26fca7e870b8eab11f73dd6887a7637f5d9ed1862cbd913b5700\",\"current_sha256\":\"16dae83570fb26fca7e870b8eab11f73dd6887a7637f5d9ed1862cbd913b5700\",\"worker_stop\":\"16dae83570fb26fca7e870b8eab11f73dd6887a7637f5d9ed1862cbd913b5700\"}\nIndex: src/ledger/enqueue.ts\n===================================================================\n--- src/ledger/enqueue.ts\n+++ src/ledger/enqueue.ts\n\n{\"path\":\"src/ledger/records.ts\",\"reviewed_sha256\":\"ddb04dfc3834e827e44f4f1ab79579f145803b4a5a4bbd14efd56252b58fd0ea\",\"current_sha256\":\"ddb04dfc3834e827e44f4f1ab79579f145803b4a5a4bbd14efd56252b58fd0ea\",\"worker_stop\":\"ddb04dfc3834e827e44f4f1ab79579f145803b4a5a4bbd14efd56252b58fd0ea\"}\nIndex: src/ledger/records.ts\n===================================================================\n--- src/ledger/records.ts\n+++ src/ledger/records.ts\n\n{\"path\":\"src/ledger/ledger.test.ts\",\"reviewed_sha256\":\"9c1bf0158e0b98e14d9cdc837dbf61f07a92573119f7b2292673423283afd12d\",\"current_sha256\":\"9696391c5875a782992299485b6cd113c42a1d4740e6943babb8715b5cd3c895\",\"worker_stop\":\"9696391c5875a782992299485b6cd113c42a1d4740e6943babb8715b5cd3c895\"}\nIndex: src/ledger/ledger.test.ts\n===================================================================\n--- src/ledger/ledger.test.ts\n+++ src/ledger/ledger.test.ts\n@@ -396,9 +396,9 @@\n     expect(ae.points).toHaveLength(3);\n     expect((ae.points[0] as { blobs: string[] }).blobs.slice(0, 5)).toEqual(['decision', 'coach', 'coach', 'home', 'hero']);\n     await enqueueOutcome({ EVENT_QUEUE: q as never, ANALYTICS: ae as never }, outcomeFromAction({ type: 'add_to_cart', userId: 'v1', timestamp: T0, data: { productId: 'p1' } }, 'coach'));\n     expect(q.sent).toHaveLength(2);\n-    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});\n+    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => undefined);\n     try {\n       await expect(enqueueDecisions({ EVENT_QUEUE: undefined as never, ANALYTICS: undefined as never }, s.records))\n         .resolves.toMatchObject({ code: 'queue_unavailable', records: { total: 3, notAttempted: 3 } });\n     } finally { diagnostic.mockRestore(); }\n@@ -468,9 +468,9 @@\n     expect(size(envelope())).toBe(LEDGER_BODY_BYTES);\n     expect((await enqueueDecisions({ EVENT_QUEUE: q as never, ANALYTICS: undefined as never }, [record])).code).toBe('accepted');\n     expect(size(q.sent[0])).toBe(LEDGER_BODY_BYTES);\n     record.explain.note += 'x';\n-    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});\n+    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => undefined);\n     try {\n       expect((await enqueueDecisions({ EVENT_QUEUE: q as never, ANALYTICS: undefined as never }, [record])).code).toBe('oversized_record');\n       expect(q.sent).toHaveLength(1);\n       const outcome = outcomeFromAction({ type: 'purchase', userId: 'v-unicode', timestamp: T0 }, 'coach')!;\n@@ -486,9 +486,9 @@\n     } finally { diagnostic.mockRestore(); }\n   });\n \n   it('W09.01 refuses preflight loss and conserves partial queue acceptance with frozen payloads and safe diagnostics', async () => {\n-    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});\n+    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => undefined);\n     const env = (queue?: unknown, ae?: FakeAE) => ({ EVENT_QUEUE: queue as never, ANALYTICS: ae as never });\n     const conserved = (result: LedgerDeliveryReceipt) => {\n       for (const c of [result.records, result.messages]) expect(c.acknowledged + c.unknown + c.notAttempted).toBe(c.total);\n       return result;\n\n{\"path\":\"docs/kit/02-api-reference.md\",\"reviewed_sha256\":\"14ef849b71d9fac0885a22e57db4040b256c6597ccd84f00df7ff52eb302b18c\",\"current_sha256\":\"14ef849b71d9fac0885a22e57db4040b256c6597ccd84f00df7ff52eb302b18c\",\"worker_stop\":\"14ef849b71d9fac0885a22e57db4040b256c6597ccd84f00df7ff52eb302b18c\"}\nIndex: docs/kit/02-api-reference.md\n===================================================================\n--- docs/kit/02-api-reference.md\n+++ docs/kit/02-api-reference.md\n\n{\"source_stop\":\"2026-09-11T21:56:24.380Z\"}\n"
+    },
+    "final_contract": {
+      "chunk_id": "e69ca0",
+      "wall_time_seconds": 0.002113796,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-11T22:00:33.492Z\",\"task\":\"W09.01\",\"state\":\"verification\",\"contract_digest\":\"e1971a1e36ac5fc9b961e322005811312ea6d23024b1acbde2e75137724f055b\",\"artifact_digest\":\"0c91b4503537f7bc3a151c88dbfdf9baceb8b8a9a18943a823f927d23ed6921c\"}\n"
+    },
+    "freeze_and_static_inspection": {
+      "chunk_id": "e5868b",
+      "wall_time_seconds": 0.00000419,
+      "exit_code": 0,
+      "original_token_count": 702,
+      "output": "{\n  \"freeze\": {\n    \"at\": \"2026-09-11T21:58:16Z\",\n    \"task_id\": \"W09.01\",\n    \"contract_digest\": \"e1971a1e36ac5fc9b961e322005811312ea6d23024b1acbde2e75137724f055b\",\n    \"source\": \"Worker explicit source STOP after fixed checks; root freeze.\",\n    \"source_stopped_at\": \"2026-09-11T21:56:24.380Z\",\n    \"owned\": [\n      \"src/ledger/enqueue.ts\",\n      \"src/ledger/records.ts\",\n      \"src/ledger/ledger.test.ts\",\n      \"docs/kit/02-api-reference.md\"\n    ],\n    \"unowned_unchanged\": 68\n  },\n  \"pin_count\": 72,\n  \"freeze_artifact_mismatches\": [],\n  \"delta_basis\": \"Exact admitted before bytes and root frozen source; bidirectional patches verified in memory, no rollback performed.\",\n  \"artifact_configuration\": \"Bounded oversized-envelope and producer-visibility containment only. Queue acceptance is not R2 persistence. Full W09/F16/N07/N08/N10 recovery, DLQ/quarantine, consumer partial loss/retry duplicates, IDs/dedup, fan-out/reconciliation, global ordering, fold capacity, deployed latency/customer/release remain open. No new external, cloud, customer-data, credential, deployment, install, build-output, commit/push, cleanup or policy authority.\",\n  \"commands\": [\n    {\n      \"kind\": \"runtime\",\n      \"exit_code\": 0,\n      \"drained\": true,\n      \"final_exit\": 0,\n      \"final\": \"e7e5f3\"\n    },\n    {\n      \"kind\": \"compiler\",\n      \"exit_code\": 0,\n      \"drained\": true,\n      \"final_exit\": 0,\n      \"final\": \"d4c6c0\"\n    },\n    {\n      \"kind\": \"lint\",\n      \"exit_code\": 0,\n      \"drained\": true,\n      \"final_exit\": 0,\n      \"final\": \"789065\"\n    },\n    {\n      \"kind\": \"runtime-final\",\n      \"exit_code\": 0,\n      \"drained\": true,\n      \"final_exit\": 0,\n      \"final\": \"bade71\"\n    },\n    {\n      \"kind\": \"compiler-final\",\n      \"exit_code\": 0,\n      \"drained\": true,\n      \"final_exit\": 0,\n      \"final\": \"b0aa2c\"\n    },\n    {\n      \"kind\": \"lint-final\",\n      \"exit_code\": 0,\n      \"drained\": true,\n      \"final_exit\": 0,\n      \"final\": \"967787\"\n    },\n    {\n      \"kind\": \"whitespace\",\n      \"exit_code\": 0,\n      \"drained\": true,\n      \"final_exit\": 0,\n      \"final\": \"67b6a7\"\n    },\n    {\n      \"kind\": \"source-stop\",\n      \"exit_code\": 0,\n      \"drained\": true,\n      \"final_exit\": 0,\n      \"final\": \"490f08\"\n    }\n  ],\n  \"final_lint\": [\n    {\n      \"path\": \"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/enqueue.ts\",\n      \"errors\": 0,\n      \"warnings\": 0,\n      \"messages\": []\n    },\n    {\n      \"path\": \"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/ledger.test.ts\",\n      \"errors\": 0,\n      \"warnings\": 0,\n      \"messages\": []\n    },\n    {\n      \"path\": \"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/records.ts\",\n      \"errors\": 0,\n      \"warnings\": 0,\n      \"messages\": []\n    }\n  ]\n}\n"
+    },
+    "source_review_captures": [
+      "83a5a6",
+      "48d85a"
+    ],
+    "source_stopped_at": "2026-09-11T21:56:24.380Z",
+    "static_reuse": {
+      "worker_record": {
+        "path": "docs/remediation/evidence/W09.01/worker.json",
+        "sha256": "8dacd77db11c4be460669ded1f9bba35e544729bb76ce79fcebc488736e5dd12"
+      },
+      "compiler": {
+        "session_id": 71879,
+        "final_capture": "b0aa2c",
+        "exit_status": 0,
+        "drained": true
+      },
+      "lint": {
+        "session_id": 28619,
+        "final_capture": "967787",
+        "exit_status": 0,
+        "drained": true,
+        "errors": 0,
+        "warnings": 0,
+        "new_warnings": 0
+      },
+      "whitespace": {
+        "final_capture": "67b6a7",
+        "exit_status": 0,
+        "drained": true
+      }
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Initial worker runtime e7e5f3 and compiler d4c6c0 passed, but lint 789065 had three new no-empty-function warnings despite process exit 0. Only three diagnostic mock bodies changed to explicit undefined; final runtime/compiler/lint supersede those candidates without hiding the failed criterion.",
+    "The reviewer's first read-only source-reconciliation helper stripped a final patch context space and failed in the patch parser (3fc0ce). Corrected in-memory extraction preserved context and passed in b9a3a2; no source file changed and no test reran because of this inspection error.",
+    "Baseline oversized generated-envelope reproduction is local synthetic evidence, not live queue delivery. Existing Vite CJS deprecation output is retained in the complete independent captures.",
+    "Byte limits drive the tested batch partitions; the 100-message guard is present but no claim is made that its exact threshold was exercised. No SDK, mounted, native platform, lifecycle or wider suite was added or run."
+  ],
+  "inspection_failure_capture": {
+    "chunk_id": "3fc0ce",
+    "wall_time_seconds": 0.126350443,
+    "exit_code": 1,
+    "original_token_count": 377,
+    "output": "{\"path\":\"src/ledger/enqueue.ts\",\"reviewed_sha256\":\"16dae83570fb26fca7e870b8eab11f73dd6887a7637f5d9ed1862cbd913b5700\",\"current_sha256\":\"16dae83570fb26fca7e870b8eab11f73dd6887a7637f5d9ed1862cbd913b5700\"}\nIndex: src/ledger/enqueue.ts\n===================================================================\n--- src/ledger/enqueue.ts\n+++ src/ledger/enqueue.ts\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/diff/libcjs/patch/parse.js:127\n                throw new Error(\"Hunk at line \".concat(chunkHeaderIndex + 1, \" contained invalid line \").concat(diffstr[i]));\n                ^\n\nError: Hunk at line 5 contained invalid line \n    at parseHunk (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/diff/libcjs/patch/parse.js:127:23)\n    at parseIndex (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/diff/libcjs/patch/parse.js:58:34)\n    at parsePatch (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/diff/libcjs/patch/parse.js:147:9)\n    at Object.applyPatch (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/diff/libcjs/patch/apply.js:35:45)\n    at [stdin]:1:31192\n    at runScriptInThisContext (node:internal/vm:209:10)\n    at node:internal/process/execution:449:12\n    at [stdin]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:447:60)\n    at evalFunction (node:internal/process/execution:87:30)\n\nNode.js v22.15.0\n"
+  },
+  "limitations": [
+    "Queue acknowledgement is acceptance only, not durable R2 persistence or downstream completeness. A rejected group may have been partly or wholly accepted. This remedy supplies no retry, rollback, outbox, durable recovery or reconciliation guarantee.",
+    "Standalone chunks retain repeated inputs for rolling compatibility. Consumer filtering/partial writes/retry duplicates, event-ID collision/dedup, DLQ/quarantine, fan-out acknowledgement, global ordering and fold-object amplification/capacity remain open under full W09/F16/N07/N08/N10.",
+    "Serialization and Analytics scheduling still begin synchronously before response release. Existing callers do not await queue I/O; no off-response CPU, deployed latency, workerd/cloud throughput, customer or release acceptance claim.",
+    "A failing logger is contained, not made durable. Failure summaries contain fixed codes and numeric counts only; no new subject-related storage/AE schema or retention decision. D06/D10 and external/cloud/customer-data/credentials/deployment/install/build/commit/policy authority remain unchanged."
+  ]
+}

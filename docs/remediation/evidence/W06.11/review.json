@@ -1,0 +1,111 @@
+{
+  "task_id": "W06.11",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "verdict": "pass",
+  "at": "2026-09-11T15:03:18.654Z",
+  "artifact_digest": "ebc43b31fbc8955ebe9f57b95fecce54c7ad26c065b543a62e4d954d4a3602b5",
+  "contract_digest": "4f0e219a937975ade25206e39c30db08bc44a7aee52943fb858e3e4443936557",
+  "summary": "No blocking issue in the three-file operator history reader repair. Actual frozen source, retained worker evidence and one independent ledger run satisfy the admitted local C1-C3 contract; lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W06.11-C1",
+      "verdict": "pass",
+      "evidence": "Both actual operator routes retain authentication/tenant authority and validate the visitor grammar before namespace addressing. Their shared reader requires successful HTTP, an object acknowledgement with ok===true, ring array and nonnegative safe-integer index, and validates every carrier with isLedgerMessage plus exact requested tenant/visitor. Only known recent envelope fields return. Fetch/decode/envelope/scope failure and the complete receipt catalog/sort/map/projection boundary return sanitized 503/no-store. The first new grouped route case tests those failures, missing binding, malformed selectors, unauthorized/cross-tenant requests before storage addressing, omitted private envelope data and unchanged stores. Valid empty responses remain successful. Independent session 26859/0c372f passed."
+    },
+    {
+      "id": "W06.11-C2",
+      "verdict": "pass",
+      "evidence": "Source inspection confirms the blanket receipt tombstone listing/410 was removed without replacing the unchanged DecisionRing.current() authority. That primitive rereads the retained inclusive cutoff for cached/index-only state and filters ts<=cutoff. The second grouped case uses actual DecisionRing, Hono, tenant middleware and initialized synthetic catalog publication: meridian/harbor share a visitor, before/equal rows suppress, later rows remain visible, a later cutoff produces genuine empty success, and restarted index-only/empty rings remain readable. Receipt timestamp/position ordering, catalog names and existing cursor pagination are asserted. Exact storage snapshots and write/delete/list spies confirm no read-side storage mutation or added tombstone scan. The unchanged console consumer already handles error and successful-empty/data responses; no UI test or edit was added."
+    },
+    {
+      "id": "W06.11-C3",
+      "verdict": "pass",
+      "evidence": "Before 39f9d4 and after 37930/b0aad2 verify every one of 71 artifact pins, all 63 protected baseline pins and exactly three bidirectional deltas against decoded baseline/current source. Current tracker contract was independently recomputed in 6e1b2d. Exactly two grouped cases were added; ten existing cases remain unchanged. The fixed ledger command ran once independently: 12/12 passed, exit 0/drained, full captures below. Full worker runtime/static/failure evidence was read: final runtime 69691/bc65c4, compiler 98450/ef7a88, scoped lint 50672/9c846b and whitespace bb9a57 all exit 0/drained; compiler/lint/whitespace have empty diagnostics, lint 0 errors/0 warnings against the same zero-warning baseline. Final static and unchanged W06.06 primitive assurance were reused, not rerun."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W06.11/plan.md",
+      "sha256": "50e056b9a2859af0c60e94f5cbc36733b9212a8258b46b13ab7e73f831a0cd88"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W06.11/artifact.json",
+      "sha256": "991c9c2f04f903c9420c401b90b38f06956a0a7570bf45a7286cc1648f025e8f"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W06.11/worker.json",
+      "sha256": "c66ad7764b5e39853f86a42f1efa4df6bef03084b7fbd82b29114c5277b88266"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+    "session_id": 26859,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 12,
+      "failed": 0,
+      "existing_cases": 10,
+      "new_grouped_cases": 2
+    },
+    "captures": [
+      {
+        "chunk_id": "2b7a8a",
+        "wall_time_seconds": 1.001782893,
+        "session_id": 26859,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0c372f",
+        "wall_time_seconds": 0.000002488,
+        "exit_code": 0,
+        "original_token_count": 119,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (12 tests) 105ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  11:01:02\n   Duration  6.47s (transform 1.95s, setup 0ms, collect 3.73s, tests 105ms, environment 0ms, prepare 1.76s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "command": "node - <<'NODE'\nconst fs=require('fs'),crypto=require('crypto'),zlib=require('zlib');const h=x=>crypto.createHash('sha256').update(x).digest('hex');const base='docs/remediation/evidence/W06.11/';const a=JSON.parse(fs.readFileSync(base+'artifact.json','utf8'));const b=JSON.parse(fs.readFileSync('docs/remediation/design/W06.11/baseline.json','utf8'));const d=JSON.parse(fs.readFileSync(base+'source-deltas.json','utf8'));const bad=a.files.filter(p=>h(fs.readFileSync(p.path))!==p.sha256);const own=new Set(b.owned.map(p=>p.path));const protectedPins=b.pins.filter(p=>!own.has(p.path));const protectedBad=protectedPins.filter(p=>h(fs.readFileSync(p.path))!==p.sha256);\nfunction patch(input,diff){const lines=input?input.replace(/\\n$/,'').split('\\n'):[],out=[];let pos=0;const ds=diff.split('\\n');for(let i=0;i<ds.length;i++){const m=ds[i].match(/^@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@/);if(!m)continue;const start=Number(m[1])-(Number(m[2]??1)===0?0:1);if(start<pos)throw Error('overlap');out.push(...lines.slice(pos,start));pos=start;let old=0,next=0;for(i++;i<ds.length&&!ds[i].startsWith('@@ ');i++){const line=ds[i];if(line==='')break;if(line.startsWith('\\\\'))throw Error('newline marker');if(line[0]===' '||line[0]==='-'){if(lines[pos]!==line.slice(1))throw Error('context mismatch');pos++;old++;}if(line[0]===' '||line[0]==='+'){out.push(line.slice(1));next++;}}if(old!==Number(m[2]??1)||next!==Number(m[4]??1))throw Error('count');i--;}out.push(...lines.slice(pos));return out.length?out.join('\\n')+'\\n':'';}\nconst deltaResults=d.deltas.map(x=>{const old=zlib.gunzipSync(Buffer.from(b.owned.find(p=>p.path===x.path).content_gzip_base64,'base64')).toString();const current=fs.readFileSync(x.path,'utf8');return{path:x.path,before:h(old)===x.before_sha256,after:h(current)===x.after_sha256,forward:patch(old,x.forward)===current,reverse:patch(current,x.reverse)===old};});const digest=h(JSON.stringify({contract_digest:a.contract_digest,configuration:a.configuration,files:a.files.map(({path,sha256,role})=>({path,sha256,role})).sort((x,y)=>x.path.localeCompare(y.path))}));console.log(JSON.stringify({at:new Date().toISOString(),artifact_digest:digest,manifest_sha256:h(fs.readFileSync(base+'artifact.json')),pins:a.files.length,bad,protected_count:protectedPins.length,protected_bad:protectedBad,deltas:deltaResults,basis:['docs/remediation/design/W06.11/plan.md',base+'artifact.json',base+'worker.json'].map(path=>({path,sha256:h(fs.readFileSync(path))}))},null,2));if(bad.length||protectedBad.length||deltaResults.some(x=>!x.before||!x.after||!x.forward||!x.reverse)||digest!=='ebc43b31fbc8955ebe9f57b95fecce54c7ad26c065b543a62e4d954d4a3602b5')process.exit(1);\nNODE",
+    "before": {
+      "chunk_id": "39f9d4",
+      "wall_time_seconds": 0.240871918,
+      "exit_code": 0,
+      "original_token_count": 308,
+      "output": "{\n  \"at\": \"2026-09-11T15:00:53.665Z\",\n  \"artifact_digest\": \"ebc43b31fbc8955ebe9f57b95fecce54c7ad26c065b543a62e4d954d4a3602b5\",\n  \"manifest_sha256\": \"991c9c2f04f903c9420c401b90b38f06956a0a7570bf45a7286cc1648f025e8f\",\n  \"pins\": 71,\n  \"bad\": [],\n  \"protected_count\": 63,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/routes/decisions.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W06.11/plan.md\",\n      \"sha256\": \"50e056b9a2859af0c60e94f5cbc36733b9212a8258b46b13ab7e73f831a0cd88\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W06.11/artifact.json\",\n      \"sha256\": \"991c9c2f04f903c9420c401b90b38f06956a0a7570bf45a7286cc1648f025e8f\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W06.11/worker.json\",\n      \"sha256\": \"c66ad7764b5e39853f86a42f1efa4df6bef03084b7fbd82b29114c5277b88266\"\n    }\n  ]\n}\n"
+    },
+    "after_captures": [
+      {
+        "chunk_id": "82f4b8",
+        "wall_time_seconds": 1.00051035,
+        "session_id": 37930,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b0aad2",
+        "wall_time_seconds": 0.000002987,
+        "exit_code": 0,
+        "original_token_count": 308,
+        "output": "{\n  \"at\": \"2026-09-11T15:02:22.005Z\",\n  \"artifact_digest\": \"ebc43b31fbc8955ebe9f57b95fecce54c7ad26c065b543a62e4d954d4a3602b5\",\n  \"manifest_sha256\": \"991c9c2f04f903c9420c401b90b38f06956a0a7570bf45a7286cc1648f025e8f\",\n  \"pins\": 71,\n  \"bad\": [],\n  \"protected_count\": 63,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/routes/decisions.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W06.11/plan.md\",\n      \"sha256\": \"50e056b9a2859af0c60e94f5cbc36733b9212a8258b46b13ab7e73f831a0cd88\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W06.11/artifact.json\",\n      \"sha256\": \"991c9c2f04f903c9420c401b90b38f06956a0a7570bf45a7286cc1648f025e8f\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W06.11/worker.json\",\n      \"sha256\": \"c66ad7764b5e39853f86a42f1efa4df6bef03084b7fbd82b29114c5277b88266\"\n    }\n  ]\n}\n"
+      }
+    ]
+  },
+  "retained_failures_and_qualifications": [
+    "Worker initial runtime 93491/816dc3 failed both new groups during synthetic catalog initialization (10 passed, 2 failed); missing R2 acknowledgement key/size prevented product-route assertions. The fixture acknowledgement was corrected without changing production bytes, and the same fixed fixture passed subsequently. Initial failure and diagnostic lookup/truncation qualifications remain in worker/baseline evidence.",
+    "Reviewer diagnostic a6bcca displayed all three deltas, then exited 1 because its metadata printer assumed flat rather than nested worker captures. The full nested runtime/static evidence was subsequently read in b8c267; no source mutation or runtime rerun resulted.",
+    "The baseline is a source-confirmed false-success/blanket-410 design case, not a red product runtime. Unchanged DecisionRing already enforced the cutoff: no standalone route erasure-leak fix is claimed.",
+    "W14.06 whole-artifact proof was prospectively qualified only for shared kit reader rows; its CSV implementation and accepted historical evidence remain intact. No CSV runtime or broader package reacceptance is claimed. The Vite CJS deprecation warning is retained in execution output."
+  ],
+  "limitations": [
+    "Local installed Node/Vitest with actual route/DecisionRing/publication code and synthetic bindings/credentials; not native/deployed, customer, UI, latency/SLO or release acceptance. Scoped dependency pins are not exhaustive installed-runtime attestation.",
+    "Existing carrier validation and point-in-time cutoff semantics are preserved, not a new complete decision schema or transactional cross-store erasure guarantee. Physical deletion/retention, cursor snapshot consistency, historical reconstruction and comprehensive privileged-access auditing/N13 remain outside this task.",
+    "Full W06 and linked findings/packages, customer/privacy policy and gates remain open. Snowflake D10/D06/D08 hold remains pending; no external or policy authority is inferred.",
+    "Only this review record was written. Root alone owns acceptance and durable governance disposition."
+  ]
+}

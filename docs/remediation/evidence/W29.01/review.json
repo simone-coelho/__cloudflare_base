@@ -1,0 +1,285 @@
+{
+  "task_id": "W29.01",
+  "actor": {
+    "agent": "/root/w2901_review",
+    "actor_id": "w2901-reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "role": "independent_verifier",
+    "provenance": "Lead delegated this distinct run as Astra/xhigh under AGENTS.md; no subdelegation."
+  },
+  "reviewed_at": "2026-09-09T03:15:58Z",
+  "verdict": "pass",
+  "scope": "Bounded G0 withdrawal of unsafe autonomy generation/apply/reject across exported functions, authenticated routes, cron and both consoles. Full W29 remains open.",
+  "basis": {
+    "canonical_audit": {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    "plan": {
+      "path": "docs/remediation/design/W29.01/plan-v1.md",
+      "sha256": "8b75bf38d7fcea688d68aa064e460d33a10f53277e32cb86438ca2024a416f8a"
+    },
+    "contract_digest": "6a1da9181e0e88700d966f58f9789e8e73e01befc06be4752daecc0fc95ff9e7",
+    "read": "AGENTS.md, execution README, full governance36/RESUME, admitted task/plan, complete W29/F24/F15 canonical scope and linked verifier reports; doc35 customer-clause reconciliation, doc22 autonomy/console requirements, ledger19 rows14–15 and Implementation Plan W6; actual sources, all11 admission patches and full10 worker check outputs."
+  },
+  "artifact": {
+    "path": "docs/remediation/evidence/W29.01/artifact.json",
+    "sha256": "fcbe1fa824adf45df015cffc0f92adb2291956f876c2085b0bcf62c29e9fbebc",
+    "digest": "c360985b8ed03d535b5aab9a8471e15255d35cdd6c3164a0eca47bd7a298e29e",
+    "pins": 312
+  },
+  "worker_proof": {
+    "path": "docs/remediation/evidence/W29.01/worker.json",
+    "sha256": "5104d826234ffaaaec1253a1acf38500f2f04de245761f560f0fd8cc848771ec",
+    "checks_inspected": 10
+  },
+  "identity": {
+    "at": "2026-09-09T03:12:37.792Z",
+    "officialPins": 312,
+    "officialDigest": "c360985b8ed03d535b5aab9a8471e15255d35cdd6c3164a0eca47bd7a298e29e",
+    "digestMatches": true,
+    "contractMatches": true,
+    "officialMismatches": [],
+    "sourceFreezePins": 306,
+    "sourceFreezeMismatches": [],
+    "unownedPins": 295,
+    "unownedMismatches": [],
+    "patchResults": [
+      {
+        "path": "src/learn/cycle.ts",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "src/index.ts",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "public/console/views.js",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "public/learning.js",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "src/learn/phase2.test.ts",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "src/console/learning.render.test.ts",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      },
+      {
+        "path": "docs/architecture/22-outcome-learning-design.md",
+        "beforeMatches": true,
+        "admissionMatches": true,
+        "afterMatches": true,
+        "reapplyMatches": true
+      }
+    ],
+    "regions": [
+      {
+        "path": "public/learning.js",
+        "unchanged": true
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "unchanged": true
+      }
+    ],
+    "artifactFileSha256": "fcbe1fa824adf45df015cffc0f92adb2291956f876c2085b0bcf62c29e9fbebc",
+    "workerProofSha256": "5104d826234ffaaaec1253a1acf38500f2f04de245761f560f0fd8cc848771ec",
+    "sourceFreezeFileSha256": "7f474d4b0200e0105473b4f282aef6c90be5ef2199a37d8448cce2dd2765c3ea"
+  },
+  "criteria": [
+    {
+      "id": "W29.01-C1",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "evidence": "Independent exact K1 passed8/8. Exported mutation functions contain no binding reads/write imports or enable branch. A trapping Env records zero access across12 concurrent/retried calls. Actual Hono/JWT routes reject missing/invalid credentials401, and authenticated read-permission operator/admin receive503 plus autonomy_unavailable and no-store for repeated cycle/apply/reject including missing ids and foreign brand query, with zero CACHE operations. Historical GET returns the three stored proposed/applied/rejected records unchanged, unverified/read-only/incomplete metadata and exactly one read; backing bytes are unchanged. Cron dispatch/import removed; inspected K4 actual workerd fixture proves six retained daily report/erasure jobs, three report summaries and three erasure rewrite reads, without proposal/slot access. Other scheduled jobs remain exercised."
+    },
+    {
+      "id": "W29.01-C2",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "evidence": "Actual modern/legacy scripts and final K2 assertions inspected: no autonomy mode/bounds editing or proposal action handlers/buttons, dormant settings displayed, historical statuses/evidence qualified, work highlight/badge removed and slot state labelled unavailable. Gamma saves preserve dormant autonomy, exploration and item controls. Final stable K2 passed5/5 selected with29 unrelated cases filtered. Corrected compiler, final scoped lint and whitespace exit0; seven index warnings occur in preserved code. Both lead documentation patches qualify current availability and preserve the unmet customer commitment. No validator/default reset or stored history rewrite."
+    },
+    {
+      "id": "W29.01-C3",
+      "verdict": "pass",
+      "claim": "source_confirmed",
+      "evidence": "Actual changed source,11 patches and complete worker proof reviewed independently. All312 official pins, original306 freeze pins and295 unowned baseline pins match; all11 admission patches reverse to recorded baseline hashes and reapply to current bytes in memory. Contract/artifact digests match. W21 legacy report renderer and report routes compare identically to admission bytes; reporting, erasure, schema and pure-helper dependencies remain unchanged. The added authentication dependency and fixture-rework history are qualified below. No further mutation caller or generic proposals-kind write route found."
+    }
+  ],
+  "checks": [
+    {
+      "id": "W29.01-K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/phase2.test.ts --maxWorkers=1 --minWorkers=1",
+      "source_digest": "850cff3df7a9edf0efe10e3df07b27473b6d0c9420dcfd75bddd01d68eb5bf65",
+      "source_pins": 306,
+      "session_id": 50590,
+      "first_observed_running_at": "2026-09-09T03:04:49.333Z",
+      "vitest_started_at_local": "23:05:18 America/New_York",
+      "completion_observed_at": "2026-09-09 03:06:23 UTC",
+      "exit_code": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/phase2.test.ts  (8 tests) 40ms\n\n Test Files  1 passed (1)\n      Tests  8 passed (8)\n   Start at  23:05:18\n   Duration  43.04s (transform 7.78s, setup 0ms, collect 15.88s, tests 40ms, environment 0ms, prepare 18.57s)\n\n",
+      "result": "pass",
+      "runtime": "Installed Node/Vitest1.6.1; actual exported functions/Hono/JWT, synthetic in-memory bindings. One reviewer execution.",
+      "timing_note": "first_observed_running_at and completion_observed_at are tool observations, not invented precise process start/end times. Vitest reported start03:05:18UTC and43.04s duration;40ms test execution is not a serving-latency or CPU claim."
+    }
+  ],
+  "inspected_worker_checks": [
+    {
+      "id": "W29.01-K1",
+      "attempt": 1,
+      "result": "pass",
+      "exit_code": 0,
+      "summary": "8/8; runtime/source dependencies unchanged by later legacy-fixture-only correction."
+    },
+    {
+      "id": "W29.01-K2",
+      "attempt": 1,
+      "result": "historical_superseded",
+      "exit_code": 0,
+      "summary": "5/5,29filtered;02:59:44.430Z–03:02:35.999Z overlapped03:01:56.415Z fixture correction, so not final-source acceptance."
+    },
+    {
+      "id": "W29.01-K2",
+      "attempt": 2,
+      "result": "pass",
+      "exit_code": 0,
+      "started_at": "2026-09-09T03:03:32.818Z",
+      "finished_at": "2026-09-09T03:08:27.364Z",
+      "summary": "Final stable source:5/5selected,29filtered;281.06s total,6.79s tests."
+    },
+    {
+      "id": "W29.01-K4",
+      "attempt": 1,
+      "result": "pass",
+      "exit_code": 0,
+      "summary": "Actual workerd scheduled fixture1/1selected,26filtered;34.47s total. Relevant entry-point source/fixture unchanged by legacy correction."
+    },
+    {
+      "id": "compiler",
+      "attempt": 1,
+      "result": "failed_superseded",
+      "exit_code": 2,
+      "summary": "Retained TS18046 at legacy fixture lines199/200 for unknown document/Event types."
+    },
+    {
+      "id": "compiler",
+      "attempt": 2,
+      "result": "pass",
+      "exit_code": 0,
+      "summary": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false; empty stdout/stderr."
+    },
+    {
+      "id": "scoped-eslint",
+      "attempt": 1,
+      "result": "historical_superseded",
+      "exit_code": 0,
+      "summary": "0errors,7existing index warnings; preserved before fixture correction."
+    },
+    {
+      "id": "scoped-eslint",
+      "attempt": 2,
+      "result": "pass",
+      "exit_code": 0,
+      "summary": "All seven owned TypeScript files;0errors,7existing index warnings. Browser scripts exercised by K2."
+    },
+    {
+      "id": "whitespace",
+      "attempt": 1,
+      "result": "historical_superseded",
+      "exit_code": 0,
+      "summary": "Owned nine-file git diff --check; empty output."
+    },
+    {
+      "id": "whitespace",
+      "attempt": 2,
+      "result": "pass",
+      "exit_code": 0,
+      "summary": "Final owned nine-file git diff --check; empty output."
+    }
+  ],
+  "fixture_rework": {
+    "at": "2026-09-09T03:14:13.818Z",
+    "path": "src/console/learning.render.test.ts",
+    "reconstructedInitialSha256": "4d28b5c703ced3c4edae36fefeac89ca5f16d30757306d506b96cd66df53c4ea",
+    "recordedInitialSha256": "4d28b5c703ced3c4edae36fefeac89ca5f16d30757306d506b96cd66df53c4ea",
+    "matches": true,
+    "actualRework": "Index: src/console/learning.render.test.ts\n===================================================================\n--- src/console/learning.render.test.ts\n+++ src/console/learning.render.test.ts\n@@ -195,10 +195,11 @@\n       for (const status of ['proposed', 'applied', 'rejected']) expect(c.$('proposals').textContent).toContain('stored status (unverified): ' + status);\n       expect(c.$('proposals').querySelectorAll('button')).toHaveLength(0);\n       for (const label of ['K, the blend constant', 'Minimum events', 'Ref', 'Budget']) expect(global).toContain(label);\n       expect(c.$('grid-count').textContent).toContain('reward purchase weighed by revenue');\n-      const trust = c.dom.window.document.querySelector('#dials-slot input') as unknown as { value: string; dispatchEvent: (event: unknown) => void };\n-      trust.value = '1'; trust.dispatchEvent(new c.dom.window.Event('input', { bubbles: true }));\n+      const browser = c.dom.window as unknown as { document: { querySelector: (selector: string) => { value: string; dispatchEvent: (event: unknown) => void } }; Event: new (type: string, options: object) => unknown };\n+      const trust = browser.document.querySelector('#dials-slot input');\n+      trust.value = '1'; trust.dispatchEvent(new browser.Event('input', { bubbles: true }));\n       await new Promise(resolve => setTimeout(resolve, 450)); await c.settle();\n       c.$('save').click(); await c.settle();\n       expect(c.saved).toHaveLength(1);\n       const saved = c.saved[0].document as typeof learnOn;\n",
+    "qualification": "Exact initial source reconstructed only in memory from final source and root's actually observed pre-correction lines, including its inline cast. Its hash matches the retained initial artifact. The browser alias introduces emitted JavaScript, so the first overlapping browser pass remains historical and exact final K2 re-execution supplies acceptance. No application source changed; no reviewer K2/compiler/lint/whitespace rerun."
+  },
+  "resolved_review_observations": [
+    {
+      "issue": "Original source freeze omitted actual JWT dependency src/auth/signingConfig.mjs.",
+      "resolution": "Official artifact adds SHA82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084 with root capture03:07:36.925Z; reviewer independently read same bytes03:07:21.234Z and verified matching current/retained W02.02 artifacte96e57fa6b2fa46bbe92e7caac450c70e6d5340b500fbd8d91eb4f9b5960202b pin. This is unchanged dependency continuity, not renewed W02 acceptance. Original306pin freeze was not rewritten or backdated."
+    }
+  ],
+  "findings": [],
+  "preparation_issues": [
+    "Reviewer initially launched duplicate board check&&status under AGENTS.md before root instructed reuse. Cancelled only own PIDs7422/7418; session30745 exit143 with no output; status never ran. Root VALID475 check/status reused; no reviewer board pass claimed.",
+    "Several read/search outputs were truncated or encountered missing optional paths; required instructions and affected source sections were subsequently read directly. No writes/test results depended on absent paths.",
+    "First in-memory reconstruction of historical fixture rework omitted the original inline cast and did not match the recorded initial hash. Root supplied the actually observed original lines; corrected reconstruction matched at03:14:13.818Z. Neither reconstruction changed files."
+  ],
+  "limitations": [
+    "Withdrawal only. Full W29 scoped role/page authority, current policy/age/pin/step/evidence gates, transactional expected revisions, idempotent publication/receipt recovery, noise/high-cardinality evaluation and validated harm controls remain open. W11/W21/W32 obligations remain separate.",
+    "Historical proposed/applied/rejected statuses are retained unverified; existing last200 validation and40/12 presentation limits, malformed/read-failure fallback and historical repair remain unremedied. Authenticated reads do not establish customer/brand authorization acceptance.",
+    "Legacy assisted/autonomous values remain schema-valid but dormant; generic manual tuning/exploration/item controls retain their own open obligations. This does not disable learning ingestion or prove gamma-zero collection safety.",
+    "Independent K1 is local Node synthetic proof; worker K2 uses JSDOM and K4 uses synthetic actual workerd scheduling. No deployed artifact/resource attestation, customer data, production workload, relevance/latency/scientific/business-lift or contractual acceptance.",
+    "W21 implemented report withdrawal and erasure compatibility are preserved by exact delta/dependency review. Historical whole-source acceptance remains qualified; no complete W21/erasure suite or unrelated test rerun was performed.",
+    "No full W-package/finding/gate/release acceptance. Reversing the owned patch would restore unsafe autonomy and requires lead review; no rollback/deploy/cloud/credential/customer-data/commit/push operation occurred."
+  ],
+  "handoff": {
+    "status": "ready_for_lead_disposition",
+    "next_action": "Lead inspect this review and exact artifact, then record bounded task disposition, tracker/journal and RESUME. No reviewer source writes or pending commands; only review.json created."
+  }
+}

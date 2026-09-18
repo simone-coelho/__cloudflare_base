@@ -1,0 +1,188 @@
+{
+  "at": "2026-09-13T04:32:59Z",
+  "task_id": "W38.02",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "899e0bafea407f510c2e577f7fe8504b5b6e540340c32dd792b36f096830d7b0",
+  "contract_digest": "028d1e7b2371c445cbab8149ebd755611f5a6699ff8f9fe1118a9074363a71e7",
+  "verdict": "PASS",
+  "summary": "Independent source and fixed-selection verification passes for bounded legacy cache residency, identity, private snapshots and local refill fences. Lead disposition remains separate.",
+  "criteria": [
+    {
+      "id": "W38.02-C1",
+      "verdict": "PASS",
+      "evidence": "Actual two-file source inspection and independent 17-case selection confirm the global 32-entry/8 MiB charged-serialization LRU, including nulls, actual binding/kind/validator/scope isolation and removal accounting. Mutable values are copied into private snapshots and copied on hits; fully frozen Reflex values retain the fast path with fresh revision wrappers. Unsupported, oversized and partially frozen valid values bypass caching rather than become fallback. The final mutable-array nonwritable-length guard preserves unsupported descriptor semantics. Pressure fixture admits five 1,740,382-byte candidates and retains four; mutation and hot-hit assertions use the actual store and Reflex validator."
+    },
+    {
+      "id": "W38.02-C2",
+      "verdict": "PASS",
+      "evidence": "Logical and elapsed read-start age checks, wall-only completion expiry, bounded epoch/order state and write-start/finally invalidation preserve newer residents across reset, success, failed/lost current acknowledgement and index failure. Later stale-revision/null completions cannot replace a valid higher revision; original callers still receive their own read result. Binding-getter failures stay inside fallback handling. Selected real store/publication/Reflex controls cover fallback retry, write/patch/rollback/history/legacy envelopes, no hit I/O/JSON parsing/revalidation and unchanged content authority."
+    },
+    {
+      "id": "W38.02-C3",
+      "verdict": "PASS",
+      "evidence": "Both final deltas match the personally inspected candidate and reconstruct exactly in both directions. All 32 artifact pins and 24 protected pins match before and after the single independent K3 invocation. The unchanged admitted selector actually passes 17, with 61 unselected; the pre-runtime fixed16 count-label correction is explicitly retained, not additional test scope. Full final worker K2 captures prove compiler and whitespace success with exactly the admitted inherited coerce scope warning. Prior overlapping byte proof remains prospectively qualified, not silently reapproved."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W38.02/plan.md",
+      "sha256": "04a439782cb9360b92b18ba01730a7e1cc61eaf6c9e3e73d7a4615f0f96f5105"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W38.02/artifact.json",
+      "sha256": "232aa07e7f5524eaa24fffda04ca2e01f2f1e6726323d6b2023b33a324c6ace6"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W38.02/worker.json",
+      "sha256": "9fba0b389282a44f5bb613ca7ff5e1b837d3f04bc9ff7a57a32d799e097934dc"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/reflex/configStore.test.ts -t 'W38.02|W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots|versions, attributes|rolls forward on rollback|serves the fallback|merges nested objects instead|accepts the legacy|writes both field names|keeps every revision body|serves repeat reads from the isolate cache|re-reads once the TTL' --maxWorkers=1 --minWorkers=1",
+    "session_id": 90659,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "fba3d6",
+        "wall_time_seconds": 1.001385297,
+        "session_id": 90659,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "99eef7",
+        "wall_time_seconds": 0.000002255,
+        "exit_code": 0,
+        "original_token_count": 573,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 bounds global charged residency with LRU expiry and binding-scope isolation\nW38.01 cache residency {\"entryLimit\":32,\"byteLimit\":8388608,\"countPressure\":{\"inserted\":33,\"retainedHits\":32,\"evictedMisses\":1},\"bytePressure\":{\"inserted\":5,\"retainedHits\":4,\"evictedMisses\":1,\"charges\":[1740886,1740886,1740886,1740886,1740886],\"insertedCharge\":8704430,\"retainedCharge\":6963544},\"measuredHeap\":false}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 fences delayed reads across local writes resets unknown acknowledgements and newer residents\nW38.01 cache fences {\"beforeWriteOrResetCases\":4,\"duringWriteCases\":1,\"newerResidentCases\":2,\"committedNoPutCases\":3,\"originalInflightRevisionPreserved\":true}\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 bounds legacy residency and isolates binding kind hooks and caller-owned values\nW38.02 charged residency {\"limit\":8388608,\"entries\":32,\"candidate_bytes\":[1740382,1740382,1740382,1740382,1740382],\"candidate_total\":8701910,\"retained_large_hits\":4}\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 fences both clocks resets partial writes and older delayed cache fills\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > serves the fallback rather than throwing when KV is down\n[config] read failed, serving fallback\n\n ✓ src/config/versionedStore.test.ts  (26 tests | 12 skipped) 2554ms\n ✓ src/reflex/configStore.test.ts  (52 tests | 49 skipped) 4ms\n\n Test Files  2 passed (2)\n      Tests  17 passed | 61 skipped (78)\n   Start at  00:32:32\n   Duration  13.13s (transform 2.20s, setup 0ms, collect 5.73s, tests 2.56s, environment 0ms, prepare 3.52s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 17,
+      "unselected": 61,
+      "total": 78,
+      "files": 2,
+      "new_grouped_cases": 2,
+      "retained_selected_cases": 15,
+      "duration_seconds": 13.13,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 32,
+    "source_pins": 26,
+    "protected_pins": 24,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": [
+      {
+        "path": "src/config/versionedStore.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      },
+      {
+        "path": "src/config/versionedStore.test.ts",
+        "before": true,
+        "after": true,
+        "forward": true,
+        "reverse": true
+      }
+    ],
+    "manifest_sha256": "232aa07e7f5524eaa24fffda04ca2e01f2f1e6726323d6b2023b33a324c6ace6",
+    "before": {
+      "at": "2026-09-13T04:32:18.233Z",
+      "capture_id": "7cae22",
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-13T04:32:59.626Z",
+      "capture_id": "3e078a",
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_before": {
+      "chunk_id": "83bd80",
+      "wall_time_seconds": 0.042137716,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T04:32:18.514Z\",\"task\":\"W38.02\",\"state\":\"verification\",\"contract_digest\":\"028d1e7b2371c445cbab8149ebd755611f5a6699ff8f9fe1118a9074363a71e7\",\"artifact_digest\":\"899e0bafea407f510c2e577f7fe8504b5b6e540340c32dd792b36f096830d7b0\"}\n"
+    },
+    "contract_after": {
+      "chunk_id": "fad3cf",
+      "wall_time_seconds": 0.020276988,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T04:32:59.885Z\",\"task\":\"W38.02\",\"state\":\"verification\",\"contract_digest\":\"028d1e7b2371c445cbab8149ebd755611f5a6699ff8f9fe1118a9074363a71e7\",\"artifact_digest\":\"899e0bafea407f510c2e577f7fe8504b5b6e540340c32dd792b36f096830d7b0\"}\n"
+    },
+    "source_stopped_at": "2026-09-13T04:28:10.642Z",
+    "frozen_at": "2026-09-13T04:30:04.407Z",
+    "inspection": {
+      "plan_and_admission": "491b16; current full task and artifact acbe46",
+      "actual_source": "Full two-file baseline-to-candidate read bd683e, after preliminary a03948. Frozen hashes remain 906928a653f79dd395c03a30b1bd6b0ca59fdab62204adb98e085664dfb5f0b2 and 178aae18f1634b6eb641924638a22c8be4667ae12b9db0473b8a7ebbc1b6453a; exact frozen deltas independently reconstructed before/after.",
+      "worker_and_freeze": "2a0697: complete worker record, all execution history and raw runtime/static/STOP captures, source-freeze and direct whitespace proof.",
+      "dependencies": "Reused personally read governance/full W38 and linked F32/F08/N07, caller/validator source inspections f19c41/0dbd8b/3f977c, and root entry VALID1392. Protected publication implementation and selected W11/W38.01 controls preserved."
+    }
+  },
+  "static_reuse": {
+    "worker_record": "docs/remediation/evidence/W38.02/worker.json",
+    "command_capture": "command_captures.static1",
+    "session_id": 22084,
+    "capture_ids": [
+      "b9141d",
+      "a822c5",
+      "5288ad",
+      "d2f8c7"
+    ],
+    "inspection_capture": "2a0697",
+    "started_at": "2026-09-13 04:27:20 UTC",
+    "finished_at": "2026-09-13 04:27:59 UTC",
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 1,
+    "new_warnings": 0,
+    "warning": "src/config/versionedStore.ts:304:57 'scope' is defined but never used (@typescript-eslint/no-unused-vars), inherited coerce warning.",
+    "whitespace": "Final scoped git diff --check passed; root source-freeze direct check found no trailing whitespace in either owned file.",
+    "reviewer_reruns": 0
+  },
+  "measurements": {
+    "source": "Independent runtime capture 99eef7",
+    "entry_limit": 32,
+    "charged_byte_limit": 8388608,
+    "candidate_bytes": [
+      1740382,
+      1740382,
+      1740382,
+      1740382,
+      1740382
+    ],
+    "candidate_total": 8701910,
+    "retained_large_hits": 4,
+    "retained_large_charge": 6961528,
+    "qualification": "Synthetic KV and actual store hit/miss assertions. Charges cover JSON revision, JSON [kind name,scope] and 256-byte allowance; not measured JS heap or native capacity. Retained W38.01 outputs are existing selected controls."
+  },
+  "retained_failures_and_qualifications": [
+    "No executed worker runtime/compiler/static failure or post-runtime source rework. Earlier source-only corrections to completion clocks, binding-getter fallback, resident revision/null ordering, nested spy setup and mutable-array length bypass are retained in worker execution_history; do not mislabel them as passing prior runtime evidence.",
+    "Baseline max-warnings 0 exited 1 for one inherited coerce scope warning; admission explicitly allows only that warning. Final K2 uses max-warnings 1 and has no new warning.",
+    "The fixed16 label undercounted the unchanged regex by one existing Reflex history/diffing case. Root detected this before execution and artifact configuration records the correction. Both worker and reviewer report actual 17/61, without changing the command or adding groups.",
+    "W31.02/W38.01 historical overlapping manifest proof is retained with prospective revalidation qualification. This review preserves their implementation and selected affected controls; it does not rerun unrelated reporting or reapprove every old artifact."
+  ],
+  "limitations": [
+    "Independent legacy 32-entry/8 MiB charged-serialization budget, separate from the content cache budget. It does not bound total heap, referenced binding internals, concurrent miss allocation or provider JSON parsing/validation.",
+    "Mutable hits incur structuredClone work and transient memory, not parse/validation/I/O. Depth, node, descriptor, cycle, exotic and byte admission guards are uncached-return safeguards, not rejection of otherwise valid documents. No native or whole-path latency/SLO measurement.",
+    "Expiry is opportunistic. Logical plus wall checks are local safeguards; original in-flight reads may return their original value/null. Global epochs conservatively suppress unrelated pending fills while retaining unrelated residents.",
+    "Remote KV/isolate staleness and revision/current/index concurrency or partial-write atomicity remain unresolved. The cache is not transactional authority or a repair of W35.",
+    "Existing fallback identity, stored validators, duplicate envelope compatibility, immutable history and content publication semantics remain. Full W38/F32/F08/N07, retention/cutover, ranking/candidate/model/customer and release acceptance remain open.",
+    "Reviewer wrote only this review record; no source/governance changes, extra suite/static/board replay, delegation, external operation or emitted build."
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "task_id": "W30.04",
+  "at": "2026-09-15T08:10:47.799Z",
+  "journal_seq": 1790,
+  "artifact_digest": "06ebd99f0713be56d6a44856b866baba5defc76ac1eb7346a8ea6e10603e3c43",
+  "contract_digest": "213c7d71f69177952e8382d47fce99bca9730d77a6a84a64ca1056e1993471f0",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W30.04/acceptance.md",
+    "sha256": "02591d5d33cbf8f1d761e13c3b7abcdc8c6ee75b6a24046bba4b392d6fed00aa"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W30.04/review.json",
+    "sha256": "815315b2d3cf17d56c4146b910c9b7aa0295e736bf0a2ff4cecbfa194a07ba44"
+  },
+  "root_review_capture": "8cc79f",
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "initial": {
+      "chunk_id": "1d8916",
+      "wall_time_seconds": 1.001176485,
+      "session_id": 3278,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "5a5da5",
+        "wall_time_seconds": 5.000588178,
+        "session_id": 3278,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "845dc5",
+        "wall_time_seconds": 5.0009237,
+        "session_id": 3278,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "6e5f61",
+        "wall_time_seconds": 10.001584026,
+        "session_id": 3278,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "cfd2ea",
+        "wall_time_seconds": 9.174079382,
+        "exit_code": 0,
+        "original_token_count": 654,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=123, closed=1; evidence records=365\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.04 — Continue W30 late/mutable-event remediation by concrete processing scenario, not a universal event-age cutoff. Preserve accepted interrupted-work recovery. Read the existing recorded late-event scenario decision and actual ledger/hourly/online/lifecycle sources, identify the next coherent in-scope fix using retained input and the lifecycle/configuration actually present; do not invent an experiment lifecycle. Distinguish receiving a valid delayed event from repairing already-completed aggregates and updating current affinity; do not auto-clear changed pending state or invent extra personal retention. Root supplies concrete options for any D04/D06/W24 business/retention decision. Full dependent-hour/historical reconstruction, customer/SLO and release remain open; no external operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 25410\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=123, closed=1; evidence records=365\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.04 — Continue W30 late/mutable-event remediation by concrete processing scenario, not a universal event-age cutoff. Preserve accepted interrupted-work recovery. Read the existing recorded late-event scenario decision and actual ledger/hourly/online/lifecycle sources, identify the next coherent in-scope fix using retained input and the lifecycle/configuration actually present; do not invent an experiment lifecycle. Distinguish receiving a valid delayed event from repairing already-completed aggregates and updating current affinity; do not auto-clear changed pending state or invent extra personal retention. Root supplies concrete options for any D04/D06/W24 business/retention decision. Full dependent-hour/historical reconstruction, customer/SLO and release remain open; no external operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 25410\n"
+      }
+    ],
+    "result": "VALID",
+    "notes_each": 25410,
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;45 exact pins rechecked, no worker/reviewer commands running. Only final handoff metadata/checkpoint updated after validated acceptance state. Tracker consistency is not engine/customer/SLO/release approval.",
+  "next_action": "Continue W30 late/mutable-event remediation by concrete processing scenario, not a universal event-age cutoff. Preserve accepted interrupted-work recovery. Read the existing recorded late-event scenario decision and actual ledger/hourly/online/lifecycle sources, identify the next coherent in-scope fix using retained input and the lifecycle/configuration actually present; do not invent an experiment lifecycle. Distinguish receiving a valid delayed event from repairing already-completed aggregates and updating current affinity; do not auto-clear changed pending state or invent extra personal retention. Root supplies concrete options for any D04/D06/W24 business/retention decision. Full dependent-hour/historical reconstruction, customer/SLO and release remain open; no external operations.",
+  "limitations": "Identical-basis interrupted-work recovery only. Completed same/older-hour recomputation still has surviving-history limits. Pending source/config/erasure conflicts require separate recovery; no event-age cutoff, new personal history/retention, generation reset, arbitrary late/mutable/higher-cap dependent rebuild, cross-store erasure atomicity, old-binary coordination, day-report global CAS, online/export parity or customer/SLO/release claim. No install/build/commit/push/deploy/provision/cloud/credential/customer-data/destructive/external operations. Fixed35 is local synthetic-storage correctness, not native/deployed R2 or latency/capacity SLO. Final same-byte compiler/lint/whitespace reused by the independent reviewer. Worker fixture and compiler failures remain recorded; no required failure treated as pass."
+}

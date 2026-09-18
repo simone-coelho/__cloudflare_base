@@ -1,0 +1,149 @@
+{
+  "task_id": "W22.05",
+  "actor_id": "w2205-reviewer",
+  "run_id": "/root/late_hour_next_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15 15:28:57 UTC",
+  "verdict": "pass",
+  "artifact_digest": "f614e13e56b0ece96e278bd6e7240fd9e379d80f11947e8ac5c49929ff7cdaa6",
+  "contract_digest": "b5871d3e160137093f0291862962022418b1949a67e3bd6b0c0521fb1d55cb27",
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W22.05/plan.md",
+      "sha256": "c50df6aaa4401b8dbc3e100e359c7e87796eb3960caa36a70a73d80376a51818"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W22.05/baseline.json",
+      "sha256": "d555a14b6d77c2b4461b2c4725e66f7d3b441edc5a157c9d5f94a4e22e1de97b"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W22.05/worker.json",
+      "sha256": "1518139bc2f1fdb3cf73e2696d64f8fb7e7b1efeddc4a7effa353fc8dbc741b8"
+    },
+    "freeze": {
+      "path": "docs/remediation/evidence/W22.05/source-freeze.json",
+      "sha256": "9db891ae56e1bdcd014e7365c6022fb6c1a6bdc906a38e4025f741a615a8b290"
+    }
+  },
+  "resume": {
+    "context_survived": true,
+    "prior_independent_runtime": "No independent runtime was started or retained before the system restart; prior work was the prospective plan and actual candidate source review.",
+    "runtime_go": "Lead reported resumed board check/status VALID1797, both exit0/drained, session24049; captures d953f8/be00df/90de20/cfa449/3f0d40,25552 historical notes each. Independent runtime below started only after this GO."
+  },
+  "source_review": {
+    "mode": "Independent complete baseline-relative three-file deltas; decoded each retained gzip original and verified its baseline hash before comparing actual source.",
+    "source_reading_reused": "Pre-restart source review reused only after all frozen source/evidence/dependency bytes were independently checked unchanged. Worker prose was not substituted for actual source inspection.",
+    "findings": [],
+    "scope": "One validator import/check before consent/state/context, two Date.now overwrite removals, exactly76 added test lines in the existing W05.05 block, and one existing API Eventing paragraph. Existing original fixtures/helpers unchanged.",
+    "files": [
+      {
+        "path": "src/routes/tracking.ts",
+        "sha256": "60f4a2b0a31de73fd532da2888478ee0f54887e5af2075495938a50d62b38da0"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "56877df9d654bdaf0c0d596b7146b157f0f83af2bf76d820c618f04cfe5c1559"
+      },
+      {
+        "path": "docs/api/01-rest-endpoints.md",
+        "sha256": "b3d5db0193a0733b583479e8159c76e2f545cc52b1e3816544e64fbb3369db6b"
+      }
+    ]
+  },
+  "criteria": {
+    "W22.05-C1": "PASS: actual source plus independent runtime preserve required occurrence time/eventId through both hosts, single success response, configured destination and nested retry/event payloads. Old, epoch, repeated, out-of-order and maximum valid Date values stay exact while separate queue clocks change.",
+    "W22.05-C2": "PASS: invalid required/type/numeric/Date representations and raw parsed positive/negative Infinity refuse single requests and a late batch member with400 before observed state reads/writes, restrictive consent persistence, context, cache, dispatch or queues. Existing ownership/refusal/expiry/failure controls pass. Validator introduces no age/skew comparison.",
+    "W22.05-C3": "PASS: exactly6 selected independently passed once on frozen artifact,74 deliberately unselected. Complete deltas and assertions inspected; required same-byte worker compiler/lint/whitespace evidence independently verified and reused. No broader suite or static rerun."
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/telemetry.boundary.test.ts -t 'W05[.]05 owned generic tracking|batch errors keep per-event' --maxWorkers=1 --minWorkers=1",
+    "workdir": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base",
+    "started_at": "2026-09-15 15:26:03 UTC",
+    "initial": {
+      "chunk_id": "71e569",
+      "wall_time_seconds": 1.001829699,
+      "session_id": 12578,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "d42d6e",
+        "wall_time_seconds": 0.000002011,
+        "exit_code": 0,
+        "original_token_count": 4181,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\nFailed to dispatch event\nFailed to dispatch event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\nFailed to dispatch event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nFailed to dispatch event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > preserves occurrence time for delayed, repeated and out-of-order events while retry/event envelopes use receipt time\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > refuses invalid occurrence times before owned state, consent hints, context or dispatch for single and whole batches\nUsing mock Optimizely client (no SDK key configured)\n\n ✓ src/routes/realtime.sdkContract.test.ts  (51 tests | 46 skipped) 837ms\n ✓ src/telemetry.boundary.test.ts  (29 tests | 28 skipped) 13ms\n\n Test Files  2 passed (2)\n      Tests  6 passed | 74 skipped (80)\n   Start at  11:26:10\n   Duration  34.65s (transform 9.38s, setup 0ms, collect 17.80s, tests 850ms, environment 0ms, prepare 12.19s)\n\n"
+      }
+    ],
+    "drained": true,
+    "completed_at": "2026-09-15 15:27:43 UTC",
+    "exit_code": 0,
+    "result": "pass"
+  },
+  "static_reuse": {
+    "worker_attempt": "static_candidate1_retry",
+    "exit_code": 0,
+    "drained": true,
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/routes/tracking.ts src/routes/realtime.sdkContract.test.ts --max-warnings 94 && git diff --check -- src/routes/tracking.ts src/routes/realtime.sdkContract.test.ts docs/api/01-rest-endpoints.md",
+    "captures": "aa2ddc/7d36d0/dd39e2; inspected in pinned worker.json",
+    "verification": "Independently verified every worker attempt capture and combined-output SHA256 (32ae1f). Remapped actual final stylish warnings to current source text and compared all94 signatures with the pinned baseline; same messages/rules/source lines,0errors and no new warning signatures (33dfe6). All38 artifact pins matched before and after independent runtime.",
+    "repeated": false
+  },
+  "preserved_failures": [
+    {
+      "source": "worker.json static_candidate1",
+      "result": "FAILED: Node uv_cwd ENOENT exit1/drained. No compiler/lint/whitespace stage credited. Worker diagnosed explicit cwd and retried the exact static chain successfully on unchanged bytes.",
+      "resolution": "static_candidate1_retry replaces failed static proof; original failure remains retained."
+    },
+    {
+      "source": "baseline.json lint_baseline",
+      "result": "Pre-admission maxWarnings0 exit1 with0errors94 inherited warnings. It remains a failed diagnostic; admitted final max94 requires independently verified unchanged signatures."
+    }
+  ],
+  "pins": {
+    "before": {
+      "cmd": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=x=>createHash(\"sha256\").update(x).digest(\"hex\"),read=p=>JSON.parse(fs.readFileSync(p,\"utf8\"));const b=read(\"docs/remediation/design/W22.05/baseline.json\"),e=read(\"docs/remediation/evidence/W22.05/register-e2.json\").after,w=read(\"docs/remediation/evidence/W22.05/worker.json\");for(const p of [...e.artifact_basis.files,...b.accepted_dependencies.flatMap(a=>[...a.files,a.review])])if(hash(fs.readFileSync(p.path))!==p.sha256)throw Error(\"pin mismatch:\"+p.path);const final=w.attempts.find(a=>a.id===\"static_candidate1_retry\"),out=[final.initial,...final.polls].map(c=>c.output).join(\"\"),path=\"src/routes/realtime.sdkContract.test.ts\",lines=fs.readFileSync(path,\"utf8\").split(\"\\n\"),warnings=[];for(const line of out.split(\"\\n\")){const m=/^\\s*(\\d+):(\\d+)\\s+warning\\s+(.+?)\\s{2,}(\\S+)\\s*$/.exec(line);if(m)warnings.push({path,message:m[3],rule:m[4],source:lines[Number(m[1])-1].trim()});}const normalized=a=>a.map(({path,message,rule,source})=>JSON.stringify({path,message,rule,source})).sort();if(warnings.length!==94||JSON.stringify(normalized(warnings))!==JSON.stringify(normalized(b.lint_warnings)))throw Error(\"lint signature mismatch\");console.log(JSON.stringify({at:new Date().toISOString(),artifact:e.artifact_digest,contract:e.artifact_basis.contract_digest,artifact_pins:e.artifact_basis.files.length,protected:b.protected.length,W3004:b.accepted_dependencies[0].files.length,W3004_review:true,worker_capture_hashes_verified:true,static_reused:final.id,static_exit:final.exit_code,baseline_warnings:b.lint_warnings.length,final_warnings:warnings.length,warning_source_signatures_equal:true,initial_static_failure:\"uv_cwd ENOENT exit1 retained; no stage credited\",prior_independent_runtime:\"none retained or started before restart\",review_exists:fs.existsSync(\"docs/remediation/evidence/W22.05/review.json\")}));'",
+      "chunk_id": "33dfe6",
+      "wall_time_seconds": 0.202117698,
+      "exit_code": 0,
+      "original_token_count": 150,
+      "output": "{\"at\":\"2026-09-15T15:25:25.666Z\",\"artifact\":\"f614e13e56b0ece96e278bd6e7240fd9e379d80f11947e8ac5c49929ff7cdaa6\",\"contract\":\"b5871d3e160137093f0291862962022418b1949a67e3bd6b0c0521fb1d55cb27\",\"artifact_pins\":38,\"protected\":29,\"W3004\":45,\"W3004_review\":true,\"worker_capture_hashes_verified\":true,\"static_reused\":\"static_candidate1_retry\",\"static_exit\":0,\"baseline_warnings\":94,\"final_warnings\":94,\"warning_source_signatures_equal\":true,\"initial_static_failure\":\"uv_cwd ENOENT exit1 retained; no stage credited\",\"prior_independent_runtime\":\"none retained or started before restart\",\"review_exists\":false}\n"
+    },
+    "after": {
+      "cmd": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=x=>createHash(\"sha256\").update(x).digest(\"hex\"),read=p=>JSON.parse(fs.readFileSync(p,\"utf8\"));const b=read(\"docs/remediation/design/W22.05/baseline.json\"),e=read(\"docs/remediation/evidence/W22.05/register-e2.json\").after;for(const p of [...e.artifact_basis.files,...b.accepted_dependencies.flatMap(a=>[...a.files,a.review])])if(hash(fs.readFileSync(p.path))!==p.sha256)throw Error(\"pin mismatch:\"+p.path);console.log(JSON.stringify({at:new Date().toISOString(),artifact:e.artifact_digest,contract:e.artifact_basis.contract_digest,artifact_pins:e.artifact_basis.files.length,protected:b.protected.length,W3004:b.accepted_dependencies[0].files.length,W3004_review:true,all_unchanged:true,review_exists:fs.existsSync(\"docs/remediation/evidence/W22.05/review.json\")}));'",
+      "chunk_id": "08823a",
+      "wall_time_seconds": 0.087855567,
+      "exit_code": 0,
+      "original_token_count": 75,
+      "output": "{\"at\":\"2026-09-15T15:27:43.662Z\",\"artifact\":\"f614e13e56b0ece96e278bd6e7240fd9e379d80f11947e8ac5c49929ff7cdaa6\",\"contract\":\"b5871d3e160137093f0291862962022418b1949a67e3bd6b0c0521fb1d55cb27\",\"artifact_pins\":38,\"protected\":29,\"W3004\":45,\"W3004_review\":true,\"all_unchanged\":true,\"review_exists\":false}\n"
+    }
+  },
+  "measurement": {
+    "selected_passed": 6,
+    "deliberately_unselected": 74,
+    "test_files": 2,
+    "new_grouped_cases": 2,
+    "retained_original_selected": 4,
+    "vitest_duration_seconds": 34.65,
+    "vitest_test_time_ms": 850,
+    "runtime": "Installed Node/Vitest1.6.1; real Hono tracking routes, EventDispatcher, SessionManager and ShopperReflex modules with synthetic state and intercepted fetch/queues.",
+    "limitations": "Functional local fixture evidence only; no latency/throughput/SLO or deployed-runtime claim. Synthetic503 destination exercises retry construction, not real external delivery. Change adds no I/O."
+  },
+  "limitations": [
+    "Generic tracking is separate from the realtime decision/outcome ledger; no historical/completed-hour reconstruction or current-affinity ordering is established.",
+    "Timestamp representation validation is not authenticity/fraud protection, lifecycle eligibility, age/skew policy, SDK buffering, delivery/idempotency or automatic retry execution.",
+    "No new subject-history retention/reset, experiment/customer/scientific acceptance, cloud/resource mutation, credentials, customer-data operation, deployment, commit or release authority.",
+    "W30.04 all45 accepted pins and its review remain unchanged. Worker and reviewer implementations/runs are distinct; lead acceptance remains separate."
+  ],
+  "disposition": {
+    "status": "independently_verified",
+    "source_edits": 0,
+    "evidence_files_written": [
+      "docs/remediation/evidence/W22.05/review.json"
+    ],
+    "running_commands": [],
+    "lead_acceptance": "pending",
+    "next_action": "Lead inspect this complete review and evidence, record bounded disposition and durable handoff; do not promote full W22/W30/finding/customer/release acceptance."
+  }
+}

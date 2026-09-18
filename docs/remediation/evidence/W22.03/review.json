@@ -1,0 +1,175 @@
+{
+  "task_id": "W22.03",
+  "at": "2026-09-14T14:58:14.850Z",
+  "verdict": "pass",
+  "actor": {
+    "actor_id": "w2203-reviewer",
+    "run_id": "/root/w2203_review",
+    "role": "independent_reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "independent_of": "/root/w2203_worker",
+    "subdelegation": false
+  },
+  "artifact_digest": "36044fb48f36dc7aacdd256654c726954c85cc125f4cf8ad72f5259c3cd99373",
+  "contract_digest": "5b7a8662e20d87e9771e6090773912524f389e84d7b3785e70525d5ebe88a39e",
+  "plan": {
+    "path": "docs/remediation/design/W22.03/plan-rework-1.md",
+    "sha256": "223fecd6ec0654388708ab041f8190ee85a181d392c774c91aa801cd49142642",
+    "verdict": "pass"
+  },
+  "criteria": [
+    {
+      "id": "W22.03-C1",
+      "verdict": "pass",
+      "rationale": "Actual baseline-relative writer/delivery changes and independent fixed9 show complete observed candidate listing and selected-row validation before returning the first target or null. Full logical equality ignores only validated top-level transport provenance; nested/array/payload changes, malformed carriers, scope/range violations, late missing/corrupt inputs and repeated legacy outcomes refuse. Exact decision/nonced outcome retries and valid strict product-sort records remain usable."
+    },
+    {
+      "id": "W22.03-C2",
+      "verdict": "pass",
+      "rationale": "Source and grouped runtime exercise 800/801 candidates, physical-key echoes, listing/line/comparison work, exact 16 MiB and cumulative UTF-8 bounds, fatal native decoding, awaited cancellation and lock release. Enforced ledger/replay conflicts yield sanitized no-store 503 with admission/result audit and no returned subject, KV/ring/replay dependency read or ledger mutation. Existing authorization, erasure and actual replay controls pass."
+    },
+    {
+      "id": "W22.03-C3",
+      "verdict": "pass",
+      "rationale": "Shared extraction retains report-owned row shape, tenant rules, counters, limits and error metadata; raw/hourly identity and bounded-body controls pass. Actual five deltas match pinned baseline/final bytes, all 50 artifact pins match before/after runtime, and final full compiler/scoped lint/whitespace evidence is reused. API and task explicitly retain observed-inventory, physical-budget, text-adapter and whole-pipeline limitations."
+    }
+  ],
+  "source_review": {
+    "baseline": {
+      "path": "docs/remediation/design/W22.03/baseline.json",
+      "sha256": "827f8cf9cd497533f317635d69f1b5632f91702992a437cac5c2dab5ac85d3de"
+    },
+    "freeze": {
+      "path": "docs/remediation/evidence/W22.03/source-freeze.json",
+      "sha256": "9473a1f199fa907ae6d584ed53704ed7a52e1604cb2812e84920e13fdebeaf67"
+    },
+    "deltas": {
+      "path": "docs/remediation/evidence/W22.03/source-deltas.json",
+      "sha256": "c34adf6acdbd6bb32e5843d2d92b2efe3a97f11241bf49293faeafb84fcb54c6"
+    },
+    "owned_files": 5,
+    "protected_files": 35,
+    "manifest_pins": 50,
+    "pin_mismatches": [],
+    "baseline_and_delta_verification": "All five retained gzip snapshots hash to their recorded baseline; all five retained patches apply in memory to exactly the final frozen files. Actual deltas were read, including final incremental line scan and approved fixture correction.",
+    "architecture": "delivery.ts imports existing low-level record/nonce semantics only; no writer-to-report runtime dependency. report.ts retains its public rawText wrapper and adapter-owned behavior. Lookup itself writes no state; unchanged routes retain authentication, subject auditing and tombstone checks.",
+    "fixture_correction": "Read exact approval 96ac1a8c7ec94861d523f3006dac39be8b32d9704dfde6158b352eb8ee836ff7 and actual W27.03 delta. Protected versionedStore.legacyJson requires get(key, stream); fixture now returns provider null or a fresh Response body and forwards/asserts stream mode. All existing replay success, absence, revision mismatch, sanitized failure, auth, audit and no-write assertions remain.",
+    "before_capture": {
+      "chunk_id": "229473",
+      "wall_time_seconds": 1.287964606,
+      "exit_code": 0,
+      "original_token_count": 549,
+      "output": "{\n  \"artifact\": \"36044fb48f36dc7aacdd256654c726954c85cc125f4cf8ad72f5259c3cd99373\",\n  \"contract\": \"5b7a8662e20d87e9771e6090773912524f389e84d7b3785e70525d5ebe88a39e\",\n  \"pins\": 50,\n  \"pinMismatches\": [],\n  \"baselineMismatches\": [],\n  \"deltaPins\": [\n    {\n      \"path\": \"src/ledger/writer.ts\",\n      \"before\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/ledger/delivery.ts\",\n      \"before\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/learn/report.ts\",\n      \"before\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"before\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true\n    }\n  ],\n  \"preflight\": {\n    \"status\": \"approved\",\n    \"plan\": {\n      \"path\": \"docs/remediation/design/W22.03/plan-rework-1.md\",\n      \"sha256\": \"223fecd6ec0654388708ab041f8190ee85a181d392c774c91aa801cd49142642\"\n    },\n    \"contract_digest\": \"5b7a8662e20d87e9771e6090773912524f389e84d7b3785e70525d5ebe88a39e\",\n    \"approval\": {\n      \"actor_id\": \"w01-lead\",\n      \"at\": \"2026-09-14T14:46:33.073Z\",\n      \"plan_sha256\": \"223fecd6ec0654388708ab041f8190ee85a181d392c774c91aa801cd49142642\",\n      \"rationale\": \"Same acceptance and owned scope; concrete heap OOM requires1536MiB. Correct pre-budget split allocation and diagnose unchanged replay expectations. Retain original failures and superseding final validation.\"\n    }\n  }\n}\nEXACT K1: node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22\\.03|writes one range-named|W27\\.03 enforces|W03\\.04 acknowledges|W14\\.02 validates|W09\\.02 preserves grouped|W22\\.01 deduplicates complete raw|W22\\.01 folds exact retries|W32\\.02 bounds actual raw reads' --maxWorkers=1 --minWorkers=1\nWORKER FINAL K1: node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22\\.03|writes one range-named|W27\\.03 enforces|W03\\.04 acknowledges|W14\\.02 validates|W09\\.02 preserves grouped|W22\\.01 deduplicates complete raw|W22\\.01 folds exact retries|W32\\.02 bounds actual raw reads' --maxWorkers=1 --minWorkers=1\n"
+    },
+    "delta_capture": {
+      "chunk_id": "5dd2f9",
+      "wall_time_seconds": 2.606681506,
+      "exit_code": 0,
+      "original_token_count": 163,
+      "output": "[\n  {\n    \"path\": \"src/ledger/writer.ts\",\n    \"deltaApplies\": true,\n    \"exactFinal\": true\n  },\n  {\n    \"path\": \"src/ledger/delivery.ts\",\n    \"deltaApplies\": true,\n    \"exactFinal\": true\n  },\n  {\n    \"path\": \"src/learn/report.ts\",\n    \"deltaApplies\": true,\n    \"exactFinal\": true\n  },\n  {\n    \"path\": \"src/ledger/ledger.test.ts\",\n    \"deltaApplies\": true,\n    \"exactFinal\": true\n  },\n  {\n    \"path\": \"docs/kit/02-api-reference.md\",\n    \"deltaApplies\": true,\n    \"exactFinal\": true\n  }\n]\n{\n  \"before\": \"1baad168e386ad5e3e1d4a93a789c89e78bc321ac1c796fa3563235fe0c72787\",\n  \"after\": \"5b7a8662e20d87e9771e6090773912524f389e84d7b3785e70525d5ebe88a39e\"\n}\n"
+    },
+    "after_capture": {
+      "chunk_id": "c74e41",
+      "wall_time_seconds": 0.341030215,
+      "exit_code": 0,
+      "original_token_count": 70,
+      "output": "{\n  \"at\": \"2026-09-14T14:57:04.247Z\",\n  \"artifact\": \"36044fb48f36dc7aacdd256654c726954c85cc125f4cf8ad72f5259c3cd99373\",\n  \"contract\": \"5b7a8662e20d87e9771e6090773912524f389e84d7b3785e70525d5ebe88a39e\",\n  \"pins\": 50,\n  \"mismatches\": [],\n  \"node\": \"v22.15.0\",\n  \"vitest\": \"1.6.1\"\n}\n"
+    }
+  },
+  "runtime": {
+    "check_id": "W22.03-K3",
+    "matches": "Exact admitted K1/K3 fixed9 command",
+    "result": "pass",
+    "selected": 9,
+    "passed": 9,
+    "failed": 0,
+    "discovered": 72,
+    "deliberately_unselected": 63,
+    "files": 3,
+    "exit_code": 0,
+    "drained": true,
+    "versions": {
+      "node": "v22.15.0",
+      "vitest": "1.6.1"
+    },
+    "vitest_duration_seconds": 86.7,
+    "test_execution_seconds": 1.65,
+    "capture": {
+      "started": "2026-09-14T14:55:12.866Z",
+      "cmd": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22\\.03|writes one range-named|W27\\.03 enforces|W03\\.04 acknowledges|W14\\.02 validates|W09\\.02 preserves grouped|W22\\.01 deduplicates complete raw|W22\\.01 folds exact retries|W32\\.02 bounds actual raw reads' --maxWorkers=1 --minWorkers=1",
+      "result": {
+        "chunk_id": "8fd132",
+        "wall_time_seconds": 1.002492461,
+        "session_id": 32113,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "6efcfe",
+          "wall_time_seconds": 5.001278463,
+          "session_id": 32113,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "413e28",
+          "wall_time_seconds": 5.001739135,
+          "session_id": 32113,
+          "original_token_count": 31,
+          "output": " ✓ src/ledger/ledger.test.ts  (24 tests | 18 skipped) 736ms\n ✓ src/learn/hourly.test.ts  (29 tests | 28 skipped) 380ms\n"
+        },
+        {
+          "chunk_id": "a0b69f",
+          "wall_time_seconds": 1.326695983,
+          "exit_code": 0,
+          "original_token_count": 66,
+          "output": " ✓ src/learn/report.test.ts  (19 tests | 17 skipped) 537ms\n\n Test Files  3 passed (3)\n      Tests  9 passed | 63 skipped (72)\n   Start at  10:55:23\n   Duration  86.70s (transform 13.86s, setup 0ms, collect 45.21s, tests 1.65s, environment 0ms, prepare 27.41s)\n\n"
+        }
+      ],
+      "completed": "2026-09-14T14:56:50.143Z"
+    },
+    "workload": "Installed actual ledger/report/hourly/route modules with synthetic storage and audit bindings; one grouped new case and eight existing controls.",
+    "warning": "Existing Vite CJS Node API deprecation warning; no runtime failure.",
+    "performance_claim": "Application refusal checks, not native provider capacity, request-latency/SLO or customer acceptance. Transform/collection/preparation are included in the reported run duration."
+  },
+  "reused_static": {
+    "check_id": "W22.03-K2",
+    "result": "pass",
+    "evidence": {
+      "path": "docs/remediation/evidence/W22.03/worker.json",
+      "sha256": "b27ac779de53c2eae1b3201a69bf85cc766c2ad3e80e138a235279cfdf6054b8"
+    },
+    "attempt": "static-final",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/writer.ts src/ledger/delivery.ts src/learn/report.ts src/ledger/ledger.test.ts && git diff --check -- src/ledger/writer.ts src/ledger/delivery.ts src/learn/report.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+    "session_id": 28244,
+    "terminal_capture": "4abf61",
+    "exit_code": 0,
+    "drained": true,
+    "compiler": "Full no-emit TypeScript with approved 1536 MiB heap",
+    "eslint": {
+      "files": 4,
+      "errors": 0,
+      "warnings": 0
+    },
+    "whitespace": {
+      "files": 5,
+      "result": "pass"
+    },
+    "basis": "Complete worker evidence inspected; final source-stop hashes agree with the frozen artifact. No independent static rerun was required by the admitted plan."
+  },
+  "retained_failures": [
+    "Worker runtime-1 and runtime-2 each exited 1 with 8 passed/1 failed, 63 deliberately unselected. Both failures were the stale W27.03 parsed-object KV fake; final approved fixture correction and superseding worker/independent fixed9 pass retain the original assertions.",
+    "Worker static-1 exhausted the 768 MiB compiler heap and exited 134; lint/whitespace were not reached. Exact approved rework raises only compiler heap to 1536 MiB; final complete static chain exits 0.",
+    "Lead-found text.split allocation was replaced by incremental line scanning before final source freeze; the grouped million-newline work case passes.",
+    "Reviewer metadata displays initially included oversized encoded/delta text and were truncated; those displays were not relied on. Bounded exact per-file reads, parsed metadata, complete retained failures and independent hash/patch checks supplied the review. One read used the design directory for the fixture approval; corrected to its actual evidence path. No reviewer runtime failure or rerun."
+  ],
+  "limitations": "Bounded local point-lookup/replay input reconciliation only. Candidate discovery depends on truthful range names and observed inventory; no snapshot isolation or detection of unlisted/out-of-range hidden rows. Physical budgets may refuse legitimate histories. Text-only adapters materialize before actual-byte checking; native stream behavior is exercised with synthetic streams, not a deployed provider. Existing erasure races and report/serving semantics remain. No durable producer, online-statistics/export reconciliation, historical/late-arrival repair, full W22/W09/F16/F22 closure, customer acceptance or release approval.",
+  "disposition": {
+    "independent_review": "pass",
+    "lead_acceptance": "pending",
+    "next": "Lead inspects this review and accepts or returns the bounded task; lead alone updates tracker/journal/checkpoint and runs final board checks.",
+    "running_commands": []
+  }
+}

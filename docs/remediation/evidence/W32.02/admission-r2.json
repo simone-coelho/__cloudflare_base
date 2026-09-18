@@ -1,0 +1,190 @@
+{
+  "at": "2026-09-12T21:12:18.620Z",
+  "source_go_at": "2026-09-12T21:12:18.620Z",
+  "task_id": "W32.02",
+  "actor_id": "w01-lead",
+  "contract_digest": "61a2d54d608eb5525991b612c92b220d9f0eccf7f3685140a5034e22c1463250",
+  "plan": {
+    "path": "docs/remediation/design/W32.02/plan-r2.md",
+    "sha256": "2885e740b617bbac4cd30c2d05d4d76946c65d074d68d5cf6a44e335247847da"
+  },
+  "prior_admission": {
+    "path": "docs/remediation/evidence/W32.02/admission.json",
+    "sha256": "6da346c5ca66e3e74ee07815488dcf0df9236cd5da41bebda4c1db029c39f9a9"
+  },
+  "protected_pins": [
+    {
+      "path": "src/learn/hourly.test.ts",
+      "role": "source",
+      "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+    },
+    {
+      "path": "src/measure/window.ts",
+      "role": "source",
+      "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+    },
+    {
+      "path": "src/learn/policy.ts",
+      "role": "source",
+      "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "role": "source",
+      "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+    },
+    {
+      "path": "src/learn/route.ts",
+      "role": "source",
+      "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "role": "source",
+      "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+    },
+    {
+      "path": "src/ledger/records.ts",
+      "role": "source",
+      "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "source",
+      "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "source",
+      "sha256": "b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff"
+    },
+    {
+      "path": "src/middleware/operatorAuth.ts",
+      "role": "source",
+      "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+    },
+    {
+      "path": "src/middleware/auth.ts",
+      "role": "source",
+      "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "role": "source",
+      "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+    },
+    {
+      "path": "src/tenancy/middleware.ts",
+      "role": "source",
+      "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+    },
+    {
+      "path": "src/auth/signingConfig.mjs",
+      "role": "source",
+      "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+    },
+    {
+      "path": "src/index.ts",
+      "role": "source",
+      "sha256": "c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "role": "source",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/sweep-learning-and-statistics.md",
+      "role": "source",
+      "sha256": "0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F17.md",
+      "role": "source",
+      "sha256": "84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F25.md",
+      "role": "source",
+      "sha256": "2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39"
+    },
+    {
+      "path": "docs/architecture/22-outcome-learning-design.md",
+      "role": "source",
+      "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F34.md",
+      "role": "source",
+      "sha256": "19fb69a80a5261cc36561ff880a940822191d677f768ce1890777b3265497f12"
+    },
+    {
+      "path": "src/learn/fan.ts",
+      "role": "source",
+      "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "role": "source",
+      "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+    },
+    {
+      "path": "src/ledger/delivery.ts",
+      "role": "source",
+      "sha256": "4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995"
+    },
+    {
+      "path": "src/durable-objects/LearnStats.ts",
+      "role": "source",
+      "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974"
+    }
+  ],
+  "partial_files": [
+    {
+      "path": "src/learn/report.ts",
+      "sha256": "05e7be548dc50eb5a960139a7fbd5d359d3aa6470b69088db3631ce1e42c010c"
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "sha256": "6ac092272a367af274f1d0c281075dc6ecfdca64cdd23ae529777f28a318d773"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "sha256": "4d890aa841d57e07d8b00eb46f65217b2287274655c02e1c9e0231c20a4128ae"
+    },
+    {
+      "path": "src/learn/report.test.ts",
+      "sha256": "c5dd0444eee89a18bd807e5b5294e07d556c13e3886cb9891fae2c235599084d"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "94f180647f94692d505b6520c4ae4ab71be6708130355845bae9596f476cf640"
+    }
+  ],
+  "scope": "Only policybudget5→6 existing UI correction; original pre-GO baseline remains comparison/rollback basis; no runtime/static before this r2GO."
+}

@@ -1,0 +1,155 @@
+{
+  "at": "2026-09-12T19:32:26.582Z",
+  "task_id": "W33.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "bc19233788aa10e5070f564c8ea9996e2ad3225de5139667b914a630aaadd93a",
+  "contract_digest": "2bec65459bb26297566c5ec273fb9fca3910fc5771c9183c5e025bc9f37aeb2e",
+  "verdict": "PASS",
+  "summary": "The frozen three-file change isolates explicit custom report arrays from canonical persistence. Independent fixed6 passed; no acceptance blocker found. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W33.01-C1",
+      "verdict": "PASS",
+      "evidence": "The shared raw builder now guards its sole put with strict reporting===null. No write occurs for empty, custom or preset-equivalent arrays, while report construction, erasure filtering, counts and coverage are unchanged. The direct group proves absent-key no-create and existing-key byte-identical no-overwrite with zero additional puts. Its raw2decisions/1credit versus actual capped aggregate1decision/0credits makes the assertion non-vacuous; null raw and aggregate persistence remain exercised."
+    },
+    {
+      "id": "W33.01-C2",
+      "verdict": "PASS",
+      "evidence": "Actual JWT validation, tenant middleware and Hono POST/GET/window paths run with synthetic storage/credentials. Explicit arrays preserve exact canonical bytes/put counts and subsequent diagnostic counts/coverage. Read and put barriers force overlapping custom/canonical requests to finish in both orders; only the canonical request writes. Tenant/brand/date sentinels and denied out-of-grant request remain unchanged. Both retained W30.02 report groups, W21 raw diagnostic control and aggregate/fallback/custom-object-cap case passed."
+    },
+    {
+      "id": "W33.01-C3",
+      "verdict": "PASS",
+      "evidence": "Inspected the actual plan/criteria and all three exact baseline deltas. All38 artifact pins,29 protected pins and three forward/inverse byte reconstructions match before/after. Exactly two new groups plus four retained cases passed once independently. Final compiler, scoped lint0errors0warnings and whitespace reused from unchanged final bytes. Kit clearly distinguishes ephemeral custom response/local CSV from canonical reload; no history repair or full package promotion."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W33.01/plan.md",
+      "sha256": "179492d94b54bfb45dca513f806a8557ffcc6f7198128e38f4b21bfb055b4551"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W33.01/artifact.json",
+      "sha256": "86e7e48b9bd3f0d9d00ad42e43701e08a6c63e92f2d8d683823a8e5d3f12becd"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W33.01/worker.json",
+      "sha256": "32b7ce7510b6e3a0a5aab36b92362ba0b94b1d6f1535b0dcc0e9454ed2b18454"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W33.01|W30.02|W21 retains repeated credits|the day report comes from the hours' --maxWorkers=1 --minWorkers=1",
+    "session_id": 66705,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "26377d",
+        "wall_time_seconds": 1.001339562,
+        "session_id": 66705,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "7069b7",
+        "wall_time_seconds": 0.355722187,
+        "exit_code": 0,
+        "original_token_count": 139,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (21 tests | 19 skipped) 22ms\n ✓ src/learn/report.test.ts  (9 tests | 5 skipped) 55ms\n\n Test Files  2 passed (2)\n      Tests  6 passed | 24 skipped (30)\n   Start at  15:31:08\n   Duration  13.34s (transform 3.46s, setup 0ms, collect 6.71s, tests 77ms, environment 0ms, prepare 4.70s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 6,
+      "unselected": 24,
+      "total": 30,
+      "test_files": 2,
+      "new_grouped_cases": 2,
+      "retained_selected_cases": 4,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 38,
+    "source_and_output_pins": 32,
+    "protected_pins": 29,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 3,
+    "manifest_sha256": "86e7e48b9bd3f0d9d00ad42e43701e08a6c63e92f2d8d683823a8e5d3f12becd",
+    "before": {
+      "at": "2026-09-12T19:31:04.633Z",
+      "captures": [
+        "5ba3f9"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T19:31:33.068Z",
+      "captures": [
+        "337331"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "d5ab94",
+          "wall_time_seconds": 0.016755635,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T19:31:04.893Z\",\"task\":\"W33.01\",\"state\":\"verification\",\"contract_digest\":\"2bec65459bb26297566c5ec273fb9fca3910fc5771c9183c5e025bc9f37aeb2e\",\"artifact_digest\":\"bc19233788aa10e5070f564c8ea9996e2ad3225de5139667b914a630aaadd93a\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "4084db",
+          "wall_time_seconds": 0.090705158,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T19:31:33.397Z\",\"task\":\"W33.01\",\"state\":\"verification\",\"contract_digest\":\"2bec65459bb26297566c5ec273fb9fca3910fc5771c9183c5e025bc9f37aeb2e\",\"artifact_digest\":\"bc19233788aa10e5070f564c8ea9996e2ad3225de5139667b914a630aaadd93a\"}\n"
+        }
+      ]
+    },
+    "inspection": "Reused valid personal governance/canonical W33/N09/F17/F25 and caller reads, including actual Learning L1/doc22§4.2 in51e190, and root entry board. Actual plan/task/production/kit read01f870 and full fixture delta2cafd4; all three hashes match STOP2026-09-12T19:29:10.071Z. Frozen baseline/manifest/deltas reconciled by exact bidirectional checks. Complete worker record and actual captures read953717/68d72a; no moving-source result substituted."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W33.01/worker.json",
+      "sha256": "32b7ce7510b6e3a0a5aab36b92362ba0b94b1d6f1535b0dcc0e9454ed2b18454"
+    },
+    "command_capture": "w3301_static1",
+    "session_id": 48070,
+    "captures": [
+      "01f2b8",
+      "fdbe28",
+      "948b8c",
+      "d51880",
+      "2dcbdc"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace": "PASS",
+    "qualification": "The exact admitted K2 && chain completed on final bytes with terminal exit0 and no diagnostics. Full retained output inspected; no static rerun. Worker final runtime75254/633dbb passed6/24unselected; independent runtime above is separate."
+  },
+  "retained_failures_and_qualifications": [
+    "Worker retained one apply_patch verification failure caused by incomplete kit paragraph context; reported readback a517d8 established no source/kit change from that failed attempt. Exact-context correction preceded the first runtime. No failed or superseded runtime/static attempt is claimed.",
+    "Independent runtime retains the existing Vite CJS deprecation notice.24 unselected cases did not run. Actual builders and authenticated Hono routes use synthetic R2/credentials; this is not native/deployed storage or full-browser evidence."
+  ],
+  "limitations": [
+    "Forward isolation applies to explicit arrays in the upgraded writer only. Historical overwrite detection, report provenance and authorized repair remain open; no existing report was scanned, deleted or reconstructed. This is not full W33/N09/F17/F25 closure.",
+    "Old binaries, canonical-versus-canonical publication races and existing swallowed canonical put failures remain unresolved. A canonical response still does not establish durable save. The guard is not a new authorization or complete request-validation boundary; existing malformed non-array POST coercion remains unchanged.",
+    "Canonical raw fallback retains prior history/erasure/object-cap limits. W30.01 attribution and W30.02 coverage remain implemented; selected dependency controls do not renew every prior whole-artifact or UI assurance.",
+    "Legacy UI custom output and local CSV remain usable but ephemeral; later GET/window reads canonical. No UI changes, policy promotion, schema/key change, extra I/O or infrastructure were introduced.",
+    "No historical/customer-data operation, cloud/deployment action, customer-policy amendment, scientific acceptance, release approval or customer acceptance is claimed."
+  ]
+}

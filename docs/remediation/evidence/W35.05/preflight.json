@@ -1,0 +1,36 @@
+{
+  "task_id": "W35.05",
+  "run_id": "/root/w3505_source_scout",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T01:46:50.406Z",
+  "verdict": "PASS",
+  "basis": {
+    "plan": { "path": "docs/remediation/design/W35.05/plan.md", "sha256": "c3c17bd244007de35506ae8ce3ee9579204e32309697c3a2e131d84a56aee944" },
+    "baseline": { "path": "docs/remediation/design/W35.05/baseline.json", "sha256": "202e33a8a56247de987380ad7967fe01a2237f1cf38d95fd0088430916782f72" },
+    "source": {
+      "src/durable-objects/ShopperReflex.ts": "66d005f5a565c3fe6924ab02e944cdb02ac905957b17974111d448821cca0021",
+      "src/routes/realtime.sdkContract.test.ts": "18cfcbf1c7063f33a4bac5727dcdf0c31a7b0bad30d204d8c0b698bc4b4fb68d"
+    },
+    "scope_read": "Complete document35 W35 and F04/F05/F06/F13/F14/F29/F32; governance/checkpoint; W35.01-.04 plans and acceptance limits; current handleLink, handleTransfer, grantAuthority, eraseWithBarrier, handleRotation, alarm, load, assertInternalState, serialize and actual link/erase callers. Root reports tracker VALID at journal1960. Scout literal board sessions were interrupted at lead direction, exit130, and are uncredited."
+  },
+  "source_case": "A target merge can commit while compatibility publication fails, leaving the source prepared. Target reset/erase/retention removes its receipt and rotates grant authority. Retrying the source sends receiptRequired=false, so current handleTransfer remerges captured behavior and issues a new grant in the rotated epoch. This is source-confirmed, not a runtime reproduction.",
+  "resolved_preflight_comments": [
+    "Clarified that a cold or validated pre-authority target may initialize empty authority exactly once; blanket rejection of missing authority would prevent first links. Prior transition/barrier markers prohibit initialization.",
+    "Corrected baseline wording from independently reproduced to independently source-confirmed; no runtime probe is claimed."
+  ],
+  "implementation_review_conditions": [
+    "Epoch admission is internal-only, bound to the exact recognized target, and serialized. It validates target identity, paired profile state and prior-key safety before any one-time initialization; malformed existing authority is never replaced.",
+    "Only an unprepared source requests the target epoch. Persist it in the immutable descriptor and fingerprint; old or malformed prepared records refuse without reacquisition, mutation or renewal. Preserve source grant/expiry checks around awaited work.",
+    "Target compares the immutable epoch to current durable authority inside serialization before profile merge, receipt/grant/member writes or compatibility publication. Missing authority at transfer admission is failure, not another cold initialization.",
+    "The target admission operation makes no callback to the source. Source-to-recognized-target ordering therefore introduces no serialization cycle; recognized subjects are already prohibited as link sources.",
+    "Rejected or commit-ambiguous authority initialization must recover by rereading durable state. Successful acquisition must preserve profile, consent, existing grants and timers. A fresh source after a barrier may use its current epoch; an older prepared source cannot."
+  ],
+  "checks_assessment": {
+    "focused_selector": "PASS: W35.05 plus the existing W35.03/W35.04 actual-module groups exercises the directly affected transfer/retry/grant boundary without a broad suite.",
+    "new_cases": "Use existing fault, restart and gate helpers to distinguish prepared precommit and committed-before-publication states; reset/internal-erasure/retention barriers; delayed request admission; immutable restart retry; missing/corrupt/legacy authority refusal; cold and fresh post-barrier success. Group these in the existing fixture and assert target behavior, receipt, membership, grant and projection absence/immutability, not only rejection status.",
+    "static": "Existing no-emit compiler, two-file lint with no new warning signatures, and scoped whitespace check are sufficient for this plan. Independent final-source review remains required. No runtime or static checks were run by this preflight."
+  },
+  "limitations": "Preflight approval only. No source change, engine acceptance, exhaustive subject discovery/source-copy erasure, session-host revocation, native durability/performance, customer/SLO/release approval, deployment or migration. Generation-aware rollback remains necessary for newly persisted descriptors.",
+  "next_action": "Lead admits the pinned plan; sole implementer applies the two-file change and focused checks, then a distinct reviewer evaluates the frozen artifact."
+}

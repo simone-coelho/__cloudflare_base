@@ -1,0 +1,171 @@
+{
+  "at": "2026-09-13 20:59:40 UTC",
+  "task_id": "W20.04",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "88ba2899fbd69de6b41aab43e6e1bdf2c24c9d363d3a932b2302c1fbe46d527f",
+  "contract_digest": "6993984fd93f2165924df7214600c95ca6aa99c762dcbfb32bb9e221959b2c5c",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W20.04-C1",
+      "verdict": "PASS",
+      "evidence": "Personally inspected schema/helper/composer deltas and fixed assertions. Dense bounded exact own-key pairs and rendering-type sets retain three-era stored parsing; actual tag-key lookup preserves explicit literal arrays, with safe contentType fallback only when absent. Per-slot/per-piece gate results are captured before hooks, including pins, and remain dominant through real exploration/diversity relaxation. Refused pins reserve nothing and do not fill arbitrarily. Exact K3 passes current/retained validation, mounted publication/history/rollback and composer controls."
+    },
+    {
+      "id": "W20.04-C2",
+      "verdict": "PASS",
+      "evidence": "Actual decide/replay/diagnostic/service assertions pass concrete absent/v1/v2 selections across all three arms and independent exploration/pins/contentType markers. Fresh/cache service tests preserve explicit long/unsafe/empty/whitespace tag arrays, absent-only fallback, exact rendering kinds, retained v1 parsing and protected empty-config handoff. Pin warnings remain catalog-dependent advisory feedback, with runtime refusal. Both affected W38.05 actual-source VM/oracle controls pass; no scoring-input rewrite or retrospective policy inference."
+    },
+    {
+      "id": "W20.04-C3",
+      "verdict": "PASS",
+      "evidence": "Actual Rules/DOM/API deltas and exact K3 pass pin/tag/type save/readback/History, no automatic take, sibling preservation, per-field/per-strategy whole-draft malformed blocking, search/scope changes and stale-handler refusal. Empty/nonstring pins refuse; exact whitespace-only IDs positively save/read back under the unchanged validator. Null clears pin/type; empty tags are neutral. Four literal authored JSON-null labels/sentences are exempted only in affected Rules stray-text assertions, not dynamic leakage or other screens. Final static reused and distinct independent review completed."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W20.04/plan-v3.md",
+      "sha256": "4c666a24a0718ee563a175b39d6b02545a5a82bc7bf47eeaff746069024ea5b5"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W20.04/artifact.json",
+      "sha256": "5c595f7c695734fcdbeed0db9ebe61e006942df13b174ef9c610c64e10feb2f6"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W20.04/worker.json",
+      "sha256": "8d76081804482e7bc7e07ca85c425e32ef16ed480b8178b49b25f4c8f76161a4"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts -t 'W20.04|W38.05|W20.03|W20.01|W20.02|W18.01|W19.02|W27.02|history shows every document|W03.03 carries named auth context|w_ext × score joins the base score' --maxWorkers=1 --minWorkers=1",
+    "session_id": 38176,
+    "invocations": 1,
+    "launched_at": "2026-09-13 20:56:44 UTC",
+    "drained_at": "2026-09-13 20:58:12 UTC",
+    "captures": [
+      {
+        "chunk_id": "6f21c8",
+        "wall_time_seconds": 1.001574682,
+        "session_id": 38176,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0b56d5",
+        "wall_time_seconds": 5.001198843,
+        "session_id": 38176,
+        "original_token_count": 125,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority\n[config] read failed, serving fallback\n\n ✓ src/routes/content.test.ts  (34 tests | 29 skipped) 100ms\n"
+      },
+      {
+        "chunk_id": "5acf8c",
+        "wall_time_seconds": 5.000280373,
+        "session_id": 38176,
+        "original_token_count": 3261,
+        "output": " ✓ src/console/console.render.test.ts  (40 tests | 33 skipped) 42722ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n[config] read failed, serving fallback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W19.02 serves and replays projected content formats with independent historical policy\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (24 tests | 20 skipped) 136ms\n ✓ src/learn/phase3.test.ts  (18 tests | 12 skipped) 111ms\n"
+      },
+      {
+        "chunk_id": "2582ed",
+        "wall_time_seconds": 0.000002173,
+        "exit_code": 0,
+        "original_token_count": 496,
+        "output": "stdout | src/reflex/contentCompose.test.ts > W38.05 served explanations > W38.05 measures paired actual composer work and warm timings at 30 and 1000 pieces\nW38.05 measurement {\"pieces\":30,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"cb1d2cb02dd7c2a305e0b92ee7e256d5f22ec6e4a346415ca09e1edc2e5a9b31\",\"callback_sha256\":\"7f124594a1679357171dc46f0ca68b9d8b31926eadbd2b482fd428c48502298b\",\"before\":{\"samples_ms\":[5.171340000000782,3.287784999993164,3.6703169999964302,3.952389999991283,3.358686999999918],\"median_ms\":3.6703169999964302,\"driver_sort_calls\":83,\"driver_rows\":1335},\"current\":{\"samples_ms\":[2.7600619999866467,3.227457000000868,2.800480999998399,3.2699350000038976,3.0625769999896875],\"median_ms\":3.0625769999896875,\"driver_sort_calls\":8,\"driver_rows\":129},\"median_improved\":true}\nW38.05 measurement {\"pieces\":1000,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"09f715bff10c96c5fd0a64301bd9052c7c6b045ac69880a58ddf7018e49699ab\",\"callback_sha256\":\"549583a33a126fd2a1c553b508ff371b3c7ff0b4e05570ab0062b95653c0988b\",\"before\":{\"samples_ms\":[134.59013900000718,133.82600499999535,131.54082900000503,136.42467400000896,131.67562000000908],\"median_ms\":133.82600499999535,\"driver_sort_calls\":2993,\"driver_rows\":48218},\"current\":{\"samples_ms\":[91.49621100000513,89.95293400000082,89.29178099999262,93.73880500000087,93.83884199999738],\"median_ms\":91.49621100000513,\"driver_sort_calls\":8,\"driver_rows\":135},\"median_improved\":true}\n\n ✓ src/reflex/contentCompose.test.ts  (8 tests | 3 skipped) 1613ms\n\n Test Files  5 passed (5)\n      Tests  27 passed | 97 skipped (124)\n   Start at  16:56:46\n   Duration  80.53s (transform 3.50s, setup 0ms, collect 23.97s, tests 44.68s, environment 1ms, prepare 8.67s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 27,
+      "failed": 0,
+      "unselected": 97,
+      "total": 124,
+      "files_passed": 5,
+      "duration_seconds": 80.53
+    }
+  },
+  "source_review": {
+    "inspection": "All 15 actual baseline-to-final deltas personally read; unchanged preliminary reads reused only after exact hash reconciliation. Frozen source/worker STOP and commands match the artifact/current task. No source edits by reviewer.",
+    "source_captures": [
+      "8af88a",
+      "4034ef",
+      "b60373",
+      "beb9ab",
+      "924417",
+      "abda3d"
+    ],
+    "contract_captures": [
+      "2b78b3",
+      "a15ade",
+      "f426a0",
+      "b4d558"
+    ],
+    "worker_full_reads": [
+      "cdffd9",
+      "44bd89",
+      "47c870",
+      "d72235",
+      "812ace",
+      "c0f63c"
+    ],
+    "frozen_record_consistency": {
+      "capture": "b9be34",
+      "inspected_hashes": 15,
+      "source_output_pins": 45,
+      "worker_stop_files": 15,
+      "commands_match": true
+    },
+    "verification": {
+      "before": {
+        "at": "2026-09-13T20:56:33.256Z",
+        "pins_capture": "8b11fd",
+        "contract_capture": "7474ac"
+      },
+      "after": {
+        "at": "2026-09-13T20:58:30.180Z",
+        "pins_capture": "723945",
+        "contract_capture": "bc3f16"
+      },
+      "artifact_files": 52,
+      "protected_unchanged": 30,
+      "forward_and_reverse_deltas": 15,
+      "failures": 0
+    },
+    "rollback": "Reconstructed every forward/reverse patch in memory against retained original gzip bytes and actual final source, with exact before/after hashes. New helper original_absent uses empty before bytes; no rollback executed.",
+    "qualification": "The W38.05 oracle input is supplemental-time pinned, not backdated to initial admission. Original before bytes and all admissions remain. Protected accepted dependency assurance is reused as admitted; overlapping W20.03 prior exact-byte proof is qualified, not erased."
+  },
+  "static_reuse": {
+    "source": "worker.json command_captures.static2",
+    "session_id": 14203,
+    "captures": [
+      "97799b",
+      "d9ad3b",
+      "d77090"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "reruns": 0,
+    "result": "Exact current K2 compiler, scoped lint and git whitespace pass on final bytes: zero errors, five inherited warnings (_share, _s, _c, when, plural), no new warnings.",
+    "actual_owned_whitespace": "Pinned source-freeze.json records all 15 direct owned-file comparisons with zero new/inherited trailing whitespace, including new/untracked helper. Git diff alone is not represented as covering untracked files."
+  },
+  "retained_history": [
+    "Initial fixed25 was never run. Pre-runtime actual-source review found the new helper import breaks the exports/work-only W38.05 VM loader; plan-v2 prospectively admitted its bounded actual pure dependency loader, supplemental oracle pin and two existing cases, fixed27 without new groups.",
+    "Worker static1 session78464 passed but is superseded. Runtime1 session55095 fully drained exit1:24 passed,3 failed,97 unselected,104.59s. The new DOM expected whitespace-only refusal contrary to actual length>0 validation; two W18 assertions matched intentional JSON-null help. Plan-v3 corrected the contract/copy and narrowly adapted only UI/DOM/kit03, preserving backend/replay semantics.",
+    "Final worker static2 session14203 and runtime2 session72801 passed on frozen bytes; runtime27/97,85.55s. Worker read-only pause-pin command typo3af8df was corrected by a1a7fb without source/check impact.",
+    "Reviewer worker-output display b69b2d truncated; the complete original f20aba output was reread losslessly in 812ace/c0f63c before verdict. No independent runtime failure or rerun."
+  ],
+  "retained_measurement_control": {
+    "source": "Included W38.05 cases inside this single K3, not a separate benchmark.",
+    "result": "Exact output/callback parity and driver-sort controls pass. At30 pieces medians3.670317→3.062577ms/20calls and sorts83→8; at1000 pieces133.826005→91.496211ms/20calls and sorts2993→8. Full samples and hashes are in terminal capture2582ed.",
+    "limitation": "Synthetic local Node/VM warm retained-composer comparison; not a new constraint-capacity benchmark, native latency or SLO claim."
+  },
+  "limitations": [
+    "Bounded exact OR tag exclusions, allowed rendering types and pin editing only. No customer lists/vocabulary/aliases/default assets, priority/multi-position policy, full W20/F28/F26/customer acceptance or release approval.",
+    "Absent/v1 stored and replay meanings are retained; no migration or historical rewrite. Current writes upgrade to v2; explicit unknown versions refuse. No registry-vocabulary or learning-safety claim follows from literal tag matching.",
+    "Service/cache/store/auth/SDK/scoring implementations remain unchanged. Existing 30-second caches and independent catalog/slot revisions are not atomic activation. Compatible readers/UI must precede controlled publication; pre-governance readers can ignore controls, v1 readers reject v2, and old cached revisions can persist.",
+    "Actual modules and authenticated mounted routes use synthetic bindings; DOM save/readback uses real validation with synthetic HTTP fixtures. Expected fallback/invalid-config and learning_incomplete diagnostics are retained, not downstream ingestion/durability or site-default-rendering proof.",
+    "Only 27 selected tests were executed independently once; 97 unselected are not claimed passing. Other adapted generic Rules assertions have source review only. No extra static/native/board/suite run, source/governance mutation, deployment, cloud or customer-data operation. Lead acceptance remains separate."
+  ]
+}

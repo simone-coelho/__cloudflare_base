@@ -1,0 +1,13 @@
+# W27.03 — lead acceptance
+
+Accepted 2026-09-12T16:13:17.336Z by w01-lead. Artifact baaa8c8960c2ab203994f8f8e9a6733b62ba941b9c44ba2b7cc79635eb5a529e, contract dfb704bd384177fadcb26cfe36072c7f0e308090b66fc6af0282e61d52498ecb, independent review 049639f8531aabe2c46bca17aba9070504d542659ec161c4002fd4b46b1c306f.
+
+Implemented replay-local safe consumed tuple checks before dependency reads and exact returned configuration-envelope revision matching. The actual authenticated retained replay boundary distinguishes valid parity, malformed tuples, wrong identities and absent/failed dependencies without changing live serving, writers, schema or audit semantics.
+
+Root inspected four exact deltas, protected pins and worker/reviewer captures. Fixed6, compiler/scopedlint0errors/no increase1/whitespace and distinct Astra/xhigh C1–C3/frozen fixed6 PASS. Two grouped additions in existing fixtures, no broad suite. Worker fixed6 passed on its first invocation; no runtime failure or source rework was required. Exact terminal worker and independent captures are retained.
+
+Replay-local consumed identity containment, not full W27/F22 closure or a new configuration publication protocol. Exact safe-integer tuple/envelope matching cannot detect a different valid body overwritten under the same revision; immutable slots/learn writers remain W11 work. Compiled revision zero, current reader normalization/code version, missing/corrupt legacy archives, mixed-version rollout, operational retention, historical repair and native resource/SLO/customer acceptance remain qualified. Actual authenticated local route uses synthetic bindings, not deployed HTTP/cloud assurance. W27.01 archive-before-live and W27.02 page manifest/choice/pin implementation are retained, not newly deployed. Deterministic replay is not W28/F23 statistical correctness or causal lift. No live serving/schema/choice/attribution/consent change, extra serving I/O, retries/resets/backfill or external/resource/credential/customer-data/deployment/commit/push/destructive/customer-policy authority.
+
+W27.02 page manifest/pin and W27.01 publisher implementation/history retained; shared-artifact proof qualified, W08.04 unchanged. Bounded task acceptance only.
+
+Next: Next admit W28 unsupported Thompson containment against F23/N25: inspect validator, serving/exploration, UI and kit offers and enforce safe withdrawal consistently without inventing a reward/statistical policy. Preserve historical replay where safe. Remaining W27 same-revision overwrite prevention belongs to W11 publication migration; rollout/retention/history/customer acceptance is not replaced by more replay helper checks. No deployment/customer-policy or external authority is inferred.

@@ -1,0 +1,216 @@
+{
+  "task": "W04.01",
+  "graph": {
+    "command": "node --input-type=module -e 'import fs from \"node:fs\"; import {createHash} from \"node:crypto\"; import * as esbuild from \"esbuild\"; const entryPoints=[\"src/identity/identity.test.ts\",\"src/routes/identity.test.ts\",\"src/sdk/identify.test.ts\",\"src/sdk/index.ts\",\"src/sdk/browser.ts\"]; const options={entryPoints,bundle:true,packages:\"external\",platform:\"node\",format:\"esm\",target:\"es2022\",write:false,metafile:true,logLevel:\"silent\",outdir:\"/tmp/w0401-graph-unused\",outbase:\".\"}; const result=await esbuild.build(options); const files=Object.keys(result.metafile.inputs).sort().map(path=>({path,sha256:createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\")})); console.log(JSON.stringify({entryPoints,options,files,limits:\"Relevant packages-external local runtime graph only; not whole installed/TypeScript/deployed graph. Mixed browser entry is bundled for static graph discovery only, not executed as Node runtime acceptance.\"}));'",
+    "entryPoints": [
+      "src/identity/identity.test.ts",
+      "src/routes/identity.test.ts",
+      "src/sdk/identify.test.ts",
+      "src/sdk/index.ts",
+      "src/sdk/browser.ts"
+    ],
+    "options": {
+      "entryPoints": [
+        "src/identity/identity.test.ts",
+        "src/routes/identity.test.ts",
+        "src/sdk/identify.test.ts",
+        "src/sdk/index.ts",
+        "src/sdk/browser.ts"
+      ],
+      "bundle": true,
+      "packages": "external",
+      "platform": "node",
+      "format": "esm",
+      "target": "es2022",
+      "write": false,
+      "metafile": true,
+      "logLevel": "silent",
+      "outdir": "/tmp/w0401-graph-unused",
+      "outbase": "."
+    },
+    "files": [
+      {
+        "path": "src/auth/signingConfig.mjs",
+        "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3"
+      },
+      {
+        "path": "src/data/coach-catalog.json",
+        "sha256": "43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e"
+      },
+      {
+        "path": "src/demos/brighthour/catalog.data.json",
+        "sha256": "a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6"
+      },
+      {
+        "path": "src/demos/brighthour/catalog.ts",
+        "sha256": "c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd"
+      },
+      {
+        "path": "src/demos/brighthour/demoClock.ts",
+        "sha256": "a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce"
+      },
+      {
+        "path": "src/demos/brighthour/offerLifecycle.ts",
+        "sha256": "7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82"
+      },
+      {
+        "path": "src/demos/brighthour/reflexConfig.ts",
+        "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf"
+      },
+      {
+        "path": "src/demos/registry.ts",
+        "sha256": "18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb"
+      },
+      {
+        "path": "src/identity/assertion.ts",
+        "sha256": "46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d"
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "e2d348577a5295430b5f85cb3f685b7eda8d8a1e7f806508e44aee6ed2e9f802"
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21"
+      },
+      {
+        "path": "src/identity/identity.test.ts",
+        "sha256": "452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc"
+      },
+      {
+        "path": "src/identity/link.ts",
+        "sha256": "6f1738ef48f3a33dfffa3b4a4d81063b44ba30f613430500c8b6d2f0be6ee0b1"
+      },
+      {
+        "path": "src/identity/shopperId.ts",
+        "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+      },
+      {
+        "path": "src/identity/store.ts",
+        "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c"
+      },
+      {
+        "path": "src/middleware/auth.ts",
+        "sha256": "9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01"
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2"
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+      },
+      {
+        "path": "src/reflex/identityMerge.ts",
+        "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "0bcffae8de408ea7ac8a432ff47f5ddf62aa598d6d79f8265d7f8aadff930433"
+      },
+      {
+        "path": "src/routes/identity.ts",
+        "sha256": "e93247553313d1bff591a6860e0837c079cb61ea3baddaff991584c15b717305"
+      },
+      {
+        "path": "src/sdk/browser.ts",
+        "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "4e00b83659eadf40fd58c80de48667f996a165b2e93f97a76ba604f1e598eb24"
+      },
+      {
+        "path": "src/sdk/emit.ts",
+        "sha256": "537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731"
+      },
+      {
+        "path": "src/sdk/host.ts",
+        "sha256": "179b975bbdd1d68ef54e4093ab82848113b35f1cad2dd33c0f994bea094c2896"
+      },
+      {
+        "path": "src/sdk/identify.test.ts",
+        "sha256": "a5116728df0f639f86d50156979aeb41f3ad0516c9e54c3dd029cb93ba421ca3"
+      },
+      {
+        "path": "src/sdk/identify.ts",
+        "sha256": "3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f"
+      },
+      {
+        "path": "src/sdk/identity.ts",
+        "sha256": "3389149258c439a23bfda2138af623e3c0ab7da4f896ef6338095872a1cc4e77"
+      },
+      {
+        "path": "src/sdk/index.ts",
+        "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+      },
+      {
+        "path": "src/sdk/listen.ts",
+        "sha256": "619c4b51562d85050bd13c0575391040778fb97bedf298797403068106d56007"
+      },
+      {
+        "path": "src/sdk/memoryHost.ts",
+        "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+      },
+      {
+        "path": "src/sdk/testHost.ts",
+        "sha256": "1033bc8f2bcd6bd03f9fb615f33a77100d968be1b6ea41e69d8a07f999d845f1"
+      },
+      {
+        "path": "src/sdk/version.ts",
+        "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+      },
+      {
+        "path": "src/sdk/wire.ts",
+        "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+      },
+      {
+        "path": "src/services/CatalogService.ts",
+        "sha256": "da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "ca33610c0915daf174e28132a846ea7f1178816dc0425979d262c2f48e2680bd"
+      },
+      {
+        "path": "src/services/visit.ts",
+        "sha256": "27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d"
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072"
+      }
+    ],
+    "limits": "Relevant packages-external local runtime graph only; not whole installed/TypeScript/deployed graph. Mixed browser entry is bundled for static graph discovery only, not executed as Node runtime acceptance."
+  },
+  "scopeCheck": {
+    "command": "node --input-type=module -e 'import fs from \"node:fs\"; import assert from \"node:assert/strict\"; import {sha256} from \"./scripts/remediation/board.mjs\"; const graphPaths=[\"src/auth/signingConfig.mjs\",\"src/config/versionedStore.ts\",\"src/data/coach-catalog.json\",\"src/demos/brighthour/catalog.data.json\",\"src/demos/brighthour/catalog.ts\",\"src/demos/brighthour/demoClock.ts\",\"src/demos/brighthour/offerLifecycle.ts\",\"src/demos/brighthour/reflexConfig.ts\",\"src/demos/registry.ts\",\"src/identity/assertion.ts\",\"src/identity/erase.ts\",\"src/identity/history.ts\",\"src/identity/identity.test.ts\",\"src/identity/link.ts\",\"src/identity/shopperId.ts\",\"src/identity/store.ts\",\"src/ledger/erasure.ts\",\"src/middleware/auth.ts\",\"src/reflex/configStore.ts\",\"src/reflex/core.ts\",\"src/reflex/identityMerge.ts\",\"src/routes/identity.test.ts\",\"src/routes/identity.ts\",\"src/sdk/browser.ts\",\"src/sdk/core.ts\",\"src/sdk/emit.ts\",\"src/sdk/host.ts\",\"src/sdk/identify.test.ts\",\"src/sdk/identify.ts\",\"src/sdk/identity.ts\",\"src/sdk/index.ts\",\"src/sdk/listen.ts\",\"src/sdk/memoryHost.ts\",\"src/sdk/testHost.ts\",\"src/sdk/version.ts\",\"src/sdk/wire.ts\",\"src/services/CatalogService.ts\",\"src/services/SessionManager.ts\",\"src/services/visit.ts\",\"src/tenancy/objects.ts\",\"src/tenancy/tenant.ts\"]; const files=graphPaths.map(path=>({path,sha256:sha256(fs.readFileSync(path))}));const before=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W04.01/tracker-before-v1.json\")); const prior=before.tasks.find(t=>t.id===\"W07.04\").artifact;const changed=new Set([\"src/identity/assertion.ts\",\"src/routes/identity.ts\",\"src/types/env.ts\"]);const protectedPins=prior.files.filter(f=>!changed.has(f.path));for(const f of protectedPins)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path); const originals=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W04.01/before-sources-v1.json\")).files; const previous=originals.find(f=>f.path===\"src/routes/identity.test.ts\").text; const current=fs.readFileSync(\"src/routes/identity.test.ts\",\"utf8\"); const marker=\"describe(\\u0027erase: the right to be forgotten\";assert.equal(current.slice(current.indexOf(marker)).replaceAll(\"await signedCall(\",\"await call(\"),previous.slice(previous.indexOf(marker))); console.log(JSON.stringify({files,protectedPriorPins:protectedPins.length,originalErasureAssertionBlock:\"identical after explicit positive signing-call substitution\",limitations:\"Hash/scope checks preserve prior artifacts, not full-contract revalidation or deployed/customer acceptance.\"}));'",
+    "result": {
+      "chunk_id": "035965",
+      "wall_time_seconds": 0.491021593,
+      "exit_code": 0,
+      "original_token_count": 1206,
+      "output": "{\"files\":[{\"path\":\"src/auth/signingConfig.mjs\",\"sha256\":\"82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084\"},{\"path\":\"src/config/versionedStore.ts\",\"sha256\":\"c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3\"},{\"path\":\"src/data/coach-catalog.json\",\"sha256\":\"43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e\"},{\"path\":\"src/demos/brighthour/catalog.data.json\",\"sha256\":\"a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6\"},{\"path\":\"src/demos/brighthour/catalog.ts\",\"sha256\":\"c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd\"},{\"path\":\"src/demos/brighthour/demoClock.ts\",\"sha256\":\"a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce\"},{\"path\":\"src/demos/brighthour/offerLifecycle.ts\",\"sha256\":\"7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82\"},{\"path\":\"src/demos/brighthour/reflexConfig.ts\",\"sha256\":\"524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf\"},{\"path\":\"src/demos/registry.ts\",\"sha256\":\"18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb\"},{\"path\":\"src/identity/assertion.ts\",\"sha256\":\"46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d\"},{\"path\":\"src/identity/erase.ts\",\"sha256\":\"e2d348577a5295430b5f85cb3f685b7eda8d8a1e7f806508e44aee6ed2e9f802\"},{\"path\":\"src/identity/history.ts\",\"sha256\":\"010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21\"},{\"path\":\"src/identity/identity.test.ts\",\"sha256\":\"452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc\"},{\"path\":\"src/identity/link.ts\",\"sha256\":\"6f1738ef48f3a33dfffa3b4a4d81063b44ba30f613430500c8b6d2f0be6ee0b1\"},{\"path\":\"src/identity/shopperId.ts\",\"sha256\":\"210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3\"},{\"path\":\"src/identity/store.ts\",\"sha256\":\"a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5\"},{\"path\":\"src/ledger/erasure.ts\",\"sha256\":\"410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c\"},{\"path\":\"src/middleware/auth.ts\",\"sha256\":\"9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01\"},{\"path\":\"src/reflex/configStore.ts\",\"sha256\":\"0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2\"},{\"path\":\"src/reflex/core.ts\",\"sha256\":\"287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db\"},{\"path\":\"src/reflex/identityMerge.ts\",\"sha256\":\"c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508\"},{\"path\":\"src/routes/identity.test.ts\",\"sha256\":\"0bcffae8de408ea7ac8a432ff47f5ddf62aa598d6d79f8265d7f8aadff930433\"},{\"path\":\"src/routes/identity.ts\",\"sha256\":\"e93247553313d1bff591a6860e0837c079cb61ea3baddaff991584c15b717305\"},{\"path\":\"src/sdk/browser.ts\",\"sha256\":\"52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321\"},{\"path\":\"src/sdk/core.ts\",\"sha256\":\"4e00b83659eadf40fd58c80de48667f996a165b2e93f97a76ba604f1e598eb24\"},{\"path\":\"src/sdk/emit.ts\",\"sha256\":\"537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731\"},{\"path\":\"src/sdk/host.ts\",\"sha256\":\"179b975bbdd1d68ef54e4093ab82848113b35f1cad2dd33c0f994bea094c2896\"},{\"path\":\"src/sdk/identify.test.ts\",\"sha256\":\"a5116728df0f639f86d50156979aeb41f3ad0516c9e54c3dd029cb93ba421ca3\"},{\"path\":\"src/sdk/identify.ts\",\"sha256\":\"3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f\"},{\"path\":\"src/sdk/identity.ts\",\"sha256\":\"3389149258c439a23bfda2138af623e3c0ab7da4f896ef6338095872a1cc4e77\"},{\"path\":\"src/sdk/index.ts\",\"sha256\":\"fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa\"},{\"path\":\"src/sdk/listen.ts\",\"sha256\":\"619c4b51562d85050bd13c0575391040778fb97bedf298797403068106d56007\"},{\"path\":\"src/sdk/memoryHost.ts\",\"sha256\":\"34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1\"},{\"path\":\"src/sdk/testHost.ts\",\"sha256\":\"1033bc8f2bcd6bd03f9fb615f33a77100d968be1b6ea41e69d8a07f999d845f1\"},{\"path\":\"src/sdk/version.ts\",\"sha256\":\"64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f\"},{\"path\":\"src/sdk/wire.ts\",\"sha256\":\"91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6\"},{\"path\":\"src/services/CatalogService.ts\",\"sha256\":\"da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff\"},{\"path\":\"src/services/SessionManager.ts\",\"sha256\":\"ca33610c0915daf174e28132a846ea7f1178816dc0425979d262c2f48e2680bd\"},{\"path\":\"src/services/visit.ts\",\"sha256\":\"27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d\"},{\"path\":\"src/tenancy/objects.ts\",\"sha256\":\"e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67\"},{\"path\":\"src/tenancy/tenant.ts\",\"sha256\":\"2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072\"}],\"protectedPriorPins\":180,\"originalErasureAssertionBlock\":\"identical after explicit positive signing-call substitution\",\"limitations\":\"Hash/scope checks preserve prior artifacts, not full-contract revalidation or deployed/customer acceptance.\"}\n"
+    }
+  },
+  "result": {
+    "graphInputs": 41,
+    "protectedPriorPins": 180,
+    "originalErasureAssertions": "Identical after explicit positive signedCall substitution."
+  },
+  "limits": "Graph topology discovered from actual5 entries; physical pins refreshed after fixture-only unknown cast.41 local packages-external runtime inputs plus separately selected types/config/build/lock; not installed package, full TypeScript-program, old baseline or deployed-runtime attestation.180 prior pins unchanged is a scope check, not prior contract reclosure."
+}
+

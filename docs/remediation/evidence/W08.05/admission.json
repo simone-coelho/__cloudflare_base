@@ -1,0 +1,443 @@
+{
+  "task_id": "W08.05",
+  "at": "2026-09-17T17:20:09.734Z",
+  "scope": "Distinguish creation/reconcile/add-brand/rotation using secure desired state; validate account/resources, preserve existing secrets, seed idempotently and fail visibly. Link schema migrations and artifact promotion; separate product/demo schema; provision required alert/config/identity material. Test rerun, partial failure, second brand and tested forward-compatible rollback/restore without exposing secret values. Complete local implementation preserving earlier remedies; original full/live acceptance remains separately authorized final-batch work.",
+  "contract_digest": "19a5a684f4cdf78a065a9d255bdba6be73edceb1ffcbe246205233f0e41a67d2",
+  "baseline": {
+    "kind": "Source-confirmed remaining-original-W08 design case; no new runtime reproduction",
+    "case": "Provisioners remain literal refusals; deploy rebuilds and lacks linked schema/artifact/recovery flow; customer migrations_dir includes demo chain; bootstrap cannot bind exact initial owner identity. Preserve accepted customer/identity/retention/telemetry and seed/recovery safeguards.",
+    "outputs": [
+      {
+        "path": "scripts/stamp-workflow.mjs",
+        "exists": false,
+        "sha256": null,
+        "bytes": 0
+      },
+      {
+        "path": "scripts/stamp-workflow.test.mjs",
+        "exists": false,
+        "sha256": null,
+        "bytes": 0
+      },
+      {
+        "path": "scripts/provision-stamp.sh",
+        "exists": true,
+        "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+        "bytes": 372
+      },
+      {
+        "path": "scripts/provision-staging.sh",
+        "exists": true,
+        "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+        "bytes": 372
+      },
+      {
+        "path": "scripts/deploy.sh",
+        "exists": true,
+        "sha256": "d5f6bd176028afa02ce4da8661ec2a289d3257eed63dce9a955606cc8d74b21f",
+        "bytes": 3147
+      },
+      {
+        "path": "scripts/operator-seed.mjs",
+        "exists": true,
+        "sha256": "30e4d662a8e38069ea893b5c749c726e2aa12ce2f3940f312cb82d1f9999c2a1",
+        "bytes": 14058
+      },
+      {
+        "path": "scripts/operator-seed.test.mjs",
+        "exists": true,
+        "sha256": "33ac67c5699d7bf65203a5f2ea7ec7109014f465f8bcde1d6e4db6abc348d757",
+        "bytes": 20285
+      },
+      {
+        "path": "migrations/product/0010_operator_accounts.sql",
+        "exists": false,
+        "sha256": null,
+        "bytes": 0
+      },
+      {
+        "path": "migrations/product/0011_operator_audit_tenant.sql",
+        "exists": false,
+        "sha256": null,
+        "bytes": 0
+      },
+      {
+        "path": "migrations/product/0012_operator_authority.sql",
+        "exists": false,
+        "sha256": null,
+        "bytes": 0
+      },
+      {
+        "path": "wrangler.toml",
+        "exists": true,
+        "sha256": "6ed0a6dc03db22eb07b6eaa671ddc4dc7d616d880c3dd47b29d9ff6fc9e6774e",
+        "bytes": 14444
+      },
+      {
+        "path": "docs/deployment/01-deploy.md",
+        "exists": true,
+        "sha256": "32931eef08babb3a4ea2a6bcc08e602e307e6db4c76e2e1679292df4b85e937b",
+        "bytes": 6383
+      }
+    ],
+    "pins": [
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+        "bytes": 690
+      },
+      {
+        "path": "migrations/0010_operator_accounts.sql",
+        "sha256": "7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55",
+        "bytes": 1784
+      },
+      {
+        "path": "migrations/0011_operator_audit_tenant.sql",
+        "sha256": "d279d332fbc0fdbdcfe5ad1dad2cb8347a056ee85ea9b975127dd3cf40e2074c",
+        "bytes": 284
+      },
+      {
+        "path": "migrations/0012_operator_authority.sql",
+        "sha256": "63143e1690f1be2bb331b547cf8d48716d6583fcefacf3353c9274075fd187b7",
+        "bytes": 2589
+      },
+      {
+        "path": "node_modules/esbuild/lib/main.js",
+        "sha256": "8331fe1d8b3a07381f33cc425fcfaa94776e263113653f80ec3ba433e9657e73",
+        "bytes": 97214
+      },
+      {
+        "path": "node_modules/esbuild/package.json",
+        "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+        "bytes": 3980
+      },
+      {
+        "path": "node_modules/wrangler/package.json",
+        "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+        "bytes": 6501
+      },
+      {
+        "path": "node_modules/wrangler/wrangler-dist/cli.js",
+        "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889",
+        "bytes": 14485517
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+        "bytes": 324615
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+        "bytes": 2696
+      },
+      {
+        "path": "public/console/index.html",
+        "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3",
+        "bytes": 16039
+      },
+      {
+        "path": "public/console/shell.js",
+        "sha256": "4121514f827d843c0ea62b35b076a39e3c6fe9d31ea7d22d2d9a03cddc153e32",
+        "bytes": 20991
+      },
+      {
+        "path": "public/console/views-accounts.js",
+        "sha256": "7571a0b71bb0148f81284fe4225657d200dceb454c6d705096352073edd12a45",
+        "bytes": 12906
+      },
+      {
+        "path": "public/console/views-config.js",
+        "sha256": "853e936a7c25ffa32ef18788a18ec87233431f7913e61af58d90e26038a4c4c7",
+        "bytes": 41788
+      },
+      {
+        "path": "public/console/views-explore.js",
+        "sha256": "21da13c01ebedc1b75f9922940044f788ceec9c32a476a10ee50bd7a5a1a1efa",
+        "bytes": 8957
+      },
+      {
+        "path": "public/console/views-measure.js",
+        "sha256": "e69b1cbde91aa894f44fe480316340b7317a8aee88c81a52629627e09ad464b3",
+        "bytes": 26032
+      },
+      {
+        "path": "public/console/views.js",
+        "sha256": "03d7a3f7b90fcceccad2d66717951fc735d0f5fa4e322a24369a5c17f673c114",
+        "bytes": 43429
+      },
+      {
+        "path": "public/learning.html",
+        "sha256": "d904b78cdc0ea25e8fa1fba58d0545c65c3f274e16e7a50f8a3bcab85c2c65a5",
+        "bytes": 1964
+      },
+      {
+        "path": "public/operator-session.js",
+        "sha256": "b7a943cbc3611f1f7e2b5a96aed19142f8a73df36abece2dd814a2bda0754869",
+        "bytes": 5675
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "5cf1ba33964d989d4f808c8148b3ae46ae4b56dd5eda584e722713d2ec70022e",
+        "bytes": 69302
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "4564fbff5d05e6b6427b48076e48a3cd23e5977cc5674031c834ebe2cc0c0ecc",
+        "bytes": 72913
+      },
+      {
+        "path": "public/tuning.html",
+        "sha256": "d8ded142aa10b0c9b82bf3c294522c77b04d86435cb9f42ca74b36c5b14fbd19",
+        "bytes": 1953
+      },
+      {
+        "path": "scripts/build-sdk.mjs",
+        "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79",
+        "bytes": 1663
+      },
+      {
+        "path": "scripts/identity-material.mjs",
+        "sha256": "8a6b67eeb248183412d72b34ea2a883e6c6dbf7ed09e4a22b79d40c2bc4ff9af",
+        "bytes": 15700
+      },
+      {
+        "path": "scripts/identity-material.test.mjs",
+        "sha256": "47b8cc2bb043c7244dc1cff100c0a213781ce9cd7181dd9c680b514743778df8",
+        "bytes": 9902
+      },
+      {
+        "path": "scripts/remediation/board.mjs",
+        "sha256": "bca77e89af7d9f627e3b6ea8fc9e8a5e3fc781ec973873c8c753a9aeb6e98377",
+        "bytes": 51467
+      },
+      {
+        "path": "scripts/setup.sh",
+        "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+        "bytes": 364
+      },
+      {
+        "path": "src/auth/accounts.ts",
+        "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+        "bytes": 6904
+      },
+      {
+        "path": "src/auth/authority.ts",
+        "sha256": "e037a63988db87268a0550833273846ba301217dc016221df089c1f68a3c30fc",
+        "bytes": 14642
+      },
+      {
+        "path": "src/auth/loginBudget.ts",
+        "sha256": "d9fe3a5f82d1f22082c591c66f94c68ea00da0859bdfd4a5c2754c40dbc14ca6",
+        "bytes": 4098
+      },
+      {
+        "path": "src/auth/signingConfig.mjs",
+        "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+        "bytes": 1088
+      },
+      {
+        "path": "src/auth/store.ts",
+        "sha256": "14a2009f44b5af8c0ef987faee989b284eb0d279ceae41da00878ebcf870ab66",
+        "bytes": 38233
+      },
+      {
+        "path": "src/auth/subjectAudit.ts",
+        "sha256": "a57ef271c50d137f1ca3926f6582e74e89c19e1745641ae6b3e09099d8b0b9a4",
+        "bytes": 14160
+      },
+      {
+        "path": "src/connectors/config.ts",
+        "sha256": "8375efba73f8358295c770d6125c5dc06d2d82793cadff6078ecc72b9a9ed9c2",
+        "bytes": 8597
+      },
+      {
+        "path": "src/customerBoundary.ts",
+        "sha256": "f4c4cf8b48cbc6bd7ff070512a3282632fadadecd4ddc9502f319eedb3631f62",
+        "bytes": 8357
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "69b2f267a4b03eae13c53c89320cda7856201627fdcd493a70051c7d4e91506b",
+        "bytes": 90573
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "dce46ca1d7cb880e878edd742c25c9702e3301446b4f3a4c705d700519d4d6b3",
+        "bytes": 14682
+      },
+      {
+        "path": "src/identity/material.mjs",
+        "sha256": "c9393df81cbe7afce6b639fe0b21887a634a60151bd7ede29d8b986e109b0e94",
+        "bytes": 2290
+      },
+      {
+        "path": "src/identity/sessionAuthority.ts",
+        "sha256": "83068676e8d425aa781835e1caf529321e670c86ecf551fad5caf69e27c0c73a",
+        "bytes": 38581
+      },
+      {
+        "path": "src/identity/store.ts",
+        "sha256": "97536a4c94321d4fc821a8d3b697908587c6d6984a5589b742c7b14a861b437f",
+        "bytes": 9733
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "2bf1425b3bbf58ba1938d7ff0b241f6a97b8bacb2d7bec686564edc340b6b9ea",
+        "bytes": 17460
+      },
+      {
+        "path": "src/middleware/edgeAccess.ts",
+        "sha256": "de97226d996fe4607ed2cb301fb82dbfdb65f656942ce973118d631a43800f2f",
+        "bytes": 10252
+      },
+      {
+        "path": "src/ops/monitor.ts",
+        "sha256": "3ec3e2daee729a09a2cecaa8674c2301a0fefd27d5da79b9d9ff011286d33ea4",
+        "bytes": 14994
+      },
+      {
+        "path": "src/retention.ts",
+        "sha256": "a7f1e12a1854e0850211266fabc5b554329e6e4b94e9851f4adddbeb2ade77aa",
+        "bytes": 9768
+      },
+      {
+        "path": "src/routes/health.ts",
+        "sha256": "7eb9339cdbe2010676f71ad44d2726645644f373abff86f5ba6b2ffb8b056870",
+        "bytes": 2845
+      },
+      {
+        "path": "src/sdk/tsconfig.json",
+        "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360",
+        "bytes": 377
+      },
+      {
+        "path": "src/tenancy/middleware.ts",
+        "sha256": "baa6107cb0d0304198c43a50b45b9c6c1620dbc31920d065f450aaad14fca521",
+        "bytes": 5254
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+        "bytes": 11730
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "61ee30cef05db9805773ee855d9d3097babe83ee7ee86993580b37637dfb67b7",
+        "bytes": 8838
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "f65418c549c2b2a2fefe963e18baf3ad37ed7ce2f7a204462f9b986ed9a60001",
+        "bytes": 1058
+      }
+    ]
+  },
+  "acceptance": [
+    {
+      "id": "W08.05-C1",
+      "description": "Working explicit creation/reconcile/add-brand/rotation commands, default plan/read-only intent before any effects. One bounded existing-platform script, not a new framework. Exact customer/account/environment/script/resource ownership and canonical registry/host/CORS authority; no default/ambient/preview target, demo binding/assets/queue workload or cross-customer resource adoption. Validate full desired state, operation intent and prerequisites before writes. Fixed confidential diagnostics and bounded secret input; all local/remote effects separately explicit.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W08.05-C2",
+      "description": "Secure caller-held desired material and durable protected prewrite operation receipts distinguish creation, unchanged reconciliation, additive second-brand changes and specifically selected credential rotation. Preserve every existing brand, key and identity salt on ordinary rerun/add-brand; reject unknown opaque material rather than regenerate or infer equality from secret names. JWT, SDK keys, identity assertion secrets/salt, explicit stamp owners, TENANTS and required alert destination/configuration have exact validated coverage. Identity-salt changes require an independently authorized identity migration/continuity plan, never silent renaming. Preserve W02 registered service credentials/shared human identities and stamp-owner recovery.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W08.05-C3",
+      "description": "Actual installed-provider-compatible bounded transports for declared resource creation/inspection, exact explicit IDs/name ownership and independently separated version/settings/triggers/queue-consumer steps. Preserve current stores and nonversioned security settings, verify before and after writes, record partial and ambiguous outcomes before retry, never blind replay non-idempotent POST or delete resources as compensation. Actual AE binding intent, secret opacity, provider retention/residency, unsupported readback and delivery remain honestly unconfirmed where no proof exists. No fake success adapters.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W08.05-C4",
+      "description": "Separate product-only D1 migration chain from untouched demo/history chain, preserving exact0010/0011/0012 filenames and migration lineage, current memberships/services and recovery AFTER INSERT transaction semantics. Fresh and upgraded schemas converge; repeats skip applied exact migrations and schema readback gates promotion. Unknown/divergent migration history refuses; no drop/demo cleanup or rewritten live schema. Operator initial creation is idempotent and explicitly binds the intended stamp owner to the exact created/preserved account without resetting existing passwords/sessions or inferring tenant memberships.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W08.05-C5",
+      "description": "Build/package once and promote the same identified Worker modules, shipped SDK and customer-allowlisted assets across explicit environments without rebuild. Bind source/tool/module/asset/migration configuration identities and declared verification to a bounded immutable artifact; tampered/missing artifacts or schemas refuse. Installed version upload/content readback/assets protocol and explicit version promotion are integrated, with no keep_assets-only equality claim or unsupported inherited-secret version pin. DO migration compatibility and existing class history are explicit; unknown tags refuse. Existing shell/npm entrypoints cannot bypass the guarded target/artifact workflow; no automatic broadCI/merge/push/deploy.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W08.05-C6",
+      "description": "Test and implement forward-compatible code rollback and scoped restore/recovery, not a placeholder. Distinguish code, schema, secrets and data state. Quarantine traffic/jobs during unsafe partial restore; retain current account/session/membership/service/recovery security state and monotonic consent/erasure/owner barriers. Never resurrect revoked credentials, withdrawn consent or erased data, automatically roll schema back, or claim whole-stamp rollback from D1 alone. Exact operation/revision targets, protected recovery intent, readback and truthful incomplete outcomes; unprovable/destructive recovery remains held for its authority. For in-place D1 restore, independently established current maintenance/quiescence covers all active/old versions, existing HTTP/DO/socket and scheduled/queue work, producers and external database writers. Verify real quarantine/traffic/settings/consumer state; retries alone cannot serve as safe queue pause. Protect and restore current six operator security/audit/recovery tables transactionally without replaying recovery triggers; KV/R2/DO privacy barriers remain current/untouched. Failures remain quarantined; absent, stale or unprovable quiescence/resume prerequisites refuse.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W08.05-C7",
+      "description": "Independent whole-original-W08/F09/F10/F33/F35/N02/N18/N19/N27/N28/N29 review of actual dirty-baseline deltas and retained remedies. Focused injected-transport/actual SQLite/seed/material/packaging tests cover rerun, partial/lost-response failures, second nondefault brand, explicit rotation, migration fresh/upgrade/repeat, promotion refusal and compatible rollback/restore without leaking material. Capture complete primary failures/superseding proof/pins; reuse valid unchanged dependencies. Concise existing deploy instructions describe real interface and limits, no new tracker/docs programme.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    },
+    {
+      "id": "W08.05-C8",
+      "description": "Full/live/customer acceptance stays open for separately authorized final batch: exact selected customer/account/stamp/environment/resource ownership, all active versions/modules/assets/bindings/secrets/schema, actual creation/second-brand/rerun/promotion/rollback/restore, alert delivery/on-call, access/retention/residency/historical and browser/customer authority. Local transport/SQLite/artifact tests are not live attestation. No cloud/resource/credential/customer-data/provider operation or release authorization under local mandate.",
+      "required_evidence_kinds": [
+        "deployed_test"
+      ],
+      "minimum_claim": "deployed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W08.05-K1",
+      "command": "node --test scripts/stamp-workflow.test.mjs scripts/operator-seed.test.mjs scripts/identity-material.test.mjs",
+      "runtime": "Installed local Node, actual SQLite and installed packaging/transport serialization with injected provider boundary; no remote CLI or target execution.",
+      "workload": "One coherent workflow fixture plus existing seed/material fixtures; real product migration fresh/upgrade/repeat and retained recovery, rerun/secondbrand/rotation, confidential partial/lostresponse, actual immutable packaging and safe rollback/restore. Smallest changed-surface checks only; preserve complete failed/superseding primaries."
+    },
+    {
+      "id": "W08.05-K2",
+      "command": "node --check scripts/stamp-workflow.mjs && node --check scripts/stamp-workflow.test.mjs && node --check scripts/operator-seed.mjs && node --check scripts/operator-seed.test.mjs && bash --noprofile --norc -n scripts/provision-stamp.sh && bash --noprofile --norc -n scripts/provision-staging.sh && bash --noprofile --norc -n scripts/deploy.sh && git diff --check -- scripts/stamp-workflow.mjs scripts/stamp-workflow.test.mjs scripts/provision-stamp.sh scripts/provision-staging.sh scripts/deploy.sh scripts/operator-seed.mjs scripts/operator-seed.test.mjs migrations/product/0010_operator_accounts.sql migrations/product/0011_operator_audit_tenant.sql migrations/product/0012_operator_authority.sql wrangler.toml docs/deployment/01-deploy.md",
+      "runtime": "Installed Node syntax, bash parse-only and12output scoped whitespace; no deploy/provision script executed.",
+      "workload": "Four JS syntax checks,three shell parses and owned whitespace; validate parsed configuration/product migrations in K1. Existing TS engine unchanged, no compiler or broad lint/CI needed."
+    },
+    {
+      "id": "W08.05-K3",
+      "command": "Independent frozen artifact and complete original W08 requirement review",
+      "runtime": "Distinct gpt-6-astra/xhigh reviewer",
+      "workload": "Actual12dirty-baseline deltas/source dependencies, provider adapter compatibility, complete primary proof and all canonical W08 clauses. Retained W01–W07 safeguards/full live limits, not just new helper tests."
+    },
+    {
+      "id": "W08.05-K4",
+      "command": "node --test --test-name-pattern='W08[.]05' scripts/stamp-workflow.test.mjs scripts/operator-seed.test.mjs",
+      "runtime": "Independent local Node/SQLite/injected transport review on frozen exact artifact",
+      "workload": "Only new W08.05 groups. Reuse unchanged seed/material and exact static/packaging evidence after pin/delta review; no broadrepeat."
+    },
+    {
+      "id": "W08.05-K5",
+      "command": "Inspect separately authorized selected-stamp create/reconcile/add-brand/rotation/schema/artifact promotion and recovery, required alert/resource/secret/customer attestations",
+      "runtime": "Authorized selected customer/account/deployment/privacy/provider owners; not run under local mandate",
+      "workload": "Final authorized batch and actual approved values/topology/historical/data/identity operations. All activeversions, resources/schema/assets, ownership/readback/alertdelivery, forwardcompatible rollback/restore. Local manifests and injected transport are not liveproof."
+    }
+  ],
+  "interface": "plan/create/reconcile/add-brand/rotate with exact customer/environment/account/resources and protected full desired material/operation receipts; package/upload/promote/rollback immutable actualWorker/SDK/customerallowlist bytes with knownschema/DO compatibility; restore separatequarantineartifact+verifiedproviderqueuepause+current scoped ownerquiescence, protects current6operator tables/recoverytrigger transactionally and leavesKV/R2/DO barriers current; incomplete leavesquarantine. Shellstrictdelegates; setupretired. Product0010/11/12copiesbyteidentical; exactownerbootstrap identity. No extra ownedfile. Live/identitysaltrotationrequires independentowner authority.",
+  "dependencies": "Independent W07 local PASS, only wrangler.toml overlap qualified; W01 strict existing-entry customer profile, W02 shared identities/registered credentials/stampowner recovery, W03 canonical registry, W04 identitymaterial, W05 explicit30day consent and W06 percategory failclosed settings, W07 operational destinations remain intact. Existing W08.01–.04 proof already revalidation_required; retain history.",
+  "rollback": "Apply only admitted hunks against saved dirty baselines. Product copies preserve old0010/11/12 bytes/filenames and no schema drop. Actual code/schema/secret/data recovery are separate target-bound operations; quarantine remains on failure and no revoked credential/privacy-barrier resurrection. Live operations require their own authority.",
+  "ownership": {
+    "worker": "Only12 write_paths plus docs/remediation/evidence/W08.05/worker.json after board GO. Capture exact originals before edits, minimal focusedchecks and complete primary/failures/deltas/pins; SOURCE/EVIDENCE STOP.",
+    "reviewer": "Only docs/remediation/evidence/W08.05/review.json after frozen GO; whole original W08 and exactK4newgroups. No source/governance edits or subdelegation.",
+    "lead": "Existing admission/tracker/journal/freeze/disposition/RESUME only; no product edits/checks."
+  },
+  "authority": "Existing user ordered W01–W41 local mandate. Explicit Astra/xhigh writer/reviewer; one writer. No real provisioning/deployment/resource/credential/customer-data/provider/external operation, broadCI, commit/merge/push or extra framework/doc programme. Live-only acceptance does not block next localW after independentlocalreview."
+}

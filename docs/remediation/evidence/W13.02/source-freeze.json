@@ -1,0 +1,114 @@
+{
+  "task_id": "W13.02",
+  "at": "2026-09-18T04:19:30Z",
+  "source_state": "SOURCE/EVIDENCE STOP; all worker/native sessions drained. Not acceptance.",
+  "worker": {
+    "path": "docs/remediation/evidence/W13.02/worker.json",
+    "sha256": "3a0d40f61955c4ff9120eee673d5f81999e8524d7e76fe325043f5c82660524b",
+    "bytes": 8891707
+  },
+  "artifact": {
+    "digest": "ae9e25610f5e38a737db2fffa43be42becc912cd6a6c7a4439ab7739bfdb0996",
+    "contract_digest": "3aca5ed4c918f6807759d3b0f4c05ccb97dfe2e276437bd6897b5d1531b06762",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W13.02"
+  },
+  "identity": {
+    "outputs": 13,
+    "protected_original": 341,
+    "frozen_files": 1191,
+    "expanded_archived_source_pins": 1193,
+    "virtual_pins": 4,
+    "root_verification": "All13 originals/reversible deltas,341 protected and current1193 expanded source identity checked; only2 archived consumer-script differences. Full nonbinary primary outputs and nested compiler/rendered outputs read; all blob identities verified. Repeated lint output integrity/aggregate checked, not every repetitive warning line."
+  },
+  "results": [
+    {
+      "id": "K1",
+      "result": "PASS",
+      "source": "W13.02-K3.2 actual nested npm run lint; 0 errors, 582 warnings, explicit cap582",
+      "primary": {
+        "sha256": "6f0a0c0d31231f8b6ec162ad629cdf76f2e8e22ec1201fd3b201b980f827a71d",
+        "bytes": 67572
+      },
+      "qualification": "Actual nested command on463 archived before/after pins. Only two unlinted Node .mjs script paths changed afterward; TypeScript/six authored JavaScript/config lint inputs unchanged."
+    },
+    {
+      "id": "K2",
+      "result": "PASS",
+      "source": "W13.02-K3.2 exact nested Worker and SDK compilers",
+      "qualification": "Actual exit0, empty stdout/stderr;463 archived before/after pins. Final two Node-script changes are outside unchanged TypeScript source/config inputs."
+    },
+    {
+      "id": "K3",
+      "result": "PASS",
+      "source": "W13.02-K3.3",
+      "primary": {
+        "sha256": "4a60beb42060684222e57e9400667b02bc7616c9a12a0ae37b6ff5db6102d733",
+        "bytes": 3557394
+      },
+      "qualification": "Current consumer/Node fixture,13 selected tests passed. Exact admitted command uses protected expected-identity retained first package;354 current pins and retained file unchanged. First root-package native observations belong to K3.2; K3.3 newly observes checked comment-only revisions, preserves original assertions and rejects altered authority/proof before provider."
+    },
+    {
+      "id": "K4",
+      "result": "PASS_QUALIFIED_REUSE",
+      "source": "W13.02-K3.2 exact nested rendered selector",
+      "qualification": "3 passed/43 unselected; complete stdout357B and stderr153B retained in artifact. All actual rendered TS/JS/config inputs unchanged by final two Node-script corrections. Distinct final K7 still pending, no duplicate worker rendered rerun."
+    },
+    {
+      "id": "K5",
+      "result": "PASS",
+      "source": "W13.02-K5.2",
+      "qualification": "Exact final four syntax checks plus thirteen-file whitespace check,exit0/empty output/354 unchanged pins; no product source edits afterward."
+    }
+  ],
+  "retained_package": {
+    "path": "/tmp/w13-retained-package-tAs1eb/13131313-1313-4313-8313-131313131313/artifact.json",
+    "directory": "/tmp/w13-retained-package-tAs1eb",
+    "identity": {
+      "digest": "497ad9cda3fc1a860eccb016aca0d44596c89e26e019cb78b4a35b7403b26720",
+      "sha256": "8c4ec86fe639c4392c3a9afaeaf285aa9aa7ad1ca587042e84d1ba1b3dc8ab39",
+      "bytes": 11050433
+    },
+    "sourceCheck": "W13.02-K3.2",
+    "sourcePrimarySha256": "93ab394fb0a8832bd399916e488676eec7fc7d649be81db5267b03b6d38ff722",
+    "preparedAt": "2026-09-18T04:06:28.922Z",
+    "qualification": "Exact retained canonical artifact copied through existing immutable protectedOperation writer; no reseal, checks, compilation or native observation performed during custody preparation."
+  },
+  "source_qualification": {
+    "archivedSourcePins": 1193,
+    "currentFilesystemPins": 1189,
+    "virtualPins": 4,
+    "archivedCheckBasis": 463,
+    "additionalReadOnlyCheckPins": 111,
+    "originalDocumentsNotConsumedByChecks": [
+      "docs/deployment/01-deploy.md",
+      "docs/kit/02-api-reference.md"
+    ],
+    "onlySourceDifferences": [
+      {
+        "path": "scripts/stamp-workflow.mjs",
+        "archivedSha256": "6b77def1f8719853945118806d18ee9c403a9c32c36b313d68c8da3dc52de8b3",
+        "sha256": "48ffb7d40aa3894948dfec1a74322090d434dc470ff014f2196870ba696d30b4",
+        "bytes": 91190,
+        "unchanged": false
+      },
+      {
+        "path": "scripts/stamp-workflow.test.mjs",
+        "archivedSha256": "36b9eaf009adc80d44efc71f243ea53f5cff85a9b070a12760596dc4d5f8de16",
+        "sha256": "bb091086875e4550e60c6df7bf65a6fe2ea8a56fa516fcfdefb23e1f72810ef7",
+        "bytes": 55516,
+        "unchanged": false
+      }
+    ],
+    "reversibleDeltaRecord": "W13.02-K3.2-archive-rework",
+    "note": "Retained actual original package and its executed proof are not resealed/relabelled to current scripts. Exact archived two-script bytes and reviewed deltas are retained, with unchanged payload/basis and complete original354 evidence. Additional capture grants no writes."
+  },
+  "limitations": [
+    "Whole original W13 independent frozen review and K7 are pending; worker completion is not W13 acceptance.",
+    "582 existing lint warnings remain under measured zero-headroom ratchet; actual SQLite/Vite/Cloudflare deprecation warnings are retained.",
+    "No full CI, npm ci, provider/deploy/cloud/resource/customer/credential/commit/push/external operations were performed.",
+    "A ci-v1 package alone is not full CI. Only matching successful Node sidecar plus exact artifact constitutes a CI-local pair; trusted CI, deployed/live acceptance and release remain OPEN.",
+    "Both historical K3 failures and all earlier baseline failures remain retained unchanged."
+  ],
+  "failures_preserved": "All baseline and K3.1/K3.2 failures remain in immutable worker evidence. No second Worker compilation; no fullCI/live claim."
+}

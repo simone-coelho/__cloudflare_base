@@ -1,0 +1,9 @@
+# W05.09 — accepted bounded historical-import containment
+
+Lead accepts this local implementation after separate Astra/xhigh review of all C1–C3 and the exact frozen artifact. Historical import now requires an existing exact profile with both tracking/personalization explicitly persisted true; it cannot create consenting profiles or follow a mismatched/forwarded identity. DO checks run inside serialization and reject signed shopper import before body parsing. Strict links/selectors preserve original-time erasure barriers; only validated successful acknowledgments update application/history counts. Existing consented decay/config/visit behavior is retained.
+
+Evidence: worker compound81544/d04d0c52/52 + named W37.04 1/1; compiler91713/113bd4, lint84439/67c3cf0errors/113inheritedwarnings (114baseline), whitespace79aa45 all0/drained. Independent exact frozen compound execution and all source/criterion judgments are in review.json. The38 unselected SDK-contract cases are not passing evidence. Initial47pass/2pre-existing config-fixture failures remain in baseline.json; corrections preserve original cutoff/ack assertions. Seven bidirectional source deltas/44artifact pins, including32unchanged protected files, verified. No extra suite/build was run.
+
+This is task acceptance, not full W05/W06/W35/W14, finding, customer, SLO or release acceptance. Persisted booleans do not prove affirmative historic consent; global privacy policy is unchanged. Session KV/cross-store identity and erasure remain nontransactional, including partial-batch failure and replay-dedup limits. Typed external attributes/precomputed audiences remain next. No external operations, commit or deployment.
+
+Accepted at 2026-09-11T08:09:43Z; independent review SHA 36f69706c44b01667343f73fd5dc718581bd772e428ead9c033c1eac00baf473.

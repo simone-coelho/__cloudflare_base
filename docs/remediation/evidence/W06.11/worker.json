@@ -1,0 +1,273 @@
+{
+  "task_id": "W06.11",
+  "actor_id": "w1405-worker",
+  "run_id": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "source_stopped_for_independent_review",
+  "admission": {
+    "journal": 957,
+    "plan": {
+      "path": "docs/remediation/design/W06.11/plan.md",
+      "sha256": "50e056b9a2859af0c60e94f5cbc36733b9212a8258b46b13ab7e73f831a0cd88"
+    },
+    "contract_digest": "4f0e219a937975ade25206e39c30db08bc44a7aee52943fb858e3e4443936557",
+    "direct_admission_chunk": "efe3b8",
+    "baseline": "docs/remediation/design/W06.11/baseline.json"
+  },
+  "changes": [
+    "One local shared operatorRecent reader validates successful HTTP, exact acknowledgement/envelope/index and every decision carrier against the requested tenant and visitor; known output fields only.",
+    "Both operator history routes return sanitized no-store 503 on unavailable/invalid history; the entire receipt catalog/sort/map/projection is inside its failure boundary.",
+    "Receipt reads no longer list all tombstones or return blanket 410. Existing unchanged DecisionRing.current() remains the inclusive per-record cutoff authority; valid empty and post-cutoff history are retained.",
+    "Exactly two grouped cases added to the existing ledger fixture with actual synthetic catalog publication and DecisionRing; the existing ten cases are unchanged. Only the two corresponding kit rows changed."
+  ],
+  "final_results": {
+    "runtime": {
+      "status": "pass",
+      "command_capture_id": "runtime-final",
+      "tests_passed": 12,
+      "tests_failed": 0,
+      "existing_cases": 10,
+      "new_grouped_cases": 2,
+      "exit_status": 0,
+      "drained": true
+    },
+    "compiler": {
+      "status": "pass",
+      "command_capture_id": "compiler-final",
+      "exit_status": 0,
+      "drained": true
+    },
+    "scoped_lint": {
+      "status": "pass",
+      "command_capture_id": "lint-final",
+      "errors": 0,
+      "warnings": 0,
+      "baseline_warnings": 0,
+      "exit_status": 0,
+      "drained": true
+    },
+    "whitespace": {
+      "status": "pass",
+      "command_capture_id": "whitespace-final",
+      "exit_status": 0,
+      "drained": true
+    },
+    "protected_pins": {
+      "status": "pass",
+      "compared": 63,
+      "mismatches": [],
+      "exit_status": 0,
+      "drained": true
+    }
+  },
+  "failures_and_corrections": [
+    {
+      "kind": "runtime",
+      "command_capture_id": "runtime-initial",
+      "exit_status": 1,
+      "drained": true,
+      "tests_passed": 10,
+      "tests_failed": 2,
+      "cause": "Both new groups stopped during synthetic catalog initialization: the fixture R2 put response omitted required key and size. Product-route assertions had not yet run.",
+      "correction": "Added key and UTF-8 byte size to the synthetic put acknowledgement; also added explicit no-delete assertions to both existing groups. Production bytes did not change. Reran the same fixed fixture, then compiler/lint/whitespace on final bytes.",
+      "superseded_by": "runtime-final"
+    },
+    {
+      "kind": "read_only_diagnostic",
+      "chunks": [
+        "5b89ef",
+        "5a82da"
+      ],
+      "cause": "Initially looked for baseline/evidence under evidence/W06.11 before that worker directory existed. Shell output reported missing paths; later statements made aggregate exit zero. Correct baseline is design/W06.11/baseline.json, read before implementation. No source mutation from these commands."
+    },
+    {
+      "kind": "read_only_output_truncation",
+      "chunks": [
+        "2dd0e6",
+        "aa5fbc"
+      ],
+      "cause": "Initial baseline print included compressed before-bytes and truncated. Re-read all metadata and pins without encoded byte payloads; actual assigned source and exact admitted plan/contract read directly. No runtime proof claimed from diagnostic reads."
+    }
+  ],
+  "command_captures": [
+    {
+      "kind": "runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-11T14:53:56.716Z",
+      "captures": [
+        {
+          "chunk_id": "c218b2",
+          "wall_time_seconds": 1.000677511,
+          "session_id": 93491,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f5d07d",
+          "wall_time_seconds": 5.002446371,
+          "session_id": 93491,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "816dc3",
+          "wall_time_seconds": 0.00000245,
+          "exit_code": 1,
+          "original_token_count": 701,
+          "output": " ❯ src/ledger/ledger.test.ts  (12 tests | 2 failed) 101ms\n   ❯ src/ledger/ledger.test.ts > W06.11 refuses unavailable, malformed or mis-scoped operator history without disclosure or writes\n     → Catalog publication authority unavailable\n   ❯ src/ledger/ledger.test.ts > W06.11 preserves actual cached cutoff projections, empty history and paged named receipts in two tenants\n     → Catalog publication authority unavailable\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/ledger/ledger.test.ts > W06.11 refuses unavailable, malformed or mis-scoped operator history without disclosure or writes\nError: Catalog publication authority unavailable\n ❯ unavailable src/config/publication.ts:20:27\n     18|     readonly code = 'publication_unavailable') { super(message); }\n     19| }\n     20| const unavailable = () => new PublicationError('Catalog publication au…\n       |                           ^\n     21| const conflict = () => new PublicationError('Catalog publication confl…\n     22| function requireStored(condition: unknown): asserts condition { if (!c…\n ❯ put src/config/publication.ts:206:19\n ❯ Module.initializePublication src/config/publication.ts:313:10\n ❯ operatorHistoryFixture src/ledger/ledger.test.ts:81:5\n ❯ src/ledger/ledger.test.ts:105:13\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { status: 503, code: 'publication_unavailable' }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/ledger/ledger.test.ts > W06.11 preserves actual cached cutoff projections, empty history and paged named receipts in two tenants\nError: Catalog publication authority unavailable\n ❯ unavailable src/config/publication.ts:20:27\n     18|     readonly code = 'publication_unavailable') { super(message); }\n     19| }\n     20| const unavailable = () => new PublicationError('Catalog publication au…\n       |                           ^\n     21| const conflict = () => new PublicationError('Catalog publication confl…\n     22| function requireStored(condition: unknown): asserts condition { if (!c…\n ❯ put src/config/publication.ts:206:19\n ❯ Module.initializePublication src/config/publication.ts:313:10\n ❯ operatorHistoryFixture src/ledger/ledger.test.ts:81:5\n ❯ src/ledger/ledger.test.ts:151:13\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { status: 503, code: 'publication_unavailable' }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  1 failed (1)\n      Tests  2 failed | 10 passed (12)\n   Start at  10:54:04\n   Duration  17.67s (transform 4.39s, setup 0ms, collect 8.82s, tests 101ms, environment 0ms, prepare 6.01s)\n\n"
+        }
+      ],
+      "exit_status": 1,
+      "drained": true,
+      "finished_at": "2026-09-11T14:54:54.848Z",
+      "id": "runtime-initial",
+      "disposition": "failed fixture setup; superseded by runtime-final"
+    },
+    {
+      "kind": "runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "d969b1",
+          "wall_time_seconds": 1.001554573,
+          "session_id": 69691,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "bc65c4",
+          "wall_time_seconds": 0.000002523,
+          "exit_code": 0,
+          "original_token_count": 119,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (12 tests) 138ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  10:55:25\n   Duration  14.33s (transform 4.32s, setup 1ms, collect 8.16s, tests 138ms, environment 0ms, prepare 3.87s)\n\n"
+        }
+      ],
+      "exit_status": 0,
+      "drained": true,
+      "finished_at": "2026-09-11T14:55:42.254Z",
+      "id": "runtime-final",
+      "initial_capture_observed_at": "2026-09-11T14:55:21.690Z"
+    },
+    {
+      "kind": "compiler",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "started_at": "2026-09-11T14:55:47.828Z",
+      "captures": [
+        {
+          "chunk_id": "f63eed",
+          "wall_time_seconds": 1.00138908,
+          "session_id": 98450,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ef7a88",
+          "wall_time_seconds": 0.000001139,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "exit_status": 0,
+      "drained": true,
+      "finished_at": "2026-09-11T14:56:19.078Z",
+      "id": "compiler-final"
+    },
+    {
+      "kind": "lint",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/routes/decisions.ts src/ledger/ledger.test.ts --format stylish",
+      "started_at": "2026-09-11T14:56:29.362Z",
+      "captures": [
+        {
+          "chunk_id": "662635",
+          "wall_time_seconds": 1.001030122,
+          "session_id": 50672,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "092988",
+          "wall_time_seconds": 5.000949579,
+          "session_id": 50672,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d5c8f8",
+          "wall_time_seconds": 5.001783423,
+          "session_id": 50672,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9c846b",
+          "wall_time_seconds": 0.000001866,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "exit_status": 0,
+      "drained": true,
+      "finished_at": "2026-09-11T14:57:57.302Z",
+      "id": "lint-final"
+    },
+    {
+      "kind": "whitespace",
+      "command": "git diff --check -- src/routes/decisions.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-11T14:58:07.155Z",
+      "captures": [
+        {
+          "chunk_id": "bb9a57",
+          "wall_time_seconds": 0.025653574,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "exit_status": 0,
+      "drained": true,
+      "finished_at": "2026-09-11T14:58:07.411Z",
+      "id": "whitespace-final"
+    }
+  ],
+  "protected_pin_capture": {
+    "command": "node -e 'const fs=require(\"fs\"),crypto=require(\"crypto\"),b=require(\"./docs/remediation/design/W06.11/baseline.json\"); const hash=p=>crypto.createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\"); const owned=new Set(b.owned.map(f=>f.path)); const protectedFiles=b.pins.filter(f=>!owned.has(f.path)).map(f=>({path:f.path,expected_sha256:f.sha256,sha256:hash(f.path)})); const mismatches=protectedFiles.filter(f=>f.sha256!==f.expected_sha256); console.log(JSON.stringify({final_source_stop:{at:new Date().toISOString(),files:b.owned.map(f=>({path:f.path,sha256:hash(f.path)}))},protected_count:protectedFiles.length,protected_files:protectedFiles,mismatches},null,2)); if(mismatches.length) process.exitCode=1;'",
+    "captures": [
+      {
+        "chunk_id": "91b9d4",
+        "wall_time_seconds": 0.163499973,
+        "exit_code": 0,
+        "original_token_count": 3790,
+        "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-11T14:58:27.958Z\",\n    \"files\": [\n      {\n        \"path\": \"src/routes/decisions.ts\",\n        \"sha256\": \"afe442c0d3779963b382fe366f18beef9e148f3e77d77567948520b6f316549d\"\n      },\n      {\n        \"path\": \"src/ledger/ledger.test.ts\",\n        \"sha256\": \"f882fcc019bb42ec7b27949b215d6e24186745d98a5060cba137a4f066960f53\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"4d655be1be24f7ab89a08609838cebe6e97766a3bbcf5c30a6fdfdbce407082f\"\n      }\n    ]\n  },\n  \"protected_count\": 63,\n  \"protected_files\": [\n    {\n      \"path\": \"src/routes/identity.ts\",\n      \"expected_sha256\": \"f60a4f69160f6a335c5966a1a1a155d5ed529a2fa8236bc58c4501e62745e5aa\",\n      \"sha256\": \"f60a4f69160f6a335c5966a1a1a155d5ed529a2fa8236bc58c4501e62745e5aa\"\n    },\n    {\n      \"path\": \"src/identity/history.ts\",\n      \"expected_sha256\": \"e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7\",\n      \"sha256\": \"e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7\"\n    },\n    {\n      \"path\": \"src/identity/link.ts\",\n      \"expected_sha256\": \"0898b366fe2a07450dd1fb779c0a2688e5476e1ecd7ebe9eb0555d46df50069b\",\n      \"sha256\": \"0898b366fe2a07450dd1fb779c0a2688e5476e1ecd7ebe9eb0555d46df50069b\"\n    },\n    {\n      \"path\": \"src/services/SessionManager.ts\",\n      \"expected_sha256\": \"5c87e159b7ca41da139ccef931fbec82cd2013f22f35bb46d0fcec2ffa8823db\",\n      \"sha256\": \"5c87e159b7ca41da139ccef931fbec82cd2013f22f35bb46d0fcec2ffa8823db\"\n    },\n    {\n      \"path\": \"src/durable-objects/ShopperReflex.ts\",\n      \"expected_sha256\": \"14fff343f56dd8814454ba3f3fea21c7636da198553a43ff48701deaba2d9a5e\",\n      \"sha256\": \"14fff343f56dd8814454ba3f3fea21c7636da198553a43ff48701deaba2d9a5e\"\n    },\n    {\n      \"path\": \"src/services/RealtimeSegmentEngine.ts\",\n      \"expected_sha256\": \"785f610c5bfbb8f95077c533253fd86875cd9030bba1874280ac67db2a92866b\",\n      \"sha256\": \"785f610c5bfbb8f95077c533253fd86875cd9030bba1874280ac67db2a92866b\"\n    },\n    {\n      \"path\": \"src/routes/realtime.sdkContract.test.ts\",\n      \"expected_sha256\": \"9ed921e8f6a1469ef0e06fb214adb8d14ffe8476fe71879a8690a77a5024e671\",\n      \"sha256\": \"9ed921e8f6a1469ef0e06fb214adb8d14ffe8476fe71879a8690a77a5024e671\"\n    },\n    {\n      \"path\": \"src/identity/store.ts\",\n      \"expected_sha256\": \"a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5\",\n      \"sha256\": \"a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5\"\n    },\n    {\n      \"path\": \"src/identity/shopperId.ts\",\n      \"expected_sha256\": \"210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3\",\n      \"sha256\": \"210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3\"\n    },\n    {\n      \"path\": \"src/identity/sessionCapability.ts\",\n      \"expected_sha256\": \"e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49\",\n      \"sha256\": \"e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49\"\n    },\n    {\n      \"path\": \"src/identity/consentContinuity.ts\",\n      \"expected_sha256\": \"504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af\",\n      \"sha256\": \"504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af\"\n    },\n    {\n      \"path\": \"src/identity/erase.ts\",\n      \"expected_sha256\": \"6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5\",\n      \"sha256\": \"6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5\"\n    },\n    {\n      \"path\": \"src/ledger/erasure.ts\",\n      \"expected_sha256\": \"e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7\",\n      \"sha256\": \"e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7\"\n    },\n    {\n      \"path\": \"src/content/consent.ts\",\n      \"expected_sha256\": \"38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930\",\n      \"sha256\": \"38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930\"\n    },\n    {\n      \"path\": \"src/reflex/core.ts\",\n      \"expected_sha256\": \"c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c\",\n      \"sha256\": \"c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c\"\n    },\n    {\n      \"path\": \"src/reflex/identityMerge.ts\",\n      \"expected_sha256\": \"c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508\",\n      \"sha256\": \"c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508\"\n    },\n    {\n      \"path\": \"src/reflex/configStore.ts\",\n      \"expected_sha256\": \"a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53\",\n      \"sha256\": \"a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53\"\n    },\n    {\n      \"path\": \"src/demos/registry.ts\",\n      \"expected_sha256\": \"9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b\",\n      \"sha256\": \"9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b\"\n    },\n    {\n      \"path\": \"src/connectors/index.ts\",\n      \"expected_sha256\": \"656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67\",\n      \"sha256\": \"656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67\"\n    },\n    {\n      \"path\": \"src/connectors/SegmentProvider.ts\",\n      \"expected_sha256\": \"ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359\",\n      \"sha256\": \"ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359\"\n    },\n    {\n      \"path\": \"src/connectors/evaluateCondition.ts\",\n      \"expected_sha256\": \"55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59\",\n      \"sha256\": \"55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59\"\n    },\n    {\n      \"path\": \"src/connectors/AudienceStore.ts\",\n      \"expected_sha256\": \"a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf\",\n      \"sha256\": \"a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf\"\n    },\n    {\n      \"path\": \"src/connectors/types.ts\",\n      \"expected_sha256\": \"b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3\",\n      \"sha256\": \"b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3\"\n    },\n    {\n      \"path\": \"src/connectors/DecisionProvider.ts\",\n      \"expected_sha256\": \"5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f\",\n      \"sha256\": \"5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f\"\n    },\n    {\n      \"path\": \"src/services/FeatureVariableManager.ts\",\n      \"expected_sha256\": \"42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357\",\n      \"sha256\": \"42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357\"\n    },\n    {\n      \"path\": \"src/services/JourneyStage.ts\",\n      \"expected_sha256\": \"ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331\",\n      \"sha256\": \"ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331\"\n    },\n    {\n      \"path\": \"src/content/service.ts\",\n      \"expected_sha256\": \"8f3aac28cf969f9b11591a9c324cdbacdf290407d8b429d543e2090de720caad\",\n      \"sha256\": \"8f3aac28cf969f9b11591a9c324cdbacdf290407d8b429d543e2090de720caad\"\n    },\n    {\n      \"path\": \"src/content/decide.ts\",\n      \"expected_sha256\": \"d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5\",\n      \"sha256\": \"d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5\"\n    },\n    {\n      \"path\": \"src/routes/realtime.ts\",\n      \"expected_sha256\": \"f049dcac8b6bf8d702bdfd20d6589bca2801876af55746737ccf7e9f8f0b104a\",\n      \"sha256\": \"f049dcac8b6bf8d702bdfd20d6589bca2801876af55746737ccf7e9f8f0b104a\"\n    },\n    {\n      \"path\": \"src/routes/identity.test.ts\",\n      \"expected_sha256\": \"b32694c52e1f95b4fda48a6d08da9a468778acbbdc07e77bd887fa60ce60c213\",\n      \"sha256\": \"b32694c52e1f95b4fda48a6d08da9a468778acbbdc07e77bd887fa60ce60c213\"\n    },\n    {\n      \"path\": \"src/services/SessionManager.identity.test.ts\",\n      \"expected_sha256\": \"a6d5d16b44a6adeb02c9a84cfaafd7676fba5a12a0803cb8645f59fbbec9ef14\",\n      \"sha256\": \"a6d5d16b44a6adeb02c9a84cfaafd7676fba5a12a0803cb8645f59fbbec9ef14\"\n    },\n    {\n      \"path\": \"src/index.api-boundary.test.ts\",\n      \"expected_sha256\": \"88708ef67688bd95e44b9b9a4e92e339fd37ae943849766cfc3776ae839c2162\",\n      \"sha256\": \"88708ef67688bd95e44b9b9a4e92e339fd37ae943849766cfc3776ae839c2162\"\n    },\n    {\n      \"path\": \"src/middleware/operatorAuth.ts\",\n      \"expected_sha256\": \"0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d\",\n      \"sha256\": \"0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d\"\n    },\n    {\n      \"path\": \"src/middleware/auth.ts\",\n      \"expected_sha256\": \"9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890\",\n      \"sha256\": \"9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890\"\n    },\n    {\n      \"path\": \"src/tenancy/tenant.ts\",\n      \"expected_sha256\": \"7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3\",\n      \"sha256\": \"7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3\"\n    },\n    {\n      \"path\": \"src/tenancy/middleware.ts\",\n      \"expected_sha256\": \"bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8\",\n      \"sha256\": \"bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8\"\n    },\n    {\n      \"path\": \"src/tenancy/objects.ts\",\n      \"expected_sha256\": \"e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67\",\n      \"sha256\": \"e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67\"\n    },\n    {\n      \"path\": \"src/index.ts\",\n      \"expected_sha256\": \"a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e\",\n      \"sha256\": \"a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e\"\n    },\n    {\n      \"path\": \"src/types/env.ts\",\n      \"expected_sha256\": \"a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54\",\n      \"sha256\": \"a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54\"\n    },\n    {\n      \"path\": \"package.json\",\n      \"expected_sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\",\n      \"sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\"\n    },\n    {\n      \"path\": \"tsconfig.json\",\n      \"expected_sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\",\n      \"sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\"\n    },\n    {\n      \"path\": \"vitest.config.ts\",\n      \"expected_sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\",\n      \"sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\"\n    },\n    {\n      \"path\": \".eslintrc.json\",\n      \"expected_sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\",\n      \"sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\"\n    },\n    {\n      \"path\": \"src/identity/profileEnrichment.ts\",\n      \"expected_sha256\": \"fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5\",\n      \"sha256\": \"fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5\"\n    },\n    {\n      \"path\": \"src/durable-objects/DecisionRing.ts\",\n      \"expected_sha256\": \"712d51a2d337f4cbbb1bfa91e23edd728efe4e3c04c57b2938bf5719a8d19b3e\",\n      \"sha256\": \"712d51a2d337f4cbbb1bfa91e23edd728efe4e3c04c57b2938bf5719a8d19b3e\"\n    },\n    {\n      \"path\": \"src/ledger/writer.ts\",\n      \"expected_sha256\": \"da7743fdfec69d2f549fff954435a273b14d90493255efba9f4f74a08c5901e9\",\n      \"sha256\": \"da7743fdfec69d2f549fff954435a273b14d90493255efba9f4f74a08c5901e9\"\n    },\n    {\n      \"path\": \"src/ledger/records.ts\",\n      \"expected_sha256\": \"f0a6285ae7371d4dc1e2830c8133d25ff72885ececff77641c282a52673473d7\",\n      \"sha256\": \"f0a6285ae7371d4dc1e2830c8133d25ff72885ececff77641c282a52673473d7\"\n    },\n    {\n      \"path\": \"src/ledger/consume.ts\",\n      \"expected_sha256\": \"bea6cc737317a20033372e73df2f58e91b79751c0fc8cd6980de4ae1a16ac5c5\",\n      \"sha256\": \"bea6cc737317a20033372e73df2f58e91b79751c0fc8cd6980de4ae1a16ac5c5\"\n    },\n    {\n      \"path\": \"src/ledger/enqueue.ts\",\n      \"expected_sha256\": \"1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830\",\n      \"sha256\": \"1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830\"\n    },\n    {\n      \"path\": \"src/ledger/productSort.ts\",\n      \"expected_sha256\": \"f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322\",\n      \"sha256\": \"f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322\"\n    },\n    {\n      \"path\": \"src/learn/receipts.ts\",\n      \"expected_sha256\": \"e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c\",\n      \"sha256\": \"e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c\"\n    },\n    {\n      \"path\": \"src/learn/rows.ts\",\n      \"expected_sha256\": \"3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614\",\n      \"sha256\": \"3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614\"\n    },\n    {\n      \"path\": \"src/learn/fan.ts\",\n      \"expected_sha256\": \"110192a195b7d18d001e17ba657ddd54adb96d30823262ee74ef9ddeabaf3273\",\n      \"sha256\": \"110192a195b7d18d001e17ba657ddd54adb96d30823262ee74ef9ddeabaf3273\"\n    },\n    {\n      \"path\": \"src/learn/policy.ts\",\n      \"expected_sha256\": \"6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73\",\n      \"sha256\": \"6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73\"\n    },\n    {\n      \"path\": \"src/learn/stats.ts\",\n      \"expected_sha256\": \"8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a\",\n      \"sha256\": \"8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a\"\n    },\n    {\n      \"path\": \"src/learn/hourly.ts\",\n      \"expected_sha256\": \"c120ae2ef6391495429debf8139a9d41f8060462f17087893bc3c759c760048b\",\n      \"sha256\": \"c120ae2ef6391495429debf8139a9d41f8060462f17087893bc3c759c760048b\"\n    },\n    {\n      \"path\": \"src/learn/report.ts\",\n      \"expected_sha256\": \"faa9211fe078e6069e095e556a1d34cf05569ff96ae52be2dee7d7add3bb1b65\",\n      \"sha256\": \"faa9211fe078e6069e095e556a1d34cf05569ff96ae52be2dee7d7add3bb1b65\"\n    },\n    {\n      \"path\": \"src/config/publication.ts\",\n      \"expected_sha256\": \"d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411\",\n      \"sha256\": \"d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411\"\n    },\n    {\n      \"path\": \"src/content/types.ts\",\n      \"expected_sha256\": \"a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06\",\n      \"sha256\": \"a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06\"\n    },\n    {\n      \"path\": \"src/content/kinds.ts\",\n      \"expected_sha256\": \"2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457\",\n      \"sha256\": \"2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457\"\n    },\n    {\n      \"path\": \"src/auth/accounts.ts\",\n      \"expected_sha256\": \"837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da\",\n      \"sha256\": \"837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da\"\n    },\n    {\n      \"path\": \"src/auth/store.ts\",\n      \"expected_sha256\": \"22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6\",\n      \"sha256\": \"22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6\"\n    },\n    {\n      \"path\": \"package-lock.json\",\n      \"expected_sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\",\n      \"sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\"\n    }\n  ],\n  \"mismatches\": []\n}\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true
+  },
+  "final_source_stop": {
+    "at": "2026-09-11T14:58:27.958Z",
+    "files": [
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "afe442c0d3779963b382fe366f18beef9e148f3e77d77567948520b6f316549d"
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "f882fcc019bb42ec7b27949b215d6e24186745d98a5060cba137a4f066960f53"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "4d655be1be24f7ab89a08609838cebe6e97766a3bbcf5c30a6fdfdbce407082f"
+      }
+    ]
+  },
+  "limitations": [
+    "Local synthetic Node/Vitest route correctness, not deployed/customer/SLO or whole W06/F06/F18/N13 acceptance.",
+    "Unchanged W06.06 DecisionRing primitive assurance reused; no extra primitive suite or new framework.",
+    "No transactional cross-store erasure/race, physical retention/deletion, cursor snapshot consistency, comprehensive operator auditing or historical reconstruction claim.",
+    "Snowflake D10/D06/D08 hold remains pending. No external/cloud/credential/customer-data/build/install/commit/push/deploy/cleanup operations or governance edits.",
+    "Independent reviewer and lead disposition are pending. No source edits after final_source_stop; only this admitted worker evidence record is written."
+  ]
+}

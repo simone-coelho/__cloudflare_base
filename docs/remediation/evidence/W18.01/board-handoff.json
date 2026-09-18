@@ -1,0 +1,70 @@
+{
+  "at": "2026-09-13T15:15:14.627Z",
+  "task_id": "W18.01",
+  "artifact_digest": "91208b6918ac8381c0d0d6c8e13bb942df88d40515e5996ca780d956cc38ef71",
+  "journal_seq": 1482,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "354036",
+        "wall_time_seconds": 1.0010207,
+        "session_id": 56205,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "3c868c",
+        "wall_time_seconds": 5.00029938,
+        "session_id": 56205,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0e6b56",
+        "wall_time_seconds": 20.001010531,
+        "session_id": 56205,
+        "original_token_count": 349,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=32, unscoped=9\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=102, closed=3; evidence records=306\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W18.01 — Inspect and admit W19 catalog import fidelity against complete W19/F27/N15. The current normalizePiece drops supported merchandising signals and supplies live status when lifecycle status is absent; merge then replaces each matching piece with that normalized record. Establish the existing full-record versus partial-update contract before fixing supported-field loss across import/direct-PUT/merge, using current validators and focused import/route cases. Inspect lifecycle/window omissions, stage aliases and canonical type/tag behavior; preserve bounded inputs and immutable publication, and do not invent product inheritance/customer taxonomy or reactivation policy. W18 actual customer weight-change walkthrough, W20 activation/pin controls/exclusions/fallback, W35 authority, native performance and deployment/customer decisions remain separate; no new framework or broad suite.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 21446\n"
+      },
+      {
+        "chunk_id": "75ce28",
+        "wall_time_seconds": 0.000001923,
+        "exit_code": 0,
+        "original_token_count": 350,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=32, unscoped=9\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=102, closed=3; evidence records=306\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W18.01 — Inspect and admit W19 catalog import fidelity against complete W19/F27/N15. The current normalizePiece drops supported merchandising signals and supplies live status when lifecycle status is absent; merge then replaces each matching piece with that normalized record. Establish the existing full-record versus partial-update contract before fixing supported-field loss across import/direct-PUT/merge, using current validators and focused import/route cases. Inspect lifecycle/window omissions, stage aliases and canonical type/tag behavior; preserve bounded inputs and immutable publication, and do not invent product inheritance/customer taxonomy or reactivation policy. W18 actual customer weight-change walkthrough, W20 activation/pin controls/exclusions/fallback, W35 authority, native performance and deployment/customer decisions remain separate; no new framework or broad suite.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 21446\n"
+      }
+    ],
+    "chunk_id": "75ce28",
+    "wall_time_seconds": 0.000001923,
+    "session_id": 56205,
+    "original_token_count": 350,
+    "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=32, unscoped=9\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=102, closed=3; evidence records=306\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W18.01 — Inspect and admit W19 catalog import fidelity against complete W19/F27/N15. The current normalizePiece drops supported merchandising signals and supplies live status when lifecycle status is absent; merge then replaces each matching piece with that normalized record. Establish the existing full-record versus partial-update contract before fixing supported-field loss across import/direct-PUT/merge, using current validators and focused import/route cases. Inspect lifecycle/window omissions, stage aliases and canonical type/tag behavior; preserve bounded inputs and immutable publication, and do not invent product inheritance/customer taxonomy or reactivation policy. W18 actual customer weight-change walkthrough, W20 activation/pin controls/exclusions/fallback, W35 authority, native performance and deployment/customer decisions remain separate; no new framework or broad suite.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 21446\n",
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      21446,
+      21446
+    ]
+  },
+  "root_frozen_check": {
+    "chunk_id": "252eda",
+    "wall_time_seconds": 0.388869296,
+    "exit_code": 0,
+    "original_token_count": 77,
+    "output": "{\"at\":\"2026-09-13T15:13:49.684Z\",\"status\":\"passed\",\"state\":\"closed\",\"journal\":1482,\"pins\":36,\"prior_journal_preserved\":1472,\"artifact\":\"91208b6918ac8381c0d0d6c8e13bb942df88d40515e5996ca780d956cc38ef71\",\"contract\":\"b748849e2213a20e67b729720aa908aa237dcba36a58c8b9b949e2b04c452bbe\",\"lead_signoff\":\"accepted\"}\n"
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "stage_and_numeric_dimension_controls",
+    "package_W18": "open",
+    "finding_F26": "open",
+    "finding_F29": "open",
+    "package_W35": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Inspect and admit W19 catalog import fidelity against complete W19/F27/N15. The current normalizePiece drops supported merchandising signals and supplies live status when lifecycle status is absent; merge then replaces each matching piece with that normalized record. Establish the existing full-record versus partial-update contract before fixing supported-field loss across import/direct-PUT/merge, using current validators and focused import/route cases. Inspect lifecycle/window omissions, stage aliases and canonical type/tag behavior; preserve bounded inputs and immutable publication, and do not invent product inheritance/customer taxonomy or reactivation policy. W18 actual customer weight-change walkthrough, W20 activation/pin controls/exclusions/fallback, W35 authority, native performance and deployment/customer decisions remain separate; no new framework or broad suite."
+  },
+  "limitations": "Bounded W18 operator stage and per-slot numeric weight controls, real-validator local DOM/save/readback and existing History feedback only. Not full W18/F26/F29 customer weight-change walkthrough, actual customer assets/browser/no-reload delivery, deployed revision propagation, CAS/W35 authority, runtime/SLO or release acceptance. Existing /learn/slots grid still lists dimension names; numeric readback lives on Slot rules. Registry failures show unavailable editor; unknown stored weights remain visible/read-only and preserved, not automatically activated or deleted. Cross-page repeated slot-name selection, unsaved navigation loss, server registry cross-validation and full W20 activation/pin UI/exclusions/fallback remain separate. No scoring/model/default-arm/pin policy change, new framework, benchmark, cloud/deploy/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions."
+}

@@ -1,0 +1,989 @@
+{
+  "task_id": "W26.02",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "run": "/root/w1404_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-14T01:28:13.047Z",
+  "contract_digest": "e8ad6d6df4729b7f9cc89dbc4e093272f085adb6bd03de44b0c8c4dd1d65ce04",
+  "source_go": {
+    "original": {
+      "at": "2026-09-14T00:56:46.131Z",
+      "capture": "8cdb36",
+      "journal": 1636,
+      "contract_digest": "b24b6a05b4d4a84a504882be56f6ab6bf6e187c7a5fc6bc1265a81c54e37cf6c"
+    },
+    "dependency_amendment": {
+      "capture": "ffc863",
+      "journal": 1640,
+      "contract_digest": "516775caaad675a5f46637a944cfcdd299d3b0cee5dd12b22fabaa8e5198f801",
+      "record": "docs/remediation/evidence/W26.02/dependency-amendment.json",
+      "qualification": "Added DecisionRing.ts only after complete plan-v2 read and explicit lead GO; original baseline retained."
+    },
+    "fixture_rework": {
+      "capture": "caa1d5",
+      "journal": 1644,
+      "record": "docs/remediation/evidence/W26.02/selection-amendment.json",
+      "qualification": "Complete plan-v3 read before the two fixture-only repairs; same literal selector, actual29."
+    }
+  },
+  "basis": [
+    {
+      "path": "docs/remediation/design/W26.02/plan.md",
+      "sha256": "7c7512e93f01f45c13b946164171fb465575192ad1bd1a42cb28db0ad699f4c6"
+    },
+    {
+      "path": "docs/remediation/design/W26.02/plan-v2.md",
+      "sha256": "0d58a9f5cb5d885dc9b874c827266df6f0bc0dc69db2fe0d121a40903a1d675f"
+    },
+    {
+      "path": "docs/remediation/design/W26.02/baseline.json",
+      "sha256": "d6fe3aad94fe53f0f93853adb56eef2aa951117a575dc6a46b5cbdc78f24859a"
+    },
+    {
+      "path": "docs/remediation/design/W26.02/baseline-v2.json",
+      "sha256": "a7d18926b7e85aa39e0d817aa5b300c064ba706302e4185081babc00fc5d8acc"
+    },
+    {
+      "path": "docs/remediation/evidence/W26.02/admission.json",
+      "sha256": "c3f78c5de980cc23e681c44bd9c51f17a80984ec988ae98a4055d7e9f1605497"
+    },
+    {
+      "path": "docs/remediation/evidence/W26.02/dependency-amendment.json",
+      "sha256": "343da185a4de1e4cc6ef4c7c6898aa4d545810039137a84ee00066552ecba087"
+    },
+    {
+      "path": "docs/remediation/design/W26.02/plan-v3.md",
+      "sha256": "50edf7bcdbc71b1a5af65ab2b677699e320bcb1e4d8462543c3715e5f4583357"
+    },
+    {
+      "path": "docs/remediation/evidence/W26.02/selection-amendment.json",
+      "sha256": "9d5281488721a938f96c1a2f799c9f25e445e5ed3cbda06081ab83f1f08e5563"
+    }
+  ],
+  "baseline_reuse": "Lead entry board VALID1627 and original admission151 source pins reused; no worker board/baseline runtime rerun. Baseline-v2 preserves original21 before bytes and adds unchanged DecisionRing.ts;107 inherited lint warnings plus added DO0. Final full and SDK compilers/scoped lint/whitespace run on all22 stopped paths.",
+  "final_results": {
+    "runtime": {
+      "passed": 29,
+      "failed": 0,
+      "skipped": 147,
+      "unselected": 147,
+      "total_discovered": 176,
+      "test_files_passed": 8,
+      "exit_code": 0,
+      "drained": true,
+      "duration_seconds": 39.77,
+      "test_duration_ms": 2410,
+      "evidence": "command_captures.runtime2"
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "full": "passed",
+      "sdk": "passed",
+      "evidence": "command_captures.static4"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 107,
+      "inherited_warnings": 107,
+      "new_errors": 0,
+      "new_warnings": 0,
+      "comparison": {
+        "method": "CLI file/severity/message/rule multiplicities; location shifts only ignored",
+        "baseline_count": 107,
+        "current_count": 107,
+        "identical": true,
+        "new_errors": 0,
+        "new_warnings": 0
+      },
+      "comparison_execution": "functions orchestration compared full retained CLI strings; no extra lint invocation",
+      "evidence": "command_captures.static4"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "scope": "All22 owned paths in exact K2 git diff --check; no new/untracked source path",
+      "evidence": "command_captures.static4"
+    }
+  },
+  "command_captures": {
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=768 node_modules/typescript/bin/tsc -p src/sdk --incremental false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts src/durable-objects/DecisionRing.ts --max-warnings 107 && git diff --check -- src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/sdk/README.md src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts public/sdk/edge-personalization.js public/sdk/edge-personalization.esm.js docs/kit/01-integration-guide.md src/durable-objects/DecisionRing.ts",
+      "captures": [
+        {
+          "chunk_id": "e704cb",
+          "wall_time_seconds": 1.001539241,
+          "session_id": 65115,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "dab1ad",
+          "wall_time_seconds": 5.003427365,
+          "session_id": 65115,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "97ef27",
+          "wall_time_seconds": 5.002006711,
+          "session_id": 65115,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ca9523",
+          "wall_time_seconds": 0.000001822,
+          "exit_code": 2,
+          "original_token_count": 350,
+          "output": "src/sdk/host.ts(11,36): error TS2304: Cannot find name 'Window'.\nsrc/sdk/host.ts(13,47): error TS2339: Property 'querySelectorAll' does not exist on type 'Document'.\nsrc/sdk/host.ts(16,48): error TS7006: Parameter 'entries' implicitly has an 'any' type.\nsrc/sdk/host.ts(26,40): error TS2304: Cannot find name 'Window'.\nsrc/sdk/host.ts(27,44): error TS2584: Cannot find name 'document'. Do you need to change your target library? Try changing the 'lib' compiler option to include 'dom'.\nsrc/sdk/host.ts(27,71): error TS2584: Cannot find name 'document'. Do you need to change your target library? Try changing the 'lib' compiler option to include 'dom'.\nsrc/sdk/host.ts(28,22): error TS2304: Cannot find name 'location'.\nsrc/sdk/host.ts(28,49): error TS2304: Cannot find name 'location'.\nsrc/sdk/host.ts(29,22): error TS2304: Cannot find name 'navigator'.\nsrc/sdk/host.ts(29,50): error TS2304: Cannot find name 'navigator'.\nsrc/sdk/host.ts(41,40): error TS2339: Property 'cookie' does not exist on type 'Document'.\nsrc/sdk/host.ts(42,51): error TS2339: Property 'cookie' does not exist on type 'Document'.\nsrc/sdk/host.ts(45,34): error TS2339: Property 'referrer' does not exist on type 'Document'.\nsrc/sdk/host.ts(57,18): error TS2339: Property 'addEventListener' does not exist on type 'Document'.\nsrc/sdk/host.ts(57,71): error TS2339: Property 'visibilityState' does not exist on type 'Document'.\n"
+        }
+      ],
+      "exit_code": 2,
+      "drained": true,
+      "source_stop": "source_stop_history[0]",
+      "stages": {
+        "full_compiler": "failed:15 browser DOM diagnostics from new fixture index import",
+        "sdk_compiler": "not reached",
+        "lint": "not reached",
+        "whitespace": "not reached"
+      },
+      "disposition": "superseded after source-only fixture composition and scoped-arm correction"
+    },
+    "static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=768 node_modules/typescript/bin/tsc -p src/sdk --incremental false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts src/durable-objects/DecisionRing.ts --max-warnings 107 && git diff --check -- src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/sdk/README.md src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts public/sdk/edge-personalization.js public/sdk/edge-personalization.esm.js docs/kit/01-integration-guide.md src/durable-objects/DecisionRing.ts",
+      "captures": [
+        {
+          "chunk_id": "9c6afa",
+          "wall_time_seconds": 1.001114586,
+          "session_id": 32023,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2e5eb2",
+          "wall_time_seconds": 5.000790419,
+          "session_id": 32023,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "16a84a",
+          "wall_time_seconds": 5.001530086,
+          "session_id": 32023,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "892794",
+          "wall_time_seconds": 4.555381324,
+          "exit_code": 0,
+          "original_token_count": 2941,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  674:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  675:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  675:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts\n   118:129  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n  1552:30   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1553:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1557:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1560:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1571:40   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1599:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1618:95   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1624:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1625:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1662:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1674:173  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1682:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1683:76   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1713:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1714:24   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1715:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:36   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1731:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1744:55   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1745:57   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1751:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1778:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1840:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1844:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1845:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1846:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1859:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1862:47   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  1908:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1912:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1915:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1918:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1918:37   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2010:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2014:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2015:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2016:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2032:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2035:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2039:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2047:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2055:25   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2073:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2079:60   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2092:71   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2099:100  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2117:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2124:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2141:110  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2147:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2148:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2149:68   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2160:52   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2161:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2161:109  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2162:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2165:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2176:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2178:119  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2193:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2198:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2200:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2223:112  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2229:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2230:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2231:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2234:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2282:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2333:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2346:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2369:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2384:101  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2391:65   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2429:153  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2463:55   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2488:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2498:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2515:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2517:77   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2529:64   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2533:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2546:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2549:41   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2554:130  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2557:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2568:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2599:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2600:71   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  2617:125  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2620:122  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.ts\n  3:10  warning  'DEFAULT_TENANT' is defined but never used  @typescript-eslint/no-unused-vars\n  3:26  warning  'TenantKV' is defined but never used        @typescript-eslint/no-unused-vars\n  3:41  warning  'KVLike' is defined but never used          @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/emit.test.ts\n  115:57   warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  135:116  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  149:108  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/emit.ts\n   84:46  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n   86:28  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  145:30  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/listen.ts\n  165:25  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n✖ 107 problems (0 errors, 107 warnings)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "source_stop": "source_stop_history[1]",
+      "stages": {
+        "full_compiler": "passed",
+        "sdk_compiler": "passed",
+        "lint": "passed:107 inherited warnings",
+        "whitespace": "passed"
+      },
+      "lint_comparison": {
+        "baseline_count": 107,
+        "current_count": 107,
+        "identical": true
+      },
+      "disposition": "intermediate pass superseded by admitted second declarative branch and paired bundles"
+    },
+    "static3": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=768 node_modules/typescript/bin/tsc -p src/sdk --incremental false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts src/durable-objects/DecisionRing.ts --max-warnings 107 && git diff --check -- src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/sdk/README.md src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts public/sdk/edge-personalization.js public/sdk/edge-personalization.esm.js docs/kit/01-integration-guide.md src/durable-objects/DecisionRing.ts",
+      "captures": [
+        {
+          "chunk_id": "6551b1",
+          "wall_time_seconds": 1.001494621,
+          "session_id": 2157,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4a9538",
+          "wall_time_seconds": 5.000996565,
+          "session_id": 2157,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b9ee5c",
+          "wall_time_seconds": 4.541967773,
+          "exit_code": 0,
+          "original_token_count": 2941,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  674:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  675:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  675:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts\n   118:129  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n  1552:30   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1553:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1557:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1560:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1571:40   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1599:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1618:95   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1624:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1625:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1662:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1674:173  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1682:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1683:76   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1713:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1714:24   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1715:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:36   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1731:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1744:55   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1745:57   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1751:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1778:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1840:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1844:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1845:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1846:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1859:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1862:47   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  1908:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1912:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1915:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1918:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1918:37   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2010:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2014:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2015:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2016:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2032:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2035:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2039:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2047:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2055:25   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2073:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2079:60   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2092:71   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2099:100  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2117:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2124:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2141:110  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2147:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2148:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2149:68   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2160:52   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2161:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2161:109  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2162:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2165:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2176:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2178:119  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2193:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2198:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2200:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2223:112  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2229:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2230:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2231:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2234:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2282:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2333:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2346:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2369:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2384:101  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2391:65   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2429:153  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2463:55   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2488:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2498:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2515:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2517:77   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2529:64   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2533:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2546:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2549:41   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2554:130  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2557:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2568:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2599:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2600:71   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  2617:125  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2620:122  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.ts\n  3:10  warning  'DEFAULT_TENANT' is defined but never used  @typescript-eslint/no-unused-vars\n  3:26  warning  'TenantKV' is defined but never used        @typescript-eslint/no-unused-vars\n  3:41  warning  'KVLike' is defined but never used          @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/emit.test.ts\n  123:57   warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  143:116  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  157:108  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/emit.ts\n   84:46  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n   86:28  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  147:30  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/listen.ts\n  165:25  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n✖ 107 problems (0 errors, 107 warnings)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "source_stop": "source_stop_history[2]",
+      "stages": {
+        "full_compiler": "passed",
+        "sdk_compiler": "passed",
+        "lint": "passed:107 inherited warnings",
+        "whitespace": "passed"
+      },
+      "lint_comparison": {
+        "method": "CLI file/severity/message/rule multiplicity; location shifts only ignored",
+        "baseline_count": 107,
+        "current_count": 107,
+        "identical": true,
+        "new_errors": 0,
+        "new_warnings": 0
+      },
+      "disposition": "passed runtime1 bytes; superseded by two affected fixture repairs"
+    },
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts src/sdk/core.test.ts src/sdk/listen.test.ts src/sdk/emit.test.ts -t 'W26.02|W26.01|W09.05|W31.01|W20.06|W05.06|W15.01|the explicit API puts|the dataLayer adapter replays|declarative capture:|listen-only keeps|the day from its hours is' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "dda6d9",
+          "wall_time_seconds": 1.00104983,
+          "session_id": 62104,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "a5859b",
+          "wall_time_seconds": 5.000858787,
+          "session_id": 62104,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "69865e",
+          "wall_time_seconds": 5.001107593,
+          "session_id": 62104,
+          "original_token_count": 7765,
+          "output": "stdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nPublicationError: Catalog publication authority unavailable\n    at unavailable (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/publication.ts:23:27)\n    at storageOf (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/publication.ts:47:17)\n    at Module.readPublication (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/publication.ts:200:41)\n    at Module.readRevision (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/versionedStore.ts:274:39)\n    at Module.serveContentDecisions (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/service.ts:169:5)\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/decisions.ts:396:21\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:23)\n    at file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:46\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/identity/sessionCapability.ts:116:9\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:17) {\n  status: 503,\n  code: 'publication_unavailable'\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ❯ src/routes/realtime.sdkContract.test.ts  (49 tests | 1 failed | 46 skipped) 495ms\n   ❯ src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\n     → expected null not to be null\n ✓ src/learn/learn.test.ts  (25 tests | 23 skipped) 36ms\nstderr | src/content/consent.test.ts > CW31 consent, the pure part > W26.02 projects exact tracked receipt IDs without changing decisions records or consent effects\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ❯ src/content/consent.test.ts  (26 tests | 1 failed | 24 skipped) 57ms\n   ❯ src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\n     → expected [ { contentId: 'a', …(8) } ] to deeply equal [ { contentId: 'a', …(8) } ]\n"
+        },
+        {
+          "chunk_id": "a9b287",
+          "wall_time_seconds": 5.000868159,
+          "session_id": 62104,
+          "original_token_count": 45,
+          "output": " ✓ src/learn/hourly.test.ts  (26 tests | 22 skipped) 103ms\n ✓ src/learn/report.test.ts  (17 tests | 16 skipped) 39ms\n ✓ src/sdk/core.test.ts  (14 tests | 9 skipped) 166ms\n"
+        },
+        {
+          "chunk_id": "b61528",
+          "wall_time_seconds": 0.000002327,
+          "exit_code": 1,
+          "original_token_count": 682,
+          "output": " ✓ src/sdk/listen.test.ts  (12 tests | 7 skipped) 203ms\n ✓ src/sdk/emit.test.ts  (7 tests) 1324ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nAssertionError: expected [ { contentId: 'a', …(8) } ] to deeply equal [ { contentId: 'a', …(8) } ]\n\n- Expected\n+ Received\n\n  Array [\n    Object {\n      \"contentId\": \"a\",\n      \"customerContentId\": \"cms-a\",\n-     \"decisionId\": \"coach:mu0k22d9:vis-00000000-0000-4000-8000-000000000001:home:hero:0:n1:90800915-f1d2-4f15-b835-042eef21d833\",\n+     \"decisionId\": \"coach:mu0k22d9:vis-00000000-0000-4000-8000-000000000001:home:hero:0:n1:7200a4b1-3d78-43c0-8ff1-60668bc78164\",\n      \"explain\": Object {\n        \"drivers\": Array [],\n        \"note\": \"no signal yet — the slot default (catalogue order)\",\n      },\n      \"order\": 0,\n      \"score\": 0,\n      \"slot\": \"hero\",\n      \"strategy\": \"default\",\n      \"type\": \"editorial\",\n    },\n  ]\n\n ❯ src/content/consent.test.ts:633:81\n    631|     const first = a.records[0]!, second = b.records[0]!;\n    632|     expect(first.ts).toBe(second.ts); expect(first.request_id).toBeTru…\n    633|     expect(first.decision_id).not.toBe(second.decision_id); expect(a.d…\n       |                                                                                 ^\n    634|     expect(compareRecords(first, second).map(d => d.field)).toEqual(['…\n    635|     expect(parseId(first.decision_id)).toMatchObject({ tenant: 'coach'…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nAssertionError: expected null not to be null\n ❯ src/routes/realtime.sdkContract.test.ts:1893:58\n    1891|       expect(requests).toEqual([]); expect(reads).toEqual([]);\n    1892|       failPreferences = false;\n    1893|       expect(await listen.hydrate({ page: 'home' })).not.toBeNull();\n       |                                                          ^\n    1894|       expect(core.consent).toEqual({ tracking: true, personalization: …\n    1895|       expect(listen.current()?.arm).toBe('default');\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  2 failed | 6 passed (8)\n      Tests  2 failed | 27 passed | 147 skipped (176)\n   Start at  21:19:05\n   Duration  45.84s (transform 7.38s, setup 0ms, collect 17.16s, tests 2.42s, environment 1ms, prepare 19.17s)\n\n"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "source_stop": "source_stop_history[2]",
+      "passed": 27,
+      "failed": 2,
+      "skipped": 147,
+      "duration_seconds": 45.84,
+      "test_duration_ms": 2420,
+      "failures": [
+        "Existing W09.05 service decisions equality included intentionally distinct newly exposed IDs.",
+        "Existing W05.06 two-host fixture lacked current catalog publication authority; actual hydrate correctly returned null."
+      ],
+      "disposition": "All five new groups passed; actual unchanged selector29 corrected in plan-v3, then fixture-only repair."
+    },
+    "static4": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=768 node_modules/typescript/bin/tsc -p src/sdk --incremental false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts src/durable-objects/DecisionRing.ts --max-warnings 107 && git diff --check -- src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/sdk/README.md src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts public/sdk/edge-personalization.js public/sdk/edge-personalization.esm.js docs/kit/01-integration-guide.md src/durable-objects/DecisionRing.ts",
+      "captures": [
+        {
+          "chunk_id": "3dfdeb",
+          "wall_time_seconds": 1.000914207,
+          "session_id": 32334,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "259745",
+          "wall_time_seconds": 5.001164898,
+          "session_id": 32334,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3e0dbe",
+          "wall_time_seconds": 0.000002004,
+          "exit_code": 0,
+          "original_token_count": 2941,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  674:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  675:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  675:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts\n   118:129  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n  1552:30   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1553:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1557:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1560:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1571:40   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1599:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1618:95   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1624:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1625:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1662:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1674:173  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1682:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1683:76   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1713:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1714:24   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1715:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:36   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1731:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1744:55   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1745:57   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1751:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1778:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1840:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1844:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1845:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1846:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1859:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1877:47   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  1923:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1927:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1930:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1933:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1933:37   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2025:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2029:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2030:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2031:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2047:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2050:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2054:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2062:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2070:25   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2088:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2094:60   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2107:71   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2114:100  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2132:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2139:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2156:110  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2162:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2163:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2164:68   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2175:52   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2176:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2176:109  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2177:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2180:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2191:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2193:119  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2208:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2213:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2215:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2238:112  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2244:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2245:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2246:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2249:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2297:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2348:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2361:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2384:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2399:101  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2406:65   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2444:153  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2478:55   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2503:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2513:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2530:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2532:77   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2544:64   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2548:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2561:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2564:41   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2569:130  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2572:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2583:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2614:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2615:71   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  2632:125  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2635:122  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.ts\n  3:10  warning  'DEFAULT_TENANT' is defined but never used  @typescript-eslint/no-unused-vars\n  3:26  warning  'TenantKV' is defined but never used        @typescript-eslint/no-unused-vars\n  3:41  warning  'KVLike' is defined but never used          @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/emit.test.ts\n  123:57   warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  143:116  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  157:108  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/emit.ts\n   84:46  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n   86:28  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n  147:30  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/sdk/listen.ts\n  165:25  warning  Unexpected empty arrow function  @typescript-eslint/no-empty-function\n\n✖ 107 problems (0 errors, 107 warnings)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "source_stop": "final_source_stop",
+      "stages": {
+        "full_compiler": "passed",
+        "sdk_compiler": "passed",
+        "lint": "passed:107 inherited warnings,exact baseline signature multiplicities",
+        "whitespace": "passed"
+      },
+      "disposition": "final byte-specific required static"
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts src/sdk/core.test.ts src/sdk/listen.test.ts src/sdk/emit.test.ts -t 'W26.02|W26.01|W09.05|W31.01|W20.06|W05.06|W15.01|the explicit API puts|the dataLayer adapter replays|declarative capture:|listen-only keeps|the day from its hours is' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "c6f7fd",
+          "wall_time_seconds": 1.000545076,
+          "session_id": 1837,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9f4ec5",
+          "wall_time_seconds": 5.000549049,
+          "session_id": 1837,
+          "original_token_count": 8309,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.06 SDK collection and transport > honors actual two-host consent, preserves defaults, and resumes only acknowledged tracking-only measurement with blocked cookies\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/routes/realtime.sdkContract.test.ts  (49 tests | 46 skipped) 585ms\n ✓ src/learn/learn.test.ts  (25 tests | 23 skipped) 33ms\nstderr | src/content/consent.test.ts > CW31 consent, the pure part > W26.02 projects exact tracked receipt IDs without changing decisions records or consent effects\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (26 tests | 24 skipped) 59ms\n"
+        },
+        {
+          "chunk_id": "b8fad4",
+          "wall_time_seconds": 5.001554341,
+          "session_id": 1837,
+          "original_token_count": 45,
+          "output": " ✓ src/learn/hourly.test.ts  (26 tests | 22 skipped) 100ms\n ✓ src/learn/report.test.ts  (17 tests | 16 skipped) 30ms\n ✓ src/sdk/core.test.ts  (14 tests | 9 skipped) 139ms\n"
+        },
+        {
+          "chunk_id": "755c48",
+          "wall_time_seconds": 0.000001972,
+          "exit_code": 0,
+          "original_token_count": 77,
+          "output": " ✓ src/sdk/listen.test.ts  (12 tests | 7 skipped) 151ms\n ✓ src/sdk/emit.test.ts  (7 tests) 1317ms\n\n Test Files  8 passed (8)\n      Tests  29 passed | 147 skipped (176)\n   Start at  21:25:36\n   Duration  39.77s (transform 6.10s, setup 0ms, collect 14.82s, tests 2.41s, environment 1ms, prepare 16.83s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "source_stop": "final_source_stop",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 147,
+      "duration_seconds": 39.77,
+      "test_duration_ms": 2410,
+      "disposition": "final byte-specific required runtime"
+    }
+  },
+  "bundle_generation": {
+    "initial": {
+      "command": "node --input-type=module -e 'import * as esbuild from \"esbuild\"; import {readFileSync} from \"node:fs\"; import {createHash} from \"node:crypto\"; const version=readFileSync(\"src/sdk/version.ts\",\"utf8\").match(/\\x27([^\\x27]+)\\x27/)[1]; const common={bundle:true,platform:\"browser\",target:\"es2022\",minify:false,sourcemap:false,legalComments:\"none\",logLevel:\"silent\",metafile:true,write:false,banner:{js:`/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */`}}; let patch=\"*** Begin Patch\\n\"; const artifacts=[]; for(const [entry,path,format] of [[\"src/sdk/index.ts\",\"public/sdk/edge-personalization.esm.js\",\"esm\"],[\"src/sdk/browser.ts\",\"public/sdk/edge-personalization.js\",\"iife\"]]){ const result=await esbuild.build({...common,entryPoints:[entry],outfile:path,format}); const next=result.outputFiles[0].text,old=readFileSync(path,\"utf8\"); patch+=`*** Update File: ${path}\\n@@\\n`+old.trimEnd().split(\"\\n\").map(l=>\"-\"+l).join(\"\\n\")+\"\\n\"+next.trimEnd().split(\"\\n\").map(l=>\"+\"+l).join(\"\\n\")+\"\\n\"; artifacts.push({path,bytes:Buffer.byteLength(next),sha256:createHash(\"sha256\").update(next).digest(\"hex\"),inputs:Object.keys(result.metafile.inputs)}); } patch+=\"*** End Patch\"; console.log(JSON.stringify({patch,artifacts}));'",
+      "write": false,
+      "application": "apply_patch only; no build script executed",
+      "captures": [
+        {
+          "chunk_id": "085f71",
+          "wall_time_seconds": 0.232839047,
+          "exit_code": 0,
+          "original_token_count": 56493,
+          "output_description": "Complete JSON generated delta was consumed through apply_patch; large patch not duplicated in worker record.",
+          "patch_characters": 217261,
+          "artifacts": [
+            {
+              "path": "public/sdk/edge-personalization.esm.js",
+              "bytes": 51596,
+              "sha256": "4e5fa6a749904a02f5675135f72cab94b04a8724a8b6334a1ddc17d0bfabd592",
+              "inputs": [
+                "src/sdk/identity.ts",
+                "src/sdk/wire.ts",
+                "src/events/actionTypes.ts",
+                "src/sdk/core.ts",
+                "src/sdk/emit.ts",
+                "src/sdk/listen.ts",
+                "src/sdk/identify.ts",
+                "src/sdk/memoryHost.ts",
+                "src/sdk/host.ts",
+                "src/sdk/version.ts",
+                "src/sdk/index.ts"
+              ]
+            },
+            {
+              "path": "public/sdk/edge-personalization.js",
+              "bytes": 54417,
+              "sha256": "150cc014dcbcdcc28d923d1ebf312c35ef35b4c8d8cd9e8f313d72120cfb707c",
+              "inputs": [
+                "src/sdk/identity.ts",
+                "src/sdk/wire.ts",
+                "src/events/actionTypes.ts",
+                "src/sdk/core.ts",
+                "src/sdk/emit.ts",
+                "src/sdk/listen.ts",
+                "src/sdk/identify.ts",
+                "src/sdk/memoryHost.ts",
+                "src/sdk/host.ts",
+                "src/sdk/version.ts",
+                "src/sdk/index.ts",
+                "src/sdk/browser.ts"
+              ]
+            }
+          ]
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "artifacts": [
+        {
+          "path": "public/sdk/edge-personalization.esm.js",
+          "bytes": 51596,
+          "sha256": "4e5fa6a749904a02f5675135f72cab94b04a8724a8b6334a1ddc17d0bfabd592",
+          "inputs": [
+            "src/sdk/identity.ts",
+            "src/sdk/wire.ts",
+            "src/events/actionTypes.ts",
+            "src/sdk/core.ts",
+            "src/sdk/emit.ts",
+            "src/sdk/listen.ts",
+            "src/sdk/identify.ts",
+            "src/sdk/memoryHost.ts",
+            "src/sdk/host.ts",
+            "src/sdk/version.ts",
+            "src/sdk/index.ts"
+          ],
+          "final_stopped_bytes_equal": false
+        },
+        {
+          "path": "public/sdk/edge-personalization.js",
+          "bytes": 54417,
+          "sha256": "150cc014dcbcdcc28d923d1ebf312c35ef35b4c8d8cd9e8f313d72120cfb707c",
+          "inputs": [
+            "src/sdk/identity.ts",
+            "src/sdk/wire.ts",
+            "src/events/actionTypes.ts",
+            "src/sdk/core.ts",
+            "src/sdk/emit.ts",
+            "src/sdk/listen.ts",
+            "src/sdk/identify.ts",
+            "src/sdk/memoryHost.ts",
+            "src/sdk/host.ts",
+            "src/sdk/version.ts",
+            "src/sdk/index.ts",
+            "src/sdk/browser.ts"
+          ],
+          "final_stopped_bytes_equal": false
+        }
+      ]
+    },
+    "final": {
+      "command": "node --input-type=module -e 'import * as esbuild from \"esbuild\"; import {readFileSync} from \"node:fs\"; import {createHash} from \"node:crypto\"; const version=readFileSync(\"src/sdk/version.ts\",\"utf8\").match(/\\x27([^\\x27]+)\\x27/)[1]; const common={bundle:true,platform:\"browser\",target:\"es2022\",minify:false,sourcemap:false,legalComments:\"none\",logLevel:\"silent\",metafile:true,write:false,banner:{js:`/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */`}}; let patch=\"*** Begin Patch\\n\"; const artifacts=[]; for(const [entry,path,format] of [[\"src/sdk/index.ts\",\"public/sdk/edge-personalization.esm.js\",\"esm\"],[\"src/sdk/browser.ts\",\"public/sdk/edge-personalization.js\",\"iife\"]]){ const result=await esbuild.build({...common,entryPoints:[entry],outfile:path,format}); const next=result.outputFiles[0].text,old=readFileSync(path,\"utf8\"); patch+=`*** Update File: ${path}\\n@@\\n`+old.trimEnd().split(\"\\n\").map(l=>\"-\"+l).join(\"\\n\")+\"\\n\"+next.trimEnd().split(\"\\n\").map(l=>\"+\"+l).join(\"\\n\")+\"\\n\"; artifacts.push({path,bytes:Buffer.byteLength(next),sha256:createHash(\"sha256\").update(next).digest(\"hex\"),inputs:Object.keys(result.metafile.inputs)}); } patch+=\"*** End Patch\"; console.log(JSON.stringify({patch,artifacts}));'",
+      "write": false,
+      "application": "apply_patch only; no build script executed",
+      "captures": [
+        {
+          "chunk_id": "c0a20c",
+          "wall_time_seconds": 0.698320875,
+          "exit_code": 0,
+          "original_token_count": 56740,
+          "output_description": "Complete JSON generated delta was consumed through apply_patch; large patch not duplicated in worker record.",
+          "patch_characters": 218209,
+          "artifacts": [
+            {
+              "path": "public/sdk/edge-personalization.esm.js",
+              "bytes": 51755,
+              "sha256": "4c81a98bc8a60447cd3ceee3f919b4e1b9b778399e32e47de438ffc0a73228f3",
+              "inputs": [
+                "src/sdk/identity.ts",
+                "src/sdk/wire.ts",
+                "src/events/actionTypes.ts",
+                "src/sdk/core.ts",
+                "src/sdk/emit.ts",
+                "src/sdk/listen.ts",
+                "src/sdk/identify.ts",
+                "src/sdk/memoryHost.ts",
+                "src/sdk/host.ts",
+                "src/sdk/version.ts",
+                "src/sdk/index.ts"
+              ]
+            },
+            {
+              "path": "public/sdk/edge-personalization.js",
+              "bytes": 54586,
+              "sha256": "0b1d870cc18ce7d8a47c1857c2bd0d30e81ea4cedc06bf6fe53867321f1f9a89",
+              "inputs": [
+                "src/sdk/identity.ts",
+                "src/sdk/wire.ts",
+                "src/events/actionTypes.ts",
+                "src/sdk/core.ts",
+                "src/sdk/emit.ts",
+                "src/sdk/listen.ts",
+                "src/sdk/identify.ts",
+                "src/sdk/memoryHost.ts",
+                "src/sdk/host.ts",
+                "src/sdk/version.ts",
+                "src/sdk/index.ts",
+                "src/sdk/browser.ts"
+              ]
+            }
+          ]
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "artifacts": [
+        {
+          "path": "public/sdk/edge-personalization.esm.js",
+          "bytes": 51755,
+          "sha256": "4c81a98bc8a60447cd3ceee3f919b4e1b9b778399e32e47de438ffc0a73228f3",
+          "inputs": [
+            "src/sdk/identity.ts",
+            "src/sdk/wire.ts",
+            "src/events/actionTypes.ts",
+            "src/sdk/core.ts",
+            "src/sdk/emit.ts",
+            "src/sdk/listen.ts",
+            "src/sdk/identify.ts",
+            "src/sdk/memoryHost.ts",
+            "src/sdk/host.ts",
+            "src/sdk/version.ts",
+            "src/sdk/index.ts"
+          ],
+          "final_stopped_bytes_equal": true
+        },
+        {
+          "path": "public/sdk/edge-personalization.js",
+          "bytes": 54586,
+          "sha256": "0b1d870cc18ce7d8a47c1857c2bd0d30e81ea4cedc06bf6fe53867321f1f9a89",
+          "inputs": [
+            "src/sdk/identity.ts",
+            "src/sdk/wire.ts",
+            "src/events/actionTypes.ts",
+            "src/sdk/core.ts",
+            "src/sdk/emit.ts",
+            "src/sdk/listen.ts",
+            "src/sdk/identify.ts",
+            "src/sdk/memoryHost.ts",
+            "src/sdk/host.ts",
+            "src/sdk/version.ts",
+            "src/sdk/index.ts",
+            "src/sdk/browser.ts"
+          ],
+          "final_stopped_bytes_equal": true
+        }
+      ]
+    },
+    "qualification": "Both actual generated final hashes equal STOP4 shipped bytes. Source fixture composes actual core/listen/emit; both shipped paths exercise createClient. Independent frozen review performs fresh paired parity."
+  },
+  "authoring_and_rework": [
+    "No source edits during any running command. Four stopped candidates and all failed/superseded attempts retained below.",
+    "Lead pre-runtime review corrected outer-whitespace rejection and explicit actual retained owner checks. No runtime failure is claimed for this authoring work.",
+    "Concrete dependency amendment checks ambiguity before DO arm/hourly brand filters. Approved same owned report refinement carries a tenant+visitor+ID withholding set across runReport brand filtering, and explicit arm lookup uses the subject ring; absent-ID behavior unchanged.",
+    "Initial static1 full compiler failed15 diagnostics because fixture import of SDK index pulled browser-only host into Worker compile. Fixture changed to existing actual source-module composition; no compiler config or production workaround.",
+    "Lead approved data-op-decision-id support in both existing declarative branches, with binding-time capture including empty values. Paired SDK outputs regenerated; intermediate static2 pass retained as stale.",
+    "Runtime1 actual29 differed from manual28 count;27 passed/2 existing controls failed. Plan-v3 records count correction and authorizes only ID-excluding field equality plus exact ID binding, and local conditional R2 empty-catalog authority for unchanged two-host consent assertions.",
+    "Final fixture-only repairs changed consent and realtime fixture bytes; production/bundles stayed at STOP3 through final STOP4/checks."
+  ],
+  "assertion_coverage": {
+    "C1": "Same-index tracked public IDs equal original item/slot/position/order records and remain unique across same-clock requests; no-tracking omits IDs. Source/IIFE/ESM preserve caller/painted IDs, delayed dwell, both declarative bindings and empty/null presence without latest-set guessing. Both real hosts reject malformed action references before effects and preserve valid/legacy outcome wire identity and consent withdrawal.",
+    "C2": "Actual ring→LearnStats targets first exact receipt rather than later same-item record; malformed/unknown/foreign owner/brand/time/session/item/slot and duplicate identical/conflicting/default rows withhold. Served n remains identical and repeated valid credits remain2. Raw runReport and persisted hour/shard paths agree on counts, grids, policies and arms; cross-brand/arm duplicate targets withhold; foreign-subject first default row cannot steal personalized arm.",
+    "C3": "New raw/hour reports basis2; explicit synthetic retained absent-ID basis1 hours retain old counts/version without mutation. Mixed hours refuse and real window reader withholds mixed bases.29 selected cases only, full/SDK compilers, identical107 inherited lint signatures, all22 whitespace, paired generated artifacts. Independent review/lead acceptance remain separate."
+  },
+  "limitations": [
+    "Optional narrowing-only receipt selector; no automatic refresh, genuine push, new rendered/viewable exposure unit, denominator/fatigue change, event/exposure idempotency or causal measurement claim.",
+    "Legacy three-argument rendered and ID-absent actions remain uncorrelated; adapters must retain actual painted receipt explicitly. GA4/custom mappings are not automatically correlated.",
+    "Malformed/unknown/ambiguous explicit references never fall back; canonical carrier is not proof of existence. Correlation is limited to each path's available subject history, not global reads.",
+    "Old computation1 remains old; mixed1/2 pools withheld. Existing counters/aggregates are not rebuilt or declared semantically clean. Reader-first/paired rollout remains outside local acceptance because older binaries may ignore additive IDs.",
+    "Synthetic local service/HTTP/R2/DO/SDK tests only; expected refusal and delivery-unavailable logs retained.147 unselected cases are not passed; native/cloud/customer/SSO/first-paint/SLO/release acceptance not claimed.",
+    "No unowned source/governance edits, subdelegation, build script, install, cloud/customer/credential/commit/push/destructive or external operations."
+  ],
+  "source_stop_history": [
+    {
+      "at": "2026-09-14T01:12:19.360Z",
+      "files": [
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+        },
+        {
+          "path": "src/content/service.ts",
+          "sha256": "f3623f7864ebde3ea38b1b23549175be1f866303b4bb1dd6e89f3ae371809389"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "sha256": "01491321f04429bb4da3b657a0b45809ecebdee188f339170cad3c208059bf9c"
+        },
+        {
+          "path": "src/sdk/types.ts",
+          "sha256": "d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "sha256": "506fddb150d89ad1858599cbac88312fea014bd46d28f7e6181bba273d00b282"
+        },
+        {
+          "path": "src/sdk/emit.ts",
+          "sha256": "cfbecd1a92104dd65dd375ab738b225734b4bfc1892a1335b80334a2657acfdb"
+        },
+        {
+          "path": "src/sdk/emit.test.ts",
+          "sha256": "34a7eabf2f220ce12cb4aa889242ba9f4f24e9da356a52c0f379aee995d92c2a"
+        },
+        {
+          "path": "src/sdk/README.md",
+          "sha256": "a05846a56fdd234f050c8a65ad62817ac5dcac0af7f2376454cdd2b254a99eea"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "7d237fb46b842768aa9fe6fc05a6dc1a6edecc5b3fe6d48d8092d59c9eef3f80"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "293e5f65b43d68a58c85bffa6fbb9eb9f959dc0ff9ec980b71d7f4d4a657ce7a"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "9fbf5f1feba0f9c627057ef0e5f5b83a166c8f990f95cde4be87ed3e82313ef9"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "e1e4304f24721638aa0705e52146eee7382e3972ead532151a9741de6ca9ad4e"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "sha256": "90ece73a7bf97f6120eb4753a1164374ce8bb67dd6f9b7af8ca0a5bfda8a5146"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "141ec2e4a55b7343e41124e5a8501de6b0ded7b5c41487ff16575144f4ec56ee"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "ec34bc94a0f732d3c17895eeac1320689613db6b101a75e73dfb30c0558fc2ef"
+        },
+        {
+          "path": "public/sdk/edge-personalization.js",
+          "sha256": "150cc014dcbcdcc28d923d1ebf312c35ef35b4c8d8cd9e8f313d72120cfb707c"
+        },
+        {
+          "path": "public/sdk/edge-personalization.esm.js",
+          "sha256": "4e5fa6a749904a02f5675135f72cab94b04a8724a8b6334a1ddc17d0bfabd592"
+        },
+        {
+          "path": "docs/kit/01-integration-guide.md",
+          "sha256": "b4e41f7264869ad10b845f51f8ace15ff125177ef9793a872ee6d71b0f07e856"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "sha256": "068189a6529f78dd91153ebb739cb7278c4ded5d0a228974fc09e5e445601dc7"
+        }
+      ],
+      "commands": [
+        "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts src/sdk/core.test.ts src/sdk/listen.test.ts src/sdk/emit.test.ts -t 'W26.02|W26.01|W09.05|W31.01|W20.06|W05.06|W15.01|the explicit API puts|the dataLayer adapter replays|declarative capture:|listen-only keeps|the day from its hours is' --maxWorkers=1 --minWorkers=1",
+        "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=768 node_modules/typescript/bin/tsc -p src/sdk --incremental false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts src/durable-objects/DecisionRing.ts --max-warnings 107 && git diff --check -- src/content/types.ts src/content/service.ts src/content/consent.test.ts src/sdk/types.ts src/sdk/listen.ts src/sdk/emit.ts src/sdk/emit.test.ts src/sdk/README.md src/ledger/records.ts src/routes/realtime.ts src/routes/realtime.sdkContract.test.ts src/learn/policy.ts src/learn/fan.ts src/learn/report.ts src/learn/hourly.ts src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/report.test.ts public/sdk/edge-personalization.js public/sdk/edge-personalization.esm.js docs/kit/01-integration-guide.md src/durable-objects/DecisionRing.ts"
+      ],
+      "capture": "66c935"
+    },
+    {
+      "at": "2026-09-14T01:14:26.864Z",
+      "files": [
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+        },
+        {
+          "path": "src/content/service.ts",
+          "sha256": "f3623f7864ebde3ea38b1b23549175be1f866303b4bb1dd6e89f3ae371809389"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "sha256": "01491321f04429bb4da3b657a0b45809ecebdee188f339170cad3c208059bf9c"
+        },
+        {
+          "path": "src/sdk/types.ts",
+          "sha256": "d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "sha256": "506fddb150d89ad1858599cbac88312fea014bd46d28f7e6181bba273d00b282"
+        },
+        {
+          "path": "src/sdk/emit.ts",
+          "sha256": "cfbecd1a92104dd65dd375ab738b225734b4bfc1892a1335b80334a2657acfdb"
+        },
+        {
+          "path": "src/sdk/emit.test.ts",
+          "sha256": "cc3b5361dabe4bcbc7dcf9e36344c8916f4388044dbd67f1dad2a9e2f7d86f56"
+        },
+        {
+          "path": "src/sdk/README.md",
+          "sha256": "a05846a56fdd234f050c8a65ad62817ac5dcac0af7f2376454cdd2b254a99eea"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "7d237fb46b842768aa9fe6fc05a6dc1a6edecc5b3fe6d48d8092d59c9eef3f80"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "293e5f65b43d68a58c85bffa6fbb9eb9f959dc0ff9ec980b71d7f4d4a657ce7a"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "c71c6737403093f21b27270adbfd414c3d24ab648f0aa19e281a8550b190d27a"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "e1e4304f24721638aa0705e52146eee7382e3972ead532151a9741de6ca9ad4e"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "sha256": "90ece73a7bf97f6120eb4753a1164374ce8bb67dd6f9b7af8ca0a5bfda8a5146"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "ba3f4d9dbf8c4dbf129a1ba5a76aa57aedd10a853caa1939a671c55dd7729d9d"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "ec34bc94a0f732d3c17895eeac1320689613db6b101a75e73dfb30c0558fc2ef"
+        },
+        {
+          "path": "public/sdk/edge-personalization.js",
+          "sha256": "150cc014dcbcdcc28d923d1ebf312c35ef35b4c8d8cd9e8f313d72120cfb707c"
+        },
+        {
+          "path": "public/sdk/edge-personalization.esm.js",
+          "sha256": "4e5fa6a749904a02f5675135f72cab94b04a8724a8b6334a1ddc17d0bfabd592"
+        },
+        {
+          "path": "docs/kit/01-integration-guide.md",
+          "sha256": "b4e41f7264869ad10b845f51f8ace15ff125177ef9793a872ee6d71b0f07e856"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "sha256": "068189a6529f78dd91153ebb739cb7278c4ded5d0a228974fc09e5e445601dc7"
+        }
+      ],
+      "capture": "5d23a0"
+    },
+    {
+      "at": "2026-09-14T01:17:09.510Z",
+      "files": [
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+        },
+        {
+          "path": "src/content/service.ts",
+          "sha256": "f3623f7864ebde3ea38b1b23549175be1f866303b4bb1dd6e89f3ae371809389"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "sha256": "01491321f04429bb4da3b657a0b45809ecebdee188f339170cad3c208059bf9c"
+        },
+        {
+          "path": "src/sdk/types.ts",
+          "sha256": "d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "sha256": "506fddb150d89ad1858599cbac88312fea014bd46d28f7e6181bba273d00b282"
+        },
+        {
+          "path": "src/sdk/emit.ts",
+          "sha256": "188cb582218166ceac62005e20e32be068cae03f2b8d99195167bafb3de636a5"
+        },
+        {
+          "path": "src/sdk/emit.test.ts",
+          "sha256": "ad0ac0bf9e2b377e2124f286e8ef2f8dd2fcfc5e3e32b5222259626146728ef2"
+        },
+        {
+          "path": "src/sdk/README.md",
+          "sha256": "a05846a56fdd234f050c8a65ad62817ac5dcac0af7f2376454cdd2b254a99eea"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "7d237fb46b842768aa9fe6fc05a6dc1a6edecc5b3fe6d48d8092d59c9eef3f80"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "293e5f65b43d68a58c85bffa6fbb9eb9f959dc0ff9ec980b71d7f4d4a657ce7a"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "c71c6737403093f21b27270adbfd414c3d24ab648f0aa19e281a8550b190d27a"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "e1e4304f24721638aa0705e52146eee7382e3972ead532151a9741de6ca9ad4e"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "sha256": "90ece73a7bf97f6120eb4753a1164374ce8bb67dd6f9b7af8ca0a5bfda8a5146"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "ba3f4d9dbf8c4dbf129a1ba5a76aa57aedd10a853caa1939a671c55dd7729d9d"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "ec34bc94a0f732d3c17895eeac1320689613db6b101a75e73dfb30c0558fc2ef"
+        },
+        {
+          "path": "public/sdk/edge-personalization.js",
+          "sha256": "0b1d870cc18ce7d8a47c1857c2bd0d30e81ea4cedc06bf6fe53867321f1f9a89"
+        },
+        {
+          "path": "public/sdk/edge-personalization.esm.js",
+          "sha256": "4c81a98bc8a60447cd3ceee3f919b4e1b9b778399e32e47de438ffc0a73228f3"
+        },
+        {
+          "path": "docs/kit/01-integration-guide.md",
+          "sha256": "b4e41f7264869ad10b845f51f8ace15ff125177ef9793a872ee6d71b0f07e856"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "sha256": "068189a6529f78dd91153ebb739cb7278c4ded5d0a228974fc09e5e445601dc7"
+        }
+      ],
+      "capture": "fd18fa"
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-14T01:24:10.570Z",
+    "files": [
+      {
+        "path": "src/content/types.ts",
+        "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+      },
+      {
+        "path": "src/content/service.ts",
+        "sha256": "f3623f7864ebde3ea38b1b23549175be1f866303b4bb1dd6e89f3ae371809389"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "9659f4c56a76a7d8746666d6ffe35c583dcf7c771a363e4917f60aef53b82a50"
+      },
+      {
+        "path": "src/sdk/types.ts",
+        "sha256": "d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4"
+      },
+      {
+        "path": "src/sdk/listen.ts",
+        "sha256": "506fddb150d89ad1858599cbac88312fea014bd46d28f7e6181bba273d00b282"
+      },
+      {
+        "path": "src/sdk/emit.ts",
+        "sha256": "188cb582218166ceac62005e20e32be068cae03f2b8d99195167bafb3de636a5"
+      },
+      {
+        "path": "src/sdk/emit.test.ts",
+        "sha256": "ad0ac0bf9e2b377e2124f286e8ef2f8dd2fcfc5e3e32b5222259626146728ef2"
+      },
+      {
+        "path": "src/sdk/README.md",
+        "sha256": "a05846a56fdd234f050c8a65ad62817ac5dcac0af7f2376454cdd2b254a99eea"
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "aa63295913a03571db0c76f5c9e812f79f959fee840b21988038a614e916f21d"
+      },
+      {
+        "path": "src/learn/policy.ts",
+        "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98"
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "sha256": "293e5f65b43d68a58c85bffa6fbb9eb9f959dc0ff9ec980b71d7f4d4a657ce7a"
+      },
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "c71c6737403093f21b27270adbfd414c3d24ab648f0aa19e281a8550b190d27a"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "e1e4304f24721638aa0705e52146eee7382e3972ead532151a9741de6ca9ad4e"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "90ece73a7bf97f6120eb4753a1164374ce8bb67dd6f9b7af8ca0a5bfda8a5146"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "ba3f4d9dbf8c4dbf129a1ba5a76aa57aedd10a853caa1939a671c55dd7729d9d"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "ec34bc94a0f732d3c17895eeac1320689613db6b101a75e73dfb30c0558fc2ef"
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "0b1d870cc18ce7d8a47c1857c2bd0d30e81ea4cedc06bf6fe53867321f1f9a89"
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "4c81a98bc8a60447cd3ceee3f919b4e1b9b778399e32e47de438ffc0a73228f3"
+      },
+      {
+        "path": "docs/kit/01-integration-guide.md",
+        "sha256": "b4e41f7264869ad10b845f51f8ace15ff125177ef9793a872ee6d71b0f07e856"
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "068189a6529f78dd91153ebb739cb7278c4ded5d0a228974fc09e5e445601dc7"
+      }
+    ]
+  },
+  "source_stop_capture": {
+    "chunk_id": "8ee0c3",
+    "wall_time_seconds": 0.000004769,
+    "exit_code": 0,
+    "original_token_count": 625,
+    "output": "{\"at\":\"2026-09-14T01:24:10.570Z\",\"files\":[{\"path\":\"src/content/types.ts\",\"sha256\":\"29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5\"},{\"path\":\"src/content/service.ts\",\"sha256\":\"f3623f7864ebde3ea38b1b23549175be1f866303b4bb1dd6e89f3ae371809389\"},{\"path\":\"src/content/consent.test.ts\",\"sha256\":\"9659f4c56a76a7d8746666d6ffe35c583dcf7c771a363e4917f60aef53b82a50\"},{\"path\":\"src/sdk/types.ts\",\"sha256\":\"d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4\"},{\"path\":\"src/sdk/listen.ts\",\"sha256\":\"506fddb150d89ad1858599cbac88312fea014bd46d28f7e6181bba273d00b282\"},{\"path\":\"src/sdk/emit.ts\",\"sha256\":\"188cb582218166ceac62005e20e32be068cae03f2b8d99195167bafb3de636a5\"},{\"path\":\"src/sdk/emit.test.ts\",\"sha256\":\"ad0ac0bf9e2b377e2124f286e8ef2f8dd2fcfc5e3e32b5222259626146728ef2\"},{\"path\":\"src/sdk/README.md\",\"sha256\":\"a05846a56fdd234f050c8a65ad62817ac5dcac0af7f2376454cdd2b254a99eea\"},{\"path\":\"src/ledger/records.ts\",\"sha256\":\"3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e\"},{\"path\":\"src/routes/realtime.ts\",\"sha256\":\"f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b\"},{\"path\":\"src/routes/realtime.sdkContract.test.ts\",\"sha256\":\"aa63295913a03571db0c76f5c9e812f79f959fee840b21988038a614e916f21d\"},{\"path\":\"src/learn/policy.ts\",\"sha256\":\"2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98\"},{\"path\":\"src/learn/fan.ts\",\"sha256\":\"293e5f65b43d68a58c85bffa6fbb9eb9f959dc0ff9ec980b71d7f4d4a657ce7a\"},{\"path\":\"src/learn/report.ts\",\"sha256\":\"c71c6737403093f21b27270adbfd414c3d24ab648f0aa19e281a8550b190d27a\"},{\"path\":\"src/learn/hourly.ts\",\"sha256\":\"e1e4304f24721638aa0705e52146eee7382e3972ead532151a9741de6ca9ad4e\"},{\"path\":\"src/learn/learn.test.ts\",\"sha256\":\"90ece73a7bf97f6120eb4753a1164374ce8bb67dd6f9b7af8ca0a5bfda8a5146\"},{\"path\":\"src/learn/hourly.test.ts\",\"sha256\":\"ba3f4d9dbf8c4dbf129a1ba5a76aa57aedd10a853caa1939a671c55dd7729d9d\"},{\"path\":\"src/learn/report.test.ts\",\"sha256\":\"ec34bc94a0f732d3c17895eeac1320689613db6b101a75e73dfb30c0558fc2ef\"},{\"path\":\"public/sdk/edge-personalization.js\",\"sha256\":\"0b1d870cc18ce7d8a47c1857c2bd0d30e81ea4cedc06bf6fe53867321f1f9a89\"},{\"path\":\"public/sdk/edge-personalization.esm.js\",\"sha256\":\"4c81a98bc8a60447cd3ceee3f919b4e1b9b778399e32e47de438ffc0a73228f3\"},{\"path\":\"docs/kit/01-integration-guide.md\",\"sha256\":\"b4e41f7264869ad10b845f51f8ace15ff125177ef9793a872ee6d71b0f07e856\"},{\"path\":\"src/durable-objects/DecisionRing.ts\",\"sha256\":\"068189a6529f78dd91153ebb739cb7278c4ded5d0a228974fc09e5e445601dc7\"}]}\n"
+  },
+  "handoff": "All source stopped; only this worker record written after final checks. Root to freeze22 deltas/protected inputs and obtain distinct independent29/parity review before any acceptance."
+}

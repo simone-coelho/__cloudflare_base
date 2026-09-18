@@ -1,0 +1,286 @@
+{
+  "before": null,
+  "after": {
+    "id": "W14.05-E3",
+    "task_id": "W14.05",
+    "check_id": "W14.05-K3",
+    "criterion_ids": [
+      "W14.05-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W14.05/review.json",
+      "sha256": "19ed93a903a009376d9334f0b652ef07eebb4dd2ed358c44384d63ad9ebcb1f9"
+    },
+    "at": "2026-09-11T12:18:50.691Z",
+    "limitations": "Bounded W14 §§1.1/1.12 typed historical segmentation/precomputed audiences through existing JSON import and both-host current consumers. Local actual Hono/session/DO class fixtures with synthetic data, not native/deployed/customer/SLO acceptance. No numerical affinity projection, invented mappings or weights, runtime model/provider calls, customer rights approval, CSV/S3 typed adapter, scheduled warehouse/destination/readback/deletion or full W14 delivery. Explicit persisted import consent/exact ownership/barriers retained; not global privacy-policy acceptance or transactional KV/cross-store identity/erasure/race assurance. Prior W05.09 accepted remedy retained and whole-artifact assurance qualified before shared extension; unchanged W08.04/W14.04 assurance reused. D03/D10, full W05/W06/W35/W14, retention/customer/gate/release open. No cloud/customer-data/credential/build/install/staging/commit/push/deploy/cleanup actions.",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/services/SessionManager.identity.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1 -t 'W14.05|uses tenant config for historical import and link/absorb, with actual internal object context before effects'",
+    "runtime": "Separate Astra/xhigh actual frozen source and same fixed compound runtime once; reuse final static and unchanged accepted dependency assurance.",
+    "workload": "All C1-C3, exact deltas/pins/full captures, legacy compatibility and explicit remaining customer/scoring/transactional/warehouse scope.",
+    "result": "pass",
+    "artifact_digest": "38fa4cbda90b14a2eed134672c06589a63d5705ac5d4583632e99c798ad03b1a",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "bd98e9ccf11107a71166935088a09f4e5b3cf3031559fb543d8b8b080d65614b",
+      "configuration": "Bounded W14 §§1.1/1.12 typed historical segmentation/precomputed audiences through existing JSON import and both-host current consumers. Local actual Hono/session/DO class fixtures with synthetic data, not native/deployed/customer/SLO acceptance. No numerical affinity projection, invented mappings or weights, runtime model/provider calls, customer rights approval, CSV/S3 typed adapter, scheduled warehouse/destination/readback/deletion or full W14 delivery. Explicit persisted import consent/exact ownership/barriers retained; not global privacy-policy acceptance or transactional KV/cross-store identity/erasure/race assurance. Prior W05.09 accepted remedy retained and whole-artifact assurance qualified before shared extension; unchanged W08.04/W14.04 assurance reused. D03/D10, full W05/W06/W35/W14, retention/customer/gate/release open. No cloud/customer-data/credential/build/install/staging/commit/push/deploy/cleanup actions.",
+      "files": [
+        {
+          "path": "src/routes/identity.ts",
+          "role": "output",
+          "sha256": "69755a03359263504740b57428c102520564a264928b202e129b55c3f7b453b7"
+        },
+        {
+          "path": "src/identity/history.ts",
+          "role": "output",
+          "sha256": "4d8c11e4ea629b11847176d4faedaa8d8249c090b643adba950657f0fee90c22"
+        },
+        {
+          "path": "src/identity/link.ts",
+          "role": "output",
+          "sha256": "0898b366fe2a07450dd1fb779c0a2688e5476e1ecd7ebe9eb0555d46df50069b"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "role": "output",
+          "sha256": "5c87e159b7ca41da139ccef931fbec82cd2013f22f35bb46d0fcec2ffa8823db"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "role": "output",
+          "sha256": "14fff343f56dd8814454ba3f3fea21c7636da198553a43ff48701deaba2d9a5e"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "role": "output",
+          "sha256": "785f610c5bfbb8f95077c533253fd86875cd9030bba1874280ac67db2a92866b"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "role": "output",
+          "sha256": "811aad2724ef436f53530c2330f9ae2f3f5c88a92ab6fb67bc257af05b761e2b"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "161599770d4ece000ba62cd77016d046d3d2ce42932598b331e06e0514efddc0"
+        },
+        {
+          "path": "src/identity/store.ts",
+          "role": "source",
+          "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+        },
+        {
+          "path": "src/identity/shopperId.ts",
+          "role": "source",
+          "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "role": "source",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+        },
+        {
+          "path": "src/identity/consentContinuity.ts",
+          "role": "source",
+          "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "role": "source",
+          "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "role": "source",
+          "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/reflex/identityMerge.ts",
+          "role": "source",
+          "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "role": "source",
+          "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+        },
+        {
+          "path": "src/connectors/index.ts",
+          "role": "source",
+          "sha256": "656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67"
+        },
+        {
+          "path": "src/connectors/SegmentProvider.ts",
+          "role": "source",
+          "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359"
+        },
+        {
+          "path": "src/connectors/evaluateCondition.ts",
+          "role": "source",
+          "sha256": "55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59"
+        },
+        {
+          "path": "src/connectors/AudienceStore.ts",
+          "role": "source",
+          "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf"
+        },
+        {
+          "path": "src/connectors/types.ts",
+          "role": "source",
+          "sha256": "b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3"
+        },
+        {
+          "path": "src/connectors/DecisionProvider.ts",
+          "role": "source",
+          "sha256": "5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f"
+        },
+        {
+          "path": "src/services/FeatureVariableManager.ts",
+          "role": "source",
+          "sha256": "42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357"
+        },
+        {
+          "path": "src/services/JourneyStage.ts",
+          "role": "source",
+          "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "8f3aac28cf969f9b11591a9c324cdbacdf290407d8b429d543e2090de720caad"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "role": "source",
+          "sha256": "f049dcac8b6bf8d702bdfd20d6589bca2801876af55746737ccf7e9f8f0b104a"
+        },
+        {
+          "path": "src/routes/identity.test.ts",
+          "role": "source",
+          "sha256": "b32694c52e1f95b4fda48a6d08da9a468778acbbdc07e77bd887fa60ce60c213"
+        },
+        {
+          "path": "src/services/SessionManager.identity.test.ts",
+          "role": "source",
+          "sha256": "a6d5d16b44a6adeb02c9a84cfaafd7676fba5a12a0803cb8645f59fbbec9ef14"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "role": "source",
+          "sha256": "88708ef67688bd95e44b9b9a4e92e339fd37ae943849766cfc3776ae839c2162"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/tenancy/objects.ts",
+          "role": "source",
+          "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "src/identity/profileEnrichment.ts",
+          "role": "output",
+          "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.05/worker.json",
+          "role": "output",
+          "sha256": "3d2d94967d154cc3167a18064a8c995660a170b554b849f975ac953b84ed9387"
+        },
+        {
+          "path": "docs/remediation/design/W14.05/plan.md",
+          "role": "configuration",
+          "sha256": "9162c3a774ae0945dc2af648d104549d0efcdc7e3d9126d7c162357d04757469"
+        },
+        {
+          "path": "docs/remediation/design/W14.05/baseline.json",
+          "role": "configuration",
+          "sha256": "3aad88fcc92a1b21fe80746b8a363168c0a6b947abc32af26c81715948ad70ed"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.05/source-freeze.json",
+          "role": "configuration",
+          "sha256": "3ccb631137f413460c066dc81be6c4d158f943bfc729799788172e0ffe10a55c"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.05/source-deltas.json",
+          "role": "configuration",
+          "sha256": "170c8f0c5caf53084de7c56948dc9766302e35912e86b3218c5b90985d2bb3f6"
+        }
+      ],
+      "digest": "38fa4cbda90b14a2eed134672c06589a63d5705ac5d4583632e99c798ad03b1a"
+    }
+  }
+}

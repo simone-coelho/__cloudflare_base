@@ -1,0 +1,247 @@
+{
+  "task_id": "W35.08",
+  "implementer": "/root/w3507_worker; gpt-6-astra/xhigh",
+  "state": "source_stop_pending_independent_review",
+  "contract_sha256": "f39c490795446704d631b1b4149df59074997926a9e83235ba777c4fc0346fb7",
+  "admission_sha256": "dfe4b65ca1d2c6ebf7fe898db6142cb3f3aee40a16470f12f3b0782179794f74",
+  "baseline_verified": true,
+  "basis": "Source-confirmed missing serialized raw-presence check; no baseline runtime reproduction claimed. Reused lead-drained VALID2005 board check/status and journal2013 admission; no redundant board run.",
+  "scope": "Four unsigned legacy mutations only. Presence, including null/malformed/empty authority, or read failure refuses before effects. Preserve signed/refusal/operator import/registered identity and erasure paths.",
+  "checks": [
+    {
+      "id": "W35.08-K1",
+      "attempt": 1,
+      "session_id": 6960,
+      "exit_code": 1,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[345678]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "source_sha256": {
+        "ShopperReflex.ts": "c498e4a3caebf1162345a71522af7057a5e626f3046034164793079e671dacaa",
+        "realtime.sdkContract.test.ts": "235873099e31f869df1dfda868d31266ef09cebe7e312051c990e84add377cef"
+      },
+      "result": "20 passed, 1 failed, 93 skipped; 39.38s. Existing legacy-group line2779 expected empty state after signed cold segments; actual grantAuthority is required by W35.04. New fence cases and prior selected erasure tests passed. Corrected only this same-group stale setup/assertion dependency, retaining exact no-effects and target-unchanged assertions; rerun required.",
+      "diagnostics": "Synthetic queue_unavailable/learning_incomplete and Vite CJS notices; streamed diagnostic chunk was truncated, final failure/summary retained. Not external delivery assurance."
+    },
+    {
+      "id": "W35.08-K1",
+      "attempt": 2,
+      "session_id": 34244,
+      "exit_code": 0,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[345678]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "source_sha256": {
+        "ShopperReflex.ts": "c498e4a3caebf1162345a71522af7057a5e626f3046034164793079e671dacaa",
+        "realtime.sdkContract.test.ts": "65d4bcc036b51e0cb12f94da9d5d3b15af9c3c3f4ddb7f00fa5f86c91a2f2878"
+      },
+      "result": "21 passed, 93 skipped; both files passed; 24.33s. Supersedes attempt1 after fixture-only correction. Subsequent K2 repair changes only erased TypeScript storage-spy typing/declaration formatting, not executable behavior. Synthetic queue/learning diagnostics and Vite CJS notice retained as local-fixture limitations."
+    },
+    {
+      "id": "W35.08-K2",
+      "attempt": 1,
+      "session_id": 75056,
+      "exit_code": 2,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+      "result": "TypeScript TS2367 at realtime.sdkContract.test.ts:2713 and :2720: last-overload spy typing inferred Record-only put/string[]-only get. Lint/whitespace did not run because the compiler failed. Repaired only local spy type to its actual string-or-record/string-or-array behavior; rerun required. Source bytes were K1 attempt2 bytes."
+    },
+    {
+      "id": "W35.08-K2",
+      "attempt": 2,
+      "session_id": 94593,
+      "exit_code": 0,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+      "result": "Compiler, two-file ESLint and scoped whitespace pass. 0 errors/109 warnings; all 10 path/rule/message/count signatures exactly match admission. Supersedes attempt1 after local storage-spy type correction.",
+      "warning_signatures": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-explicit-any",
+          "message": "Unexpected any. Specify a different type",
+          "count": 9
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'_ws' is defined but never used",
+          "count": 2
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'_code' is defined but never used",
+          "count": 1
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'_reason' is defined but never used",
+          "count": 1
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'_wasClean' is defined but never used",
+          "count": 1
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "rule": "@typescript-eslint/no-unused-vars",
+          "message": "'error' is defined but never used",
+          "count": 1
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "rule": "@typescript-eslint/no-empty-function",
+          "message": "Unexpected empty method 'passThroughOnException'",
+          "count": 1
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "rule": "@typescript-eslint/no-explicit-any",
+          "message": "Unexpected any. Specify a different type",
+          "count": 89
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "rule": "@typescript-eslint/no-empty-function",
+          "message": "Unexpected empty arrow function",
+          "count": 2
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "rule": "@typescript-eslint/no-empty-function",
+          "message": "Unexpected empty method 'set'",
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "handoff": "SOURCE STOP. K1 passing pre-type-correction basis and exact final K2 retained; no running commands. Distinct Astra/xhigh review/K3 and lead disposition pending. No self-verification or acceptance.",
+  "limitations": "Local DO stale-writer containment only. No KV atomicity, full session/socket parity, retention policy, historical repair, host toggle, migration/deployment, customer/external operation or full W35/F14/customer/SLO/release acceptance.",
+  "source_stop_utc": "2026-09-16 06:01:46 UTC",
+  "fixture_correction": "Six W35.06/.07 successor setup calls now write explicit synthetic affinity/pipeline/owner state while preserving durable authority and retirement markers; existing erasure assertions unchanged. Existing W35.08-tagged legacy group preserves true-absence compatibility, signed absorb/forward, operator import, necessary refusal and no-effects checks.",
+  "k1_final_basis": "Lead explicitly approved reuse after only TypeScript local storage-spy typing/declaration formatting changed following passing K1; pre-correction hashes retained above. Distinct final K3 must exercise exact stopped bytes. No final-byte runtime pass or acceptance claimed by worker.",
+  "delta_format": "Sequential UTF-16 string splices against each admitted before file: at offset require exact delete string, replace with insert. Apply in listed order; reverse order with insert/delete exchanged reconstructs baseline. No unrelated changes included.",
+  "files": [
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "before_sha256": "31828b04839833d9e3a4326b1994a338a5e7b602098509d37672bab9d3748ffe",
+      "final_sha256": "c498e4a3caebf1162345a71522af7057a5e626f3046034164793079e671dacaa",
+      "delta": [
+        {
+          "offset": 31667,
+          "delete": " if (principal) await this.assertOwned(principal, undefined, true);",
+          "insert": "\n          if (principal) await this.assertOwned(principal, undefined, true);\n          else await this.assertLegacyWriter();\n       "
+        },
+        {
+          "offset": 33343,
+          "delete": "",
+          "insert": "        else await this.assertLegacyWriter();\n"
+        },
+        {
+          "offset": 40933,
+          "delete": "",
+          "insert": "          await this.assertLegacyWriter();\n"
+        },
+        {
+          "offset": 73503,
+          "delete": "",
+          "insert": "  /** Called inside serialization: only never-adopted objects admit legacy writers. */\n  private async assertLegacyWriter(): Promise<void> {\n    // Raw presence is the fence, including an empty barrier or malformed value.\n    if (await this.state.storage.get('grantAuthority') !== undefined) throw new SessionAccessError();\n  }\n\n"
+        },
+        {
+          "offset": 119587,
+          "delete": "",
+          "insert": "      else await this.assertLegacyWriter();\n"
+        }
+      ]
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "before_sha256": "dda42c2be57a1e7c085eff1685dc6962a64b9d48be19ccbc72126944ee343269",
+      "final_sha256": "d2a494460e1d234789d16649cca592f43db8b0a6e2221bfbcca121defad79839",
+      "delta": [
+        {
+          "offset": 2936,
+          "delete": "",
+          "insert": "emptyState, "
+        },
+        {
+          "offset": 12256,
+          "delete": "",
+          "insert": "  // Explicit synthetic successor setup: unsigned absorb cannot bypass a retained barrier.\n  const seedSuccessor = (f: Fixture, subject: string) => {\n    const target = item(f, subject), now = Date.now();\n    target.data.set('affinity', { shopperId: subject, reflex: emptyState(DEFAULT_REFLEX_CONFIG), odpSeed: [],\n      odpSeedAt: 0, odpRecentEvents: [], lastSeen: now, configVersion: DEFAULT_REFLEX_CONFIG.version } satisfies AffinityRecord);\n    target.data.set('pipeline', { attributes: {}, segments: [], journeyStage: 'early', sessionId: crypto.randomUUID(),\n      visitorId: subject, firstSeen: now, sessionCount: 0 } satisfies PipelineRecord);\n    target.data.set('audienceOwner', null); restart(f, subject);\n  };\n"
+        },
+        {
+          "offset": 15818,
+          "delete": "await internal(f, g.subject, '/identity/absorb', { shopperId: g.subject, affinity: null, pipeline: null, now: Date.now() }",
+          "insert": "seedSuccessor(f, g.subject"
+        },
+        {
+          "offset": 27409,
+          "delete": "await internal(f, subject, '/identity/absorb', { shopperId: subject, affinity: null, pipeline: null, now: Date.now() }",
+          "insert": "seedSuccessor(f, subject"
+        },
+        {
+          "offset": 27796,
+          "delete": "await internal(f, g.subject, '/identity/absorb', { shopperId: g.subject, affinity: null, pipeline: null, now: Date.now() }",
+          "insert": "seedSuccessor(f, g.subject"
+        },
+        {
+          "offset": 31058,
+          "delete": "await internal(f, g.subject, '/identity/absorb', { shopperId: g.subject, affinity: null, pipeline: null, now: Date.now() }",
+          "insert": "seedSuccessor(f, g.subject"
+        },
+        {
+          "offset": 35889,
+          "delete": "await internal(f, later.subject, '/identity/absorb', { shopperId: later.subject, affinity: null, pipeline: null, now: Date.now() }",
+          "insert": "seedSuccessor(f, later.subject"
+        },
+        {
+          "offset": 41857,
+          "delete": "await internal(f, sources[0].subject, '/identity/absorb', { shopperId: sources[0].subject, affinity: null, pipeline: null, now: Date.now() }",
+          "insert": "seedSuccessor(f, sources[0].subject"
+        },
+        {
+          "offset": 227777,
+          "delete": "invalidates internal import/absorb authority including failed writes and allows only absent-marker legacy default ingest",
+          "insert": "W35.08 fences adopted legacy writers while retaining signed absorb, operator import and absent-authority compatibility"
+        },
+        {
+          "offset": 228261,
+          "delete": "",
+          "insert": "    await f.drain();\n"
+        },
+        {
+          "offset": 228487,
+          "delete": "",
+          "insert": "      const legacyState = baseline.filter(([key]) => !['audienceOwner', 'grantAuthority'].includes(key));\n      const restore = (values: Array<[string, unknown]>) => {\n        item.data.clear(); for (const [key, value] of structuredClone(values)) item.data.set(key, value); restart(f, g);\n      };\n      const writers = [\n        ['/ingest', event(g, 'coach')], ['/consent', { tracking: false, personalization: false }],\n        ['/identity/absorb', { shopperId: g.subject, affinity: null, pipeline: null, now: Date.now() }],\n        ['/identity/forward', { to: 'w3508-legacy-target' }],\n      ] as const;\n      const writeLegacy = (path: string, body: unknown) => path.startsWith('/identity/')\n        ? internal(item, g, path, body) : direct(item, path, body);\n      const refuses = async (pending: Promise<Response>, readFailure = false) => {\n        const status = await pending.then(response => response.status, (error: unknown) => {\n          if (readFailure) expect(error).toMatchObject({ message: 'synthetic read failure' });\n          else expect(error).toBeInstanceOf(SessionAccessError);\n          return 401;\n        });\n        expect(status).toBe(401);\n      };\n      // Presence, not schema validity or cached owner/profile markers, is the boundary.\n      for (const [path, body] of writers) {\n        restore(legacyState);\n        expect((await writeLegacy(path, body)).status).toBe(200);\n        expect(item.data.has('grantAuthority')).toBe(false); await f.drain();\n        for (const mode of ['adopted', 'null', 'malformed', 'erased', 'read-failure']) {\n          restore(legacyState);\n          if (mode === 'erased') expect((await internal(item, g, '/reset', {})).status).toBe(200);\n          else if (mode !== 'read-failure') item.data.set('grantAuthority', mode === 'adopted'\n            ? new Map(baseline).get('grantAuthority') : mode === 'null' ? null : { grants: [] });\n          restart(f, g);\n          const before = structuredClone([...item.data]), alarms = [...item.alarms];\n          const get = vi.spyOn(item.state.storage, 'get');\n          f.effects.length = 0; f.cache.calls.length = 0; f.sessions.calls.length = 0;\n          qualified.mockClear(); seed.mockClear(); f.faults.read = mode === 'read-failure';\n          await refuses(writeLegacy(path, body), f.faults.read); f.faults.read = false;\n          expect(get.mock.calls).toEqual([['grantAuthority']]); get.mockRestore();\n          expect([...item.data]).toEqual(before); expect(item.alarms).toEqual(alarms);\n          expect(f.effects).toEqual([]); expect(f.cache.calls).toEqual([]); expect(f.sessions.calls).toEqual([]);\n          expect(qualified).not.toHaveBeenCalled(); expect(seed).not.toHaveBeenCalled();\n        }\n        // A writer queued while signed adoption is uncommitted must check after it commits.\n        restore(legacyState);\n        let entered!: () => void, release!: () => void;\n        const entering = new Promise<void>(resolve => { entered = resolve; });\n        const waiting = new Promise<void>(resolve => { release = resolve; });\n        const store = item.state.storage as unknown as {\n          get(key: string | string[]): Promise<unknown>;\n          put(key: string | Record<string, unknown>, value?: unknown): Promise<void>;\n        };\n        const put = store.put.bind(store), get = vi.spyOn(store, 'get');\n        const paused = vi.spyOn(store, 'put').mockImplementation(async (...args: Parameters<typeof store.put>) => {\n          if (args[0] === 'grantAuthority') { entered(); await waiting; }\n          return put(...args);\n        });\n        const adopted = direct(item, '/identity/activate', { consent: { tracking: true, personalization: true } }, g);\n        await entering;\n        const rejected = refuses(writeLegacy(path, body));\n        await new Promise(resolve => setTimeout(resolve, 0));\n        const readsBeforeCommit = get.mock.calls.filter(([key]) => key === 'grantAuthority').length;\n        f.effects.length = 0; f.cache.calls.length = 0; f.sessions.calls.length = 0;\n        release(); expect((await adopted).status).toBe(200); await rejected;\n        paused.mockRestore(); get.mockRestore();\n        expect(readsBeforeCommit).toBe(1);\n        expect([...item.data]).toEqual([...legacyState, ['grantAuthority', new Map(baseline).get('grantAuthority')]]);\n        expect(f.effects).toEqual(['store:grantAuthority']); expect(f.cache.calls).toEqual([]); expect(f.sessions.calls).toEqual([]);\n      }\n      // Necessary refusal still records the restriction on an otherwise empty barrier.\n      expect((await internal(item, g, '/reset', {})).status).toBe(200);\n      const barrier = structuredClone(item.data.get('grantAuthority'));\n      expect((await internal(item, g, '/consent/refusal', { tracking: false, personalization: false })).status).toBe(200);\n      expect(item.data.get('grantAuthority')).toEqual(barrier);\n      expect(item.data.get('consent')).toEqual({ tracking: false, personalization: false });\n"
+        },
+        {
+          "offset": 234092,
+          "delete": "if (fails) await expect(internal(item, g, path, body)).rejects.toThrow('synthetic write failure');\n        else expect((await internal(item, g, path, body",
+          "insert": "const write = () => path.endsWith('import') ? internal(item, g, path, body) : direct(item, path, body, g);\n        if (fails) await expect(write()).rejects.toThrow('synthetic write failure');\n        else expect((await write("
+        },
+        {
+          "offset": 236403,
+          "delete": "",
+          "insert": "item.data.delete('grantAuthority'); "
+        },
+        {
+          "offset": 237021,
+          "delete": "expect((await direct(itemFor(f, other), '/ingest', event(other))).status).toBe(401);\n      expect(itemFor(f, other).data.size).toBe(0",
+          "insert": "const otherBefore = structuredClone([...itemFor(f, other).data]);\n      expect([...itemFor(f, other).data.keys()]).toEqual(['grantAuthority']);\n      expect((await direct(itemFor(f, other), '/ingest', event(other))).status).toBe(401);\n      expect([...itemFor(f, other).data]).toEqual(otherBefore"
+        },
+        {
+          "offset": 237603,
+          "delete": "expect(itemFor(f, target).data.size).toBe(0);\n      expect((await direct(item, '/segments', { segment: 'bind-source' }, g)).status).toBe(200);\n      for (const [source, grant] of [[item, g], [itemFor(f, other), other]] as const) {\n        expect((await internal(source, grant, '/identity/forward', { to: shopperObjectName(target.tenant, target.subject) }",
+          "insert": "const targetBefore = structuredClone([...itemFor(f, target).data]);\n      expect([...itemFor(f, target).data.keys()]).toEqual(['grantAuthority']);\n      expect((await direct(item, '/segments', { segment: 'bind-source' }, g)).status).toBe(200);\n      for (const [source, grant] of [[item, g], [itemFor(f, other), other]] as const) {\n        const body = { to: shopperObjectName(target.tenant, target.subject) };\n        expect((await direct(source, '/identity/forward', body, grant"
+        },
+        {
+          "offset": 238434,
+          "delete": "itemFor(f, target).data.size).toBe(0);\n      }\n      item.data.delete('audienceOwner",
+          "insert": "[...itemFor(f, target).data]).toEqual(targetBefore);\n      }\n      item.data.delete('audienceOwner'); item.data.delete('grantAuthority"
+        },
+        {
+          "offset": 238866,
+          "delete": "",
+          "insert": "read = false; f.faults."
+        }
+      ]
+    }
+  ]
+}

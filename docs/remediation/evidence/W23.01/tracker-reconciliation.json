@@ -1,0 +1,396 @@
+{
+  "at": "2026-09-12T04:23:50.495Z",
+  "actor_id": "w01-lead",
+  "reason": "Final checker caught an ambiguous generic-context tracker patch applied to W15 instead of intended W23. Restore W15 empty decomposition and apply already-approved W23 package-admission after-image using unique surrounding package context. No source/evidence/journal/acceptance changes or new scope; this is correction of root patch placement.",
+  "failed_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "206fcc",
+        "wall_time_seconds": 1.000958972,
+        "session_id": 39616,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "831a83",
+        "wall_time_seconds": 24.357612457,
+        "exit_code": 1,
+        "original_token_count": 370,
+        "output": "Tracker INVALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=20, unscoped=21\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=79, closed=2; evidence records=231\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W23.01 — Next inspect and admit bounded W24 accumulation-configuration compatibility: prevent reward/objective/decay-horizon changes from silently relabeling incompatible item and slot history, while preserving compatible estimator-only settings. Inspect actual ingestion, publication and serving/cache consumers first; no implicit reset/generation rollout, old-state rewrite or historical reconstruction. W23 forward arithmetic is implemented; timestamp/lateness policy and historical repair remain open. No external/customer-policy/deployment authority is inferred.\nERROR dangling_reference: W15 task link W23.01 is missing or belongs elsewhere\nERROR coverage: W15 has dangling criterion/task coverage\nERROR coverage: W15 has dangling criterion/task coverage\nERROR coverage: W15 has dangling criterion/task coverage\nERROR journal_mismatch: Journal 1109: latest package/W23 digest differs from current record\nERROR dangling_reference: W23.01 missing from package task list\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 1; NOTE count 16282\n"
+      }
+    ],
+    "session_id": 39616,
+    "exit_code": 1,
+    "drained": true
+  },
+  "before": {
+    "W15": {
+      "id": "W15",
+      "canonical": {
+        "gate_scope": "G2",
+        "full_scope": "Supported refresh or genuine push through the exact kit; coalescing/stale-response guards, correct absence/default handoff and server-snapshot/no-flash contract. Distinguish read-only polls from actual correlated exposures. Deliver customer browser/operator acceptance, tag-plan/debug artifacts and feed failure cases. Correct objective/symbol/default/acceptance claims; reconcile SSO with customer authority, not unilateral deletion.",
+        "finding_refs": "F12/F21/F29/F30; N17/N25",
+        "sizing_owner": "S documentation/absence containment → M/L SDK + customer acceptance; D/OL + C"
+      },
+      "title": "Supported SDK refresh and customer acceptance",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F12",
+        "F21",
+        "F29",
+        "F30",
+        "N17",
+        "N25"
+      ],
+      "proposed_owner": "D/OL + C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "partial",
+        "criteria": [
+          {
+            "id": "W23-FORWARD",
+            "description": "Order-invariant forward counters and full-precision estimates/serving gates; clean sequence and actual consumer proof."
+          },
+          {
+            "id": "W23-TIME",
+            "description": "Defined customer event-time/lateness/skew policy with bounded validated ingestion and timestamp-abuse proof; not delivered here."
+          },
+          {
+            "id": "W23-RECOVERY",
+            "description": "Authorized repair or explicit reset of damaged item/slot history with W22/W24/W30 generations/reconstruction and replay proof; not delivered here."
+          }
+        ],
+        "coverage": [
+          {
+            "criterion_id": "W23-FORWARD",
+            "task_id": "W23.01",
+            "task_criterion_id": "W23.01-C1"
+          },
+          {
+            "criterion_id": "W23-FORWARD",
+            "task_id": "W23.01",
+            "task_criterion_id": "W23.01-C2"
+          },
+          {
+            "criterion_id": "W23-FORWARD",
+            "task_id": "W23.01",
+            "task_criterion_id": "W23.01-C3"
+          }
+        ],
+        "task_ids": [
+          "W23.01"
+        ],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    "W23": {
+      "id": "W23",
+      "canonical": {
+        "gate_scope": "G1 accumulation / G3 serving",
+        "full_scope": "Order-invariant counters, exact internal rates and bounded validated event time. Rebuild or explicitly reset damaged item and slot state under W22/W24/W30. Test chronological/permuted/replayed sequences, rare concentrated cells, zero rates and timestamp abuse. A local merge patch alone cannot repair historical evidence.",
+        "finding_refs": "F18",
+        "sizing_owner": "S arithmetic containment → M recovery/proof; OL"
+      },
+      "title": "Order-invariant counters and event time",
+      "gates": [
+        "G1",
+        "G3"
+      ],
+      "source_findings": [
+        "F18"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    }
+  },
+  "after": {
+    "W15": {
+      "id": "W15",
+      "canonical": {
+        "gate_scope": "G2",
+        "full_scope": "Supported refresh or genuine push through the exact kit; coalescing/stale-response guards, correct absence/default handoff and server-snapshot/no-flash contract. Distinguish read-only polls from actual correlated exposures. Deliver customer browser/operator acceptance, tag-plan/debug artifacts and feed failure cases. Correct objective/symbol/default/acceptance claims; reconcile SSO with customer authority, not unilateral deletion.",
+        "finding_refs": "F12/F21/F29/F30; N17/N25",
+        "sizing_owner": "S documentation/absence containment → M/L SDK + customer acceptance; D/OL + C"
+      },
+      "title": "Supported SDK refresh and customer acceptance",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F12",
+        "F21",
+        "F29",
+        "F30",
+        "N17",
+        "N25"
+      ],
+      "proposed_owner": "D/OL + C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    "W23": {
+      "id": "W23",
+      "canonical": {
+        "gate_scope": "G1 accumulation / G3 serving",
+        "full_scope": "Order-invariant counters, exact internal rates and bounded validated event time. Rebuild or explicitly reset damaged item and slot state under W22/W24/W30. Test chronological/permuted/replayed sequences, rare concentrated cells, zero rates and timestamp abuse. A local merge patch alone cannot repair historical evidence.",
+        "finding_refs": "F18",
+        "sizing_owner": "S arithmetic containment → M recovery/proof; OL"
+      },
+      "title": "Order-invariant counters and event time",
+      "gates": [
+        "G1",
+        "G3"
+      ],
+      "source_findings": [
+        "F18"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "partial",
+        "criteria": [
+          {
+            "id": "W23-FORWARD",
+            "description": "Order-invariant forward counters and full-precision estimates/serving gates; clean sequence and actual consumer proof."
+          },
+          {
+            "id": "W23-TIME",
+            "description": "Defined customer event-time/lateness/skew policy with bounded validated ingestion and timestamp-abuse proof; not delivered here."
+          },
+          {
+            "id": "W23-RECOVERY",
+            "description": "Authorized repair or explicit reset of damaged item/slot history with W22/W24/W30 generations/reconstruction and replay proof; not delivered here."
+          }
+        ],
+        "coverage": [
+          {
+            "criterion_id": "W23-FORWARD",
+            "task_id": "W23.01",
+            "task_criterion_id": "W23.01-C1"
+          },
+          {
+            "criterion_id": "W23-FORWARD",
+            "task_id": "W23.01",
+            "task_criterion_id": "W23.01-C2"
+          },
+          {
+            "criterion_id": "W23-FORWARD",
+            "task_id": "W23.01",
+            "task_criterion_id": "W23.01-C3"
+          }
+        ],
+        "task_ids": [
+          "W23.01"
+        ],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    }
+  },
+  "unchanged_package_pins": [
+    {
+      "id": "W01",
+      "sha256": "f82b39774dd5541bd0d14b399d29979b611939514b8aac8f3e570c6b7031876a"
+    },
+    {
+      "id": "W02",
+      "sha256": "7bf44ef196599e63aa650face22f3f00f46771d79e94cd02eb18ab309b1c0dee"
+    },
+    {
+      "id": "W03",
+      "sha256": "9901d608e5b7f3e5c0ff55fdb582b3f92b5a2f6b4f842312f62dc1312ba64c37"
+    },
+    {
+      "id": "W04",
+      "sha256": "aada69b67c9396a0bca01384d5e614136a912e06dddc5c7b8f7aa86241b2742c"
+    },
+    {
+      "id": "W05",
+      "sha256": "4e47f4bd2d1f0185a4ddb2859e4695d27d9ba258f46fdc82485411caec1f9339"
+    },
+    {
+      "id": "W06",
+      "sha256": "91cd6b487cc0df54ceb0438eb888b3cf6ef15c79c450295e54cad10cb9f13e32"
+    },
+    {
+      "id": "W07",
+      "sha256": "e41a4c5936c1bd6ebb1fa0afaaee07f88324f427aadf7c1f0738220854b4475d"
+    },
+    {
+      "id": "W08",
+      "sha256": "2e843b6160dbec43e8df16db8c34d8b3e41078dfdfd5d505120e19653e52cda9"
+    },
+    {
+      "id": "W09",
+      "sha256": "fe73536f1a2b14e6d91ee09226fb5dacb23be442545e6949889c90fb5711695a"
+    },
+    {
+      "id": "W10",
+      "sha256": "70adbed893139d5dc4718b0f5d6e5fa7a6ca32bdac08c4a2e4d4ab8e365701c9"
+    },
+    {
+      "id": "W11",
+      "sha256": "9074c5b593817e7d15e7eda8b2a57287856eaf872b862fd122d9349690820934"
+    },
+    {
+      "id": "W12",
+      "sha256": "c1f722a81a5e4f8f1afd3c3fe12da1b73cea6084c57fea5927e4d476159b2167"
+    },
+    {
+      "id": "W13",
+      "sha256": "a42637e3a86fc786ea33b1f5d5ed656bff03aeb0a170f3364eac77434ac15bf6"
+    },
+    {
+      "id": "W14",
+      "sha256": "6e9271518fb01382ac8098ffb4e1fff60db9a1182ccad8e726b38b95d9a3f7c3"
+    },
+    {
+      "id": "W16",
+      "sha256": "46ff7d83840bcc858057f989fe2b006d8dc08bf5ebf840c09021583896d8d576"
+    },
+    {
+      "id": "W17",
+      "sha256": "78db8a92606178d3645003e4bdb469df6359177afda2094b5e7b1097b3308979"
+    },
+    {
+      "id": "W18",
+      "sha256": "50eb25637a83d52005cb9be5e42c5ca5a16e6d7529944a7c4965cdcd24d564c3"
+    },
+    {
+      "id": "W19",
+      "sha256": "321c31cc75b71f02ae3a27f67178b4de0958144e122ba831c398266e835b0158"
+    },
+    {
+      "id": "W20",
+      "sha256": "7a7d0b6c3fc0dd3552b7d6b33d9cd284e6b557d9c44d1dd815e40eec3ee4e5c1"
+    },
+    {
+      "id": "W21",
+      "sha256": "d41d1a84eb13328788eede68bb8ed31d1afaf72f2418ef9a1c4c2bc2f7d17098"
+    },
+    {
+      "id": "W22",
+      "sha256": "c076e21e126cfef9e902c686bfbe6759170866f8a28213be921540f8763bb3d8"
+    },
+    {
+      "id": "W24",
+      "sha256": "7d625670d83ae423e92687bea6f3f1d975b04a8c921433f59a82ab8c88390c08"
+    },
+    {
+      "id": "W25",
+      "sha256": "ad62cfb48c5414b2194b6379e4e70ec3cd55b8a19118867dfbb51a44c2989962"
+    },
+    {
+      "id": "W26",
+      "sha256": "e2f02c62a1994b2bd68f1dd9c0e35ca45e4372fa5c9238bd605400f4cd1432e6"
+    },
+    {
+      "id": "W27",
+      "sha256": "3b8c09a6e8eaee73c2aee5b5fedf32742e5792a2ee1b321a923d37330f88600a"
+    },
+    {
+      "id": "W28",
+      "sha256": "ebf6cee4400eca49b175cf1aeeff0869450e0588d23571aa03141c02f917b4d7"
+    },
+    {
+      "id": "W29",
+      "sha256": "92246e9f442c2ea0a12edf0842b42d7a92ef0bf851a9285f277d1c8d4505a104"
+    },
+    {
+      "id": "W30",
+      "sha256": "1013fffeb66fcbb4d75fd706097a5e7cbd97432047175e4980d449bd46c97d10"
+    },
+    {
+      "id": "W31",
+      "sha256": "c5a08ee18fc1c6ec9f31bb4b857678c79a104fc684e025445975561b79a711b3"
+    },
+    {
+      "id": "W32",
+      "sha256": "48796d05085d67cd7955696af8e6a1d372b9f49e56fc7ee301436892f56f1dad"
+    },
+    {
+      "id": "W33",
+      "sha256": "70fe343e686077dfc8be3d1deb803c78fbe56db1a63d2ba768c27ed4f2e7714e"
+    },
+    {
+      "id": "W34",
+      "sha256": "7f770e32df69355e2e7dcd4281af81e0c0d56c775b59457a7d0044715fe06ee2"
+    },
+    {
+      "id": "W35",
+      "sha256": "6e2f159027f08c5b5f33786b0c3f98bcd59d7381d8669f5d7e522a835250ff32"
+    },
+    {
+      "id": "W36",
+      "sha256": "d438a51f195d72b1066ffed187ce9ff78ae5acde8a40bc27d2a7dc46a98cff9d"
+    },
+    {
+      "id": "W37",
+      "sha256": "aca872603b9202414e3e171ce1ee27e8c1fc86a2fbe30f4b52a41764f8579382"
+    },
+    {
+      "id": "W38",
+      "sha256": "191983053d8f1def294e6af5b8bbc9ff8b911ab15e3d53516caf42a07e259f4d"
+    },
+    {
+      "id": "W39",
+      "sha256": "c1198f7ab617684d66ae69be316c72600e1149b5afd9eebca5905ce77adced4a"
+    },
+    {
+      "id": "W40",
+      "sha256": "d2f9db9a16683a16dda71e5e546feae73b8c52ea09bb0454c15272b25834d60f"
+    },
+    {
+      "id": "W41",
+      "sha256": "4733269d4ae6dd67d6f9cc87290fc42d8ee9a06264ec414600669f49e6881d94"
+    }
+  ],
+  "journal_sha256": "c45aa04e025f7f5f6d7233ff2836fc6030e52d460d7455d93e41dec3d3190da3"
+}

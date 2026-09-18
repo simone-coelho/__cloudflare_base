@@ -1,0 +1,341 @@
+{
+  "task_id": "W20.06",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "run_id": "/root/w1404_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T22:44:53.974Z",
+  "contract_digest": "e1f9b63bb059079e8608b28ac7202b2f88949467e5e8a2cd9fc251f93e86cbcf",
+  "references": [
+    {
+      "path": "docs/remediation/design/W20.06/plan.md",
+      "sha256": "bd11438994c02ff61a1fe6c493e9f45bb98eb817e10d4e18b767cdb57253a0fe"
+    },
+    {
+      "path": "docs/remediation/design/W20.06/plan-v2.md",
+      "sha256": "e98cbed63c1e5b48936ce31b0fa392c381d773c57da8c99cd2e1255167467e2d"
+    },
+    {
+      "path": "docs/remediation/design/W20.06/baseline.json",
+      "sha256": "0c1ea398e5bba5064be546c461b694281b87f3fa36c247a85a390e5befc7b134"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.06/admission.json",
+      "sha256": "dd5ae997dee1bc3f348c4ac49ea4464473a42a0e3edca983995b20104b3aa1f1"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.06/check-amendment.json",
+      "sha256": "860d62ad01ba9342d1a156ce45e998337b8fe7a62d351e4d25b0e59980535595"
+    }
+  ],
+  "admission": {
+    "capture": "cfb212",
+    "journal": 1604,
+    "owned_source_files": 7,
+    "baseline_pins": 35,
+    "check_amendment": {
+      "journal": 1608,
+      "capture": "059a30",
+      "source_writes_authorized": false
+    }
+  },
+  "baseline": {
+    "kind": "source_confirmed_design_case",
+    "entry": "Root check/status VALID1595, exit0/drained; baseline/admission retains exact evidence. Complete plan/task read8fcbd8; amendment read9239e9. No baseline runtime claimed or duplicate board run.",
+    "reuse": "All74 prior accepted pins checked by lead; W20.05 listen-dependency proof prospectively qualified, engine controls/history retained, W08.04 unchanged. Baseline scoped lint has30 storefront errors and12 total warnings. No unrelated cleanup."
+  },
+  "summary": "Known absence now clears cached decisions/capture and reaches slot subscribers. Request intent and delivery epochs guard stale/reentrant work; actual storefront paint ownership restores existing defaults and reports only completed engine paints. Both shipped SDK outputs updated together.",
+  "criteria": [
+    {
+      "id": "W20.06-C1",
+      "verdict": "local_runtime_pass",
+      "evidence": "Failure/malformed/deadline and identity clear current, deliver empty slot lists with page context and known-absence late subscription; successful empty sets remain sets and own late snapshots still apply. Listener exceptions are isolated. Existing observers and queued rendered capture are cancelled; no default impression invented, while manual rendered without current stays supported. Existing readiness/consent controls retained."
+    },
+    {
+      "id": "W20.06-C2",
+      "verdict": "local_runtime_pass",
+      "evidence": "Out-of-order same-generation hydrate success/failure/timers cannot overwrite latest hydrate/apply; callback apply and nested hydrate stop obsolete fanout and returned sets. Real expired-capability renewal succeeds with required consent acknowledgment; synchronous ready reentry cannot reclaim newer intent."
+    },
+    {
+      "id": "W20.06-C3",
+      "verdict": "worker_checks_pass_independent_review_pending",
+      "evidence": "Source/IIFE/ESM clients drive actual storefront subscription and render methods in a stateful synthetic DOM. Tests preserve preexisting defaults with pending map and cancelled first engine paint; reverse deferred fills and mixed fade/ViewTransition leave current defaults visible. Exact ID/payload paint keys prevent same-title false attribution, absence avoids stale sibling capture, missing map/IDs restore owned defaults, completed fills alone emit impressions and default handoff clears click authority. Fixed12, both compilers and no-new-diagnostics/whitespace pass; independent frozen review/lead acceptance remain separate."
+    }
+  ],
+  "authoring_review": "Before runtime, root source feedback be03ba corrected self-cancelling expired-grant readiness, actual-versus-pending ownership and title-only paint identity. Separate request/delivery bookkeeping, per-slot callback rendering and actual-paint click/capture dependencies were part of admitted design. These were authoring corrections, not executed failures.",
+  "rework": [
+    {
+      "attempt": "runtime1",
+      "exit_code": 1,
+      "drained": true,
+      "passed": 11,
+      "failed": 1,
+      "duration_seconds": 7.86,
+      "result": "New renewal fixture omitted required consent:false recovery acknowledgment, so core correctly refused its synthetic replacement grant. After full drain, fixture supplies exact acknowledgment. Root valid-fill fading cleanup and mixed fade→ViewTransition stateful assertion also applied within the existing group; obsolete fade cleanup must not leave a later transition hidden.",
+      "superseded_by": "runtime2"
+    },
+    {
+      "attempt": "static1",
+      "exit_code": 1,
+      "drained": true,
+      "result": "Both &&-chained compilers passed. Lint comparison then rejected all42 inherited diagnostics solely because stylish baseline messages omit the terminal period included by the ESLint API. Whitespace was not reached. No source change or diagnostic suppression.",
+      "correction": "Lead plan-v2/check-amendment normalizes one terminal message period on both sides, retaining exact file/rule/severity/column/source-line multiplicity. Reuse same-byte runtime2 and compiler stages; execute corrected comparison plus whitespace once.",
+      "superseded_by": "static2 (lint/whitespace only)"
+    }
+  ],
+  "final_results": {
+    "runtime": {
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 3.88,
+      "source": "runtime2"
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "full_project": true,
+      "sdk_project": true,
+      "reused_from": "static1",
+      "qualification": "Both compiler stages succeeded because the && chain reached ESLint. Whole static1 exited1 later. Plan-v2 explicitly reuses these successful stages on unchanged seven source and28 protected input pins; no compiler rerun."
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "errors": 30,
+      "warnings": 12,
+      "new_errors": 0,
+      "new_warnings": 0,
+      "new_diagnostics": 0,
+      "inherited_unmatched": 0,
+      "source": "static2",
+      "qualification": "No-new-diagnostics acceptance only, not clean whole-file lint. Existing storefront30errors6warnings and SDK6warnings remain. Only terminal message-period representation normalized; no rule disabled or source-line exception broadened."
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "source": "static2",
+      "qualification": "Literal admitted seven-file git diff --check; exact owned deltas and protected pins remain lead freeze responsibility."
+    }
+  },
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/sdk/listen.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "db9b1d",
+          "wall_time_seconds": 1.001337377,
+          "session_id": 96334,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "986abc",
+          "wall_time_seconds": 0.000002098,
+          "exit_code": 1,
+          "original_token_count": 388,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/sdk/listen.test.ts  (12 tests | 1 failed) 236ms\n   ❯ src/sdk/listen.test.ts > listen > W20.06 latest intent owns timers and results across same-generation and callback reentry\n     → expected undefined to be 'renewed' // Object.is equality\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/sdk/listen.test.ts > listen > W20.06 latest intent owns timers and results across same-generation and callback reentry\nAssertionError: expected undefined to be 'renewed' // Object.is equality\n\n- Expected: \n\"renewed\"\n\n+ Received: \nundefined\n\n ❯ src/sdk/listen.test.ts:242:87\n    240|     f.tick(3_600_001);\n    241|     const renewal = listen.hydrate({ page: 'renewed' }); await vi.adva…\n    242|     requests.at(-1)!({ ...snapshot, page: 'renewed' }); expect((await …\n       |                                                                                       ^\n    243|     // A genuinely newer request started synchronously by ready() stil…\n    244|     const ready = core.ready; let once = true;\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed (1)\n      Tests  1 failed | 11 passed (12)\n   Start at  18:54:01\n   Duration  7.86s (transform 354ms, setup 0ms, collect 611ms, tests 236ms, environment 0ms, prepare 4.51s)\n\n"
+        }
+      ],
+      "session_id": 96334,
+      "drained": true,
+      "exit_code": 1
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/sdk/listen.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "0a7933",
+          "wall_time_seconds": 1.000914543,
+          "session_id": 55565,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4428c6",
+          "wall_time_seconds": 0.000002171,
+          "exit_code": 0,
+          "original_token_count": 118,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/sdk/listen.test.ts  (12 tests) 182ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  18:55:10\n   Duration  3.88s (transform 291ms, setup 0ms, collect 513ms, tests 182ms, environment 0ms, prepare 2.16s)\n\n"
+        }
+      ],
+      "session_id": 55565,
+      "drained": true,
+      "exit_code": 0
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=768 node_modules/typescript/bin/tsc -p src/sdk --incremental false && node --max-old-space-size=512 --input-type=module -e 'import fs from '\\''node:fs'\\'';import assert from '\\''node:assert/strict'\\'';import { ESLint } from '\\''eslint'\\'';const b=JSON.parse(fs.readFileSync('\\''docs/remediation/design/W20.06/baseline.json'\\'','\\''utf8'\\''));const key=x=>JSON.stringify([x.file,x.ruleId,x.severity,x.message,x.column,x.sourceLine]);const expected=new Map();for(const d of b.static_diagnostics){const k=key(d);expected.set(k,(expected.get(k)||0)+1);}const results=[...await new ESLint().lintFiles(['\\''src/sdk/listen.ts'\\'','\\''src/sdk/listen.test.ts'\\'']),...await new ESLint({overrideConfig:{env:{browser:true}}}).lintFiles(['\\''public/storefront.js'\\''])];const added=[];let errors=0,warnings=0;for(const r of results){const file=r.filePath.replace(process.cwd()+'\\''/'\\'','\\'''\\''),lines=fs.readFileSync(r.filePath,'\\''utf8'\\'').split('\\''\\n'\\'');for(const m of r.messages){const d={file,ruleId:m.ruleId,severity:m.severity,message:m.message,column:m.column,sourceLine:lines[m.line-1]};const k=key(d),n=expected.get(k)||0;if(n)expected.set(k,n-1);else added.push(d);if(m.severity===2)errors++;else warnings++;}}console.log(JSON.stringify({check:'\\''scoped lint baseline comparison'\\'',errors,warnings,new_diagnostics:added,inherited_remaining:[...expected.values()].reduce((a,b)=>a+b,0),qualification:'\\''Existing storefront baseline has30 errors and6 warnings; SDK has6 warnings. No lint rule disabled; only exact unchanged source-line diagnostics may remain. This is no-new-diagnostics acceptance, not whole-file lint PASS.'\\''}));assert.equal(added.length,0);' && git diff --check -- src/sdk/listen.ts src/sdk/listen.test.ts public/storefront.js public/sdk/edge-personalization.js public/sdk/edge-personalization.esm.js src/sdk/README.md docs/kit/01-integration-guide.md",
+      "captures": [
+        {
+          "chunk_id": "3213ee",
+          "wall_time_seconds": 1.001523575,
+          "session_id": 5959,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ec7eaa",
+          "wall_time_seconds": 5.000373994,
+          "session_id": 5959,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4e326b",
+          "wall_time_seconds": 5.000972064,
+          "session_id": 5959,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2731c0",
+          "wall_time_seconds": 0.000002605,
+          "exit_code": 1,
+          "original_token_count": 2630,
+          "output": "{\"check\":\"scoped lint baseline comparison\",\"errors\":30,\"warnings\":12,\"new_diagnostics\":[{\"file\":\"src/sdk/listen.ts\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"column\":25,\"sourceLine\":\"        let off = () => {}, stopped = false;\"},{\"file\":\"src/sdk/listen.test.ts\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"column\":39,\"sourceLine\":\"    const observe = vi.fn(() => () => {});\"},{\"file\":\"src/sdk/listen.test.ts\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty method 'addEventListener'.\",\"column\":167,\"sourceLine\":\"    listen.subscribe('hero', ds => { delivered.push(ds[0]?.contentId ?? 'default'); listen.rendered('hero', 'c1', { getAttribute: () => null, addEventListener: () => {} }); });\"},{\"file\":\"src/sdk/listen.test.ts\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty method 'addEventListener'.\",\"column\":68,\"sourceLine\":\"    const el = { getAttribute: () => null, addEventListener: () => {} };\"},{\"file\":\"src/sdk/listen.test.ts\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"column\":146,\"sourceLine\":\"    host.dom = { querySelectorAll: () => [] as unknown as ArrayLike<never> & Iterable<never>, observe: (_el, cb) => { visible = cb; return () => {}; } };\"},{\"file\":\"src/sdk/listen.test.ts\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty method 'addEventListener'.\",\"column\":68,\"sourceLine\":\"    const el = { getAttribute: () => null, addEventListener: () => {} };\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":59,\"sourceLine\":\"        try { id = localStorage.getItem(KEY); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":121,\"sourceLine\":\"        if (!id) { try { id = (document.cookie.match(/(?:^|;\\\\s*)opt_visitor_id=([^;]+)/) || [])[1] || null; } catch (e) {} }\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":58,\"sourceLine\":\"        try { localStorage.setItem(KEY, id); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":126,\"sourceLine\":\"        try { document.cookie = KEY + '=' + id + '; Max-Age=' + (60 * 60 * 24 * 365) + '; Path=/; SameSite=Lax'; } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":21,\"sourceLine\":\"        } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":72,\"sourceLine\":\"        setTimeout(() => { try { this.snapshotBaselines(); } catch (e) {} }, 2600);\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":101,\"sourceLine\":\"        try { if (new URLSearchParams(location.search).get('sdk') === '1') return true; } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":112,\"sourceLine\":\"            if (!this._afxIntroduced) { this._afxIntroduced = true; try { this.setTab('affinity'); } catch (e) {} }\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":114,\"sourceLine\":\"    reflexMomentCta() { const fn = this._rmxOnCta; this.dismissReflexMoment(); if (fn) { try { fn(); } catch (e) {} } }\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":87,\"sourceLine\":\"            if (!detail.noNav) { try { this.go('home', { silent: true }); } catch (e) {} }\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"column\":83,\"sourceLine\":\"            try { void Promise.resolve(this.sendAction(eventKey, {})).catch(() => {}); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":100,\"sourceLine\":\"            try { void Promise.resolve(this.sendAction(eventKey, {})).catch(() => {}); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"column\":85,\"sourceLine\":\"            try { void Promise.resolve(this.sendAction(eventKey, tags)).catch(() => {}); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":102,\"sourceLine\":\"            try { void Promise.resolve(this.sendAction(eventKey, tags)).catch(() => {}); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":21,\"sourceLine\":\"        } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":21,\"sourceLine\":\"        } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":104,\"sourceLine\":\"        try { await this.runExperimentScenario('bnpl_rogue', 'pay_in_4', { noNav: true }); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"column\":30,\"sourceLine\":\"                .catch(() => {});\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"column\":148,\"sourceLine\":\"            this.sdk.emit.purchase(order).then((u) => this.logEvent('post', 'purchase', label, Math.round(performance.now() - t0), u)).catch(() => {});\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"column\":71,\"sourceLine\":\"            this.sendAction('purchase', order, { label }).catch(() => {});\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"@typescript-eslint/no-unused-vars\",\"severity\":1,\"message\":\"'sel' is defined but never used.\",\"column\":23,\"sourceLine\":\"    async captureZone(sel) {\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":110,\"sourceLine\":\"            try { el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":60,\"sourceLine\":\"        catch (e) { try { el.scrollIntoView(); } catch (_) {} }\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":74,\"sourceLine\":\"        try { window.dispatchEvent(new Event('opal:reset')); } catch (e) {}   // fresh Opal chat per demo run\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":71,\"sourceLine\":\"        try { localStorage.setItem('opt_visitor_id', id); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":134,\"sourceLine\":\"        try { document.cookie = 'opt_visitor_id=' + id + '; Max-Age=' + (60 * 60 * 24 * 365) + '; Path=/; SameSite=Lax'; } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":83,\"sourceLine\":\"        if (this.ws) { try { this.ws.onclose = null; this.ws.close(); } catch (e) {} this.ws = null; }\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":78,\"sourceLine\":\"                try { localStorage.removeItem('opt_visitor_id'); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":105,\"sourceLine\":\"                try { document.cookie = 'opt_visitor_id=; Max-Age=0; Path=/; SameSite=Lax'; } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":111,\"sourceLine\":\"        try { await fetch('/realtime/session/reset', { method: 'POST', credentials: 'include' }); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":71,\"sourceLine\":\"        try { localStorage.removeItem('opal-session-id'); } catch (e) {}   // fresh Opal thread too (still per-browser keyed)\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":70,\"sourceLine\":\"        try { localStorage.removeItem('opt_visitor_id'); } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":97,\"sourceLine\":\"        try { document.cookie = 'opt_visitor_id=; Max-Age=0; Path=/; SameSite=Lax'; } catch (e) {}\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":128,\"sourceLine\":\"        try { window.dispatchEvent(new CustomEvent('opal:ask', { detail: { text: signal.nlSeed, fresh: true } })); } catch (e) {}   // fresh thread → Opal generates + launches the moment LIVE each run (no stale \\\"already live\\\")\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":59,\"sourceLine\":\"        if (this.ws) { try { this.ws.close(); } catch (e) {} }\"},{\"file\":\"public/storefront.js\",\"ruleId\":\"no-empty\",\"severity\":2,\"message\":\"Empty block statement.\",\"column\":66,\"sourceLine\":\"        if (this.sdk) { try { this.sdk.disconnect(); } catch (e) {} this._engineHero = null; this._engineStory = null; }\"}],\"inherited_remaining\":42,\"qualification\":\"Existing storefront baseline has30 errors and6 warnings; SDK has6 warnings. No lint rule disabled; only exact unchanged source-line diagnostics may remain. This is no-new-diagnostics acceptance, not whole-file lint PASS.\"}\nnode:internal/modules/run_main:122\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n42 !== 0\n\n    at file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/[eval1]:1:1436 {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 42,\n  expected: 0,\n  operator: 'strictEqual'\n}\n\nNode.js v22.15.0\n"
+        }
+      ],
+      "session_id": 5959,
+      "drained": true,
+      "exit_code": 1
+    },
+    "static2": {
+      "command": "node --max-old-space-size=512 --input-type=module -e 'import fs from '\\''node:fs'\\'';import assert from '\\''node:assert/strict'\\'';import { ESLint } from '\\''eslint'\\'';const b=JSON.parse(fs.readFileSync('\\''docs/remediation/design/W20.06/baseline.json'\\'','\\''utf8'\\''));const key=x=>JSON.stringify([x.file,x.ruleId,x.severity,x.message.replace(/\\.$/,String()),x.column,x.sourceLine]);const expected=new Map();for(const d of b.static_diagnostics){const k=key(d);expected.set(k,(expected.get(k)||0)+1);}const results=[...await new ESLint().lintFiles(['\\''src/sdk/listen.ts'\\'','\\''src/sdk/listen.test.ts'\\'']),...await new ESLint({overrideConfig:{env:{browser:true}}}).lintFiles(['\\''public/storefront.js'\\''])];const added=[];let errors=0,warnings=0;for(const r of results){const file=r.filePath.replace(process.cwd()+'\\''/'\\'','\\'''\\''),lines=fs.readFileSync(r.filePath,'\\''utf8'\\'').split('\\''\\n'\\'');for(const m of r.messages){const d={file,ruleId:m.ruleId,severity:m.severity,message:m.message,column:m.column,sourceLine:lines[m.line-1]};const k=key(d),n=expected.get(k)||0;if(n)expected.set(k,n-1);else added.push(d);if(m.severity===2)errors++;else warnings++;}}console.log(JSON.stringify({check:'\\''scoped lint baseline comparison'\\'',errors,warnings,new_diagnostics:added,inherited_remaining:[...expected.values()].reduce((a,b)=>a+b,0),qualification:'\\''Existing storefront baseline has30 errors and6 warnings; SDK has6 warnings. No lint rule disabled; only exact unchanged source-line diagnostics may remain. This is no-new-diagnostics acceptance, not whole-file lint PASS.'\\''}));assert.equal(added.length,0);' && git diff --check -- src/sdk/listen.ts src/sdk/listen.test.ts public/storefront.js public/sdk/edge-personalization.js public/sdk/edge-personalization.esm.js src/sdk/README.md docs/kit/01-integration-guide.md",
+      "captures": [
+        {
+          "chunk_id": "381f24",
+          "wall_time_seconds": 1.001669212,
+          "session_id": 2261,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e33616",
+          "wall_time_seconds": 5.001062261,
+          "session_id": 2261,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "62f2b3",
+          "wall_time_seconds": 0.000002537,
+          "exit_code": 0,
+          "original_token_count": 89,
+          "output": "{\"check\":\"scoped lint baseline comparison\",\"errors\":30,\"warnings\":12,\"new_diagnostics\":[],\"inherited_remaining\":0,\"qualification\":\"Existing storefront baseline has30 errors and6 warnings; SDK has6 warnings. No lint rule disabled; only exact unchanged source-line diagnostics may remain. This is no-new-diagnostics acceptance, not whole-file lint PASS.\"}\n"
+        }
+      ],
+      "session_id": 2261,
+      "drained": true,
+      "exit_code": 0
+    }
+  },
+  "bundle_generation": {
+    "command": "node --input-type=module <<'NODE'\nimport * as esbuild from 'esbuild';\nimport fs from 'node:fs';\nimport path from 'node:path';\nimport {createHash} from 'node:crypto';\nconst hash=x=>createHash('sha256').update(x).digest('hex');\nconst version=fs.readFileSync('src/sdk/version.ts','utf8').match(/'([^']+)'/)[1];\nconst banner=`/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */`;\nconst artifacts=[];\nlet patch='*** Begin Patch\\n';\nfor(const [entry,out,format] of [['src/sdk/index.ts','public/sdk/edge-personalization.esm.js','esm'],['src/sdk/browser.ts','public/sdk/edge-personalization.js','iife']]){\n const result=await esbuild.build({entryPoints:[path.resolve(entry)],outfile:path.resolve(out),bundle:true,platform:'browser',target:'es2022',minify:false,sourcemap:false,legalComments:'none',logLevel:'silent',metafile:true,banner:{js:banner},format,write:false});\n const before=fs.readFileSync(out,'utf8'),after=result.outputFiles[0].text;\n patch+='*** Update File: '+out+'\\n@@\\n'+before.trimEnd().split('\\n').map(l=>'-'+l).join('\\n')+'\\n'+after.trimEnd().split('\\n').map(l=>'+'+l).join('\\n')+'\\n';\n artifacts.push({path:out,generated_sha256:hash(after),bytes:Buffer.byteLength(after),input_paths:Object.keys(result.metafile.inputs),write:false});\n}\npatch+='*** End Patch';\nconsole.log(JSON.stringify({artifacts,patch}));\nNODE",
+    "captures": [
+      {
+        "chunk_id": "83070a",
+        "wall_time_seconds": 0.779723462,
+        "exit_code": 0,
+        "original_token_count": 54462
+      }
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "artifacts": [
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "generated_sha256": "751679ecaf435c876b09419831caeb43362cac57f8b8bb312013f8c5f04f7e30",
+        "bytes": 49726,
+        "input_paths": [
+          "src/sdk/identity.ts",
+          "src/sdk/wire.ts",
+          "src/events/actionTypes.ts",
+          "src/sdk/core.ts",
+          "src/sdk/emit.ts",
+          "src/sdk/listen.ts",
+          "src/sdk/identify.ts",
+          "src/sdk/memoryHost.ts",
+          "src/sdk/host.ts",
+          "src/sdk/version.ts",
+          "src/sdk/index.ts"
+        ],
+        "write": false
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "generated_sha256": "e6125bae3f65ab50b69bfa227fd7bdeb8381c8b22bc4287ceeba1015137e9ddf",
+        "bytes": 52455,
+        "input_paths": [
+          "src/sdk/identity.ts",
+          "src/sdk/wire.ts",
+          "src/events/actionTypes.ts",
+          "src/sdk/core.ts",
+          "src/sdk/emit.ts",
+          "src/sdk/listen.ts",
+          "src/sdk/identify.ts",
+          "src/sdk/memoryHost.ts",
+          "src/sdk/host.ts",
+          "src/sdk/version.ts",
+          "src/sdk/index.ts",
+          "src/sdk/browser.ts"
+        ],
+        "write": false
+      }
+    ],
+    "qualification": "Actual installed esbuild write:false output was an apply_patch payload, applied only to the two owned SDK artifacts. The large source patch is not duplicated here: before bytes are retained in baseline.json and exact generated after bytes are the two pinned outputs. Their generated SHA256 values equal final_source_stop hashes; source/compiler/runtime inputs stayed unchanged afterward. No build script or emitted compiler output."
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T23:04:25.265Z",
+    "files": [
+      {
+        "path": "src/sdk/listen.ts",
+        "sha256": "2dc1611cc79a94b9f350a5d9c36e42a61cb493390fb7c436989a1b4a6892e677"
+      },
+      {
+        "path": "src/sdk/listen.test.ts",
+        "sha256": "005f1da20f19e56403c6e7008e3bf332b6af5b245329b50c1efac65ff44d9d21"
+      },
+      {
+        "path": "public/storefront.js",
+        "sha256": "fb7abcd55b5f935ce569ed22fde724ee03676a9a22d147118b063ce00f6e5b67"
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "sha256": "e6125bae3f65ab50b69bfa227fd7bdeb8381c8b22bc4287ceeba1015137e9ddf"
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "sha256": "751679ecaf435c876b09419831caeb43362cac57f8b8bb312013f8c5f04f7e30"
+      },
+      {
+        "path": "src/sdk/README.md",
+        "sha256": "f44f2b9ac8bc6027a0ecd67a1321621ce414ae9f7a0738c3de7b60066a5188c0"
+      },
+      {
+        "path": "docs/kit/01-integration-guide.md",
+        "sha256": "134b47b20d47908cc744c05d6fec605c318108479eedc76b9e905c62fe4688f8"
+      }
+    ]
+  },
+  "source_stop_capture": {
+    "chunk_id": "559126",
+    "wall_time_seconds": 0.154029033,
+    "exit_code": 0,
+    "original_token_count": 485,
+    "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-13T23:04:25.265Z\",\n    \"files\": [\n      {\n        \"path\": \"src/sdk/listen.ts\",\n        \"sha256\": \"2dc1611cc79a94b9f350a5d9c36e42a61cb493390fb7c436989a1b4a6892e677\"\n      },\n      {\n        \"path\": \"src/sdk/listen.test.ts\",\n        \"sha256\": \"005f1da20f19e56403c6e7008e3bf332b6af5b245329b50c1efac65ff44d9d21\"\n      },\n      {\n        \"path\": \"public/storefront.js\",\n        \"sha256\": \"fb7abcd55b5f935ce569ed22fde724ee03676a9a22d147118b063ce00f6e5b67\"\n      },\n      {\n        \"path\": \"public/sdk/edge-personalization.js\",\n        \"sha256\": \"e6125bae3f65ab50b69bfa227fd7bdeb8381c8b22bc4287ceeba1015137e9ddf\"\n      },\n      {\n        \"path\": \"public/sdk/edge-personalization.esm.js\",\n        \"sha256\": \"751679ecaf435c876b09419831caeb43362cac57f8b8bb312013f8c5f04f7e30\"\n      },\n      {\n        \"path\": \"src/sdk/README.md\",\n        \"sha256\": \"f44f2b9ac8bc6027a0ecd67a1321621ce414ae9f7a0738c3de7b60066a5188c0\"\n      },\n      {\n        \"path\": \"docs/kit/01-integration-guide.md\",\n        \"sha256\": \"134b47b20d47908cc744c05d6fec605c318108479eedc76b9e905c62fe4688f8\"\n      }\n    ]\n  },\n  \"references\": [\n    {\n      \"path\": \"docs/remediation/design/W20.06/plan.md\",\n      \"sha256\": \"bd11438994c02ff61a1fe6c493e9f45bb98eb817e10d4e18b767cdb57253a0fe\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W20.06/plan-v2.md\",\n      \"sha256\": \"e98cbed63c1e5b48936ce31b0fa392c381d773c57da8c99cd2e1255167467e2d\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W20.06/baseline.json\",\n      \"sha256\": \"0c1ea398e5bba5064be546c461b694281b87f3fa36c247a85a390e5befc7b134\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W20.06/admission.json\",\n      \"sha256\": \"dd5ae997dee1bc3f348c4ac49ea4464473a42a0e3edca983995b20104b3aa1f1\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W20.06/check-amendment.json\",\n      \"sha256\": \"860d62ad01ba9342d1a156ce45e998337b8fe7a62d351e4d25b0e59980535595\"\n    }\n  ]\n}\n"
+  },
+  "limitations": [
+    "Bounded local absence/default handoff only. No engine/pin/governance/replay/server/consent-authority changes, new assets, customer vocabulary, refresh/coalescing service or infrastructure.",
+    "Existing site default helpers remain site-owned. Local source and actual IIFE/ESM VM execution with stateful DOM/timers is not real-browser/customer walkthrough, no-flash/server-render timing, deployment/native/SLO/scientific or release acceptance.",
+    "Exactly12 cases passed. Expected inherited Vite CJS warning retained. Storefront30 lint errors and12 combined warnings remain explicitly inherited; no full clean-lint claim.",
+    "Known identity absence now reaches late subscribers; the old W04 silent-subscription assertion was deliberately updated to empty-list delivery. Manual rendered without current is unchanged; no new membership or general exposure/attribution policy.",
+    "No source edits during checks. After source STOP only this worker record written; no subdelegation, governance edits, external/cloud/customer-data/deploy/build-script/install/destructive/commit actions. Full W20/W15/F28/F29/customer acceptance remains open; frozen independent review and acceptance are lead-owned."
+  ]
+}

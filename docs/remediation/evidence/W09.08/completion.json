@@ -1,0 +1,78 @@
+{
+  "task_id": "W09.08",
+  "at": "2026-09-15T16:51:25.480Z",
+  "journal_seq": 1828,
+  "artifact_digest": "6e643f5ff488f5b0f2ed54afc51115e081884a9805d55dcd0c436755c734ad01",
+  "contract_digest": "edfe2f6bf671c5fca5b95535f26c789d999c385563fa5f7fdd17a54d7dbd8ae9",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W09.08/acceptance.md",
+    "sha256": "a8518cca2aa76ae7fa13211ad03ed6908fc9a455d938339ac220be7a514ee208"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W09.08/review.json",
+    "sha256": "364f7c4c64acf7b1eb8b676c0185b59fa3ff1866b41cc2fd4bdb2a6a88d8d012"
+  },
+  "root_review_capture": [
+    "ba065f",
+    "703d9f",
+    "af1965",
+    "df1aa8"
+  ],
+  "follow_on_read_only": {
+    "captures": [
+      "dd25a0",
+      "207142",
+      "7d2206",
+      "417b2b",
+      "dc886e",
+      "230e17"
+    ],
+    "finding": "Read-only next-work navigation: the realtime action passes a supplied valid occurrence timestamp into outcome capture, while both live scoring hosts call applyReflex and fanInRegionTrend using receipt-time now. Explicit history imports instead document historical decay. This is the concrete late-data live-versus-historical boundary to reconcile against the original server-clock requirement and scenario decision; it is not an admitted change or approved new lifecycle/retention policy.",
+    "next": "Read complete parent W22/W30 and applicable North Star/customer/source contract before proposing one coherent live/historical fix; do not assume replacing now with client time is safe or sufficient."
+  },
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){process.argv=[process.execPath,file,command];const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);await import(entry.href);write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;if(process.exitCode!==0)break;}'",
+    "initial": {
+      "chunk_id": "939e93",
+      "wall_time_seconds": 1.000715629,
+      "session_id": 39638,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "22905f",
+        "wall_time_seconds": 5.001253746,
+        "session_id": 39638,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "5eddab",
+        "wall_time_seconds": 5.001530554,
+        "session_id": 39638,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ae5e10",
+        "wall_time_seconds": 5.001399584,
+        "session_id": 39638,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0c59e7",
+        "wall_time_seconds": 18.247022816,
+        "exit_code": 0,
+        "original_token_count": 664,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=125, closed=2; evidence records=374\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.08 — Return to the remaining W22/W30 late-data attribution and reconstruction work. Read the recorded D06-W30-late-event-scenarios clarification, current src/routes/realtime.ts action/emitOutcome path, both live hosts and src/identity/history.ts historical weighting before admitting the next coherent fix. Distinguish preserving a valid delayed event from treating it as fresh affinity/trend activity and rebuilding completed reports. Reuse the implemented timestamp, interrupted-fold and delivery remedies; do not add a blanket age cutoff, blind refold, extra personal retention or invented experiment lifecycle. Surface only concrete scenario-specific owner choices before changing those semantics. W09.08 and W22.06 remain accepted; no feature activation, customer-data recovery or external operations are authorized.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 26176\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=125, closed=2; evidence records=374\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.08 — Return to the remaining W22/W30 late-data attribution and reconstruction work. Read the recorded D06-W30-late-event-scenarios clarification, current src/routes/realtime.ts action/emitOutcome path, both live hosts and src/identity/history.ts historical weighting before admitting the next coherent fix. Distinguish preserving a valid delayed event from treating it as fresh affinity/trend activity and rebuilding completed reports. Reuse the implemented timestamp, interrupted-fold and delivery remedies; do not add a blanket age cutoff, blind refold, extra personal retention or invented experiment lifecycle. Surface only concrete scenario-specific owner choices before changing those semantics. W09.08 and W22.06 remain accepted; no feature activation, customer-data recovery or external operations are authorized.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 26176\n"
+      }
+    ],
+    "result": "VALID",
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;33 artifact pins plus W22.06 accepted44pins/review unchanged. No worker/reviewer commands running. Tracker consistency is not engine/customer/SLO/release acceptance.",
+  "next_action": "Return to the remaining W22/W30 late-data attribution and reconstruction work. Read the recorded D06-W30-late-event-scenarios clarification, current src/routes/realtime.ts action/emitOutcome path, both live hosts and src/identity/history.ts historical weighting before admitting the next coherent fix. Distinguish preserving a valid delayed event from treating it as fresh affinity/trend activity and rebuilding completed reports. Reuse the implemented timestamp, interrupted-fold and delivery remedies; do not add a blanket age cutoff, blind refold, extra personal retention or invented experiment lifecycle. Surface only concrete scenario-specific owner choices before changing those semantics. W09.08 and W22.06 remain accepted; no feature activation, customer-data recovery or external operations are authorized.",
+  "limitations": "Binding-failure handling in existing ledger producers and opted-in canonical recovery only. No recovery activation, new state/retention/outbox/quarantine, changed erasure/identity/event-time/lifecycle policy, historical repair or full W09/W22/customer/SLO/release acceptance. Preserve exact W22.06 and all inherited fixes. No install/emitted build/deploy/provision/cloud/credential/customer-data/destructive/commit/push/external operations. Worker and independent reviewer each passed exact6 local synthetic checks. Same-byte compiler1536/two-file lint0errors0warnings/whitespace passed. Not native/cloud failure, customer or SLO evidence."
+}

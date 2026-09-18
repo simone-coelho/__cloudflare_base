@@ -1,0 +1,50 @@
+{
+  "actor_id": "w01-lead",
+  "run_id": "/root",
+  "scope": "W02.03 pre-freeze direct checks, not independent acceptance",
+  "graphEnvelopeDiagnostic": {
+    "observedAt": "2026-09-07T03:24:40Z",
+    "initialResult": "fail",
+    "message": "Initial strict whole-JSON comparison raised Graph differs from actual successful stdout.",
+    "resolution": "The file adds only command/started/collected metadata; every runtime graph payload field equals successful K1 stdout byte-for-byte after JSON serialization. No worker file or source changed to resolve this."
+  },
+  "syntaxFailure": {
+    "command": "node --input-type=module -e \"import fs from 'node:fs'; import {createHash} from 'node:crypto';\\nconst hash=p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');\\nconst d='docs/remediation/evidence/W02.03/';\\nconst b=JSON.parse(fs.readFileSync(d+'baseline-source.json','utf8'));\\nconst protectedChanges=b.files.filter(f=>f.absent?fs.existsSync(f.path):!fs.existsSync(f.path)||hash(f.path)!==f.sha256).map(f=>({path:f.path,before:f.sha256??null,after:fs.existsSync(f.path)?hash(f.path):null}));\\nconst w=JSON.parse(fs.readFileSync(d+'worker-checks.json','utf8'));const k=w.checks.find(c=>c.kind==='K1');const a=JSON.parse(k.output.split('\\\\n').find(s=>s.startsWith('W02.03 runtime-inputs ')).slice(22));const v=JSON.parse(fs.readFileSync(d+'worker-runtime-inputs.json','utf8'));\\nconst differences=Object.keys(a).filter(key=>JSON.stringify(a[key])!==JSON.stringify(v[key]));\\nconst metadata={command:v.command,started:v.started,collected:v.collected};\\nconsole.log(JSON.stringify({at:new Date().toISOString(),protectedCount:b.files.length,protectedChanges,graphKeys:Object.keys(a),graphDifferences:differences,metadata,source:hash('src/middleware/auth.ts'),fixture:hash('src/middleware/auth.claims-boundary.test.ts')}));\\nif(differences.length||protectedChanges.length!==1||protectedChanges[0].path!=='src/middleware/auth.ts')process.exitCode=1;\"",
+    "chunk_id": "830363",
+    "wall_time_seconds": 0.000003468,
+    "exit_code": 1,
+    "original_token_count": 519,
+    "output": "file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/[eval1]:1\nimport fs from 'node:fs'; import {createHash} from 'node:crypto';\\nconst hash=p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');\\nconst d='docs/remediation/evidence/W02.03/';\\nconst b=JSON.parse(fs.readFileSync(d+'baseline-source.json','utf8'));\\nconst protectedChanges=b.files.filter(f=>f.absent?fs.existsSync(f.path):!fs.existsSync(f.path)||hash(f.path)!==f.sha256).map(f=>({path:f.path,before:f.sha256??null,after:fs.existsSync(f.path)?hash(f.path):null}));\\nconst w=JSON.parse(fs.readFileSync(d+'worker-checks.json','utf8'));const k=w.checks.find(c=>c.kind==='K1');const a=JSON.parse(k.output.split('\\n').find(s=>s.startsWith('W02.03 runtime-inputs ')).slice(22));const v=JSON.parse(fs.readFileSync(d+'worker-runtime-inputs.json','utf8'));\\nconst differences=Object.keys(a).filter(key=>JSON.stringify(a[key])!==JSON.stringify(v[key]));\\nconst metadata={command:v.command,started:v.started,collected:v.collected};\\nconsole.log(JSON.stringify({at:new Date().toISOString(),protectedCount:b.files.length,protectedChanges,graphKeys:Object.keys(a),graphDifferences:differences,metadata,source:hash('src/middleware/auth.ts'),fixture:hash('src/middleware/auth.claims-boundary.test.ts')}));\\nif(differences.length||protectedChanges.length!==1||protectedChanges[0].path!=='src/middleware/auth.ts')process.exitCode=1;\n                                                                 ^\n\nSyntaxError: Invalid or unexpected token\n    at compileSourceTextModule (node:internal/modules/esm/utils:344:16)\n    at ModuleLoader.createModuleWrap (node:internal/modules/esm/loader:252:12)\n    at ModuleLoader.eval (node:internal/modules/esm/loader:291:23)\n    at node:internal/process/execution:72:24\n    at asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:11)\n    at Object.runEntryPointWithESMLoader (node:internal/modules/run_main:138:19)\n    at evalModuleEntryPoint (node:internal/process/execution:71:47)\n    at node:internal/main/eval_string:38:3\n\nNode.js v22.15.0\n"
+  },
+  "correctedFreezeCheck": {
+    "command": "node --input-type=module -e 'import fs from '\\''node:fs'\\''; import {createHash} from '\\''node:crypto'\\'';\nconst hash=p=>createHash('\\''sha256'\\'').update(fs.readFileSync(p)).digest('\\''hex'\\'');\nconst d='\\''docs/remediation/evidence/W02.03/'\\'';\nconst b=JSON.parse(fs.readFileSync(d+'\\''baseline-source.json'\\'','\\''utf8'\\''));\nconst protectedChanges=b.files.filter(f=>f.absent?fs.existsSync(f.path):!fs.existsSync(f.path)||hash(f.path)!==f.sha256).map(f=>({path:f.path,before:f.sha256??null,after:fs.existsSync(f.path)?hash(f.path):null}));\nconst w=JSON.parse(fs.readFileSync(d+'\\''worker-checks.json'\\'','\\''utf8'\\''));const k=w.checks.find(c=>c.kind==='\\''K1'\\'');const a=JSON.parse(k.output.split('\\''\\n'\\'').find(s=>s.startsWith('\\''W02.03 runtime-inputs '\\'')).slice(22));const v=JSON.parse(fs.readFileSync(d+'\\''worker-runtime-inputs.json'\\'','\\''utf8'\\''));\nconst differences=Object.keys(a).filter(key=>JSON.stringify(a[key])!==JSON.stringify(v[key]));\nconst metadata={command:v.command,started:v.started,collected:v.collected};\nconsole.log(JSON.stringify({at:new Date().toISOString(),protectedCount:b.files.length,protectedChanges,graphKeys:Object.keys(a),graphDifferences:differences,metadata,source:hash('\\''src/middleware/auth.ts'\\''),fixture:hash('\\''src/middleware/auth.claims-boundary.test.ts'\\'')}));\nif(differences.length||protectedChanges.length!==1||protectedChanges[0].path!=='\\''src/middleware/auth.ts'\\'')process.exitCode=1;'",
+    "chunk_id": "fb7dbf",
+    "wall_time_seconds": 0.98153019,
+    "exit_code": 0,
+    "original_token_count": 180,
+    "output": "{\"at\":\"2026-09-07T03:30:15.671Z\",\"protectedCount\":338,\"protectedChanges\":[{\"path\":\"src/middleware/auth.ts\",\"before\":\"71b8bff20c06df6fdcbddd37678a73fcdfe7b0b3dcafbfba49d16b70587c1316\",\"after\":\"9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01\"}],\"graphKeys\":[\"files\",\"graphs\",\"baselineOnly\",\"outbound\",\"disposed\"],\"graphDifferences\":[],\"metadata\":{\"command\":\"node node_modules/vitest/vitest.mjs run src/middleware/auth.claims-boundary.test.ts --maxWorkers=1 --minWorkers=1\",\"started\":\"2026-09-07T03:19:02.990Z\",\"collected\":\"2026-09-07T03:19:24.136Z\"},\"source\":\"9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01\",\"fixture\":\"307efa307c42d2a3904fc0818ae9afaa95224bcd5c882a8a3f71486a491a77e3\"}\n"
+  },
+  "physicalGraphCheck": {
+    "chunk_id": "67fdc0",
+    "wall_time_seconds": 0.000003241,
+    "exit_code": 0,
+    "original_token_count": 134,
+    "output": "{\n  \"at\": \"2026-09-07T03:22:19.620Z\",\n  \"files\": 281,\n  \"graphs\": [\n    {\n      \"phase\": \"node-current\",\n      \"inputs\": 199\n    },\n    {\n      \"phase\": \"node-before\",\n      \"inputs\": 199\n    },\n    {\n      \"phase\": \"workerd-current\",\n      \"inputs\": 196\n    },\n    {\n      \"phase\": \"workerd-before\",\n      \"inputs\": 196\n    }\n  ],\n  \"baselineOnly\": [\n    {\n      \"phase\": \"node-before\",\n      \"paths\": []\n    },\n    {\n      \"phase\": \"workerd-before\",\n      \"paths\": []\n    }\n  ],\n  \"outbound\": 0,\n  \"disposed\": 2,\n  \"mismatches\": []\n}\n"
+  },
+  "applicationTypecheck": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit --project tsconfig.json --tsBuildInfoFile /tmp/w0203-lead-typecheck.29SLWe/app.tsbuildinfo",
+    "chunk_id": "304d1b",
+    "wall_time_seconds": 0.000001517,
+    "original_token_count": 0,
+    "output": "",
+    "exit_code": 0
+  },
+  "scopedDiff": {
+    "chunk_id": "a568d3",
+    "wall_time_seconds": 0.000005276,
+    "exit_code": 1,
+    "original_token_count": 272,
+    "output": "--- docs/remediation/evidence/W02.03/before-auth.ts.txt\t2026-09-06 22:57:35.145982700 -0400\n+++ src/middleware/auth.ts\t2026-09-06 23:05:05.690343100 -0400\n@@ -27,6 +27,9 @@\n   return parts[1];\n };\n \n+const isStringArray = (value: unknown): value is string[] =>\n+  Array.isArray(value) && value.every((entry) => typeof entry === 'string');\n+\n export const jwt = (options?: {\n   required?: boolean;\n   roles?: string[];\n@@ -61,6 +64,14 @@\n       if (payload.type === 'refresh') {\n         return c.json({ error: 'Invalid token' }, 401);\n       }\n+\n+      // Signed claims still need a valid identity and exact-membership arrays.\n+      // Inspect whitespace only; accepted subjects and authority values stay intact.\n+      if (typeof payload.sub !== 'string' || !payload.sub.trim()\n+        || (payload.roles !== undefined && !isStringArray(payload.roles))\n+        || (payload.permissions !== undefined && !isStringArray(payload.permissions))) {\n+        return c.json({ error: 'Invalid token' }, 401);\n+      }\n       \n       const jwtPayload = payload as unknown as JWTPayload;\n       \n"
+  },
+  "limitations": "Task-local synthetic checks on actual modules; no deployed, customer, SLO or release claim. Original source and virtual-wrapper mapping are retained in baseline/test/worker graph. Earlier acceptance remains historical pending separate current-source episodes."
+}

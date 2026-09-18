@@ -1,0 +1,385 @@
+{
+  "task_id": "W30.04",
+  "actor_id": "w3004-worker",
+  "run_id": "/root/w3004_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15 08:01:56 UTC",
+  "source_go": {
+    "journal": 1785,
+    "contract_digest": "213c7d71f69177952e8382d47fce99bca9730d77a6a84a64ca1056e1993471f0"
+  },
+  "references": {
+    "docs/remediation/design/W30.04/plan.md": {
+      "path": "docs/remediation/design/W30.04/plan.md",
+      "sha256": "9fa2b02642cc99a274e702ed2a0c379769f0ebe16b95d585e753f0364227bbd3"
+    },
+    "docs/remediation/design/W30.04/baseline.json": {
+      "path": "docs/remediation/design/W30.04/baseline.json",
+      "sha256": "bdace88b4c66c34474b53c02af9d93503d9fc0919acb4ed9709abb40e919dfa2"
+    },
+    "docs/remediation/evidence/W30.04/admission.json": {
+      "path": "docs/remediation/evidence/W30.04/admission.json",
+      "sha256": "05b222b9829afc034d54cf2528087babda5a387a75be0ceda58a05e639b4e003"
+    },
+    "docs/remediation/evidence/W30.04/design-clarification.json": {
+      "path": "docs/remediation/evidence/W30.04/design-clarification.json",
+      "sha256": "084ca03689b938fe486764c4567ed032653e35dbd47c38e3e7263e62ab5d852a"
+    }
+  },
+  "pre_edit_verification": {
+    "capture": "95a182",
+    "owned": 4,
+    "matched": 4,
+    "description": "Decoded baseline originals and current owned bytes match their recorded hashes. Complete redacted metadata read after initial oversized base64 display."
+  },
+  "implementation": [
+    "All shards and exact numeric aggregate admitted before mutation, preserving unchanged shard bodies and original fold/replay/erasure semantics.",
+    "Existing shard zero holds a version1 pending exact numeric aggregate, original aggregate condition, source/config/suppression fingerprint and dense before/after shard fingerprints. Changed shards and every aggregate retain unique technical generation to prevent participating-writer ABA.",
+    "Retries validate the complete observed basis and all mixed shard states before effects, recompute only exact-before untouched shards, verify staged fingerprints and reuse saved aggregate numbers. Every write is conditional; uncertain acknowledgements permit only exact bounded readback.",
+    "Loaded and staged shard bodies are separately bounded at16MiB; aggregate, coordinator and worst partial-state mixture must also fit. No new visitor history, namespace or event-age cutoff.",
+    "CatchUp discovers pending work before missing-hour progression, including existing aggregate/out-of-lookback cases, counts debt once, stops newer writes on unresolved work and preserves newest-three active-date publication/no-op. Request-local actual storage-call metering charges recovery I/O.",
+    "Two existing storage fakes implement content ETags and conditional null acknowledgements; existing spies propagate conditions/acknowledgements. Three new grouped cases and narrow superseded metadata/read/refusal expectations only."
+  ],
+  "attempts": [
+    {
+      "id": "fixed35_candidate1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'the hourly fold|W33[.]01' --maxWorkers=1 --minWorkers=1",
+      "source": {
+        "files": [
+          {
+            "path": "src/learn/hourly.ts",
+            "sha256": "23f59961c0f40e9a5802357c7abd4cd637434ee8917b9dc63195186a53683d2b"
+          },
+          {
+            "path": "src/learn/hourly.test.ts",
+            "sha256": "be8d3b05519f426bee432e4e66becb82cf9bf0f06eb57159942cdee8c8d182d6"
+          },
+          {
+            "path": "src/learn/report.test.ts",
+            "sha256": "f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c"
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "926e23",
+        "wall_time_seconds": 1.001622916,
+        "session_id": 44479,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "6d87e5",
+          "wall_time_seconds": 5.00154162,
+          "session_id": 44479,
+          "original_token_count": 199,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/learn/hourly.test.ts  (33 tests | 2 failed) 915ms\n   ❯ src/learn/hourly.test.ts > the hourly fold > W30.04 preserves exact prepared credits across every interrupted write and lost acknowledgement, restart and next-hour attribution\n     → expected +0 to be 3 // Object.is equality\n   ❯ src/learn/hourly.test.ts > the hourly fold > W30.04 refuses changed recovery bases, malformed plans, divergent shards and bounded-state overflow before further effects\n     → Unexpected non-whitespace character after JSON at position 565 (line 2 column 1)\n"
+        },
+        {
+          "chunk_id": "c59c0b",
+          "wall_time_seconds": 0.000001907,
+          "exit_code": 1,
+          "original_token_count": 500,
+          "output": " ✓ src/learn/report.test.ts  (19 tests | 17 skipped) 83ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/learn/hourly.test.ts > the hourly fold > W30.04 preserves exact prepared credits across every interrupted write and lost acknowledgement, restart and next-hour attribution\nAssertionError: expected +0 to be 3 // Object.is equality\n\n- Expected\n+ Received\n\n- 3\n+ 0\n\n ❯ src/learn/hourly.test.ts:169:61\n    167|       ledger(restart, [], f.visitors.map(v => out(v, 's', T12 + H + MI…\n    168|       const next = await buildHour(restart, 'coach', { ...f.at, hour: …\n    169|       expect(next.brands.coach!.policies.learning!.credits).toBe(3);\n       |                                                             ^\n    170|       const report = reportFromHours([recovered, next], ids, learn, f.…\n    171|       expect(report.policies[0]!.credits).toBe(9); expect(report.count…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/learn/hourly.test.ts > the hourly fold > W30.04 refuses changed recovery bases, malformed plans, divergent shards and bounded-state overflow before further effects\nSyntaxError: Unexpected non-whitespace character after JSON at position 565 (line 2 column 1)\n ❯ src/learn/hourly.test.ts:188:81\n    186|       let config = learn, options = f.options;\n    187|       if (fault === 'payload' || fault === 'bytes') {\n    188|         const key = f.r2.keys(`coach/${ids.date}/12/decision/`)[0]!, r…\n       |                                                                                 ^\n    189|         f.r2.objects.set(key, fault === 'bytes' ? f.r2.objects.get(key…\n    190|       }\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  1 failed | 1 passed (2)\n      Tests  2 failed | 33 passed | 17 skipped (52)\n   Start at  03:57:11\n   Duration  10.80s (transform 2.11s, setup 0ms, collect 4.31s, tests 998ms, environment 0ms, prepare 4.01s)\n\n"
+        }
+      ],
+      "drained": true,
+      "result": {
+        "exit_code": 1,
+        "passed": 33,
+        "failed": 2,
+        "unselected": 17,
+        "duration_seconds": 10.8
+      }
+    },
+    {
+      "id": "fixed35_candidate2",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'the hourly fold|W33[.]01' --maxWorkers=1 --minWorkers=1",
+      "source": {
+        "files": [
+          {
+            "path": "src/learn/hourly.ts",
+            "sha256": "23f59961c0f40e9a5802357c7abd4cd637434ee8917b9dc63195186a53683d2b"
+          },
+          {
+            "path": "src/learn/hourly.test.ts",
+            "sha256": "274cba6686958c77ef609d0a9444ff8d1c20d45e90f34edadb60c00947c906e7"
+          },
+          {
+            "path": "src/learn/report.test.ts",
+            "sha256": "f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c"
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "4a98c3",
+        "wall_time_seconds": 1.001609522,
+        "session_id": 1597,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "23dd15",
+          "wall_time_seconds": 0.000001736,
+          "exit_code": 0,
+          "original_token_count": 137,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (33 tests) 1616ms\n ✓ src/learn/report.test.ts  (19 tests | 17 skipped) 79ms\n\n Test Files  2 passed (2)\n      Tests  35 passed | 17 skipped (52)\n   Start at  03:57:57\n   Duration  10.81s (transform 2.12s, setup 0ms, collect 4.36s, tests 1.70s, environment 0ms, prepare 3.42s)\n\n"
+        }
+      ],
+      "drained": true,
+      "result": {
+        "exit_code": 0,
+        "passed": 35,
+        "failed": 0,
+        "unselected": 17,
+        "duration_seconds": 10.81
+      }
+    },
+    {
+      "id": "static_candidate2",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts --max-warnings 0 && git diff --check -- src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts docs/kit/02-api-reference.md",
+      "source": {
+        "files": [
+          {
+            "path": "src/learn/hourly.ts",
+            "sha256": "23f59961c0f40e9a5802357c7abd4cd637434ee8917b9dc63195186a53683d2b"
+          },
+          {
+            "path": "src/learn/hourly.test.ts",
+            "sha256": "274cba6686958c77ef609d0a9444ff8d1c20d45e90f34edadb60c00947c906e7"
+          },
+          {
+            "path": "src/learn/report.test.ts",
+            "sha256": "f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c"
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "dbdc4d",
+        "wall_time_seconds": 1.001026733,
+        "session_id": 50439,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "80896d",
+          "wall_time_seconds": 3.778951923,
+          "exit_code": 2,
+          "original_token_count": 281,
+          "output": "src/learn/hourly.ts(700,91): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.\n  Type 'undefined' is not assignable to type 'string | null'.\nsrc/learn/hourly.ts(717,54): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(718,27): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(718,38): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(718,52): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(718,91): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(718,118): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(719,10): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(719,30): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(720,25): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(721,20): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(722,26): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(725,20): error TS18048: 'p' is possibly 'undefined'.\nsrc/learn/hourly.ts(726,53): error TS18048: 'p' is possibly 'undefined'.\n"
+        }
+      ],
+      "drained": true,
+      "result": {
+        "exit_code": 2,
+        "compiler_exit_code": 2,
+        "lint": "not_run",
+        "whitespace": "not_run"
+      }
+    },
+    {
+      "id": "static_final",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts --max-warnings 0 && git diff --check -- src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts docs/kit/02-api-reference.md",
+      "source": {
+        "files": [
+          {
+            "path": "src/learn/hourly.ts",
+            "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc"
+          },
+          {
+            "path": "src/learn/hourly.test.ts",
+            "sha256": "274cba6686958c77ef609d0a9444ff8d1c20d45e90f34edadb60c00947c906e7"
+          },
+          {
+            "path": "src/learn/report.test.ts",
+            "sha256": "f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c"
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "c8d703",
+        "wall_time_seconds": 1.001009405,
+        "session_id": 81770,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "39d957",
+          "wall_time_seconds": 5.000324448,
+          "session_id": 81770,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "eca685",
+          "wall_time_seconds": 0.000001127,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "drained": true,
+      "result": {
+        "exit_code": 0,
+        "compiler_exit_code": 0,
+        "lint_errors": 0,
+        "lint_warnings": 0,
+        "whitespace_exit_code": 0,
+        "component_semantics": "All three commands in the declared && chain ran and exited0."
+      }
+    },
+    {
+      "id": "fixed35_final",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'the hourly fold|W33[.]01' --maxWorkers=1 --minWorkers=1",
+      "source": {
+        "files": [
+          {
+            "path": "src/learn/hourly.ts",
+            "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc"
+          },
+          {
+            "path": "src/learn/hourly.test.ts",
+            "sha256": "274cba6686958c77ef609d0a9444ff8d1c20d45e90f34edadb60c00947c906e7"
+          },
+          {
+            "path": "src/learn/report.test.ts",
+            "sha256": "f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c"
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "6401f4",
+        "wall_time_seconds": 1.0010217,
+        "session_id": 92579,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "65b114",
+          "wall_time_seconds": 0.000002043,
+          "exit_code": 0,
+          "original_token_count": 137,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (33 tests) 1690ms\n ✓ src/learn/report.test.ts  (19 tests | 17 skipped) 82ms\n\n Test Files  2 passed (2)\n      Tests  35 passed | 17 skipped (52)\n   Start at  04:00:20\n   Duration  11.03s (transform 2.13s, setup 0ms, collect 4.37s, tests 1.77s, environment 0ms, prepare 3.42s)\n\n"
+        }
+      ],
+      "drained": true,
+      "result": {
+        "exit_code": 0,
+        "passed": 35,
+        "failed": 0,
+        "unselected": 17,
+        "duration_seconds": 11.03,
+        "assertion_time_ms": 1772
+      }
+    }
+  ],
+  "measurement": {
+    "final_tests": 35,
+    "unselected": 17,
+    "files": 2,
+    "grouped_cases_added": 3,
+    "fixture": "Installed Node/Vitest and actual hourly/report modules through synthetic content-etag conditional storage; no deployed/native/runtime-capacity claim.",
+    "scope": "Five write stages before/after lost acknowledgement, unavailable and available readback, fresh-process storage copies, evicted carry-in and subsequent attribution; changed full payload/framing/inventory/options/config/erasure, malformed checkpoint/vector/numeric/computation/owner, missing etag, divergent before/after state, aggregate conflict and total-body bounds; four stale-helper interleavings, aggregate X->Y->X replay, pending inside/outside lookback/existing aggregate/maxHours0/no-op.",
+    "qualification": "The lost-completion catch-up fixture restores the exact same pending coordinator after an actual completed fold to model pending completion with already-published aggregate. Races otherwise use actual paused conditional writes and competing buildHour calls. Persisted null vector element models malformed dense state; no sparse JS array survives JSON."
+  },
+  "lint": {
+    "final_errors": 0,
+    "final_warnings": 0,
+    "baseline_errors": 0,
+    "baseline_warnings": 0
+  },
+  "final_source": {
+    "at": "2026-09-15T08:00:19.080Z",
+    "files": [
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "274cba6686958c77ef609d0a9444ff8d1c20d45e90f34edadb60c00947c906e7"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248"
+      }
+    ],
+    "same_bytes_as_final_runtime_and_static": true
+  },
+  "protected": {
+    "total": 34,
+    "matched": 34,
+    "mismatches": []
+  },
+  "source_checks": {
+    "final": {
+      "chunk_id": "ed7e8a",
+      "wall_time_seconds": 0.000003566,
+      "exit_code": 0,
+      "original_token_count": 325,
+      "output": "{\"at\":\"2026-09-15T08:00:19.080Z\",\"files\":[{\"path\":\"src/learn/hourly.ts\",\"sha256\":\"57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc\"},{\"path\":\"src/learn/hourly.test.ts\",\"sha256\":\"274cba6686958c77ef609d0a9444ff8d1c20d45e90f34edadb60c00947c906e7\"},{\"path\":\"src/learn/report.test.ts\",\"sha256\":\"f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c\"},{\"path\":\"docs/kit/02-api-reference.md\",\"sha256\":\"35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248\"}],\"protected\":{\"total\":34,\"matched\":34,\"mismatches\":[]},\"references\":{\"docs/remediation/design/W30.04/plan.md\":{\"path\":\"docs/remediation/design/W30.04/plan.md\",\"sha256\":\"9fa2b02642cc99a274e702ed2a0c379769f0ebe16b95d585e753f0364227bbd3\"},\"docs/remediation/design/W30.04/baseline.json\":{\"path\":\"docs/remediation/design/W30.04/baseline.json\",\"sha256\":\"bdace88b4c66c34474b53c02af9d93503d9fc0919acb4ed9709abb40e919dfa2\"},\"docs/remediation/evidence/W30.04/admission.json\":{\"path\":\"docs/remediation/evidence/W30.04/admission.json\",\"sha256\":\"05b222b9829afc034d54cf2528087babda5a387a75be0ceda58a05e639b4e003\"},\"docs/remediation/evidence/W30.04/design-clarification.json\":{\"path\":\"docs/remediation/evidence/W30.04/design-clarification.json\",\"sha256\":\"084ca03689b938fe486764c4567ed032653e35dbd47c38e3e7263e62ab5d852a\"}}}\n"
+    }
+  },
+  "failures": [
+    {
+      "attempt": "fixed35_candidate1",
+      "failure": "Two new fixture defects: subsequent click31min after a decision outside the existing30min click window; JSON.parse attempted on a multi-line NDJSON object.",
+      "rework": "Moved fresh decisions to12:40/outcomes12:41, retaining subsequent13:01 attribution within policy. Changed only one parsed line's noncompact explain field and preserved every other line plus final LF.",
+      "superseded_by": "fixed35_candidate2"
+    },
+    {
+      "attempt": "static_candidate2",
+      "failure": "Compiler could not narrow optional pending/etag values through inferred const never-returning helper. Compiler exit2; lint/whitespace not run.",
+      "rework": "Converted recoveryConflict const arrow into an equivalent named never-returning function declaration.",
+      "superseded_by": [
+        "static_final",
+        "fixed35_final"
+      ]
+    }
+  ],
+  "disposition": {
+    "status": "source_stop",
+    "source_stopped": true,
+    "running_commands": [],
+    "worker_checks": "pass",
+    "independent_review": "pending",
+    "lead_acceptance": "pending",
+    "next_action": "Root freezes exact four-file deltas/protected pins and obtains independent fixed35 artifact review."
+  },
+  "limitations": [
+    "Forward recovery covers interrupted transactions only on an identical observed source/options/config/suppression basis. Fingerprints are not an atomic snapshot across raw objects and erasure stores; concurrent raw/erasure changes and cross-store atomicity remain unresolved.",
+    "Changed pending basis refuses without automatic reset, event-age rejection or history reconstruction. Completed explicit same/older-hour recomputation still cannot restore evicted carry-in or rebuild dependent hours; original historical loss remains.",
+    "Technical generation prevents participating-writer ETag reuse, not old-binary/external writer coordination. Keep compatible writers/readers until pending work drains. Canonical day publication has no new global CAS.",
+    "Budget meters actual started-fold storage calls; it does not establish per-invocation maximum, workload capacity or SLO. Outside-lookback report dates remain deferred. Existing maturity/coverage/retention/online-export reconciliation and D04/D06/W24 obligations remain open.",
+    "No full package/finding/customer/scientific/release acceptance, deploy/provision/cloud/credentials/customer-data/external messages/commit/push/destructive operations; root owns governance and final disposition."
+  ]
+}

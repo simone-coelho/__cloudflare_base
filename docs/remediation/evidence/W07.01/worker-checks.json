@@ -1,0 +1,129 @@
+{
+  "task": "W07.01",
+  "actor": "w0202-worker",
+  "contract": "7092d0d7077f844850c745b7061c08fb6b6f22e9f2a10f71803b70d244509cb0",
+  "scope": "Seven production files and three test files only; source frozen, independent review pending",
+  "freeze": {
+    "at": "2026-09-07T11:41:06.873Z",
+    "files": [
+      {
+        "path": "src/routes/tracking.ts",
+        "sha256": "40e3267f75d9e036886e1238331fbfc8a4d995a14825354c9201b0674057e352"
+      },
+      {
+        "path": "src/routes/pixel.ts",
+        "sha256": "058e8755b14d7313277c411e67c6fccde12695f47c9cb0b2a226412248ef3524"
+      },
+      {
+        "path": "src/routes/webhook.ts",
+        "sha256": "297fecd370072bcbc258834cc9409d2ac2088653b91513a693eaa8d2e4084af9"
+      },
+      {
+        "path": "src/routes/optimizely.ts",
+        "sha256": "3f85a23330bcabb3263882e4c559ae47b2019d138a994ca2d27fdaf9dd80dd6c"
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "576644f34fcfd3e9a6642884bb779e8755110f2395a88fc223a69e6620d0b573"
+      },
+      {
+        "path": "src/middleware/error.ts",
+        "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b"
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "e2d348577a5295430b5f85cb3f685b7eda8d8a1e7f806508e44aee6ed2e9f802"
+      },
+      {
+        "path": "src/telemetry.boundary.test.ts",
+        "sha256": "c09e6f2c6c92b0cedfbbe41a7f02224253e125c772da24fc5d5cfe7a39308d75"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "eee0323718111974f29b861903d50a7f998e4dc5563e6c07934e144625e950fd"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "97233303b427b30a85f08c0c64d5d442721d8928f9bbb7c3fe76d871cba78fc7"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "K1-initial",
+      "command": "node node_modules/vitest/vitest.mjs run src/telemetry.boundary.test.ts src/routes/identity.test.ts src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (20 tests) 52ms\n ✓ src/telemetry.boundary.test.ts  (28 tests) 33ms\n ✓ src/ledger/ledger.test.ts  (6 tests) 9ms\n\n Test Files  3 passed (3)\n      Tests  54 passed (54)\n   Start at  07:39:12\n   Duration  13.66s (transform 1.63s, setup 0ms, collect 5.50s, tests 94ms, environment 0ms, prepare 5.96s)\n\n",
+      "status": "superseded by K1-final after typing-only fixture correction",
+      "reportedLocalStart": "2026-09-07 07:39:12 America/New_York"
+    },
+    {
+      "id": "K2-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t W07.01",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (24 tests | 19 skipped) 3964ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 19 skipped (24)\n   Start at  07:39:12\n   Duration  11.89s (transform 1.13s, setup 0ms, collect 5.37s, tests 3.96s, environment 0ms, prepare 1.76s)\n\n",
+      "status": "pass; five selected W07.01 tests, nineteen unrelated historical tests excluded by required command",
+      "reportedLocalStart": "2026-09-07 07:39:12 America/New_York",
+      "freshness": "No K2 source/runtime input changed after this execution; only new Node telemetry fixture typing changed"
+    },
+    {
+      "id": "application-noEmit-initial",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w0701-typecheck.iNF0tS/application.tsbuildinfo",
+      "exitCode": 2,
+      "output": "src/telemetry.boundary.test.ts(35,3): error TS2322: Type 'Mock<[], Promise<Response>>' is not assignable to type 'Mock<any[], unknown>'.\n  Types of property 'mockImplementation' are incompatible.\n    Types of parameters 'fn' and 'fn' are incompatible.\n      Type 'unknown' is not assignable to type 'Promise<Response>'.\nsrc/telemetry.boundary.test.ts(38,3): error TS2322: Type 'MockInstance<[message?: any, ...optionalParams: any[]], void>' is not assignable to type 'MockInstance<unknown[], unknown>'.\n  The types returned by 'withImplementation(...)' are incompatible between these types.\n    Type 'MockInstance<[message?: any, ...optionalParams: any[]], void> | Promise<MockInstance<[message?: any, ...optionalParams: any[]], void>>' is not assignable to type 'MockInstance<unknown[], unknown> | Promise<MockInstance<unknown[], unknown>>'.\n      Type 'MockInstance<[message?: any, ...optionalParams: any[]], void>' is not assignable to type 'MockInstance<unknown[], unknown> | Promise<MockInstance<unknown[], unknown>>'.\nsrc/telemetry.boundary.test.ts(39,3): error TS2322: Type 'MockInstance<[], Promise<void>>' is not assignable to type 'MockInstance<unknown[], unknown>'.\n  Types of property 'mockImplementation' are incompatible.\n    Types of parameters 'fn' and 'fn' are incompatible.\n      Type 'unknown' is not assignable to type 'Promise<void>'.\nsrc/telemetry.boundary.test.ts(40,3): error TS2322: Type 'MockInstance<[eventKey: string, userId: string, userAttributes?: UserAttributes | undefined, eventTags?: EventTags | undefined], Promise<void>>' is not assignable to type 'MockInstance<unknown[], unknown>'.\n  The types returned by 'getMockImplementation()' are incompatible between these types.\n    Type '((eventKey: string, userId: string, userAttributes?: UserAttributes | undefined, eventTags?: EventTags | undefined) => Promise<void>) | undefined' is not assignable to type '((...args: unknown[]) => unknown) | undefined'.\n      Type '(eventKey: string, userId: string, userAttributes?: UserAttributes | undefined, eventTags?: EventTags | undefined) => Promise<void>' is not assignable to type '(...args: unknown[]) => unknown'.\n        Types of parameters 'eventKey' and 'args' are incompatible.\n          Type 'unknown' is not assignable to type 'string'.\nsrc/telemetry.boundary.test.ts(41,3): error TS2322: Type 'MockInstance<[experimentKey: string, userId: string, userAttributes?: UserAttributes | undefined], Promise<string | null>>' is not assignable to type 'MockInstance<unknown[], unknown>'.\n  The types returned by 'getMockImplementation()' are incompatible between these types.\n    Type '((experimentKey: string, userId: string, userAttributes?: UserAttributes | undefined) => Promise<string | null>) | undefined' is not assignable to type '((...args: unknown[]) => unknown) | undefined'.\n      Type '(experimentKey: string, userId: string, userAttributes?: UserAttributes | undefined) => Promise<string | null>' is not assignable to type '(...args: unknown[]) => unknown'.\n        Types of parameters 'experimentKey' and 'args' are incompatible.\n          Type 'unknown' is not assignable to type 'string'.\nsrc/telemetry.boundary.test.ts(42,3): error TS2322: Type 'MockInstance<[featureKey: string, userId: string, userAttributes?: UserAttributes | undefined], Promise<boolean>>' is not assignable to type 'MockInstance<unknown[], unknown>'.\n  The types returned by 'getMockImplementation()' are incompatible between these types.\n    Type '((featureKey: string, userId: string, userAttributes?: UserAttributes | undefined) => Promise<boolean>) | undefined' is not assignable to type '((...args: unknown[]) => unknown) | undefined'.\n      Type '(featureKey: string, userId: string, userAttributes?: UserAttributes | undefined) => Promise<boolean>' is not assignable to type '(...args: unknown[]) => unknown'.\n        Types of parameters 'featureKey' and 'args' are incompatible.\n          Type 'unknown' is not assignable to type 'string'.\nsrc/telemetry.boundary.test.ts(43,3): error TS2322: Type 'MockInstance<[featureKey: string, userId: string, userAttributes?: UserAttributes | undefined], Promise<Record<string, any>>>' is not assignable to type 'MockInstance<unknown[], unknown>'.\n  The types returned by 'getMockImplementation()' are incompatible between these types.\n    Type '((featureKey: string, userId: string, userAttributes?: UserAttributes | undefined) => Promise<Record<string, any>>) | undefined' is not assignable to type '((...args: unknown[]) => unknown) | undefined'.\n      Type '(featureKey: string, userId: string, userAttributes?: UserAttributes | undefined) => Promise<Record<string, any>>' is not assignable to type '(...args: unknown[]) => unknown'.\n        Types of parameters 'featureKey' and 'args' are incompatible.\n          Type 'unknown' is not assignable to type 'string'.\nsrc/telemetry.boundary.test.ts(44,3): error TS2322: Type 'MockInstance<[userId: string, userAttributes?: UserAttributes | undefined], Promise<string[]>>' is not assignable to type 'MockInstance<unknown[], unknown>'.\n  The types returned by 'getMockImplementation()' are incompatible between these types.\n    Type '((userId: string, userAttributes?: UserAttributes | undefined) => Promise<string[]>) | undefined' is not assignable to type '((...args: unknown[]) => unknown) | undefined'.\n      Type '(userId: string, userAttributes?: UserAttributes | undefined) => Promise<string[]>' is not assignable to type '(...args: unknown[]) => unknown'.\n        Types of parameters 'userId' and 'args' are incompatible.\n          Type 'unknown' is not assignable to type 'string'.\n",
+      "status": "failed, superseded",
+      "startedAt": {
+        "current_time": "2026-09-07 11:39:25 UTC"
+      },
+      "cause": "Eight fixture-only TS2322 errors: broad ReturnType on generic Vitest mock factories was invariant/incompatible. Corrected with method-specific MockInstance<Parameters<T>,ReturnType<T>> and typed fetch mock. No production or assertion change."
+    },
+    {
+      "id": "K1-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/telemetry.boundary.test.ts src/routes/identity.test.ts src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (20 tests) 51ms\n ✓ src/telemetry.boundary.test.ts  (28 tests) 32ms\n ✓ src/ledger/ledger.test.ts  (6 tests) 8ms\n\n Test Files  3 passed (3)\n      Tests  54 passed (54)\n   Start at  07:40:33\n   Duration  14.65s (transform 1.70s, setup 0ms, collect 5.32s, tests 91ms, environment 0ms, prepare 6.87s)\n\n",
+      "status": "pass;54 tests",
+      "startedNoEarlierThan": {
+        "current_time": "2026-09-07 11:40:30 UTC"
+      },
+      "collectedAt": {
+        "current_time": "2026-09-07 11:41:06 UTC"
+      }
+    },
+    {
+      "id": "application-noEmit-final",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w0701-typecheck.iNF0tS/application.tsbuildinfo",
+      "exitCode": 0,
+      "output": "",
+      "status": "pass",
+      "startedNoEarlierThan": {
+        "current_time": "2026-09-07 11:40:30 UTC"
+      },
+      "collectedAt": {
+        "current_time": "2026-09-07 11:41:06 UTC"
+      }
+    },
+    {
+      "id": "owned-diff-check-final",
+      "command": "git diff --check -- src/routes/tracking.ts src/routes/pixel.ts src/routes/webhook.ts src/routes/optimizely.ts src/index.ts src/middleware/error.ts src/identity/erase.ts src/telemetry.boundary.test.ts src/index.api-boundary.test.ts src/routes/identity.test.ts",
+      "exitCode": 0,
+      "output": "",
+      "status": "pass"
+    }
+  ],
+  "executionNotes": [
+    "Both worker entry board check/status processes completed exit0/Tracker VALID; qualified historical proof warnings remain, and their displayed outputs were truncated. No framework test suite ran.",
+    "Production first landed under plan-v1 after baseline-six original-byte assertion. Additional middleware/error.ts and existing index/identity test original bytes retained in worker-before-additional.json before edits.",
+    "Paused source/fixture edits on lead request after new telemetry fixture landed, before acceptance execution; resumed after reading plan-v2 at seq125. Only C2 evidence-class common floor changed, not behavior or mandatory checks.",
+    "Read-only review caught incomplete health positive-fixture bindings before first K1; supplied working STORAGE.head, EVENT_QUEUE and STATE_MANAGER fixture. No failed test or weakened status assertion.",
+    "All subprocesses collected and Miniflare disposed. No real network, operational scripts, dataset or credential/customer actions. No new harness or dependency graph collected by worker."
+  ],
+  "limitations": [
+    "No comprehensive log-clean or nothing-written-under-refusal claim: dispatch/queue/domain writes remain. EventDispatcher, OptimizelyService, scene-generation, WebSocket, scheduled and other route logs remain outside this containment.",
+    "Public error bodies retain existing details, deliberately asserted in batch/global error tests; this task changes selected logs, not response policy.",
+    "Telemetry route tests use real routers/decoder/dispatcher with intercepted external fetch and Optimizely service methods. They prove calls and data preservation, not external delivery.",
+    "The K2 scene success control exercises an existing cached image; handled failure is missing model configuration. No model generation is invoked or claimed.",
+    "Historical AE/log deletion, dataset environment isolation/attestation, retention/disposition, full consent/erasure policy, full W07/finding/gate/customer/performance/deployed/release acceptance remain open.",
+    "K2 excludes nineteen unrelated historical cases; it does not reclose W01.02 or other prior evidence. Lead owns artifact identity and independent acceptance."
+  ]
+}

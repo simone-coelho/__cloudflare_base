@@ -1,0 +1,209 @@
+{
+  "task_id": "W26.04",
+  "actor_id": "w2205-reviewer",
+  "run_id": "/root/late_hour_next_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15 20:09:26 UTC",
+  "verdict": "PASS",
+  "claim": "local_runtime",
+  "frozen_go_journal": 1893,
+  "identity": {
+    "artifact_digest": "ffe030e167286f6bad6db2f0b261a396d06ef5143daf90323a107f7ba92bb728",
+    "contract_digest": "8dec7911792e2d0f16be670645e7e4f2a03931cc2c63cc15dd4f6fd0a9d407f3",
+    "pin_map": {
+      "path": "docs/remediation/evidence/W26.04/register-e2.json",
+      "sha256": "0f5bb0c95995d3457e8198dda552227ba5e91d3d15a1b6ad27ddae22c05f89cc",
+      "pointer": "/after/artifact_basis/files"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W26.04/worker.json",
+      "sha256": "828679500a72b40ef18abfe84ecb7350d2186875d50e8d5b1d647dda26566c20",
+      "canonical_basis_pointer": "/canonical_source/basis"
+    },
+    "baseline_sha256": "c36a93b851949e6fa28ef4f10a6a6ba6cd159619ad7fa24062512661208f1f1f"
+  },
+  "source_review": {
+    "result": "PASS",
+    "captures": [
+      "3c2e9e",
+      "4c0bf8",
+      "b8bd43"
+    ],
+    "basis": "Read complete actual task/plan, baseline metadata, both source deltas/source-freeze, full worker evidence and actual affected source/fixtures, reusing independent W26/F21/F16/F34/relevant W15/F03/doc22/section1.7 reading. Decoded baseline originals and verified each complete stored delta reproduces current bytes. Exactly one production filter; optional default-coach helper parameter/three publication scopes and one 39-line grouped service/replay case with imports. Existing calls retain default behavior; three selected controls remain protected byte-identical.",
+    "findings": []
+  },
+  "pin_snapshots": {
+    "before": {
+      "capture": "ef4545",
+      "exit_code": 0,
+      "at": "2026-09-15T20:07:46.565Z",
+      "artifact_digest": "ffe030e167286f6bad6db2f0b261a396d06ef5143daf90323a107f7ba92bb728",
+      "contract_digest": "8dec7911792e2d0f16be670645e7e4f2a03931cc2c63cc15dd4f6fd0a9d407f3",
+      "artifact_pins": 40,
+      "artifact_pin_digest": "b9b48f4c88adb7cf6df09860ecba8b583cd71d2e6fa3cc1b98bc807b812647a6",
+      "protected_pins": 32,
+      "protected_digest": "1b6c594d02a1231f8961382fff6442e34e95b16fd04e848a5de7bdf908e9f634",
+      "canonical_pins": 83,
+      "canonical_digest": "db77f934c9e45e3d430e1d5888f93781499183d5201cebbd8a76d7eb12788aef",
+      "pin_map_sha256": "0f5bb0c95995d3457e8198dda552227ba5e91d3d15a1b6ad27ddae22c05f89cc",
+      "source_freeze_sha256": "11dd85a8952c40720159286702e25c53410dc012619df00800c12537844d7ff9",
+      "source_deltas_sha256": "b809e2b4e4b9c74abcf36cd5e4b5e44d446ffd61dc5343d58456f77f34cc6c9d",
+      "dependencies": [
+        {
+          "task_id": "W22.07",
+          "pins": 51,
+          "digest": "5f672370eccadb82209f01fc7d1ab985724bef9b830f0f3fed2296ba4369f5fd",
+          "review_sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c",
+          "review_unchanged": true,
+          "owned_overlaps": []
+        },
+        {
+          "task_id": "W22.09",
+          "pins": 32,
+          "digest": "4b33216fb760258430bd8c5c76fd8afad0c87aa95e091e6d00fde0597dc3a263",
+          "review_sha256": "ee455d4dd1e263d6d83387b9039ca07ce4d52554e07d6b7998d302cc1dbf13f9",
+          "review_unchanged": true,
+          "owned_overlaps": []
+        }
+      ],
+      "decoded_deltas_matched": 2,
+      "fixture_only_rework_reconstructed": true,
+      "three_selected_controls_protected_unchanged": true,
+      "mismatches": []
+    },
+    "after": {
+      "capture": "ea37c8",
+      "exit_code": 0,
+      "at": "2026-09-15T20:08:16.370Z",
+      "artifact_digest": "ffe030e167286f6bad6db2f0b261a396d06ef5143daf90323a107f7ba92bb728",
+      "contract_digest": "8dec7911792e2d0f16be670645e7e4f2a03931cc2c63cc15dd4f6fd0a9d407f3",
+      "artifact_pins": 40,
+      "artifact_pin_digest": "b9b48f4c88adb7cf6df09860ecba8b583cd71d2e6fa3cc1b98bc807b812647a6",
+      "protected_pins": 32,
+      "protected_digest": "1b6c594d02a1231f8961382fff6442e34e95b16fd04e848a5de7bdf908e9f634",
+      "canonical_pins": 83,
+      "canonical_digest": "db77f934c9e45e3d430e1d5888f93781499183d5201cebbd8a76d7eb12788aef",
+      "pin_map_sha256": "0f5bb0c95995d3457e8198dda552227ba5e91d3d15a1b6ad27ddae22c05f89cc",
+      "source_freeze_sha256": "11dd85a8952c40720159286702e25c53410dc012619df00800c12537844d7ff9",
+      "source_deltas_sha256": "b809e2b4e4b9c74abcf36cd5e4b5e44d446ffd61dc5343d58456f77f34cc6c9d",
+      "dependencies": [
+        {
+          "task_id": "W22.07",
+          "pins": 51,
+          "digest": "5f672370eccadb82209f01fc7d1ab985724bef9b830f0f3fed2296ba4369f5fd",
+          "review_sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c",
+          "review_unchanged": true,
+          "owned_overlaps": []
+        },
+        {
+          "task_id": "W22.09",
+          "pins": 32,
+          "digest": "4b33216fb760258430bd8c5c76fd8afad0c87aa95e091e6d00fde0597dc3a263",
+          "review_sha256": "ee455d4dd1e263d6d83387b9039ca07ce4d52554e07d6b7998d302cc1dbf13f9",
+          "review_unchanged": true,
+          "owned_overlaps": []
+        }
+      ],
+      "decoded_deltas_matched": 2,
+      "fixture_only_rework_reconstructed": true,
+      "three_selected_controls_protected_unchanged": true,
+      "mismatches": []
+    },
+    "algorithm": "SHA-256 of JSON.stringify(path.localeCompare-sorted {path,sha256} arrays), separately from governance artifact digest. Canonical83 is the baseline-owned/protected/accepted-files/reviews union with frozen owned hashes. Artifact and contract formulas independently recomputed; no board execution."
+  },
+  "independent_runtime": {
+    "check_id": "W26.04-K3",
+    "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/content/freshFatigue.test.ts -t 'W26[.]04|is off without a ring read|reads the ring.*full records|counts the ring inside' --maxWorkers=1 --minWorkers=1",
+    "cwd": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base",
+    "attempts": 1,
+    "initial": {
+      "chunk_id": "0ec32b",
+      "wall_time_seconds": 1.001785131,
+      "session_id": 22937,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "f41165",
+        "wall_time_seconds": 1.368378931,
+        "exit_code": 0,
+        "original_token_count": 744,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W26.04 keeps actual fatigue ranking receipts and replay within the requested brand\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (27 tests | 26 skipped) 32ms\n ✓ src/content/freshFatigue.test.ts  (8 tests | 5 skipped) 27ms\n\n Test Files  2 passed (2)\n      Tests  4 passed | 31 skipped (35)\n   Start at  16:07:58\n   Duration  8.54s (transform 1.88s, setup 0ms, collect 3.55s, tests 59ms, environment 0ms, prepare 3.48s)\n\n"
+      }
+    ],
+    "exit_code": 0,
+    "session_drained": true,
+    "result": {
+      "passed": 4,
+      "failed": 0,
+      "deliberately_unselected": 31,
+      "total": 35,
+      "test_files": 2,
+      "duration_seconds": 8.54,
+      "test_seconds": 0.059
+    },
+    "diagnostics": "Five learning_incomplete reports retained verbatim: synthetic ring has no valid append receipt and statistics binding is absent. No durable ring/exposure delivery claim. Vite CJS deprecation is existing tool output, not ESLint."
+  },
+  "static_reuse": {
+    "result": "PASS",
+    "rerun": false,
+    "worker_attempt": "static-final",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/service.ts src/content/consent.test.ts --max-warnings 0 && git diff --check -- src/content/service.ts src/content/consent.test.ts",
+    "raw_capture_references": [
+      "b0bc12",
+      "68c584",
+      "726e6f",
+      "3ba179"
+    ],
+    "session_id": 23178,
+    "exit_code": 0,
+    "session_drained": true,
+    "compiler_exit": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace_exit": 0,
+    "basis": "Inspected complete pinned raw worker command/initial/polls/drained exit0, with empty output and zero-warning threshold. Baseline and final lint both0/0; no separate signature comparison required. Final worker runtime and static before/after hashes match canonical83 db77f934c9e45e3d430e1d5888f93781499183d5201cebbd8a76d7eb12788aef, independently verified before/after this runtime. No static rerun."
+  },
+  "criteria": {
+    "W26.04-C1": {
+      "result": "PASS",
+      "finding": "Live consumer requires exact requested brand before shared servedCounts; absent brand contributes no penalty without failing the decision. Actual service case uses tenant meridian/requested alpha/foreign beta: empty, foreign-only and brandless-only give identical ordered records/candidates/explanations/inputs; mixed equals own-only."
+    },
+    "W26.04-C2": {
+      "result": "PASS",
+      "finding": "Same-brand other-page/slot/old-session default and no_learning records still count: winner changes a→b, a retains served2/applied-0.4/score0.6 and inputs {hero:{a:2}}. Both JSON-roundtripped receipts replay equal with those recorded counts after live ring changes, without reading it; default request also avoids a ring read. Three unchanged controls pass default/null/replay, full-record conversion/slow/unbound timeout and slot-window cross-slot helper semantics. Shared helper, recorded-history replay and retention unchanged."
+    },
+    "W26.04-C3": {
+      "result": "PASS",
+      "finding": "Worker final and independent fixed4 pass; same-byte compiler1536/two-file lint0/0/whitespace evidence reused. Complete actual delta and fixture-only rework verified. All40 artifact/32 protected/83 canonical pins and complete W22.07 all51+review/W22.09 all32+review unchanged before/after; no owned dependency overlap."
+    }
+  },
+  "failures_and_rework": [
+    {
+      "worker_attempt": "fixed4-initial",
+      "raw_capture_references": [
+        "4024a9",
+        "d533c0"
+      ],
+      "exit_code": 1,
+      "session_drained": true,
+      "result": "One new case failed before ranking: ReflexConfigUnavailableError for synthetic meridian; three existing controls passed,31 unselected.",
+      "disposition": "Root-approved fixture-only correction imports existing DEFAULT_REFLEX_CONFIG/writeReflexConfig and publishes the synthetic tenant configuration in the same case; production unchanged. Independently removing these two imports and one setup line exactly reconstructs failed fixture SHA82e0eafe4c5aa56e4bd8b08702faae71f98c4d0749ef309d613b31113997987c. Retained failure superseded by worker fixed4-final and this independent fixed4, not erased."
+    }
+  ],
+  "limitations": [
+    "Forward live brand-local fatigue only; missing brand is not guessed. Same-brand global-item counting remains served-record semantics, not proof of rendered/viewable exposures or placement-specific policy.",
+    "Actual service/ranking/replay use synthetic publication/shopper/ring bindings. No deployed durability, browser, customer-data recovery, latency/SLO or hard-isolation acceptance.",
+    "No historical ranking/statistics reconstruction, new retention/lifecycle/privacy policy, migration, full W26/finding closure or release approval. Accepted W22.07/W22.09 artifacts and inherited W22.08 ordering preserved.",
+    "Only this review file written. No source/governance writes, extra suite, static rerun, board, build, install, delegation or external operation."
+  ],
+  "disposition": {
+    "status": "independent_review_passed",
+    "source_and_evidence_stopped": true,
+    "running_commands": [],
+    "lead_acceptance": "pending",
+    "next_action": "Root checks exact review, owns acceptance/final existing board. Reviewer STOP."
+  }
+}

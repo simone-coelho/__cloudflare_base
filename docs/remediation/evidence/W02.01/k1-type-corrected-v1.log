@@ -1,0 +1,22 @@
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+ RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"open","state":"fresh","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"open","state":"revoked","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"enforced","state":"fresh","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"enforced","state":"revoked","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+ ✓ src/middleware/auth.refresh-boundary.test.ts  (28 tests) 348ms
+
+ Test Files  1 passed (1)
+      Tests  28 passed (28)
+   Start at  20:41:04
+   Duration  6.37s (transform 449ms, setup 0ms, collect 2.15s, tests 348ms, environment 0ms, prepare 2.69s)

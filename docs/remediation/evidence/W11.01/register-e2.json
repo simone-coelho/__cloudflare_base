@@ -1,0 +1,191 @@
+{
+  "before": null,
+  "after": {
+    "id": "W11.01-E2",
+    "task_id": "W11.01",
+    "check_id": "W11.01-K2",
+    "criterion_ids": [
+      "W11.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1101-worker",
+    "run_id": "/root/w1101_worker",
+    "file": {
+      "path": "docs/remediation/evidence/W11.01/worker.json",
+      "sha256": "a9a0a96730da4edbdb946088cdd7d68198cf5dca19ac83ce935fc644674d6fe8"
+    },
+    "at": "2026-09-11T03:21:44Z",
+    "limitations": "Bounded local content-only conditional R2 publication and owned-refusal preservation. No real catalog initialization/cutover, deployed or immediate-effect/latency/SLO/customer acceptance, full W11/F15/F24, other configuration kinds, multi-document manifest, autonomy or enrichment apply-to-live. Existing consumers require explicit cutover and new publication headers; active catalog reads never silently return legacy/defaults. R2 same-key throttling can leave a pending operation requiring explicit authorized recovery. Serving cache visibility <=30s excludes already-in-flight reads and is not customer acceptance. Native in-memory R2 validates conditional behavior only; failure injection is synthetic. D05/D10, release and external operations remain unapproved. K2 command is the planned check basis; worker captures retain actual component invocations. Final tsc omitted only the optional Node heap cap and is accepted as equivalent compiler coverage, not an exact literal invocation; no required compiler option was omitted.",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false; node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/publication.ts src/config/versionedStore.ts src/content/kinds.ts src/routes/content.ts src/config/versionedStore.test.ts src/routes/content.test.ts src/content/service.ts --format stylish; git diff --check -- src/config/publication.ts src/config/versionedStore.ts src/content/kinds.ts src/routes/content.ts src/config/versionedStore.test.ts src/routes/content.test.ts src/content/service.ts docs/kit/02-api-reference.md",
+    "runtime": "Installed compiler/scoped lint/whitespace; zero errors/no new warnings, new-file whitespace.",
+    "workload": "Exact8owned deltas, one affected service dependency, no build/broad suite.",
+    "result": "pass",
+    "artifact_digest": "df6bd826171cfcd029a971a5ca7071629389977d302a0c68492ffbffb5fc510a",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "fb4afb32d3f909909870c6b7de232eab00e74762cbadf114cd7b656b0b714e13",
+      "configuration": "Bounded local content-only conditional R2 publication and owned-refusal preservation. No real catalog initialization/cutover, deployed or immediate-effect/latency/SLO/customer acceptance, full W11/F15/F24, other configuration kinds, multi-document manifest, autonomy or enrichment apply-to-live. Existing consumers require explicit cutover and new publication headers; active catalog reads never silently return legacy/defaults. R2 same-key throttling can leave a pending operation requiring explicit authorized recovery. Serving cache visibility <=30s excludes already-in-flight reads and is not customer acceptance. Native in-memory R2 validates conditional behavior only; failure injection is synthetic. D05/D10, release and external operations remain unapproved.",
+      "files": [
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "output",
+          "sha256": "84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "output",
+          "sha256": "2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "output",
+          "sha256": "31dd29adeb811b59f8e13a0bd1577cd49357f75ac40890bf00f56e12c3896de6"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "role": "output",
+          "sha256": "f12a965dd3ff0faddfe05f43491c7eddccbe11aa2de47f51c8839f81d91b68f8"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "4bc72084cb33372e3315b5f9a6d3752810e21d28f711e9d3ba97579a200986bc"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "88327264f185bb7ba1fa230a2e0c710939aec58e15d8452fa56a2487a6b92728"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "output",
+          "sha256": "8f3aac28cf969f9b11591a9c324cdbacdf290407d8b429d543e2090de720caad"
+        },
+        {
+          "path": "src/content/import.ts",
+          "role": "source",
+          "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "source",
+          "sha256": "2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "66693cba2fda80b183804a0f4764c3a3a474500e620538f36ad2931ca399a360"
+        },
+        {
+          "path": "src/content/enrichment.ts",
+          "role": "source",
+          "sha256": "a3ab80fadee98504369bda570531679044f913b1c956a4d07a6a1bac10670b5f"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "role": "source",
+          "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "role": "source",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "output",
+          "sha256": "d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411"
+        },
+        {
+          "path": "docs/remediation/evidence/W11.01/worker.json",
+          "role": "output",
+          "sha256": "a9a0a96730da4edbdb946088cdd7d68198cf5dca19ac83ce935fc644674d6fe8"
+        },
+        {
+          "path": "docs/remediation/design/W11.01/plan-v2.md",
+          "role": "configuration",
+          "sha256": "5ee066b9c819c187d4d23627f39994bc0cc2a61689bdc6946d486f14a0f4eeaf"
+        },
+        {
+          "path": "docs/remediation/design/W11.01/baseline-v2.json",
+          "role": "configuration",
+          "sha256": "22388be01ea8d940b3426978acf39046881af929f1d9effa955fa8bc674d1785"
+        },
+        {
+          "path": "docs/remediation/evidence/W11.01/source-freeze.json",
+          "role": "configuration",
+          "sha256": "947c5664d391baad9054f9e65eff1e9a13a53882b8b0e8375e27aace03bd3822"
+        },
+        {
+          "path": "docs/remediation/evidence/W11.01/source-deltas.json",
+          "role": "configuration",
+          "sha256": "0bf63ebd6910de47c37b8afdff7bd1d030879a33484bf03ab92b8776c68cde15"
+        },
+        {
+          "path": "docs/remediation/design/W11.01/clarifications.md",
+          "role": "configuration",
+          "sha256": "e6dd2acc2e0cb6d864b7cff399752bfa27921229b66577f01a95c13dc277d11b"
+        },
+        {
+          "path": "docs/remediation/evidence/W11.01/authorization.md",
+          "role": "configuration",
+          "sha256": "fa6ccf17fc51448be5163686c8d66ea90d8794340996d35b7ac4b459143c6696"
+        }
+      ],
+      "digest": "df6bd826171cfcd029a971a5ca7071629389977d302a0c68492ffbffb5fc510a"
+    }
+  }
+}

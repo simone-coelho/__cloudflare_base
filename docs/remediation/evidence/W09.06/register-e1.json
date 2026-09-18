@@ -1,0 +1,208 @@
+{
+  "before": null,
+  "after": {
+    "id": "W09.06-E1",
+    "task_id": "W09.06",
+    "check_id": "W09.06-K1",
+    "criterion_ids": [
+      "W09.06-C1",
+      "W09.06-C2",
+      "W09.06-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w0906-reviewer",
+    "run_id": "/root/w0906_review",
+    "file": {
+      "path": "docs/remediation/evidence/W09.06/review.json",
+      "sha256": "6e43059ae0edcdf0fff9ea0b875852d2eeb1049e8ed21f92eb09778ee9712b17"
+    },
+    "at": "2026-09-14T17:39:49Z",
+    "limitations": "Isolated local DLQ declarations and installed native broker retry-exhaustion forwarding only. Test-only collector proves full-body forwarding, not consumerless retention, restart durability, deployed retry semantics, native concurrency or operational recovery. Queue existence/activation, access/retention/erasure/alerts/recovery ownership and customer/privacy decisions need separate authority. Producer rejection, intentionally acknowledged non-ledger/handled scene failures, replay/reconciliation, partial/legacy duplication, full W09/W22/F16/N10 and release remain open. Retired scripts remain retired. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations. Static command whitespace covers tracked manifest/doc only; inherited untracked fixture106 added lines/unchanged EOF independently source-checked clean. Supplemental no-index command exit1 with empty output is retained, not relabeled exit0.",
+    "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W09\\.06|W09\\.03 maps mixed ledger|W07\\.01 preserves successful ledger' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Vitest/Miniflare/workerd; actual worker.queue with synthetic native R2 and queue broker plus test-only observer.",
+    "workload": "Fixed3: one grouped W09.06 case and two existing W09.03/W07.01 controls; all-three parsed config checks, one representative native topology.",
+    "result": "pass",
+    "artifact_digest": "ce2ee15e0c2078762b7c98867e3f159ed13c05bf33ce7762462ccee682b0dc52",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "2d1760eebb1b6e8dfbd75d53cb65b63c3d374cb4e93e81d086efd6d8c84ffa95",
+      "configuration": "Isolated local DLQ declarations and installed native broker retry-exhaustion forwarding only. Test-only collector proves full-body forwarding, not consumerless retention, restart durability, deployed retry semantics, native concurrency or operational recovery. Queue existence/activation, access/retention/erasure/alerts/recovery ownership and customer/privacy decisions need separate authority. Producer rejection, intentionally acknowledged non-ledger/handled scene failures, replay/reconciliation, partial/legacy duplication, full W09/W22/F16/N10 and release remain open. Retired scripts remain retired. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations.",
+      "files": [
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "output"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "sha256": "67e9511393c4aa6f6d45bbb575631b6b00d5a23df3812912915c278666af2ae5",
+          "role": "output"
+        },
+        {
+          "path": "docs/deployment/01-deploy.md",
+          "sha256": "32931eef08babb3a4ea2a6bcc08e602e307e6db4c76e2e1679292df4b85e937b",
+          "role": "output"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": "scripts/deploy.sh",
+          "sha256": "d5f6bd176028afa02ce4da8661ec2a289d3257eed63dce9a955606cc8d74b21f",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-stamp.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-staging.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/setup.sh",
+          "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/package.json",
+          "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/wrangler-dist/cli.js",
+          "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889",
+          "role": "source"
+        },
+        {
+          "path": "src/index.ts",
+          "sha256": "c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/consume.ts",
+          "sha256": "03ce5c01ac378e0aa7bb99720a669421c93cdc788872844584a5041e4260713b",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "sha256": "ab36da893a42b1cc27d2f39810c387cff5c246c81cc3448bd4f638481b3d1f2a",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "sha256": "35907738604b099ea4ab4155be8c1b3049147e53b41777732cb4c01059875e06",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "src/services/sceneGen.ts",
+          "sha256": "81f64caf0e818e557c9ce4a80b90d0d7fdeb09e2d1882f467f492c5447f5428f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/miniflare/package.json",
+          "sha256": "fd99d43256bda835c65af700c80c3e6b1c3b3ed7af45e81d300fc8db0b9e858b",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/miniflare/dist/src/workers/queues/broker.worker.js",
+          "sha256": "a0d61b530deef23668cfe72f74e8ecfc0211fe56b6c2e1b4850c9f85417b62e9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/miniflare/dist/src/index.js",
+          "sha256": "fb489dfb0eff95a0303f1ac093bd8e6e1f46bb227f65ce105694832f971f3edd",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/esbuild/package.json",
+          "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.06/worker.json",
+          "sha256": "d312228ac9ac3f9ff4f170612fa31eb9632fe292293764e10ae11de651ffa4a3",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W09.06/plan.md",
+          "sha256": "d27fc2343bf2229478081f37bbd96608da9dca7540df0e37f883b262bede3394",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W09.06/baseline.json",
+          "sha256": "6180e0c2769047d7f7a4096ce666be956f216217f371613250154cd81fd4a24e",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.06/admission.json",
+          "sha256": "9200420c3aa4c91dc2910430fda2e4a2383aae0958b5aaceb7a4147d7ae47e49",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.06/source-freeze.json",
+          "sha256": "9b795816c84184bfcc951b7d38118e092ff9b87687109586b28952b79e1b4e90",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.06/source-deltas.json",
+          "sha256": "8951721fa4e152e13bd6995a4ea846f3905c0b965e91efd65b57e291d8787bef",
+          "role": "configuration"
+        }
+      ],
+      "digest": "ce2ee15e0c2078762b7c98867e3f159ed13c05bf33ce7762462ccee682b0dc52"
+    }
+  }
+}

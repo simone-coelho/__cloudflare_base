@@ -1,0 +1,134 @@
+{
+  "task_id": "W35.02",
+  "authority_direction": {
+    "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+    "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c"
+  },
+  "at": "2026-09-15T22:32:41.840Z",
+  "journal_seq": 1931,
+  "artifact_digest": "c4442102d5c844c0bfaef2ea67c92f1ebfafe4e059b2a50ec55f6746c05c160c",
+  "contract_digest": "82863e33a7cdd31c3c6c0eb212ff57c91872675430080e85c98ac4be6c5ea319",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W35.02/acceptance.md",
+    "sha256": "4628ebfbda4c36d884941b7bea442ec1ae0f25612db5d59476ebd9c2b14ec161"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W35.02/review.json",
+    "sha256": "3ecff4bdf1de4f0c27be7c226ca112222ff449f432b29415051b7803f4a45656"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W35.02/worker.json",
+    "sha256": "543148700c122dd8e464838500cd99ae4c5f5961ae889214697bd729b52811f6"
+  },
+  "root_review_capture": "d917be/b88e76/3d3c80/b47e83/b58aeb complete17 deltas; a6c0b8 worker attempts; b10101 accepted tracker; final board 202f5b→9701f4",
+  "independent_recovery": {
+    "original_run": "/root/late_hour_next_review",
+    "result": "provider usage limit before verdict; uncredited",
+    "actual_review_run": "/root/w3502_recovery_review",
+    "assigned_orchestration_identity": "/root/late_hour_next_review",
+    "disclosure": "review.json records the actual distinct recovery run; tracker E3 retains the frozen contract-bound assigned identity required by governance schema."
+  },
+  "acceptance_rework": {
+    "first_board": {
+      "captures": [
+        "589253",
+        "87a3ea",
+        "1da451",
+        "7a04eb"
+      ],
+      "result": "INVALID schema; status not run"
+    },
+    "cause": "Lead attempted unsupported actor record_change/current run-id mutation while transparently encoding the recovery reviewer. This broke historical episode binding; no product or frozen artifact bytes changed.",
+    "correction": {
+      "path": "docs/remediation/evidence/W35.02/register-recovery-reviewer.json",
+      "sha256": "54f436c538aba579c16fbf061bc50b824d27a3933f6aa68795f01ed80b3e2201"
+    },
+    "result": "Assigned actor/contract restored; actual recovery run remains in review evidence; final check/status VALID."
+  },
+  "board": {
+    "initial": {
+      "chunk_id": "202f5b",
+      "wall_time_seconds": 1.001061114,
+      "session_id": 50110,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "6034f4",
+        "wall_time_seconds": 5.001140939,
+        "session_id": 50110,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "eb5482",
+        "wall_time_seconds": 5.001205711,
+        "session_id": 50110,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "74331a",
+        "wall_time_seconds": 5.001118495,
+        "session_id": 50110,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "872815",
+        "wall_time_seconds": 5.001050998,
+        "session_id": 50110,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "d9bb88",
+        "wall_time_seconds": 5.000347811,
+        "session_id": 50110,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "e8c91a",
+        "wall_time_seconds": 5.000846511,
+        "session_id": 50110,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f08c89",
+        "wall_time_seconds": 5.001649853,
+        "session_id": 50110,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "af9c11",
+        "wall_time_seconds": 5.001218367,
+        "session_id": 50110,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ad8e99",
+        "wall_time_seconds": 5.001329755,
+        "session_id": 50110,
+        "original_token_count": 381,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=36, unscoped=5\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=132, closed=2; evidence records=396\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W35.02 — Continue the approved local W35 Durable Object authority implementation; do not re-ask the host choice. Next admit one coherent identity/session-transition and stale-writer fencing unit. Root source c41c46/980a3f/ab0762 shows linkVisitor publishes a KV IdentityStore link before object absorb/forward, and detach issues fresh anonymous capability without revoking the old one in the route; inspect actual store/object ownership, consent and erasure guards before choosing the recoverable serialized protocol. These are source-confirmed next seams, not a claimed runtime reproduction or completed fix. Preserve W35.01 commit/recovery, W35.02 visit/channel/SDK, W22.07 buffered purpose/lifetime, W26.04 fatigue and W22.09 brand attribution remedies. Keep full link/erase/consent/session/SDK/sort/fatigue, concurrent/stale/delayed/restart/rollback and exact customer/runtime tails in W35 coverage. No host toggle, deployment, existing-data migration, new privacy/retention/lifecycle policy or external operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 27607\n"
+      },
+      {
+        "chunk_id": "9701f4",
+        "wall_time_seconds": 0.846191755,
+        "exit_code": 0,
+        "original_token_count": 381,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=36, unscoped=5\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=132, closed=2; evidence records=396\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W35.02 — Continue the approved local W35 Durable Object authority implementation; do not re-ask the host choice. Next admit one coherent identity/session-transition and stale-writer fencing unit. Root source c41c46/980a3f/ab0762 shows linkVisitor publishes a KV IdentityStore link before object absorb/forward, and detach issues fresh anonymous capability without revoking the old one in the route; inspect actual store/object ownership, consent and erasure guards before choosing the recoverable serialized protocol. These are source-confirmed next seams, not a claimed runtime reproduction or completed fix. Preserve W35.01 commit/recovery, W35.02 visit/channel/SDK, W22.07 buffered purpose/lifetime, W26.04 fatigue and W22.09 brand attribution remedies. Keep full link/erase/consent/session/SDK/sort/fatigue, concurrent/stale/delayed/restart/rollback and exact customer/runtime tails in W35 coverage. No host toggle, deployment, existing-data migration, new privacy/retention/lifecycle policy or external operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 27607\n"
+      }
+    ],
+    "result": "VALID",
+    "scope": "Existing read-only board check/status with bounded filesystem caching and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;97 artifact pins and worker canonical119 pins unchanged. W35.01/W26.04 shared exact proofs qualified with remedies and unowned assurance retained; W22.07 buffered purpose/lifetime retained; W22.09 unchanged. No active commands. Tracker consistency is not engine/customer/SLO/release acceptance.",
+  "next_action": "Continue the approved local W35 Durable Object authority implementation; do not re-ask the host choice. Next admit one coherent identity/session-transition and stale-writer fencing unit. Root source c41c46/980a3f/ab0762 shows linkVisitor publishes a KV IdentityStore link before object absorb/forward, and detach issues fresh anonymous capability without revoking the old one in the route; inspect actual store/object ownership, consent and erasure guards before choosing the recoverable serialized protocol. These are source-confirmed next seams, not a claimed runtime reproduction or completed fix. Preserve W35.01 commit/recovery, W35.02 visit/channel/SDK, W22.07 buffered purpose/lifetime, W26.04 fatigue and W22.09 brand attribution remedies. Keep full link/erase/consent/session/SDK/sort/fatigue, concurrent/stale/delayed/restart/rollback and exact customer/runtime tails in W35 coverage. No host toggle, deployment, existing-data migration, new privacy/retention/lifecycle policy or external operations.",
+  "limitations": "Local W35 visit/channel/SDK wiring only under approved DO target. No host toggle/migration/deployment, seeded gamma-zero influence, classifier/memory/journey calibration, distinct-visit dedup, new privacy/retention/science, native/customer/SLO/release acceptance or full W35/F14 closure. Existing W35.01 commit, W22.07 buffered and W26.04 fatigue implementations retained; overlapping exact proofs qualified with history/unowned assurance. W22.09 unchanged. No install/stage/commit/push/unrelated build/cloud/credentials/customer-data/destructive/external operations. Required local synthetic actual-module/SDK VM checks pass; unchanged-byte static and SDK equality reused by distinct review. Not native workerd, browser/customer or SLO evidence."
+}

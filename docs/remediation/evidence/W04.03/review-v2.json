@@ -1,0 +1,97 @@
+{
+  "task_id": "W04.03",
+  "rework_id": "W04.03-R1",
+  "actor": "w0403-reviewer",
+  "agent": "/root/w01_reviewer",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "at": "2026-09-17T03:29:42.486Z",
+  "verdict": "PASS_LOCAL",
+  "claim": "Whole original W04 local implementation reviewed with component-scoped evidence reuse; R1 is resolved. This is not full W04/F04/F06, deployed/customer/SLO or release acceptance. C7/K6 remains open; lead disposition is separate.",
+  "artifact": {
+    "digest": "dec5cafe0a7cbd29cc927e9edb6cefac126323d53569f882ebca9b9c79b9240c",
+    "contract": "dfbbecbf7135869e6b481ca27a0bab25f49d9056437739bac99d71540990c392",
+    "freeze": {
+      "path": "docs/remediation/evidence/W04.03/source-freeze-v2.json",
+      "sha256": "4f78454b29a92312113b145e154e63bf57613d3713f796791f24fe2b83beaaed"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W04.03/worker-v2.json",
+      "sha256": "982783651e33d741cec08d921d551b26e84efae39f01648c6c97ccbf9e552ac2"
+    }
+  },
+  "supersedes": {
+    "path": "docs/remediation/evidence/W04.03/review.json",
+    "sha256": "ed615ea1384d044559932284603febc32246231ddeecc5782f41e8dbf8511611",
+    "disposition": "Immutable REWORK retained with rejected artifact and passing original K5; no backdating or replacement of its missing-evidence finding."
+  },
+  "basis": [
+    "Re-read standing AGENTS agreement/current checkpoint, execution/governance instructions, complete original document35 W04 and linked F04/F06/N05, original admission plus v2/v3 corrections and exact R1 amendments. Original signed409 requirement is preserved.",
+    "Reused prior whole43-output source/delta assessment only for matching paths; inspected all new three-file patches and current canonical discovery/adoption, effect guards, both-host history import and appended assertions.",
+    "Independently reconstructed final manifest from original plus exactly3 approved updates, verified all122 pins before/after the one affected runtime and against formal source-freeze-v2; formal artifact exactly equals runtime basis. Verified all3 v1-relative before/final/patch hashes and forward/inverse roundtrips (+545/-37); old fixture is an identical prefix and identity.test.ts is unchanged.",
+    "Verified all10 retained worker-v2 primary-output hashes, including exact reconstructed diagnostic output; edit-history hash and four immutable original evidence records match. Final compiler/lint/whitespace primary output inspected, not rerun."
+  ],
+  "criteria": {
+    "C1": {
+      "status": "PASS_LOCAL",
+      "assessment": "Mandatory tenant/account/visitor-bound proof, strict customer material/salt readiness and monitor failure, named rotation, no cookie/profile/pointer promotion and fresh signed409 retry remain unchanged. Prior actual authority/readiness and SDK checks apply to their unchanged components; no real secret or backend provisioning was exercised."
+    },
+    "C2": {
+      "status": "PASS_LOCAL",
+      "assessment": "Existing owner serialization, exact method/path/principal/object admission, invocation closure, public effect-time expiry, underlying FX/ODP drain and callback-free socket relay remain intact. R1 changes canonical erasure schema/begin/effect branches only; no route/socket/provider dispatch or owner serialization change. Historical native both-host socket runs support unchanged socket behavior but are not a newly executed native result on this owner-class hash."
+    },
+    "C3": {
+      "status": "PASS_LOCAL",
+      "assessment": "Actual recognized-person applyHistory and history metadata now have measured import-first and erasure-first ordering, exact retry/restart outcomes and physical local destination assertions. Initial raw discovery is digest-bound; only exact currently retained owner publication supersedes it. Receipt/barrier commit is atomic; entirely unadvanced v6 root CAS precedes scans/effects. Same-owner/SID aliases, literal/digest equality, source eligibility and exact empty continuation epoch survive retries; no new raw profile retention, TTL renewal, legacy promotion or second authority. Prior per-grant detach/reset, recoverable transfer, refusal/typed-import and pointer-lifetime semantics are preserved."
+    },
+    "C4": {
+      "status": "PASS_LOCAL",
+      "assessment": "Unchanged SDK source, notification/lock adapters and both byte-identical shipped bundles retain endpoint+tenant Web Locks, shared anchor/use-time checks, stale HTTP/proof/cache/socket invalidation, newer-grant protection and fail-closed unavailable coordination/persistence. Prior source/ESM/IIFE runtime is reused on unchanged consumed inputs, not presented as real-browser evidence."
+    },
+    "C5": {
+      "status": "PASS_LOCAL",
+      "assessment": "Unchanged functional add-only exact-base staging adapter/material validator retain secure stdin, strict inheritance and preserved opaque salt/secrets/settings/assets, immutable intent plus file/parent-directory fsync before POST, sanitized failure and read-only ambiguous reconciliation. Final four synthetic tool tests and bundle/material checks are reused; no upload CAS, hardware power-loss or actual credential/provisioning claim."
+    },
+    "C6": {
+      "status": "PASS_LOCAL",
+      "assessment": "Distinct whole-W04 source/requirement/delta/evidence review completed, including current independent affected22 result and explicit retained/native limits. Original W01–W03/W05/W06/W35 safeguards were not weakened; no source or governance edits by reviewer."
+    },
+    "C7": {
+      "status": "OPEN_NOT_RUN",
+      "assessment": "K6 real provisioning/backend handoff, selected deployed configuration/resources, real-browser/customer old-cookie/stale-tab/in-flight/multi-account and both-host timing/SLO remain for separately authorized acceptance. Broader F06 physical/external obligations and full package/finding/release approval are not inferred."
+    }
+  },
+  "R1_resolution": {
+    "status": "RESOLVED_LOCAL",
+    "history": "Initial review correctly identified missing C3 runtime evidence. The added actual metadata-before-put baseline then failed on both hosts (2 failed/78 unselected). An intermediate correction passed new cases but failed the unchanged W35.07 base-byte oracle (21 passed/1 failed); production was tightened rather than weakening that oracle.",
+    "source": "erase.ts canonicalErasureDiscoverySchema/canonicalDiscovery/adoptCanonical bind the exact initial capsule and accept only fully unadvanced v6 state. ShopperReflex /begin attests changed raw session/member bytes against committed owner storage, including pending publication; unproven drift retains the original witness. Immutable saved replies never recapture current KV. Every canonical effect requires the matching receipt and empty continuation epoch even with absent or byte-identical successor KV. Legacy v1–v5 contexts reject canonical/digest authority; scanned capsules reject all digest rows before object effects. Cross-format comparisons hash actual literal bytes; original source/foreign/alias guards remain.",
+    "current_evidence": "Ten appended cases plus12 retained affected cases pass independently: metadata-before-put on both hosts, real raw-session-before-put on session host only; prepared import after erasure; exact lost/pending publication recovery without double count; restart/lost begin/root CAS recovery; altered discovery/receipt/raw bytes/alias and same-SID successor denial; exact foreign state and local deletion/barrier assertions. The retained one-read raw-byte/restoration and legacy v5 cursor tests pass unchanged.",
+    "fixture_qualification": "Malformed legacy cases deep-clone each version so v1 cache shaping cannot invalidate later controls. Actual modules use synthetic demo-config storage/namespace/provider bindings, not strict-customer/native deployment proof. DO host correctly asserts absence of a session KV projection."
+  },
+  "checks": {
+    "independent": {
+      "path": "docs/remediation/evidence/W04.03/independent-R1.json",
+      "sha256": "0c2571f4e5fcbbeb1708d8db4b0c48f2421804358d28a8ac62cd743cefbc8b29",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W04[.]03.*history metadata|W35[.]0[678]|W06[.]0[89]' --maxWorkers=1 --minWorkers=1",
+      "exit_code": 0,
+      "started_at": "2026-09-17T03:24:56.140Z",
+      "ended_at": "2026-09-17T03:25:37.499Z",
+      "elapsed_ms": 41279.368386999995,
+      "result": "22 passed /112 unselected; two files; Vitest36.90s. Complete raw stdout/stderr/arrival-ordered combined output, selected names and before/after pins retained. Session62692 drained."
+    },
+    "worker_current": "R1.affected2 exit0:22 passed/112 unselected,34.38s. R1.static3 exit0: current app compiler, three-file lint0errors121warnings and whitespace. All121 scoped warnings match v1 signatures; no additional lint/compiler execution by reviewer.",
+    "reused": [
+      "Original worker K1.6 (63/175 unselected), affected W35.02 supplement (1/77) and independent K5 (15/262 plus4tool) remain historical source-bound executions. Current affected runtime replaces erasure/history assurance only; none is relabeled a full rerun on this artifact.",
+      "119 other pins are unchanged. Prior SDK39/source+ESM+IIFE, final tool4, material checks, SDK compiler and bundle reproduction remain valid for their unchanged consumed inputs.",
+      "Original native Miniflare/workerd both-host upgrade/expiry/frame/ownership evidence is retained for unchanged socket branches. ShopperReflex as a whole changed, so no final-hash native execution is claimed; the new canonical-erasure protocol is validated here with real classes/synthetic storage.",
+      "Prior whole-task static201 warnings and qualifications remain:182 exact inherited,18 new and1 earlier changed-line warning. Current three-file121 inherited count does not erase that history."
+    ]
+  },
+  "limitations": [
+    "All worker-v1 29 attempts and worker-v2 10 captures, failed/intermediate results and known capture gaps remain immutable. R1.affected1 middle truncation, initial capture failure without retained console, empty non-TTY identity helper and timestamp-observation qualifications remain explicit; successful final runtime has complete primary output.",
+    "The earlier unmeasured session401/DO200 inference remains corrected; no product status relaxation was based on it. Reviewer made no new such inference.",
+    "No extra runtime beyond the one approved affected selector, no broad CI/board run, source edits, deployment, credentials/customer operations or subdelegation. Only independent-R1.json and this review-v2.json were written.",
+    "Local synthetic storage/restart schedules do not attest KV propagation, native storage durability, hardware failure, external deletion or deployed capacity/SLO. Already-transmitted remote effects cannot be recalled."
+  ],
+  "state": "REVIEW_STOP; independent runtime drained, source/evidence pins verified. Ready for lead local disposition; full/live W04 remains open."
+}

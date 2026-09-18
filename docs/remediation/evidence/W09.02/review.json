@@ -1,0 +1,163 @@
+{
+  "task_id": "W09.02",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "at": "2026-09-11T23:14:20Z",
+  "verdict": "pass",
+  "artifact_digest": "7cd11b57727b90b206600cbb610601fb2927928e2f3e99e44258df65f6e8dff7",
+  "contract_digest": "d6b695151d6933c0f60f0a11d5e5301c2b1257c3935ca7c1dbf0aeb0bdf6a8af",
+  "summary": "Independent source and fixed-runtime review passes the admitted bounded local managed-recovery contract. Lead disposition remains separate.",
+  "criteria": [
+    {
+      "id": "W09.02-C1",
+      "verdict": "pass",
+      "evidence": [
+        "Reviewed all ten baseline-to-current deltas and reconciled final bytes. Frozen full-delivery UUID digest/count commitments precede immutable tenant/hour/stream destination claims; both metadata namespaces are outside canonical tenant/day scans. Changed payload/owner/hour reuse refuses; distinct UUIDs retain distinct rows despite equal logical IDs.",
+        "Canonical full records and delivery/ordinal provenance share the same conditional body write. Grouped destinations survive partial/reordered/subset retries. Per-body 100-part/16MiB limits, original filename range validation, strict nonempty-ETag acknowledgement and at most three explicit-null retries are enforced; thrown writes remain unknown, not rolled back.",
+        "Independent fixed runtime: 20 ledger cases passed, including grouped/retried/duplicate-looking deliveries, namespace isolation, conflicting commitments/rows/claims, byte and part bounds, receipt conservation, and concurrent same-delivery native in-memory R2 capture. No raw outbox was introduced."
+      ]
+    },
+    {
+      "id": "W09.02-C2",
+      "verdict": "pass",
+      "evidence": [
+        "Exact string true enables producers; other values preserve the legacy lane. Managed recognition precedes permissive legacy expansion and does not depend on the flag. Producer fallback retains frozen identities for queue-unknown and unattempted messages, separates queue and R2 dispositions, preserves original records and emits only fixed-code/numeric failure summaries.",
+        "Each conditional data attempt reads the current object before fresh applicable rewrite-journal and tombstone barriers; retries reload them. Incoming erased rows are suppressed, while existing bodies are removed only by the eraser.",
+        "Managed erasure preserves metadata/provenance, conditionally replaces even empty bodies, refuses null or empty-ETag acknowledgements, retains exact intent on conflict and never rebases or guesses credits. The same-object fixture checks conflict hold, survivor retention, lost-ack after-state reconciliation and empty-body replay suppression; all 12 erasure cases passed.",
+        "Inspected unchanged index whole-subset retry dispatch, point/export/replay/fold integration. Default-off consumer-and-eraser-first activation and unresolved global erasure races remain explicit, not claimed fixed."
+      ]
+    },
+    {
+      "id": "W09.02-C3",
+      "verdict": "pass",
+      "evidence": [
+        "All 81 artifact pins, 65 protected source pins, exact contract and ten bidirectional deltas passed before and after the independent command; no implementation edits by reviewer.",
+        "The exact admitted two-fixture command ran once in session 5587 and drained with exit 0: 32 passed, zero failures/skips. The embedded Miniflare smoke uses synthetic in-memory R2 with outbound access refused and disposal in finally; it is not a deployed full-worker or latency test.",
+        "Reused inspected final worker compiler-final-2 (14a488, exit 0), lint-final (12b7cf, zero errors/warnings against zero baseline), whitespace (4e7be6, exit 0), and source-stop direct new-file whitespace/pin check (9bb023). Complete raw worker captures, earlier failures and superseded passes were read, not replaced by summary assertions."
+      ]
+    }
+  ],
+  "resolved_findings": [
+    {
+      "issue": "Metadata claims could collide with a canonical tenant/day prefix.",
+      "resolution": "Fixed non-date identities/claims segments plus existing grouped namespace assertions; frozen source confirmed."
+    },
+    {
+      "issue": "Part-only claims did not globally bind delivery UUID reuse across changed partitions.",
+      "resolution": "Immutable full-delivery digest/count commitment before partition claims; changed owner/hour/payload assertions pass."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W09.02/plan.md",
+      "sha256": "aea3b55308804c2f6123028dbdf862d97bff1d3389790802e07ac528d25ac846"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W09.02/artifact.json",
+      "sha256": "f6110a1711be28d0faf4e16aad109780ce20de93fbb8366ab2b9dfdb0083d995"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W09.02/worker.json",
+      "sha256": "083080a8d52165fcce159b3be9b657dfc34e965d95b023fb6344e0916349c054"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+    "session_id": 5587,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "test_files_passed": 2,
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0,
+      "ledger": 20,
+      "erasure": 12
+    },
+    "captures": [
+      {
+        "chunk_id": "8f1805",
+        "wall_time_seconds": 1.000932623,
+        "session_id": 5587,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "421d23",
+        "wall_time_seconds": 5.001722336,
+        "session_id": 5587,
+        "original_token_count": 60,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+      },
+      {
+        "chunk_id": "a5aa17",
+        "wall_time_seconds": 0.000002295,
+        "exit_code": 0,
+        "original_token_count": 72,
+        "output": " ✓ src/ledger/ledger.test.ts  (20 tests) 4294ms\n ✓ src/ledger/erasure.test.ts  (12 tests) 58ms\n\n Test Files  2 passed (2)\n      Tests  32 passed (32)\n   Start at  19:13:38\n   Duration  27.40s (transform 5.41s, setup 0ms, collect 15.85s, tests 4.35s, environment 0ms, prepare 4.92s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "before": {
+      "chunk_id": "5cbc13",
+      "wall_time_seconds": 0.521158202,
+      "exit_code": 0,
+      "original_token_count": 552,
+      "output": "{\n  \"at\": \"2026-09-11T23:13:28.206Z\",\n  \"artifact_digest\": \"7cd11b57727b90b206600cbb610601fb2927928e2f3e99e44258df65f6e8dff7\",\n  \"manifest_sha256\": \"f6110a1711be28d0faf4e16aad109780ce20de93fbb8366ab2b9dfdb0083d995\",\n  \"pins\": 81,\n  \"bad\": [],\n  \"protected_count\": 65,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/ledger/enqueue.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/records.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/writer.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/consume.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/erasure.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/types/env.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/delivery.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/erasure.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W09.02/plan.md\",\n      \"sha256\": \"aea3b55308804c2f6123028dbdf862d97bff1d3389790802e07ac528d25ac846\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.02/artifact.json\",\n      \"sha256\": \"f6110a1711be28d0faf4e16aad109780ce20de93fbb8366ab2b9dfdb0083d995\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.02/worker.json\",\n      \"sha256\": \"083080a8d52165fcce159b3be9b657dfc34e965d95b023fb6344e0916349c054\"\n    }\n  ]\n}\n"
+    },
+    "after": {
+      "chunk_id": "c6e0d7",
+      "wall_time_seconds": 0.220148392,
+      "exit_code": 0,
+      "original_token_count": 552,
+      "output": "{\n  \"at\": \"2026-09-11T23:14:19.797Z\",\n  \"artifact_digest\": \"7cd11b57727b90b206600cbb610601fb2927928e2f3e99e44258df65f6e8dff7\",\n  \"manifest_sha256\": \"f6110a1711be28d0faf4e16aad109780ce20de93fbb8366ab2b9dfdb0083d995\",\n  \"pins\": 81,\n  \"bad\": [],\n  \"protected_count\": 65,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/ledger/enqueue.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/records.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/writer.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/consume.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/erasure.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/types/env.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/delivery.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/erasure.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W09.02/plan.md\",\n      \"sha256\": \"aea3b55308804c2f6123028dbdf862d97bff1d3389790802e07ac528d25ac846\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.02/artifact.json\",\n      \"sha256\": \"f6110a1711be28d0faf4e16aad109780ce20de93fbb8366ab2b9dfdb0083d995\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.02/worker.json\",\n      \"sha256\": \"083080a8d52165fcce159b3be9b657dfc34e965d95b023fb6344e0916349c054\"\n    }\n  ]\n}\n"
+    },
+    "contract_before": {
+      "chunk_id": "eee828",
+      "wall_time_seconds": 0.061062808,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-11T23:13:28.512Z\",\"task\":\"W09.02\",\"state\":\"verification\",\"contract_digest\":\"d6b695151d6933c0f60f0a11d5e5301c2b1257c3935ca7c1dbf0aeb0bdf6a8af\",\"artifact_digest\":\"7cd11b57727b90b206600cbb610601fb2927928e2f3e99e44258df65f6e8dff7\"}\n"
+    },
+    "contract_after": {
+      "chunk_id": "015d02",
+      "wall_time_seconds": 0.023136865,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-11T23:14:20.046Z\",\"task\":\"W09.02\",\"state\":\"verification\",\"contract_digest\":\"d6b695151d6933c0f60f0a11d5e5301c2b1257c3935ca7c1dbf0aeb0bdf6a8af\",\"artifact_digest\":\"7cd11b57727b90b206600cbb610601fb2927928e2f3e99e44258df65f6e8dff7\"}\n"
+    },
+    "source_reconciliation": {
+      "chunk_id": "4031bc",
+      "wall_time_seconds": 0.314662633,
+      "exit_code": 0,
+      "original_token_count": 1825,
+      "output": "{\"path\":\"src/ledger/enqueue.ts\",\"reviewed_sha256\":\"7874967b3c197812b16aad956f71bf1e93881984ef7ea84f7bba5dcb21b4b156\",\"current_sha256\":\"7874967b3c197812b16aad956f71bf1e93881984ef7ea84f7bba5dcb21b4b156\",\"unchanged\":true}\n{\"path\":\"src/ledger/records.ts\",\"reviewed_sha256\":\"7061023d9e05636367778a0d1b67de6c6763dd3d08a29ff78ce274207027faf4\",\"current_sha256\":\"7061023d9e05636367778a0d1b67de6c6763dd3d08a29ff78ce274207027faf4\",\"unchanged\":true}\n{\"path\":\"src/ledger/consume.ts\",\"reviewed_sha256\":\"2e8a6bd2d3a6d2d0cb9b6ddfd11b64ca2ecb85aed9965eb5cf7c4bf7220f6655\",\"current_sha256\":\"2e8a6bd2d3a6d2d0cb9b6ddfd11b64ca2ecb85aed9965eb5cf7c4bf7220f6655\",\"unchanged\":true}\n{\"path\":\"src/types/env.ts\",\"reviewed_sha256\":\"222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab\",\"current_sha256\":\"222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab\",\"unchanged\":true}\n{\"path\":\"src/ledger/delivery.ts\",\"reviewed_sha256\":\"d53c3b8c1239f45d51dd6a2fa4531fca5d91b555034894b274dc33c356262183\",\"current_sha256\":\"4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995\",\"unchanged\":false}\nIndex: src/ledger/delivery.ts\n===================================================================\n--- src/ledger/delivery.ts\n+++ src/ledger/delivery.ts\n@@ -1,7 +1,7 @@\n // Shared managed-ledger protocol, not a second raw-data store.\n import type { DecisionRecord } from '@/content/types';\n-import { hourPrefix, parseId, type LedgerMessage, type OutcomeRecord } from './records';\n+import { fromTs36, hourPrefix, parseId, type LedgerMessage, type OutcomeRecord } from './records';\n \n export const DELIVERY_FIELD = '_ledger_delivery' as const;\n export const MANAGED_MARKER = 'ledger_delivery';\n export const MANAGED_BYTES = 16 * 1024 * 1024;\n@@ -49,14 +49,16 @@\n }\n export function managedRows(body: string, key: string, metadata: Record<string, string> | undefined): DeliveryRow[] {\n   if (!managedKey(key) || metadata?.[MANAGED_MARKER] !== '1' || byteLength(body) > MANAGED_BYTES) throw new Error('Managed ledger state unavailable');\n   const stream = key.includes('/decision/') ? 'decision' : 'outcome', seen = new Set<string>(), ids = new Set<string>();\n+  const range = /\\/([0-9a-z]{9})-([0-9a-z]{9})-managed-/.exec(key)!;\n   const rows: DeliveryRow[] = [];\n   for (const line of body.split('\\n')) {\n     if (!line) continue;\n     const row = JSON.parse(line) as DeliveryRow, p = row?.[DELIVERY_FIELD];\n     if (!validCarrier(row, stream) || !p || Object.keys(p).sort().join(',') !== 'id,ordinal'\n       || !UUID.test(p.id) || !Number.isSafeInteger(p.ordinal) || p.ordinal < 0\n+      || row.ts < fromTs36(range[1]!) || row.ts > fromTs36(range[2]!)\n       || !key.startsWith(`${hourPrefix(row.tenant, row.ts)}/${stream}/`) || seen.has(`${p.id}:${p.ordinal}`)) throw new Error('Managed ledger state unavailable');\n     seen.add(`${p.id}:${p.ordinal}`); ids.add(p.id); rows.push(row);\n   }\n   if (ids.size > MANAGED_PARTS) throw new Error('Managed ledger state unavailable');\n\n{\"path\":\"src/ledger/writer.ts\",\"reviewed_sha256\":\"607cf3fdea9f8b8703cd8c9ae016a3d8aa922ebce91a74e89428d0049279f069\",\"current_sha256\":\"607cf3fdea9f8b8703cd8c9ae016a3d8aa922ebce91a74e89428d0049279f069\",\"unchanged\":true}\n{\"path\":\"src/ledger/erasure.ts\",\"reviewed_sha256\":\"651659564d1681250186f6f84e62446750371dea2c851b526e1e24c186087f5d\",\"current_sha256\":\"0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f\",\"unchanged\":false}\nIndex: src/ledger/erasure.ts\n===================================================================\n--- src/ledger/erasure.ts\n+++ src/ledger/erasure.ts\n@@ -372,9 +372,9 @@\n         if (!same(filtered.removed, intent.removed) || (filtered.body === null && !managed ? null : await fingerprint(filtered.body ?? '')) !== intent.after) failRewrite();\n         if (managed) {\n           const put = await r2.put(key, filtered.body ?? '', { onlyIf: { etagMatches: obj!.etag },\n             customMetadata: { ...obj!.customMetadata, [MANAGED_MARKER]: '1' }, httpMetadata: { contentType: 'application/x-ndjson' } });\n-          if (!put || typeof put !== 'object' || typeof (put as { etag?: unknown }).etag !== 'string') failRewrite();\n+          if (!put || typeof put !== 'object' || typeof (put as { etag?: unknown }).etag !== 'string' || !(put as { etag: string }).etag) failRewrite();\n         } else if (filtered.body === null) await r2.delete(key);\n         else if (await r2.put(key, filtered.body) === null) failRewrite();\n       } else if (before !== intent.after) failRewrite();\n       // Exact after-state includes absence only for an intended committed delete.\n\n{\"path\":\"src/ledger/ledger.test.ts\",\"reviewed_sha256\":\"f7865bf285071ecfe30b5b2c3557d5049104473a3d3e9f546ab3c3ffc2be1166\",\"current_sha256\":\"83cf1ecc997f49ff5bc89cd5878400fc918a09a3ab95c50b7abc8e15a33bceac\",\"unchanged\":false}\nIndex: src/ledger/ledger.test.ts\n===================================================================\n--- src/ledger/ledger.test.ts\n+++ src/ledger/ledger.test.ts\n@@ -715,9 +715,9 @@\n     const retried = captureConserved(await persistDeliveries(r2, [delivery]));\n     expect(retried).toMatchObject({ ok: true, alreadyPresent: mode === 'committed-throw' ? 1 : 0, newlyStored: mode === 'committed-throw' ? 0 : 1 });\n     expect(r2.rows()).toHaveLength(1);\n   }\n-  for (const mode of ['journal-undefined', 'journal-corrupt', 'claim-digest', 'claim-range', 'row-conflict', 'marker-missing'] as const) {\n+  for (const mode of ['journal-undefined', 'journal-corrupt', 'claim-digest', 'claim-range', 'row-conflict', 'row-range', 'marker-missing'] as const) {\n     const r2 = new ManagedR2(); await persistDeliveries(r2, [delivery]);\n     const dataKey = r2.dataKeys()[0]!;\n     if (mode === 'journal-undefined') {\n       const get = r2.get.bind(r2); r2.get = async key => key === 'erasures/coach/rewrite.json' ? undefined as never : get(key);\n@@ -727,9 +727,14 @@\n       if (mode === 'claim-digest') claim.digest = '0'.repeat(64);\n       else claim.key = claim.key.replace(/\\/[0-9a-z]{9}-[0-9a-z]{9}-managed-/, '/000000000-000000001-managed-');\n       r2.store.set(key, JSON.stringify(claim));\n     } else if (mode === 'marker-missing') r2.metadata.delete(dataKey);\n-    else { const row = JSON.parse(r2.store.get(dataKey)!); row.currency = 'CONFLICT'; r2.store.set(dataKey, JSON.stringify(row) + '\\n'); }\n+    else {\n+      const row = JSON.parse(r2.store.get(dataKey)!);\n+      if (mode === 'row-range') { row.ts++; row.outcome_id = `coach:${ts36(row.ts)}:v-bounds:purchase`; }\n+      else row.currency = 'CONFLICT';\n+      r2.store.set(dataKey, JSON.stringify(row) + '\\n');\n+    }\n     const before = r2.puts;\n     expect((await persistDeliveries(r2, [delivery])).ok, mode).toBe(false); expect(r2.puts).toBe(before);\n   }\n   const runtime = new Miniflare({ cf: false, modules: true, script: 'export default { fetch() { return new Response(\"synthetic\"); } };',\n\n{\"path\":\"src/ledger/erasure.test.ts\",\"reviewed_sha256\":\"28c8ed6fb54aa07595767c3a7bb2accc3419efab087a162cceff1c1c5cb6abbf\",\"current_sha256\":\"28c8ed6fb54aa07595767c3a7bb2accc3419efab087a162cceff1c1c5cb6abbf\",\"unchanged\":true}\n{\"path\":\"docs/kit/02-api-reference.md\",\"reviewed_sha256\":\"35438951a871ff66afd51690ec1712630b3d678e976d490f4290a89c013d1676\",\"current_sha256\":\"35438951a871ff66afd51690ec1712630b3d678e976d490f4290a89c013d1676\",\"unchanged\":true}\n"
+    },
+    "inspection": {
+      "initial_actual_delta_captures": [
+        "d776bb",
+        "a3b369",
+        "74d9c6"
+      ],
+      "worker_complete_capture": "fcccba",
+      "qualification": "All ten source/fixture/kit deltas inspected; final reconciliation directly reviewed the three changed files (filename-range validation, nonempty erasure acknowledgement, grouped out-of-range fixture). Seven other reviewed outputs are byte-identical. Approved plan/tracker criteria and actual artifact/freeze/deltas/worker evidence were read; unchanged protected dependency assurance and final worker statics reused without replay."
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Worker runtime-1: 31 pass/1 fail, exit 1 (061892), from a cross-hour synthetic erasure setup. Same-object target/cutoff/survivor/racer correction was inspected; subsequent 32-pass candidates remain retained.",
+    "Worker compiler-1 exit 2 (d2cc13) identified two fixture return errors; lint-1 exit 0 (fdf35b) still failed the zero-warning criterion with two unused-variable warnings. Fixture-only corrections and superseding outputs remain in worker.json.",
+    "Pre-STOP empty-ETag and filename-range strictness fixes supersede earlier runtime/compiler passes. Final runtime-final-2 (70c609) and final statics correspond to frozen bytes.",
+    "Independent run retains the existing Vite CJS deprecation diagnostic. No required check skipped, no extra suite or static replay, and no independent runtime failure."
+  ],
+  "limitations": [
+    "Bounded local managed canonical capture only; prior W09.01 containment is retained. No full W09/F16/N07/N08/N10, W06, customer, contractual, release or deployed-performance closure.",
+    "Process death before acknowledged capture, legacy/old-consumer retry duplication, durable outbox/DLQ/quarantine, SDK logical-event collisions, online fan-out reconciliation, late-hour aggregate repair and exceptional object fragmentation remain open.",
+    "Object CAS plus fresh reads is not an atomic global erasure fence. Stale pre-journal/cutoff writes, body-ETag ABA, concurrent unconditional journal coordination and manifest omissions remain unresolved; unexpected body conflicts intentionally hold durable intent.",
+    "Metadata claim/commitment and empty-object retention lifecycle, D06/D10 decisions and default-off rollout activation remain separately governed. No deployment, external/customer-data/cloud-resource/credential/policy operation was performed.",
+    "Serialization and Analytics scheduling still begin synchronously; background queue/R2 I/O does not establish an SLO or complete recording guarantee. Reviewer wrote only this record; root alone may accept."
+  ]
+}

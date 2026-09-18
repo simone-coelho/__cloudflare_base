@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-12T00:27:43.679Z",
+  "command": "node --input-type=module -e 'import fs from '\\''node:fs'\\'';import assert from '\\''node:assert/strict'\\'';import{sha256,taskContractDigest,artifactDigest}from'\\''./scripts/remediation/board.mjs'\\'';const j=p=>JSON.parse(fs.readFileSync(p)),t=j('\\''docs/remediation/tracker.json'\\''),task=t.tasks.find(x=>x.id==='\\''W09.04'\\''),b=j('\\''docs/remediation/design/W09.04/baseline.json'\\'');assert.equal(task.state,'\\''in_progress'\\'');assert.equal(task.preflight.contract_digest,taskContractDigest(task));assert.equal(sha256(fs.readFileSync(task.preflight.plan.path)),task.preflight.plan.sha256);const e=t.journal.findLast(x=>x.task_id===task.id&&x.to==='\\''in_progress'\\'');assert.deepEqual(e.plan_snapshot,task.preflight);assert.equal(e.plan_sha256,task.preflight.plan.sha256);assert(t.authority.local_authorization.scope_extensions.some(x=>x.scope_task_ids.includes(task.id)));for(const f of b.pins)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);assert.equal(sha256(JSON.stringify(t.journal.slice(0,b.prior_journal_length))),b.prior_journal_sha256);for(const x of t.tasks.filter(x=>x.state==='\\''closed'\\'')){assert.equal(artifactDigest(x.artifact),x.artifact.digest);for(const f of x.artifact.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);}console.log(JSON.stringify({ok:true,at:new Date().toISOString(),journal:t.journal.length,task:task.id,contract:task.preflight.contract_digest,plan:task.preflight.plan.sha256,pins:b.pins.length,owned:b.owned.length,protected:b.pins.length-b.owned.length,closed:t.tasks.filter(x=>x.state==='\\''closed'\\'').map(x=>x.id)}));'",
+  "captures": [
+    {
+      "chunk_id": "0734e2",
+      "wall_time_seconds": 1.001695905,
+      "session_id": 35837,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "e094b8",
+      "wall_time_seconds": 0.000002769,
+      "exit_code": 0,
+      "original_token_count": 71,
+      "output": "{\"ok\":true,\"at\":\"2026-09-12T00:27:30.418Z\",\"journal\":1056,\"task\":\"W09.04\",\"contract\":\"504fa293e91fcae2a9c16f003374086884451a872997b5aec435073c1d4dd651\",\"plan\":\"59cad39c43a05eb1712a762faf291ec5f05a180f7fb000d3a435da504a00c811\",\"pins\":82,\"owned\":9,\"protected\":73,\"closed\":[\"W08.04\"]}\n"
+    }
+  ],
+  "exit_code": 0,
+  "drained": true,
+  "source_go": true,
+  "baseline_lint": "docs/remediation/design/W09.04/baseline-lint.json",
+  "scope": "Nine owned task files only; actual task contract504fa293/source pins PASS. Independent review required, no external operations."
+}

@@ -1,0 +1,138 @@
+{
+  "task_id": "W14.02",
+  "actor_id": "w1402-reviewer",
+  "run_id": "/root/w1402_design_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "verdict": "pass",
+  "at": "2026-09-11 00:14:41 UTC",
+  "artifact_digest": "db30f65ff27edeaf32155342b6cb26125b2207f75672a08451484f0331089993",
+  "contract_digest": "dbf4aa5e8f2d1e2851a340d40d25630364f56550271352fe040661e52106f8b9",
+  "summary": "C1-C3 pass for the bounded best-effort product-sort persistence slice. Independent final-source review and the exact two-file runtime command found no blocking defect. Root acceptance remains separate.",
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W14.02/plan.md",
+      "sha256": "1cd7d7daeae1c3a5322336942beec67354e71cdb3fa1868d1e0cad43a32927e1"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W14.02/artifact.json",
+      "sha256": "f5e72891ce1275087acde4667721ce8b40b908d8c8102fb439eab0da373e9889"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W14.02/worker.json",
+      "sha256": "8852ee9c75f4400cd03abfa34dd7ace11c979db3826308fee830411ec11c048e"
+    },
+    "implementation_review": {
+      "path": "docs/remediation/design/W14.02/implementation-review.json",
+      "sha256": "ef726768448fdba8a14a794efd22fd5eefb088c63cf375c2aa9c7be4c12abb9d"
+    },
+    "source_stopped_at": "2026-09-11T00:07:59.178Z",
+    "source_frozen_at": "2026-09-11T00:09:26Z",
+    "review": "Read the complete task/plan/clarification, canonical W14 and linked customer clause during preflight, final changed source and all ten forward deltas, existing relevant consent/ownership/queue/erasure/report consumers, and complete retained worker outputs. Verified all forward/reverse patches in memory against admitted and frozen bytes."
+  },
+  "criteria": [
+    {
+      "id": "W14.02-C1",
+      "verdict": "pass",
+      "evidence": "Both signed routes reuse the exact ranking results, canonical signed tenant/subject/session, effective consent/config/applied weights and pre-affinity timestamp with distinct UUID record/object identity. Eight real-route combinations cover both modes, both hosts and two nondefault registries; held R2 reads prove response completion before persistence. Stored order/items/drivers equal returned output; private source/profile/header markers are absent and queue/AE/ring/stats spies remain untouched. Existing profile/visit state is unchanged outside permitted refusal preferences. The large 500-item/eight-driver fixture qualifies serialization and scheduling only, not ranking math or runtime capacity."
+    },
+    {
+      "id": "W14.02-C2",
+      "verdict": "pass",
+      "evidence": "Real routes exercise stored/body/cookie/controlled-DO tracking refusal, body ownership refusal, absent/throwing context and missing binding; no background storage occurs for these refusals. Invalid/nonserializable and actual UTF-8 oversized records are wholly refused; normalized Unicode intent is retained. Deferred start occurs only after successful waitUntil registration. Existing strict exact tombstone reads suppress equality/pre-cutoff and reject corrupt/wrong-tenant/unavailable state; five injected async failures emit only the fixed non-subject diagnostic. Actual operator service JWT/current-tenant middleware and new point-read validation enforce readback ownership, malformed-record rejection and tombstone410; generic rewrite removes the new stream while preserving another tenant. Explicit product export and legacy default both are distinguished. Product-sort partition exclusion precedes hourly/day budgets and loadDay; tenant-name collisions decision/outcome/product-sort are covered. Queue wire remains unchanged and rejects product-sort messages."
+    },
+    {
+      "id": "W14.02-C3",
+      "verdict": "pass",
+      "evidence": "Exactly ten admitted source/fixture/doc deltas, with two route and one ledger grouped additions. Independent final-byte primary22/22 passes. All123 artifact pins,117 frozen source/output pins and107 unowned baseline pins verified; artifact and task-contract digests recomputed; all ten bidirectional patches match. Final compiler/lint/whitespace evidence reused with literal failure/difference statuses retained. Kit accurately documents whole1MiB best-effort receipts, explicit read/export, erasure and durability limitations. No full W14/customer/release claim or new infrastructure/suite."
+    }
+  ],
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/sort.test.ts src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+    "started_at": "2026-09-11 00:11:27 UTC",
+    "captures": [
+      {
+        "chunk_id": "78ec58",
+        "wall_time_seconds": 1.000688136,
+        "session_id": 82328,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "fdd863",
+        "wall_time_seconds": 5.000774286,
+        "session_id": 82328,
+        "original_token_count": 124,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/sort.test.ts > W14.01 POST /sort/intent > enforces owned consent, generic failures and authenticated streamed request bounds without behavior writes\n[config] read failed, serving fallback\n\n ✓ src/routes/sort.test.ts  (12 tests) 181ms\n"
+      },
+      {
+        "chunk_id": "8347a2",
+        "wall_time_seconds": 0.000002441,
+        "exit_code": 0,
+        "original_token_count": 60,
+        "output": " ✓ src/ledger/ledger.test.ts  (10 tests) 41ms\n\n Test Files  2 passed (2)\n      Tests  22 passed (22)\n   Start at  20:11:34\n   Duration  26.67s (transform 6.43s, setup 0ms, collect 12.62s, tests 222ms, environment 0ms, prepare 10.25s)\n\n"
+      }
+    ],
+    "session_id": 82328,
+    "exit_status": 0,
+    "drained": true,
+    "completed_at": "2026-09-11 00:12:36 UTC",
+    "result": "22/22 pass:12 route and10 ledger tests, two files. Reported26.67s; route181ms, ledger41ms. Local synthetic fixture durations only."
+  },
+  "artifact_verification": {
+    "before_runtime": {
+      "chunk_id": "638646",
+      "at": "2026-09-11T00:11:20.547Z",
+      "exit_code": 0,
+      "artifact_files": 123,
+      "mismatches": []
+    },
+    "digest_and_delta_capture": {
+      "chunk_id": "605cc2",
+      "at": "2026-09-11T00:12:36.391Z",
+      "exit_code": 0,
+      "artifact_files": 123,
+      "source_pins": 117,
+      "unowned_checked": 107,
+      "bidirectional_deltas": 10,
+      "errors": []
+    },
+    "final_pin_capture": {
+      "chunk_id": "66f6f0",
+      "at": "2026-09-11T00:13:27.268Z",
+      "exit_code": 0,
+      "mismatches": []
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W14.02/source-freeze.json",
+      "sha256": "d9066b8e4953cbcf2355d884e3a9e6d54e74e5b5c07f3d01d41af878457a7f04"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W14.02/source-deltas.json",
+      "sha256": "50708967a116a51cf1e3861e54b3febdf513650fe3ece06dea952cd6b6b1c923"
+    }
+  },
+  "reused_worker_checks": {
+    "review": "Inspected all original capture outputs. Baseline ESLint JSON parsed completely; its embedded sort fixture hashes to the admitted source. Final runtime/compiler precede only two nonfunctional fixture comments; this independent runtime exercises final frozen bytes.",
+    "baseline_lint": "37630/b686d4 exit0/drained:0 errors,1 no-explicit-any warning at sort.test.ts:97; embedded sourceSHA c8737cf306e89180f432ca41fb903eaf78da049d77c36b84e48955a7579861ca matches baseline.",
+    "primary_final": "52662/333450 exit0/drained,22/22PASS,29.13s reported; supersedes pre-correction15154/3cf09b22/22.",
+    "compiler_final": "27487/c7c72b exit0/drained,no output. Prior65792/f8d44a exit2 fixture-only narrowing/method typing errors retained.",
+    "lint_final": "99545/5f4e98 exit0/drained,0 errors and1 inherited no-explicit-any warning moved97 to113. Prior36475/87173f exit0 had two new empty-method warnings; two comments corrected them before final freeze.",
+    "whitespace": "Tracked scope a6ce06 exit0/no output. Untracked module1dbc13 git diff --no-index --check exit1/no diagnostics is the new-file difference status, not exit0; root's explicit source whitespace inspection and reviewer source inspection are reused.",
+    "rework": "Root's pre-freeze selector contamination correction for tenants decision/outcome and normalized Unicode expansion128-to256 remain recorded at unchanged contract in implementation-review.json. Initial runtime pass, failed compiler and intermediate lint warnings are not substituted for final acceptance."
+  },
+  "limitations": [
+    "Partial local W14§1.6 best-effort persistence only. Scheduled means registered background work, not durable storage. Failure, termination/time limits or erasure suppression can leave IDs unreadable; there is no durable retry/outbox/request idempotency/exactly-once/every-decision guarantee.",
+    "Whole UTF-8 NDJSON records over1MiB are refused without truncation. Plain-sort input/response bounds are otherwise unchanged. One object per request increases listing and erasure costs; no SLO, throughput, scale or lift evidence.",
+    "Strict pre-write deletion-cutoff reads and existing generic rewrite are reused. Check/put is not atomic; concurrent erasure, all historical/retention/external destinations and scheduled warehouse reconciliation remain open.",
+    "Real Hono routes, signatures/operator service tokens and synthetic KV/R2/context plus controlled DO responses are local integration evidence. Existing authority/consent/core/native-host assurance is reused; this is not fresh browser/native/deployed or customer acceptance.",
+    "Legacy non-product stream selection and legacy key behavior remain intentionally unchanged. Product rows are neither content exposures nor learning outcomes and receive no content attribution/replay acceptance.",
+    "Selected123 artifact pins are not exhaustive installed-runtime or deployed attestation. Full§1.6/W14, W09/W22 delivery, finding/gate/customer/release acceptance and applicable decisions remain open."
+  ],
+  "diagnostics": [
+    "Independent runtime emitted the existing Vite CJS deprecation notice and the deliberate invalid-config fallback diagnostic; no unexpected runtime failure.",
+    "Early combined evidence displays were oversized. Bounded complete delta/output reads and parsed baseline/source-hash checks replaced those displays; they are not additional product-test passes."
+  ],
+  "pending_sessions": [],
+  "writes": "Only this review.json. No source edits, further suites, board commands, external/customer/cloud operations or subdelegation."
+}

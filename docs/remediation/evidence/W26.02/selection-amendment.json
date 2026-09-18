@@ -1,0 +1,54 @@
+{
+  "at": "2026-09-14T01:23:11.178Z",
+  "reason": "Reconcile actual unchanged runtime selection29 (24existing+5new), preserve first runtime27pass/2fail and authorize two owned fixture repairs without weakening assertions.",
+  "prior_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W26.02/plan-v2.md",
+      "sha256": "0d58a9f5cb5d885dc9b874c827266df6f0bc0dc69db2fe0d121a40903a1d675f"
+    },
+    "contract_digest": "516775caaad675a5f46637a944cfcdd299d3b0cee5dd12b22fabaa8e5198f801",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T01:04:51.386Z",
+      "plan_sha256": "0d58a9f5cb5d885dc9b874c827266df6f0bc0dc69db2fe0d121a40903a1d675f",
+      "rationale": "Concrete pre-filter ambiguity can hide duplicate IDs across arms/brands; admit one existing DO dependency, same five grouped cases/fixed28, original source/check history retained. Independent Astra/xhigh complete-v2 challenge PASS26f0d2; root read source and approved before added-file edits."
+    }
+  },
+  "current_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W26.02/plan-v3.md",
+      "sha256": "50edf7bcdbc71b1a5af65ab2b677699e320bcb1e4d8462543c3715e5f4583357"
+    },
+    "contract_digest": "e8ad6d6df4729b7f9cc89dbc4e093272f085adb6bd03de44b0c8c4dd1d65ce04",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T01:23:11.178Z",
+      "plan_sha256": "50edf7bcdbc71b1a5af65ab2b677699e320bcb1e4d8462543c3715e5f4583357",
+      "rationale": "Reconcile actual unchanged runtime selection29 (24existing+5new), preserve first runtime27pass/2fail and authorize two owned fixture repairs without weakening assertions. Distinct complete-v3 challenge PASS719c87; root source reads09b5f8/a9f65d/4aeb82 and count279a65."
+    }
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W26.02/baseline-v2.json",
+    "sha256": "a7d18926b7e85aa39e0d817aa5b300c064ba706302e4185081babc00fc5d8acc"
+  },
+  "runtime1": {
+    "result": "fail",
+    "passed": 27,
+    "failed": 2,
+    "unselected": 147,
+    "total": 176,
+    "duration_seconds": 45.84,
+    "captures": [
+      "dda6d9",
+      "a5859b",
+      "69865e",
+      "a9b287",
+      "b61528"
+    ],
+    "exit_code": 1,
+    "drained": true
+  },
+  "qualification": "Full captures/source stops and failed/superseded static checks retained by worker; unchanged literal commands, ownership22 and baseline151pins; no new test case or external operation. Root original manual28 count was wrong."
+}

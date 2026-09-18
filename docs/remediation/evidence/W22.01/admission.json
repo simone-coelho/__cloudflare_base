@@ -1,0 +1,60 @@
+{
+  "at": "2026-09-14T03:29:58.431Z",
+  "task": "W22.01",
+  "plan": {
+    "path": "docs/remediation/design/W22.01/plan.md",
+    "sha256": "e3cb7a308889932dbd9b42114a701e887595c08cf3a57ca00c5150c86295e895"
+  },
+  "contract_digest": "875c06a0ad705e2b08c1541da73e56b50f8b733b73882bd81dd105b3c9caab5e",
+  "baseline": {
+    "path": "docs/remediation/design/W22.01/baseline.json",
+    "sha256": "76e1710e65d20cda98d7980cf5ed877294f1416fcddae08785b4e3b0bc18302f"
+  },
+  "reviewer": {
+    "actor_id": "w2201-reviewer",
+    "run_id": "/root/w2201_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "PASS",
+    "basis": "Exact plan with forward compact/raw overlap refusal and tenant enforcement; direct preflight message before admission. Redundant direct board attempts terminated143, no pass claimed; reuse root entryVALID1663."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-14T03:29:58.431Z",
+    "plan_sha256": "e3cb7a308889932dbd9b42114a701e887595c08cf3a57ca00c5150c86295e895",
+    "rationale": "Root actual-source/design case and distinct /root/w2201_review Astra/xhigh exact-plan PASS including forward compact overlap/requested tenant. Fixed18 counted; lint0/0. Scope remains read-dedup containment only."
+  },
+  "owned": [
+    "src/learn/report.ts",
+    "src/learn/hourly.ts",
+    "src/learn/report.test.ts",
+    "src/learn/hourly.test.ts",
+    "docs/kit/02-api-reference.md"
+  ],
+  "protected": [
+    "src/content/types.ts",
+    "src/ledger/records.ts",
+    "src/ledger/delivery.ts",
+    "src/ledger/writer.ts",
+    "src/ledger/erasure.ts",
+    "src/ledger/ledger.test.ts",
+    "src/events/actionTypes.ts",
+    "src/learn/policy.ts",
+    "src/learn/stats.ts",
+    "src/learn/fan.ts",
+    "src/durable-objects/DecisionRing.ts",
+    "src/config/versionedStore.ts",
+    "src/config/publication.ts",
+    "src/reflex/core.ts",
+    "src/types/env.ts",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    ".eslintrc.json",
+    "docs/architecture/35-audit-verification-and-source-of-truth.md",
+    "docs/architecture/35-verification-reports/F16.md",
+    "docs/architecture/22-outcome-learning-design.md"
+  ],
+  "limitations": "Local forward report-input deduplication only, not full W22/F16 closure, producer recovery, online statistics dedup, export/replay reconciliation, repaired historical shards/aggregates, complete histories or causal lift. Legacy nonce-free repeated outcomes refuse; identical legacy decisions are logical-ID counts, not proof of unique page views. Physical object/byte/work caps can still refuse duplicated traffic. Compact carry-in cannot prove full-payload identity; ambiguity refuses locally and prior shard progress may exist, with no aggregate published. Existing horizons, erasure races, served denominators, refresh and customer policies unchanged. No customer/native/SLO/release approval, installs/builds/deploy/cloud/customer-data/credentials/commit/push/destructive/external operations."
+}

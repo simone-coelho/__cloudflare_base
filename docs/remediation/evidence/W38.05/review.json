@@ -1,0 +1,188 @@
+{
+  "task_id": "W38.05",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "at": "2026-09-13T13:46:27.285Z",
+  "artifact_digest": "d961de6e10f0af87c36c6624dfa06ac1750bdab25425b6da3993169c70154fef",
+  "contract_digest": "f8032721bc8205ae21a3e862d3a75bb3516e88ff42ad41ff7895f3864eb619c8",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W38.05-C1",
+      "verdict": "PASS",
+      "evidence": "Actual two deltas preserve scoring order and floating arithmetic, capture original driver values before prefer/adjust/explore can mutate inputs, and materialize/sort only served explanations with the unchanged native comparator. Candidate sorting/ties, exploration, pins, diversity and cross-slot selection are untouched. Independent full-object/trace parity against the SHA-verified original and imported current module covers non-finite values, >4 ties, mutating hooks, rejected adjustments, both exploration forms and ordinary output-object independence; selected actual decision/receipt/replay controls pass."
+    },
+    {
+      "id": "W38.05-C2",
+      "verdict": "PASS",
+      "evidence": "Independent declared paired workload passes complete output/callback parity. Larger 1000-piece median improves 212.853026→133.659874 ms per20 calls;30-piece improves3.906160→3.302793. Separate observed nonempty driver-sort work falls2993→8 calls and48218→135 rows at1000 pieces. The logged larger-median result was inspected independently, not inferred from14 passing tests. Raw five alternating samples remain in runtime captures."
+    },
+    {
+      "id": "W38.05-C3",
+      "verdict": "PASS",
+      "evidence": "Exact admitted K3 executed once on frozen bytes:14 passed/27 unselected. Final worker full compiler/two-file zero-warning lint/whitespace reused. Both owned deltas reconstruct forward/reverse exactly; all31 artifact pins and23 protected files match before/after; current contract verified. No extra suite, source edits or delegation."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W38.05/plan.md",
+      "sha256": "d2b1d81a8313019fb2e6295722c85b95323040a1211c8114111e40b4bd3ff517"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W38.05/artifact.json",
+      "sha256": "4fdfc0d38e3126c1547663f9b54b12c802042a3109d1ce7d0a1d8c123f33dfec"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W38.05/worker.json",
+      "sha256": "3e19bf5e4fb428eba3720399942f0fc3cd479f6fe934d89d47b601e4a7c81538"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/content/decide.test.ts src/content/merchandisingSeam.test.ts src/content/inventoryDiversity.test.ts src/learn/phase3.test.ts -t 'W38.05|returns exactly the decisions|records the ranked candidates|honours the candidate limit|emits the delivery contract|the default arm serves the defaults|at γ = 1 a strong lift|the combined boost is clamped|sits before the lift|at most max per value|relaxes rather than leave|w_ext × score joins|W27.02 replays coupled' --maxWorkers=1 --minWorkers=1",
+    "session_id": 63342,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "db3ba9",
+        "wall_time_seconds": 1.001167186,
+        "session_id": 63342,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "2c665b",
+        "wall_time_seconds": 5.001368263,
+        "session_id": 63342,
+        "original_token_count": 532,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/phase3.test.ts  (15 tests | 13 skipped) 20ms\nstdout | src/reflex/contentCompose.test.ts > W38.05 served explanations > W38.05 measures paired actual composer work and warm timings at 30 and 1000 pieces\nW38.05 measurement {\"pieces\":30,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"cb1d2cb02dd7c2a305e0b92ee7e256d5f22ec6e4a346415ca09e1edc2e5a9b31\",\"callback_sha256\":\"7f124594a1679357171dc46f0ca68b9d8b31926eadbd2b482fd428c48502298b\",\"before\":{\"samples_ms\":[8.094396000000415,4.378731999997399,3.5767669999986538,3.9061600000022736,3.557534999999916],\"median_ms\":3.9061600000022736,\"driver_sort_calls\":83,\"driver_rows\":1335},\"current\":{\"samples_ms\":[2.936195999998745,4.486851000001479,3.3464509999976144,3.0008749999979045,3.3027929999989283],\"median_ms\":3.3027929999989283,\"driver_sort_calls\":8,\"driver_rows\":129},\"median_improved\":true}\nW38.05 measurement {\"pieces\":1000,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"09f715bff10c96c5fd0a64301bd9052c7c6b045ac69880a58ddf7018e49699ab\",\"callback_sha256\":\"549583a33a126fd2a1c553b508ff371b3c7ff0b4e05570ab0062b95653c0988b\",\"before\":{\"samples_ms\":[157.1508360000007,212.85302600000068,205.16963500000202,214.0624910000006,254.08505299999888],\"median_ms\":212.85302600000068,\"driver_sort_calls\":2993,\"driver_rows\":48218},\"current\":{\"samples_ms\":[94.85699000000022,133.65987400000085,124.55555599999934,142.82394100000238,157.11719900000026],\"median_ms\":133.65987400000085,\"driver_sort_calls\":8,\"driver_rows\":135},\"median_improved\":true}\n\n ✓ src/reflex/contentCompose.test.ts  (5 tests) 2172ms\n ✓ src/content/decide.test.ts  (10 tests | 7 skipped) 5ms\n"
+      },
+      {
+        "chunk_id": "87367c",
+        "wall_time_seconds": 0.000002851,
+        "exit_code": 0,
+        "original_token_count": 86,
+        "output": " ✓ src/content/merchandisingSeam.test.ts  (5 tests | 3 skipped) 9ms\n ✓ src/content/inventoryDiversity.test.ts  (6 tests | 4 skipped) 4ms\n\n Test Files  5 passed (5)\n      Tests  14 passed | 27 skipped (41)\n   Start at  09:44:42\n   Duration  31.23s (transform 5.38s, setup 1ms, collect 7.89s, tests 2.21s, environment 1ms, prepare 15.60s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 14,
+      "unselected": 27,
+      "total": 41,
+      "files": 5,
+      "duration_seconds": 31.23,
+      "final_bytes": true
+    }
+  },
+  "measurement_review": {
+    "source": "Independent K3 stdout 2c665b; retained original source was executed alongside current after implementation, not as a claimed pre-GO runtime.",
+    "workload": "30/1000 pieces,8 dimensions×2 tags,3 ranked slots taking1/2/5 plus1 pin,candidateLimit10;10 warmups then5 alternating20-call samples per variant. Same in-memory TypeScript transpilation; evaluated current compared with imported module.",
+    "independent": [
+      {
+        "pieces": 30,
+        "before_median_ms": 3.9061600000022736,
+        "current_median_ms": 3.3027929999989283,
+        "median_improved": true,
+        "before_sort_calls": 83,
+        "current_sort_calls": 8,
+        "before_driver_rows": 1335,
+        "current_driver_rows": 129,
+        "output_sha256": "cb1d2cb02dd7c2a305e0b92ee7e256d5f22ec6e4a346415ca09e1edc2e5a9b31",
+        "callback_sha256": "7f124594a1679357171dc46f0ca68b9d8b31926eadbd2b482fd428c48502298b"
+      },
+      {
+        "pieces": 1000,
+        "before_median_ms": 212.85302600000068,
+        "current_median_ms": 133.65987400000085,
+        "median_improved": true,
+        "before_sort_calls": 2993,
+        "current_sort_calls": 8,
+        "before_driver_rows": 48218,
+        "current_driver_rows": 135,
+        "output_sha256": "09f715bff10c96c5fd0a64301bd9052c7c6b045ac69880a58ddf7018e49699ab",
+        "callback_sha256": "549583a33a126fd2a1c553b508ff371b3c7ff0b4e05570ab0062b95653c0988b"
+      }
+    ],
+    "qualification": "Timing excludes input construction/transpilation, assertions and sort instrumentation. Separate isolated VM observation counts nonempty driver sorts and rows reaching that boundary; actual source shows those rows were materialized. This is not a heap-byte/allocation-profiler or native/request measurement. Non-finite parity uses complete structured-cloned objects, not JSON hashes."
+  },
+  "source_and_artifact_review": {
+    "inspected": "Complete current plan/task/admission and applicable canonical scope; full baseline-to-candidate source/fixture inspection6ebc00 reconciled unchanged to frozen production d4e4ba1f889939e71f096c771437da92354f03102baf9d348604a8b9f18dcf34 and fixture10c663c2555d816eeb988e705f5b660b265851d9b19992c8a8054f37a74a834c. Artifact/freeze/deltas and full worker metadata/captures inspected; initial combined display truncation resolved by818787/088ce3.",
+    "source_stop": "2026-09-13T13:41:59.265Z",
+    "artifact_pins": 31,
+    "source_and_output": 25,
+    "protected_unchanged": 23,
+    "exact_bidirectional_deltas": 2,
+    "before": {
+      "chunk_id": "d7d23f",
+      "wall_time_seconds": 0.101943603,
+      "exit_code": 0,
+      "original_token_count": 274,
+      "output": "{\n  \"at\": \"2026-09-13T13:44:38.629Z\",\n  \"artifact_digest\": \"d961de6e10f0af87c36c6624dfa06ac1750bdab25425b6da3993169c70154fef\",\n  \"manifest_sha256\": \"4fdfc0d38e3126c1547663f9b54b12c802042a3109d1ce7d0a1d8c123f33dfec\",\n  \"pins\": 31,\n  \"bad\": [],\n  \"protected_count\": 23,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/reflex/contentCompose.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/reflex/contentCompose.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W38.05/plan.md\",\n      \"sha256\": \"d2b1d81a8313019fb2e6295722c85b95323040a1211c8114111e40b4bd3ff517\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.05/artifact.json\",\n      \"sha256\": \"4fdfc0d38e3126c1547663f9b54b12c802042a3109d1ce7d0a1d8c123f33dfec\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.05/worker.json\",\n      \"sha256\": \"3e19bf5e4fb428eba3720399942f0fc3cd479f6fe934d89d47b601e4a7c81538\"\n    }\n  ]\n}\n"
+    },
+    "contract_before": {
+      "chunk_id": "ef9e84",
+      "wall_time_seconds": 0.107173205,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T13:44:38.984Z\",\"task\":\"W38.05\",\"state\":\"verification\",\"contract_digest\":\"f8032721bc8205ae21a3e862d3a75bb3516e88ff42ad41ff7895f3864eb619c8\",\"artifact_digest\":\"d961de6e10f0af87c36c6624dfa06ac1750bdab25425b6da3993169c70154fef\"}\n"
+    },
+    "after": {
+      "chunk_id": "2d21d4",
+      "wall_time_seconds": 0.029938174,
+      "exit_code": 0,
+      "original_token_count": 274,
+      "output": "{\n  \"at\": \"2026-09-13T13:45:15.793Z\",\n  \"artifact_digest\": \"d961de6e10f0af87c36c6624dfa06ac1750bdab25425b6da3993169c70154fef\",\n  \"manifest_sha256\": \"4fdfc0d38e3126c1547663f9b54b12c802042a3109d1ce7d0a1d8c123f33dfec\",\n  \"pins\": 31,\n  \"bad\": [],\n  \"protected_count\": 23,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/reflex/contentCompose.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/reflex/contentCompose.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W38.05/plan.md\",\n      \"sha256\": \"d2b1d81a8313019fb2e6295722c85b95323040a1211c8114111e40b4bd3ff517\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.05/artifact.json\",\n      \"sha256\": \"4fdfc0d38e3126c1547663f9b54b12c802042a3109d1ce7d0a1d8c123f33dfec\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.05/worker.json\",\n      \"sha256\": \"3e19bf5e4fb428eba3720399942f0fc3cd479f6fe934d89d47b601e4a7c81538\"\n    }\n  ]\n}\n"
+    },
+    "contract_after": {
+      "chunk_id": "3f0fa9",
+      "wall_time_seconds": 0.065088957,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T13:45:16.070Z\",\"task\":\"W38.05\",\"state\":\"verification\",\"contract_digest\":\"f8032721bc8205ae21a3e862d3a75bb3516e88ff42ad41ff7895f3864eb619c8\",\"artifact_digest\":\"d961de6e10f0af87c36c6624dfa06ac1750bdab25425b6da3993169c70154fef\"}\n"
+    }
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W38.05/worker.json",
+      "sha256": "3e19bf5e4fb428eba3720399942f0fc3cd479f6fe934d89d47b601e4a7c81538"
+    },
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts --max-warnings 0 && git diff --check -- src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts",
+    "session_id": 12747,
+    "started_at": "2026-09-13T13:40:01.240Z",
+    "finished_at": "2026-09-13T13:40:58.718Z",
+    "capture_ids": [
+      "0a4576",
+      "f472c8",
+      "5ce856",
+      "d3882c",
+      "393389",
+      "074786"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": "Full compiler, two-file lint0 errors/0 warnings and scoped whitespace passed on final bytes. Independent static reruns0."
+  },
+  "retained_history": {
+    "worker": "No failed runtime/static attempts; original before-source bytes and final measurements retained.",
+    "reviewer_inspection_correction": {
+      "explanation": "Pre-review d13be3 exited1 because the read-only diff command used before_gzip_base64 instead of the actual content_gzip_base64 field. Corrected6ebc00 verified original SHA and read both complete deltas. No source rework, runtime invocation or artifact mutation resulted.",
+      "capture": {
+        "chunk_id": "d13be3",
+        "wall_time_seconds": 0.78183526,
+        "exit_code": 1,
+        "original_token_count": 287,
+        "output": "[\n  {\n    \"keys\": [\n      \"path\",\n      \"sha256\",\n      \"content_gzip_base64\"\n    ],\n    \"path\": \"src/reflex/contentCompose.ts\",\n    \"sha256\": \"0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe\"\n  },\n  {\n    \"keys\": [\n      \"path\",\n      \"sha256\",\n      \"content_gzip_base64\"\n    ],\n    \"path\": \"src/reflex/contentCompose.test.ts\",\n    \"sha256\": \"7a0588c2feeedc29912eaf4f0db162f5fe0f31473b73ac065e1acf70d5b3a836\"\n  }\n]\nnode:buffer:325\n  throw new ERR_INVALID_ARG_TYPE(\n  ^\n\nTypeError [ERR_INVALID_ARG_TYPE]: The first argument must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object. Received undefined\n    at Function.from (node:buffer:325:9)\n    at [eval]:1:337\n    at [eval]:1:595\n    at runScriptInThisContext (node:internal/vm:209:10)\n    at node:internal/process/execution:449:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:447:60)\n    at evalFunction (node:internal/process/execution:87:30)\n    at evalScript (node:internal/process/execution:99:3)\n    at node:internal/main/eval_string:74:3 {\n  code: 'ERR_INVALID_ARG_TYPE'\n}\n\nNode.js v22.15.0\n"
+      }
+    },
+    "prior_proof": "Lead prospectively qualified W38.04's broad composer-byte assurance while preserving the actual request/import remedy and prior history. No blanket old-artifact renewal."
+  },
+  "limitations": [
+    "Packed snapshots, all scoring and candidate sorts still scale with input. No candidate pruning, retrieval/sharding, model or scoring-policy change.",
+    "Synthetic warm local Node compute at30/1000 pieces does not establish total heap, cold read/validation cost, concurrency, native/request/browser latency, supported customer capacity or full W38/F32/F08/N07 closure.",
+    "Numeric/driver and callback parity is for the existing typed composer contract and declared cases; no new arbitrary-object/coercion/prototype policy is introduced.",
+    "Retention/old-reader cutover, W35 transactional authority, customer/privacy/scientific acceptance and release approval remain separate. Lead alone accepts this bounded task."
+  ]
+}

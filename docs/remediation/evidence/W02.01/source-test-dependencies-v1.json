@@ -1,0 +1,106 @@
+{
+  "node": "v22.15.0",
+  "method": "esbuild source-input traversal with installed packages external, plus config and installed version records",
+  "files": [
+    {
+      "path": "node_modules/esbuild/package.json",
+      "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a"
+    },
+    {
+      "path": "node_modules/hono/package.json",
+      "sha256": "0190ed73085e7509f652e5877691ea52063628ad633add49e7ffef4a375389cd"
+    },
+    {
+      "path": "node_modules/jose/package.json",
+      "sha256": "3cb0f73674b50b4e99f35c883e10c9e541e3b8d20368825379515547af1d804d"
+    },
+    {
+      "path": "node_modules/typescript/package.json",
+      "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3"
+    },
+    {
+      "path": "node_modules/vitest/package.json",
+      "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5"
+    },
+    {
+      "path": "node_modules/zod/package.json",
+      "sha256": "c630bd10b52dcf71c112a2bf78dbf2734b9db58d62de663b8d86c2ec2c8cda2e"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "package.json",
+      "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c"
+    },
+    {
+      "path": "src/auth/accounts.ts",
+      "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+    },
+    {
+      "path": "src/auth/store.ts",
+      "sha256": "7d0513e2456798aff7d448fc79d11ebad4f3b014a74a03b2df1843a2238144cf"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "sha256": "a0f4de159c1e83a5f81fd5c75f54f74662ce6e6d35a0e4b72de6a8d870801081"
+    },
+    {
+      "path": "src/demos/brighthour/reflexConfig.ts",
+      "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf"
+    },
+    {
+      "path": "src/middleware/auth.refresh-boundary.test.ts",
+      "sha256": "11628a318420ddb8d2d269373a7f23a46f7ad4b7913648db565b0dedd07ee177"
+    },
+    {
+      "path": "src/middleware/auth.ts",
+      "sha256": "a3a7be192b89395fed567d59b48aed6076f7e80797c8a6c175bff20ff6fce5ea"
+    },
+    {
+      "path": "src/middleware/edgeAccess.ts",
+      "sha256": "ef4935e1c8eaf725efb4c7372faa5ea5b09082b0d238b68de09e1d4934375999"
+    },
+    {
+      "path": "src/reflex/configStore.ts",
+      "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2"
+    },
+    {
+      "path": "src/reflex/core.ts",
+      "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+    },
+    {
+      "path": "src/routes/auth.ts",
+      "sha256": "678fd63e42f5ce93b2cce1eb7f6d7a05ee98cbb33d7f18c3b9e04e279ff8d20e"
+    },
+    {
+      "path": "src/routes/config.ts",
+      "sha256": "2e1d5c1e42c5ceb498b8011de65d495b185afcbe21da8b326a2d8b6ed9b04560"
+    },
+    {
+      "path": "src/sdk/tsconfig.json",
+      "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360"
+    },
+    {
+      "path": "src/types/env.ts",
+      "sha256": "e44f357958d91affcd4610c62a8e23a36d48431ddfff16f2b6d7440598bf2d50"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "480c32f5b079b289385b0a0b73cc59a9dba47e318144c4c85ac4b96a9a6472a9"
+    },
+    {
+      "path": "vitest.config.ts",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    }
+  ],
+  "versions": {
+    "hono": "4.12.27",
+    "jose": "5.10.0",
+    "vitest": "1.6.1",
+    "esbuild": "0.28.1",
+    "typescript": "5.9.2",
+    "zod": "4.4.3"
+  }
+}

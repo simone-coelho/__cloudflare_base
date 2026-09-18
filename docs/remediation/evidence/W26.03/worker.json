@@ -1,0 +1,218 @@
+{
+  "task_id": "W26.03",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "run": "/root/w1404_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-14T02:28:22.661Z",
+  "contract_digest": "41daf7a67d737b929b3a3b982c1f96120cc7ab40b75d374b8a0841ea04cdaa42",
+  "source_go": {
+    "journal": 1658,
+    "capture": "15edd1",
+    "admission": {
+      "path": "docs/remediation/evidence/W26.03/admission.json",
+      "sha256": "08f3851d1f5635b6e88f664ae1c3de9da2d3dd6bf9951d1efa2494a2e80f5c20"
+    }
+  },
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W26.03/plan.md",
+      "sha256": "3585359789eb65b49554cd66f3134389ab9dde0a1e72e753c013dec13f301e44"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W26.03/baseline.json",
+      "sha256": "f0714d9232180176b68e5ee80e55b9eb30f3e1bc2f0cfe876c5479be38d828dd"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W26.03/admission.json",
+      "sha256": "08f3851d1f5635b6e88f664ae1c3de9da2d3dd6bf9951d1efa2494a2e80f5c20"
+    }
+  },
+  "baseline_reuse": "Parent entry check/status both VALID1649/drained and all29 pre-edit pins verified. Source-confirmed case, not a claimed failed baseline runtime. Existing accepted W26.02 identity/attribution and unchanged statistics assurance reused; overlap qualified by lead. No new board or baseline test invocation.",
+  "final_results": {
+    "runtime": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 19,
+      "unselected": 19,
+      "total_discovered": 27,
+      "test_files_passed": 1,
+      "exit_code": 0,
+      "drained": true,
+      "duration_seconds": 8.1,
+      "test_duration_ms": 295,
+      "evidence": "command_captures.runtime1"
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "full": "passed",
+      "evidence": "command_captures.static1"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 3,
+      "inherited_warnings": 3,
+      "new_errors": 0,
+      "new_warnings": 0,
+      "comparison": {
+        "method": "file/severity/rule/message multiplicity; CLI terminal punctuation normalized and locations ignored",
+        "baseline": [
+          "src/learn/learn.test.ts|warning|'_init' is defined but never used|@typescript-eslint/no-unused-vars",
+          "src/learn/learn.test.ts|warning|'_key' is defined but never used|@typescript-eslint/no-unused-vars",
+          "src/learn/learn.test.ts|warning|'_url' is defined but never used|@typescript-eslint/no-unused-vars"
+        ],
+        "current": [
+          "src/learn/learn.test.ts|warning|'_init' is defined but never used|@typescript-eslint/no-unused-vars",
+          "src/learn/learn.test.ts|warning|'_key' is defined but never used|@typescript-eslint/no-unused-vars",
+          "src/learn/learn.test.ts|warning|'_url' is defined but never used|@typescript-eslint/no-unused-vars"
+        ],
+        "identical": true
+      },
+      "comparison_execution": "Compared retained K2 CLI output against baseline JSON; no second lint invocation.",
+      "evidence": "command_captures.static1"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "scope": "Four owned tracked source/document paths in literal K2 git diff --check.",
+      "evidence": "command_captures.static1"
+    }
+  },
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W26.03|W26.02|W10.02|W09.04|W06.06 suppresses old decisions|W06.06 exposes no records' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-14T02:25:38.085Z",
+      "captures": [
+        {
+          "chunk_id": "714cbe",
+          "wall_time_seconds": 1.001384795,
+          "session_id": 30505,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c9be03",
+          "wall_time_seconds": 0.000002595,
+          "exit_code": 0,
+          "original_token_count": 237,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (27 tests | 19 skipped) 295ms\n\n Test Files  1 passed (1)\n      Tests  8 passed | 19 skipped (27)\n   Start at  22:25:41\n   Duration  8.10s (transform 2.21s, setup 0ms, collect 3.25s, tests 295ms, environment 0ms, prepare 3.15s)\n\n"
+        }
+      ],
+      "finished_at": "2026-09-14T02:25:54.021Z",
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 30505,
+      "duration_seconds": 15.936
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/fan.ts src/learn/learn.test.ts && git diff --check -- src/durable-objects/DecisionRing.ts src/learn/fan.ts src/learn/learn.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-14T02:26:02.173Z",
+      "captures": [
+        {
+          "chunk_id": "9aed8d",
+          "wall_time_seconds": 1.001303408,
+          "session_id": 95780,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d91106",
+          "wall_time_seconds": 5.000673736,
+          "session_id": 95780,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6b78ec",
+          "wall_time_seconds": 5.001199654,
+          "session_id": 95780,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e9c4b3",
+          "wall_time_seconds": 0.000002236,
+          "exit_code": 0,
+          "original_token_count": 100,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  674:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  675:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  675:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "finished_at": "2026-09-14T02:27:08.735Z",
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 95780,
+      "duration_seconds": 66.562
+    }
+  },
+  "authoring_and_rework": [
+    "Implemented nonrecursive full-record comparison and staged unique admission inside existing serialized/fresh-barrier/single-put boundary; no persistent identity schema or statistics changes.",
+    "Before first runtime: adapted existing W10.02 rich-byte/index overflow inputs to distinct IDs, retained actual overflow/no-put/parallel-statistics assertions; W09.04 exact append receipt now v2. Two new grouped cases only.",
+    "Lead reviewed actual production/API and all four final deltas. Minor pre-runtime API link correction points to existing integration guide. No executed check failure or superseding source rework.",
+    "No source writes during either check. Initial candidate pins and final STOP pins are identical."
+  ],
+  "assertion_coverage": {
+    "C1": "Actual bounded ring: 512 nested JSON levels, reordered own object keys including __proto__, exact arrays/all-field conflicts, late-batch atomic refusal, existing ambiguous/index-only refusal without history repair, full record missing index, 500 duplicates at full4096 index, genuine overflow, concurrent appends, committed/uncommitted lost save acknowledgements and restart, fresh inclusive erasure, existing expiry/reset limits.",
+    "C2": "Actual fan/ring/stats: append v2 unique/duplicate counts; v1 accepted without invented duplicates; malformed v2/version/count/depth acknowledgements unknown without retries; readRing→servedCounts remains one and exact correlated target unique; repeated exposures and credits both still count2. Conflicting ring append leaves state unchanged while independent stats exposure commits.",
+    "C3": "Fixed8 passed, full compiler/scoped lint/owned whitespace passed. Existing W10.02 both, W26.02, W09.04 and two selected W06.06 controls retained. Independent frozen review and lead acceptance pending."
+  },
+  "limitations": [
+    "Forward retained DecisionRing append containment only; full W26/F16/F21 remain open.",
+    "Index-only collisions and existing ambiguous full-record IDs refuse. Unrelated stored duplicates are unchanged; no historical cleanup, new retention/index schema or dedup assurance after evidence expiry/reset.",
+    "No statistics exposure/outcome dedup, safe full fan-out retry, exactly-once pipeline, durable sink reconciliation, or historical count repair. Subject identifiers were not added to aggregate statistics.",
+    "Fresh subject/erasure checks are not an atomic global erasure fence. Collision applied:false is ring-local, not rollback of independent statistics effects.",
+    "v1 receipts remain explicitly legacy; old v1-only callers treat v2 as unknown. No deployment/mixed-version rollout proof.",
+    "No rendered/viewable denominator, fatigue policy, SDK, ranking, report or replay change; no native/SLO/customer/release acceptance or external operations."
+  ],
+  "source_stop_history": [
+    {
+      "at": "2026-09-14T02:25:38.060Z",
+      "files": [
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "sha256": "2fba160c596b9740527465d8c6abb37aa95979656d1475ed08b76403b4453db6"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "0927a0dc9428e64d362d1210325ed7cca4c4e09324608faf7c6f07d73594494d"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "sha256": "ef18be84c345d2c924b677210c5266e392fdcd8c055cf4063655d07fe0a03045"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "ac21c25b2e9dfb729911820d9237c2abd1102c8d7ec98001be7ca39bd0d0cce5"
+        }
+      ],
+      "capture": "8129aa",
+      "phase": "source held before final runtime/static"
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-14T02:27:28.535Z",
+    "files": [
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "2fba160c596b9740527465d8c6abb37aa95979656d1475ed08b76403b4453db6"
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "sha256": "0927a0dc9428e64d362d1210325ed7cca4c4e09324608faf7c6f07d73594494d"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "ef18be84c345d2c924b677210c5266e392fdcd8c055cf4063655d07fe0a03045"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "ac21c25b2e9dfb729911820d9237c2abd1102c8d7ec98001be7ca39bd0d0cce5"
+      }
+    ]
+  },
+  "source_stop_capture": "75ebaf",
+  "handoff": "Only worker.json written after final source STOP. All commands drained. Root owns freeze, distinct independent review, governance and final acceptance."
+}

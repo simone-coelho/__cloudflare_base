@@ -1,0 +1,97 @@
+{
+  "before": {
+    "id": "W02",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Reject refresh-as-access, migrate access/service claims and tool tokens, enforce temporary-password/account/session revocation policy, and reject unsafe/missing configured signing material at readiness. Add abuse budgets and bounded account lockout/audit growth for N14. Prove logout/disable/delete/demotion/password/rotation transitions and recovery without locking legitimate operators out.",
+      "finding_refs": "F02/F09; N02/N14",
+      "sizing_owner": "S narrow guard → M full auth/abuse contract; D/OL + S/P"
+    },
+    "title": "Operator credentials and session policy",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F02",
+      "F09",
+      "N02",
+      "N14"
+    ],
+    "proposed_owner": "D/OL + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W02",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Reject refresh-as-access, migrate access/service claims and tool tokens, enforce temporary-password/account/session revocation policy, and reject unsafe/missing configured signing material at readiness. Add abuse budgets and bounded account lockout/audit growth for N14. Prove logout/disable/delete/demotion/password/rotation transitions and recovery without locking legitimate operators out.",
+      "finding_refs": "F02/F09; N02/N14",
+      "sizing_owner": "S narrow guard → M full auth/abuse contract; D/OL + S/P"
+    },
+    "title": "Operator credentials and session policy",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F02",
+      "F09",
+      "N02",
+      "N14"
+    ],
+    "proposed_owner": "D/OL + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W02-F02-REFRESH",
+          "description": "Narrow refresh-as-access containment only; credential migration, full account/session/onboarding/membership/signing/abuse policy remains uncovered."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W02-F02-REFRESH",
+          "task_id": "W02.01",
+          "task_criterion_id": "W02.01-C1"
+        },
+        {
+          "criterion_id": "W02-F02-REFRESH",
+          "task_id": "W02.01",
+          "task_criterion_id": "W02.01-C2"
+        },
+        {
+          "criterion_id": "W02-F02-REFRESH",
+          "task_id": "W02.01",
+          "task_criterion_id": "W02.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W02.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

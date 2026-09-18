@@ -1,0 +1,28 @@
+{
+  "at": "2026-09-13T15:35:12.492Z",
+  "task_id": "W19.01",
+  "source_edits_started": false,
+  "attempts": [
+    {
+      "kind": "patch_generation_output_truncation",
+      "captures": [
+        "afa31d",
+        "de166e"
+      ],
+      "exit_code": 0,
+      "applied": false,
+      "result": "JSON rejected truncated output; regenerated original snapshot in bounded groups before applying."
+    },
+    {
+      "kind": "direct_go_failed",
+      "session": 89214,
+      "captures": [
+        "86c02c",
+        "d0cb8b"
+      ],
+      "exit_code": 1,
+      "result": "Three-line generic patch context applied W19 decomposition to first identical unscoped W15 block. Direct source-GO package assertion caught mismatch before implementation. Restored W15 unscoped structure and applied intended W19 package using uniquely identifying expanded context; retained journal unchanged."
+    }
+  ],
+  "required_next": "Successful direct GO check and final board required; no engine check claimed by this repair."
+}

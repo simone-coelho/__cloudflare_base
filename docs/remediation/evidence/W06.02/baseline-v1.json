@@ -1,0 +1,12 @@
+{
+  "task_id": "W06.02",
+  "kind": "source_confirmed",
+  "at": "2026-09-08T13:28:58Z",
+  "head": "e49aef83c9a9843dd21479f1b08d53e7709fac41",
+  "tracker_sha256": "e4b9175e048146769fa070801be7820eda98b5e73e885fce990f613cff2b5814",
+  "journal_seq": 313,
+  "entry": {"board_check": {"exit_code": 0, "header": "Tracker VALID | mode=local_remediation_authorized", "output_bytes": 325576}, "board_status": {"exit_code": 0, "header": "Tracker VALID | mode=local_remediation_authorized", "output_bytes": 325576}, "current_task_warnings": []},
+  "source_observation": "rewriteErasures writes a retired audit record and deletes the only active tombstone; consumeLedger/writeBatches then persist a delayed pre-erasure decision or outcome without consulting erasures. The committed F06 verifier reproduced a visible permanent row after rewrite retirement and also while a pending rewrite had already passed that day. isLedgerMessage accepts an ID carrier without checking record tenant/time/visitor fields.",
+  "reproduction_basis": "Current source-confirmed against the same behavior and the repository's committed independent F06 R1-R3 reproduction. New tests must inspect R2 rows and active barriers; no separate broad baseline run.",
+  "limits": "Does not prove strict concurrent write fencing, shopper generation revocation, deployed R2 behavior, approved retention, physical completion SLA, customer acceptance or release."
+}

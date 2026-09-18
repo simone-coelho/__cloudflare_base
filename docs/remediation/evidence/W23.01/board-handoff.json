@@ -1,0 +1,85 @@
+{
+  "at": "2026-09-12T04:25:29.564Z",
+  "task_id": "W23.01",
+  "artifact_digest": "33f4d52ecaf2a18bb84ce446482539f779a59b142b36ac10baf4c2dadffc499d",
+  "journal_seq": 1121,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "f97327",
+        "wall_time_seconds": 1.000963179,
+        "session_id": 27527,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "230b16",
+        "wall_time_seconds": 30.001014744,
+        "session_id": 27527,
+        "original_token_count": 268,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=20, unscoped=21\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=79, closed=2; evidence records=231\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W23.01 — Next inspect and admit bounded W24 accumulation-configuration compatibility: prevent reward/objective/decay-horizon changes from silently relabeling incompatible item and slot history, while preserving compatible estimator-only settings. Inspect actual ingestion, publication and serving/cache consumers first; no implicit reset/generation rollout, old-state rewrite or historical reconstruction. W23 forward arithmetic is implemented; timestamp/lateness policy and historical repair remain open. No external/customer-policy/deployment authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 16282\n"
+      },
+      {
+        "chunk_id": "e05a3b",
+        "wall_time_seconds": 0.000001866,
+        "exit_code": 0,
+        "original_token_count": 268,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=20, unscoped=21\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=79, closed=2; evidence records=231\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W23.01 — Next inspect and admit bounded W24 accumulation-configuration compatibility: prevent reward/objective/decay-horizon changes from silently relabeling incompatible item and slot history, while preserving compatible estimator-only settings. Inspect actual ingestion, publication and serving/cache consumers first; no implicit reset/generation rollout, old-state rewrite or historical reconstruction. W23 forward arithmetic is implemented; timestamp/lateness policy and historical repair remain open. No external/customer-policy/deployment authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 16282\n"
+      }
+    ],
+    "session_id": 27527,
+    "supersedes": "docs/remediation/evidence/W23.01/tracker-reconciliation.json: failed final check39616/831a83",
+    "correction_check": {
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import assert from \"node:assert/strict\";import{sha256}from\"./scripts/remediation/board.mjs\";const j=p=>JSON.parse(fs.readFileSync(p)),t=j(\"docs/remediation/tracker.json\"),r=j(\"docs/remediation/evidence/W23.01/tracker-reconciliation.json\");for(const [id,value]of Object.entries(r.after))assert.deepEqual(t.packages.find(p=>p.id===id),value);for(const p of r.unchanged_package_pins)assert.equal(sha256(JSON.stringify(t.packages.find(x=>x.id===p.id))),p.sha256,p.id);assert.equal(sha256(JSON.stringify(t.journal)),r.journal_sha256);console.log(JSON.stringify({ok:true,at:new Date().toISOString(),journal:t.journal.length,W23_task_ids:t.packages.find(p=>p.id===\"W23\").decomposition.task_ids,W15_restored:true,other_packages_unchanged:r.unchanged_package_pins.length}));'",
+      "captures": [
+        {
+          "chunk_id": "932bde",
+          "wall_time_seconds": 0.020970924,
+          "exit_code": 0,
+          "original_token_count": 34,
+          "output": "{\"ok\":true,\"at\":\"2026-09-12T04:24:09.531Z\",\"journal\":1121,\"W23_task_ids\":[\"W23.01\"],\"W15_restored\":true,\"other_packages_unchanged\":39}\n"
+        }
+      ]
+    },
+    "exit_code": 0,
+    "drained": true,
+    "valid": true,
+    "note_counts": [
+      16282,
+      16282
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module -e 'import fs from'\\''node:fs'\\'';import assert from'\\''node:assert/strict'\\'';import{gunzipSync}from'\\''node:zlib'\\'';import{applyPatch}from'\\''diff'\\'';import{sha256,artifactDigest,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';const j=p=>JSON.parse(fs.readFileSync(p)),t=j('\\''docs/remediation/tracker.json'\\''),task=t.tasks.find(x=>x.id==='\\''W23.01'\\''),b=j('\\''docs/remediation/design/W23.01/baseline.json'\\''),a=j('\\''docs/remediation/evidence/W23.01/artifact.json'\\''),d=j('\\''docs/remediation/evidence/W23.01/source-deltas.json'\\'');assert.deepEqual(task.artifact,a);assert.equal(a.digest,artifactDigest(a));assert.equal(a.contract_digest,taskContractDigest(task));for(const f of a.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);for(const x of d.deltas){const before=gunzipSync(Buffer.from(b.owned.find(f=>f.path===x.path).content_gzip_base64,'\\''base64'\\'')).toString(),after=fs.readFileSync(x.path,'\\''utf8'\\'');assert.equal(applyPatch(before,x.forward),after,x.path);assert.equal(applyPatch(after,x.reverse),before,x.path);}console.log(JSON.stringify({ok:true,at:new Date().toISOString(),artifact:a.digest,files:a.files.length,source:b.pins.length,protected:b.pins.filter(f=>f.role==='\\''source'\\'').length,deltas:d.deltas.length,contract:a.contract_digest}));'",
+    "captures": [
+      {
+        "chunk_id": "550ca6",
+        "wall_time_seconds": 0.413765613,
+        "exit_code": 0,
+        "original_token_count": 63,
+        "output": "{\"ok\":true,\"at\":\"2026-09-12T04:18:46.758Z\",\"artifact\":\"33f4d52ecaf2a18bb84ce446482539f779a59b142b36ac10baf4c2dadffc499d\",\"files\":116,\"source\":108,\"protected\":105,\"deltas\":3,\"contract\":\"e6cc73fc693932020d5e81e74563a38a03c5eb4349fcef5c99e6aaef09fa10b7\"}\n"
+      }
+    ]
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_forward_arithmetic",
+    "package_W23": "open",
+    "finding_F18": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Next inspect and admit bounded W24 accumulation-configuration compatibility: prevent reward/objective/decay-horizon changes from silently relabeling incompatible item and slot history, while preserving compatible estimator-only settings. Inspect actual ingestion, publication and serving/cache consumers first; no implicit reset/generation rollout, old-state rewrite or historical reconstruction. W23 forward arithmetic is implemented; timestamp/lateness policy and historical repair remain open. No external/customer-policy/deployment authority is inferred."
+  },
+  "next_read_only_inspection": {
+    "status": "read_only_no_next_task_admitted",
+    "source_case": "LearnStats.candidate currently clones stored stats but replaces config wholesale with each supplied config; snapshot builds using stored config, while requests can mix objective/reward/tau histories. Complete W24/F19 and live snapshot consumers need admission-scoped inspection.",
+    "read_sources": [
+      "Document35 W24/F19",
+      "LearnStats.candidate/writeRows/snapshot/publish",
+      "stats.ts shared counters and snapshot"
+    ],
+    "not_authorized": "No source work/reset/generation rollout/customer lateness policy or historical rebuild under W23.01."
+  },
+  "limitations": "Forward arithmetic/precision correction only, within JavaScript floating-point tolerance. No repair/reset of damaged persisted item or slot counters, old rounded snapshots/archives or previously emitted reports; no historical re-fold, migration/generation marker, automatic replay/idempotency, timestamp/lateness or reward/currency/model-policy choice. Valid future timestamps remain an ingestion-integrity residual; existing caller/config validation is not a customer lateness policy. Full W23/F18 and W22/W24/W30 recovery, trustworthy measurement/customer/deployed SLO/release acceptance remain open. More precise JSON can reach existing byte budgets earlier; capacity guards must remain enforced. Preserve deterministic core, gamma0 and current priors/root-zero/clamps; human prose may round only for presentation. No external/cloud/resource/credential/customer-data/deploy/commit/push/cleanup authority."
+}

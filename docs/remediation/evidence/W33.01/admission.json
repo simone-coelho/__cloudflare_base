@@ -1,0 +1,49 @@
+{
+  "at": "2026-09-12T19:23:49.627Z",
+  "source_go_at": "2026-09-12T19:23:49.627Z",
+  "actor_id": "w01-lead",
+  "task_id": "W33.01",
+  "worker": "w1405-worker",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "2bec65459bb26297566c5ec273fb9fca3910fc5771c9183c5e025bc9f37aeb2e",
+  "plan": {
+    "path": "docs/remediation/design/W33.01/plan.md",
+    "sha256": "179492d94b54bfb45dca513f806a8557ffcc6f7198128e38f4b21bfb055b4551"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "8393bf",
+        "wall_time_seconds": 1.000927693,
+        "session_id": 33033,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f4c9bf",
+        "wall_time_seconds": 0.0000026,
+        "exit_code": 0,
+        "original_token_count": 556,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=26, unscoped=15\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=88, closed=2; evidence records=258\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.02 — Next admit the W33 forward report-integrity fix: custom reporting overlays must never overwrite canonical saved day reports consumed by window reporting. Read full W33/N09/F17/F25 and actual runReport/runDayReport/POST paths, choose a bounded no-write/custom-output correction, focused actual route checks and independent review; no historical/customer-data repair authority. Preserve W30.01 temporal and W30.02 coverage changes. Full W30 manifests/checkpoints/late-mutable reconstruction/capacity/seven-day/maturity and the recorded W28 legacy dormant-mode display residual remain open, not waived.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19274\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=26, unscoped=15\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=88, closed=2; evidence records=258\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.02 — Next admit the W33 forward report-integrity fix: custom reporting overlays must never overwrite canonical saved day reports consumed by window reporting. Read full W33/N09/F17/F25 and actual runReport/runDayReport/POST paths, choose a bounded no-write/custom-output correction, focused actual route checks and independent review; no historical/customer-data repair authority. Preserve W30.01 temporal and W30.02 coverage changes. Full W30 manifests/checkpoints/late-mutable reconstruction/capacity/seven-day/maturity and the recorded W28 legacy dormant-mode display residual remain open, not waived.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19274\n"
+      }
+    ],
+    "session_id": 33033,
+    "drained": true,
+    "exit_code": 0
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1261,
+    "pins": 32,
+    "protected": 29,
+    "authority": true,
+    "actual_package_matches": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true,
+    "remaining_closed_no_planned_overlap": true
+  },
+  "limitations": "Forward isolation of explicit custom policy arrays, including empty and built-in-equivalent arrays, from canonical day report persistence in the upgraded writer. Not full W33/N09/F17/F25 closure: historical overwrite detection/provenance and safe authorized repair remain open; no existing report is scanned, deleted or reconstructed. Old binaries and canonical-vs-canonical races/write acknowledgements remain unproved. Existing malformed non-array POST coercion/request validation remains unchanged; this is not a write-authorization boundary. Canonical raw fallback retains its existing history/cap limits. W30.01 attribution and W30.02 coverage remain implemented; broad shared artifact proof is explicitly qualified with accepted history preserved, not silently renewed. Legacy UI custom results/CSV are response-only; reload GET reads canonical, while ordinary console/scheduler null requests retain publication. No serving/attribution policy, report schema, identity/key format, additional I/O, new infrastructure, external/cloud/credential/customer-data/deployment/destructive/commit/push or customer-policy authority."
+}

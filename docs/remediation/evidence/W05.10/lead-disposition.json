@@ -1,0 +1,50 @@
+{
+  "task_id": "W05.10",
+  "at": "2026-09-17T06:20:59Z",
+  "actor_id": "w01-lead",
+  "verdict": "LOCAL_W05_IMPLEMENTED_AND_INDEPENDENTLY_VERIFIED; full acceptance withheld",
+  "artifact_digest": "071c304409f4a63666d0317bf6565656797a7e95263ef1d670bc883a98e725ba",
+  "contract_digest": "377488540d84dd99f9cdb663b287a044fb1fd7df29d3cda37b94cd245a7aaa0f",
+  "review": {
+    "path": "docs/remediation/evidence/W05.10/review-v2.json",
+    "sha256": "0e6141fe409b9600c5a6a02ebb46db5d522b86e16f1092635251c805e4374238"
+  },
+  "primary_records": [
+    {
+      "path": "docs/remediation/evidence/W05.10/worker.json",
+      "sha256": "e9e4bd93e37f8838f8a3a6296879bb7ea49354d8458eb5c10bc29a034cb78b87"
+    },
+    {
+      "path": "docs/remediation/evidence/W05.10/worker-v2.json",
+      "sha256": "2076373971f99765019e2868be3dab635f064898917484d17c00b6900251f477"
+    },
+    {
+      "path": "docs/remediation/evidence/W05.10/review.json",
+      "sha256": "c70203690e62d24c190c03c46f4f136fe257b29a450719f0328bb079a464a05a"
+    },
+    {
+      "path": "docs/remediation/evidence/W05.10/review-v2.json",
+      "sha256": "0e6141fe409b9600c5a6a02ebb46db5d522b86e16f1092635251c805e4374238"
+    },
+    {
+      "path": "docs/remediation/evidence/W05.10/source-freeze.json",
+      "sha256": "0ddb8ab809a593bec7aef6cef8610f1ab40d5c48c1480c01a1c9737fe9372e9a"
+    },
+    {
+      "path": "docs/remediation/evidence/W05.10/source-freeze-v2.json",
+      "sha256": "2bdfdf88717c0bf3b6fdc859ad77eb38b4fdf27c6b3a109ec9360961a082d645"
+    }
+  ],
+  "results": {
+    "K1": "Qualified component assurance: v1 full K1.7 exit1 with98pass/1fail/190unselected, then final W05.08 fixture +2/-1 and affected K1.8 threepass/97unselected;110other pins unchanged. R1 changes only5SDK outputs. Actual changed SDK dependency is superseded by independent W05.06 real-SDK/both-host1pass/99unselected. Source/delta review supports remaining unchanged server reuse; no whole final K1 command rerun.",
+    "K2": "Final worker R1.K2.2 exact build/four SDK fixtures66/66 (51retained+15new),12.32s. Actual source/ESM/IIFE full clients. Repeated supplied generator byte-identical; not a reviewer full-suite/build repeat.",
+    "K3": "Final R1.K3.2 SDK compiler/3-filelint/2-bundle syntax/5-filewhitespace exit0;6 exact inherited warnings, none added/resolved. Retain v1 server fullK3.5+affectedK3.6, composed228warnings=214inherited+14changed/new signatures,9resolved. SDK runtime/tests changed, server compiler not rerun; exact dependency review qualifies unchanged server component. No whole final static-command rerun.",
+    "K4": "Distinct full-original-W05/C1–C7 final source/delta/evidence review PASS_LOCAL. R1 shared decision classifier, final post-ack epoch/use-time return, populated-cache and callback/reentrancy protections inspected;2old OFF-recovery responses genuinely default, no affirmative carry or old assertion weakening. Local C1–C6 only; C7/K6 remains NOTRUN.",
+    "K5": "Independent frozen SDK W05.10 selector20pass/31unselected (6.21s), plus affected W05.06 actual-router/both-host1pass/99unselected (10.64s), each exit0.111pins match before/after. Retained v1 independent16server/273unselected uses unchanged owner/server/native-local components; prior5SDK now superseded by20. Not a whole original K5 final rerun. Supplemental diagnostics include missing synthetic sinks/mock fallback; no end-to-end delivery or deployed/browser claim."
+  },
+  "lead_checks": "Read complete independent final review; rechecked111currentpins,5R1forward/reverse deltas and106 unchanged inputs, original36dirty output baselines through immutable v1. Verified21worker-v2 compressed blocks and6review-v2 blocks, exact commands, counts and complete primary stdout/stderr. Old v1 verification retained. Root performed no product edits/tests.",
+  "resolution": "Explicit-choice/server per-switch30-day policy, both-host purpose/transition/physical necessary-copy controls and actual source/ESM/IIFE fail-closed decisions locally implemented and independently reviewed. R1 corrected; legitimate default/refusal acknowledgments and tokenless new-owner OFF recovery retained.",
+  "history": "All rejected/failed/partial evidence retained: v1 REWORK despite passed K5; R1 baseline15fail, later63pass/3fail and compilerfail. Baseline loop tails unexecuted; final66 and independent20 exercise both direct/hydrate and all selected loops. Warning debt/source-qualified component reuse remain explicit.",
+  "live": "C7/K6 selected deployment/resource/destination, real browser/storage/alarm and customer acceptance NOT RUN; fullW05/findings/privacy/legal/release open. W06 explicit per-category configuration approved separately, no concrete retention periods/historical deletion authority.",
+  "next_action": "Original W06.12 local implementation next under existing ordered mandate. This combined checkpoint registers immutable W05 local proof already qualified for planned W06 overlap; untouched component assurance remains reusable after source/dependency review. No extra deployment/checkpoint loop or external operation."
+}

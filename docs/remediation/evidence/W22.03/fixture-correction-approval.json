@@ -1,0 +1,9 @@
+{
+  "task_id": "W22.03",
+  "at": "2026-09-14T14:47:15.921Z",
+  "actor_id": "w01-lead",
+  "contract_digest": "5b7a8662e20d87e9771e6090773912524f389e84d7b3785e70525d5ebe88a39e",
+  "source_case": "Root read src/config/versionedStore.ts legacyJson: provider get(key,stream) is mandatory and parsed objects refuse. Existing W27.03 local KV fake returns parsed objects, so initial replay fails before its intended retained-dependency assertions. Second exact fixed9 worker-reported8/9 with slots revision1 missing (425531). This is a stale fixture incompatibility, not evidence that current lookup loses the record.",
+  "approved_change": "Within already-owned ledger.test.ts only, W27.03 KV fake returns fresh Response(raw).body or provider null; wrappers forward and assert requested stream mode. Keep all original success, revision mismatch, absence, sanitized failure, unauthorized, no-store/audit and no-write expectations. Diagnostic assertion reason retained. No production dependency changes, no extra test/suite, same fixed9/full static.",
+  "evidence": "Worker must retain first/second failed captures and final superseding validation; root/reviewer inspect actual fixture delta before acceptance."
+}

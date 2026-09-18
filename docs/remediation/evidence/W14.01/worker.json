@@ -1,0 +1,297 @@
+{
+  "task_id": "W14.01",
+  "actor_id": "w1401-worker",
+  "run_id": "/root/w1401_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-10T23:12:37.217Z",
+  "status": "ready_for_independent_review",
+  "source_stopped_at": "2026-09-10T23:11:27.531Z",
+  "admission": {
+    "plan": "docs/remediation/design/W14.01/plan.md",
+    "plan_sha256": "d392ef1547319035a397ecef016b9236b8819340801d307fcc4cd2c6e2aeb3d1",
+    "contract_digest": "591a44b564a9a2836092cb9935e0639c29ecedebad7f853077ab19cea43e2536",
+    "board": {
+      "session_id": 75842,
+      "chunk_id": "ec48b5",
+      "journal": 843,
+      "exit_status": 0,
+      "drained": true,
+      "status": "VALID",
+      "notes": 9227
+    },
+    "baseline": "docs/remediation/design/W14.01/baseline.json"
+  },
+  "summary": "Added a separate signed shopper /sort/intent endpoint and deterministic tenant-registry filtering helper. First canonical IDs control stock and filter eligibility; live server affinity ranks only eligible supplied candidates, preserving original feed ranks and post-ranking limits with truthful counts.",
+  "files": [
+    {
+      "path": "src/reflex/searchCandidates.ts",
+      "sha256": "70a1b115d9b733dd7e9c6f0f104001bb2ff4faa0db97106e642048d99313056e"
+    },
+    {
+      "path": "src/routes/sort.ts",
+      "sha256": "f00f9907a70ac915529be8d4a6137c7eafd89d347d64c4cb15c17b814ae90cab"
+    },
+    {
+      "path": "src/routes/sort.test.ts",
+      "sha256": "c8737cf306e89180f432ca41fb903eaf78da049d77c36b84e48955a7579861ca"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "e9eced8ca8e61756c581f61ee93dd804360cf8d0ea5110e287abd5711b823517"
+    }
+  ],
+  "preservation": {
+    "existing_sort_and_affinityFor_preserved": true,
+    "identity_capture": {
+      "command": "node --input-type=module -e 'import fs from \"node:fs\"; import crypto from \"node:crypto\"; import zlib from \"node:zlib\"; const paths=[\"src/reflex/searchCandidates.ts\",\"src/routes/sort.ts\",\"src/routes/sort.test.ts\",\"docs/kit/02-api-reference.md\"]; const baseline=JSON.parse(fs.readFileSync(\"docs/remediation/design/W14.01/baseline.json\",\"utf8\")); const old=baseline.owned.find(x=>x.path===\"src/routes/sort.ts\"); const before=zlib.gunzipSync(Buffer.from(old.content_gzip_base64,\"base64\")).toString(); const current=fs.readFileSync(old.path,\"utf8\"); const addedImport=current.split(\"\\n\").find(line=>line.includes(\"import { searchCandidates,\")); const preserved=current.replace(addedImport+\"\\n\",\"\").startsWith(before); if(!preserved) throw new Error(\"Existing sort route or helper changed\"); console.log(JSON.stringify({source_stopped_at:new Date().toISOString(),existing_sort_and_affinityFor_preserved:preserved,files:paths.map(path=>({path,sha256:crypto.createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\")}))},null,2));'",
+      "result": {
+        "chunk_id": "5bb749",
+        "wall_time_seconds": 0.000003806,
+        "exit_code": 0,
+        "original_token_count": 170,
+        "output": "{\n  \"source_stopped_at\": \"2026-09-10T23:11:27.531Z\",\n  \"existing_sort_and_affinityFor_preserved\": true,\n  \"files\": [\n    {\n      \"path\": \"src/reflex/searchCandidates.ts\",\n      \"sha256\": \"70a1b115d9b733dd7e9c6f0f104001bb2ff4faa0db97106e642048d99313056e\"\n    },\n    {\n      \"path\": \"src/routes/sort.ts\",\n      \"sha256\": \"f00f9907a70ac915529be8d4a6137c7eafd89d347d64c4cb15c17b814ae90cab\"\n    },\n    {\n      \"path\": \"src/routes/sort.test.ts\",\n      \"sha256\": \"c8737cf306e89180f432ca41fb903eaf78da049d77c36b84e48955a7579861ca\"\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"sha256\": \"e9eced8ca8e61756c581f61ee93dd804360cf8d0ea5110e287abd5711b823517\"\n    }\n  ]\n}\n"
+      }
+    },
+    "unowned_changes": "No worker edits outside the four admitted implementation/fixture/doc paths and this evidence file. Root owns protected-pin/freeze/governance review; existing worktree changes preserved.",
+    "ai_withdrawal": "src/index.ts, src/middleware/edgeAccess.ts, src/routes/ai.ts and existing sortCandidates.ts untouched; prior perimeter and signed DO/consent/config assurance reused, not newly re-proven."
+  },
+  "criteria": [
+    {
+      "id": "W14.01-C1",
+      "worker_result": "pass",
+      "evidence": "Three added route groups use exact configured dimensions, trim/casefold values, AND/OR filters, explicit true stock, first-ID dedupe before exclusion, derived configured band, no match, stable ties/original feedRank, default9 and postrank limit/counts. Pure helper negative covers missing stock and unusable IDs; unchanged sorter suite passes."
+    },
+    {
+      "id": "W14.01-C2",
+      "worker_result": "pass",
+      "evidence": "Real signed capabilities and SessionManager with synthetic KV exercise two distinct nondefault registries/live ordering/read-only warm and cold ranking. Controlled DO projection exercises signed tenant/subject transport, live ranking and consent envelopes. Stored/body/cookie refusal removes influence and drivers, preserving behavioral bytes; cold refusal creates only the admitted necessary preference record. Strict malformed/oversized/auth/ownership/cross-tenant/config failures remain generic, reject body affinity/query, and avoid unintended state lookup/writes. UTF-8 bytecap tested without and with dishonest Content-Length, auth before body pulls, and exact-cap acceptance."
+    },
+    {
+      "id": "W14.01-C3",
+      "worker_result": "pass_pending_independent_review",
+      "evidence": "Exactly three new grouped it cases in existing sort.test.ts; fixed two-file command passes25/25. No-emit compiler and scoped lint pass with same one historical no-explicit-any warning shifted92 to97 by new imports; no new warnings. Scoped tracked/untracked whitespace passes. Concise endpoint section retains partial scope; root must freeze/review/accept."
+    }
+  ],
+  "checks": [
+    {
+      "name": "baseline_lint",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/routes/sort.ts src/routes/sort.test.ts --format json",
+      "started_at": "2026-09-10T22:58:42.739Z",
+      "completion_observed_at": "2026-09-10T23:00:07.783Z",
+      "session_id": 4472,
+      "exit_status": 0,
+      "drained": true,
+      "captures": [
+        {
+          "chunk_id": "a9bd11",
+          "wall_time_seconds": 1.001683671,
+          "session_id": 4472,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "7c7890",
+          "wall_time_seconds": 5.001899944,
+          "session_id": 4472,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3cc3d7",
+          "wall_time_seconds": 5.001046567,
+          "session_id": 4472,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2d5722",
+          "wall_time_seconds": 5.001033244,
+          "session_id": 4472,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6914b6",
+          "wall_time_seconds": 0.000003428,
+          "exit_code": 0,
+          "original_token_count": 1962,
+          "output": "[{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/sort.test.ts\",\"messages\":[{\"ruleId\":\"@typescript-eslint/no-explicit-any\",\"severity\":1,\"message\":\"Unexpected any. Specify a different type.\",\"line\":92,\"column\":29,\"nodeType\":\"TSAnyKeyword\",\"messageId\":\"unexpectedAny\",\"endLine\":92,\"endColumn\":32,\"suggestions\":[{\"messageId\":\"suggestUnknown\",\"fix\":{\"range\":[5106,5109],\"text\":\"unknown\"},\"desc\":\"Use `unknown` instead, this will force you to explicitly, and safely assert the type is correct.\"},{\"messageId\":\"suggestNever\",\"fix\":{\"range\":[5106,5109],\"text\":\"never\"},\"desc\":\"Use `never` instead, this is useful when instantiating generic type parameters that you don't need to know the type of.\"}]}],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":1,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"source\":\"// src/routes/sort.test.ts\\n//\\n// The pure sorter is covered in sortCandidates.test.ts. This proves the route:\\n// the shape a commerce platform gets back, parity through the wire, and the two\\n// refusals.\\n\\nimport { describe, it, expect } from 'vitest';\\nimport { sortRoutes } from '@/routes/sort';\\nimport { newAnonymousSession, SHOPPER_HEADER } from '@/identity/sessionCapability';\\nimport type { Env } from '@/types/env';\\n\\nclass FakeKV {\\n  store = new Map<string, string>();\\n  async get(key: string, type?: string) { const r = this.store.get(key); return r === undefined ? null : (type === 'json' ? JSON.parse(r) : r); }\\n  async put(key: string, value: string) { this.store.set(key, value); }\\n  async delete(key: string) { this.store.delete(key); }\\n  async list(o?: { prefix?: string }) { const p = o?.prefix ?? ''; return { keys: [...this.store.keys()].filter((k) => k.startsWith(p)).map((name) => ({ name })) }; }\\n}\\n\\nfunction env(overrides: Record<string, unknown> = {}) {\\n  return {\\n    CACHE: new FakeKV(), SESSIONS: new FakeKV(),\\n    ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock',\\n    JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',\\n    ...overrides,\\n  } as unknown as Record<string, unknown>;\\n}\\n\\nconst FEED = [\\n  { id: 'P1', line: 'Rogue', price_usd: 795 },\\n  { id: 'P2', line: 'Tabby', price_usd: 380 },\\n  { id: 'P3', line: 'Tabby', price_usd: 350 },\\n];\\n\\nasync function post(body: unknown, e = env()) {\\n  const session = await newAnonymousSession(e as unknown as Env, 'coach');\\n  const input = body as { userId?: string };\\n  const target = input.userId && !input.userId.startsWith('t:') ? { ...input, userId: session.subject } : input;\\n  const res = await sortRoutes.request('/', {\\n    method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: session.capability }, body: JSON.stringify(target),\\n  }, e);\\n  return { status: res.status, body: (await res.json()) as Record<string, unknown> };\\n}\\n\\ndescribe('POST /sort', () => {\\n  it('returns the ids in an order, plus the receipt a commerce team can read', async () => {\\n    const { status, body } = await post({ userId: 'vis-new', candidates: FEED });\\n    expect(status).toBe(200);\\n    expect(body.ok).toBe(true);\\n    expect(body.order).toEqual(['P1', 'P2', 'P3']);       // no history: the platform's order stands\\n    expect(body.tenant).toBe('coach');\\n    expect(typeof body.configVersion).toBe('string');\\n    expect(Array.isArray(body.items)).toBe(true);\\n  });\\n\\n  it('reproduces the feed order at affinity 0, through the wire', async () => {\\n    const { body } = await post({ userId: 'vis-new', candidates: FEED, weights: { affinity: 0 } });\\n    expect(body.order).toEqual(['P1', 'P2', 'P3']);\\n    expect(body.affinityWeight).toBe(0);\\n  });\\n\\n  it('refuses a malformed body with 400, not 500', async () => {\\n    expect((await post({ candidates: FEED })).status).toBe(400);\\n    expect((await post({ userId: 'v', candidates: 'nope' })).status).toBe(400);\\n    expect((await post({ userId: 'v', candidates: [{ line: 'x' }] })).status).toBe(400);\\n    for (const consent of [null, false, [], { tracking: 'false' }, { personalization: 0 }]) {\\n      expect((await post({ userId: 'v', candidates: FEED, consent })).status).toBe(400);\\n    }\\n  });\\n\\n  it('W05.03 validates the DO consent envelope before returning a ranked receipt', async () => {\\n    for (const reply of [\\n      { status: 503, body: { ok: false } }, { status: 200, body: { ok: false } },\\n      { status: 200, body: { ok: true } }, { status: 200, body: { ok: true, consent: null } },\\n      { status: 200, body: { ok: true, consent: {} } }, { status: 200, body: { ok: true, consent: { tracking: 'false', personalization: true } } },\\n    ]) {\\n      const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json(reply.body, { status: reply.status }) }) } });\\n      const out = await post({ userId: 'v', candidates: FEED }, e);\\n      expect(out.status).toBeGreaterThanOrEqual(400); expect(out.body).not.toHaveProperty('items'); expect(out.body).not.toHaveProperty('order');\\n    }\\n  });\\n\\n  it('W05.03 uses the existing signed snapshot projection and never lets a zero dial substitute for an empty refused vector', async () => {\\n    const asked: Array<{ url: string; headers: Headers }> = [];\\n    const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async (url: string, init: RequestInit) => {\\n      asked.push({ url, headers: new Headers(init.headers) });\\n      return Response.json({ ok: true, consent: { tracking: false, personalization: true }, affinity: { dims: { line: { Tabby: 0.8 } } } });\\n    } }) } });\\n    for (const affinity of [0, 4]) {\\n      const { status, body } = await post({ userId: 'v', candidates: [...FEED, { id: ' P2 ', line: 'Rogue' }, { id: ' ' }], consent: { personalization: false }, weights: { affinity } }, e);\\n      expect(status).toBe(200); expect(body.order).toEqual(['P1', 'P2', 'P3']); expect(body.dropped).toBe(2); expect(body.affinityWeight).toBe(affinity);\\n      expect((body.items as any[]).every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);\\n    }\\n    expect(asked).toHaveLength(2);\\n    for (const request of asked) {\\n      expect(request.url).toBe('https://shopper-reflex/snapshot?projection=sort');\\n      expect(request.headers.get(SHOPPER_HEADER)).toMatch(/^ss1\\\\./);\\n      expect(request.headers.get('x-tenant')).toBe('coach');\\n      expect(request.headers.get('cookie')).toBe('opt_personalization_enabled=false');\\n    }\\n  });\\n\\n  it('bounds the candidate set, because a page of results is not a catalog', async () => {\\n    const huge = Array.from({ length: 501 }, (_, i) => ({ id: `P${i}` }));\\n    expect((await post({ userId: 'v', candidates: huge })).status).toBe(400);\\n  });\\n\\n  it('refuses a visitor id that addresses another brand, on the DO host', async () => {\\n    const asked: string[] = [];\\n    const e = env({\\n      REFLEX_HOST: 'do',\\n      SHOPPER_REFLEX: {\\n        idFromName: (n: string) => { asked.push(n); return n; },\\n        get: () => ({ fetch: async () => new Response(JSON.stringify({ affinity: { dims: {} } })) }),\\n      },\\n    });\\n    const { status } = await post({ userId: 't:kate-spade:vis-victim', candidates: FEED }, e);\\n    expect(status).toBe(401);\\n    expect(asked).toEqual([]);\\n  });\\n});\\n\",\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/sort.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]}]\n"
+        }
+      ]
+    },
+    {
+      "name": "primary",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/sort.test.ts src/reflex/sortCandidates.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-10T23:08:03.306Z",
+      "completion_observed_at": "2026-09-10T23:08:54.876Z",
+      "session_id": 21552,
+      "exit_status": 0,
+      "drained": true,
+      "captures": [
+        {
+          "chunk_id": "d2e285",
+          "wall_time_seconds": 1.000510141,
+          "session_id": 21552,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6fa74e",
+          "wall_time_seconds": 5.001588169,
+          "session_id": 21552,
+          "original_token_count": 124,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/sort.test.ts  (10 tests) 116ms\nstderr | src/routes/sort.test.ts > W14.01 POST /sort/intent > enforces owned consent, generic failures and authenticated streamed request bounds without behavior writes\n[config] read failed, serving fallback\n\n"
+        },
+        {
+          "chunk_id": "6aebdb",
+          "wall_time_seconds": 0.000002409,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": " ✓ src/reflex/sortCandidates.test.ts  (15 tests) 5ms\n\n Test Files  2 passed (2)\n      Tests  25 passed (25)\n   Start at  19:08:10\n   Duration  29.88s (transform 2.64s, setup 0ms, collect 6.25s, tests 121ms, environment 0ms, prepare 16.36s)\n\n"
+        }
+      ]
+    },
+    {
+      "name": "tsc",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "started_at": "2026-09-10T23:09:00.749Z",
+      "completion_observed_at": "2026-09-10T23:09:42.000Z",
+      "session_id": 95677,
+      "exit_status": 0,
+      "drained": true,
+      "captures": [
+        {
+          "chunk_id": "0c0101",
+          "wall_time_seconds": 1.00154998,
+          "session_id": 95677,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d0e4c5",
+          "wall_time_seconds": 5.001062121,
+          "session_id": 95677,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4a1d52",
+          "wall_time_seconds": 0.000001388,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ]
+    },
+    {
+      "name": "lint",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/searchCandidates.ts src/routes/sort.ts src/routes/sort.test.ts --format json",
+      "started_at": "2026-09-10T23:09:47.047Z",
+      "completion_observed_at": "2026-09-10T23:11:02.103Z",
+      "session_id": 51876,
+      "exit_status": 0,
+      "drained": true,
+      "captures": [
+        {
+          "chunk_id": "97eb3c",
+          "wall_time_seconds": 1.000681824,
+          "session_id": 51876,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b467b0",
+          "wall_time_seconds": 5.000730964,
+          "session_id": 51876,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "83a55f",
+          "wall_time_seconds": 0.00000256,
+          "exit_code": 0,
+          "original_token_count": 6139,
+          "output": "[{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/reflex/searchCandidates.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/sort.test.ts\",\"messages\":[{\"ruleId\":\"@typescript-eslint/no-explicit-any\",\"severity\":1,\"message\":\"Unexpected any. Specify a different type.\",\"line\":97,\"column\":29,\"nodeType\":\"TSAnyKeyword\",\"messageId\":\"unexpectedAny\",\"endLine\":97,\"endColumn\":32,\"suggestions\":[{\"messageId\":\"suggestUnknown\",\"fix\":{\"range\":[5493,5496],\"text\":\"unknown\"},\"desc\":\"Use `unknown` instead, this will force you to explicitly, and safely assert the type is correct.\"},{\"messageId\":\"suggestNever\",\"fix\":{\"range\":[5493,5496],\"text\":\"never\"},\"desc\":\"Use `never` instead, this is useful when instantiating generic type parameters that you don't need to know the type of.\"}]}],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":1,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"source\":\"// src/routes/sort.test.ts\\n//\\n// The pure sorter is covered in sortCandidates.test.ts. This proves the route:\\n// the shape a commerce platform gets back, parity through the wire, and the two\\n// refusals.\\n\\nimport { describe, it, expect, vi } from 'vitest';\\nimport { sortRoutes } from '@/routes/sort';\\nimport { newAnonymousSession, SHOPPER_HEADER } from '@/identity/sessionCapability';\\nimport type { Env } from '@/types/env';\\nimport { SessionManager } from '@/services/SessionManager';\\nimport { apply, emptyState, DEFAULT_REFLEX_CONFIG, type ReflexConfig } from '@/reflex/core';\\nimport { invalidateConfigCache, reflexScopeForTenant, writeReflexConfig } from '@/reflex/configStore';\\nimport { searchCandidates, type SearchResult } from '@/reflex/searchCandidates';\\nimport { tenantKey } from '@/tenancy/tenant';\\n\\nclass FakeKV {\\n  store = new Map<string, string>();\\n  async get(key: string, type?: string) { const r = this.store.get(key); return r === undefined ? null : (type === 'json' ? JSON.parse(r) : r); }\\n  async put(key: string, value: string) { this.store.set(key, value); }\\n  async delete(key: string) { this.store.delete(key); }\\n  async list(o?: { prefix?: string }) { const p = o?.prefix ?? ''; return { keys: [...this.store.keys()].filter((k) => k.startsWith(p)).map((name) => ({ name })) }; }\\n}\\n\\nfunction env(overrides: Record<string, unknown> = {}) {\\n  return {\\n    CACHE: new FakeKV(), SESSIONS: new FakeKV(),\\n    ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock',\\n    JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',\\n    ...overrides,\\n  } as unknown as Record<string, unknown>;\\n}\\n\\nconst FEED = [\\n  { id: 'P1', line: 'Rogue', price_usd: 795 },\\n  { id: 'P2', line: 'Tabby', price_usd: 380 },\\n  { id: 'P3', line: 'Tabby', price_usd: 350 },\\n];\\n\\nasync function post(body: unknown, e = env()) {\\n  const session = await newAnonymousSession(e as unknown as Env, 'coach');\\n  const input = body as { userId?: string };\\n  const target = input.userId && !input.userId.startsWith('t:') ? { ...input, userId: session.subject } : input;\\n  const res = await sortRoutes.request('/', {\\n    method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: session.capability }, body: JSON.stringify(target),\\n  }, e);\\n  return { status: res.status, body: (await res.json()) as Record<string, unknown> };\\n}\\n\\ndescribe('POST /sort', () => {\\n  it('returns the ids in an order, plus the receipt a commerce team can read', async () => {\\n    const { status, body } = await post({ userId: 'vis-new', candidates: FEED });\\n    expect(status).toBe(200);\\n    expect(body.ok).toBe(true);\\n    expect(body.order).toEqual(['P1', 'P2', 'P3']);       // no history: the platform's order stands\\n    expect(body.tenant).toBe('coach');\\n    expect(typeof body.configVersion).toBe('string');\\n    expect(Array.isArray(body.items)).toBe(true);\\n  });\\n\\n  it('reproduces the feed order at affinity 0, through the wire', async () => {\\n    const { body } = await post({ userId: 'vis-new', candidates: FEED, weights: { affinity: 0 } });\\n    expect(body.order).toEqual(['P1', 'P2', 'P3']);\\n    expect(body.affinityWeight).toBe(0);\\n  });\\n\\n  it('refuses a malformed body with 400, not 500', async () => {\\n    expect((await post({ candidates: FEED })).status).toBe(400);\\n    expect((await post({ userId: 'v', candidates: 'nope' })).status).toBe(400);\\n    expect((await post({ userId: 'v', candidates: [{ line: 'x' }] })).status).toBe(400);\\n    for (const consent of [null, false, [], { tracking: 'false' }, { personalization: 0 }]) {\\n      expect((await post({ userId: 'v', candidates: FEED, consent })).status).toBe(400);\\n    }\\n  });\\n\\n  it('W05.03 validates the DO consent envelope before returning a ranked receipt', async () => {\\n    for (const reply of [\\n      { status: 503, body: { ok: false } }, { status: 200, body: { ok: false } },\\n      { status: 200, body: { ok: true } }, { status: 200, body: { ok: true, consent: null } },\\n      { status: 200, body: { ok: true, consent: {} } }, { status: 200, body: { ok: true, consent: { tracking: 'false', personalization: true } } },\\n    ]) {\\n      const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json(reply.body, { status: reply.status }) }) } });\\n      const out = await post({ userId: 'v', candidates: FEED }, e);\\n      expect(out.status).toBeGreaterThanOrEqual(400); expect(out.body).not.toHaveProperty('items'); expect(out.body).not.toHaveProperty('order');\\n    }\\n  });\\n\\n  it('W05.03 uses the existing signed snapshot projection and never lets a zero dial substitute for an empty refused vector', async () => {\\n    const asked: Array<{ url: string; headers: Headers }> = [];\\n    const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async (url: string, init: RequestInit) => {\\n      asked.push({ url, headers: new Headers(init.headers) });\\n      return Response.json({ ok: true, consent: { tracking: false, personalization: true }, affinity: { dims: { line: { Tabby: 0.8 } } } });\\n    } }) } });\\n    for (const affinity of [0, 4]) {\\n      const { status, body } = await post({ userId: 'v', candidates: [...FEED, { id: ' P2 ', line: 'Rogue' }, { id: ' ' }], consent: { personalization: false }, weights: { affinity } }, e);\\n      expect(status).toBe(200); expect(body.order).toEqual(['P1', 'P2', 'P3']); expect(body.dropped).toBe(2); expect(body.affinityWeight).toBe(affinity);\\n      expect((body.items as any[]).every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);\\n    }\\n    expect(asked).toHaveLength(2);\\n    for (const request of asked) {\\n      expect(request.url).toBe('https://shopper-reflex/snapshot?projection=sort');\\n      expect(request.headers.get(SHOPPER_HEADER)).toMatch(/^ss1\\\\./);\\n      expect(request.headers.get('x-tenant')).toBe('coach');\\n      expect(request.headers.get('cookie')).toBe('opt_personalization_enabled=false');\\n    }\\n  });\\n\\n  it('bounds the candidate set, because a page of results is not a catalog', async () => {\\n    const huge = Array.from({ length: 501 }, (_, i) => ({ id: `P${i}` }));\\n    expect((await post({ userId: 'v', candidates: huge })).status).toBe(400);\\n  });\\n\\n  it('refuses a visitor id that addresses another brand, on the DO host', async () => {\\n    const asked: string[] = [];\\n    const e = env({\\n      REFLEX_HOST: 'do',\\n      SHOPPER_REFLEX: {\\n        idFromName: (n: string) => { asked.push(n); return n; },\\n        get: () => ({ fetch: async () => new Response(JSON.stringify({ affinity: { dims: {} } })) }),\\n      },\\n    });\\n    const { status } = await post({ userId: 't:kate-spade:vis-victim', candidates: FEED }, e);\\n    expect(status).toBe(401);\\n    expect(asked).toEqual([]);\\n  });\\n});\\n\\ndescribe('W14.01 POST /sort/intent', () => {\\n  type Grant = Awaited<ReturnType<typeof newAnonymousSession>>;\\n  type FixtureEnv = Env & { CACHE: FakeKV; SESSIONS: FakeKV };\\n  type Receipt = SearchResult & { ok: boolean; tenant: string; configVersion: string; error?: string };\\n  const specs = [\\n    { tenant: 'meridian', dimension: 'fabric', source: 'weave', favorite: 'Silk', values: ['Linen', 'Silk'], winner: 'p2' },\\n    { tenant: 'brighthour', dimension: 'tone', source: 'hue', favorite: 'Ocean', values: ['Ocean', 'Sand'], winner: 'p1' },\\n  ];\\n  const feed = [\\n    { id: 'p1', inStock: true, weave: 'Linen', hue: 'Ocean', uses: ['work'], amount: 45 },\\n    { id: 'p2', inStock: true, weave: 'Silk', hue: 'Sand', uses: ['work', 'travel'], amount: 45 },\\n  ];\\n  const config = (index = 0): ReflexConfig => {\\n    const spec = specs[index]!;\\n    return { ...DEFAULT_REFLEX_CONFIG, version: `w1401-${spec.tenant}`, tauMs: 1_000_000_000,\\n      weights: { product_view: 3 }, dimensions: [\\n        { key: spec.dimension, source: spec.source },\\n        { key: 'occasion', source: 'uses', multi: true },\\n        { key: 'priceBand', source: 'amount', derive: 'band', cuts: index ? [5, 15] : [30, 100], labels: ['low', 'middle', 'high'] },\\n      ] };\\n  };\\n  async function configured(overrides: Record<string, unknown> = {}) {\\n    invalidateConfigCache();\\n    const e = env({ TENANTS: JSON.stringify({ provisioned: specs.map(s => s.tenant) }), ...overrides }) as unknown as FixtureEnv;\\n    e.CACHE.store.set('reflex:config:brighthour:current', 'private-demo-config-marker');\\n    for (let i = 0; i < specs.length; i++) {\\n      expect((await writeReflexConfig(e, reflexScopeForTenant(specs[i]!.tenant), config(i), { actor: 'synthetic' })).ok).toBe(true);\\n    }\\n    return e;\\n  }\\n  async function warm(e: FixtureEnv, index = 0) {\\n    const spec = specs[index]!;\\n    const grant = await newAnonymousSession(e, spec.tenant);\\n    await new SessionManager(e, { tenant: spec.tenant, principal: grant }).createOrUpdateSession(grant.sessionId, grant.subject, {\\n      reflex: apply(emptyState(config(index)), { action: 'product_view', touches: [{ dim: spec.dimension, value: spec.favorite }] }, Date.now(), config(index)).state,\\n      preferences: { trackingConsent: true, personalizationEnabled: true, cookieConsent: true },\\n    });\\n    return grant;\\n  }\\n  const requestBody = (grant: Grant, overrides: Record<string, unknown> = {}) => ({\\n    userId: grant.subject, sessionId: grant.sessionId, candidates: feed, intent: { filters: [] }, ...overrides,\\n  });\\n  async function call(e: FixtureEnv, grant: Grant, overrides: Record<string, unknown> = {}, headers: Record<string, string> = {}) {\\n    const response = await sortRoutes.request('/intent', {\\n      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Tenant': grant.tenant, [SHOPPER_HEADER]: grant.capability, ...headers },\\n      body: JSON.stringify(requestBody(grant, overrides)),\\n    }, e);\\n    return { response, body: await response.json() as Receipt };\\n  }\\n\\n  it('uses two nondefault registries and the owned live profile on session and signed DO projection paths', async () => {\\n    const e = await configured();\\n    const grants = await Promise.all(specs.map((_, index) => warm(e, index)));\\n    const before = [...e.SESSIONS.store];\\n    for (let index = 0; index < specs.length; index++) {\\n      const spec = specs[index]!, grant = grants[index]!;\\n      const input = { surface: 'brighthour', intent: { filters: [{ dimension: spec.dimension, values: spec.values }] } };\\n      const { response, body } = await call(e, grant, input);\\n      expect(response.status).toBe(200); expect(response.headers.get('cache-control')).toBe('no-store');\\n      expect(body).toMatchObject({ ok: true, source: 'structured-intent', tenant: spec.tenant, configVersion: `w1401-${spec.tenant}+r1`, eligibleCount: 2 });\\n      expect(body.order[0]).toBe(spec.winner);\\n      expect(body.items[0]!.drivers).toEqual([expect.objectContaining({ dim: spec.dimension, value: spec.favorite })]);\\n      expect(body.items[0]!.score).toBeGreaterThan(0);\\n      expect((await call(e, grant, { ...input, weights: { affinity: 0 } })).body.order).toEqual(['p1', 'p2']);\\n      const cold = await newAnonymousSession(e, spec.tenant);\\n      expect((await call(e, cold, input)).body.order).toEqual(['p1', 'p2']);\\n\\n      const asked: Array<{ name: string; url: string; headers: Headers }> = [];\\n      const d = { ...e, REFLEX_HOST: 'do', SHOPPER_REFLEX: {\\n        idFromName: (name: string) => name,\\n        get: (name: string) => ({ fetch: async (url: string, init: RequestInit) => {\\n          asked.push({ name, url, headers: new Headers(init.headers) });\\n          return Response.json({ ok: true, consent: { tracking: true, personalization: true }, affinity: { dims: { [spec.dimension]: { [spec.favorite]: 0.8 } } } });\\n        } }),\\n      } } as unknown as FixtureEnv;\\n      expect((await call(d, grant, input)).body.order[0]).toBe(spec.winner);\\n      expect(asked).toHaveLength(1);\\n      expect(asked[0]!.name).toBe(tenantKey(spec.tenant, grant.subject));\\n      expect(asked[0]!.url).toBe('https://shopper-reflex/snapshot?projection=sort&surface=brighthour');\\n      expect(asked[0]!.headers.get(SHOPPER_HEADER)).toBe(grant.capability);\\n      expect(asked[0]!.headers.get('x-tenant')).toBe(spec.tenant);\\n    }\\n    expect([...e.SESSIONS.store]).toEqual(before);\\n    expect(e.CACHE.store.get('reflex:config:brighthour:current')).toBe('private-demo-config-marker');\\n  });\\n\\n  it('keeps first-ID eligibility, exact AND/OR filters, bands, original ranks and truthful prelimit counts', async () => {\\n    const e = await configured(), grant = await warm(e);\\n    const candidates = [\\n      { ...feed[1]!, id: ' unavailable ', inStock: false },\\n      { ...feed[1]!, id: 'unavailable' },\\n      { ...feed[0]!, id: 'filtered', uses: ['evening'] },\\n      { ...feed[1]!, id: ' filtered ' },\\n      { ...feed[0]!, id: 'linen', weave: ' LINEN ' },\\n      { ...feed[1]!, id: 'silk' },\\n      { ...feed[1]!, id: 'tie' },\\n      { ...feed[1]!, id: 'wrong-band', amount: 120 },\\n      { ...feed[1]!, id: 'not-substring', uses: ['workshop'] },\\n    ];\\n    const intent = { filters: [\\n      { dimension: 'fabric', values: [' linen ', 'SILK'] },\\n      { dimension: 'occasion', values: [' WORK ', 'travel'] },\\n      { dimension: 'priceBand', values: ['Middle'] },\\n    ] };\\n    const { response, body } = await call(e, grant, { candidates, intent, limit: 1 });\\n    expect(response.status).toBe(200); expect(body.order).toEqual(['silk']);\\n    expect(body).toMatchObject({ inputCount: 9, dropped: 2, filteredCount: 4, eligibleCount: 3 });\\n    expect(body.items[0]).toMatchObject({ id: 'silk', feedRank: 5, rank: 0 });\\n    const all = (await call(e, grant, { candidates, intent, limit: 500 })).body;\\n    expect(all.order).toEqual(['silk', 'tie', 'linen']);\\n    expect(all.items.map(item => item.feedRank)).toEqual([5, 6, 4]);\\n    const parity = (await call(e, grant, { candidates, intent, weights: { affinity: 0 } })).body;\\n    expect(parity.order).toEqual(['linen', 'silk', 'tie']);\\n    expect(parity.items.map(item => item.feedRank)).toEqual([4, 5, 6]);\\n    const none = (await call(e, grant, { candidates, intent: { filters: [{ dimension: 'occasion', values: ['missing'] }] } })).body;\\n    expect(none).toMatchObject({ order: [], items: [], eligibleCount: 0, filteredCount: 7, dropped: 2 });\\n    const ten = Array.from({ length: 10 }, (_, i) => ({ ...feed[0]!, id: `id-${i}` }));\\n    expect((await call(e, grant, { candidates: ten })).body).toMatchObject({ eligibleCount: 10, order: ten.slice(0, 9).map(p => p.id) });\\n    for (const filters of [\\n      [{ dimension: 'unknown', values: ['x'] }],\\n      [{ dimension: 'Fabric', values: ['Silk'] }],\\n      [{ dimension: 'fabric', values: ['Silk'] }, { dimension: ' fabric ', values: ['Linen'] }],\\n    ]) {\\n      const failed = await call(e, grant, { intent: { filters } });\\n      expect(failed.response.status).toBe(400); expect(failed.body).toEqual({ ok: false, error: 'Invalid intent filters' });\\n    }\\n    // Internal helper also fails stock closed and accounts for unusable IDs.\\n    expect(searchCandidates([{ id: ' ' }, { id: 'missing' }, { id: 'false', inStock: false }, { id: 'yes', inStock: true }], { filters: [] }, {}, config()))\\n      .toMatchObject({ order: ['yes'], inputCount: 4, dropped: 1, filteredCount: 2, eligibleCount: 1, items: [expect.objectContaining({ feedRank: 3 })] });\\n  });\\n\\n  it('enforces owned consent, generic failures and authenticated streamed request bounds without behavior writes', async () => {\\n    const e = await configured(), grant = await warm(e);\\n    const sessionReads = vi.spyOn(e.SESSIONS, 'get');\\n    const before = [...e.SESSIONS.store];\\n    for (const invalid of [\\n      { affinity: { fabric: { Silk: 1 } } }, { query: 'silk' }, { priceMax: 20 },\\n      { intent: { filters: [], query: 'silk' } }, { candidates: [{ id: 'x' }] },\\n      { candidates: [{ id: ' ', inStock: true }] }, { candidates: [{ id: 'x', inStock: 'true' }] },\\n      { candidates: [{ id: 'x', inStock: true, nested: { secret: true } }] },\\n      { candidates: Array.from({ length: 501 }, (_, i) => ({ id: `${i}`, inStock: true })) },\\n      { intent: { filters: Array.from({ length: 17 }, () => ({ dimension: 'fabric', values: ['Silk'] })) } },\\n      { intent: { filters: [{ dimension: 'fabric', values: Array(9).fill('Silk') }] } },\\n      { intent: { filters: [{ dimension: 'fabric', values: [] }] } },\\n      { intent: { filters: [{ dimension: 'fabric', values: ['x'.repeat(129)] }] } },\\n      { intent: { filters: [{ dimension: 'x'.repeat(65), values: ['Silk'] }] } },\\n      { weights: { affinity: -1 } }, { weights: { dims: { fabric: 11 } } },\\n      { limit: 0 }, { limit: 501 }, { limit: 1.5 }, { consent: { tracking: 'false' } },\\n    ]) {\\n      const out = await call(e, grant, invalid);\\n      expect(out.response.status).toBe(400); expect(out.body).toEqual({ ok: false, error: 'Invalid intent request' });\\n    }\\n    for (const overrides of [{ userId: 'vis-victim' }, { sessionId: 's-victim' }]) expect((await call(e, grant, overrides)).response.status).toBe(401);\\n    expect((await call(e, grant, {}, { 'X-Tenant': 'brighthour' })).response.status).toBe(401);\\n    expect(sessionReads).not.toHaveBeenCalled();\\n    expect([...e.SESSIONS.store]).toEqual(before);\\n\\n    async function streamed(text: string, authenticated: boolean, contentLength?: string) {\\n      let pulls = 0, cancelled = false;\\n      const chunks = new TextEncoder().encode(text);\\n      const stream = new ReadableStream<Uint8Array>({\\n        pull(controller) { pulls++; controller.enqueue(chunks); if (chunks.byteLength <= 256 * 1024) controller.close(); },\\n        cancel() { cancelled = true; },\\n      }, { highWaterMark: 0 });\\n      const headers = { 'Content-Type': 'application/json', 'X-Tenant': grant.tenant,\\n        ...(authenticated ? { [SHOPPER_HEADER]: grant.capability } : {}), ...(contentLength === undefined ? {} : { 'Content-Length': contentLength }) };\\n      const response = await sortRoutes.request(new Request('https://example.test/intent', {\\n        method: 'POST', headers, body: stream, duplex: 'half',\\n      } as RequestInit & { duplex: string }), undefined, e);\\n      return { response, pulls, cancelled, body: await response.json() };\\n    }\\n    const unauthorized = await streamed('x'.repeat(256 * 1024 + 1), false);\\n    expect(unauthorized.response.status).toBe(401); expect(unauthorized.pulls).toBe(0);\\n    for (const length of [undefined, '1']) {\\n      const oversized = await streamed(JSON.stringify(requestBody(grant, { candidates: [{ id: 'x', inStock: true, label: 'é'.repeat(128 * 1024) }] })), true, length);\\n      expect(oversized.response.status).toBe(413); expect(oversized.cancelled).toBe(true);\\n      expect(oversized.body).toEqual({ ok: false, error: 'Intent request too large' });\\n    }\\n    expect((await streamed('{broken', true)).response.status).toBe(400);\\n    expect(sessionReads).not.toHaveBeenCalled();\\n    const base = JSON.stringify(requestBody(grant, { candidates: [{ id: 'x', inStock: true, padding: '' }] }));\\n    const atLimit = base.replace('\\\"padding\\\":\\\"\\\"', `\\\"padding\\\":\\\"${'x'.repeat(256 * 1024 - new TextEncoder().encode(base).byteLength)}\\\"`);\\n    expect((await streamed(atLimit, true)).response.status).toBe(200);\\n\\n    for (const mode of ['stored', 'body', 'cookie'] as const) {\\n      const current = await warm(e);\\n      const key = tenantKey(current.tenant, `session:${current.sessionId}`);\\n      if (mode === 'stored') {\\n        const data = JSON.parse(e.SESSIONS.store.get(key)!);\\n        data.preferences.trackingConsent = false;\\n        e.SESSIONS.store.set(key, JSON.stringify(data));\\n      }\\n      const rawBefore = JSON.parse(e.SESSIONS.store.get(key)!);\\n      const out = await call(e, current, { weights: { affinity: 10 }, consent: mode === 'body' ? { personalization: false } : { tracking: true, personalization: true } },\\n        mode === 'cookie' ? { Cookie: 'opt_tracking_consent=false' } : {});\\n      expect(out.response.status).toBe(200); expect(out.body.order).toEqual(['p1', 'p2']);\\n      expect(out.body.items.every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);\\n      const rawAfter = JSON.parse(e.SESSIONS.store.get(key)!);\\n      expect(rawAfter.reflex).toEqual(rawBefore.reflex); expect(rawAfter.metadata).toEqual(rawBefore.metadata);\\n      expect((await call(e, current)).body.items.every(item => item.drivers.length === 0)).toBe(true);\\n    }\\n    const cold = await newAnonymousSession(e, grant.tenant);\\n    const coldBefore = new Set(e.SESSIONS.store.keys());\\n    expect((await call(e, cold, { consent: { tracking: false } })).response.status).toBe(200);\\n    const refusalKey = tenantKey(cold.tenant, `session:${cold.sessionId}`);\\n    expect([...e.SESSIONS.store.keys()].filter(key => !coldBefore.has(key))).toEqual([refusalKey]);\\n    const refusal = JSON.parse(e.SESSIONS.store.get(refusalKey)!);\\n    expect(refusal).not.toHaveProperty('reflex'); expect(refusal.metadata.sessionCount).toBe(0);\\n\\n    const asked: Headers[] = [];\\n    for (const reply of [\\n      { ok: true, consent: { tracking: false, personalization: true }, affinity: { dims: { fabric: { Silk: 0.9 } } } },\\n      { ok: true, consent: { tracking: true, personalization: true }, affinity: { dims: { fabric: { Silk: 0.9 } } } },\\n      { ok: true, consent: null, error: 'private-do-marker' }, { ok: false, error: 'private-do-marker' },\\n    ]) {\\n      const d = { ...e, REFLEX_HOST: 'do', SHOPPER_REFLEX: {\\n        idFromName: (name: string) => name, get: () => ({ fetch: async (_url: string, init: RequestInit) => {\\n          asked.push(new Headers(init.headers)); return Response.json(reply);\\n        } }),\\n      } } as unknown as FixtureEnv;\\n      const out = await call(d, grant, { consent: { personalization: false } });\\n      if (reply.ok && reply.consent) {\\n        expect(out.response.status).toBe(200); expect(out.body.order).toEqual(['p1', 'p2']);\\n        expect(out.body.items.every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);\\n      } else {\\n        expect(out.response.status).toBe(503); expect(out.body).toEqual({ ok: false, error: 'Intent ranking unavailable' });\\n      }\\n    }\\n    expect(asked.every(headers => headers.get('cookie') === 'opt_personalization_enabled=false' && headers.get(SHOPPER_HEADER) === grant.capability)).toBe(true);\\n    invalidateConfigCache();\\n    e.CACHE.store.set(`reflex:config:${grant.tenant}:current`, 'private-config-marker');\\n    const unavailable = await call(e, grant);\\n    expect(unavailable.response.status).toBe(503); expect(unavailable.body).toEqual({ ok: false, error: 'Intent ranking unavailable' });\\n    sessionReads.mockRestore();\\n  });\\n});\\n\",\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/sort.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]}]\n"
+        }
+      ]
+    },
+    {
+      "name": "whitespace",
+      "command": "git diff --check -- src/reflex/searchCandidates.ts src/routes/sort.ts src/routes/sort.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-10T23:10:08.359Z",
+      "completion_observed_at": "2026-09-10T23:10:08.736Z",
+      "session_id": null,
+      "exit_status": 0,
+      "drained": true,
+      "captures": [
+        {
+          "chunk_id": "fea31e",
+          "wall_time_seconds": 0.207075325,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ]
+    },
+    {
+      "name": "new_whitespace",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\"; import assert from \"node:assert/strict\"; const path=\"src/reflex/searchCandidates.ts\"; const source=fs.readFileSync(path,\"utf8\"); assert(!/[\\t ]+$/m.test(source)); assert(source.endsWith(\"\\n\")); assert(!source.endsWith(\"\\n\\n\")); console.log(\"Untracked searchCandidates.ts whitespace PASS\");'",
+      "started_at": "2026-09-10T23:10:15.677Z",
+      "completion_observed_at": "2026-09-10T23:10:15.794Z",
+      "session_id": null,
+      "exit_status": 0,
+      "drained": true,
+      "captures": [
+        {
+          "chunk_id": "23adaa",
+          "wall_time_seconds": 0.000006072,
+          "exit_code": 0,
+          "original_token_count": 12,
+          "output": "Untracked searchCandidates.ts whitespace PASS\n"
+        }
+      ]
+    }
+  ],
+  "validation_summary": {
+    "primary": {
+      "files": 2,
+      "tests": 25,
+      "route_tests": 10,
+      "pure_sorter_tests": 15,
+      "reported_duration_seconds": 29.88,
+      "route_fixture_ms": 116,
+      "pure_fixture_ms": 5
+    },
+    "compiler": "exit0; no output",
+    "lint": "exit0,0errors,1pre-existing warning; baseline sort.test.ts:92 now97, no-explicit-any, unchanged assertion.",
+    "whitespace": "Scoped git diff --check exit0 plus explicit new-module trailing-whitespace/final-newline check exit0.",
+    "failures": [],
+    "expected_diagnostics": [
+      "Vite CJS Node API deprecation notice.",
+      "[config] read failed, serving fallback: synthetic invalid nondefault config test; route returned generic503 and no candidate result."
+    ]
+  },
+  "changes_after_primary": [
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "description": "Lead requested deleting an unestablished site-credential requirement from the new endpoint section; retained actual canonical X-Tenant plus X-Shopper-Session boundary. Documentation-only change; no runtime rerun."
+    }
+  ],
+  "limitations": [
+    "This is a structured-intent candidate-page ranking leg only. No natural-language interpretation, catalog retrieval/membership proof, inventory freshness validation, numeric-price/currency/gift policy or completed v8 §1.10 acceptance.",
+    "Commerce caller supplies candidate IDs, attributes and stock assertions. Existing extractTouches/sortCandidates semantics are reused; no new taxonomy or runtime model/provider/external calls.",
+    "Controlled DO replies verify this route's use of the existing signed projection interface; they are not native Durable Object, deployed host, complete perimeter/privacy or customer-runtime proof.",
+    "Fixture durations are local Node/Vitest timings, not a latency/SLO/scale or relevance-lift qualification. Installed runtime graph not exhaustively traced.",
+    "Necessary existing refusal preference persistence is retained, including a minimal cold refusal record; ranking does not create or advance behavioral history, visits, events, queues or learning.",
+    "Full W14 enrichment/review/publication, product-decision persistence, entitlement, external/SFCC/customer acceptance, typed historical audiences, warehouse landing/readback/deletion, optional widgets/tag-plan handoff and applicable customer/model/scope decisions remain open.",
+    "Independent review, root freeze and lead acceptance remain pending. No package/finding/gate/customer/release closure is claimed."
+  ],
+  "metadata_correction": {"at":"2026-09-10T23:14:30.923Z","prior_record_sha256":"49fe9f49a8cc599226975acb3b8fafd234e0884f18912683e6726505f9d1c6ac","change":"Corrected two overescaped command strings from original retained tool inputs (identity capture and new-module whitespace). Outputs, source hashes, source STOP and validation unchanged; no source edit or check rerun."},
+  "handoff": {
+    "pending_sessions": [],
+    "next_action": "Root freezes exact four source hashes and own evidence, then independent Astra/xhigh reviewer inspects actual artifact/full outputs and runs the same fixed two-file suite once. Root owns tracker/journal/RESUME and final acceptance.",
+    "rollback": "Root-reviewed exact inverse deltas against recorded baseline only; preserve unrelated worktree changes.",
+    "external_operations": "None; no deploy/provision/seed/build/install/cloud/resource/credential/customer-data/commit/push/cleanup or external messages."
+  }
+}

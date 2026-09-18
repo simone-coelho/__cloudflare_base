@@ -1,0 +1,28 @@
+{
+  "task_id": "W35.03",
+  "at": "2026-09-15T23:00:18.645Z",
+  "plan": {
+    "path": "docs/remediation/design/W35.03/plan.md",
+    "sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W35.03/baseline.json",
+    "sha256": "4f42d52a8aa4687b88182708ea3e3da85d61b09f8a8dc5b42db41f3dae87054f"
+  },
+  "contract_digest": "0046f1b04a0e82a0388d32bec7300870adc7dded8c16a69b7408fb639bcd35b1",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T23:00:18.645Z",
+    "plan_sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d",
+    "rationale": "Complete W35/linked source read and source-confirmed failure analysis; amended bounded plan passed distinct Astra/xhigh exact-plan review. D03 local DO direction, implemented/current-green W35.01 behavior and accepted W35.02 invariants reused."
+  },
+  "independent_preflight": {
+    "actor_id": "w3503-reviewer",
+    "run_id": "/root/w3503_stale_session_investigation",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "plan_sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d",
+    "result": "PASS after bounded rework: authoritative latest membership publication and immutable transfer identity separated from monotone consent tightening."
+  },
+  "limitations": "Local DO link transfer only. No stale-grant detach/erase/socket revocation, complete erasure epoch/race, host toggle, migration, historical repair, deployment, new retention/privacy policy, native/customer/SLO/release acceptance or full W35/F14 closure."
+}

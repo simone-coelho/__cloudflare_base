@@ -1,0 +1,269 @@
+{
+  "at": "2026-09-13T23:49:20.110Z",
+  "task_id": "W15.01",
+  "contract_digest": "1974a51270a1c2079305a03643c84816bf920ecca5de608a3ff0eab9de1c8fbf",
+  "source": "Root inspected6 scoped before/after source files and complete final worker captures; fixed28, both compilers and scoped lint/whitespace passed,36protected pins match. Generic update finite high-water/bounded exact-payload echoes and reentrant delivery/returned-response ownership with paired SDK artifacts. No customer lists/default assets or new infrastructure; frozen independent review remains required.",
+  "source_stopped_at": "2026-09-13T23:47:01.776Z",
+  "root_read_captures": [
+    "14e2f4",
+    "ab6c47",
+    "a4c42d",
+    "8b17aa"
+  ],
+  "owned_whitespace": {
+    "method": "Final lines compared with retained before bytes; only unchanged inherited whitespace allowed; covers every owned file including inherited untracked diagnostics.",
+    "results": [
+      {
+        "path": "src/sdk/core.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/sdk/core.test.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/sdk/README.md",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "docs/kit/01-integration-guide.md",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      }
+    ]
+  },
+  "owned": [
+    "src/sdk/core.ts",
+    "src/sdk/core.test.ts",
+    "public/sdk/edge-personalization.js",
+    "public/sdk/edge-personalization.esm.js",
+    "src/sdk/README.md",
+    "docs/kit/01-integration-guide.md"
+  ],
+  "pins": [
+    {
+      "path": "src/sdk/core.ts",
+      "role": "output",
+      "sha256": "d183cc129206527fe5df917502d88904c86728afea3b5a15f8a9058c64c834eb"
+    },
+    {
+      "path": "src/sdk/core.test.ts",
+      "role": "output",
+      "sha256": "03fabdabb697327c07dff18f32057cc727662285019fd13d5706aa35d77b411f"
+    },
+    {
+      "path": "public/sdk/edge-personalization.js",
+      "role": "output",
+      "sha256": "90aded65709ceb8210a9eb05a4795cb660527eccc18ddb0a6eef13f3a412a85c"
+    },
+    {
+      "path": "public/sdk/edge-personalization.esm.js",
+      "role": "output",
+      "sha256": "2d40227cd42188fe035d5670a8483c52d16ddc6c3f4fe21218981c2f19206e39"
+    },
+    {
+      "path": "src/sdk/README.md",
+      "role": "output",
+      "sha256": "0b168c6bff7721d3b36017af1592dde64d7cf806e261198ece8fb8fcdce0cb15"
+    },
+    {
+      "path": "docs/kit/01-integration-guide.md",
+      "role": "output",
+      "sha256": "cd70821538959e2f1d92b6e4f8282b02fa31377415172e73b7a24c230686dba8"
+    },
+    {
+      "path": "src/sdk/listen.ts",
+      "role": "source",
+      "sha256": "2dc1611cc79a94b9f350a5d9c36e42a61cb493390fb7c436989a1b4a6892e677"
+    },
+    {
+      "path": "src/sdk/listen.test.ts",
+      "role": "source",
+      "sha256": "005f1da20f19e56403c6e7008e3bf332b6af5b245329b50c1efac65ff44d9d21"
+    },
+    {
+      "path": "public/storefront.js",
+      "role": "source",
+      "sha256": "fb7abcd55b5f935ce569ed22fde724ee03676a9a22d147118b063ce00f6e5b67"
+    },
+    {
+      "path": "src/sdk/types.ts",
+      "role": "source",
+      "sha256": "d55a4a84b3ca1807260b56acf575d85b8aa2c9e1d77be638d481e3283b699afb"
+    },
+    {
+      "path": "src/sdk/testHost.ts",
+      "role": "source",
+      "sha256": "5104d089455694ef802507f8188af6e9fedcfa3604f8a2e5226da6b249ac7842"
+    },
+    {
+      "path": "src/sdk/identity.ts",
+      "role": "source",
+      "sha256": "a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f"
+    },
+    {
+      "path": "src/sdk/wire.ts",
+      "role": "source",
+      "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+    },
+    {
+      "path": "src/events/actionTypes.ts",
+      "role": "source",
+      "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3"
+    },
+    {
+      "path": "src/sdk/emit.ts",
+      "role": "source",
+      "sha256": "4fc50a87c17cdfda2eb4fefdef5bb10017392db42f9ea941485154d1da2c10b6"
+    },
+    {
+      "path": "src/sdk/identify.ts",
+      "role": "source",
+      "sha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1"
+    },
+    {
+      "path": "src/sdk/memoryHost.ts",
+      "role": "source",
+      "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+    },
+    {
+      "path": "src/sdk/host.ts",
+      "role": "source",
+      "sha256": "f0e8f50d96fbf0108defa76808270c5c2f08a43b5c2d32f0e31d65e39263f92d"
+    },
+    {
+      "path": "src/sdk/version.ts",
+      "role": "source",
+      "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+    },
+    {
+      "path": "src/sdk/index.ts",
+      "role": "source",
+      "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+    },
+    {
+      "path": "src/sdk/browser.ts",
+      "role": "source",
+      "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+    },
+    {
+      "path": "scripts/build-sdk.mjs",
+      "role": "source",
+      "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79"
+    },
+    {
+      "path": "src/sdk/tsconfig.json",
+      "role": "source",
+      "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "role": "source",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F26.md",
+      "role": "source",
+      "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F28.md",
+      "role": "source",
+      "sha256": "121a07ed372126d8e1741d374865e8af6eef55357b76a955b4db18fba236da9f"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F29.md",
+      "role": "source",
+      "sha256": "152dc5d717c42e1590fae470a52a01cd35860f72ec9d82c669c2843700bdf996"
+    },
+    {
+      "path": "docs/architecture/18-content-affinity-engine.md",
+      "role": "source",
+      "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+    },
+    {
+      "path": "docs/PS-Implementation-Delivery-Guide.md",
+      "role": "source",
+      "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+    },
+    {
+      "path": "docs/Tapestry-Scope-Questions-Answers.md",
+      "role": "source",
+      "sha256": "84db3ca353f907fc2e170ed4ba4307a6a785c9b7c8c77d161eb2a40d8071e844"
+    },
+    {
+      "path": "docs/content-personalization-design-tapestry.html",
+      "role": "source",
+      "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+    },
+    {
+      "path": "src/sdk/session.test.ts",
+      "role": "source",
+      "sha256": "40d4540b8c41750030ace414b4e4b957c201868f9b59b98064bd98cd02210adf"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F12.md",
+      "role": "source",
+      "sha256": "ab0f06017342d01d74a03ed82693ffdb9ee065f1f4f740dd46e4babd96223957"
+    },
+    {
+      "path": "src/learn/fan.ts",
+      "role": "source",
+      "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "role": "source",
+      "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da"
+    },
+    {
+      "path": "src/content/service.ts",
+      "role": "source",
+      "sha256": "2dbb3ea87ffa67d34e2acb2088e68fe9f7798959226689daa1f8d903353aadcd"
+    },
+    {
+      "path": "src/ledger/records.ts",
+      "role": "source",
+      "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+    }
+  ],
+  "unowned_unchanged": 36
+}

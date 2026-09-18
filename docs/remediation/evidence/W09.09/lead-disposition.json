@@ -1,0 +1,54 @@
+{
+  "task_id": "W09.09",
+  "at": "2026-09-17T21:55:58Z",
+  "actor_id": "w01-lead",
+  "verdict": "LOCAL_W09_IMPLEMENTED_AND_INDEPENDENTLY_VERIFIED; full acceptance withheld",
+  "artifact_digest": "af9af103b3e5099638ed1bbce4b2e5f26cca0cb8217b032e1bc91a57c80b685d",
+  "contract_digest": "ea9b09b82fe2a51aff057120bac7c3cc0b2067f54eed3356af0ba137cfd6a70b",
+  "review": {
+    "path": "docs/remediation/evidence/W09.09/review-r2.json",
+    "sha256": "7cec7616404dc4595aa70593a36ba8cb92a2339d1feeb5a77b68e2e55bd56a69"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W09.09/worker-r2.json",
+    "sha256": "678fc0483c4839d1468d46c0a16ec2870ba34c66ba36e00f791824f9aadc0900"
+  },
+  "source_freeze": {
+    "path": "docs/remediation/evidence/W09.09/source-freeze-r2.json",
+    "sha256": "1c070a33f6dee954ba26fafdaf5767ae24ac5e8b2732e5527c61e8f3d9539dac"
+  },
+  "results": {
+    "K1": "Source-qualified unchanged ledger/erasure23pass from R.K1.1; affected actual-ring/owner integration freshly covered.",
+    "K2": "Exact final-source23pass/23unselected R2.K2.1.",
+    "K3": "Exact final-source11pass/134unselected R2.K3.1.",
+    "K4": "Exact final-source5pass/62unselected R2.K4.1; native retries/healthy-once/DLQ/persisted sink/outbound0/disposed.",
+    "K5": "Source-qualified unchanged workflow7pass R.K5.1 including intake policy and both-queue restore.",
+    "K6": "Final Worker compiler/two-file lint0errors4inheritedwarnings/whitespace; unchanged remaining30TS lint/2JSsyntax/35filewhitespace reused from R.K6.2.174combined warnings all inherited. Not a full final K6 command rerun.",
+    "K7": "Distinct whole-originalW09/C1–C8 actual source/delta/primary review PASS_LOCAL; original four findings and residual alarm expiry independently resolved.",
+    "K8": "Exact independent final frozen new-group command PASS18runtime+3workflow; complete primary d05338457d68b7ca3ecfc2c8a0257680ed18fd126e15d9eaca5a33c0e5fd38ff/48566B and102before/after pins in review-r2.json.",
+    "K9": "NOT_RUN; full/live final authorized batch."
+  },
+  "lead_checks": "Standing agreement/full-originalW09 checked; all final102pins,2new reversible deltas and5new primary integrities verified; retained original37/r1-15 delta/primary assurance reused. Read distinct final whole review and complete K8 primary; root made no product edits/tests.",
+  "limits": "All worker/reviewer sessions drained, source/evidence stopped. C9/K9 full/live/customer/resource/activation/actual-policy/disposal/legacy/history/provider/SLO remains OPEN; not finding/customer/release closure. Earlier failed tests and rejected reviews immutable.",
+  "next_action": "OriginalW10 local implementation in order; final separately authorized live batch remains open.",
+  "prospective_overlap": {
+    "next_task": "W10.03",
+    "paths": [
+      "src/learn/fan.ts",
+      "src/durable-objects/DecisionRing.ts",
+      "src/durable-objects/LearnStats.ts",
+      "src/content/service.ts",
+      "src/routes/decisions.ts",
+      "src/customerBoundary.ts",
+      "src/auth/store.ts",
+      "src/auth/subjectAudit.ts",
+      "src/learn/learn.test.ts",
+      "src/content/consent.test.ts",
+      "src/index.api-boundary.test.ts",
+      "docs/kit/02-api-reference.md",
+      "src/learn/stats.ts",
+      "src/learn/priors.ts"
+    ],
+    "qualification": "Only these admitted shared source pins prospectively revalidate; immutable W09 local PASS and all untouched assurance retained."
+  }
+}

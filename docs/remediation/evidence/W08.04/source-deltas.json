@@ -1,0 +1,16 @@
+{
+  "at": "2026-09-10T22:37:52Z",
+  "task_id": "W08.04",
+  "basis": "Exact admitted before bytes and root frozen source; bidirectional patches verified in memory, no rollback performed.",
+  "deltas": [
+    {
+      "path": "package.json",
+      "original_absent": false,
+      "before_sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c",
+      "after_sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+      "changed": true,
+      "forward": "Index: package.json\n===================================================================\n--- package.json\n+++ package.json\n@@ -4,9 +4,9 @@\n   \"description\": \"Comprehensive Cloudflare Workers platform with tracking, personalization, and experimentation\",\n   \"main\": \"src/index.ts\",\n   \"scripts\": {\n     \"dev\": \"npm run build:meridian && npm run build:sdk && wrangler dev\",\n-    \"deploy\": \"npm run build:meridian && npm run build:sdk && wrangler deploy\",\n+    \"deploy\": \"bash scripts/deploy.sh\",\n     \"build\": \"echo 'No build required for TypeScript with Cloudflare Workers'\",\n     \"build:island\": \"node scripts/build-island.mjs\",\n     \"build:sdk\": \"node scripts/build-sdk.mjs\",\n     \"tail\": \"wrangler tail\",\n",
+      "reverse": "Index: package.json\n===================================================================\n--- package.json\n+++ package.json\n@@ -4,9 +4,9 @@\n   \"description\": \"Comprehensive Cloudflare Workers platform with tracking, personalization, and experimentation\",\n   \"main\": \"src/index.ts\",\n   \"scripts\": {\n     \"dev\": \"npm run build:meridian && npm run build:sdk && wrangler dev\",\n-    \"deploy\": \"bash scripts/deploy.sh\",\n+    \"deploy\": \"npm run build:meridian && npm run build:sdk && wrangler deploy\",\n     \"build\": \"echo 'No build required for TypeScript with Cloudflare Workers'\",\n     \"build:island\": \"node scripts/build-island.mjs\",\n     \"build:sdk\": \"node scripts/build-sdk.mjs\",\n     \"tail\": \"wrangler tail\",\n"
+    }
+  ]
+}

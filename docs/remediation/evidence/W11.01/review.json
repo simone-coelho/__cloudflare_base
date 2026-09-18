@@ -1,0 +1,170 @@
+{
+  "task_id": "W11.01",
+  "actor_id": "w1101-reviewer",
+  "run_id": "/root/w1101_design_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "verdict": "pass",
+  "at": "2026-09-11 03:26:49 UTC",
+  "artifact_digest": "df6bd826171cfcd029a971a5ca7071629389977d302a0c68492ffbffb5fc510a",
+  "contract_digest": "fb4afb32d3f909909870c6b7de232eab00e74762cbadf114cd7b656b0b714e13",
+  "summary": "C1-C3 pass for the integrated local content-only conditional R2 publication path. Independent fixed primary passed40/40 on frozen bytes. Explicit activation, legacy recovery, full W11 and customer/release acceptance remain separate; lead disposition is pending.",
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W11.01/plan-v2.md",
+      "sha256": "5ee066b9c819c187d4d23627f39994bc0cc2a61689bdc6946d486f14a0f4eeaf"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W11.01/artifact.json",
+      "sha256": "149b73911ab4903da724f60313cd26e394bd9cc6e398a3e69d0936688927981b"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W11.01/worker.json",
+      "sha256": "a9a0a96730da4edbdb946088cdd7d68198cf5dca19ac83ce935fc644674d6fe8"
+    },
+    "source_stopped_at": "2026-09-11T03:19:00Z",
+    "source_frozen_at": "2026-09-11T03:21:20Z",
+    "review": "Read complete admitted task/plan-v2/clarifications and source/delta/evidence records, actual publication/store dispatch/catalog routes/service catch and both focused fixtures, unchanged operator/tenant/validator/import/replay boundaries and kit contract. Reused this independent run's earlier complete governance/canonical W11/F15/F24/customer-source preflight. Reconstructed admitted before bytes and verified all8forward/reverse patches against final bytes in memory; no source mutation."
+  },
+  "criteria": [
+    {
+      "id": "W11.01-C1",
+      "verdict": "pass",
+      "evidence": "Conditional pending head reservation serializes expected-base catalog publication; immutable numeric body precedes CAS pointer/index finalization and strict readback. Other operation/actor/request/base conflicts cannot overwrite revisions. Existing fixtures verify concurrent/stale writes, same-operation late receipt replay, exact-base merge and patch, forward rollback, old numeric lookup after50-summary eviction, cross-bucket/tenant identity and explicit historical floor. Native two distinct workers share actual in-memory R2 and produce one success/one409. Content-name dispatch prevents a markerless caller from falling through to KV; every current generic catalog read/write/history/replay caller consumes the new authority."
+    },
+    {
+      "id": "W11.01-C2",
+      "verdict": "pass",
+      "evidence": "Six pre/post-put failure positions each for normal publication and library-only initialization retain truthful state and recover exact intent; ordinary pending readers retain previous committed body, above-head bodies are not published history, mismatched immutable bodies remain untouched, authorized successor recovery retains original attribution. Explicit uninitialized/corrupt/read/metadata/2MiB/version/safe-counter guards,500-piece supported fixture, no fallback/error refresh and immutable read-start30s cache behavior pass. Actual Hono/JWT/tenant routes in both modes reject missing/invalid preconditions, untyped/ungranted/foreign/duplicate/encoded-kind selectors before relevant effects; stale/pending pull refuses before refetch and explicit recovery uses stored intent. Service aggregate document failure invokes owned refusal once and unsigned refused input never gains shopper access; unchanged underlying shopper authority assurance is reused."
+    },
+    {
+      "id": "W11.01-C3",
+      "verdict": "pass",
+      "evidence": "Exactly8admitted source/fixture/doc deltas verified bidirectionally;31artifact pins,24freeze pins and16protected baseline sources match. Artifact and task-contract digests recomputed; all10worker command hashes and36capture hashes verified. Independent exact fixed primary40/40 passes on final frozen source and native input hashes match current publication/store/kinds. Final compiler/scoped lint/whitespace evidence reused with invocation/failure qualifications preserved. Existing enrichment and other-kind/auth fixture assertions remain passing; no full-package, deployed or customer acceptance is inferred."
+    }
+  ],
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/routes/content.test.ts --maxWorkers=1 --minWorkers=1",
+    "started_at": "2026-09-11 03:23:15 UTC",
+    "captures": [
+      {
+        "chunk_id": "18607a",
+        "wall_time_seconds": 1.001895063,
+        "session_id": 76304,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "beccf5",
+        "wall_time_seconds": 5.001747344,
+        "session_id": 76304,
+        "original_token_count": 60,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+      },
+      {
+        "chunk_id": "e09e48",
+        "wall_time_seconds": 5.000887921,
+        "session_id": 76304,
+        "original_token_count": 13,
+        "output": " ✓ src/routes/content.test.ts  (18 tests) 1418ms\n"
+      },
+      {
+        "chunk_id": "94535e",
+        "wall_time_seconds": 5.000857116,
+        "session_id": 76304,
+        "original_token_count": 223,
+        "output": "stdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native input identity {\"source\":\"4242414906244d01d28cc01a88e1a05208b2ff93db702ad7861aeb5b4f0d0ed3\",\"bundle\":\"a363467d48a993e924b50058dbaaa67c6e59d01a248be1396129388078740331\",\"inputs\":[{\"path\":\"src/config/publication.ts\",\"sha256\":\"d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411\"},{\"path\":\"src/config/versionedStore.ts\",\"sha256\":\"84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13\"},{\"path\":\"src/content/kinds.ts\",\"sha256\":\"2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457\"},{\"path\":\"w1101-native.ts\",\"sha256\":\"4242414906244d01d28cc01a88e1a05208b2ff93db702ad7861aeb5b4f0d0ed3\"}]}\nW11.01 native startup {\"stage\":\"constructed\",\"bundleMs\":407,\"at\":\"2026-09-11T03:24:37.622Z\"}\n\n"
+      },
+      {
+        "chunk_id": "cff648",
+        "wall_time_seconds": 0.000002364,
+        "exit_code": 0,
+        "original_token_count": 416,
+        "output": "stdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native startup {\"stage\":\"workers-ready\",\"elapsedMs\":17843}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native startup {\"stage\":\"first-r2-complete\",\"elapsedMs\":18096}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native startup {\"stage\":\"race-start\",\"elapsedMs\":18115}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native R2 result {\"workers\":2,\"successfulConcurrentWriters\":1,\"conflicts\":1,\"elapsedMs\":18168,\"persistence\":\"memory\",\"externalCalls\":0,\"notDeployedOrSlo\":true}\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > serves the fallback rather than throwing when KV is down\n[config] read failed, serving fallback\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > ignores a stored document that no longer validates\n[config] stored document is invalid and was ignored\n\n ✓ src/config/versionedStore.test.ts  (22 tests) 23888ms\n\n Test Files  2 passed (2)\n      Tests  40 passed (40)\n   Start at  23:23:29\n   Duration  86.68s (transform 9.09s, setup 0ms, collect 28.47s, tests 25.31s, environment 0ms, prepare 23.90s)\n\n"
+      }
+    ],
+    "session_id": 76304,
+    "exit_status": 0,
+    "drained": true,
+    "completed_at": "2026-09-11 03:25:06 UTC",
+    "result": "Executed exact fixed primary once on final frozen bytes:2files,40/40PASS,86.68s reported; routes18tests1418ms,store22tests23888ms. Native R2 elapsed18168ms includes17843ms worker startup, firstR2 complete18096ms, race start18115ms; one successful writer and one409. Local runtime evidence only.",
+    "native_identity": {
+      "source": "4242414906244d01d28cc01a88e1a05208b2ff93db702ad7861aeb5b4f0d0ed3",
+      "bundle": "a363467d48a993e924b50058dbaaa67c6e59d01a248be1396129388078740331",
+      "inputs": [
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457"
+        }
+      ],
+      "network_boundary": "Miniflare cf:false disables host CF metadata fetch and both workers deny outbound service calls. Printed externalCalls:0 is a fixture declaration, not an independent traffic meter."
+    }
+  },
+  "artifact_verification": {
+    "before_runtime": {
+      "chunk_id": "7b3e81",
+      "at": "2026-09-11T03:23:08.479Z",
+      "artifact_pins": 31,
+      "source_pins": 24,
+      "protected": 16,
+      "bidirectional_patches": 8,
+      "errors": [],
+      "exit_code": 0
+    },
+    "digests_and_worker_captures": {
+      "chunk_id": "db1b34",
+      "at": "2026-09-11T03:24:39.223Z",
+      "worker_commands": 10,
+      "worker_captures": 36,
+      "artifact_and_contract_digests_match": true,
+      "errors": [],
+      "exit_code": 0
+    },
+    "after_runtime": {
+      "chunk_id": "0d2261",
+      "at": "2026-09-11T03:25:07.486Z",
+      "artifact_pins": 31,
+      "protected_baseline_pins": 16,
+      "errors": [],
+      "exit_code": 0
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W11.01/source-freeze.json",
+      "sha256": "947c5664d391baad9054f9e65eff1e9a13a53882b8b0e8375e27aace03bd3822"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W11.01/source-deltas.json",
+      "sha256": "0bf63ebd6910de47c37b8afdff7bd1d030879a33484bf03ab92b8776c68cde15"
+    }
+  },
+  "reused_worker_checks": {
+    "compiler_final": "44375/8d25f2 exit0/drained,empty output. Actual command node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false omitted planned --max-old-space-size=768. This changes the Node memory ceiling, not compiler/project/checking options; equivalent type-check coverage is accepted, not literal invocation equality or bounded-memory proof.",
+    "lint_final": "29795/a0a177 exact K2 flags,exit0/drained,zero errors and one inherited unused-scope warning. Two new unused-digest warnings from initial28093/1ac371 exit1 were corrected, not waived.",
+    "whitespace_final": "77890/c33562 scoped git diff --check exit0/drained,empty. Added-file f72f24 diff --no-index --check exit1/empty is retained as difference status with no whitespace diagnostics, not relabeled exit0.",
+    "historical_runtime": "Initial68763 exited1 with38/40, including unsigned-refusal fixture error and native30s timeout. Corrected71633 passed40/40 but predates final explicit digest discards/comment/cf:false changes; supporting predecessor only. This independent run supplies final-byte runtime evidence.",
+    "rework": "Retained initial compiler95968 exit2 and initial lint28093 exit1; root's pre-primary source corrections and affected service re-admission remain visible. Native initial timeout location/cause is unproven; passing final run does not retrospectively diagnose it or certify resource/SLO behavior."
+  },
+  "limitations": [
+    "Bounded local content-only publication. FullW11/F15/F24, other configuration kinds, multi-document activation, autonomy policy/write receipts and enrichment apply-to-current-catalog are not accepted.",
+    "No real initialization/cutover executed. Reviewed supplied baseline, old-writer quiescence, legacy history recovery and updated client publication headers remain deployment prerequisites; uninitialized catalogs now fail closed. Baseline floor prevents silent remapping of older receipts.",
+    "Production R2 same-key throttling is not modeled here; reservation/finalization may leave503/pending until explicit authorized recovery. No expiry, automatic abort/reassignment, blind retry or rapid-success throughput promise.",
+    "Serving retains verified immutable cache snapshots for<=30s from read start, excluding already-in-flight reads. This is not customer effective-immediately, deployed latency, catalog workload, capacity or SLO acceptance.",
+    "Service failure fixture observes one refusal request at the synthetic DO boundary; underlying owned refusal persistence/consent/session authority assurance is reused, not re-proven by that helper. Operator authorization is checked at request admission, not atomically against later in-flight revocation.",
+    "The31selected artifact pins and native3source bundle inputs are not an exhaustive installed-runtime/deployment manifest. Synthetic failure injection and native local R2 conditionals do not attest deployed resource/retention/rate behavior.",
+    "D05/D10, model/provider egress, customer taxonomy/sample/feed/retention, release and external operations remain unapproved. No cloud/customer/credential/commit/deploy operations performed."
+  ],
+  "diagnostics": [
+    "Oversized combined evidence/base64/delta displays were uncredited and replaced with bounded source/output reads plus complete in-memory digest/patch verification. No extra product suite or rerun resulted.",
+    "Independent runtime emitted inherited Vite CJS deprecation and intentional legacy fallback/invalid-document warnings; no independent failure."
+  ],
+  "pending_sessions": [],
+  "writes": "Only this review.json. No source/governance edits, extra suites, board calls, cloud/customer operations or subdelegation."
+}

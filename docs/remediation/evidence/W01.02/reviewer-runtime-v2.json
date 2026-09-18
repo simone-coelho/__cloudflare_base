@@ -1,0 +1,353 @@
+{
+  "reviewer": "/root/w0102_reval_review",
+  "actor_id": "w0102-v2-reviewer",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "episode_start": "2026-09-07T01:05:55Z",
+  "artifact_digest": "9b401e92a09329e30a7c747e0a1d53de23976fa95dad756bbea01ad1dfc02ada",
+  "k1": {
+    "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+    "invoked_at_utc": "2026-09-07 01:06:44 UTC",
+    "exit_code": 0,
+    "output": "The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (20 tests) 6764ms\n\n Test Files  1 passed (1)\n      Tests  20 passed (20)\n   Start at  21:06:46\n   Duration  13.37s (transform 1.12s, setup 0ms, collect 4.32s, tests 6.76s, environment 0ms, prepare 1.30s)\n\n"
+  },
+  "composed_original_route_replay": {
+    "command": "W01_02_BEFORE=1 W01_02_TRACE=1 node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t 'AUTH_MODE=enforced.*rejects all ten raw operations for operator|uses real JWT|retains SDK'",
+    "invoked_at_utc": "2026-09-07 01:06:44 UTC",
+    "exit_code": 1,
+    "expected_exit_code": 1,
+    "basis": "Hash-checked original index.ts and routes/api.ts composed in memory with CURRENT shared auth.ts guard and other current dependencies. This is not the complete historical pre-W02 tree; no live source reversal.",
+    "traces": [
+      {
+        "request": "GET /api/cache/t%3Aglobex%3Aprivate%3Acatalog",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ],
+          [
+            "CACHE.get",
+            "t:globex:private:catalog"
+          ]
+        ],
+        "mutated": false,
+        "privateDisclosed": true,
+        "markerDisclosed": false,
+        "envAccesses": 36,
+        "logCount": 2
+      },
+      {
+        "request": "PUT /api/cache/t%3Aglobex%3Aprivate%3Acatalog",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ],
+          [
+            "CACHE.put",
+            "t:globex:private:catalog"
+          ]
+        ],
+        "mutated": true,
+        "privateDisclosed": false,
+        "markerDisclosed": false,
+        "envAccesses": 36,
+        "logCount": 2
+      },
+      {
+        "request": "DELETE /api/cache/t%3Aglobex%3Aprivate%3Acatalog",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ],
+          [
+            "CACHE.delete",
+            "t:globex:private:catalog"
+          ]
+        ],
+        "mutated": true,
+        "privateDisclosed": false,
+        "markerDisclosed": false,
+        "envAccesses": 36,
+        "logCount": 2
+      },
+      {
+        "request": "GET /api/storage/globex%2F2026-09-06%2F13%2Fdecisions%2Fprivate.ndjson",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ],
+          [
+            "STORAGE.get",
+            "globex/2026-09-06/13/decisions/private.ndjson"
+          ]
+        ],
+        "mutated": false,
+        "privateDisclosed": true,
+        "markerDisclosed": false,
+        "envAccesses": 36,
+        "logCount": 2
+      },
+      {
+        "request": "PUT /api/storage/globex%2F2026-09-06%2F13%2Fdecisions%2Fprivate.ndjson",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ],
+          [
+            "STORAGE.put",
+            "globex/2026-09-06/13/decisions/private.ndjson"
+          ]
+        ],
+        "mutated": true,
+        "privateDisclosed": false,
+        "markerDisclosed": false,
+        "envAccesses": 36,
+        "logCount": 2
+      },
+      {
+        "request": "DELETE /api/storage/globex%2F2026-09-06%2F13%2Fdecisions%2Fprivate.ndjson",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ],
+          [
+            "STORAGE.delete",
+            "globex/2026-09-06/13/decisions/private.ndjson"
+          ]
+        ],
+        "mutated": true,
+        "privateDisclosed": false,
+        "markerDisclosed": false,
+        "envAccesses": 36,
+        "logCount": 2
+      },
+      {
+        "request": "POST /api/queue/send",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ],
+          [
+            "EVENT_QUEUE.send"
+          ]
+        ],
+        "mutated": true,
+        "privateDisclosed": false,
+        "markerDisclosed": false,
+        "envAccesses": 36,
+        "logCount": 2
+      },
+      {
+        "request": "GET /api/state/state/t%3Aglobex%3Aprivate-state",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ],
+          [
+            "STATE_MANAGER.idFromName",
+            "t:globex:private-state"
+          ],
+          [
+            "STATE_MANAGER.get",
+            "t:globex:private-state"
+          ],
+          [
+            "STATE_MANAGER.fetch",
+            "t:globex:private-state"
+          ],
+          [
+            "STATE.storage.get",
+            "t:globex:private-state"
+          ]
+        ],
+        "mutated": false,
+        "privateDisclosed": true,
+        "markerDisclosed": false,
+        "envAccesses": 37,
+        "logCount": 2
+      },
+      {
+        "request": "PUT /api/state/state/t%3Aglobex%3Aprivate-state",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ],
+          [
+            "STATE_MANAGER.idFromName",
+            "t:globex:private-state"
+          ],
+          [
+            "STATE_MANAGER.get",
+            "t:globex:private-state"
+          ],
+          [
+            "STATE_MANAGER.fetch",
+            "t:globex:private-state"
+          ],
+          [
+            "STATE.storage.put",
+            "t:globex:private-state"
+          ]
+        ],
+        "mutated": true,
+        "privateDisclosed": false,
+        "markerDisclosed": false,
+        "envAccesses": 37,
+        "logCount": 2
+      },
+      {
+        "request": "GET /api/analytics/query?query=W0102_REQUEST_MARKER",
+        "status": 200,
+        "calls": [
+          [
+            "RATE_LIMITER.idFromName",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.get",
+            "unknown"
+          ],
+          [
+            "RATE_LIMITER.fetch",
+            "unknown"
+          ]
+        ],
+        "mutated": false,
+        "privateDisclosed": false,
+        "markerDisclosed": true,
+        "envAccesses": 35,
+        "logCount": 2
+      }
+    ],
+    "summary": "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[80/80]⎯\n\n Test Files  1 failed (1)\n      Tests  1 failed | 2 passed | 17 skipped (20)\n   Start at  21:06:46\n   Duration  12.49s (transform 1.07s, setup 0ms, collect 5.16s, tests 5.08s, environment 0ms, prepare 1.27s)\n\n",
+    "retention": "All ten per-operation trace summaries and final test summary retained. The tool truncated the middle of repetitive expected soft-assertion diagnostics (80 failures within one selected denial test); these diagnostics are not claimed as completely retained. The other17 cases were unselected by the explicit reproduction filter; both retained JWT/SDK control tests passed.",
+    "observed": {
+      "requests": 10,
+      "status200": 10,
+      "private_disclosures": 3,
+      "mutated_requests": 6,
+      "logs_per_request": [
+        2
+      ]
+    }
+  },
+  "artifact_check": {
+    "command": "node docs/remediation/evidence/W01.02/reviewer-artifact-v2.mjs",
+    "exit_code": 0,
+    "result": {
+      "at": "2026-09-07T01:07:58.931Z",
+      "manifestDigest": "9b401e92a09329e30a7c747e0a1d53de23976fa95dad756bbea01ad1dfc02ada",
+      "manifestFileSha256": "1abe4e8644afa5be814c716f7a4eca99fcde2cc46c07054e80f7f420ef2240e4",
+      "files": 895,
+      "mismatches": [],
+      "delta": [
+        {
+          "path": "src/middleware/auth.ts",
+          "before": "65a1553ae0d93627f82f5c6dd3f5acb8ee3a8b94b7d82955c15098d3c1317492",
+          "after": "a3a7be192b89395fed567d59b48aed6076f7e80797c8a6c175bff20ff6fce5ea"
+        }
+      ],
+      "dependencyInputs": 871,
+      "missing": [],
+      "surplus": [],
+      "uncovered": [],
+      "scopedDiffMatches": true,
+      "deletedApiAbsent": true,
+      "originals": {
+        "index": "a9ca5ae49c3741d9375bd0245c7e377bfd779021055df9d90671b0f580f9f4f1",
+        "api": "905f2512b23e6639441067a45864fe25634b3fbf2d9fc977b34370fbd90dca58"
+      }
+    }
+  },
+  "limits": "Local actual-default-export workerd with synthetic successful bindings, compatibility adapters and denied outbound service; not deployed/native resources/assets/customer/SLO acceptance. Runtime instances disposed by afterAll."
+}
+

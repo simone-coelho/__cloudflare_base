@@ -1,0 +1,496 @@
+{
+  "task_id": "W20.05",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "run_id": "/root/w1404_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T21:23:09.809Z",
+  "contract_digest": "8e23fb28189276ab6995c8605f38134e7c614f3a89d719e3851705b439b69975",
+  "references": [
+    {
+      "path": "docs/remediation/design/W20.05/plan.md",
+      "sha256": "7617ce7ea49b6b8490b5f06220399e8075074691ed63e26b2364f9e091c01def"
+    },
+    {
+      "path": "docs/remediation/design/W20.05/baseline.json",
+      "sha256": "c4d5b315a319bdfdade6905a773b9ba85a329fbfc2a29c259fa63c1a14712b0f"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.05/admission.json",
+      "sha256": "be03dadbe5c86d8e43f950a34d1db6ea1f1a1a3490b436cf79b1accd11cc6ef5"
+    }
+  ],
+  "admission": {
+    "capture": "ac235e",
+    "journal": 1590,
+    "owned_source_files": 22,
+    "baseline_pins": 53
+  },
+  "baseline": {
+    "kind": "source_confirmed_design_case",
+    "entry": "Root check/status VALID1581, both0/drained (18206;922876/bf5466), followed by direct admission pins/contract GO. Worker read complete plan/task and baseline/admission; no duplicate board or baseline runtime.",
+    "reuse": "Accepted W20.04 final27/full compiler/static retained with prospective exact-byte overlap qualification; root added-file lint passes 47030/72b115/1933b8/0a0f57 and 34286/671d16/8b9bc0. Six inherited warnings. W08.04 unchanged."
+  },
+  "summary": "Version-3 ordered pin prefixes reserve atomically before ranking, preserve physical placement and historical pin policies, and expose truthful mixed-slot Rules/index/queue, replay and exploration-opportunity evidence.",
+  "criteria": [
+    {
+      "id": "W20.05-C1",
+      "verdict": "local_runtime_pass",
+      "evidence": "Composer verifies exact prefix order and eligible tail, missing/ineligible/slot-type/hard-gate/conflict whole-prefix refusal with released ownership, immutable IDs/order/take/diversity seeds and source-object reservation despite caller mutation, full-prefix no-hook work and soft-tail diversity relaxation. Mounted validation/publication covers dense/distinct/50-member bounds, exact whitespace/long IDs, field exclusivity, active/dormant contradictions, old stored formats and version3 History/rollback with positional advisory feedback."
+    },
+    {
+      "id": "W20.05-C2",
+      "verdict": "local_runtime_pass",
+      "evidence": "All-arm actual receipts carry singleton unscored pin evidence, precise ranked ordinal/candidates, genuine rotation at the first tail position and truthful mixed/refused manifest rows. Replay of every current and historical-policy record passes; pin receipts read no ranking archives, tail receipts read only required prefix dependencies, unknown markers and forged positions/ordinals/dependencies refuse. Real decision records produce matching raw/hourly counts, grids and policies; malformed current ordinal facts refuse and legacy position behavior remains."
+    },
+    {
+      "id": "W20.05-C3",
+      "verdict": "worker_checks_pass_independent_review_pending",
+      "evidence": "Actual Rules DOM uses current validator, string/array/null editing, save/readback, exact raw text, no automatic take changes, whole-draft malformed blocking, stale strategy callbacks, discard and History rollback. Actual slotsIndex powers mixed/full UI readback; real service fresh/cached/retained paths and persisted ledger records replay across arms. Actual index→queue excludes fully pinned/off-limits slots from evidence/acting needs. Fixed36 and full static pass; distinct review and lead disposition remain pending."
+    }
+  ],
+  "authoring_review": "Pre-runtime source reviews corrected scalar-branch precedence, retained nonprefix hook-time take semantics, refused-prefix dependency rows, first-ID prefix lookup, truthful queue acting capacity and original-object reservation membership. Preset-policy comparator and fixture typing corrections were recorded before runtime. No source edits occurred during any check.",
+  "rework": [
+    {
+      "attempt": "static1",
+      "exit_code": 2,
+      "drained": true,
+      "result": "Four fixture compiler diagnostics: two heterogeneous hourly weights inference call errors, historical symbol array widened to symbol, readonly prefix reverse. Lint and whitespace were not reached.",
+      "correction": "Explicit SlotStrategy[] and const symbol tuple, copied reverse, and source-reviewed matching preset report policies; production unchanged.",
+      "superseded_by": "static2"
+    },
+    {
+      "attempt": "static2",
+      "exit_code": 0,
+      "drained": true,
+      "result": "Compiler/lint/whitespace passed with six inherited warnings; superseded by lead-approved queue slots_acting capacity guard and same service-group gamma assertion.",
+      "superseded_by": "static3"
+    },
+    {
+      "attempt": "static3",
+      "exit_code": 0,
+      "drained": true,
+      "result": "Passed with six inherited warnings; superseded by original pinned-object reservation membership and exact mutation candidate assertion, after full drain and lead agreement.",
+      "superseded_by": "static4"
+    },
+    {
+      "attempt": "static4",
+      "exit_code": 0,
+      "drained": true,
+      "result": "Passed initial runtime candidate; production bytes remained unchanged through subsequent fixture-only rework.",
+      "superseded_by": "static5"
+    },
+    {
+      "attempt": "runtime1",
+      "exit_code": 1,
+      "drained": true,
+      "passed": 33,
+      "failed": 3,
+      "unselected": 126,
+      "duration_seconds": 108.22,
+      "result": "DOM full-page normalized text collapsed intentional ID spaces; phase3/hourly empty snapshots selected the existing score leader, so rotation correctly returned no exploration. No production failure identified.",
+      "correction": "After drain, assert raw itemid DOM text and seed 60 actual leader exposures in both snapshot fixtures, retaining explored=true and complete raw/hourly equality assertions. Only three fixture files changed.",
+      "superseded_by": "static5/runtime2"
+    }
+  ],
+  "final_results": {
+    "runtime": {
+      "passed": 36,
+      "failed": 0,
+      "skipped": 126,
+      "unselected": 126,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 104.47
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 6,
+      "new_warnings": 0,
+      "final_bytes": true,
+      "signatures": [
+        {
+          "path": "src/content/decide.ts",
+          "line": 228,
+          "column": 20,
+          "message": "'_share' is assigned a value but never used",
+          "rule": "@typescript-eslint/no-unused-vars"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "line": 323,
+          "column": 62,
+          "message": "'_s' is defined but never used",
+          "rule": "@typescript-eslint/no-unused-vars"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "line": 198,
+          "column": 25,
+          "message": "'_c' is defined but never used",
+          "rule": "@typescript-eslint/no-unused-vars"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "line": 19,
+          "column": 29,
+          "message": "'when' is assigned a value but never used",
+          "rule": "@typescript-eslint/no-unused-vars"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "line": 19,
+          "column": 35,
+          "message": "'plural' is assigned a value but never used",
+          "rule": "@typescript-eslint/no-unused-vars"
+        },
+        {
+          "path": "public/console/views.js",
+          "line": 18,
+          "column": 14,
+          "message": "'clear' is assigned a value but never used",
+          "rule": "@typescript-eslint/no-unused-vars"
+        }
+      ],
+      "final_captures": [
+        "120db6",
+        "50b28c"
+      ]
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "qualification": "Literal admitted git diff --check does not inspect untracked paths. Root exact owned-delta whitespace assurance remains separate; no untracked git coverage is falsely claimed."
+    }
+  },
+  "command_captures": {
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.ts src/learn/queue.ts src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js public/console/views-config.js public/console/shell.js public/console/views.js --env browser --global OperatorSession --max-warnings 3 && git diff --check -- src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts public/console/views-config.js src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md docs/kit/03-payload-schemas.md src/learn/rows.ts src/learn/queue.ts public/console/shell.js public/console/views.js src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts",
+      "captures": [
+        {
+          "chunk_id": "6cd6df",
+          "wall_time_seconds": 1.001296847,
+          "session_id": 1348,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6c67b6",
+          "wall_time_seconds": 0.000002181,
+          "exit_code": 2,
+          "original_token_count": 765,
+          "output": "src/learn/hourly.test.ts(97,34): error TS2345: Argument of type '{ tenant: string; brand: string; page: string; visitorId: string; sessionId: string; identityAnchor: \"visitor\"; nowMs: number; pieces: { id: string; customerContentId: string; title: string; type: string; tags: { ...; }; slotTypes: string[]; lifecycle: { ...; }; }[]; ... 6 more ...; learning: { ...; }; }' is not assignable to parameter of type 'DecideInput'.\n  Types of property 'slots' are incompatible.\n    Type '({ slot: string; take: number; weights: { topic: number; }; pinnedPieceIds: string[]; } | { slot: string; take: number; weights: { topic?: undefined; }; pinnedPieceIds: string[]; })[]' is not assignable to type 'readonly SlotStrategy[]'.\n      Type '{ slot: string; take: number; weights: { topic: number; }; pinnedPieceIds: string[]; } | { slot: string; take: number; weights: { topic?: undefined; }; pinnedPieceIds: string[]; }' is not assignable to type 'SlotStrategy'.\n        Type '{ slot: string; take: number; weights: { topic?: undefined; }; pinnedPieceIds: string[]; }' is not assignable to type 'SlotStrategy'.\n          Types of property 'weights' are incompatible.\n            Type '{ topic?: undefined; }' is not assignable to type 'Record<string, number>'.\n              Property 'topic' is incompatible with index signature.\n                Type 'undefined' is not assignable to type 'number'.\nsrc/learn/hourly.test.ts(97,64): error TS2345: Argument of type '{ nowMs: number; learning: null; tenant: string; brand: string; page: string; visitorId: string; sessionId: string; identityAnchor: \"visitor\"; pieces: { id: string; customerContentId: string; title: string; type: string; tags: { ...; }; slotTypes: string[]; lifecycle: { ...; }; }[]; ... 5 more ...; configLabel: stri...' is not assignable to parameter of type 'DecideInput'.\n  Types of property 'slots' are incompatible.\n    Type '({ slot: string; take: number; weights: { topic: number; }; pinnedPieceIds: string[]; } | { slot: string; take: number; weights: { topic?: undefined; }; pinnedPieceIds: string[]; })[]' is not assignable to type 'readonly SlotStrategy[]'.\n      Type '{ slot: string; take: number; weights: { topic: number; }; pinnedPieceIds: string[]; } | { slot: string; take: number; weights: { topic?: undefined; }; pinnedPieceIds: string[]; }' is not assignable to type 'SlotStrategy'.\n        Type '{ slot: string; take: number; weights: { topic?: undefined; }; pinnedPieceIds: string[]; }' is not assignable to type 'SlotStrategy'.\n          Types of property 'weights' are incompatible.\n            Type '{ topic?: undefined; }' is not assignable to type 'Record<string, number>'.\n              Property 'topic' is incompatible with index signature.\n                Type 'undefined' is not assignable to type 'number'.\nsrc/learn/phase3.test.ts(375,51): error TS2345: Argument of type 'symbol' is not assignable to parameter of type 'HistoricalPins | undefined'.\nsrc/reflex/contentCompose.test.ts(57,45): error TS2339: Property 'reverse' does not exist on type 'readonly string[]'.\n"
+        }
+      ],
+      "session_id": 1348,
+      "drained": true,
+      "exit_code": 2
+    },
+    "static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.ts src/learn/queue.ts src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js public/console/views-config.js public/console/shell.js public/console/views.js --env browser --global OperatorSession --max-warnings 3 && git diff --check -- src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts public/console/views-config.js src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md docs/kit/03-payload-schemas.md src/learn/rows.ts src/learn/queue.ts public/console/shell.js public/console/views.js src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts",
+      "captures": [
+        {
+          "chunk_id": "280324",
+          "wall_time_seconds": 1.000874366,
+          "session_id": 5980,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "212d17",
+          "wall_time_seconds": 5.001645508,
+          "session_id": 5980,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6635c5",
+          "wall_time_seconds": 5.001425056,
+          "session_id": 5980,
+          "original_token_count": 127,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/decide.ts\n  228:20  warning  '_share' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  323:62  warning  '_s' is defined but never used               @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  198:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        },
+        {
+          "chunk_id": "5efb5e",
+          "wall_time_seconds": 5.001506538,
+          "session_id": 5980,
+          "original_token_count": 132,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views-config.js\n  19:29  warning  'when' is assigned a value but never used    @typescript-eslint/no-unused-vars\n  19:35  warning  'plural' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views.js\n  18:14  warning  'clear' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        },
+        {
+          "chunk_id": "81fe79",
+          "wall_time_seconds": 0.000001132,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 5980,
+      "drained": true,
+      "exit_code": 0
+    },
+    "static3": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.ts src/learn/queue.ts src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js public/console/views-config.js public/console/shell.js public/console/views.js --env browser --global OperatorSession --max-warnings 3 && git diff --check -- src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts public/console/views-config.js src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md docs/kit/03-payload-schemas.md src/learn/rows.ts src/learn/queue.ts public/console/shell.js public/console/views.js src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts",
+      "captures": [
+        {
+          "chunk_id": "9f74b8",
+          "wall_time_seconds": 1.00117778,
+          "session_id": 50398,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "1f2681",
+          "wall_time_seconds": 2.758389647,
+          "exit_code": 0,
+          "original_token_count": 258,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/decide.ts\n  228:20  warning  '_share' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  323:62  warning  '_s' is defined but never used               @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  198:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views-config.js\n  19:29  warning  'when' is assigned a value but never used    @typescript-eslint/no-unused-vars\n  19:35  warning  'plural' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views.js\n  18:14  warning  'clear' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 50398,
+      "drained": true,
+      "exit_code": 0
+    },
+    "static4": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.ts src/learn/queue.ts src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js public/console/views-config.js public/console/shell.js public/console/views.js --env browser --global OperatorSession --max-warnings 3 && git diff --check -- src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts public/console/views-config.js src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md docs/kit/03-payload-schemas.md src/learn/rows.ts src/learn/queue.ts public/console/shell.js public/console/views.js src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts",
+      "captures": [
+        {
+          "chunk_id": "b1ef50",
+          "wall_time_seconds": 1.001282404,
+          "session_id": 25323,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "7df95e",
+          "wall_time_seconds": 20.00126406,
+          "session_id": 25323,
+          "original_token_count": 127,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/decide.ts\n  228:20  warning  '_share' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  323:62  warning  '_s' is defined but never used               @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  198:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        },
+        {
+          "chunk_id": "b94600",
+          "wall_time_seconds": 0.000002179,
+          "exit_code": 0,
+          "original_token_count": 132,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views-config.js\n  19:29  warning  'when' is assigned a value but never used    @typescript-eslint/no-unused-vars\n  19:35  warning  'plural' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views.js\n  18:14  warning  'clear' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 25323,
+      "drained": true,
+      "exit_code": 0
+    },
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.test.ts src/learn/queue.test.ts src/learn/hourly.test.ts -t 'W20.05|groups every slot by page with what is set on it, and counts the pieces eligible now|counts pending proposals, slots without evidence, slots acting, controls and erasures|the day from its hours is the day from its records: grids, arms, exploration, credits, counts|W20.04|W38.05|W20.03|W20.01|W20.02|W18.01|W19.02|W27.02|history shows every document|W03.03 carries named auth context|w_ext × score joins the base score' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "6d5498",
+          "wall_time_seconds": 1.001915434,
+          "session_id": 14638,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "13ca83",
+          "wall_time_seconds": 20.001025534,
+          "session_id": 14638,
+          "original_token_count": 125,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority\n[config] read failed, serving fallback\n\n ✓ src/routes/content.test.ts  (35 tests | 29 skipped) 138ms\n"
+        },
+        {
+          "chunk_id": "ad05ca",
+          "wall_time_seconds": 20.001415833,
+          "session_id": 14638,
+          "original_token_count": 4825,
+          "output": " ❯ src/console/console.render.test.ts  (41 tests | 1 failed | 33 skipped) 44812ms\n   ❯ src/console/console.render.test.ts > the operator application, rendered > W20.05 edits unified exact prefixes with real index readback and rollback\n     → expected ' Operator coach · chero Signed in as …' to contain 'Pinned first: [\" p,\\\"[]\\n \",\"   \"]; 2…'\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 5,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 5,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W19.02 serves and replays projected content formats with independent historical policy\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (25 tests | 20 skipped) 151ms\n ❯ src/learn/hourly.test.ts  (25 tests | 1 failed | 23 skipped) 32ms\n   ❯ src/learn/hourly.test.ts > the hourly fold > W20.05 counts the first ranked ordinal equally in raw and hourly reports\n     → expected [ [ +0, undefined, false ], …(4) ] to deeply equal [ [ +0, undefined, false ], …(4) ]\n"
+        },
+        {
+          "chunk_id": "6adf47",
+          "wall_time_seconds": 0.000002217,
+          "exit_code": 1,
+          "original_token_count": 1602,
+          "output": " ❯ src/learn/phase3.test.ts  (19 tests | 1 failed | 12 skipped) 77ms\n   ❯ src/learn/phase3.test.ts > replay (doc 22 §12.3) > W20.05 replays exact pin positions and ranked ordinals with only consumed prefix archives\n     → expected false to be true // Object.is equality\nstdout | src/reflex/contentCompose.test.ts > W38.05 served explanations > W38.05 measures paired actual composer work and warm timings at 30 and 1000 pieces\nW38.05 measurement {\"pieces\":30,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"cb1d2cb02dd7c2a305e0b92ee7e256d5f22ec6e4a346415ca09e1edc2e5a9b31\",\"callback_sha256\":\"7f124594a1679357171dc46f0ca68b9d8b31926eadbd2b482fd428c48502298b\",\"before\":{\"samples_ms\":[5.179790000009234,3.987831999998889,3.1362499999959255,4.007095000008121,3.890716000008979],\"median_ms\":3.987831999998889,\"driver_sort_calls\":83,\"driver_rows\":1335},\"current\":{\"samples_ms\":[2.788184999997611,3.4769590000069,3.1611050000065006,2.660067999997409,3.041473000004771],\"median_ms\":3.041473000004771,\"driver_sort_calls\":8,\"driver_rows\":129},\"median_improved\":true}\nW38.05 measurement {\"pieces\":1000,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"09f715bff10c96c5fd0a64301bd9052c7c6b045ac69880a58ddf7018e49699ab\",\"callback_sha256\":\"549583a33a126fd2a1c553b508ff371b3c7ff0b4e05570ab0062b95653c0988b\",\"before\":{\"samples_ms\":[133.9268999999913,217.39152799999283,134.016294999994,154.52282800000103,144.46326000000408],\"median_ms\":144.46326000000408,\"driver_sort_calls\":2993,\"driver_rows\":48218},\"current\":{\"samples_ms\":[92.34612499999639,92.22612399999343,97.1549459999951,109.43725999999151,93.63419199999771],\"median_ms\":93.63419199999771,\"driver_sort_calls\":8,\"driver_rows\":135},\"median_improved\":true}\n\n ✓ src/reflex/contentCompose.test.ts  (9 tests | 3 skipped) 1806ms\n ✓ src/learn/rows.test.ts  (7 tests | 6 skipped) 2ms\n ✓ src/learn/queue.test.ts  (1 test) 1ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/console/console.render.test.ts > the operator application, rendered > W20.05 edits unified exact prefixes with real index readback and rollback\nAssertionError: expected ' Operator coach · chero Signed in as …' to contain 'Pinned first: [\" p,\\\"[]\\n \",\"   \"]; 2…'\n\n- Expected\n+ Received\n\n- Pinned first: [\" p,\\\"[]\\n \",\"   \"]; 2 ranked positions\n+  Operator coach · chero Signed in as Test Operator Sign in Change password Sign out Email Password Sign in Cancel Current password New password Change Cancel Context Brand Find a slot Slot chero · 2 pinned + rankedmerch · 1 pinned 2 slots on 1 page AttentionWorkProposalsErasuresThis slotWhat it has learnedDialsSlot rulesWhat is exploringThis brandSlots2InterestsMeasurementHistoryWhy a shopper saw thisThis platformAccounts Every slot, and what is set on it A slot is one place on one page. This is what each is configured to do and what it has learned so far. The box in the rail narrows this list on the server. Saved as slots revision 6. Pin feedback is advisory; delivery is checked at runtime. home · 2 slotsSlotShowsEligibleWeighted onRulesLearns againstTrustγExploringAutonomy (unavailable)HeldLearned so farcheroPinned first: [\" p,\\\"[]\\n \",\" \"]; 2 ranked positions40linefreshnessclick0offunavailable · stored configured (dormant)—not askedmerchPinned first: [\"cnt_m\"]; 0 ranked positions10none weightednoneclick0offunavailable · stored configured (dormant)—not asked No changes Discard Save \n\n ❯ src/console/console.render.test.ts:1031:72\n    1029|       take(4); await save(); expect(c.text()).toContain('2 ranked posi…\n    1030|       expect(c.$('slot').textContent).toContain('2 pinned + ranked');\n    1031|       await c.goTo('#/slots?scope=coach&slot=chero'); expect(c.text())…\n       |                                                                        ^\n    1032|       await c.goTo('#/rules?scope=coach&slot=chero');\n    1033|       expect(field().value).toBe(JSON.stringify(ids));\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯\n\n FAIL  src/learn/hourly.test.ts > the hourly fold > W20.05 counts the first ranked ordinal equally in raw and hourly reports\nAssertionError: expected [ [ +0, undefined, false ], …(4) ] to deeply equal [ [ +0, undefined, false ], …(4) ]\n\n- Expected\n+ Received\n\n  Array [\n    Array [\n      0,\n      undefined,\n      false,\n    ],\n    Array [\n      1,\n      undefined,\n      false,\n    ],\n    Array [\n      2,\n      0,\n-     true,\n+     false,\n    ],\n    Array [\n      3,\n      1,\n      false,\n    ],\n    Array [\n      0,\n      undefined,\n      false,\n    ],\n  ]\n\n ❯ src/learn/hourly.test.ts:100:83\n     98|     const old = dec('v2', 's2', T12 + 2 * MIN, 'legacy', { explored: t…\n     99|     const records = [...active.records, ...quiet.records, old];\n    100|     expect(active.records.map(r => [r.position, r.ranking_position, r.…\n       |                                                                                   ^\n    101|     const r2 = new FakeR2(); ledger(r2, records, []);\n    102|     const aggregate = await buildHour(r2, 'coach', { date: ids.date, h…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯\n\n FAIL  src/learn/phase3.test.ts > replay (doc 22 §12.3) > W20.05 replays exact pin positions and ranked ordinals with only consumed prefix archives\nAssertionError: expected false to be true // Object.is equality\n\n- Expected\n+ Received\n\n- true\n+ false\n\n ❯ src/learn/phase3.test.ts:367:29\n    365|       }\n    366|       const tail = set.records.find(r => r.slot === 'hero' && r.rankin…\n    367|       expect(tail.explored).toBe(arm === 'personalized');\n       |                             ^\n    368|       if (arm !== 'default') expect((await replayDecision({} as Env, t…\n    369|       for (const changed of [{ ...tail, ranking_position: 1 }, { ...ta…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯\n\n Test Files  3 failed | 5 passed (8)\n      Tests  3 failed | 33 passed | 126 skipped (162)\n   Start at  17:43:31\n   Duration  108.22s (transform 6.50s, setup 0ms, collect 36.29s, tests 47.02s, environment 1ms, prepare 18.23s)\n\n"
+        }
+      ],
+      "session_id": 14638,
+      "drained": true,
+      "exit_code": 1
+    },
+    "static5": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.ts src/learn/queue.ts src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js public/console/views-config.js public/console/shell.js public/console/views.js --env browser --global OperatorSession --max-warnings 3 && git diff --check -- src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/slotDiagnostics.ts src/content/slotConstraints.ts public/console/views-config.js src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md docs/kit/03-payload-schemas.md src/learn/rows.ts src/learn/queue.ts public/console/shell.js public/console/views.js src/learn/hourly.ts src/learn/report.ts src/learn/hourly.test.ts",
+      "captures": [
+        {
+          "chunk_id": "691528",
+          "wall_time_seconds": 1.000748112,
+          "session_id": 90117,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "120db6",
+          "wall_time_seconds": 20.001016163,
+          "session_id": 90117,
+          "original_token_count": 127,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/decide.ts\n  228:20  warning  '_share' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  323:62  warning  '_s' is defined but never used               @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  198:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        },
+        {
+          "chunk_id": "50b28c",
+          "wall_time_seconds": 0.000002064,
+          "exit_code": 0,
+          "original_token_count": 132,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views-config.js\n  19:29  warning  'when' is assigned a value but never used    @typescript-eslint/no-unused-vars\n  19:35  warning  'plural' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views.js\n  18:14  warning  'clear' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 90117,
+      "drained": true,
+      "exit_code": 0
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.test.ts src/learn/queue.test.ts src/learn/hourly.test.ts -t 'W20.05|groups every slot by page with what is set on it, and counts the pieces eligible now|counts pending proposals, slots without evidence, slots acting, controls and erasures|the day from its hours is the day from its records: grids, arms, exploration, credits, counts|W20.04|W38.05|W20.03|W20.01|W20.02|W18.01|W19.02|W27.02|history shows every document|W03.03 carries named auth context|w_ext × score joins the base score' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "2a51d7",
+          "wall_time_seconds": 1.001406673,
+          "session_id": 53415,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e14be4",
+          "wall_time_seconds": 20.001361426,
+          "session_id": 53415,
+          "original_token_count": 125,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority\n[config] read failed, serving fallback\n\n ✓ src/routes/content.test.ts  (35 tests | 29 skipped) 121ms\n"
+        },
+        {
+          "chunk_id": "d9c724",
+          "wall_time_seconds": 0.000002195,
+          "exit_code": 0,
+          "original_token_count": 5177,
+          "output": " ✓ src/console/console.render.test.ts  (41 tests | 33 skipped) 52005ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 5,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 5,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.04 serves format-two constraints on all arms with cached and retained revisions\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W19.02 serves and replays projected content formats with independent historical policy\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (25 tests | 20 skipped) 152ms\n ✓ src/learn/hourly.test.ts  (25 tests | 23 skipped) 23ms\n ✓ src/learn/phase3.test.ts  (19 tests | 12 skipped) 71ms\n ✓ src/reflex/contentCompose.test.ts  (9 tests | 3 skipped) 1628ms\nstdout | src/reflex/contentCompose.test.ts > W38.05 served explanations > W38.05 measures paired actual composer work and warm timings at 30 and 1000 pieces\nW38.05 measurement {\"pieces\":30,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"cb1d2cb02dd7c2a305e0b92ee7e256d5f22ec6e4a346415ca09e1edc2e5a9b31\",\"callback_sha256\":\"7f124594a1679357171dc46f0ca68b9d8b31926eadbd2b482fd428c48502298b\",\"before\":{\"samples_ms\":[5.15553999999247,4.354688000006718,3.191886999993585,3.7954639999952633,3.944311999992351],\"median_ms\":3.944311999992351,\"driver_sort_calls\":83,\"driver_rows\":1335},\"current\":{\"samples_ms\":[2.6844140000030166,3.1659140000119805,3.2449499999929685,2.8087559999985388,2.9751069999911124],\"median_ms\":2.9751069999911124,\"driver_sort_calls\":8,\"driver_rows\":129},\"median_improved\":true}\nW38.05 measurement {\"pieces\":1000,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"09f715bff10c96c5fd0a64301bd9052c7c6b045ac69880a58ddf7018e49699ab\",\"callback_sha256\":\"549583a33a126fd2a1c553b508ff371b3c7ff0b4e05570ab0062b95653c0988b\",\"before\":{\"samples_ms\":[129.33926199999405,130.94377499999246,133.303356000004,132.2245360000088,135.42760700000508],\"median_ms\":132.2245360000088,\"driver_sort_calls\":2993,\"driver_rows\":48218},\"current\":{\"samples_ms\":[96.49241199999233,89.46999500000675,102.33401999999478,90.35461199999554,88.84148499999719],\"median_ms\":90.35461199999554,\"driver_sort_calls\":8,\"driver_rows\":135},\"median_improved\":true}\n\n ✓ src/learn/rows.test.ts  (7 tests | 6 skipped) 2ms\n ✓ src/learn/queue.test.ts  (1 test) 1ms\n\n Test Files  8 passed (8)\n      Tests  36 passed | 126 skipped (162)\n   Start at  17:47:35\n   Duration  104.47s (transform 4.79s, setup 0ms, collect 30.06s, tests 54.00s, environment 1ms, prepare 15.42s)\n\n"
+        }
+      ],
+      "session_id": 53415,
+      "drained": true,
+      "exit_code": 0
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T21:49:42.845Z",
+    "files": [
+      {
+        "path": "src/content/types.ts",
+        "sha256": "1ee42b71f35c042174cf4bf5dbe4376740b7e87469e50ac0de3010f7ccdde98b"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f"
+      },
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "sha256": "87d88bd5815f18d79a1d53909021edbfe67ceb4039826603ed66310f72ed462e"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556"
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "d7e830270b1f18962d42555fb6ee8b12c6d446ae5d5fa5937cc579175a1427a4"
+      },
+      {
+        "path": "src/content/slotDiagnostics.ts",
+        "sha256": "7caaeb9ad1c7ad5c75f02beb54206b0666be7138a932860f72162dc02a0c1595"
+      },
+      {
+        "path": "src/content/slotConstraints.ts",
+        "sha256": "5fe3ea07c0d949b9f67081598369690fcd5c33a14bf5ec4b34e3a56579d7d3e5"
+      },
+      {
+        "path": "public/console/views-config.js",
+        "sha256": "853e936a7c25ffa32ef18788a18ec87233431f7913e61af58d90e26038a4c4c7"
+      },
+      {
+        "path": "src/reflex/contentCompose.test.ts",
+        "sha256": "8832a50721937b506c64bef8a4b15287234612481ecf4365c7edcf0c827db7b6"
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "sha256": "4c793accdd379deee9d06f7af8196249d968f83153c2bde867570d9486e6e2c3"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "1de0b950a935ef214fd83d2ae41bb74fbdfbba748f0d7a269e8fcdeecf7455fc"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "53747df01ea85cee7f5094e29507bea3d1f991d54abdbe4670023b6c84f17137"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "19be59ee0d1c94165b4192e282d73e9bd36d6148d9e2ce0206686fc6ed4bbbfb"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "e1f722ab023df513c752c70d873e761ff789331e06b53a75733ee0cc37adaa31"
+      },
+      {
+        "path": "docs/kit/03-payload-schemas.md",
+        "sha256": "869b4bcdee304c00b50de4752f428d44a6ab6fc336fa1f210ff2b71333de9320"
+      },
+      {
+        "path": "src/learn/rows.ts",
+        "sha256": "5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060"
+      },
+      {
+        "path": "src/learn/queue.ts",
+        "sha256": "724bd6caf6332b74d8706c1410531f1a550a13341bbf381326eb96e40429644c"
+      },
+      {
+        "path": "public/console/shell.js",
+        "sha256": "4121514f827d843c0ea62b35b076a39e3c6fe9d31ea7d22d2d9a03cddc153e32"
+      },
+      {
+        "path": "public/console/views.js",
+        "sha256": "03d7a3f7b90fcceccad2d66717951fc735d0f5fa4e322a24369a5c17f673c114"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "ec9725d6ee2448017cccf38d93a9ad8235417231089b9d46d048a3f74da3b2db"
+      },
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "007903b466010ec67d7ca129833b5834f157e2366dc34a733864c72f6ab6e8f4"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "d9470a838f6e1aff68ae7f1e6e2ba7d63729faecaff0d26d1e4189c8ba9bf3fa"
+      }
+    ]
+  },
+  "source_stop_capture": {
+    "chunk_id": "060a94",
+    "wall_time_seconds": 0.000003902,
+    "exit_code": 0,
+    "original_token_count": 953,
+    "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-13T21:49:42.845Z\",\n    \"files\": [\n      {\n        \"path\": \"src/content/types.ts\",\n        \"sha256\": \"1ee42b71f35c042174cf4bf5dbe4376740b7e87469e50ac0de3010f7ccdde98b\"\n      },\n      {\n        \"path\": \"src/content/kinds.ts\",\n        \"sha256\": \"62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f\"\n      },\n      {\n        \"path\": \"src/reflex/contentCompose.ts\",\n        \"sha256\": \"87d88bd5815f18d79a1d53909021edbfe67ceb4039826603ed66310f72ed462e\"\n      },\n      {\n        \"path\": \"src/content/decide.ts\",\n        \"sha256\": \"27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556\"\n      },\n      {\n        \"path\": \"src/learn/replay.ts\",\n        \"sha256\": \"d7e830270b1f18962d42555fb6ee8b12c6d446ae5d5fa5937cc579175a1427a4\"\n      },\n      {\n        \"path\": \"src/content/slotDiagnostics.ts\",\n        \"sha256\": \"7caaeb9ad1c7ad5c75f02beb54206b0666be7138a932860f72162dc02a0c1595\"\n      },\n      {\n        \"path\": \"src/content/slotConstraints.ts\",\n        \"sha256\": \"5fe3ea07c0d949b9f67081598369690fcd5c33a14bf5ec4b34e3a56579d7d3e5\"\n      },\n      {\n        \"path\": \"public/console/views-config.js\",\n        \"sha256\": \"853e936a7c25ffa32ef18788a18ec87233431f7913e61af58d90e26038a4c4c7\"\n      },\n      {\n        \"path\": \"src/reflex/contentCompose.test.ts\",\n        \"sha256\": \"8832a50721937b506c64bef8a4b15287234612481ecf4365c7edcf0c827db7b6\"\n      },\n      {\n        \"path\": \"src/learn/phase3.test.ts\",\n        \"sha256\": \"4c793accdd379deee9d06f7af8196249d968f83153c2bde867570d9486e6e2c3\"\n      },\n      {\n        \"path\": \"src/routes/content.test.ts\",\n        \"sha256\": \"1de0b950a935ef214fd83d2ae41bb74fbdfbba748f0d7a269e8fcdeecf7455fc\"\n      },\n      {\n        \"path\": \"src/console/console.render.test.ts\",\n        \"sha256\": \"53747df01ea85cee7f5094e29507bea3d1f991d54abdbe4670023b6c84f17137\"\n      },\n      {\n        \"path\": \"src/content/consent.test.ts\",\n        \"sha256\": \"19be59ee0d1c94165b4192e282d73e9bd36d6148d9e2ce0206686fc6ed4bbbfb\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"e1f722ab023df513c752c70d873e761ff789331e06b53a75733ee0cc37adaa31\"\n      },\n      {\n        \"path\": \"docs/kit/03-payload-schemas.md\",\n        \"sha256\": \"869b4bcdee304c00b50de4752f428d44a6ab6fc336fa1f210ff2b71333de9320\"\n      },\n      {\n        \"path\": \"src/learn/rows.ts\",\n        \"sha256\": \"5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060\"\n      },\n      {\n        \"path\": \"src/learn/queue.ts\",\n        \"sha256\": \"724bd6caf6332b74d8706c1410531f1a550a13341bbf381326eb96e40429644c\"\n      },\n      {\n        \"path\": \"public/console/shell.js\",\n        \"sha256\": \"4121514f827d843c0ea62b35b076a39e3c6fe9d31ea7d22d2d9a03cddc153e32\"\n      },\n      {\n        \"path\": \"public/console/views.js\",\n        \"sha256\": \"03d7a3f7b90fcceccad2d66717951fc735d0f5fa4e322a24369a5c17f673c114\"\n      },\n      {\n        \"path\": \"src/learn/hourly.ts\",\n        \"sha256\": \"ec9725d6ee2448017cccf38d93a9ad8235417231089b9d46d048a3f74da3b2db\"\n      },\n      {\n        \"path\": \"src/learn/report.ts\",\n        \"sha256\": \"007903b466010ec67d7ca129833b5834f157e2366dc34a733864c72f6ab6e8f4\"\n      },\n      {\n        \"path\": \"src/learn/hourly.test.ts\",\n        \"sha256\": \"d9470a838f6e1aff68ae7f1e6e2ba7d63729faecaff0d26d1e4189c8ba9bf3fa\"\n      }\n    ]\n  },\n  \"references\": [\n    {\n      \"path\": \"docs/remediation/design/W20.05/plan.md\",\n      \"sha256\": \"7617ce7ea49b6b8490b5f06220399e8075074691ed63e26b2364f9e091c01def\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W20.05/baseline.json\",\n      \"sha256\": \"c4d5b315a319bdfdade6905a773b9ba85a329fbfc2a29c259fa63c1a14712b0f\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W20.05/admission.json\",\n      \"sha256\": \"be03dadbe5c86d8e43f950a34d1db6ea1f1a1a3490b436cf79b1accd11cc6ef5\"\n    }\n  ]\n}\n"
+  },
+  "limitations": [
+    "Bounded customer-neutral ordered prefix only: no sparse position policy, customer vocabulary/list/default asset, full W20/F28/F26/customer acceptance or release approval.",
+    "Stored absent/1/2 prefix stripping and old receipt marker meanings remain exact; no migration or historical aggregate rewrite. Exposure, credit, holdout and attribution policies unchanged.",
+    "Service/SDK/store/auth/cache/provider implementations unchanged. Existing optional pin I/O, 30-second caches and independent non-atomic catalog/slot publication remain; zero scoring is not zero I/O. Compatible readers/UI/report workers must precede controlled format3 publication; deployed compatibility is not attested.",
+    "Exactly36 selected cases passed;126 unselected are not claimed passing. Existing W38 retained-source output/callback and driver-work controls pass, not a new prefix benchmark or native/SLO/customer-renderer proof.",
+    "Expected synthetic learning_incomplete, malformed-config/outage logs and Vite CJS warning are retained. Local persisted ledger/replay proof does not establish active learning fanout delivery success.",
+    "Only22 assigned source/API/operator/fixture files and this worker record changed. No source edits during checks, broad suites, new framework, emitted builds, installs, external/cloud/customer-data/destructive/commit actions, governance edits or delegation. Frozen independent review and acceptance remain lead-owned."
+  ]
+}

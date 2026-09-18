@@ -1,0 +1,97 @@
+{
+  "before": {
+    "mode": "framework_only",
+    "local_engine_changes": false,
+    "local_authorization": null,
+    "deployment": false,
+    "model": "gpt-6-astra",
+    "efforts": [
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "max_active_tasks": 1,
+    "design_authorization": {
+      "actor_id": "w01-user",
+      "at": "2026-09-06T21:29:15Z",
+      "scope_task_ids": [
+        "W01.01"
+      ],
+      "allowed_actions": [
+        "source_inspection",
+        "task_documentation_and_tracking",
+        "independent_source_review",
+        "local_read_only_checks"
+      ],
+      "record": {
+        "path": "docs/remediation/evidence/W01.01/authorization.md",
+        "sha256": "99ba9e72bf83297e940eb23cce1a80f52dd6e00c4a8c88a410b649115bac7bf7"
+      },
+      "description": "User's go accepted the bounded source-only W01.01 offer. Legacy framework_only mode retains no-engine-write permission; this record is specific design authority, not a customer decision or local implementation mandate."
+    }
+  },
+  "after": {
+    "mode": "local_remediation_authorized",
+    "local_engine_changes": true,
+    "local_authorization": {
+      "actor_id": "g0-user",
+      "at": "2026-09-06T23:27:46.881Z",
+      "description": "User Approved local decision-independent G0 code remediation, starting with unused API removal. Reuse for admitted in-scope fixes; excludes deployment, real credentials/customer data, customer-policy decisions, staging/commit/push and unrelated/destructive operations.",
+      "record": {
+        "path": "docs/remediation/evidence/W01.02/authorization.md",
+        "sha256": "67f30789c71bff1f416497106ee6d3760f53630d93eebdcbeff648ff37d55f70"
+      },
+      "scope_task_ids": [
+        "W01.02"
+      ],
+      "scope_package_ids": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W12",
+        "W13",
+        "W14",
+        "W21",
+        "W29",
+        "W34",
+        "W37",
+        "W39"
+      ],
+      "allowed_actions": [
+        "local_engine_changes",
+        "local_checks"
+      ]
+    },
+    "deployment": false,
+    "model": "gpt-6-astra",
+    "efforts": [
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "max_active_tasks": 1,
+    "design_authorization": {
+      "actor_id": "w01-user",
+      "at": "2026-09-06T21:29:15Z",
+      "scope_task_ids": [
+        "W01.01"
+      ],
+      "allowed_actions": [
+        "source_inspection",
+        "task_documentation_and_tracking",
+        "independent_source_review",
+        "local_read_only_checks"
+      ],
+      "record": {
+        "path": "docs/remediation/evidence/W01.01/authorization.md",
+        "sha256": "99ba9e72bf83297e940eb23cce1a80f52dd6e00c4a8c88a410b649115bac7bf7"
+      },
+      "description": "User's go accepted the bounded source-only W01.01 offer. Legacy framework_only mode retains no-engine-write permission; this record is specific design authority, not a customer decision or local implementation mandate."
+    }
+  }
+}

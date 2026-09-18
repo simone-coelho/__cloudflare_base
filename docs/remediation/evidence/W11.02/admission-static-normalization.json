@@ -1,0 +1,45 @@
+{
+  "task_id": "W11.02",
+  "at": "2026-09-18T00:31:18.218Z",
+  "actor_id": "w01-lead",
+  "before": "5c9690aafabd5166f6b29f1172cd5df7f40fb8df2f7aeba665c6cb3b522e96b4",
+  "after": "09043d78a779aa4043892dd3d9cbc0cf8dba58ba7a5bc8031c43a959543c49c0",
+  "scope": "Only exact K5 diagnostic-format comparison corrected. Whole-original W11/C1–C9/29 outputs/ownership/all other checks and matching predicates unchanged.",
+  "prior_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/evidence/W11.02/admission-static-amendment.json",
+      "sha256": "f0c9256ddc0046156349b0b043200f3bd1c5cdc1e2e4caf92fc59638166eb096"
+    },
+    "contract_digest": "5c9690aafabd5166f6b29f1172cd5df7f40fb8df2f7aeba665c6cb3b522e96b4",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-17T23:37:53.685Z",
+      "plan_sha256": "f0c9256ddc0046156349b0b043200f3bd1c5cdc1e2e4caf92fc59638166eb096",
+      "rationale": "Validation-only, exact saved-source no-new-diagnostic gate; never full-lintPASS. CompleteW11 scope/ownership/all otherchecks unchanged; no unrelated cleanup."
+    }
+  },
+  "replacement": {
+    "from": "b.message===m.message",
+    "to": "b.message===m.message.replace(/([^ ])\\.$/u,\"$1\")",
+    "occurrences": 1,
+    "before_command_sha256": "5b85a3923f700cc5e6abe08dd345a60a0ad6bae5e643b7e0900d895958a3570a",
+    "after_command_sha256": "97375afa5aaec09144b0bb83a818315a248abab04e7978ae75ffce25e86308a9"
+  },
+  "installed_formatter": {
+    "path": "node_modules/eslint/lib/cli-engine/formatters/stylish.js",
+    "sha256": "5b29a5d0f0496c57c3c1232acf317edd3bc980446e6dca3922eba3289b5c82d7",
+    "line": 69,
+    "expression": "message.message.replace(/([^ ])\\.$/u, \"$1\")"
+  },
+  "reason": "Saved baseline is stylish-formatted; API messages retain terminal periods removed by stylish. Apply exactly the installed formatter transformation to compare the same diagnostic text. No waiver: path/severity/rule/source-line and one-to-one matching, exactly eight admitted inherited errors and no new diagnostics remain required.",
+  "retained_failure": {
+    "attempt": "K5.4",
+    "primary_sha256": "6bfd9936fe57188e36e072aca352094c23f759dda0927f858f28992f0cc8ebb7",
+    "primary_bytes": 48476,
+    "result": "Compiler PASS; raw lint8 errors19 warnings; diagnostic gate FAIL, whitespace not reached. Four genuine introduced warnings remain to be corrected; no result rewritten."
+  },
+  "baseline": "Original baseline.1 and all dirty originals preserved; original/static-amendment plans immutable. Runtime passes K1.4/K2.4/K3.2/K4.1 require final source qualification, not reruns for behavior-free formatting.",
+  "approval": "Lead approves exact formatter-equivalent correction only; final K5 GO follows valid board. Raw full lint remains FAILED on eight inherited Meridian errors. Final frozen whole-W11 independent review and C9/K8 live acceptance remain open.",
+  "rollback": "Retain prior command/plan/failed primaries; no product rollback or external action."
+}

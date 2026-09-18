@@ -1,0 +1,248 @@
+{
+  "before": null,
+  "after": {
+    "id": "W20.06-E3",
+    "task_id": "W20.06",
+    "check_id": "W20.06-K3",
+    "criterion_ids": [
+      "W20.06-C1",
+      "W20.06-C2",
+      "W20.06-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W20.06/review.json",
+      "sha256": "735fad157b1353991330eccce545f55b5e4bffe1dd4d31ecbf0ee2892e5de1f7"
+    },
+    "at": "2026-09-13 23:10:00 UTC",
+    "limitations": "Bounded local customer-neutral absence/default handoff only; no engine ranking, pins, governance schema, receipts/replay, server routes, consent/identity authority or model changes. Existing site default helpers remain site-owned; no customer-selected assets or arbitrary replacement. Source and both SDK bundles are checked with local synthetic hosts/DOM and actual guarded renderer code, not a customer browser/walkthrough, first-paint/no-flash guarantee, deployed latency/native/SLO, scientific or release acceptance. No new refresh/push server, infrastructure, test suite, cloud/resource/customer-data/credential operations, deployment, dev/provision/seed/install, destructive cleanup, commit/push or external action. SDK generation is installed esbuild write:false with apply_patch of owned outputs only. Full W20/W15/F28/F29, actual customer default mappings and server-render timing remain open. W20.05 exact-byte proof is prospectively qualified for its listen dependency; its implemented pin/ranking/replay/report controls and history remain, W08.04 unchanged. Storefront has30 inherited lint errors and6 warnings; SDK6 warnings. Exact unchanged baseline diagnostics may remain, no new errors/warnings or disabled rules; not a full storefront lint pass. Plan-v2 normalizes only terminal diagnostic message periods; full/SDK compiler stages reused from drained static1 on identical source/input bytes.",
+    "command": "node node_modules/vitest/vitest.mjs run src/sdk/listen.test.ts --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct Astra/xhigh frozen source/artifact review and exact same12 once; final static reused.",
+    "workload": "Seven scoped deltas, protected dependencies, actual generated output parity and customer-default/capture contract; no full W20/W15/customer/no-flash/SLO claim.",
+    "result": "pass",
+    "artifact_digest": "1530c67c278ce45266980fa56923638510da9b8a5e46452d68affafa59a1ad81",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "e1f9b63bb059079e8608b28ac7202b2f88949467e5e8a2cd9fc251f93e86cbcf",
+      "configuration": "Bounded local customer-neutral absence/default handoff only; no engine ranking, pins, governance schema, receipts/replay, server routes, consent/identity authority or model changes. Existing site default helpers remain site-owned; no customer-selected assets or arbitrary replacement. Source and both SDK bundles are checked with local synthetic hosts/DOM and actual guarded renderer code, not a customer browser/walkthrough, first-paint/no-flash guarantee, deployed latency/native/SLO, scientific or release acceptance. No new refresh/push server, infrastructure, test suite, cloud/resource/customer-data/credential operations, deployment, dev/provision/seed/install, destructive cleanup, commit/push or external action. SDK generation is installed esbuild write:false with apply_patch of owned outputs only. Full W20/W15/F28/F29, actual customer default mappings and server-render timing remain open. W20.05 exact-byte proof is prospectively qualified for its listen dependency; its implemented pin/ranking/replay/report controls and history remain, W08.04 unchanged. Storefront has30 inherited lint errors and6 warnings; SDK6 warnings. Exact unchanged baseline diagnostics may remain, no new errors/warnings or disabled rules; not a full storefront lint pass. Plan-v2 normalizes only terminal diagnostic message periods; full/SDK compiler stages reused from drained static1 on identical source/input bytes.",
+      "files": [
+        {
+          "path": "src/sdk/listen.ts",
+          "role": "output",
+          "sha256": "2dc1611cc79a94b9f350a5d9c36e42a61cb493390fb7c436989a1b4a6892e677"
+        },
+        {
+          "path": "src/sdk/listen.test.ts",
+          "role": "output",
+          "sha256": "005f1da20f19e56403c6e7008e3bf332b6af5b245329b50c1efac65ff44d9d21"
+        },
+        {
+          "path": "public/storefront.js",
+          "role": "output",
+          "sha256": "fb7abcd55b5f935ce569ed22fde724ee03676a9a22d147118b063ce00f6e5b67"
+        },
+        {
+          "path": "public/sdk/edge-personalization.js",
+          "role": "output",
+          "sha256": "e6125bae3f65ab50b69bfa227fd7bdeb8381c8b22bc4287ceeba1015137e9ddf"
+        },
+        {
+          "path": "public/sdk/edge-personalization.esm.js",
+          "role": "output",
+          "sha256": "751679ecaf435c876b09419831caeb43362cac57f8b8bb312013f8c5f04f7e30"
+        },
+        {
+          "path": "src/sdk/README.md",
+          "role": "output",
+          "sha256": "f44f2b9ac8bc6027a0ecd67a1321621ce414ae9f7a0738c3de7b60066a5188c0"
+        },
+        {
+          "path": "docs/kit/01-integration-guide.md",
+          "role": "output",
+          "sha256": "134b47b20d47908cc744c05d6fec605c318108479eedc76b9e905c62fe4688f8"
+        },
+        {
+          "path": "src/sdk/core.ts",
+          "role": "source",
+          "sha256": "babf972c47fcf27fa39075ee616bf92bfedb1c17d9a62397ae7e9733707b132b"
+        },
+        {
+          "path": "src/sdk/types.ts",
+          "role": "source",
+          "sha256": "d55a4a84b3ca1807260b56acf575d85b8aa2c9e1d77be638d481e3283b699afb"
+        },
+        {
+          "path": "src/sdk/testHost.ts",
+          "role": "source",
+          "sha256": "5104d089455694ef802507f8188af6e9fedcfa3604f8a2e5226da6b249ac7842"
+        },
+        {
+          "path": "src/sdk/identity.ts",
+          "role": "source",
+          "sha256": "a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f"
+        },
+        {
+          "path": "src/sdk/wire.ts",
+          "role": "source",
+          "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "role": "source",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3"
+        },
+        {
+          "path": "src/sdk/emit.ts",
+          "role": "source",
+          "sha256": "4fc50a87c17cdfda2eb4fefdef5bb10017392db42f9ea941485154d1da2c10b6"
+        },
+        {
+          "path": "src/sdk/identify.ts",
+          "role": "source",
+          "sha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1"
+        },
+        {
+          "path": "src/sdk/memoryHost.ts",
+          "role": "source",
+          "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+        },
+        {
+          "path": "src/sdk/host.ts",
+          "role": "source",
+          "sha256": "f0e8f50d96fbf0108defa76808270c5c2f08a43b5c2d32f0e31d65e39263f92d"
+        },
+        {
+          "path": "src/sdk/version.ts",
+          "role": "source",
+          "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+        },
+        {
+          "path": "src/sdk/index.ts",
+          "role": "source",
+          "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+        },
+        {
+          "path": "src/sdk/browser.ts",
+          "role": "source",
+          "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+        },
+        {
+          "path": "scripts/build-sdk.mjs",
+          "role": "source",
+          "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79"
+        },
+        {
+          "path": "src/sdk/tsconfig.json",
+          "role": "source",
+          "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F26.md",
+          "role": "source",
+          "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F28.md",
+          "role": "source",
+          "sha256": "121a07ed372126d8e1741d374865e8af6eef55357b76a955b4db18fba236da9f"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F29.md",
+          "role": "source",
+          "sha256": "152dc5d717c42e1590fae470a52a01cd35860f72ec9d82c669c2843700bdf996"
+        },
+        {
+          "path": "docs/architecture/18-content-affinity-engine.md",
+          "role": "source",
+          "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "source",
+          "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+        },
+        {
+          "path": "docs/Tapestry-Scope-Questions-Answers.md",
+          "role": "source",
+          "sha256": "84db3ca353f907fc2e170ed4ba4307a6a785c9b7c8c77d161eb2a40d8071e844"
+        },
+        {
+          "path": "docs/content-personalization-design-tapestry.html",
+          "role": "source",
+          "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.06/worker.json",
+          "role": "output",
+          "sha256": "643902a2bc015fe9c0812bf61072ff2a677302903934f7a10041fba94b7745a1"
+        },
+        {
+          "path": "docs/remediation/design/W20.06/plan-v2.md",
+          "role": "configuration",
+          "sha256": "e98cbed63c1e5b48936ce31b0fa392c381d773c57da8c99cd2e1255167467e2d"
+        },
+        {
+          "path": "docs/remediation/design/W20.06/baseline.json",
+          "role": "configuration",
+          "sha256": "0c1ea398e5bba5064be546c461b694281b87f3fa36c247a85a390e5befc7b134"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.06/admission.json",
+          "role": "configuration",
+          "sha256": "dd5ae997dee1bc3f348c4ac49ea4464473a42a0e3edca983995b20104b3aa1f1"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.06/check-amendment.json",
+          "role": "configuration",
+          "sha256": "860d62ad01ba9342d1a156ce45e998337b8fe7a62d351e4d25b0e59980535595"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.06/source-freeze.json",
+          "sha256": "6222ab72b9a2460fe545421e8bb495381ab89ab7bc6a6cab0a34d96d68b9ca2c",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.06/source-deltas.json",
+          "sha256": "7581e202d695311bde9113bbe47a3b13a9fdf3f01dadd50a5c5b1ce719d27c25",
+          "role": "configuration"
+        }
+      ],
+      "digest": "1530c67c278ce45266980fa56923638510da9b8a5e46452d68affafa59a1ad81"
+    }
+  }
+}

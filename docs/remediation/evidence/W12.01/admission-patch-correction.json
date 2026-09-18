@@ -1,0 +1,199 @@
+{
+  "id": "W12.01",
+  "at": "2026-09-09T00:23:23.739Z",
+  "before": {
+    "W09": {
+      "id": "W09",
+      "canonical": {
+        "gate_scope": "G1",
+        "full_scope": "Version/chunk queue envelopes by serialized byte and batch budgets, including shared inputs without breaking readers. Define durable recovery for producer rejection, invalid/quarantined records and partial writes; DLQ in each environment; validate fan-out responses and reconcile counts to sinks. Fault tests cover oversize, outage, malformed records, retry/regroup, duplicate sends and recovery. Logging/DLQ alone is not closure.",
+        "finding_refs": "F16; N07/N08/N10",
+        "sizing_owner": "S envelope/visibility containment → M/L delivery guarantees; OL"
+      },
+      "title": "Bounded ledger delivery and recovery",
+      "gates": [
+        "G1"
+      ],
+      "source_findings": [
+        "F16",
+        "N07",
+        "N08",
+        "N10"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "partial",
+        "criteria": [
+          {
+            "id": "W12-MONITOR-TRUTHFULNESS",
+            "description": "Fail empty default decisions and expose alert delivery/recovery retry in existing monitor; bounded local containment, not complete monitoring continuity or deployed on-call acceptance."
+          }
+        ],
+        "coverage": [
+          {
+            "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+            "task_id": "W12.01",
+            "task_criterion_id": "W12.01-C1"
+          },
+          {
+            "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+            "task_id": "W12.01",
+            "task_criterion_id": "W12.01-C2"
+          },
+          {
+            "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+            "task_id": "W12.01",
+            "task_criterion_id": "W12.01-C3"
+          }
+        ],
+        "task_ids": [
+          "W12.01"
+        ],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    "W12": {
+      "id": "W12",
+      "canonical": {
+        "gate_scope": "G0/G1",
+        "full_scope": "Consent-safe, non-polluting monitor with zero-decision detection, delivery/schema/tenant continuity, justified thresholds and visible alert result. Isolate synthetic receipts/state from customer measurement. Verify disabled/failed/empty queues, destination failure, both hosts and each configured tenant. An alert URL merely being present is not on-call acceptance.",
+        "finding_refs": "F10; N19",
+        "sizing_owner": "S isolated checks → M operational proof; OL/D"
+      },
+      "title": "Consent-safe monitoring and alerts",
+      "gates": [
+        "G0",
+        "G1"
+      ],
+      "source_findings": [
+        "F10",
+        "N19"
+      ],
+      "proposed_owner": "OL/D",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    }
+  },
+  "after": {
+    "W09": {
+      "id": "W09",
+      "canonical": {
+        "gate_scope": "G1",
+        "full_scope": "Version/chunk queue envelopes by serialized byte and batch budgets, including shared inputs without breaking readers. Define durable recovery for producer rejection, invalid/quarantined records and partial writes; DLQ in each environment; validate fan-out responses and reconcile counts to sinks. Fault tests cover oversize, outage, malformed records, retry/regroup, duplicate sends and recovery. Logging/DLQ alone is not closure.",
+        "finding_refs": "F16; N07/N08/N10",
+        "sizing_owner": "S envelope/visibility containment → M/L delivery guarantees; OL"
+      },
+      "title": "Bounded ledger delivery and recovery",
+      "gates": [
+        "G1"
+      ],
+      "source_findings": [
+        "F16",
+        "N07",
+        "N08",
+        "N10"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    "W12": {
+      "id": "W12",
+      "canonical": {
+        "gate_scope": "G0/G1",
+        "full_scope": "Consent-safe, non-polluting monitor with zero-decision detection, delivery/schema/tenant continuity, justified thresholds and visible alert result. Isolate synthetic receipts/state from customer measurement. Verify disabled/failed/empty queues, destination failure, both hosts and each configured tenant. An alert URL merely being present is not on-call acceptance.",
+        "finding_refs": "F10; N19",
+        "sizing_owner": "S isolated checks → M operational proof; OL/D"
+      },
+      "title": "Consent-safe monitoring and alerts",
+      "gates": [
+        "G0",
+        "G1"
+      ],
+      "source_findings": [
+        "F10",
+        "N19"
+      ],
+      "proposed_owner": "OL/D",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "partial",
+        "criteria": [
+          {
+            "id": "W12-MONITOR-TRUTHFULNESS",
+            "description": "Fail empty default decisions and expose alert delivery/recovery retry in existing monitor; bounded local containment, not complete monitoring continuity or deployed on-call acceptance."
+          }
+        ],
+        "coverage": [
+          {
+            "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+            "task_id": "W12.01",
+            "task_criterion_id": "W12.01-C1"
+          },
+          {
+            "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+            "task_id": "W12.01",
+            "task_criterion_id": "W12.01-C2"
+          },
+          {
+            "criterion_id": "W12-MONITOR-TRUTHFULNESS",
+            "task_id": "W12.01",
+            "task_criterion_id": "W12.01-C3"
+          }
+        ],
+        "task_ids": [
+          "W12.01"
+        ],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    }
+  },
+  "failed_check": "Admission board445 exit1: W09 dangling W12.01 coverage and W12 missing task link/journal mismatch.",
+  "cause": "Identical short-context empty-decomposition patch matched W09 instead of W12. Root detected immediately and paused worker; worker had already applied monitor source after valid contract/plan and dependency qualification. No fixture/check then ran. Restore untouched W09 and apply exact admitted W12; future patches include wider identity context.",
+  "scope": "No implementation or acceptance contract change; no test expansion."
+}

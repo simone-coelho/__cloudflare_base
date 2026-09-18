@@ -1,0 +1,168 @@
+{
+  "task_id": "W12.02",
+  "at": "2026-09-18T02:48:20.272Z",
+  "source_state": "SOURCE/EVIDENCE STOP; all worker/native commands drained. Final independent whole-originalW12/K5/K6 pending valid boardGO.",
+  "worker": {
+    "path": "docs/remediation/evidence/W12.02/worker.json",
+    "sha256": "20935b3c99f3b39f9b1e7de1952fc710cc183f738084972b6afef13eb5c67064",
+    "bytes": 1395693
+  },
+  "admissions": [
+    {
+      "path": "docs/remediation/evidence/W12.02/admission.json",
+      "sha256": "80245e0e79b46daf445e868125cd5ac89809a5533ae87ddd80ba773864daede3",
+      "bytes": 39524
+    },
+    {
+      "path": "docs/remediation/evidence/W12.02/admission-recovery.json",
+      "sha256": "27f548e39f7556d8a1ca44c6217b64e9d977275558bc7e76c563a90299c12b12",
+      "bytes": 1814
+    }
+  ],
+  "artifact": {
+    "digest": "d6926be92e29a17106cc1505d9a8074fe7b7d75ccb27cc04cf3c135523d9fa9c",
+    "contract_digest": "078fb3af31b292feb584b44f0d0952687122d099ac52d7530b253ca461c65244",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W12.02"
+  },
+  "identity": {
+    "outputs": 18,
+    "reversible_deltas": 18,
+    "protected_unchanged": 120,
+    "complete_primaries": 26,
+    "root_verification": "Verified all18 dirty originals against admission and decoded bytes, forward/reverse exact patches/current outputs, all120 protected/current138pins. Fully decoded/read/hash-length/metadata verified all26 complete retained primaries. Diagnostic6 retained exact output but missing timings/pins explicitly never acceptance. Exact final static pins and raw inverse one-character reuse hashes verified. No root product edits/tests."
+  },
+  "results": [
+    {
+      "id": "W12.02-K1",
+      "attempt": 4,
+      "passed": 23,
+      "command": "node node_modules/vitest/vitest.mjs run src/ops/monitor.test.ts src/services/telemetry.boundary.test.ts src/content/consent.test.ts src/reflex/regionTrend.test.ts -t 'the monitor|W12|W07[.]05.*monitor|W10[.]03 checks actual serving health|region keys, rollups, and the ladder' --maxWorkers=1 --minWorkers=1",
+      "result": "PASS_WITH_RECORDED_QUALIFICATION",
+      "primary_sha256": "81ded0dc97c08ca82111ad14c1be2f9656f657807b720878c3ac9d4e8599d2b3",
+      "primary_bytes": 11781,
+      "started_at": "2026-09-18T02:41:30.053Z",
+      "finished_at": "2026-09-18T02:41:52.423Z",
+      "exit_code": 0
+    },
+    {
+      "id": "W12.02-K2",
+      "attempt": 4,
+      "passed": 5,
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W12|W09[.]03|W09[.]06|W10[.]03 native SQLite|W07[.]04 keeps actual scheduled' --maxWorkers=1 --minWorkers=1",
+      "result": "PASS_WITH_RECORDED_QUALIFICATION",
+      "primary_sha256": "957d3a6fc5a914020f6757dba144635681edff115e1274b3797742cfc1654270",
+      "primary_bytes": 8651,
+      "started_at": "2026-09-18T02:39:37.814Z",
+      "finished_at": "2026-09-18T02:41:48.612Z",
+      "exit_code": 0
+    },
+    {
+      "id": "W12.02-K3",
+      "attempt": 1,
+      "passed": 3,
+      "command": "node --test --test-name-pattern 'W12|W08[.]05 strict intent|W09[.]09 rework intake' scripts/stamp-workflow.test.mjs",
+      "result": "PASS_WITH_RECORDED_QUALIFICATION",
+      "primary_sha256": "183145fbe304e3992fdcc046b8a6f474a65ccb44435f18e857b9525621be5ec7",
+      "primary_bytes": 1004,
+      "started_at": "2026-09-18T02:01:48.994Z",
+      "finished_at": "2026-09-18T02:01:52.652Z",
+      "exit_code": 0
+    },
+    {
+      "id": "W12.02-K4",
+      "attempt": 6,
+      "passed": null,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/eslint/bin/eslint.js src/content/service.ts src/reflex/regionTrend.ts src/ops/monitor.ts src/ops/synthetic.ts src/index.ts src/connectors/config.ts src/identity/sessionAuthority.ts src/durable-objects/ShopperReflex.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/durable-objects/RegionTrend.ts src/durable-objects/PersonalizationWebSocket.ts src/ops/monitor.test.ts src/index.api-boundary.test.ts src/services/telemetry.boundary.test.ts && node --check scripts/stamp-workflow.mjs && node --check scripts/stamp-workflow.test.mjs && git diff --check -- src/content/service.ts src/reflex/regionTrend.ts src/ops/monitor.ts src/ops/synthetic.ts src/index.ts src/connectors/config.ts src/identity/sessionAuthority.ts src/durable-objects/ShopperReflex.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/durable-objects/RegionTrend.ts src/durable-objects/PersonalizationWebSocket.ts scripts/stamp-workflow.mjs src/ops/monitor.test.ts src/index.api-boundary.test.ts src/services/telemetry.boundary.test.ts scripts/stamp-workflow.test.mjs docs/kit/02-api-reference.md",
+      "result": "PASS_WITH_RECORDED_QUALIFICATION",
+      "primary_sha256": "f06b7b588b0295900a506d5c1a1ef1bbdfeb453fb0b0dba42ae2c83698b1a759",
+      "primary_bytes": 8936,
+      "started_at": "2026-09-18T02:42:53.230Z",
+      "finished_at": "2026-09-18T02:43:34.832Z",
+      "exit_code": 0
+    }
+  ],
+  "source_qualification": [
+    {
+      "id": "W12.02-K1",
+      "attempt": 4,
+      "source_differences": [
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "before_sha256": "2fa761d649917e54e2679941219339b2e641d1123918d5dc6783ef9074a1c2e3",
+          "after_sha256": "2c2e17fb71b694abf32e9c5a5b2a252a60c3fd926e302ac42bafd78e5678e828"
+        }
+      ],
+      "basis": "Only the exact compile-erased non-null assertion in index fixture differs. Root reversed that one character and matched the retained source SHA. Worker sourceReuse records complete esbuild-transformed equality; root did not run a compiler or claim to independently execute that transform. Final independent K6 runs exact final source."
+    },
+    {
+      "id": "W12.02-K2",
+      "attempt": 4,
+      "source_differences": [
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "before_sha256": "2fa761d649917e54e2679941219339b2e641d1123918d5dc6783ef9074a1c2e3",
+          "after_sha256": "2c2e17fb71b694abf32e9c5a5b2a252a60c3fd926e302ac42bafd78e5678e828"
+        }
+      ],
+      "basis": "Only the exact compile-erased non-null assertion in index fixture differs. Root reversed that one character and matched the retained source SHA. Worker sourceReuse records complete esbuild-transformed equality; root did not run a compiler or claim to independently execute that transform. Final independent K6 runs exact final source."
+    },
+    {
+      "id": "W12.02-K3",
+      "attempt": 1,
+      "source_differences": [
+        {
+          "path": "src/ops/synthetic.ts",
+          "before_sha256": "d2510effbca9abbafbec38736b0aebf7224f8460a37fb9865018d66ba05126ff",
+          "after_sha256": "3cbf8a0429d9aaf55c4583cd8d4a25b9b1aba9995609d201cb69d9734fa937e3"
+        },
+        {
+          "path": "src/durable-objects/PersonalizationWebSocket.ts",
+          "before_sha256": "bcd53ac9a105a7f2b2cd70986ab8b782abe76317a9d552937979ee89fe0acd76",
+          "after_sha256": "8977fd4a392ec68903bae18ee34fd588542a4072e876625cdad23fba555e5fe9"
+        },
+        {
+          "path": "src/content/service.ts",
+          "before_sha256": "2514b3e688387332cf275953b6b1079a7c646858c72b39915e77c3a5c257e14f",
+          "after_sha256": "3d7ed17320b01075b2a5052071105626b7dc8f74bc8afa2bf25949862ae5f09a"
+        },
+        {
+          "path": "src/ops/monitor.test.ts",
+          "before_sha256": "70f76fee9a0d66a5515bf97dadbc77bac7099fcd52c33669931beeb36fd5112c",
+          "after_sha256": "c997b106d05423e1fab83eb7b3ecf71202ade47acb7555e499c73a058edbc5fe"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "before_sha256": "a887b54d1e107c7396400a127bf9cd55744f73ee086d29969224c7a89671de5a",
+          "after_sha256": "2c2e17fb71b694abf32e9c5a5b2a252a60c3fd926e302ac42bafd78e5678e828"
+        }
+      ],
+      "basis": "Only five application/native/fixture files differ; selected workflow desired-state/material checks, scripts, configurations and protected dependencies are unchanged. Independent reviewer must confirm this reuse relevance."
+    },
+    {
+      "id": "W12.02-K4",
+      "attempt": 6,
+      "source_differences": [],
+      "basis": "Exact final138pins; compiler/lint0errors81warnings/syntax/whitespace. No no-warning/no-new-warning claim."
+    }
+  ],
+  "diagnostics": {
+    "compiler": "PASS",
+    "lint_errors": 0,
+    "lint_warnings": 81,
+    "syntax": "PASS",
+    "whitespace": "PASS",
+    "warning_qualification": "Actual warnings retained; no warning-free/no-new baseline/W13 claim."
+  },
+  "native": {
+    "coverage": "Real source/ledger/learning on two nondefault tenants and both hosts; all-five native authority/restart/expiry/ambiguous writes, held disposal/replay, failed sinks and queue negatives, late observation, consumer timeout with ordinary positional sibling, original/retry alarm failure propagation, zero revoked initializer row-work. Full exactK2.4 PASS5; W09 source/DLQ and W10 SQLite boundaries preserved.",
+    "samples": "K2 native decision193–222ms/event157–244ms; two monitor results correctly fail diagnostic latency, not customerSLO. W10 native3MiB SQLITE_TOOBIG/noncommit,1200markers/1201events/256items/280570B, persisted restart, owner5ms/held50ms; outbound0/disposed.",
+    "qualification": "Cross-request-promise warning at intentional post-deadline release retained. Original diagnostic8/9 RetentionUnavailable phase unproved; later corrected native assertions pass, no retrospective exact-cause claim."
+  },
+  "limitations": [
+    "Distinct frozen whole-W12/K5/K6 and lead local disposition remain pending; this is not acceptance.",
+    "C9/K7 live resource/queue/policy/retention/activation/provider/oncall/workload/customerSLO acceptance remainsOPEN final separately authorized batch.",
+    "No cloud/resource/credential/customer/external operation, deployment/commit/merge/push, broadCI or package/SDKbuild. Full originalW13 not admitted."
+  ],
+  "failures_preserved": "All26 historical/failed/superseding primaries and original admission/recovery retained unchanged. Diagnostic-only subset runs never replace full exactK2. K4.4 drifting source remains diagnostic-only; K4.5 type failure superseded by exact finalK4.6."
+}

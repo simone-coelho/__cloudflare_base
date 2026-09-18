@@ -1,0 +1,89 @@
+{
+  "handoff_readback": {
+    "initial_capture": "144db4",
+    "initial_exit_code": 1,
+    "initial_limitation": "Read-only assertion incorrectly searched all retained RESUME history for a pending-board sentence instead of the current checkpoint; no artifact or board failure and no source edits.",
+    "superseding_capture": "b34af9",
+    "superseding_exit_code": 0,
+    "superseding_at": "2026-09-13T16:12:04.529Z",
+    "result": "Current checkpoint and closed/accepted task, journal1503, matching artifact and valid fully drained board handoff confirmed. Historical checkpoint text preserved."
+  },
+  "at": "2026-09-13T16:11:33.531Z",
+  "task_id": "W19.01",
+  "artifact_digest": "de9e7386adb6fe63a4790b476ea848adf4141726adb584ad9db6ba1a3bedbdcc",
+  "journal_seq": 1503,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "a91ce3",
+        "wall_time_seconds": 1.000587973,
+        "session_id": 5642,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "d9d1ab",
+        "wall_time_seconds": 5.001766629,
+        "session_id": 5642,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f713cc",
+        "wall_time_seconds": 5.000759841,
+        "session_id": 5642,
+        "original_token_count": 316,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=104, closed=2; evidence records=309\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W19.01 — Inspect and admit the remaining W19/N15 canonical content-type mismatch: events accumulate on piece.type while ranking uses tags.contentType, including film/video disagreement. Trace actual customer-neutral registry vocabulary and both signal/scoring paths before choosing a backward-compatible contract; preserve historical receipts and avoid hard-coding a customer taxonomy or inventing product-attribute inheritance. W19 registry/locale/slot vocabulary, empty-taxonomy policy, inheritance/customer decisions and full feed acceptance remain open; W18 customer walkthrough, W20 activation/governance controls, W35 native authority/performance and release approval stay separate. Keep the next implementation bounded; no new framework or broad suite.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 21532\n"
+      },
+      {
+        "chunk_id": "5de705",
+        "wall_time_seconds": 0.000002249,
+        "exit_code": 0,
+        "original_token_count": 316,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=104, closed=2; evidence records=309\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W19.01 — Inspect and admit the remaining W19/N15 canonical content-type mismatch: events accumulate on piece.type while ranking uses tags.contentType, including film/video disagreement. Trace actual customer-neutral registry vocabulary and both signal/scoring paths before choosing a backward-compatible contract; preserve historical receipts and avoid hard-coding a customer taxonomy or inventing product-attribute inheritance. W19 registry/locale/slot vocabulary, empty-taxonomy policy, inheritance/customer decisions and full feed acceptance remain open; W18 customer walkthrough, W20 activation/governance controls, W35 native authority/performance and release approval stay separate. Keep the next implementation bounded; no new framework or broad suite.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 21532\n"
+      }
+    ],
+    "chunk_id": "5de705",
+    "wall_time_seconds": 0.000002249,
+    "session_id": 5642,
+    "original_token_count": 316,
+    "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=104, closed=2; evidence records=309\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W19.01 — Inspect and admit the remaining W19/N15 canonical content-type mismatch: events accumulate on piece.type while ranking uses tags.contentType, including film/video disagreement. Trace actual customer-neutral registry vocabulary and both signal/scoring paths before choosing a backward-compatible contract; preserve historical receipts and avoid hard-coding a customer taxonomy or inventing product-attribute inheritance. W19 registry/locale/slot vocabulary, empty-taxonomy policy, inheritance/customer decisions and full feed acceptance remain open; W18 customer walkthrough, W20 activation/governance controls, W35 native authority/performance and release approval stay separate. Keep the next implementation bounded; no new framework or broad suite.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 21532\n",
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      21532,
+      21532
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';import assert from 'node:assert/strict';import {sha256,artifactDigest,taskContractDigest}from'./scripts/remediation/board.mjs';const t=JSON.parse(fs.readFileSync('docs/remediation/tracker.json','utf8')),k=t.tasks.find(x=>x.id==='W19.01'),b=JSON.parse(fs.readFileSync('docs/remediation/design/W19.01/baseline.json','utf8'));for(const f of k.artifact.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);assert.equal(artifactDigest(k.artifact),k.artifact.digest);assert.equal(taskContractDigest(k),k.preflight.contract_digest);assert.equal(sha256(JSON.stringify(t.journal.slice(0,b.prior_journal_length))),b.prior_journal_sha256);console.log(JSON.stringify({at:new Date().toISOString(),status:'passed',state:k.state,journal:t.journal.length,pins:k.artifact.files.length,prior_journal_preserved:b.prior_journal_length,artifact:k.artifact.digest,contract:k.preflight.contract_digest,lead_signoff:k.lead_signoff.status}));\nNODE",
+    "captures": [
+      {
+        "chunk_id": "d6bce6",
+        "wall_time_seconds": 0.34120785,
+        "exit_code": 0,
+        "original_token_count": 77,
+        "output": "{\"at\":\"2026-09-13T16:07:33.218Z\",\"status\":\"passed\",\"state\":\"closed\",\"journal\":1503,\"pins\":36,\"prior_journal_preserved\":1482,\"artifact\":\"de9e7386adb6fe63a4790b476ea848adf4141726adb584ad9db6ba1a3bedbdcc\",\"contract\":\"ff0af9a552112143e6830a55b9176a27cc1fdea3e1a10a7b720f8c4ca5f46c15\",\"lead_signoff\":\"accepted\"}\n"
+      }
+    ],
+    "chunk_id": "d6bce6",
+    "wall_time_seconds": 0.34120785,
+    "exit_code": 0,
+    "original_token_count": 77,
+    "output": "{\"at\":\"2026-09-13T16:07:33.218Z\",\"status\":\"passed\",\"state\":\"closed\",\"journal\":1503,\"pins\":36,\"prior_journal_preserved\":1482,\"artifact\":\"de9e7386adb6fe63a4790b476ea848adf4141726adb584ad9db6ba1a3bedbdcc\",\"contract\":\"ff0af9a552112143e6830a55b9176a27cc1fdea3e1a10a7b720f8c4ca5f46c15\",\"lead_signoff\":\"accepted\"}\n"
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "supported_catalog_metadata_safe_merge_and_compatible_write_validation",
+    "package_W19": "open",
+    "finding_F27": "open",
+    "finding_N15": "open",
+    "package_W35": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Inspect and admit the remaining W19/N15 canonical content-type mismatch: events accumulate on piece.type while ranking uses tags.contentType, including film/video disagreement. Trace actual customer-neutral registry vocabulary and both signal/scoring paths before choosing a backward-compatible contract; preserve historical receipts and avoid hard-coding a customer taxonomy or inventing product-attribute inheritance. W19 registry/locale/slot vocabulary, empty-taxonomy policy, inheritance/customer decisions and full feed acceptance remain open; W18 customer walkthrough, W20 activation/governance controls, W35 native authority/performance and release approval stay separate. Keep the next implementation bounded; no new framework or broad suite."
+  },
+  "limitations": "Bounded current supported-field import/merge fidelity, promised stage aliases and duplicate-tag refusal with retained-history compatibility only. Full W19/F27/N15 stays open: canonical type/film-video signal and ranking agreement, registry/locale/slot vocabulary, unusable taxonomy policy, product-attribute inheritance, full versioned feed/customer acceptance remain. Stored duplicate tags retain old scoring; new writes/rollback/enrichment containing them refuse until explicit correction; no silent historical rewrite. No new infrastructure, broad suite, benchmark, scoring/model/consent/authority change, emitted build/install, cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions. Retained raw enrichment proposals keep their original sample/digest and validate against the whole historical or current schema only on reads; new captures remain strict. CSV row provenance is local to parser-returned objects; copied rows are ordinary JSON. Unknown metadata is outside this bounded supported-field contract."
+}

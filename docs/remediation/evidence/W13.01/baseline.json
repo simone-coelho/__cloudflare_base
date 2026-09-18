@@ -1,0 +1,1589 @@
+{
+  "id": "W13.01",
+  "at": "2026-09-09T01:26:42.160Z",
+  "entry_board": "check/status VALID450 exit0",
+  "original_lint": {
+    "command": "npm run lint",
+    "started_at": "2026-09-09T01:21:14.893Z",
+    "finished_at": "2026-09-09T01:21:23.955Z",
+    "exit_code": 2,
+    "output": "\n> cloudflare-edge-platform@1.0.0 lint\n> eslint src --ext .ts\n\n\nOops! Something went wrong! :(\n\nESLint: 8.57.1\n\nESLint couldn't find the config \"@typescript-eslint/recommended\" to extend from. Please check that the name of the config is correct.\n\nThe config \"@typescript-eslint/recommended\" was referenced from the config file in \"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/.eslintrc.json\".\n\nIf you still have problems, please stop by https://eslint.org/chat/help to chat with the team.\n\n"
+  },
+  "scratch_lint": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';import {ESLint} from 'eslint';\nconst started_at=new Date().toISOString(), config=JSON.parse(fs.readFileSync('.eslintrc.json','utf8'));\nconfig.extends=config.extends.map(x=>x==='@typescript-eslint/recommended'?'plugin:@typescript-eslint/recommended':x);\nconst lint=new ESLint({useEslintrc:false,overrideConfig:config,extensions:['.ts'],fix:false,cache:false});\nconst results=await lint.lintFiles(['src']);\nconst byRule={};for(const r of results)for(const m of r.messages)if(m.severity===1)byRule[m.ruleId]=(byRule[m.ruleId]??0)+1;\nconst error_count=results.reduce((n,r)=>n+r.errorCount,0),warning_count=results.reduce((n,r)=>n+r.warningCount,0);\nconsole.log(JSON.stringify({started_at,finished_at:new Date().toISOString(),scratch_change:'Only extends plugin prefix corrected in memory; no source/config writes; fix/cache false.',files_analyzed:results.length,error_count,warning_count,warnings_by_rule:byRule,errors:results.flatMap(r=>r.messages.filter(m=>m.severity===2).map(m=>({path:r.filePath.replace(process.cwd()+'/',''),...m}))),source_files:results.map(r=>r.filePath.replace(process.cwd()+'/',''))},null,2));\nprocess.exitCode=error_count?1:0;\nNODE",
+    "exit_code": 1,
+    "started_at": "2026-09-09T01:21:43.757Z",
+    "finished_at": "2026-09-09T01:22:20.800Z",
+    "scratch_change": "Only extends plugin prefix corrected in memory; no source/config writes; fix/cache false.",
+    "files_analyzed": 281,
+    "error_count": 6,
+    "warning_count": 503,
+    "warnings_by_rule": {
+      "@typescript-eslint/no-explicit-any": 380,
+      "@typescript-eslint/no-unused-vars": 88,
+      "@typescript-eslint/no-empty-function": 35
+    },
+    "errors": [
+      {
+        "path": "src/demos/meridian/receipts.test.ts",
+        "ruleId": "@typescript-eslint/no-this-alias",
+        "severity": 2,
+        "message": "Unexpected aliasing of 'this' to local variable.",
+        "line": 15,
+        "column": 11,
+        "nodeType": "Identifier",
+        "messageId": "thisAssignment",
+        "endLine": 15,
+        "endColumn": 15
+      },
+      {
+        "path": "src/identity/link.ts",
+        "ruleId": "no-useless-escape",
+        "severity": 2,
+        "message": "Unnecessary escape character: \\-.",
+        "line": 56,
+        "column": 50,
+        "nodeType": "Literal",
+        "messageId": "unnecessaryEscape",
+        "endLine": 56,
+        "endColumn": 51,
+        "suggestions": [
+          {
+            "messageId": "removeEscape",
+            "fix": {
+              "range": [
+                2783,
+                2784
+              ],
+              "text": ""
+            },
+            "desc": "Remove the `\\`. This maintains the current functionality."
+          },
+          {
+            "messageId": "escapeBackslash",
+            "fix": {
+              "range": [
+                2783,
+                2783
+              ],
+              "text": "\\"
+            },
+            "desc": "Replace the `\\` with `\\\\` to include the actual backslash character."
+          }
+        ]
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "ruleId": "no-constant-condition",
+        "severity": 2,
+        "message": "Unexpected constant condition.",
+        "line": 312,
+        "column": 10,
+        "nodeType": "Literal",
+        "messageId": "unexpected",
+        "endLine": 312,
+        "endColumn": 14
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "ruleId": "no-control-regex",
+        "severity": 2,
+        "message": "Unexpected control character(s) in regular expression: \\x00, \\x1f.",
+        "line": 296,
+        "column": 18,
+        "nodeType": "Literal",
+        "messageId": "unexpected",
+        "endLine": 296,
+        "endColumn": 37
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "ruleId": "prefer-const",
+        "severity": 2,
+        "message": "'base' is never reassigned. Use 'const' instead.",
+        "line": 464,
+        "column": 9,
+        "nodeType": "Identifier",
+        "messageId": "useConst",
+        "endLine": 464,
+        "endColumn": 33,
+        "fix": {
+          "range": [
+            22411,
+            22524
+          ],
+          "text": "const base: SessionData | null = canonicalId ? await this.readRaw(canonicalId, input.consent !== undefined) : null;"
+        }
+      },
+      {
+        "path": "src/tenancy/d1.test.ts",
+        "ruleId": "@typescript-eslint/no-this-alias",
+        "severity": 2,
+        "message": "Unexpected aliasing of 'this' to local variable.",
+        "line": 36,
+        "column": 11,
+        "nodeType": "Identifier",
+        "messageId": "thisAssignment",
+        "endLine": 36,
+        "endColumn": 15
+      }
+    ],
+    "source_files": [
+      "src/agents/OpalAgent.ts",
+      "src/agents/tools/diagnoseFunnel.ts",
+      "src/agents/tools/experimentTools.ts",
+      "src/agents/tools/geoCohort.ts",
+      "src/agents/tools.ts",
+      "src/auth/accounts.test.ts",
+      "src/auth/accounts.ts",
+      "src/auth/signing-config.boundary.test.ts",
+      "src/auth/store.ts",
+      "src/config/versionedStore.test.ts",
+      "src/config/versionedStore.ts",
+      "src/connectors/AudienceAuthoring.ts",
+      "src/connectors/AudienceStore.ts",
+      "src/connectors/DecisionProvider.ts",
+      "src/connectors/SegmentProvider.ts",
+      "src/connectors/SignalProvider.ts",
+      "src/connectors/evaluateCondition.ts",
+      "src/connectors/index.ts",
+      "src/connectors/types.ts",
+      "src/console/console.render.test.ts",
+      "src/console/jsdom.d.ts",
+      "src/console/learning.render.test.ts",
+      "src/content/cell.stage.test.ts",
+      "src/content/cell.test.ts",
+      "src/content/cell.ts",
+      "src/content/consent.test.ts",
+      "src/content/consent.ts",
+      "src/content/decide.test.ts",
+      "src/content/decide.ts",
+      "src/content/freshFatigue.test.ts",
+      "src/content/holdout.test.ts",
+      "src/content/holdout.ts",
+      "src/content/import.test.ts",
+      "src/content/import.ts",
+      "src/content/inventoryDiversity.test.ts",
+      "src/content/kinds.test.ts",
+      "src/content/kinds.ts",
+      "src/content/lifecycle.ts",
+      "src/content/merchandisingSeam.test.ts",
+      "src/content/service.ts",
+      "src/content/stage.test.ts",
+      "src/content/types.ts",
+      "src/data/seed-audiences.ts",
+      "src/demos/brighthour/catalog.ts",
+      "src/demos/brighthour/composer.test.ts",
+      "src/demos/brighthour/composer.ts",
+      "src/demos/brighthour/demoClock.test.ts",
+      "src/demos/brighthour/demoClock.ts",
+      "src/demos/brighthour/experiment.test.ts",
+      "src/demos/brighthour/experiment.ts",
+      "src/demos/brighthour/geoCohort.test.ts",
+      "src/demos/brighthour/geoCohort.ts",
+      "src/demos/brighthour/offerDesk.test.ts",
+      "src/demos/brighthour/offerDesk.ts",
+      "src/demos/brighthour/offerLifecycle.test.ts",
+      "src/demos/brighthour/offerLifecycle.ts",
+      "src/demos/brighthour/reflexConfig.ts",
+      "src/demos/brighthour/surface.test.ts",
+      "src/demos/brighthour/types.ts",
+      "src/demos/meridian/MeridianReflex.ts",
+      "src/demos/meridian/catalog.ts",
+      "src/demos/meridian/client-engine.ts",
+      "src/demos/meridian/coldstart.ts",
+      "src/demos/meridian/composer.test.ts",
+      "src/demos/meridian/composer.ts",
+      "src/demos/meridian/concierge.ts",
+      "src/demos/meridian/content.test.ts",
+      "src/demos/meridian/content.ts",
+      "src/demos/meridian/contentCompose.test.ts",
+      "src/demos/meridian/contentCompose.ts",
+      "src/demos/meridian/experiment.ts",
+      "src/demos/meridian/expiry.test.ts",
+      "src/demos/meridian/funnel.test.ts",
+      "src/demos/meridian/funnel.ts",
+      "src/demos/meridian/geoCohort.test.ts",
+      "src/demos/meridian/geoCohort.ts",
+      "src/demos/meridian/isolation.test.ts",
+      "src/demos/meridian/layout.test.ts",
+      "src/demos/meridian/layout.ts",
+      "src/demos/meridian/lead.test.ts",
+      "src/demos/meridian/lead.ts",
+      "src/demos/meridian/lines.test.ts",
+      "src/demos/meridian/moment.ts",
+      "src/demos/meridian/opal.ts",
+      "src/demos/meridian/receipts.test.ts",
+      "src/demos/meridian/receipts.ts",
+      "src/demos/meridian/reflexConfig.ts",
+      "src/demos/meridian/routes.ts",
+      "src/demos/meridian/scenes.ts",
+      "src/demos/meridian/search.test.ts",
+      "src/demos/meridian/search.ts",
+      "src/demos/meridian/silhouettes.ts",
+      "src/demos/meridian/types.ts",
+      "src/demos/registry.ts",
+      "src/durable-objects/DecisionRing.ts",
+      "src/durable-objects/LearnStats.ts",
+      "src/durable-objects/PersonalizationWebSocket.ts",
+      "src/durable-objects/RateLimiter.ts",
+      "src/durable-objects/RegionTrend.ts",
+      "src/durable-objects/ShopperReflex.ts",
+      "src/durable-objects/StateManager.ts",
+      "src/events/actionTypes.test.ts",
+      "src/events/actionTypes.ts",
+      "src/identity/assertion.ts",
+      "src/identity/consentContinuity.ts",
+      "src/identity/erase.ts",
+      "src/identity/history.ts",
+      "src/identity/identity.test.ts",
+      "src/identity/link.ts",
+      "src/identity/sessionCapability.ts",
+      "src/identity/shopperId.ts",
+      "src/identity/store.ts",
+      "src/index.api-boundary.test.ts",
+      "src/index.ts",
+      "src/learn/autonomy.ts",
+      "src/learn/bridge.test.ts",
+      "src/learn/cycle.ts",
+      "src/learn/explore.ts",
+      "src/learn/external.ts",
+      "src/learn/fan.ts",
+      "src/learn/holdoutArms.test.ts",
+      "src/learn/hourly.test.ts",
+      "src/learn/hourly.ts",
+      "src/learn/learn.test.ts",
+      "src/learn/objective.test.ts",
+      "src/learn/phase2.test.ts",
+      "src/learn/phase3.test.ts",
+      "src/learn/policy.ts",
+      "src/learn/priors.ts",
+      "src/learn/queue.test.ts",
+      "src/learn/queue.ts",
+      "src/learn/receipts.test.ts",
+      "src/learn/receipts.ts",
+      "src/learn/replay.ts",
+      "src/learn/report.test.ts",
+      "src/learn/report.ts",
+      "src/learn/route.ts",
+      "src/learn/rows.test.ts",
+      "src/learn/rows.ts",
+      "src/learn/stats.ts",
+      "src/ledger/consume.ts",
+      "src/ledger/enqueue.ts",
+      "src/ledger/erasure.test.ts",
+      "src/ledger/erasure.ts",
+      "src/ledger/ledger.test.ts",
+      "src/ledger/records.ts",
+      "src/ledger/writer.ts",
+      "src/measure/holdout.test.ts",
+      "src/measure/holdout.ts",
+      "src/measure/window.test.ts",
+      "src/measure/window.ts",
+      "src/middleware/auth.claims-boundary.test.ts",
+      "src/middleware/auth.refresh-boundary.test.ts",
+      "src/middleware/auth.ts",
+      "src/middleware/edgeAccess.test.ts",
+      "src/middleware/edgeAccess.ts",
+      "src/middleware/error.ts",
+      "src/middleware/rate-limiter.ts",
+      "src/middleware/request-id.ts",
+      "src/ops/monitor.test.ts",
+      "src/ops/monitor.ts",
+      "src/reflex/audienceGenerator.test.ts",
+      "src/reflex/audienceGenerator.ts",
+      "src/reflex/choreography.test.ts",
+      "src/reflex/configStore.test.ts",
+      "src/reflex/configStore.ts",
+      "src/reflex/contentCompose.test.ts",
+      "src/reflex/contentCompose.ts",
+      "src/reflex/contentTelemetry.test.ts",
+      "src/reflex/contentTelemetry.ts",
+      "src/reflex/core.test.ts",
+      "src/reflex/core.ts",
+      "src/reflex/identityMerge.test.ts",
+      "src/reflex/identityMerge.ts",
+      "src/reflex/merchandising.test.ts",
+      "src/reflex/merchandising.ts",
+      "src/reflex/odpLoop.test.ts",
+      "src/reflex/regionTrend.test.ts",
+      "src/reflex/regionTrend.ts",
+      "src/reflex/shopperReflex.consent.test.ts",
+      "src/reflex/shopperReflex.identity.test.ts",
+      "src/reflex/shopperReflex.test.ts",
+      "src/reflex/sortCandidates.test.ts",
+      "src/reflex/sortCandidates.ts",
+      "src/routes/ai.ts",
+      "src/routes/aiScene.ts",
+      "src/routes/auth.test.ts",
+      "src/routes/auth.ts",
+      "src/routes/brands.test.ts",
+      "src/routes/cdp.ts",
+      "src/routes/config.ts",
+      "src/routes/content.test.ts",
+      "src/routes/content.ts",
+      "src/routes/decisions.ts",
+      "src/routes/demoEventCapture.test.ts",
+      "src/routes/experiment.ts",
+      "src/routes/funnel.ts",
+      "src/routes/funnelSim.ts",
+      "src/routes/geo.ts",
+      "src/routes/health.ts",
+      "src/routes/identity.test.ts",
+      "src/routes/identity.ts",
+      "src/routes/live.ts",
+      "src/routes/liveOps.ts",
+      "src/routes/operator.ts",
+      "src/routes/optimizely.ts",
+      "src/routes/pixel.ts",
+      "src/routes/realtime.sdkContract.test.ts",
+      "src/routes/realtime.ts",
+      "src/routes/shot.ts",
+      "src/routes/signals.ts",
+      "src/routes/sort.test.ts",
+      "src/routes/sort.ts",
+      "src/routes/tracking.ts",
+      "src/routes/webhook.ts",
+      "src/sdk/browser.ts",
+      "src/sdk/core.test.ts",
+      "src/sdk/core.ts",
+      "src/sdk/emit.test.ts",
+      "src/sdk/emit.ts",
+      "src/sdk/host.ts",
+      "src/sdk/identify.test.ts",
+      "src/sdk/identify.ts",
+      "src/sdk/identity.test.ts",
+      "src/sdk/identity.ts",
+      "src/sdk/index.ts",
+      "src/sdk/listen.test.ts",
+      "src/sdk/listen.ts",
+      "src/sdk/memoryHost.ts",
+      "src/sdk/session.test.ts",
+      "src/sdk/testHost.ts",
+      "src/sdk/types.ts",
+      "src/sdk/version.ts",
+      "src/sdk/wire.ts",
+      "src/services/CDPService.ts",
+      "src/services/CatalogIntent.ts",
+      "src/services/CatalogService.ts",
+      "src/services/EventDispatcher.ts",
+      "src/services/FeatureVariableManager.ts",
+      "src/services/JourneyStage.test.ts",
+      "src/services/JourneyStage.ts",
+      "src/services/OptimizelyService.ts",
+      "src/services/PixelDecoder.ts",
+      "src/services/RealtimeSegmentEngine.ts",
+      "src/services/SessionManager.identity.test.ts",
+      "src/services/SessionManager.ts",
+      "src/services/SessionManager.visit.test.ts",
+      "src/services/cmab.ts",
+      "src/services/demoEventCapture.ts",
+      "src/services/experimentFx.ts",
+      "src/services/experimentRun.ts",
+      "src/services/experimentScenarios.ts",
+      "src/services/funnel/compute.ts",
+      "src/services/funnel/contract.ts",
+      "src/services/funnel/diagnose.ts",
+      "src/services/funnel/sim.ts",
+      "src/services/fxEnv.ts",
+      "src/services/geo/cohort.ts",
+      "src/services/odpLoop.ts",
+      "src/services/optimizelyFx.ts",
+      "src/services/sceneGen.ts",
+      "src/services/sessionConsent.test.ts",
+      "src/services/sessionDefer.test.ts",
+      "src/services/telemetry.boundary.test.ts",
+      "src/services/visit.test.ts",
+      "src/services/visit.ts",
+      "src/telemetry.boundary.test.ts",
+      "src/tenancy/d1.test.ts",
+      "src/tenancy/d1.ts",
+      "src/tenancy/middleware.test.ts",
+      "src/tenancy/middleware.ts",
+      "src/tenancy/objects.test.ts",
+      "src/tenancy/objects.ts",
+      "src/tenancy/routeEscape.test.ts",
+      "src/tenancy/storeIsolation.test.ts",
+      "src/tenancy/tenant.test.ts",
+      "src/tenancy/tenant.ts",
+      "src/types/env.ts",
+      "src/types/events.ts",
+      "src/utils/context.ts",
+      "src/utils/pixel.ts"
+    ]
+  },
+  "files": [
+    {
+      "path": ".eslintrc.json",
+      "sha256": "5c683d1155c1f5f6797f5793caef7e06f8d3e421cb9e9d2e29cb88d15d97983b",
+      "content": "{\n  \"extends\": [\n    \"eslint:recommended\",\n    \"@typescript-eslint/recommended\"\n  ],\n  \"parser\": \"@typescript-eslint/parser\",\n  \"plugins\": [\"@typescript-eslint\"],\n  \"parserOptions\": {\n    \"ecmaVersion\": 2022,\n    \"sourceType\": \"module\"\n  },\n  \"env\": {\n    \"es2022\": true\n  },\n  \"rules\": {\n    \"@typescript-eslint/no-explicit-any\": \"warn\",\n    \"@typescript-eslint/no-unused-vars\": \"warn\",\n    \"@typescript-eslint/explicit-function-return-type\": \"off\",\n    \"@typescript-eslint/explicit-module-boundary-types\": \"off\",\n    \"@typescript-eslint/no-empty-function\": \"warn\",\n    \"prefer-const\": \"error\",\n    \"no-var\": \"error\"\n  },\n  \"ignorePatterns\": [\"dist\", \".wrangler\", \"node_modules\"]\n}"
+    },
+    {
+      "path": "package.json",
+      "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c",
+      "content": "{\n  \"name\": \"cloudflare-edge-platform\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Comprehensive Cloudflare Workers platform with tracking, personalization, and experimentation\",\n  \"main\": \"src/index.ts\",\n  \"scripts\": {\n    \"dev\": \"npm run build:meridian && npm run build:sdk && wrangler dev\",\n    \"deploy\": \"npm run build:meridian && npm run build:sdk && wrangler deploy\",\n    \"build\": \"echo 'No build required for TypeScript with Cloudflare Workers'\",\n    \"build:island\": \"node scripts/build-island.mjs\",\n    \"build:sdk\": \"node scripts/build-sdk.mjs\",\n    \"tail\": \"wrangler tail\",\n    \"format\": \"prettier --write .\",\n    \"lint\": \"eslint src --ext .ts\",\n    \"typecheck\": \"tsc --noEmit && tsc -p src/sdk\",\n    \"test\": \"vitest run\",\n    \"test:watch\": \"vitest\",\n    \"ci\": \"npm run typecheck && npm run test\",\n    \"optly\": \"node optly-npx-fix.cjs optly\",\n    \"optly-help\": \"node optly-npx-fix.cjs optly --help\",\n    \"optly-version\": \"node optly-npx-fix.cjs optly --version\",\n    \"optly-health\": \"node optly-npx-fix.cjs optly health\",\n    \"optly-setup\": \"node optly-npx-fix.cjs optly setup-docs\",\n    \"optly-sync\": \"node optly-npx-fix.cjs optly sync status\",\n    \"optly-sync-refresh\": \"node optly-npx-fix.cjs optly sync refresh\",\n    \"optly-analytics\": \"node optly-npx-fix.cjs optly analytics templates\",\n    \"optly-entity-flags\": \"node optly-npx-fix.cjs optly entity templates flag\",\n    \"optly-entity-experiments\": \"node optly-npx-fix.cjs optly entity templates experiment\",\n    \"optly-entity-audiences\": \"node optly-npx-fix.cjs optly entity templates audience\",\n    \"build:meridian\": \"node scripts/build-meridian.mjs\",\n    \"rehearse\": \"node scripts/meridian-rehearsal.mjs && node scripts/meridian-isolation.mjs\"\n  },\n  \"keywords\": [\n    \"cloudflare-workers\",\n    \"edge-computing\",\n    \"optimizely\",\n    \"tracking\",\n    \"personalization\"\n  ],\n  \"author\": \"\",\n  \"license\": \"MIT\",\n  \"devDependencies\": {\n    \"@cloudflare/workers-types\": \"^4.20240806.0\",\n    \"@types/node\": \"^20.14.14\",\n    \"@types/react\": \"^19.2.17\",\n    \"@types/react-dom\": \"^19.2.3\",\n    \"@typescript-eslint/eslint-plugin\": \"^7.18.0\",\n    \"@typescript-eslint/parser\": \"^7.18.0\",\n    \"esbuild\": \"^0.28.1\",\n    \"eslint\": \"^8.57.0\",\n    \"jsdom\": \"^24.1.3\",\n    \"prettier\": \"^3.3.3\",\n    \"typescript\": \"^5.5.4\",\n    \"vitest\": \"^1.6.0\",\n    \"wrangler\": \"^4.105.0\"\n  },\n  \"dependencies\": {\n    \"@ai-sdk/google\": \"^3.0.84\",\n    \"@ai-sdk/react\": \"^3.0.213\",\n    \"@cloudflare/ai-chat\": \"^0.8.6\",\n    \"@cloudflare/puppeteer\": \"^1.1.0\",\n    \"@optimizely/optimizely-sdk\": \"^5.3.4\",\n    \"agents\": \"^0.16.2\",\n    \"ai\": \"^6.0.211\",\n    \"hono\": \"^4.5.5\",\n    \"jose\": \"^5.6.3\",\n    \"react\": \"^19.2.7\",\n    \"react-dom\": \"^19.2.7\",\n    \"zod\": \"^4.4.3\"\n  }\n}\n"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "e25d029351084f8525590cd7c43772bc5f2183641c33df784ee6a46e78109c90",
+      "content": "# CI — the evidentiary standard, enforced.\n#\n# The scope appendix says twelve capabilities are \"built, tested, and active on\n# signature\". Until 2026-09-02 the test harness could not execute; until this\n# file, nothing ran it automatically. A suite nobody runs on every commit is a\n# suite whose green is a memory.\n#\n# Two jobs, on purpose. Typecheck and tests fail independently, so a red run says\n# WHICH standard slipped rather than one bar going red for both.\nname: ci\n\non:\n  push:\n    branches: ['**']\n  pull_request:\n\nconcurrency:\n  group: ci-${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n  typecheck:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 22\n          cache: npm\n      - run: npm ci\n      - run: npm run typecheck\n\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 22\n          cache: npm\n      - run: npm ci\n      # `vitest run`, never watch mode; exit code propagates. No `| tail`.\n      - run: npm test\n"
+    },
+    {
+      "path": "src/demos/meridian/receipts.test.ts",
+      "sha256": "ca030d672a7f5aeb2ecc4e41d18840e20b6c3241e187656ec2da96bf165670f9",
+      "content": "// src/demos/meridian/receipts.test.ts\n// The regression this file exists for: POST /decisions built its CaptureInput\n// without `sections`, so every page-ordering receipt the client posted was\n// dropped before it reached D1 — and the guard rejected a sections-only post\n// outright. Page order is half the Experience milestone; its receipts were the\n// half that never persisted.\n\nimport { describe, it, expect } from 'vitest';\nimport { capture, captureInputFrom, rowsForLayout, MRD_DECISION_COLUMNS } from './receipts';\nimport type { SectionDecision, SectionStrategy } from './types';\n\nclass FakeD1 {\n  batched: unknown[][] = [];\n  prepare(sql: string) {\n    const self = this;\n    return { bind: (...args: unknown[]) => ({ sql, args, _self: self }) } as never;\n  }\n  async batch(stmts: Array<{ args: unknown[] }>): Promise<unknown[]> {\n    this.batched.push(...stmts.map((s) => s.args));\n    return [];\n  }\n}\n\nconst section = (name: string, rank: number, strategy: SectionStrategy = 'affinity'): SectionDecision => ({\n  section: name, rank, templateRank: rank, strategy, score: 0.42,\n  explain: {\n    drivers: [{ dim: 'line', value: 'drover', a: 0.7, weight: 1 }],\n    lead: { shape: 'line', dim: 'line', value: 'drover' },\n    confidence: 0.7, thetaOut: 0.45,\n    movedBecause: `line-drover 0.70 >= thetaOut 0.45`,\n    configVersion: 'v1',\n  },\n});\nconst decision = (slot: string, order: number) => ({\n  slot, order, itemId: `item-${order}`, strategy: 'affinity',\n  explain: { candidates: 12, drivers: [{ dim: 'line', value: 'drover', a: 0.7, weight: 1 }], configVersion: 'v1' },\n  rankScore: 0.5,\n} as never);\n\ndescribe('captureInputFrom', () => {\n  it('carries sections through — the field the route used to drop', () => {\n    const input = captureInputFrom(\n      { visitorId: 'v1', decisions: [decision('hero', 0)], sections: [section('offers', 1)] },\n      'retail' as never, 1000,\n    );\n    expect(input).not.toBeNull();\n    expect(input!.sections).toHaveLength(1);\n    expect(input!.sections![0].section).toBe('offers');\n  });\n\n  it('accepts a sections-only post, which the old guard rejected with a 400', () => {\n    const input = captureInputFrom({ visitorId: 'v1', sections: [section('offers', 1)] }, 'retail' as never, 1000);\n    expect(input).not.toBeNull();\n    expect(input!.decisions).toEqual([]);\n    expect(input!.sections).toHaveLength(1);\n  });\n\n  it('accepts a decisions-only post, unchanged from before', () => {\n    const input = captureInputFrom({ visitorId: 'v1', decisions: [decision('hero', 0)] }, 'retail' as never, 1000);\n    expect(input!.decisions).toHaveLength(1);\n    expect(input!.sections).toEqual([]);\n  });\n\n  it('is null when there is nothing to write, and when the visitor is missing', () => {\n    expect(captureInputFrom({ visitorId: 'v1', decisions: [], sections: [] }, 'retail' as never, 1)).toBeNull();\n    expect(captureInputFrom({ decisions: [decision('hero', 0)] }, 'retail' as never, 1)).toBeNull();\n    expect(captureInputFrom({ visitorId: '  ' }, 'retail' as never, 1)).toBeNull();\n    expect(captureInputFrom(null, 'retail' as never, 1)).toBeNull();\n  });\n\n  it('ignores non-array decisions/sections rather than throwing on bad input', () => {\n    const input = captureInputFrom(\n      { visitorId: 'v1', decisions: 'nope', sections: [section('offers', 1)] } as never, 'retail' as never, 1,\n    );\n    expect(input!.decisions).toEqual([]);\n    expect(input!.sections).toHaveLength(1);\n  });\n});\n\ndescribe('capture writes section rows', () => {\n  it('persists one row per section, keyed as layout:<section>', async () => {\n    const db = new FakeD1();\n    const input = captureInputFrom(\n      { visitorId: 'v1', sections: [section('offers', 1), section('editorial', 2)] }, 'retail' as never, 1000,\n    )!;\n    const n = await capture(db as never, input);\n    expect(n).toBe(2);\n\n    const slotIdx = MRD_DECISION_COLUMNS.indexOf('slot_id' as never);\n    const slots = db.batched.map((row) => row[slotIdx]);\n    expect(slots).toEqual(['layout:offers', 'layout:editorial']);\n  });\n\n  it('writes slot decisions and section decisions in ONE batch, so a page is one receipt', async () => {\n    const db = new FakeD1();\n    const input = captureInputFrom(\n      { visitorId: 'v1', decisions: [decision('hero', 0), decision('rail', 1)], sections: [section('offers', 1)] },\n      'retail' as never, 1000,\n    )!;\n    expect(await capture(db as never, input)).toBe(3);\n    expect(db.batched).toHaveLength(3);\n  });\n\n  it('records a locked section with \"locked\" as the gate that outranked the engine', () => {\n    const rows = rowsForLayout({\n      visitorId: 'v1', vertical: 'retail' as never, now: 1,\n      sections: [section('merch', 1, 'locked')],\n    });\n    const gatesIdx = MRD_DECISION_COLUMNS.indexOf('gates_failed' as never);\n    expect(JSON.parse(rows[0][gatesIdx] as string)).toEqual(['locked']);\n  });\n\n  it('writes nothing rather than an empty batch when both lists are empty', async () => {\n    const db = new FakeD1();\n    expect(await capture(db as never, {\n      visitorId: 'v1', vertical: 'retail' as never, decisions: [], sections: [], now: 1,\n    })).toBe(0);\n    expect(db.batched).toHaveLength(0);\n  });\n});\n"
+    },
+    {
+      "path": "src/identity/link.ts",
+      "sha256": "52bb959a00d4df5b8cb6717c7445a972bb2e8e9fc0363bd179b1391e46628eed",
+      "content": "// src/identity/link.ts\n// ---------------------------------------------------------------------------\n// The link itself: a browser becomes a person's, and the profile follows.\n//\n// Whichever host holds the profile (the KV session today, the shopper object\n// when REFLEX_HOST is 'do'), the steps are the same and in the same order:\n//\n//   1. name the person: shopperIdFor(tenant, accountId)\n//   2. record the link, and learn whether this browser is new to the person,\n//      already theirs, or moving from someone else\n//   3. new: fold the browser's profile into the person's, and leave the\n//      browser's record forwarding there\n//      moving: only repoint; what it learned went to the first person\n//      already: nothing\n//   4. tell the client the id to carry from now on\n//\n// Step 3 is where the two hosts differ, and only there.\n//\n// WHAT A LINK IS NOT. It is not a login. The site knows who is signed in; this\n// records that the site said so, with how much assurance, and merges profiles\n// accordingly. And it is not reversible by design: a merged profile is one\n// profile. \"Log out\" is a client act, detach (identity/detach) plus a fresh\n// anonymous id, and the person's profile stays whole for their next sign-in.\n// ---------------------------------------------------------------------------\n\nimport type { Env } from '@/types/env';\nimport type { TenantId } from '@/tenancy/tenant';\nimport { shopperObject, shopperObjectName } from '@/tenancy/objects';\nimport { resolveReflexConfig, resolveSurface } from '@/demos/registry';\nimport { SessionManager, type SessionData } from '@/services/SessionManager';\nimport type { ReflexChanges } from '@/reflex/core';\nimport { IdentityStore, type LinkSource } from '@/identity/store';\nimport { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';\nimport type { Assurance } from '@/identity/assertion';\nimport { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';\nimport { consentFromCookies, consentOf, intersectConsent, storedConsent, type Consent } from '@/content/consent';\n\nexport type LinkOutcome = 'linked' | 'already' | 'relinked';\n\nexport interface LinkResult {\n  shopperId: string;\n  visitorId: string;\n  outcome: LinkOutcome;\n  assurance: Assurance;\n  /** Session host only: the person's session id, for the cookie. */\n  sessionId: string | null;\n  /** What the merge did to the person's memberships. Empty when nothing merged. */\n  changes: ReflexChanges;\n  audiences: string[];\n  cookieHeaders: string[];\n  consent?: Consent;\n}\n\n/** A visitor id we will link: the client's own format, bounded, never a namespace. */\nexport function validVisitorId(id: unknown): id is string {\n  return typeof id === 'string' && /^[A-Za-z0-9_.\\-]{1,200}$/.test(id);\n}\n\nexport async function linkVisitor(\n  env: Env,\n  tenant: TenantId,\n  input: {\n    visitorId: string; accountId: string; source: LinkSource; assurance: Assurance; now?: number;\n    /** The session id on the request's cookie, if any: where the browser's own record lives once its `user:` key points at a person. */\n    cookieSessionId?: string | null;\n    /** Public link ingress only; trusted history/import callers omit this. */\n    principal?: SessionCapability;\n    capability?: string;\n    cookieHeader?: string | null;\n  },\n): Promise<LinkResult> {\n  const now = input.now ?? Date.now();\n  let ownedSource: { id: string; data: SessionData } | null | undefined;\n  let sourceConsent: Consent | undefined;\n  let ownedObjectSource: { affinity?: unknown; pipeline?: unknown; forwardTo?: unknown } | undefined;\n  if (input.principal) {\n    assertSessionTarget(input.principal, input.visitorId);\n    if (input.principal.kind !== 'anonymous' || input.principal.tenant !== tenant) throw new SessionAccessError();\n    if ((env.REFLEX_HOST ?? 'session') !== 'do') {\n      const data = await new SessionManager(env, { tenant, principal: input.principal }).readRaw(input.principal.sessionId, true);\n      ownedSource = data ? { id: input.principal.sessionId, data } : null;\n      sourceConsent = consentOf(data);\n    } else {\n      const res = await shopperObject(env.SHOPPER_REFLEX, input.visitorId, tenant).fetch('https://shopper-reflex/identity/export', {\n        headers: { [SHOPPER_HEADER]: input.capability ?? '', 'X-Tenant': tenant },\n      });\n      if (!res.ok) throw new SessionAccessError();\n      const source = await res.json() as { forwardTo?: unknown; affinity?: { shopperId?: unknown }; pipeline?: unknown; consent?: unknown };\n      if (source.forwardTo || (source.affinity && source.affinity.shopperId !== input.visitorId)) throw new SessionAccessError();\n      if (source.consent === undefined) throw new SessionAccessError();\n      sourceConsent = storedConsent(source.consent);\n      ownedObjectSource = source;\n    }\n    sourceConsent = intersectConsent(sourceConsent, consentFromCookies(input.cookieHeader));\n  }\n  const shopperId = await shopperIdFor(env, tenant, input.accountId);\n  if (input.principal) assertSessionTarget(input.principal, input.visitorId);\n  const store = new IdentityStore(env.SESSIONS as never, tenant);\n\n  const { outcome } = await store.link({\n    visitorId: input.visitorId, shopperId, assurance: input.assurance, source: input.source,\n    salted: isSalted(env), now,\n  });\n\n  const base: Omit<LinkResult, 'sessionId' | 'changes' | 'audiences' | 'cookieHeaders'> = {\n    shopperId, visitorId: input.visitorId, outcome, assurance: input.assurance,\n  };\n\n  if ((env.REFLEX_HOST ?? 'session') === 'do') {\n    const r = await linkOnObjectHost(env, tenant, input.visitorId, shopperId, outcome, now, sourceConsent, ownedObjectSource);\n    return { ...base, cookieHeaders: [], ...r };\n  }\n  const r = await linkOnSessionHost(env, tenant, input.visitorId, shopperId, outcome, now, input.cookieSessionId ?? null, ownedSource, sourceConsent);\n  // CW28: the browser's own record now forwards to the person and nothing else\n  // points at it; the link remembers it so an erasure can reach it.\n  if (r.ownSessionId) await store.noteOwnSession(input.visitorId, r.ownSessionId);\n  return { ...base, sessionId: r.sessionId, changes: r.changes, audiences: r.audiences, cookieHeaders: r.cookieHeaders, consent: r.consent };\n}\n\n// ── The session host ─────────────────────────────────────────────────────────\n\nasync function linkOnSessionHost(\n  env: Env, tenant: TenantId, visitorId: string, shopperId: string, outcome: LinkOutcome, now: number,\n  cookieSessionId: string | null,\n  ownedSource?: { id: string; data: SessionData } | null,\n  consent?: Consent,\n): Promise<Pick<LinkResult, 'sessionId' | 'changes' | 'audiences' | 'cookieHeaders' | 'consent'> & { ownSessionId: string | null }> {\n  const sm = new SessionManager(env, { tenant });\n  const none: ReflexChanges = { entered: [], exited: [], explain: [] };\n\n  // The browser's OWN record: the one named by this visitor id, carrying no\n  // identity. After a first link the `user:` key points at the person, so the\n  // cookie is tried first; a record that turns out to be a person's is not the\n  // browser's and is left alone.\n  const own = async (sid: string | null): Promise<{ id: string; data: SessionData } | null> => {\n    if (!sid) return null;\n    const data = await sm.readRaw(sid);\n    return data && !data.identity && data.userId === visitorId ? { id: sid, data } : null;\n  };\n  const browser = ownedSource !== undefined ? ownedSource : (await own(cookieSessionId)) ?? (await own(await sm.resolveSessionIdByUserId(visitorId)));\n  const fromSessionId = browser?.id ?? null;\n  const fromRaw = browser?.data ?? null;\n  const cfg = await resolveReflexConfig(env, resolveSurface({ surface: fromRaw?.surface }));\n\n  if (outcome === 'already') {\n    // Nothing to merge; still answer with the person's session so the cookie can follow.\n    const sid = await sm.resolveSessionIdByUserId(shopperId);\n    const data = sid ? await sm.readRaw(sid, consent !== undefined) : null;\n    if (sid && data) {\n      const resolved = consent ? await sm.restrictConsent(sid, consent) : consentOf(data);\n      const next = { ...data, preferences: { ...data.preferences, trackingConsent: resolved.tracking, personalizationEnabled: resolved.personalization } };\n      return { sessionId: sid, changes: none, audiences: data.reflex?.audiences ?? [], cookieHeaders: sm.createCookieHeaders(sm.generateSessionCookies(next, sid)), ownSessionId: fromSessionId, consent: resolved };\n    }\n    // The link exists but the person's session expired: make one from what the browser has.\n  }\n\n  const absorbed = await sm.absorbIntoShopper({\n    shopperId, visitorId, from: fromRaw, fromSessionId, config: cfg, now,\n    mode: outcome === 'relinked' ? 'repoint' : 'merge',\n    consent,\n  });\n  return {\n    sessionId: absorbed.sessionId,\n    changes: absorbed.changes,\n    audiences: absorbed.data.reflex?.audiences ?? [],\n    cookieHeaders: sm.createCookieHeaders(sm.generateSessionCookies(absorbed.data, absorbed.sessionId)),\n    ownSessionId: fromSessionId && fromSessionId !== absorbed.sessionId ? fromSessionId : null,\n    consent: consentOf(absorbed.data),\n  };\n}\n\n// ── The object host ──────────────────────────────────────────────────────────\n\nasync function linkOnObjectHost(\n  env: Env, tenant: TenantId, visitorId: string, shopperId: string, outcome: LinkOutcome, now: number,\n  consent?: Consent, ownedSource?: { affinity?: unknown; pipeline?: unknown; forwardTo?: unknown },\n): Promise<Pick<LinkResult, 'changes' | 'audiences' | 'sessionId' | 'consent'>> {\n  const none: ReflexChanges = { entered: [], exited: [], explain: [] };\n  const person = shopperObject(env.SHOPPER_REFLEX, shopperId, tenant);\n  const browser = shopperObject(env.SHOPPER_REFLEX, visitorId, tenant);\n  const personName = shopperObjectName(tenant, shopperId);\n  const checked = async (response: Response) => {\n    const body = await response.json() as { ok?: unknown; sessionId?: unknown; consent?: unknown; audiences?: string[]; changes?: ReflexChanges; affinity?: { audiences?: string[] } | null; pipeline?: unknown; forwardTo?: unknown };\n    if (!response.ok || body?.ok !== true) throw new SessionAccessError();\n    return body;\n  };\n  const actualSid = (value: unknown): string => {\n    if (typeof value !== 'string' || !value) throw new SessionAccessError();\n    return value;\n  };\n  const actualConsent = (value: unknown): Consent => {\n    if (value === undefined) throw new SessionAccessError();\n    return storedConsent(value);\n  };\n\n  if (outcome === 'already') {\n    if (consent) {\n      const response = await person.fetch('https://shopper-reflex/consent/refusal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(consent) });\n      consent = actualConsent((await checked(response)).consent);\n    }\n    const snap = await checked(await person.fetch('https://shopper-reflex/snapshot'));\n    return { changes: none, audiences: snap.affinity?.audiences ?? [], sessionId: actualSid(snap.sessionId), consent };\n  }\n\n  let audiences: string[] = [];\n  let changes = none;\n  let sessionId: string | null = null;\n  if (outcome === 'linked') {\n    const exported = ownedSource ?? await checked(await browser.fetch('https://shopper-reflex/identity/export'));\n    // A browser already forwarding elsewhere has nothing of its own to fold in.\n    const payload = exported.forwardTo ? { shopperId, now } : { shopperId, now, affinity: exported.affinity ?? null, pipeline: exported.pipeline ?? null };\n    const absorbed = await checked(await person.fetch('https://shopper-reflex/identity/absorb', {\n      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, ...(consent ? { consent } : {}) }),\n    }));\n    if (consent) consent = actualConsent(absorbed.consent);\n    sessionId = actualSid(absorbed.sessionId);\n    audiences = absorbed.audiences ?? [];\n    changes = absorbed.changes ?? none;\n  } else {\n    // relinked: make sure the person's object exists and carries the id, fold nothing.\n    const absorbed = await checked(await person.fetch('https://shopper-reflex/identity/absorb', {\n      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shopperId, now, ...(consent ? { consent } : {}) }),\n    }));\n    if (consent) consent = actualConsent(absorbed.consent);\n    sessionId = actualSid(absorbed.sessionId);\n  }\n  await checked(await browser.fetch('https://shopper-reflex/identity/forward', {\n    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: personName }),\n  }));\n  return { changes, audiences, sessionId, consent };\n}\n"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "sha256": "e5508888c2491dab8b5bbe0ec9d5e01c4beb68be63e96d6e6761281b0ffc530b",
+      "content": "// src/ledger/erasure.ts\n// Doc 22 §15, CW28: erasure across the ledger. The ledger is append-only and\n// its R2 partition is the warehouse's export, so \"delete this visitor's rows\"\n// is two things with one list between them.\n//\n// A TOMBSTONE per visitor, written the moment erasure is requested, that every\n// reader honours at once: the day report, the point lookup, the replay and the\n// export listing all drop a row whose visitor is tombstoned and whose time is\n// at or before the erasure. And a scheduled REWRITE that walks the tenant's\n// partition newest day first over the retention window, removes those rows\n// from the batch objects, deletes an object that empties, and records scan\n// completion WITHOUT retiring the active suppression predicate. A run resumes where\n// it stopped, and is idempotent: a day done twice removes nothing the second\n// time. Aggregates are untouched, because counts are not personal data.\n//\n// The rows a visitor produces AFTER the erasure are new evidence, kept: an\n// erasure is a point in time, not a ban. The retention window is the ledger's\n// configured scan horizon, not an approved physical-retention policy. Barrier\n// removal requires a later authorized lifecycle; no automatic expiry is implied.\n\nimport type { Env } from '@/types/env';\n\nexport interface Tombstone {\n  tenant: string;\n  visitor_id: string;\n  /** When erasure was requested. Rows at or before it are hidden, then removed. */\n  erased_at: number;\n  actor: string;\n  /** The oldest day (UTC, YYYY-MM-DD) the rewrite has already cleaned for this visitor; absent before the first pass. */\n  done_through?: string;\n  rows_removed: number;\n  objects_rewritten: number;\n  objects_deleted: number;\n  /** Completed configured scan, not exhaustive/external erasure. The barrier stays active. */\n  rewritten_at?: number;\n  window_days?: number;\n  /** Durable day coordinator; never discard this reference while recovery is pending. */\n  rewrite?: { id: string; day: string };\n}\n\n/** What remains after the rewrite: the audit of an erasure, with the visitor id replaced by a hash. */\nexport interface RetiredTombstone {\n  tenant: string;\n  visitor_hash: string;\n  erased_at: number;\n  rewritten_at: number;\n  window_days: number;\n  rows_removed: number;\n  objects_rewritten: number;\n  objects_deleted: number;\n}\n\nexport interface R2Erasable {\n  put(key: string, body: string, opts?: unknown): Promise<unknown>;\n  get(key: string): Promise<{ text(): Promise<string> } | null>;\n  delete(key: string): Promise<unknown>;\n  list(opts: { prefix: string; cursor?: string; limit?: number }): Promise<{ objects: Array<{ key: string }>; truncated: boolean; cursor?: string }>;\n}\nexport type R2Readable = Pick<R2Erasable, 'get' | 'list'>;\n\nexport const DEFAULT_RETENTION_DAYS = 90;\nconst DAY = 86_400_000;\n\nexport const pendingPrefix = (tenant: string) => `erasures/${tenant}/pending/`;\nexport const retiredPrefix = (tenant: string) => `erasures/${tenant}/retired/`;\nexport const tombstoneKey = (tenant: string, visitorId: string) => `${pendingPrefix(tenant)}${encodeURIComponent(visitorId)}.json`;\nconst rewriteKey = (tenant: string) => `erasures/${tenant}/rewrite.json`;\n\nexport const dayOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10);\nconst msOfDay = (day: string): number => Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10));\nconst prevDay = (day: string): string => dayOf(msOfDay(day) - DAY);\n\n/** FNV-1a over the id, with its length: enough to tell audit rows apart, and no way back to the id. */\nexport function visitorHash(id: string): string {\n  let h = 0x811c9dc5;\n  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }\n  return `${h.toString(16).padStart(8, '0')}-${id.length}`;\n}\n\n/** The retention window in days: `LEDGER_RETENTION_DAYS`, or the design's default. */\nexport function retentionDays(env: Pick<Env, 'LEDGER_RETENTION_DAYS'>): number {\n  const n = Number(env.LEDGER_RETENTION_DAYS);\n  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_RETENTION_DAYS;\n}\n\nexport async function listKeys(r2: R2Readable, prefix: string): Promise<string[]> {\n  const out: string[] = [];\n  let cursor: string | undefined;\n  const seen = new Set<string>();\n  do {\n    const page = await r2.list({ prefix, cursor, limit: 1000 });\n    for (const o of page.objects) out.push(o.key);\n    if (page.truncated && (typeof page.cursor !== 'string' || !page.cursor || seen.has(page.cursor))) throw new Error('Erasure listing unavailable');\n    cursor = page.truncated ? page.cursor : undefined;\n    if (cursor) seen.add(cursor);\n  } while (cursor);\n  return out.sort();\n}\n\nconst validSubject = (id: unknown): id is string => typeof id === 'string' && /^[A-Za-z0-9_.-]{1,200}$/.test(id);\nconst validTenant = (id: unknown): id is string => typeof id === 'string' && /^[a-z0-9][a-z0-9_-]{0,63}$/i.test(id);\nconst validTime = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 && Number.isFinite(new Date(n).getTime());\nconst validDay = (v: unknown): v is string => typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)\n  && Number.isFinite(Date.parse(v)) && dayOf(Date.parse(v)) === v;\nfunction checkedTombstone(value: unknown, tenant: string, key: string): Tombstone {\n  const t = value as Tombstone | null;\n  if (!t || !validTenant(tenant) || t.tenant !== tenant || !validSubject(t.visitor_id)\n    || key !== tombstoneKey(tenant, t.visitor_id) || !validTime(t.erased_at)\n    || typeof t.actor !== 'string' || t.actor.length < 1 || t.actor.length > 200\n    || ![t.rows_removed, t.objects_rewritten, t.objects_deleted].every(n => Number.isSafeInteger(n) && n >= 0)\n    || (t.done_through !== undefined && (!validDay(t.done_through) || t.done_through > dayOf(t.erased_at)))\n    || ((t.rewritten_at === undefined) !== (t.window_days === undefined))\n    || (t.rewrite !== undefined && (!t.rewrite || typeof t.rewrite.id !== 'string' || !/^[a-f0-9]{32}$/.test(t.rewrite.id)\n      || !validDay(t.rewrite.day) || t.rewrite.day !== (t.done_through ? prevDay(t.done_through) : dayOf(t.erased_at)) || t.rewritten_at !== undefined))\n    || (t.rewritten_at !== undefined && (!validTime(t.rewritten_at) || t.rewritten_at < t.erased_at\n      || !Number.isSafeInteger(t.window_days) || t.window_days! < 1\n      || !Number.isFinite(new Date(t.erased_at - t.window_days! * DAY).getTime())\n      || !t.done_through || t.done_through > dayOf(t.erased_at - t.window_days! * DAY)))) throw new Error('Erasure state unavailable');\n  return t;\n}\n\n/** Exact active barrier, including completed scans. Only a definite missing key means no cutoff. */\nexport async function loadTombstone(r2: Pick<R2Readable, 'get'>, tenant: string, visitorId: string): Promise<Tombstone | null> {\n  if (!r2 || typeof r2.get !== 'function' || !validTenant(tenant) || !validSubject(visitorId)) throw new Error('Erasure state unavailable');\n  const key = tombstoneKey(tenant, visitorId), obj = await r2.get(key);\n  if (obj === null) return null;\n  if (!obj || typeof obj.text !== 'function') throw new Error('Erasure state unavailable');\n  return checkedTombstone(JSON.parse(await obj.text()), tenant, key);\n}\n\n/** Every active barrier, including completed scans. Listed absence/corruption is not consent to write. */\nexport async function loadTombstones(r2: R2Readable, tenant: string): Promise<Map<string, Tombstone>> {\n  if (!validTenant(tenant)) throw new Error('Erasure state unavailable');\n  const out = new Map<string, Tombstone>();\n  for (const key of await listKeys(r2, pendingPrefix(tenant))) {\n    const obj = await r2.get(key);\n    if (!obj) throw new Error('Erasure state unavailable');\n    const t = checkedTombstone(JSON.parse(await obj.text()), tenant, key);\n    out.set(t.visitor_id, t);\n  }\n  return out;\n}\n\n/** Is this row hidden: its visitor is tombstoned and it happened at or before the erasure. */\nexport function hidden(tombs: ReadonlyMap<string, Pick<Tombstone, 'erased_at'>>, rec: { visitor_id: string; ts: number }): boolean {\n  const t = tombs.get(rec.visitor_id);\n  return t !== undefined && rec.ts <= t.erased_at;\n}\n\nexport function withoutErased<T extends { visitor_id: string; ts: number }>(records: readonly T[], tombs: ReadonlyMap<string, Pick<Tombstone, 'erased_at'>>): T[] {\n  return tombs.size ? records.filter((r) => !hidden(tombs, r)) : [...records];\n}\n\n/** Same-cutoff retries preserve progress; a genuinely later erasure restarts the window. */\nexport async function writeTombstone(r2: R2Erasable, tenant: string, visitorId: string, actor: string, now = Date.now()): Promise<{ key: string; tombstone: Tombstone }> {\n  if (!validTenant(tenant) || !validSubject(visitorId) || !validTime(now) || typeof actor !== 'string' || actor.length < 1 || actor.length > 200) throw new Error('Erasure state unavailable');\n  const key = tombstoneKey(tenant, visitorId);\n  let prior: Tombstone | null = null;\n  const obj = await r2.get(key);\n  if (obj) {\n    prior = checkedTombstone(JSON.parse(await obj.text()), tenant, key);\n    if (now <= prior.erased_at) return { key, tombstone: prior };\n  }\n  // A later cutoff must not replace the snapshots/counters of an unfinished\n  // physical pass. Same/earlier requests above remain harmless barrier retries.\n  const journal = await readRewrite(r2, tenant);\n  if (prior?.rewrite || journal?.targets.some(t => t.base.visitor_id === visitorId)) throw new Error('Erasure rewrite recovery required');\n  const tombstone: Tombstone = {\n    tenant, visitor_id: visitorId, erased_at: Math.max(now, prior?.erased_at ?? 0), actor,\n    rows_removed: prior?.rows_removed ?? 0, objects_rewritten: prior?.objects_rewritten ?? 0, objects_deleted: prior?.objects_deleted ?? 0,\n  };\n  await r2.put(key, JSON.stringify(tombstone), { httpMetadata: { contentType: 'application/json' } });\n  return { key, tombstone };\n}\n\nexport interface RewriteResult {\n  tenant: string;\n  /** Active barriers at the start, including already completed scans. */\n  tombstones: number;\n  /** The days this run cleaned, newest first. */\n  days: string[];\n  objects_opened: number;\n  /** Mutations durably credited this run, including reconciled earlier attempts. */\n  objects_rewritten: number;\n  objects_deleted: number;\n  rows_removed: number;\n  /** Legacy field: scans completed this run; their active barriers are NOT retired. */\n  retired: number;\n  /** Physical scans still pending after the run, not the number of active barriers. */\n  remaining: number;\n  /** The run stopped at its object cap with days left; the next run continues. */\n  more: boolean;\n}\n\ntype Counts = Pick<Tombstone, 'rows_removed' | 'objects_rewritten' | 'objects_deleted'>;\ninterface RewriteJournal {\n  version: 1;\n  tenant: string;\n  id: string;\n  day: string;\n  window_days: number;\n  phase: 'preparing' | 'scanning' | 'finalizing';\n  keys: string[];\n  index: number;\n  targets: Array<{ base: Tombstone; credit: Counts }>;\n  intent?: { before: string; after: string | null; removed: number[] };\n}\nconst zeroCounts = (): Counts => ({ rows_removed: 0, objects_rewritten: 0, objects_deleted: 0 });\nconst countsValid = (c: Counts): boolean => !!c && [c.rows_removed, c.objects_rewritten, c.objects_deleted].every(n => Number.isSafeInteger(n) && n >= 0);\nconst failRewrite = (): never => { throw new Error('Erasure rewrite state unavailable or conflicting'); };\nconst same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);\nconst stateOf = (t: Tombstone): unknown[] => [t.tenant, t.visitor_id, t.erased_at, t.actor, t.done_through,\n  t.rows_removed, t.objects_rewritten, t.objects_deleted, t.rewritten_at, t.window_days, t.rewrite?.id, t.rewrite?.day];\nconst anchored = (j: RewriteJournal, t: Tombstone): Tombstone => ({ ...t, rewrite: { id: j.id, day: j.day } });\nconst totalFor = (j: RewriteJournal, target: RewriteJournal['targets'][number]): Tombstone => ({\n  ...target.base, done_through: j.day,\n  rows_removed: target.base.rows_removed + target.credit.rows_removed,\n  objects_rewritten: target.base.objects_rewritten + target.credit.objects_rewritten,\n  objects_deleted: target.base.objects_deleted + target.credit.objects_deleted,\n});\nfunction checkedRewrite(value: unknown, tenant: string): RewriteJournal {\n  const j = value as RewriteJournal | null;\n  if (!j || j.version !== 1 || j.tenant !== tenant || typeof j.id !== 'string' || !/^[a-f0-9]{32}$/.test(j.id)\n    || !validDay(j.day) || !Number.isSafeInteger(j.window_days) || j.window_days < 1\n    || !['preparing', 'scanning', 'finalizing'].includes(j.phase) || !Array.isArray(j.keys)\n    || !Number.isSafeInteger(j.index) || j.index < 0 || j.index > j.keys.length\n    || !Array.isArray(j.targets) || !j.targets.length) return failRewrite();\n  const prefix = `${tenant}/${j.day}/`;\n  if (j.keys.some((key, i) => typeof key !== 'string' || !key.startsWith(prefix) || key.length <= prefix.length\n    || (i > 0 && key <= j.keys[i - 1]!))) return failRewrite();\n  const visitors = new Set<string>();\n  for (const target of j.targets) {\n    if (!target || !target.base) return failRewrite();\n    const t = checkedTombstone(target.base, tenant, tombstoneKey(tenant, target.base.visitor_id));\n    if (t.rewrite || t.rewritten_at !== undefined || visitors.has(t.visitor_id) || !countsValid(target.credit)\n      || j.day !== (t.done_through ? prevDay(t.done_through) : dayOf(t.erased_at))\n      || !Number.isFinite(new Date(t.erased_at - j.window_days * DAY).getTime())\n      || j.day < dayOf(t.erased_at - j.window_days * DAY)\n      || target.credit.objects_rewritten + target.credit.objects_deleted > j.index\n      || target.credit.rows_removed < target.credit.objects_rewritten + target.credit.objects_deleted\n      || (target.credit.rows_removed > 0 && target.credit.objects_rewritten + target.credit.objects_deleted === 0)\n      || !countsValid(totalFor(j, target))) return failRewrite();\n    visitors.add(t.visitor_id);\n  }\n  if (j.phase === 'preparing' && (j.index !== 0 || j.intent || j.targets.some(t => !same(t.credit, zeroCounts())))) return failRewrite();\n  if (j.phase === 'finalizing' && (j.index !== j.keys.length || j.intent)) return failRewrite();\n  if (j.intent !== undefined && (!j.intent || j.phase !== 'scanning' || j.index >= j.keys.length\n    || typeof j.intent.before !== 'string' || !/^[a-f0-9]{64}$/.test(j.intent.before)\n    || (j.intent.after !== null && (typeof j.intent.after !== 'string' || !/^[a-f0-9]{64}$/.test(j.intent.after)))\n    || j.intent.before === j.intent.after || !Array.isArray(j.intent.removed) || j.intent.removed.length !== j.targets.length\n    || !j.intent.removed.every(n => Number.isSafeInteger(n) && n >= 0) || !j.intent.removed.some(n => n > 0))) return failRewrite();\n  if (j.intent) for (const [i, target] of j.targets.entries()) {\n    const total = totalFor(j, target), removed = j.intent.removed[i]!;\n    if (!countsValid({ rows_removed: total.rows_removed + removed,\n      objects_rewritten: total.objects_rewritten + (removed > 0 && j.intent.after !== null ? 1 : 0),\n      objects_deleted: total.objects_deleted + (removed > 0 && j.intent.after === null ? 1 : 0) })) return failRewrite();\n  }\n  return j;\n}\nasync function readRewrite(r2: R2Readable, tenant: string): Promise<RewriteJournal | null> {\n  const obj = await r2.get(rewriteKey(tenant));\n  return obj ? checkedRewrite(JSON.parse(await obj.text()), tenant) : null;\n}\nasync function putJson(r2: R2Erasable, key: string, value: unknown): Promise<void> {\n  if (await r2.put(key, JSON.stringify(value), { httpMetadata: { contentType: 'application/json' } }) === null) failRewrite();\n}\nasync function saveRewrite(r2: R2Erasable, j: RewriteJournal): Promise<void> {\n  checkedRewrite(j, j.tenant);\n  await putJson(r2, rewriteKey(j.tenant), j);\n}\nasync function currentTarget(r2: R2Readable, tenant: string, visitor: string): Promise<Tombstone> {\n  const key = tombstoneKey(tenant, visitor), obj = await r2.get(key);\n  if (!obj) return failRewrite();\n  return checkedTombstone(JSON.parse(await obj.text()), tenant, key);\n}\nasync function fingerprint(body: string): Promise<string> {\n  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body));\n  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');\n}\nfunction filterObject(body: string, j: RewriteJournal): { body: string | null; removed: number[] } {\n  const kept: string[] = [], removed = j.targets.map(() => 0);\n  const targets = new Map(j.targets.map((t, index) => [t.base.visitor_id, { at: t.base.erased_at, index }]));\n  for (const line of body.split('\\n')) {\n    if (!line) continue;\n    let rec: { visitor_id?: unknown; ts?: unknown } | null = null;\n    try { rec = JSON.parse(line); } catch { kept.push(line); continue; }\n    const target = typeof rec?.visitor_id === 'string' ? targets.get(rec.visitor_id) : undefined;\n    if (target && typeof rec?.ts === 'number' && rec.ts <= target.at) removed[target.index]!++;\n    else kept.push(line);\n  }\n  return { body: kept.length ? kept.join('\\n') + '\\n' : null, removed };\n}\n\n/**\n * One shared, manifest-bound pass per day. The object budget includes recovery\n * reads, not metadata/listing operations. The manifest still has whole-day\n * listing/memory cost; this is not a physical-deletion SLA or a concurrent-writer\n * fence. Incompatible rollback must preserve the journal and its anchors.\n */\nexport async function rewriteErasures(r2: R2Erasable, tenant: string, opts: { now?: number; retentionDays?: number; maxObjects?: number } = {}): Promise<RewriteResult> {\n  const now = opts.now ?? Date.now(), window = opts.retentionDays ?? DEFAULT_RETENTION_DAYS, cap = opts.maxObjects ?? 5000;\n  if (!validTime(now) || !Number.isSafeInteger(window) || window < 1 || !Number.isSafeInteger(cap) || cap < 1\n    || !Number.isFinite(new Date(now - window * DAY).getTime())) throw new Error('Erasure scan unavailable');\n  const today = dayOf(now), tombs = await loadTombstones(r2, tenant);\n  let journal = await readRewrite(r2, tenant);\n  for (const t of tombs.values()) if (t.rewrite && (!journal || t.rewrite.id !== journal.id || t.rewrite.day !== journal.day\n    || !journal.targets.some(target => target.base.visitor_id === t.visitor_id))) failRewrite();\n  const result: RewriteResult = { tenant, tombstones: tombs.size, days: [], objects_opened: 0, objects_rewritten: 0,\n    objects_deleted: 0, rows_removed: 0, retired: 0, remaining: [...tombs.values()].filter(t => t.rewritten_at === undefined).length, more: false };\n  const floorOf = (t: Tombstone) => dayOf(t.erased_at - window * DAY);\n  const nextOf = (t: Tombstone) => t.done_through ? prevDay(t.done_through) : dayOf(t.erased_at);\n  while (true) {\n    if (!journal) {\n      const eligible = [...tombs.values()].filter(t => t.rewritten_at === undefined && nextOf(t) >= floorOf(t) && nextOf(t) < today);\n      if (!eligible.length) break;\n      if (result.objects_opened >= cap) { result.more = true; break; }\n      const day = eligible.map(nextOf).sort().reverse()[0]!;\n      journal = { version: 1, tenant, id: crypto.randomUUID().replace(/-/g, ''), day, window_days: window, phase: 'preparing',\n        keys: await listKeys(r2, `${tenant}/${day}/`), index: 0,\n        targets: eligible.filter(t => nextOf(t) === day).map(base => ({ base, credit: zeroCounts() })) };\n      await saveRewrite(r2, journal); // Even ambiguous creation precedes every anchor/mutation.\n    }\n    let j: RewriteJournal = journal;\n    if (j.window_days !== window || j.day >= today) failRewrite();\n    // Complete partial anchor installation before touching any ledger object.\n    for (const target of j.targets) {\n      const current = await currentTarget(r2, tenant, target.base.visitor_id), expected = anchored(j, target.base);\n      if (j.phase === 'finalizing' && same(stateOf(current), stateOf(totalFor(j, target)))) continue;\n      if (!same(stateOf(current), stateOf(expected))) {\n        if (j.phase !== 'preparing' || !same(stateOf(current), stateOf(target.base))) failRewrite();\n        await putJson(r2, tombstoneKey(tenant, current.visitor_id), expected);\n      }\n      tombs.set(current.visitor_id, expected);\n    }\n    if (j.phase === 'preparing') {\n      j = { ...j, phase: 'scanning' };\n      await saveRewrite(r2, j);\n    }\n    while (j.phase === 'scanning' && j.index < j.keys.length && result.objects_opened < cap) {\n      const key = j.keys[j.index]!;\n      result.objects_opened++;\n      const obj = await r2.get(key), body = obj ? await obj.text() : null;\n      const before = body === null ? null : await fingerprint(body);\n      if (!j.intent) {\n        const filtered = body === null ? null : filterObject(body, j);\n        if (!filtered || !filtered.removed.some(n => n > 0)) {\n          const next = { ...j, index: j.index + 1 };\n          await saveRewrite(r2, next); // A listed missing object earns zero removal credit.\n          j = next;\n          continue;\n        }\n        j = { ...j, intent: { before: before!, after: filtered.body === null ? null : await fingerprint(filtered.body), removed: filtered.removed } };\n        await saveRewrite(r2, j); // No destructive call without a durable exact intent.\n      }\n      const intent = j.intent!;\n      if (before === intent.before && body !== null) {\n        const filtered = filterObject(body, j);\n        if (!same(filtered.removed, intent.removed) || (filtered.body === null ? null : await fingerprint(filtered.body)) !== intent.after) failRewrite();\n        if (filtered.body === null) await r2.delete(key);\n        else if (await r2.put(key, filtered.body) === null) failRewrite();\n      } else if (before !== intent.after) failRewrite();\n      // Exact after-state includes absence only for an intended committed delete.\n      const targets = j.targets.map((target, i) => ({\n        ...target,\n        credit: {\n          rows_removed: target.credit.rows_removed + intent.removed[i]!,\n          objects_rewritten: target.credit.objects_rewritten + (intent.removed[i]! > 0 && intent.after !== null ? 1 : 0),\n          objects_deleted: target.credit.objects_deleted + (intent.removed[i]! > 0 && intent.after === null ? 1 : 0),\n        },\n      }));\n      const next: RewriteJournal = { ...j, targets, index: j.index + 1 };\n      delete next.intent;\n      await saveRewrite(r2, next); // Cursor and every visitor's credit are one checkpoint.\n      result.rows_removed += intent.removed.reduce((a, b) => a + b, 0);\n      if (intent.after === null) result.objects_deleted++; else result.objects_rewritten++;\n      j = next;\n    }\n    if (j.index < j.keys.length) { journal = j; result.more = true; break; }\n    if (j.phase !== 'finalizing') {\n      j = { ...j, phase: 'finalizing' };\n      await saveRewrite(r2, j);\n    }\n    for (const target of j.targets) {\n      const current = await currentTarget(r2, tenant, target.base.visitor_id), final = totalFor(j, target);\n      if (!same(stateOf(current), stateOf(final))) {\n        if (!same(stateOf(current), stateOf(anchored(j, target.base)))) failRewrite();\n        await putJson(r2, tombstoneKey(tenant, current.visitor_id), final);\n      }\n      tombs.set(current.visitor_id, final);\n    }\n    // Failure before/after this deletion is safe: all absolute target snapshots\n    // have already been acknowledged, and a retained journal accepts them again.\n    await r2.delete(rewriteKey(tenant));\n    result.days.push(j.day);\n    journal = null;\n  }\n  for (const t of tombs.values()) {\n    if (t.rewritten_at === undefined && !t.rewrite && t.done_through && t.done_through <= floorOf(t)) {\n      const retired: RetiredTombstone = {\n        tenant, visitor_hash: visitorHash(t.visitor_id), erased_at: t.erased_at, rewritten_at: now, window_days: window,\n        rows_removed: t.rows_removed, objects_rewritten: t.objects_rewritten, objects_deleted: t.objects_deleted,\n      };\n      await putJson(r2, `${retiredPrefix(tenant)}${t.erased_at.toString(36)}-${retired.visitor_hash}.json`, retired);\n      const completed = { ...t, rewritten_at: now, window_days: window };\n      await putJson(r2, tombstoneKey(tenant, t.visitor_id), completed);\n      tombs.set(t.visitor_id, completed);\n      result.retired++;\n    }\n  }\n  result.remaining = [...tombs.values()].filter(t => t.rewritten_at === undefined).length;\n  return result;\n}\n\n/**\n * The ledger half of an erasure, in one call for the identity route to make:\n * the tombstone, so every reader hides the rows now and the rewrite removes\n * them; and the visitor's own ring of served decisions, emptied. The profile\n * and the long index live in the shopper's object, which the identity route\n * erases itself.\n */\nexport async function resetVisitorRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string): Promise<'reset' | 'unbound' | 'failed'> {\n  let ring: 'reset' | 'unbound' | 'failed' = 'unbound';\n  const ns = env.DECISION_RING;\n  if (ns) {\n    try {\n      const res = await ns.get(ns.idFromName(`${tenant}:${visitorId}`)).fetch('https://learn/reset', { method: 'POST' });\n      const body = await res.json() as { ok?: unknown; reset?: unknown };\n      ring = res.ok && body.ok === true && body.reset === true ? 'reset' : 'failed';\n    } catch { ring = 'failed'; }\n  }\n  return ring;\n}\n\nexport async function eraseVisitorLedger(env: Pick<Env, 'STORAGE' | 'DECISION_RING'>, tenant: string, visitorId: string, actor: string, now = Date.now()): Promise<{ ok: boolean; tombstone: { key: string; erased_at: number }; ring: 'reset' | 'unbound' | 'failed' }> {\n  const { key, tombstone } = await writeTombstone(env.STORAGE as unknown as R2Erasable, tenant, visitorId, actor, now);\n  const ring = await resetVisitorRing(env, tenant, visitorId);\n  return { ok: ring !== 'failed', tombstone: { key, erased_at: tombstone.erased_at }, ring };\n}\n"
+    },
+    {
+      "path": "src/reflex/core.ts",
+      "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db",
+      "content": "// src/reflex/core.ts\n// ─────────────────────────────────────────────────────────────────────────────\n// ReflexCore — the pure heart of the Edge Affinity Reflex (doc 16 §4, §12).\n//\n// A deterministic, recency/frequency-weighted, time-DECAYED affinity engine:\n// per catalog dimension (line, silhouette, occasion, …) it keeps a raw score\n// per value and derives a normalized affinity a ∈ [0,1]. Shoppers ENTER an\n// affinity audience when a crosses θ_in and EXIT when it decays below θ_out —\n// the Dynamic-Yield-style \"move in and out by behavior\", made glass.\n//\n// Invariants (doc 16 §4 — what makes this an engine, not a demo trick):\n//   • Store raw, read lazily. State is only (R, tLast) — NEVER pre-decayed.\n//     Every read computes R_eff = R · exp(−Δt/τ) as a pure function of time.\n//     Nothing mutates on a timer; replays are deterministic.\n//   • The engine clock is authoritative — the HOST stamps `now` (client ts is\n//     advisory); apply() never reads Date.now() itself.\n//   • apply(state, input, now, config) → (state′, changes) is a PURE function:\n//     no I/O, no ambient state. It is the testing seam and the portability\n//     seam (request path today → ShopperReflex DO in P2, unchanged).\n//\n// NO ML. Where real ML belongs (propensity/churn) it lives in ODP predictive\n// insights; discovery/suggestion belongs to Opal. This module is math.\n// ─────────────────────────────────────────────────────────────────────────────\n\n/** One catalog axis affinity is computed on. Catalog-agnostic by construction (D-6). */\nexport interface DimensionSpec {\n  /** Dimension key, e.g. 'line' | 'silhouette' | 'occasion' | 'priceBand'. */\n  key: string;\n  /** Product field the value(s) come from, e.g. 'line' or 'price_usd'. */\n  source: string;\n  /** The field is an array (e.g. occasion[]) — each entry is touched. */\n  multi?: boolean;\n  /** Derived dimension: bucket a numeric source into labeled bands. */\n  derive?: 'band';\n  /** Band cut points (ascending), e.g. [150, 400]. */\n  cuts?: number[];\n  /** Band labels, length = cuts.length + 1, e.g. ['entry','core','elevated']. */\n  labels?: string[];\n  /** Per-dimension overrides of the global tuning (τ/K/θ). */\n  tauMs?: number;\n  K?: number;\n  thetaIn?: number;\n  thetaOut?: number;\n}\n\n/** Versioned engine tuning. Lives in config/KV — tuning is never a redeploy. */\nexport interface ReflexConfig {\n  version: string;\n  dimensions: DimensionSpec[];\n  /** Action → accumulation weight. Unknown actions weigh 0 (still re-evaluate). */\n  weights: Record<string, number>;\n  /** Global decay half-life-ish time constant τ (ms): R_eff = R·exp(−Δt/τ). */\n  tauMs: number;\n  /** Saturation midpoint: a = R/(R+K) → a=0.5 at R=K. */\n  K: number;\n  /** Enter threshold (a ≥ θ_in enters). */\n  thetaIn: number;\n  /** Exit threshold (a < θ_out exits). θ_out < θ_in = hysteresis, no flapping. */\n  thetaOut: number;\n  /** Prune floor: entries whose R_eff falls below this are dropped. */\n  epsilon: number;\n  /** Safety cap on distinct values tracked per dimension (evict weakest). */\n  maxValuesPerDim: number;\n  /**\n   * Where a product event's touches come from when the product is not in a\n   * catalog this engine holds. `catalog-only` (the default, and the demo\n   * surfaces' posture) drops it. `event-when-unknown` scores the attributes the\n   * event itself carries, bounded to the registry's dimensions, which is what a\n   * customer's site needs: their events, their catalog, not a copy of it here.\n   */\n  eventAttributes?: 'catalog-only' | 'event-when-unknown';\n}\n\n/** Raw per-value accumulator — s is NEVER pre-decayed; t is the last touch. */\nexport interface ReflexEntry {\n  s: number;\n  t: number;\n}\n\n/** JSON-safe per-shopper state. Rides the session in P0; ctx.storage in P2. */\nexport interface ReflexState {\n  v: 1;\n  /** dims[dimensionKey][originalValue] → (raw score, last-touch ms). */\n  dims: Record<string, Record<string, ReflexEntry>>;\n  /** Current audience memberships (audience keys), sorted for determinism. */\n  audiences: string[];\n  /** ReflexConfig.version this state was last evaluated under. */\n  configVersion: string;\n}\n\n/** A single (dimension, value) hit extracted from a product interaction. */\nexport interface Touch {\n  dim: string;\n  value: string;\n}\n\n/** What the host feeds apply(): a normalized action + its catalog touches. */\nexport interface ReflexInput {\n  action: string;\n  touches: Touch[];\n}\n\n/** Why a membership changed — the glass-box record (doc 16 §12). */\nexport interface ExplainRecord {\n  ts: number;\n  audience: string;\n  dim: string;\n  value: string;\n  direction: 'enter' | 'exit';\n  /** Affinity a at the moment of the transition (0 if pruned to nothing). */\n  score: number;\n  thetaIn: number;\n  thetaOut: number;\n  /** The action that triggered evaluation ('tick' = time-only re-eval). */\n  trigger: string;\n  configVersion: string;\n}\n\nexport interface ReflexChanges {\n  entered: string[];\n  exited: string[];\n  explain: ExplainRecord[];\n}\n\nexport interface ReflexResult {\n  state: ReflexState;\n  changes: ReflexChanges;\n}\n\n/** Live affinity snapshot for the client instrument (original value names). */\nexport interface AffinitySnapshot {\n  dims: Record<string, Record<string, number>>;\n  audiences: string[];\n}\n\n// ── Naming (single source of truth — the P1 generator imports these) ─────────\n\n/** Lowercase slug: non-alphanumerics collapse to '_'. 'Date-Night' → 'date_night'. */\nexport function slugValue(v: string): string {\n  return v\n    .toLowerCase()\n    .replace(/[^a-z0-9]+/g, '_')\n    .replace(/^_+|_+$/g, '');\n}\n\n/** Dimension-namespaced audience key: 'line' + 'Tabby' → 'line_tabby_affinity'. */\nexport function audienceKey(dim: string, value: string): string {\n  return `${slugValue(dim)}_${slugValue(value)}_affinity`;\n}\n\n/** Flattened attribute key for evaluateCondition: 'line_affinity.tabby'. */\nexport function affinityAttrKey(dim: string, value: string): string {\n  return `${slugValue(dim)}_affinity.${slugValue(value)}`;\n}\n\n// ── Default config (demo tuning per doc 16 §4 — production retunes via KV) ───\n\nexport const DEFAULT_REFLEX_CONFIG: ReflexConfig = {\n  version: 'reflex-demo-v1',\n  dimensions: [\n    { key: 'line', source: 'line' },\n    { key: 'category', source: 'category' },\n    { key: 'subcategory', source: 'subcategory' },\n    { key: 'silhouette', source: 'silhouette' },\n    { key: 'occasion', source: 'occasion', multi: true },\n    // Price bands match the existing cuts (CatalogService.priceBandOf): <150 / <400 / rest.\n    // Price POSTURE is a slower-moving trait than product interest: a longer τ lets it\n    // accumulate across human-paced browsing (~15s/view) and fade more slowly — the\n    // per-dimension tuning §4 was designed for.\n    { key: 'priceBand', source: 'price_usd', derive: 'band', cuts: [150, 400], labels: ['entry', 'core', 'elevated'], tauMs: 150_000 },\n    // CW3. The content type a shopper engages with (video, editorial, on-model,\n    // silo), read off content events. Mandeep named it by name: \"content-type\n    // affinity learnable, e.g. video affinity\". Sourced from the SDK's\n    // contentType attribute; the sanitizer admits it because this entry exists.\n    { key: 'contentType', source: 'contentType' },\n  ],\n  weights: {\n    // Views build affinity 1:1; intent actions weigh heavier (doc 16 §4 table).\n    product_view: 1,\n    pdp_view: 1,\n    view_product: 1,\n    wishlist: 2,\n    wishlist_add: 2,\n    add_to_wishlist: 2,\n    save_for_later: 2,\n    add_to_cart: 3,\n    cart_add: 3,\n    purchase: 5,\n    checkout: 5,\n    order_complete: 5,\n    // CW3: content interactions, on the same scale. Impression is ZERO by\n    // default: dense and involuntary, it must not read as interest. See\n    // contentTelemetry.ts for the reasoning behind each number.\n    content_impression: 0,\n    content_dwell: 0.5,\n    content_click: 1,\n    video_complete: 2,\n    // Time-only re-evaluation (alarms / no-product events): no accumulation.\n    tick: 0,\n  },\n  // Demo cadence: 3 brisk views (~5s apart) cross θ_in (a ≈ 0.606); ~40s idle exits.\n  tauMs: 60_000,\n  K: 1.8,\n  thetaIn: 0.6,\n  thetaOut: 0.45,\n  epsilon: 1e-4,\n  maxValuesPerDim: 24,\n};\n\n// ── Pure math ─────────────────────────────────────────────────────────────────\n\ninterface DimParams {\n  tauMs: number;\n  K: number;\n  thetaIn: number;\n  thetaOut: number;\n}\n\nfunction dimParams(config: ReflexConfig, spec: DimensionSpec | undefined): DimParams {\n  return {\n    tauMs: spec?.tauMs ?? config.tauMs,\n    K: spec?.K ?? config.K,\n    thetaIn: spec?.thetaIn ?? config.thetaIn,\n    thetaOut: spec?.thetaOut ?? config.thetaOut,\n  };\n}\n\nfunction specOf(config: ReflexConfig, dim: string): DimensionSpec | undefined {\n  return config.dimensions.find((d) => d.key === dim);\n}\n\n/** Lazily-decayed effective score at `now`. Pure; never stored. */\nexport function effectiveScore(entry: ReflexEntry, now: number, tauMs: number): number {\n  const dt = Math.max(0, now - entry.t);\n  return entry.s * Math.exp(-dt / tauMs);\n}\n\n/** Saturating normalization: a = R/(R+K) ∈ [0,1). */\nexport function affinityOf(effScore: number, K: number): number {\n  return effScore <= 0 ? 0 : effScore / (effScore + K);\n}\n\nexport function emptyState(config: ReflexConfig): ReflexState {\n  return { v: 1, dims: {}, audiences: [], configVersion: config.version };\n}\n\n/**\n * Extract the (dimension, value) touches a product interaction produces,\n * per the configured dimensions. Catalog-agnostic: reads spec.source fields\n * off any product-shaped object; unknown/empty fields simply produce nothing.\n */\nexport function extractTouches(product: Record<string, unknown>, config: ReflexConfig): Touch[] {\n  const touches: Touch[] = [];\n  for (const spec of config.dimensions) {\n    const raw = product[spec.source];\n    if (raw === undefined || raw === null) continue;\n\n    if (spec.derive === 'band') {\n      const n = typeof raw === 'number' ? raw : Number(raw);\n      if (!Number.isFinite(n) || !spec.cuts || !spec.labels) continue;\n      let idx = spec.cuts.findIndex((cut) => n < cut);\n      if (idx === -1) idx = spec.cuts.length;\n      const label = spec.labels[idx];\n      if (label) touches.push({ dim: spec.key, value: label });\n      continue;\n    }\n\n    if (spec.multi && Array.isArray(raw)) {\n      for (const v of raw) {\n        if (typeof v === 'string' && v.trim()) touches.push({ dim: spec.key, value: v });\n      }\n      continue;\n    }\n\n    if (typeof raw === 'string' && raw.trim()) {\n      touches.push({ dim: spec.key, value: raw });\n    }\n  }\n  return touches;\n}\n\n/** The most values a single multi-valued attribute may contribute from one event. */\nconst MAX_EVENT_VALUES = 8;\nconst MAX_EVENT_VALUE_LENGTH = 64;\n\n/**\n * Only what the registry names, only in the shape it names. A string is\n * trimmed and capped; an array is capped; a band source must already be\n * numeric or numeric-looking. Nothing else on the event is looked at.\n */\nexport function sanitizeEventAttributes(data: Record<string, unknown>, config: ReflexConfig): Record<string, unknown> {\n  const out: Record<string, unknown> = {};\n  const clean = (v: unknown): string | null => {\n    if (typeof v !== 'string') return null;\n    const t = v.trim().slice(0, MAX_EVENT_VALUE_LENGTH);\n    return t && !/[\\u0000-\\u001f<>]/.test(t) ? t : null;\n  };\n  for (const spec of config.dimensions) {\n    const raw = data[spec.source];\n    if (raw === undefined || raw === null) continue;\n    if (spec.derive === 'band') {\n      const n = typeof raw === 'number' ? raw : Number(raw);\n      if (Number.isFinite(n)) out[spec.source] = n;\n      continue;\n    }\n    if (spec.multi && Array.isArray(raw)) {\n      const vals = raw.map(clean).filter((x): x is string => x !== null).slice(0, MAX_EVENT_VALUES);\n      if (vals.length) out[spec.source] = vals;\n      continue;\n    }\n    const one = clean(Array.isArray(raw) ? raw[0] : raw);\n    if (one !== null) out[spec.source] = one;\n  }\n  return out;\n}\n\n/**\n * The touches a product event contributes. A product this engine holds always\n * wins, because its attributes are ours to trust. Without one, the event's own\n * attributes count only where the scope has said so, and only through the\n * registry. Both hosts call this; neither decides it alone.\n */\nexport function touchesForEvent(\n  data: Record<string, unknown>,\n  product: Record<string, unknown> | undefined,\n  config: ReflexConfig,\n): Touch[] {\n  if (product) return extractTouches(product, config);\n  if (config.eventAttributes !== 'event-when-unknown') return [];\n  return extractTouches(sanitizeEventAttributes(data, config), config);\n}\n\n/**\n * THE core transition — pure and deterministic:\n *   (state, input, now, config) → (state′, changes)\n *\n * 1. Decay-then-accumulate every touched (dim, value): R ← R·exp(−Δt/τ) + w.\n * 2. Prune entries whose effective score fell below ε (state stays tiny).\n * 3. Re-evaluate ALL memberships with hysteresis (enter ≥ θ_in; exit < θ_out).\n *    Exits happen on ANY apply — including weight-0 'tick' — so time alone\n *    moves shoppers out (the request path evaluates lazily; the DO adds\n *    exact-time alarms in P2 using nextCrossing()).\n * 4. Emit an ExplainRecord per transition (the glass box).\n *\n * The previous state object is never mutated.\n */\nexport function apply(\n  prev: ReflexState | undefined | null,\n  input: ReflexInput,\n  now: number,\n  config: ReflexConfig\n): ReflexResult {\n  const base = prev && prev.v === 1 ? prev : emptyState(config);\n  const weight = config.weights[input.action] ?? 0;\n\n  // Copy-on-write: fresh dim maps; entries are replaced, never mutated.\n  const dims: ReflexState['dims'] = {};\n  for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };\n\n  // 1. Decay-then-accumulate the touches.\n  if (weight > 0) {\n    for (const touch of input.touches) {\n      if (!touch.value) continue;\n      const spec = specOf(config, touch.dim);\n      if (!spec) continue; // unconfigured dimension — ignore\n      const p = dimParams(config, spec);\n      const dimMap = (dims[touch.dim] = dims[touch.dim] ?? {});\n      const prevEntry = dimMap[touch.value];\n      const carried = prevEntry ? effectiveScore(prevEntry, now, p.tauMs) : 0;\n      dimMap[touch.value] = { s: carried + weight, t: now };\n    }\n  }\n\n  // 2. Prune dead entries + enforce the per-dimension cap (deterministic).\n  for (const d of Object.keys(dims)) {\n    const p = dimParams(config, specOf(config, d));\n    const dimMap = dims[d];\n    for (const v of Object.keys(dimMap)) {\n      if (effectiveScore(dimMap[v], now, p.tauMs) < config.epsilon) delete dimMap[v];\n    }\n    const values = Object.keys(dimMap);\n    if (values.length > config.maxValuesPerDim) {\n      values\n        .map((v) => ({ v, eff: effectiveScore(dimMap[v], now, p.tauMs) }))\n        .sort((a, b) => a.eff - b.eff || (a.v < b.v ? -1 : 1)) // weakest first; key tie-break\n        .slice(0, values.length - config.maxValuesPerDim)\n        .forEach(({ v }) => delete dimMap[v]);\n    }\n    if (Object.keys(dimMap).length === 0) delete dims[d];\n  }\n\n  // 3. Membership evaluation with hysteresis, over every surviving value.\n  const prevAudiences = new Set(base.audiences);\n  const next = new Set<string>();\n  const explain: ExplainRecord[] = [];\n  const meta = new Map<string, { dim: string; value: string; a: number; p: DimParams }>();\n\n  for (const d of Object.keys(dims).sort()) {\n    const p = dimParams(config, specOf(config, d));\n    const dimMap = dims[d];\n    for (const v of Object.keys(dimMap).sort()) {\n      const a = affinityOf(effectiveScore(dimMap[v], now, p.tauMs), p.K);\n      const key = audienceKey(d, v);\n      meta.set(key, { dim: d, value: v, a, p });\n      const wasMember = prevAudiences.has(key);\n      if (wasMember ? a >= p.thetaOut : a >= p.thetaIn) next.add(key);\n    }\n  }\n\n  // 4. Diff + explain. (A membership whose entry was pruned exits at score 0.)\n  const entered = [...next].filter((k) => !prevAudiences.has(k)).sort();\n  const exited = [...prevAudiences].filter((k) => !next.has(k)).sort();\n\n  for (const key of entered) {\n    const m = meta.get(key)!;\n    explain.push({\n      ts: now, audience: key, dim: m.dim, value: m.value, direction: 'enter',\n      score: round4(m.a), thetaIn: m.p.thetaIn, thetaOut: m.p.thetaOut,\n      trigger: input.action, configVersion: config.version,\n    });\n  }\n  for (const key of exited) {\n    const m = meta.get(key);\n    explain.push({\n      ts: now, audience: key,\n      dim: m?.dim ?? '', value: m?.value ?? '', direction: 'exit',\n      score: round4(m?.a ?? 0),\n      thetaIn: m?.p.thetaIn ?? config.thetaIn, thetaOut: m?.p.thetaOut ?? config.thetaOut,\n      trigger: input.action, configVersion: config.version,\n    });\n  }\n\n  return {\n    state: { v: 1, dims, audiences: [...next].sort(), configVersion: config.version },\n    changes: { entered, exited, explain },\n  };\n}\n\n/** Time-only re-evaluation (no accumulation) — what a DO alarm runs in P2. */\nexport function tick(state: ReflexState | undefined | null, now: number, config: ReflexConfig): ReflexResult {\n  return apply(state, { action: 'tick', touches: [] }, now, config);\n}\n\n/** Live snapshot for the Affinity Instrument — original value names, a ∈ [0,1]. */\nexport function snapshot(state: ReflexState, now: number, config: ReflexConfig): AffinitySnapshot {\n  const dims: AffinitySnapshot['dims'] = {};\n  for (const d of Object.keys(state.dims).sort()) {\n    const p = dimParams(config, specOf(config, d));\n    const out: Record<string, number> = {};\n    for (const v of Object.keys(state.dims[d]).sort()) {\n      out[v] = round4(affinityOf(effectiveScore(state.dims[d][v], now, p.tauMs), p.K));\n    }\n    dims[d] = out;\n  }\n  return { dims, audiences: [...state.audiences] };\n}\n\n/**\n * Flattened, freshly-computed attributes for the existing condition evaluator\n * (evaluateCondition does a direct attributes[key] lookup with numeric gte/lt):\n *   'line_affinity.tabby' → 0.72   +   'line_affinity_top' → 'Tabby'\n * NEVER persist these (they go stale by construction) — compute at read time.\n */\nexport function attributesFrom(state: ReflexState, now: number, config: ReflexConfig): Record<string, number | string> {\n  const attrs: Record<string, number | string> = {};\n  for (const d of Object.keys(state.dims)) {\n    const p = dimParams(config, specOf(config, d));\n    let topV = '';\n    let topA = -1;\n    for (const v of Object.keys(state.dims[d])) {\n      const a = affinityOf(effectiveScore(state.dims[d][v], now, p.tauMs), p.K);\n      attrs[affinityAttrKey(d, v)] = round4(a);\n      if (a > topA || (a === topA && v < topV)) {\n        topA = a;\n        topV = v;\n      }\n    }\n    if (topV) attrs[`${slugValue(d)}_affinity_top`] = topV;\n  }\n  return attrs;\n}\n\n/**\n * Closed-form next θ_out crossing across CURRENT memberships (doc 16 §6):\n *   t* = tLast + τ · ln( R · (1 − θ_out) / (K · θ_out) )\n * Returns the earliest exit instant, or null if no membership can decay out.\n * This is what makes P2's alarms exact instead of polled.\n */\nexport function nextCrossing(state: ReflexState, now: number, config: ReflexConfig): number | null {\n  const members = new Set(state.audiences);\n  if (members.size === 0) return null;\n  let earliest: number | null = null;\n\n  for (const d of Object.keys(state.dims)) {\n    const spec = specOf(config, d);\n    const p = dimParams(config, spec);\n    const floor = (p.K * p.thetaOut) / (1 - p.thetaOut); // R_eff at a = θ_out\n    for (const v of Object.keys(state.dims[d])) {\n      if (!members.has(audienceKey(d, v))) continue;\n      const entry = state.dims[d][v];\n      if (entry.s <= floor) {\n        // Already at/below the floor — crosses immediately.\n        earliest = earliest === null ? now : Math.min(earliest, now);\n        continue;\n      }\n      const tStar = entry.t + p.tauMs * Math.log(entry.s / floor);\n      earliest = earliest === null ? tStar : Math.min(earliest, tStar);\n    }\n  }\n  return earliest;\n}\n\nfunction round4(n: number): number {\n  return Math.round(n * 10_000) / 10_000;\n}\n"
+    },
+    {
+      "path": "src/services/SessionManager.ts",
+      "sha256": "083fba6ff166ee6beadbdbda4b19c6c12c97bec3f1e7a33074dfa5eea62b014b",
+      "content": "import type { Env } from '@/types/env';\nimport type { ReflexChanges, ReflexConfig, ReflexState } from '@/reflex/core';\nimport { mergeReflexStates } from '@/reflex/identityMerge';\nimport { z } from 'zod';\nimport { assertSessionTarget, SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';\nimport { consentOf, consentFromCookies, intersectConsent, type Consent } from '@/content/consent';\n\nimport {\n  classifyEntryChannel, isNewVisit, nextVisitCount,\n  type ChannelSignals, type EntryChannel,\n} from '@/services/visit';\nimport { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';\n\nexport interface SessionData {\n  userId: string;\n  anonymousId?: string;\n  segments: string[];\n  attributes: Record<string, any>;\n  /** Demo surface this session belongs to (@/demos/registry). ABSENT ⇒ 'coach' —\n      every session written before the multi-surface split is the retail demo's. */\n  surface?: string;\n  /** Edge Affinity Reflex state (doc 16) — raw (R, tLast) per dimension·value.\n      P0 hosting: rides the session; relocates into the ShopperReflex DO in P2. */\n  reflex?: ReflexState;\n  /** ODP loop (doc 16 §8): the session's last-seeded qualified ODP audiences + when. */\n  odpSeed?: string[];\n  odpSeedAt?: number;\n  /** Ring of the session's recent events in the FLAT recent_events shape (≤10, ≤55min)\n      — injected inline into the GraphQL read for instant (~200ms) qualification. */\n  odpRecentEvents?: Array<Record<string, unknown>>;\n  /**\n   * CW25. Set on a record whose visitor was linked to a person: reads and\n   * writes addressed to this session land on the person's session instead. The\n   * record keeps its old content underneath, so if the target ever expires the\n   * browser still has what it had. One hop, never chained.\n   */\n  forwardTo?: string;\n  /**\n   * CW25. Present on the PERSON's session. Its userId is the shopper id, and a\n   * write arriving with a browser's visitor id must not overwrite it, or the\n   * ODP vuid and the identity anchor would flap between devices.\n   */\n  identity?: { shopperId: string; linkedAt: number };\n  metadata: {\n    firstSeen: number;\n    lastSeen: number;\n    /**\n     * Interactions, NOT visits. It increments on every createOrUpdateSession\n     * call, which is what it has always done; the name is misleading and the\n     * field is kept because it is persisted and read. For \"how many times has\n     * this shopper been here\", use visitCount.\n     */\n    sessionCount: number;\n    /**\n     * Visits, counted on an idle-gap boundary (see @/services/visit). Optional\n     * because records written before this field existed must still parse:\n     * getSession() runs the schema and swallows a failure as null, so a required\n     * field here would silently wipe every live session on deploy.\n     */\n    visitCount?: number;\n    /** When the current visit began. */\n    lastVisitAt?: number;\n    /** How this visit was entered. Classified once per visit, then carried. */\n    entryChannel?: EntryChannel;\n    engagementScore: number;\n    lastSegmentUpdate: number;\n    journeyStage?: 'early' | 'mid' | 'late';\n  };\n  preferences: {\n    trackingConsent: boolean;\n    personalizationEnabled: boolean;\n    cookieConsent: boolean;\n  };\n}\n\nexport interface CookieConfig {\n  name: string;\n  value: string;\n  maxAge?: number;\n  httpOnly?: boolean;\n  secure?: boolean;\n  sameSite?: 'Strict' | 'Lax' | 'None';\n  domain?: string;\n  path?: string;\n}\n\nexport interface SessionCookies {\n  sessionId: string;\n  segments: string;\n  userId?: string;\n  anonymousId?: string;\n  engagementScore: string;\n  lastUpdate: string;\n  trackingConsent: string;\n  personalizationEnabled: string;\n}\n\nconst sessionDataSchema = z.object({\n  userId: z.string(),\n  anonymousId: z.string().optional(),\n  segments: z.array(z.string()),\n  attributes: z.record(z.string(), z.any()),\n  // Declared or .parse() silently STRIPS it on every read/write (same trap as reflex).\n  surface: z.string().optional(),\n  // Reflex state must be declared or .parse() silently STRIPS it on every read/write.\n  reflex: z.any().optional(),\n  odpSeed: z.array(z.string()).optional(),\n  odpSeedAt: z.number().optional(),\n  odpRecentEvents: z.array(z.any()).optional(),\n  // CW25. Declared or .parse() silently STRIPS them, same trap as reflex.\n  forwardTo: z.string().optional(),\n  identity: z.object({ shopperId: z.string(), linkedAt: z.number() }).optional(),\n  metadata: z.object({\n    firstSeen: z.number(),\n    lastSeen: z.number(),\n    sessionCount: z.number(),\n    // Optional, deliberately: see the note on the interface above. A required\n    // field would fail .parse() on every record written before this deploy, and\n    // getSession() turns a parse failure into null.\n    visitCount: z.number().optional(),\n    lastVisitAt: z.number().optional(),\n    // An enum, so the parsed type matches the interface, with .catch so an\n    // unrecognised stored value degrades to undefined instead of failing the\n    // parse and taking the whole session with it.\n    entryChannel: z\n      .enum(['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'])\n      .optional()\n      .catch(undefined),\n    engagementScore: z.number(),\n    lastSegmentUpdate: z.number(),\n    journeyStage: z.enum(['early', 'mid', 'late']).optional()\n  }),\n  preferences: z.object({\n    trackingConsent: z.boolean(),\n    personalizationEnabled: z.boolean(),\n    cookieConsent: z.boolean()\n  })\n});\n\n/**\n * CW25. Attributes that count events, which add across a person's devices. The\n * names are RETAIL_SIGNAL_DEFAULTS' (RealtimeSegmentEngine); anything not here\n * is a latest-value attribute, on which the person's record wins.\n */\n/** How often a forwarding record has its TTL renewed under a browser that keeps using it. */\nconst FORWARD_REFRESH_MS = 24 * 60 * 60 * 1000;\n\nconst COUNTER_ATTRIBUTES = new Set(['product_views', 'cart_adds', 'wishlist_adds', 'page_views', 'category_dwell_ms', 'purchases']);\n\nexport class SessionManager {\n  private env: Env;\n  readonly tenant: TenantId;\n  private sessionTTL: number = 30 * 24 * 60 * 60; // 30 days in seconds\n  private cookieDomain: string;\n  private isSecure: boolean;\n\n  /**\n   * Sessions scoped to one brand (CW1). A visitor on Kate Spade and a visitor on\n   * Coach who happen to share a session id are two different people, and without\n   * this they were one: `session:{id}` was a global key.\n   *\n   * The default tenant is unprefixed, so an existing `new SessionManager(env)`\n   * reads and writes exactly the keys it always did and no live session moves.\n   */\n  private readonly kv: KVLike;\n\n  readonly principal?: SessionCapability;\n\n  constructor(env: Env, options?: { domain?: string; secure?: boolean; tenant?: TenantId; principal?: SessionCapability }) {\n    this.env = env;\n    this.tenant = options?.tenant ?? DEFAULT_TENANT;\n    this.principal = options?.principal;\n    if (this.principal && this.principal.tenant !== this.tenant) throw new SessionAccessError();\n    this.kv = new TenantKV(env.SESSIONS as unknown as KVLike, this.tenant);\n    this.cookieDomain = options?.domain || '';\n    this.isSecure = options?.secure ?? true;\n  }\n\n  /**\n   * Create a new session or update existing one\n   */\n  async createOrUpdateSession(\n    sessionId: string,\n    userId: string,\n    data: Partial<SessionData>,\n    /**\n     * How this request arrived: utm tags and referrer. Only consulted when this\n     * call opens a new visit, because entry is a property of the visit and not\n     * of every event inside it. Optional, so no existing call site changes.\n     */\n    entry?: ChannelSignals,\n    /**\n     * CW37. Where the KV writes go instead of being awaited. A decision does not\n     * depend on the session having been STORED -- it is computed from the record\n     * this call returns -- and a KV write costs half a second or more from a\n     * Worker, which doc 32 measured as the whole of a new shopper's 627 ms. Hand\n     * this a sink (the request's `waitUntil`) and the write leaves the response\n     * path. Omit it and nothing changes: every existing caller still awaits.\n     */\n    defer?: (p: Promise<unknown>) => void,\n    ownedSnapshot?: { sessionId: string; data: SessionData | null },\n  ): Promise<SessionData> {\n    if (this.principal) {\n      assertSessionTarget(this.principal, userId, sessionId);\n      if (data.forwardTo || (data.identity && (this.principal.kind !== 'recognized' || data.identity.shopperId !== userId))) throw new SessionAccessError();\n    }\n    try {\n      // CW25. A browser that was linked to a person writes to the person's\n      // session; the id on the cookie stays what it was, the record it names\n      // forwards. Resolved once here, for the read below and the write at the end.\n      const target = ownedSnapshot\n        ? { id: sessionId, data: this.checkedSnapshot(sessionId, ownedSnapshot) }\n        : await this.resolveRecord(sessionId);\n      sessionId = target.id;\n      const existingSession = target.data;\n      // A person's session keeps the person's id whatever browser is writing.\n      if (existingSession?.identity && existingSession.userId !== userId) userId = existingSession.userId;\n\n      const now = Date.now();\n\n      // THE VISIT BOUNDARY. Read lastSeen from the STORED record, never from the\n      // incoming data: a caller that passes `metadata.lastSeen: Date.now()` would\n      // otherwise close the gap it is being measured against, and every event\n      // would look like a new visit.\n      const priorLastSeen = existingSession?.metadata.lastSeen;\n      const openingNewVisit = isNewVisit(priorLastSeen, now);\n      const visitCount = nextVisitCount(existingSession?.metadata.visitCount, priorLastSeen, now);\n      // A record written before visitCount existed resolves to visit 1. That\n      // under-counts a returning shopper once, which is honest; seeding from\n      // sessionCount would import its wrongness instead.\n      const entryChannel: EntryChannel = openingNewVisit && entry\n        ? classifyEntryChannel(entry)\n        : (existingSession?.metadata.entryChannel ?? (entry ? classifyEntryChannel(entry) : 'direct'));\n\n      const sessionData: SessionData = {\n        userId,\n        anonymousId: data.anonymousId || existingSession?.anonymousId,\n        segments: data.segments || existingSession?.segments || ['new_user'],\n        attributes: {\n          ...existingSession?.attributes,\n          ...data.attributes\n        },\n        surface: data.surface ?? existingSession?.surface,\n        reflex: data.reflex ?? existingSession?.reflex,\n        odpSeed: data.odpSeed ?? existingSession?.odpSeed,\n        odpSeedAt: data.odpSeedAt ?? existingSession?.odpSeedAt,\n        odpRecentEvents: data.odpRecentEvents ?? existingSession?.odpRecentEvents,\n        identity: data.identity ?? existingSession?.identity,\n        metadata: {\n          firstSeen: existingSession?.metadata.firstSeen || now,\n          lastSeen: now,\n          sessionCount: existingSession ? existingSession.metadata.sessionCount + 1 : 1,\n          visitCount,\n          lastVisitAt: openingNewVisit ? now : (existingSession?.metadata.lastVisitAt ?? now),\n          entryChannel,\n          engagementScore: data.metadata?.engagementScore || existingSession?.metadata.engagementScore || 0,\n          lastSegmentUpdate: data.segments ? now : existingSession?.metadata.lastSegmentUpdate || now,\n          journeyStage: data.metadata?.journeyStage ?? existingSession?.metadata.journeyStage\n        },\n        preferences: {\n          trackingConsent: data.preferences?.trackingConsent ?? existingSession?.preferences.trackingConsent ?? true,\n          personalizationEnabled: data.preferences?.personalizationEnabled ?? existingSession?.preferences.personalizationEnabled ?? true,\n          cookieConsent: data.preferences?.cookieConsent ?? existingSession?.preferences.cookieConsent ?? true\n        }\n      };\n\n      // Validate the session data\n      const validatedData = sessionDataSchema.parse(sessionData);\n\n      // CW31 (BTIE D10). A shopper who withheld tracking consent is still\n      // ANSWERED, from the state that is already stored, and nothing this\n      // request learned is kept. This is the object host's rule exactly\n      // (ShopperReflex step 8, where the record is restored to what it was):\n      // the two hosts must never disagree about the same shopper, because\n      // REFLEX_HOST decides which one a brand runs on and consent is not a\n      // property of that choice.\n      //\n      // The one write that still happens is the INSTRUCTION itself. Without it\n      // the next request reads no stored preference, the default of that is\n      // consenting, and the engine would start writing again on the request\n      // after the shopper asked it to stop.\n      if (!validatedData.preferences.trackingConsent) {\n        const onlyTheInstruction = sessionDataSchema.parse(\n          existingSession\n            ? { ...existingSession, preferences: validatedData.preferences }\n            : {\n                userId,\n                segments: [],\n                attributes: {},\n                metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },\n                preferences: validatedData.preferences,\n              }\n        );\n        // The pointer stays, or the switches could not be found again.\n        const refusal = Promise.all([\n          this.kv.put(`session:${sessionId}`, JSON.stringify(onlyTheInstruction), { expirationTtl: this.sessionTTL }),\n          this.kv.put(`user:${userId}`, sessionId, { expirationTtl: this.sessionTTL }),\n        ]);\n        if (defer) defer(refusal); else await refusal;\n        return validatedData;\n      }\n\n      // The record, and the pointer that finds it by user id. These were two\n      // awaits in sequence, which paid for two round trips where one would do;\n      // neither depends on the other.\n      const writes = Promise.all([\n        this.kv.put(`session:${sessionId}`, JSON.stringify(validatedData), { expirationTtl: this.sessionTTL }),\n        this.kv.put(`user:${userId}`, sessionId, { expirationTtl: this.sessionTTL }),\n      ]);\n      if (defer) defer(writes); else await writes;\n\n      return validatedData;\n\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      console.error('Error creating/updating session');\n      throw error;\n    }\n  }\n\n  /** The record exactly as stored, forward and all. */\n  async readRaw(sessionId: string, strict = false): Promise<SessionData | null> {\n    if (this.principal) assertSessionTarget(this.principal, undefined, sessionId);\n    let raw: SessionData | null;\n    try {\n      const stored = await this.kv.get(`session:${sessionId}`, strict ? undefined : 'json');\n      const sessionData = strict && stored !== null && typeof stored === 'string' ? JSON.parse(stored) : stored;\n      raw = strict ? (stored === null ? null : sessionDataSchema.parse(sessionData)) : (sessionData ? sessionDataSchema.parse(sessionData) : null);\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      if (this.principal || strict) throw new SessionAccessError();\n      console.error('Error retrieving session');\n      return null;\n    }\n    if (this.principal) {\n      assertSessionTarget(this.principal);\n      if (raw ? raw.userId !== this.principal.subject || !!raw.forwardTo\n        || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject)\n        : this.principal.kind === 'recognized') throw new SessionAccessError();\n    }\n    return raw;\n  }\n\n  /**\n   * The session a request for `sessionId` actually lands on: the record itself,\n   * or the person's session it forwards to. One hop. If the target has expired\n   * the browser's own record is returned, which is what it had before the link.\n   */\n  async resolveRecord(sessionId: string): Promise<{ id: string; data: SessionData | null }> {\n    const raw = await this.readRaw(sessionId);\n    if (this.principal) return { id: sessionId, data: raw };\n    if (raw?.forwardTo && raw.forwardTo !== sessionId) {\n      const target = await this.readRaw(raw.forwardTo);\n      if (target) {\n        // The browser's record and its `user:` pointer are never rewritten by\n        // the writes that now land on the person, so they would expire under a\n        // browser that kept coming back. Refreshed once a day, off the hot path.\n        const now = Date.now();\n        if (now - raw.metadata.lastSeen > FORWARD_REFRESH_MS) {\n          const refreshed = { ...raw, metadata: { ...raw.metadata, lastSeen: now } };\n          await Promise.all([\n            this.kv.put(`session:${sessionId}`, JSON.stringify(refreshed), { expirationTtl: this.sessionTTL }),\n            this.kv.put(`user:${raw.userId}`, raw.forwardTo, { expirationTtl: this.sessionTTL }),\n          ]);\n        }\n        return { id: raw.forwardTo, data: target };\n      }\n    }\n    return { id: sessionId, data: raw };\n  }\n\n  /**\n   * Get session data by session ID. Follows a link (CW25), so a browser that\n   * was recognised reads the person's profile from its old cookie.\n   */\n  async getSession(sessionId: string): Promise<SessionData | null> {\n    return (await this.resolveRecord(sessionId)).data;\n  }\n\n  /** Request-local owned read: cookies only restrict, and refusal is durable before use. */\n  async readOwnedConsent(sessionId: string, cookieHeader?: string | null): Promise<{ sessionId: string; data: SessionData | null; consent: Consent }> {\n    if (!this.principal) throw new SessionAccessError();\n    let data = await this.readRaw(sessionId, true);\n    const consent = intersectConsent(consentOf(data), consentFromCookies(cookieHeader));\n    if (!consent.tracking || !consent.personalization) {\n      await this.restrictConsent(sessionId, consent, { sessionId, data });\n      if (data) data = { ...data, preferences: { ...data.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization } };\n    }\n    assertSessionTarget(this.principal, undefined, sessionId);\n    return { sessionId, data, consent };\n  }\n\n  /** Necessary refusal storage only: no visit, profile merge, or user-pointer write. */\n  async restrictConsent(sessionId: string, hints: Consent, ownedSnapshot?: { sessionId: string; data: SessionData | null }): Promise<Consent> {\n    const previous = ownedSnapshot ? this.checkedSnapshot(sessionId, ownedSnapshot) : await this.readRaw(sessionId, true);\n    const consent = intersectConsent(consentOf(previous), hints);\n    if (consent.tracking && consent.personalization) return consent;\n    if (previous && previous.preferences.trackingConsent === consent.tracking\n      && previous.preferences.personalizationEnabled === consent.personalization) return consent;\n    if (!previous && !this.principal) throw new SessionAccessError();\n    const now = Date.now();\n    const data: SessionData = {\n      ...(previous ?? {\n        userId: this.principal!.subject, segments: [], attributes: {},\n        metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },\n      }),\n      preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization, cookieConsent: previous?.preferences.cookieConsent ?? true },\n    };\n    await this.kv.put(`session:${sessionId}`, JSON.stringify(sessionDataSchema.parse(data)), { expirationTtl: this.sessionTTL });\n    return consent;\n  }\n\n  /** Request-local state already read by the owned action lane, never a caller payload. */\n  private checkedSnapshot(sessionId: string, snapshot: { sessionId: string; data: SessionData | null }): SessionData | null {\n    if (!this.principal || snapshot.sessionId !== sessionId) throw new SessionAccessError();\n    assertSessionTarget(this.principal, undefined, sessionId);\n    const raw = snapshot.data === null ? null : sessionDataSchema.parse(snapshot.data);\n    if (raw ? raw.userId !== this.principal.subject || !!raw.forwardTo\n      || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject)\n      : this.principal.kind === 'recognized') throw new SessionAccessError();\n    return raw;\n  }\n\n  /**\n   * CW25. Fold a browser's session into a person's, and leave the browser's\n   * record forwarding there.\n   *\n   * The person's session is `user:{shopperId}`'s, created here on the first\n   * link. The reflex vectors merge on the decay invariant (identityMerge.ts);\n   * visits add, because two devices' visits are one person's visits; first seen\n   * is the earliest, last seen the latest, the counters sum, and on anything\n   * else the person's existing record wins over the browser's. Segments are\n   * unioned and the reflex memberships re-evaluated, so the returned changes\n   * are exactly what the link did to this person's audiences.\n   */\n  async absorbIntoShopper(input: {\n    shopperId: string;\n    /** The browser being linked. Its `user:` key is pointed at the person even when it had no session yet. */\n    visitorId?: string;\n    from: SessionData | null;\n    fromSessionId: string | null;\n    config: ReflexConfig;\n    now?: number;\n    /**\n     * `merge` folds the browser's profile in (a first link). `repoint` only moves\n     * the browser: it was linked to someone else before, its profile already\n     * went there, and a shared computer's second account must not inherit it.\n     */\n    mode?: 'merge' | 'repoint';\n    /** Public identity transitions intersect, never upgrade, the source switches. */\n    consent?: Consent;\n  }): Promise<{ sessionId: string; data: SessionData; changes: ReflexChanges; created: boolean }> {\n    const now = input.now ?? Date.now();\n    const { shopperId } = input;\n    const browserId = input.visitorId ?? input.from?.userId;\n    // THE GUARD. Only a browser's own record is ever folded or forwarded: one\n    // that carries no identity and is named by the browser being linked. A\n    // person's session handed in here by mistake (the `user:` key of a linked\n    // browser points at the person, not the browser) must never be forwarded to\n    // another person, which would hand one shopper's profile to another.\n    const from = input.from && !input.from.identity && input.from.userId === browserId ? input.from : null;\n\n    let canonicalId = (await this.kv.get(`user:${shopperId}`)) as string | null;\n    let base: SessionData | null = canonicalId ? await this.readRaw(canonicalId, input.consent !== undefined) : null;\n    const created = !base;\n    if (!base) canonicalId = this.generateSessionId();\n    // A browser already forwarding here, or one being repointed, has nothing to fold in.\n    const fold = input.mode !== 'repoint' && from && from.forwardTo !== canonicalId && from.userId !== shopperId ? from : null;\n\n    const merged = mergeReflexStates(base?.reflex, fold?.reflex, now, input.config);\n    const counters: Record<string, unknown> = { ...(fold?.attributes ?? {}), ...(base?.attributes ?? {}) };\n    for (const k of Object.keys(fold?.attributes ?? {})) {\n      const a = base?.attributes?.[k]; const b = fold?.attributes?.[k];\n      if (typeof a === 'number' && typeof b === 'number' && COUNTER_ATTRIBUTES.has(k)) counters[k] = a + b;\n    }\n    const laterVisit = (fold?.metadata.lastVisitAt ?? 0) > (base?.metadata.lastVisitAt ?? 0) ? fold : base;\n\n    const data: SessionData = {\n      userId: shopperId,\n      anonymousId: base?.anonymousId ?? fold?.anonymousId,\n      segments: [...new Set([...(base?.segments ?? []), ...(fold?.segments ?? []), ...merged.state.audiences])].sort(),\n      attributes: counters,\n      surface: base?.surface ?? fold?.surface,\n      reflex: merged.state,\n      odpSeed: base?.odpSeed ?? fold?.odpSeed,\n      odpSeedAt: base?.odpSeedAt ?? fold?.odpSeedAt,\n      odpRecentEvents: [...(fold?.odpRecentEvents ?? []), ...(base?.odpRecentEvents ?? [])].slice(-10),\n      identity: base?.identity ?? { shopperId, linkedAt: now },\n      metadata: {\n        firstSeen: Math.min(base?.metadata.firstSeen ?? now, fold?.metadata.firstSeen ?? now),\n        lastSeen: Math.max(base?.metadata.lastSeen ?? 0, fold?.metadata.lastSeen ?? 0) || now,\n        sessionCount: (base?.metadata.sessionCount ?? 0) + (fold?.metadata.sessionCount ?? 0),\n        visitCount: (base?.metadata.visitCount ?? 0) + (fold?.metadata.visitCount ?? 0) || undefined,\n        lastVisitAt: laterVisit?.metadata.lastVisitAt,\n        entryChannel: laterVisit?.metadata.entryChannel,\n        engagementScore: Math.max(base?.metadata.engagementScore ?? 0, fold?.metadata.engagementScore ?? 0),\n        lastSegmentUpdate: now,\n        journeyStage: base?.metadata.journeyStage ?? fold?.metadata.journeyStage,\n      },\n      preferences: base?.preferences ?? fold?.preferences ?? { trackingConsent: true, personalizationEnabled: true, cookieConsent: true },\n    };\n    if (input.consent) {\n      const consent = intersectConsent(consentOf(data), input.consent);\n      data.preferences = { ...data.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization };\n    }\n    const validated = sessionDataSchema.parse(data);\n\n    await this.kv.put(`session:${canonicalId}`, JSON.stringify(validated), { expirationTtl: this.sessionTTL });\n    await this.kv.put(`user:${shopperId}`, canonicalId!, { expirationTtl: this.sessionTTL });\n    if (browserId && browserId !== shopperId) {\n      await this.kv.put(`user:${browserId}`, canonicalId!, { expirationTtl: this.sessionTTL });\n    }\n    if (from) {\n      if (input.fromSessionId && input.fromSessionId !== canonicalId) {\n        // The browser's record stays as it was, plus the pointer: roll forward, never rewind.\n        const tomb = sessionDataSchema.parse({ ...from, forwardTo: canonicalId });\n        await this.kv.put(`session:${input.fromSessionId}`, JSON.stringify(tomb), { expirationTtl: this.sessionTTL });\n      }\n    }\n    return { sessionId: canonicalId!, data: validated, changes: merged.changes, created };\n  }\n\n  /**\n   * CW25. Write an imported reflex vector onto a shopper's session, and nothing\n   * else about the visit. History informs interest; it does not claim visits the\n   * engine never saw, so lastSeen and the visit number are left exactly as they\n   * were. A shopper met first through an import gets a record with the identity\n   * block and no visit at all.\n   */\n  async applyImport(input: {\n    userId: string;\n    reflex: ReflexState;\n    identity?: { shopperId: string; linkedAt: number };\n    now?: number;\n  }): Promise<{ sessionId: string; data: SessionData; created: boolean }> {\n    const now = input.now ?? Date.now();\n    const sid0 = (await this.kv.get(`user:${input.userId}`)) as string | null;\n    const resolved = sid0 ? await this.resolveRecord(sid0) : { id: this.generateSessionId(), data: null };\n    const existing = resolved.data;\n    const sessionId = resolved.id;\n    const data: SessionData = existing\n      ? {\n          ...existing,\n          reflex: input.reflex,\n          segments: [...new Set([...existing.segments, ...input.reflex.audiences])].sort(),\n          identity: existing.identity ?? input.identity,\n          metadata: { ...existing.metadata, lastSegmentUpdate: now },\n        }\n      : {\n          userId: input.userId,\n          segments: [...input.reflex.audiences].sort(),\n          attributes: {},\n          reflex: input.reflex,\n          identity: input.identity,\n          metadata: { firstSeen: now, lastSeen: 0, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },\n          preferences: { trackingConsent: true, personalizationEnabled: true, cookieConsent: true },\n        };\n    const validated = sessionDataSchema.parse(data);\n    await this.kv.put(`session:${sessionId}`, JSON.stringify(validated), { expirationTtl: this.sessionTTL });\n    await this.kv.put(`user:${validated.userId}`, sessionId, { expirationTtl: this.sessionTTL });\n    return { sessionId, data: validated, created: !existing };\n  }\n\n  /**\n   * CW28. Forget a browser entirely: its `user:` pointer, and its own record\n   * when the link remembered one (after a link the pointer names the person, so\n   * the browser's pre-link record is reachable only this way).\n   */\n  async forgetVisitor(userId: string, ownSessionId?: string | null): Promise<void> {\n    try {\n      if (ownSessionId) await this.kv.delete(`session:${ownSessionId}`);\n      await this.kv.delete(`user:${userId}`);\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      console.error('Error forgetting visitor');\n    }\n  }\n\n  /**\n   * Get session data by user ID\n   */\n  async getSessionByUserId(userId: string): Promise<SessionData | null> {\n    if (this.principal) {\n      assertSessionTarget(this.principal, userId);\n      return this.getSession(this.principal.sessionId);\n    }\n    try {\n      const sessionId = (await this.kv.get(`user:${userId}`)) as string | null;\n      if (!sessionId) {\n        return null;\n      }\n\n      return this.getSession(sessionId);\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      console.error('Error retrieving session by user ID');\n      return null;\n    }\n  }\n\n  /**\n   * Resolve the current sessionId for a stable userId (anon vuid), if any.\n   * Used as a continuity fallback when the session cookie is absent or blocked.\n   */\n  async resolveSessionIdByUserId(userId: string): Promise<string | null> {\n    if (this.principal) {\n      assertSessionTarget(this.principal, userId);\n      return this.principal.sessionId;\n    }\n    try {\n      return (await this.kv.get(`user:${userId}`)) as string | null;\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      console.error('Error resolving session id by user ID');\n      return null;\n    }\n  }\n\n  /**\n   * Update user segments in session\n   */\n  async updateUserSegments(\n    sessionId: string,\n    segments: string[],\n    engagementScore?: number\n  ): Promise<SessionData | null> {\n    try {\n      const existingSession = await this.getSession(sessionId);\n      if (!existingSession) {\n        return null;\n      }\n\n      const updatedSession = await this.createOrUpdateSession(sessionId, existingSession.userId, {\n        ...existingSession,\n        segments,\n        metadata: {\n          ...existingSession.metadata,\n          engagementScore: engagementScore ?? existingSession.metadata.engagementScore,\n          lastSegmentUpdate: Date.now()\n        }\n      });\n\n      return updatedSession;\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      console.error('Error updating user segments');\n      return null;\n    }\n  }\n\n  /**\n   * Generate secure cookies for client-side persistence\n   */\n  generateSessionCookies(sessionData: SessionData, sessionId: string): CookieConfig[] {\n    const cookieOptions: Partial<CookieConfig> = {\n      maxAge: this.sessionTTL,\n      httpOnly: false, // Need to be accessible to JavaScript for personalization\n      secure: this.isSecure,\n      sameSite: 'Lax',\n      path: '/',\n      ...(this.cookieDomain && { domain: this.cookieDomain })\n    };\n\n    const cookies: CookieConfig[] = [\n      {\n        name: 'opt_session_id',\n        value: sessionId,\n        ...cookieOptions,\n        httpOnly: true // Session ID should be HTTP-only for security\n      },\n      {\n        name: 'opt_user_id',\n        value: sessionData.userId,\n        ...cookieOptions\n      },\n      {\n        name: 'opt_segments',\n        value: sessionData.segments.join(','),\n        ...cookieOptions\n      },\n      {\n        name: 'opt_engagement_score',\n        value: sessionData.metadata.engagementScore.toString(),\n        ...cookieOptions\n      },\n      {\n        name: 'opt_last_update',\n        value: sessionData.metadata.lastSegmentUpdate.toString(),\n        ...cookieOptions\n      },\n      {\n        name: 'opt_tracking_consent',\n        value: sessionData.preferences.trackingConsent.toString(),\n        ...cookieOptions\n      },\n      {\n        name: 'opt_personalization_enabled',\n        value: sessionData.preferences.personalizationEnabled.toString(),\n        ...cookieOptions\n      }\n    ];\n\n    // Add anonymous ID cookie if available\n    if (sessionData.anonymousId) {\n      cookies.push({\n        name: 'opt_anonymous_id',\n        value: sessionData.anonymousId,\n        ...cookieOptions\n      });\n    }\n\n    return cookies;\n  }\n\n  /** Necessary preference mirrors only; never inspect or serialize a behavioral profile. */\n  generateConsentCookieHeaders(preferences: Pick<SessionData['preferences'], 'trackingConsent' | 'personalizationEnabled'>): string[] {\n    return this.createCookieHeaders([\n      { name: 'opt_tracking_consent', value: String(preferences.trackingConsent) },\n      { name: 'opt_personalization_enabled', value: String(preferences.personalizationEnabled) },\n    ].map(cookie => ({ ...cookie, maxAge: this.sessionTTL, secure: this.isSecure, sameSite: 'Lax', path: '/', ...(this.cookieDomain && { domain: this.cookieDomain }) })));\n  }\n\n  /**\n   * Parse session cookies from request headers\n   */\n  parseSessionCookies(cookieHeader: string | null): Partial<SessionCookies> {\n    if (!cookieHeader) {\n      return {};\n    }\n\n    const cookies: Record<string, string> = {};\n    \n    cookieHeader.split(';').forEach(cookie => {\n      const [name, ...value] = cookie.trim().split('=');\n      if (name && value.length > 0) {\n        cookies[name] = decodeURIComponent(value.join('='));\n      }\n    });\n\n    return {\n      sessionId: cookies['opt_session_id'],\n      userId: cookies['opt_user_id'],\n      anonymousId: cookies['opt_anonymous_id'],\n      segments: cookies['opt_segments'],\n      engagementScore: cookies['opt_engagement_score'],\n      lastUpdate: cookies['opt_last_update'],\n      trackingConsent: cookies['opt_tracking_consent'],\n      personalizationEnabled: cookies['opt_personalization_enabled']\n    };\n  }\n\n  /**\n   * Create cookie header string for HTTP response\n   */\n  /**\n   * Private identity/profile mirrors only. Refusal cookies must survive logout/reset.\n   * `maxAge` 0 is rendered by hand because createCookieHeaders treats 0 as unset.\n   */\n  clearCookieHeaders(): string[] {\n    const names = ['opt_session_id', 'opt_user_id', 'opt_anonymous_id', 'opt_segments',\n      'opt_engagement_score', 'opt_last_update'];\n    const domain = this.cookieDomain ? `; Domain=${this.cookieDomain}` : '';\n    return names.map((n) => `${n}=; Max-Age=0; Path=/${domain}; SameSite=Lax`);\n  }\n\n  createCookieHeaders(cookies: CookieConfig[]): string[] {\n    return cookies.map(cookie => {\n      let header = `${cookie.name}=${encodeURIComponent(cookie.value)}`;\n      \n      if (cookie.maxAge) {\n        header += `; Max-Age=${cookie.maxAge}`;\n      }\n      \n      if (cookie.domain) {\n        header += `; Domain=${cookie.domain}`;\n      }\n      \n      if (cookie.path) {\n        header += `; Path=${cookie.path}`;\n      }\n      \n      if (cookie.secure) {\n        header += '; Secure';\n      }\n      \n      if (cookie.httpOnly) {\n        header += '; HttpOnly';\n      }\n      \n      if (cookie.sameSite) {\n        header += `; SameSite=${cookie.sameSite}`;\n      }\n      \n      return header;\n    });\n  }\n\n  /**\n   * Generate a new session ID\n   */\n  generateSessionId(): string {\n    return crypto.randomUUID();\n  }\n\n  /**\n   * Delete session and clear cookies\n   */\n  async deleteSession(sessionId: string): Promise<boolean> {\n    if (this.principal) assertSessionTarget(this.principal, undefined, sessionId);\n    try {\n      // The record as stored, NOT what it forwards to: deleting a linked\n      // browser's session detaches that browser; only the person's own session\n      // id erases the person.\n      const sessionData = await this.readRaw(sessionId);\n      \n      // Delete session data\n      await this.kv.delete(`session:${sessionId}`);\n      \n      // Delete user ID mapping\n      if (sessionData) {\n        await this.kv.delete(`user:${sessionData.userId}`);\n      }\n\n      return true;\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      console.error('Error deleting session');\n      return false;\n    }\n  }\n\n  /**\n   * Clear expired sessions (to be called by scheduled worker)\n   */\n  async cleanupExpiredSessions(): Promise<number> {\n    try {\n      // KV automatically handles TTL expiration, but we can manually clean up if needed\n      // This is more for logging/metrics purposes\n      console.log('Session cleanup scheduled - KV TTL handles automatic expiration');\n      return 0;\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      console.error('Error during session cleanup');\n      return 0;\n    }\n  }\n\n  /**\n   * Get session analytics data\n   */\n  async getSessionAnalytics(sessionId: string): Promise<{\n    sessionDuration: number;\n    pageViews: number;\n    engagementScore: number;\n    segmentHistory: string[];\n  } | null> {\n    try {\n      const sessionData = await this.getSession(sessionId);\n      if (!sessionData) {\n        return null;\n      }\n\n      const sessionDuration = Date.now() - sessionData.metadata.firstSeen;\n      \n      return {\n        sessionDuration,\n        pageViews: sessionData.attributes.page_views || 0,\n        engagementScore: sessionData.metadata.engagementScore,\n        segmentHistory: sessionData.segments\n      };\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      console.error('Error retrieving session analytics');\n      return null;\n    }\n  }\n\n  /**\n   * Update user preferences\n   */\n  async updateUserPreferences(\n    sessionId: string,\n    preferences: Partial<SessionData['preferences']>,\n    cookieHeader?: string | null,\n  ): Promise<SessionData | null> {\n    if (this.principal) {\n      const existing = await this.readRaw(sessionId, true);\n      const restricted = intersectConsent(consentOf(existing), consentFromCookies(cookieHeader));\n      const effective = {\n        trackingConsent: preferences.trackingConsent ?? restricted.tracking,\n        personalizationEnabled: preferences.personalizationEnabled ?? restricted.personalization,\n        cookieConsent: preferences.cookieConsent ?? existing?.preferences.cookieConsent ?? true,\n      };\n      // Anonymous absence is not a visit. Only an instruction to refuse may create it.\n      if (!existing && effective.trackingConsent && effective.personalizationEnabled) return null;\n      const now = Date.now();\n      const updated = sessionDataSchema.parse({\n        ...(existing ?? { userId: this.principal.subject, segments: [], attributes: {},\n          metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now } }),\n        preferences: effective,\n      });\n      assertSessionTarget(this.principal, undefined, sessionId);\n      await this.kv.put(`session:${sessionId}`, JSON.stringify(updated), { expirationTtl: this.sessionTTL });\n      assertSessionTarget(this.principal, undefined, sessionId);\n      return updated;\n    }\n    try {\n      const existingSession = await this.getSession(sessionId);\n      if (!existingSession) {\n        return null;\n      }\n\n      return this.createOrUpdateSession(sessionId, existingSession.userId, {\n        ...existingSession,\n        preferences: {\n          ...existingSession.preferences,\n          ...preferences\n        }\n      });\n    } catch (error) {\n      if (error instanceof SessionAccessError) throw error;\n      console.error('Error updating user preferences');\n      return null;\n    }\n  }\n}\n"
+    },
+    {
+      "path": "src/tenancy/d1.test.ts",
+      "sha256": "b565e4d8465a4dcb4db4d3fe8309a8991889e895debad4d626810dd9bb7fdd57",
+      "content": "// src/tenancy/d1.test.ts\n//\n// SQL tenancy is a convention, not a primitive, so the tests guard the two ways\n// a convention fails: the migration literal drifting from the code constant, and\n// a read path that forgets the predicate.\n\nimport { describe, it, expect } from 'vitest';\nimport { readFileSync } from 'node:fs';\nimport { DEFAULT_TENANT } from '@/tenancy/tenant';\nimport { TENANT_COLUMN_DDL, addTenantColumnSql } from '@/tenancy/d1';\nimport { capture, captureInputFrom, exportRows, MRD_DECISION_COLUMNS } from '@/demos/meridian/receipts';\n\ndescribe('the migration and the code cannot drift', () => {\n  it('migration 0009 contains the DDL fragment verbatim', () => {\n    // A migration that hard-codes 'coach' while DEFAULT_TENANT says something\n    // else is invisible until the second brand exists.\n    const sql = readFileSync('migrations/0009_tenant_columns.sql', 'utf-8');\n    expect(sql).toContain(TENANT_COLUMN_DDL);\n    expect(sql).toContain(addTenantColumnSql('mrd_decisions'));\n  });\n\n  it('the default in the DDL IS the default tenant', () => {\n    expect(TENANT_COLUMN_DDL).toBe(`tenant TEXT NOT NULL DEFAULT '${DEFAULT_TENANT}'`);\n  });\n\n  it('the writer column list ends with tenant, so the eighteen before it keep their order', () => {\n    expect(MRD_DECISION_COLUMNS[MRD_DECISION_COLUMNS.length - 1]).toBe('tenant');\n    expect(MRD_DECISION_COLUMNS).toHaveLength(19);\n  });\n});\n\nclass FakeD1 {\n  rows: unknown[][] = [];\n  queries: Array<{ sql: string; args: unknown[] }> = [];\n  prepare(sql: string) {\n    const self = this;\n    return {\n      bind: (...args: unknown[]) => ({\n        sql, args,\n        all: async () => { self.queries.push({ sql, args }); return { results: [] }; },\n      }),\n    } as never;\n  }\n  async batch(stmts: Array<{ args: unknown[] }>) { this.rows.push(...stmts.map((s) => s.args)); return []; }\n}\n\nconst decision = (slot: string) => ({\n  slot, order: 0, itemId: 'i', strategy: 'affinity',\n  explain: { candidates: 1, drivers: [], configVersion: 'v1' }, rankScore: 0.1,\n} as never);\n\nconst tenantIdx = MRD_DECISION_COLUMNS.indexOf('tenant' as never);\n\ndescribe('every receipt carries its brand', () => {\n  it('writes the resolved brand into the row', async () => {\n    const db = new FakeD1();\n    const input = captureInputFrom({ visitorId: 'v', decisions: [decision('hero')] }, 'retail' as never, 1, 'kate-spade')!;\n    await capture(db as never, input);\n    expect(db.rows[0][tenantIdx]).toBe('kate-spade');\n  });\n\n  it('writes the default brand when an unconverted caller passes none', async () => {\n    // Which is also what the column's SQL DEFAULT would do; the two agree.\n    const db = new FakeD1();\n    const input = captureInputFrom({ visitorId: 'v', decisions: [decision('hero')] }, 'retail' as never, 1)!;\n    await capture(db as never, input);\n    expect(db.rows[0][tenantIdx]).toBe(DEFAULT_TENANT);\n  });\n\n  it('stamps section rows with the brand too', async () => {\n    const db = new FakeD1();\n    const input = captureInputFrom({\n      visitorId: 'v',\n      sections: [{ section: 's', rank: 1, templateRank: 1, strategy: 'affinity', score: 0.1,\n        explain: { drivers: [], lead: null, confidence: 0.1, thetaOut: 0.45, movedBecause: '', configVersion: 'v1' } }],\n    }, 'retail' as never, 1, 'kate-spade')!;\n    await capture(db as never, input);\n    expect(db.rows[0][tenantIdx]).toBe('kate-spade');\n  });\n});\n\ndescribe('the export can never omit the brand', () => {\n  it('names the tenant in the predicate, with and without a visitor filter', async () => {\n    const db = new FakeD1();\n    await exportRows(db as never, null, 10, 'kate-spade');\n    await exportRows(db as never, 'v1', 10, 'kate-spade');\n    for (const q of db.queries) {\n      expect(q.sql).toMatch(/WHERE tenant = \\?/);\n      expect(q.args[0]).toBe('kate-spade');\n    }\n  });\n\n  it('defaults to the default brand rather than to \"every brand\"', async () => {\n    // An export with no tenant that returned everything would be the leak.\n    const db = new FakeD1();\n    await exportRows(db as never, null, 10);\n    expect(db.queries[0].sql).toMatch(/WHERE tenant = \\?/);\n    expect(db.queries[0].args[0]).toBe(DEFAULT_TENANT);\n  });\n});\n"
+    }
+  ],
+  "lint_source_pins": [
+    {
+      "path": "src/agents/OpalAgent.ts",
+      "sha256": "1fe4bfea369c8937e57169ae205f76f7ead393cda6a298433f84d97a33c4daab"
+    },
+    {
+      "path": "src/agents/tools/diagnoseFunnel.ts",
+      "sha256": "44d3bb43084508959a1b3656491b586efb5c64eaa938f8fdbf9d053c2cb0ebe8"
+    },
+    {
+      "path": "src/agents/tools/experimentTools.ts",
+      "sha256": "145fea74bd33c8efd3875dffc558055949542979742578f5ca16d7f65afe4ac3"
+    },
+    {
+      "path": "src/agents/tools/geoCohort.ts",
+      "sha256": "6742792d8be2b1fcf71f025a0a3e70b17455a56f92e5b0015c1ecd077858a8e9"
+    },
+    {
+      "path": "src/agents/tools.ts",
+      "sha256": "f6c4b44c36e38b4799da35b6657035e65345e521d9e3598c079aefce981e5d8a"
+    },
+    {
+      "path": "src/auth/accounts.test.ts",
+      "sha256": "350143889cacddb4e482592f72165ccbc1df9a66ca1d784dd3480c7941dbcd1b"
+    },
+    {
+      "path": "src/auth/accounts.ts",
+      "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+    },
+    {
+      "path": "src/auth/signing-config.boundary.test.ts",
+      "sha256": "4d99a0bf5eefcb148ff0bfc0010beadcd2ecf0c018bc0c35ec7067dcdf88741f"
+    },
+    {
+      "path": "src/auth/store.ts",
+      "sha256": "7d0513e2456798aff7d448fc79d11ebad4f3b014a74a03b2df1843a2238144cf"
+    },
+    {
+      "path": "src/config/versionedStore.test.ts",
+      "sha256": "1453036c34ca8c350b33b9300a3382a50b43ebce26b68d2da85fa3a450f75ba2"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "sha256": "c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3"
+    },
+    {
+      "path": "src/connectors/AudienceAuthoring.ts",
+      "sha256": "58757744a3bfbb5d7d9f64ed15a1c0837aac97be57bb7e1906742fa09087ce42"
+    },
+    {
+      "path": "src/connectors/AudienceStore.ts",
+      "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf"
+    },
+    {
+      "path": "src/connectors/DecisionProvider.ts",
+      "sha256": "5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f"
+    },
+    {
+      "path": "src/connectors/SegmentProvider.ts",
+      "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359"
+    },
+    {
+      "path": "src/connectors/SignalProvider.ts",
+      "sha256": "81936e5cf88c48ad7e31fddbb631ae24717c1e3d2ef9dab3fd921616a47e2965"
+    },
+    {
+      "path": "src/connectors/evaluateCondition.ts",
+      "sha256": "55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59"
+    },
+    {
+      "path": "src/connectors/index.ts",
+      "sha256": "efa519931607a1319d33fcbb5b1b9c1526a7e164845a99cd9e6e60878d935871"
+    },
+    {
+      "path": "src/connectors/types.ts",
+      "sha256": "b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3"
+    },
+    {
+      "path": "src/console/console.render.test.ts",
+      "sha256": "cdbfa78992086b648241d8d6ed836ec0802352efe51e74813a8622f065c0a9a7"
+    },
+    {
+      "path": "src/console/jsdom.d.ts",
+      "sha256": "ed11ae4357dd935864c3c981ec17707a0644ca63bf620b3544a1466054e782d6"
+    },
+    {
+      "path": "src/console/learning.render.test.ts",
+      "sha256": "187f2506a43e1aef5ffe035e598c7ccb7047df622d18abb2e7ef7bd36549691e"
+    },
+    {
+      "path": "src/content/cell.stage.test.ts",
+      "sha256": "e0e0004530fd7ccd852549ea9c01b4d0cf65de284af47ce6cc9f3e60fd91c805"
+    },
+    {
+      "path": "src/content/cell.test.ts",
+      "sha256": "41928bbc432ee6e670a2bcbba8c64f0c57d4442983c6713ac3cd4f9558cdf7e5"
+    },
+    {
+      "path": "src/content/cell.ts",
+      "sha256": "b3fc57930c43d36681edda47d040f46691c4a442c5d84d816102dc906a203b6c"
+    },
+    {
+      "path": "src/content/consent.test.ts",
+      "sha256": "53f073abe810512a571c5dafd7f9c91a73f2fb2342776c06a316128556a17a73"
+    },
+    {
+      "path": "src/content/consent.ts",
+      "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+    },
+    {
+      "path": "src/content/decide.test.ts",
+      "sha256": "56946e6ad16abec73520f0dfe79003ec280cc272a062d744b8c766489cb6af6f"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+    },
+    {
+      "path": "src/content/freshFatigue.test.ts",
+      "sha256": "1babeb8dacb5c7cdf888be5a1db461acb98143969cb93188d00f05eb45fcd01b"
+    },
+    {
+      "path": "src/content/holdout.test.ts",
+      "sha256": "140554875c571824b3ad45ebb4d58ba09cd5737ca28d4cef303abc78d50be3ce"
+    },
+    {
+      "path": "src/content/holdout.ts",
+      "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc"
+    },
+    {
+      "path": "src/content/import.test.ts",
+      "sha256": "db6c9e75697b0c576e502da3e97edb6212638f4f65e4e99a3cb35ec797027835"
+    },
+    {
+      "path": "src/content/import.ts",
+      "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+    },
+    {
+      "path": "src/content/inventoryDiversity.test.ts",
+      "sha256": "7fc426419ee9eed15b41f47ab0758e70eb420f4fc019dcdce1dc140431124c74"
+    },
+    {
+      "path": "src/content/kinds.test.ts",
+      "sha256": "b6a348fa0881b7864d21a325a96673d808b6a6aee9943b1da639504150cb0fdd"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "sha256": "e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b"
+    },
+    {
+      "path": "src/content/lifecycle.ts",
+      "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+    },
+    {
+      "path": "src/content/merchandisingSeam.test.ts",
+      "sha256": "083968330562f2249ba7fcea1b06fb920a7af431b9354220598e68201cd67b73"
+    },
+    {
+      "path": "src/content/service.ts",
+      "sha256": "15652c2467d217a08f3d827cd74bdf3d5c98f182377c5178f52d8462a093ca68"
+    },
+    {
+      "path": "src/content/stage.test.ts",
+      "sha256": "35a7f2c22d426dc21f99f285f7e10423c2d682c0ff1cbae187a7f90851b9242f"
+    },
+    {
+      "path": "src/content/types.ts",
+      "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+    },
+    {
+      "path": "src/data/seed-audiences.ts",
+      "sha256": "3e8e23f7cf778e27c76b67025d3c734624bf801627a6a864830725e6cd449f78"
+    },
+    {
+      "path": "src/demos/brighthour/catalog.ts",
+      "sha256": "c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd"
+    },
+    {
+      "path": "src/demos/brighthour/composer.test.ts",
+      "sha256": "e53d66747d1f3c5d8656afc7aeb8df0d8f74cb9e66c2d71d898313b8010fbd1c"
+    },
+    {
+      "path": "src/demos/brighthour/composer.ts",
+      "sha256": "3fe956de6e702ae8f4e6c005136ff334aa61d14349a5da41ff800208f4d7cebf"
+    },
+    {
+      "path": "src/demos/brighthour/demoClock.test.ts",
+      "sha256": "c498d702a3f4ee1bf9890d38684b2eb6ff02b386cb93e9395461f54ee54c08ff"
+    },
+    {
+      "path": "src/demos/brighthour/demoClock.ts",
+      "sha256": "a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce"
+    },
+    {
+      "path": "src/demos/brighthour/experiment.test.ts",
+      "sha256": "02622345e78faea747f1d71723ab2f1e65ae8c458a9cdd1cb0070c3d9e8ead6d"
+    },
+    {
+      "path": "src/demos/brighthour/experiment.ts",
+      "sha256": "ff85b9a1405970eecc5e130746a7d1d992df675a7efd6ea9f093dda2bf60cb43"
+    },
+    {
+      "path": "src/demos/brighthour/geoCohort.test.ts",
+      "sha256": "b102832141388c2091493cf2597711a778b4ba183078719681165b16f86b2a4c"
+    },
+    {
+      "path": "src/demos/brighthour/geoCohort.ts",
+      "sha256": "a06df0433f449b7f71dd14eb1085b52c79fdf040aca4911ca486bbe0ce4b16c9"
+    },
+    {
+      "path": "src/demos/brighthour/offerDesk.test.ts",
+      "sha256": "a91b3aed37c9808fb9aaa44ead5ac3c6b0b381636bd10f861e93339d66371493"
+    },
+    {
+      "path": "src/demos/brighthour/offerDesk.ts",
+      "sha256": "c059fe2721117dfab7eca00209a21eec0fc58d2d20e6821c142d7fe80c79d238"
+    },
+    {
+      "path": "src/demos/brighthour/offerLifecycle.test.ts",
+      "sha256": "bbb78df9fd4f6f855503bd451b996e86bcf40402933b0620bed0445585c0f9da"
+    },
+    {
+      "path": "src/demos/brighthour/offerLifecycle.ts",
+      "sha256": "7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82"
+    },
+    {
+      "path": "src/demos/brighthour/reflexConfig.ts",
+      "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf"
+    },
+    {
+      "path": "src/demos/brighthour/surface.test.ts",
+      "sha256": "3b7aa39fb5a676fcbe68650e61d8eda826b4f5aea5cbe2845c6b0d3e7087152a"
+    },
+    {
+      "path": "src/demos/brighthour/types.ts",
+      "sha256": "34770f522ef7592df7435c5faab43ac022cf67d2959e2d9a68a38ab03ce0ef4d"
+    },
+    {
+      "path": "src/demos/meridian/MeridianReflex.ts",
+      "sha256": "1cd3e0351474e66c5c5aa174c8cbd2c22b447da4a3fbf7393f3798a7231364b6"
+    },
+    {
+      "path": "src/demos/meridian/catalog.ts",
+      "sha256": "f3c743ecbca547d21148abe0f58cf301647e504dc6a5aef634aeaacab66b60e4"
+    },
+    {
+      "path": "src/demos/meridian/client-engine.ts",
+      "sha256": "db02d8d144764ce16dd2e4bcc2561284ce724cc17d40e0abafb39fa6a12a72be"
+    },
+    {
+      "path": "src/demos/meridian/coldstart.ts",
+      "sha256": "4e408e09ea89565a2e9357c24a6d74064216407a70fa50cdda41bcb67108fe92"
+    },
+    {
+      "path": "src/demos/meridian/composer.test.ts",
+      "sha256": "07696e4367212895eca49277032fabdb2cd8da484b82c7d326f41b636c622715"
+    },
+    {
+      "path": "src/demos/meridian/composer.ts",
+      "sha256": "0102629c38a923b489f8873b348010fdcdeb6d906390d42391777bee64a68839"
+    },
+    {
+      "path": "src/demos/meridian/concierge.ts",
+      "sha256": "bf05bb6a7ae7d0878851fed256895c7b9e6bcc62bbbdfebec4e8522597af6757"
+    },
+    {
+      "path": "src/demos/meridian/content.test.ts",
+      "sha256": "554c1221947c5beaf189752384b3f3ef6fd4a1a4033be29a98802df06d348143"
+    },
+    {
+      "path": "src/demos/meridian/content.ts",
+      "sha256": "6577a357b3e742eafd66ad90407780bba1ccc8b382b3ea052b4f789252368dfb"
+    },
+    {
+      "path": "src/demos/meridian/contentCompose.test.ts",
+      "sha256": "38130c0f460d641f07548f144198d3be6fb99fa620ed933e8cfa84a59e8a8e62"
+    },
+    {
+      "path": "src/demos/meridian/contentCompose.ts",
+      "sha256": "92813439f8f29c2612e7fbc8cd9c2649342a6859db7cfb40fec6bb9445cdfdf1"
+    },
+    {
+      "path": "src/demos/meridian/experiment.ts",
+      "sha256": "81079e86b59e053e7ad4dd9a43f394c443956b332cc8e17e98e7fbdbfa46cd4f"
+    },
+    {
+      "path": "src/demos/meridian/expiry.test.ts",
+      "sha256": "126f860b6703eb5c56b578a710fafd7214271b94cccf40c062a1d10832c3455e"
+    },
+    {
+      "path": "src/demos/meridian/funnel.test.ts",
+      "sha256": "5894feb89e03a867764b933e00645b253fadb5d43f7fc591a00df29472929048"
+    },
+    {
+      "path": "src/demos/meridian/funnel.ts",
+      "sha256": "b6ba3ec7e1ff1857c573b782cbb137046c6f92b867c75b2f5cfa3ef6e022688b"
+    },
+    {
+      "path": "src/demos/meridian/geoCohort.test.ts",
+      "sha256": "15d53f8e1e07f81c661cbfb055271a2c8517ea9ea7917e4c349ab12e4c20c9c3"
+    },
+    {
+      "path": "src/demos/meridian/geoCohort.ts",
+      "sha256": "17449b3e0dd74db2ab0654b4c3878bb4dfae86f81190f2dffb1debf9b32f7859"
+    },
+    {
+      "path": "src/demos/meridian/isolation.test.ts",
+      "sha256": "ca2d4143a1eea0397c04f342974037e8e8642bc39c9e87c2a87f39f58f1d5a9c"
+    },
+    {
+      "path": "src/demos/meridian/layout.test.ts",
+      "sha256": "e857a09fc969d6a1a71fe46f59a90e6386834d56430a664c0e154f99bafa0605"
+    },
+    {
+      "path": "src/demos/meridian/layout.ts",
+      "sha256": "596191783819ef9da110dc9d89a5df4b74bc24da02ba75de7f20c75a07866ac2"
+    },
+    {
+      "path": "src/demos/meridian/lead.test.ts",
+      "sha256": "c02d655d5c5aa67f7ad58e863ee5261d868971147f0f80e25f447a0cd8cc7fe9"
+    },
+    {
+      "path": "src/demos/meridian/lead.ts",
+      "sha256": "40c75eb7446886a7ad8a336104314921cd782c21785193fc99862b7eeb75ba9d"
+    },
+    {
+      "path": "src/demos/meridian/lines.test.ts",
+      "sha256": "f6225e03393d435ab00af82a692208787062c95f5e67b2267d4612bb3a688534"
+    },
+    {
+      "path": "src/demos/meridian/moment.ts",
+      "sha256": "d00904a84bad1bda4476c362184fec0927f3c2ad7068bcc15a2b0cdabf84d162"
+    },
+    {
+      "path": "src/demos/meridian/opal.ts",
+      "sha256": "0e8fbc9e6b8276c6517cba8ac26345418f5c4a995209087b5c7121705dd78456"
+    },
+    {
+      "path": "src/demos/meridian/receipts.test.ts",
+      "sha256": "ca030d672a7f5aeb2ecc4e41d18840e20b6c3241e187656ec2da96bf165670f9"
+    },
+    {
+      "path": "src/demos/meridian/receipts.ts",
+      "sha256": "19e52898e0641f75270fcf0e05eb893ede39270b49ffdb6f8020db0f9a1d44e1"
+    },
+    {
+      "path": "src/demos/meridian/reflexConfig.ts",
+      "sha256": "241294f7064739d7dc5b651c9d64c749f68bf5ebeb312b8e0ab385b42cb89d65"
+    },
+    {
+      "path": "src/demos/meridian/routes.ts",
+      "sha256": "329258ef3f746357f97d67f3e04150694d30dc3ea1a8af615165e65e34a82a2b"
+    },
+    {
+      "path": "src/demos/meridian/scenes.ts",
+      "sha256": "f481673970a3926db48d25554b02ddad2d9fd7253e1a0d87f65391baed924215"
+    },
+    {
+      "path": "src/demos/meridian/search.test.ts",
+      "sha256": "f8efba1cb97f90df944b9a86b2e0a02094e546c5d4075b2987427d5a75980cb6"
+    },
+    {
+      "path": "src/demos/meridian/search.ts",
+      "sha256": "b8bc51aafbf95a1b59d45a507a333a150a86f61de5ca096e26c44df90678dc43"
+    },
+    {
+      "path": "src/demos/meridian/silhouettes.ts",
+      "sha256": "c4cfa5e5120df4dd19e4349d9103a4f8871f0a4b88488a675ef4b9097528b4f2"
+    },
+    {
+      "path": "src/demos/meridian/types.ts",
+      "sha256": "9b61f727266d7d711f2f6f00ee690d759deb1d98201b53b105afd9ac262b48fe"
+    },
+    {
+      "path": "src/demos/registry.ts",
+      "sha256": "18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb"
+    },
+    {
+      "path": "src/durable-objects/DecisionRing.ts",
+      "sha256": "712d51a2d337f4cbbb1bfa91e23edd728efe4e3c04c57b2938bf5719a8d19b3e"
+    },
+    {
+      "path": "src/durable-objects/LearnStats.ts",
+      "sha256": "c98d68408ecd641b7d31819fde525fb21cc19125636c08ef6d143bdc1271437b"
+    },
+    {
+      "path": "src/durable-objects/PersonalizationWebSocket.ts",
+      "sha256": "6e7ab3fc0c6a0204656f2dd718d2c40d40ae9fc45e4b8ccc876718af7f1108d4"
+    },
+    {
+      "path": "src/durable-objects/RateLimiter.ts",
+      "sha256": "9a03f0a7130af02596748f378d0f2c64634a0f2d399c6c1e943e75a56e8ee5b7"
+    },
+    {
+      "path": "src/durable-objects/RegionTrend.ts",
+      "sha256": "08f0a17c19b3b4d9ba6a05627a71727f655d6bdd37369f9e9f338acae4aab1bc"
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "sha256": "8e6c5f92a71cfcc1205122836809918e6c6117d4e3c69ee98f1341c15d1bd88e"
+    },
+    {
+      "path": "src/durable-objects/StateManager.ts",
+      "sha256": "e02905bb4843fd4d9bb68534bb098891cde7f28e64e74b13bc3ff01dc41c594a"
+    },
+    {
+      "path": "src/events/actionTypes.test.ts",
+      "sha256": "43e6a04061ee4cc9e92f4dc3b0cf065703f9175afaa74900ca056acce8c789c1"
+    },
+    {
+      "path": "src/events/actionTypes.ts",
+      "sha256": "865d11512ca0af01c6104789b2e2155cb5272deeafd12bd890ccff6e9064712a"
+    },
+    {
+      "path": "src/identity/assertion.ts",
+      "sha256": "46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d"
+    },
+    {
+      "path": "src/identity/consentContinuity.ts",
+      "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af"
+    },
+    {
+      "path": "src/identity/erase.ts",
+      "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+    },
+    {
+      "path": "src/identity/history.ts",
+      "sha256": "77d37606e7c386c2f0bb2609f44c13b8329111c7bb7e904dbc4293c8a36faf84"
+    },
+    {
+      "path": "src/identity/identity.test.ts",
+      "sha256": "452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc"
+    },
+    {
+      "path": "src/identity/link.ts",
+      "sha256": "52bb959a00d4df5b8cb6717c7445a972bb2e8e9fc0363bd179b1391e46628eed"
+    },
+    {
+      "path": "src/identity/sessionCapability.ts",
+      "sha256": "7d5a2b4e2da2400705c8346041c8a650c479ee680531d65a6fc332b5e82a598c"
+    },
+    {
+      "path": "src/identity/shopperId.ts",
+      "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+    },
+    {
+      "path": "src/identity/store.ts",
+      "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "sha256": "00fc6f4e6377d2d42584c73c02a6d7ed2eb3364a71211a9c2a4c7564a109754c"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "4f3ed7ab4eb8e0016f09931b794041c1aea649e7eccacab076e7da1dc943fcfb"
+    },
+    {
+      "path": "src/learn/autonomy.ts",
+      "sha256": "667a6083d145ab6f4f35944a8b290738396b6fdac006abcc7baaf919903ebc60"
+    },
+    {
+      "path": "src/learn/bridge.test.ts",
+      "sha256": "b53df1297fa92079ae7e56c82a3b5dd3be51a9d26aa1293fa5c31d284a5a1b40"
+    },
+    {
+      "path": "src/learn/cycle.ts",
+      "sha256": "708c1702ed09dc70adb3a3ee9744b41d896183cbe969e0c5b73d70be2ebec34c"
+    },
+    {
+      "path": "src/learn/explore.ts",
+      "sha256": "90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c"
+    },
+    {
+      "path": "src/learn/external.ts",
+      "sha256": "af5bb4cb5ec6a4080d3aeec190bdf9c1fe67c69b4f1a2a9905618ad330efda0d"
+    },
+    {
+      "path": "src/learn/fan.ts",
+      "sha256": "110192a195b7d18d001e17ba657ddd54adb96d30823262ee74ef9ddeabaf3273"
+    },
+    {
+      "path": "src/learn/holdoutArms.test.ts",
+      "sha256": "97327600db02002e013746049b5c7a608f3cd7c6adc418e5704ba26298ec8ede"
+    },
+    {
+      "path": "src/learn/hourly.test.ts",
+      "sha256": "14e517e641edb75eb1558c6e097a239b1a5318e0457103a98c624e4e47761352"
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "sha256": "67a67a49236801445baaea2459fe09ae098bf4cd674471a18cb194af08db24fa"
+    },
+    {
+      "path": "src/learn/learn.test.ts",
+      "sha256": "7cd482cb433e15f289e8f71199acd07ee436bbc580db5c83bf06aee3e9d7c685"
+    },
+    {
+      "path": "src/learn/objective.test.ts",
+      "sha256": "79a0c812be51687bc28a01c8700bba53b34ace0de178e0262c2a0de8db954bf0"
+    },
+    {
+      "path": "src/learn/phase2.test.ts",
+      "sha256": "52832fd3bb7ef2cbd9a0b4725b2fb5342a87d76d4adf257f2a999b7632eea593"
+    },
+    {
+      "path": "src/learn/phase3.test.ts",
+      "sha256": "47ce0df0d69faf274ed57118e68fbdf7a166e8d889048c5053a5bc53fb81d1e3"
+    },
+    {
+      "path": "src/learn/policy.ts",
+      "sha256": "6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73"
+    },
+    {
+      "path": "src/learn/priors.ts",
+      "sha256": "bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f"
+    },
+    {
+      "path": "src/learn/queue.test.ts",
+      "sha256": "e145b9db91f1086692bb4924aa2af8550ef5da2ef35a5bf66183c29bce61235e"
+    },
+    {
+      "path": "src/learn/queue.ts",
+      "sha256": "47411c4358b60caac52a36c0e8bacc8a678334bac7d3cedc2555af33ccc6246c"
+    },
+    {
+      "path": "src/learn/receipts.test.ts",
+      "sha256": "d1fa2abbcc16f68d5669d783f8b40579f34d0ad42d824f80dbf73038bc1edd0b"
+    },
+    {
+      "path": "src/learn/receipts.ts",
+      "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c"
+    },
+    {
+      "path": "src/learn/replay.ts",
+      "sha256": "2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5"
+    },
+    {
+      "path": "src/learn/report.test.ts",
+      "sha256": "bd7c2abd9586275bc26576c10e5e6d6588e35af903c8878f78e3fba710d004b5"
+    },
+    {
+      "path": "src/learn/report.ts",
+      "sha256": "ace43a542d4f5ef96ecc5d7eb17256cb391390832092c319bd0a0e01c3ab57ff"
+    },
+    {
+      "path": "src/learn/route.ts",
+      "sha256": "fb7ba5e29cc20de154510626f7250632adf62e568cb353a9174d2f8bf1eb592e"
+    },
+    {
+      "path": "src/learn/rows.test.ts",
+      "sha256": "4d77e27931c589b1a442140270f9a36a9dc9014d99ba390c3173504fe2e1cb80"
+    },
+    {
+      "path": "src/learn/rows.ts",
+      "sha256": "3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a"
+    },
+    {
+      "path": "src/ledger/consume.ts",
+      "sha256": "bea6cc737317a20033372e73df2f58e91b79751c0fc8cd6980de4ae1a16ac5c5"
+    },
+    {
+      "path": "src/ledger/enqueue.ts",
+      "sha256": "1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830"
+    },
+    {
+      "path": "src/ledger/erasure.test.ts",
+      "sha256": "bf3faee7a1bb3eb85a7198ac536b1adeb5bc74555136c5e299e76cdc737e6568"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "sha256": "e5508888c2491dab8b5bbe0ec9d5e01c4beb68be63e96d6e6761281b0ffc530b"
+    },
+    {
+      "path": "src/ledger/ledger.test.ts",
+      "sha256": "8990fbeea353848e1c0a1819de16811e7874dc1ce527df8f3f7131f2f92149db"
+    },
+    {
+      "path": "src/ledger/records.ts",
+      "sha256": "73f8fbd34413425c34c3ac64a9ef853e302a18278f84b5df8bfb58073235f11e"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "sha256": "4b6c25ead40c75908aa683c0c49c3a8f1945861f40cda598925f18e74c850e5b"
+    },
+    {
+      "path": "src/measure/holdout.test.ts",
+      "sha256": "483948fb46d88947778cc72166ddfbe34748cc2c957ab8643df4d0f6b98263e3"
+    },
+    {
+      "path": "src/measure/holdout.ts",
+      "sha256": "cd421bae32093f09b37c2d36e3253d85ce9c4cfad9cb8d5913730e92098ace9b"
+    },
+    {
+      "path": "src/measure/window.test.ts",
+      "sha256": "0490e897e9a9d22bdba72d4fe34121866cfef4dc8191225c1bdc16f724fa2d62"
+    },
+    {
+      "path": "src/measure/window.ts",
+      "sha256": "652f123b5f28f2907f7cf831a24f6e5afe8b80c025d93d0f32634fd42a8ff6ba"
+    },
+    {
+      "path": "src/middleware/auth.claims-boundary.test.ts",
+      "sha256": "307efa307c42d2a3904fc0818ae9afaa95224bcd5c882a8a3f71486a491a77e3"
+    },
+    {
+      "path": "src/middleware/auth.refresh-boundary.test.ts",
+      "sha256": "aef2f43c339122013007f4e2483117b5544875fdbc787ec56b78a398f5b7982b"
+    },
+    {
+      "path": "src/middleware/auth.ts",
+      "sha256": "9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01"
+    },
+    {
+      "path": "src/middleware/edgeAccess.test.ts",
+      "sha256": "abe9cfadecbcd011715879062dd2641e89cec140e969163fccc2544140461c82"
+    },
+    {
+      "path": "src/middleware/edgeAccess.ts",
+      "sha256": "ef4935e1c8eaf725efb4c7372faa5ea5b09082b0d238b68de09e1d4934375999"
+    },
+    {
+      "path": "src/middleware/error.ts",
+      "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b"
+    },
+    {
+      "path": "src/middleware/rate-limiter.ts",
+      "sha256": "2ecf40ca0f70d7b0e6848c1c11927a22896db9e295320db60e40d803d5510fe6"
+    },
+    {
+      "path": "src/middleware/request-id.ts",
+      "sha256": "ac0d8806f2fdd9cde3074bf86375563a1ebd1c102f97f5a2834e71a6f1689465"
+    },
+    {
+      "path": "src/ops/monitor.test.ts",
+      "sha256": "ce23a8adc7b11f1a00251de1fb34afbefea9b053a2e2ad609817a2e963648dba"
+    },
+    {
+      "path": "src/ops/monitor.ts",
+      "sha256": "ebda4505fbb10ebda0d26e4bb5de1f77ae039361f1d59d70e95ac590f11e095a"
+    },
+    {
+      "path": "src/reflex/audienceGenerator.test.ts",
+      "sha256": "d0f32c0992b287f04bd5125e906b61ed81158549f12e3a1e5b1a03bb7e3b4ae6"
+    },
+    {
+      "path": "src/reflex/audienceGenerator.ts",
+      "sha256": "663c87b162c7373c138d0c40ce50c16051c0d31ce5e34d2a8e3aa366f2bd8940"
+    },
+    {
+      "path": "src/reflex/choreography.test.ts",
+      "sha256": "2254fe6f9a7e97e253dadd33e24f6286b12e46114a1b2932e34c6e626c0a230b"
+    },
+    {
+      "path": "src/reflex/configStore.test.ts",
+      "sha256": "c330d24a587a2c87173455074f131de93f5918d665469f84273535c7f732d720"
+    },
+    {
+      "path": "src/reflex/configStore.ts",
+      "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2"
+    },
+    {
+      "path": "src/reflex/contentCompose.test.ts",
+      "sha256": "7a0588c2feeedc29912eaf4f0db162f5fe0f31473b73ac065e1acf70d5b3a836"
+    },
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+    },
+    {
+      "path": "src/reflex/contentTelemetry.test.ts",
+      "sha256": "1b1e4805e0f3bfe0c2d8aefb7056f2bc97173f55c3e792b0db961770489a19be"
+    },
+    {
+      "path": "src/reflex/contentTelemetry.ts",
+      "sha256": "ec6ef52dd9800f7488bcb03d6def18f2fe084208dca0b0f48ca604d9a74c5e41"
+    },
+    {
+      "path": "src/reflex/core.test.ts",
+      "sha256": "d250d254608809529d4f69a4affcd6e21bb2089de7a14e1e170496ec4eda696f"
+    },
+    {
+      "path": "src/reflex/core.ts",
+      "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+    },
+    {
+      "path": "src/reflex/identityMerge.test.ts",
+      "sha256": "4e4fd0515e0b76180969f642ab9d4ff7ec6054fe0caff003b0e4f5be714dca27"
+    },
+    {
+      "path": "src/reflex/identityMerge.ts",
+      "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+    },
+    {
+      "path": "src/reflex/merchandising.test.ts",
+      "sha256": "a4ed71523d20fbae9fae876ac3b26df858bf291be9522a503ceb5ff1b403e640"
+    },
+    {
+      "path": "src/reflex/merchandising.ts",
+      "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+    },
+    {
+      "path": "src/reflex/odpLoop.test.ts",
+      "sha256": "9493b4a945f0e4c2f317914eaf351cf7d754f460800f51382ffeea97a2b62ef5"
+    },
+    {
+      "path": "src/reflex/regionTrend.test.ts",
+      "sha256": "3e957ae3ab4641e0884807406fe218c690950bbfbe2f72fc1511993eb7c9a0a0"
+    },
+    {
+      "path": "src/reflex/regionTrend.ts",
+      "sha256": "94c0fa6e51313f8a361e05088cc20c04563f40a37b8fb5a6a2db9382302d0531"
+    },
+    {
+      "path": "src/reflex/shopperReflex.consent.test.ts",
+      "sha256": "26994b1ec8001ab744b5e22f0a5a228e5400e582a7490d19c5dae18929ef9be9"
+    },
+    {
+      "path": "src/reflex/shopperReflex.identity.test.ts",
+      "sha256": "fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced"
+    },
+    {
+      "path": "src/reflex/shopperReflex.test.ts",
+      "sha256": "170bcf95405c31a448acfdcf32d5fa4a302fe5a15141a0102ffb4d8307277cf0"
+    },
+    {
+      "path": "src/reflex/sortCandidates.test.ts",
+      "sha256": "dfcca85d06c9cc571e0ee35648eee7c0b6fe7cea9f6aa6c37878314a05306493"
+    },
+    {
+      "path": "src/reflex/sortCandidates.ts",
+      "sha256": "e7e195583c7e96452a646108e6eca583b2d59a88f77f95721a2607cecf900bbe"
+    },
+    {
+      "path": "src/routes/ai.ts",
+      "sha256": "1ea7f73d384130794d43fb034a02eae4351a4295e5b394412882f0f2630e7fda"
+    },
+    {
+      "path": "src/routes/aiScene.ts",
+      "sha256": "fd32de1dd9f263640362921f24d97210c518f44ed91ee54595f79c06503d1f44"
+    },
+    {
+      "path": "src/routes/auth.test.ts",
+      "sha256": "4a4dea048fef42294fee798d029f7d79aa8b06e8d5909445e0b57c29ae61a64d"
+    },
+    {
+      "path": "src/routes/auth.ts",
+      "sha256": "f69f9d83d15d869fa1685a23550322b28fe023ece00295a694efd2b4355096b1"
+    },
+    {
+      "path": "src/routes/brands.test.ts",
+      "sha256": "3b67c725cee2faa595ef2e3ea4747dc86ad695c5394bbaa53d96c2afe4d6ff18"
+    },
+    {
+      "path": "src/routes/cdp.ts",
+      "sha256": "a654bfa36298ddcd85ebf9622a0cfd6e858097babf1754581beb775196650de0"
+    },
+    {
+      "path": "src/routes/config.ts",
+      "sha256": "22beb4d906345afee1267a1c146fcaac003490d360a6ab85d5a5c1ee0e551499"
+    },
+    {
+      "path": "src/routes/content.test.ts",
+      "sha256": "bb6a3257ec32648c0b7c4d14add6d540821aa5f0db51def91c7eeccbfea958f6"
+    },
+    {
+      "path": "src/routes/content.ts",
+      "sha256": "4344476c6d9d61db58f243f9e6649b499d2ac029269ea4dfa5fccf4447a8eed8"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "sha256": "595014de054f86c1412cd4beb9c65fd464ec4bdcbd8361970440942f9a040902"
+    },
+    {
+      "path": "src/routes/demoEventCapture.test.ts",
+      "sha256": "8ce00ea26ac4b807afebf9973ce5347ff9787e0cc4a44a8aa759622cbd71cd5a"
+    },
+    {
+      "path": "src/routes/experiment.ts",
+      "sha256": "896f6ad917396dced06e50c0cd4c7f99800bcc6a7cf708375f8fe048c99b8fb6"
+    },
+    {
+      "path": "src/routes/funnel.ts",
+      "sha256": "70adeed284a69d260411158995fb7b42b6c23b513c78aa1afd7f121acc24a033"
+    },
+    {
+      "path": "src/routes/funnelSim.ts",
+      "sha256": "7df45aa331766a4a058570db59c4fa5522164de9e48f6c9d697650c77ff5321d"
+    },
+    {
+      "path": "src/routes/geo.ts",
+      "sha256": "5836b61ca7336edb27d1f5568f118f8325f11510d169250cd09439dcfba467ed"
+    },
+    {
+      "path": "src/routes/health.ts",
+      "sha256": "0ea5b72d026c4964bb8a34fac627a8704c8a0c5f8eed95e3b656b83a8fda3712"
+    },
+    {
+      "path": "src/routes/identity.test.ts",
+      "sha256": "13a2987921c87a8fbe9e4392a2526842ca2dc291a83e2050942a39f70ba61450"
+    },
+    {
+      "path": "src/routes/identity.ts",
+      "sha256": "9f1fe4760f92e4f20a1c6f41dd67ecbe064da8996d2476b34718a1b7f87915e3"
+    },
+    {
+      "path": "src/routes/live.ts",
+      "sha256": "cad7b8c41068e697d074ce3dcd0ad95d7f4dca9e65bbd8d7fab2ca5dc6cbf411"
+    },
+    {
+      "path": "src/routes/liveOps.ts",
+      "sha256": "55b1acce38f7e7045dfa6ed6be358dbedc60ab259a2710c8812d0d6bc41cf382"
+    },
+    {
+      "path": "src/routes/operator.ts",
+      "sha256": "118134249a86efcf6ae14cb503819d2e375ffa3144ddfe0110ee4b0fb73c30cd"
+    },
+    {
+      "path": "src/routes/optimizely.ts",
+      "sha256": "a2aee846c17cd744adae9fb82850927fe7f7b0ddc6b261cc7518a417cbe4bac0"
+    },
+    {
+      "path": "src/routes/pixel.ts",
+      "sha256": "aec450c2f1c33d0f10a121b05d814a278631db038cb69b7f119dad9dc2cab9be"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "sha256": "03328a04389fa0efa8dd3eca45b561f5727e5d7d5d46aa80e328ff5d7c7979ba"
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "sha256": "481f39f64a058556c4caf90e3a297b68de8ec6eda43dc48a9241aa03e2550fe5"
+    },
+    {
+      "path": "src/routes/shot.ts",
+      "sha256": "b889bbb38b6a171484525ccf49c9b958f560c5177d267aa413d325fe10f1fbc2"
+    },
+    {
+      "path": "src/routes/signals.ts",
+      "sha256": "159a1e961043940a6404bdb170ea98e920b9532ec3f8a076618f7a8476194504"
+    },
+    {
+      "path": "src/routes/sort.test.ts",
+      "sha256": "2d4fcefc97fba13bd1e2e6446b4238c38dcd1c0c7323c142dda9a771c9210cc6"
+    },
+    {
+      "path": "src/routes/sort.ts",
+      "sha256": "067abd2701c663680984aef352e0de6cbd5bc84f212d5a73248e38d55086ca0c"
+    },
+    {
+      "path": "src/routes/tracking.ts",
+      "sha256": "39444f23d98951a63f7f59610b81372e04ddd3629c74f00cfbbafa1ca052af45"
+    },
+    {
+      "path": "src/routes/webhook.ts",
+      "sha256": "fa7d963dda226e9632c171a86baf3a82433b138492c241689480f75405c40a83"
+    },
+    {
+      "path": "src/sdk/browser.ts",
+      "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+    },
+    {
+      "path": "src/sdk/core.test.ts",
+      "sha256": "25af9d586c08e60505036b7a7916ed1ce79475f061261a29c43aacfefc528e78"
+    },
+    {
+      "path": "src/sdk/core.ts",
+      "sha256": "cbec796e90326440092176914cc3d7d0f80014b29debeaecf6a37de5eea8ce55"
+    },
+    {
+      "path": "src/sdk/emit.test.ts",
+      "sha256": "dbe728a93222161031db902c80cc0d98d232f912cef6314b2e026fee781f1181"
+    },
+    {
+      "path": "src/sdk/emit.ts",
+      "sha256": "4fc50a87c17cdfda2eb4fefdef5bb10017392db42f9ea941485154d1da2c10b6"
+    },
+    {
+      "path": "src/sdk/host.ts",
+      "sha256": "f0e8f50d96fbf0108defa76808270c5c2f08a43b5c2d32f0e31d65e39263f92d"
+    },
+    {
+      "path": "src/sdk/identify.test.ts",
+      "sha256": "2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333"
+    },
+    {
+      "path": "src/sdk/identify.ts",
+      "sha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1"
+    },
+    {
+      "path": "src/sdk/identity.test.ts",
+      "sha256": "96c2657a041b0b1c1756e632bc859aa29e38ed6b8544c4cc482b9a376d98c576"
+    },
+    {
+      "path": "src/sdk/identity.ts",
+      "sha256": "a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f"
+    },
+    {
+      "path": "src/sdk/index.ts",
+      "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+    },
+    {
+      "path": "src/sdk/listen.test.ts",
+      "sha256": "f230fb461d7486a66602e8a1a1db19735d8cdb3d16663d8f6e0e4f4aff6aace6"
+    },
+    {
+      "path": "src/sdk/listen.ts",
+      "sha256": "a52f5d1b39a934c893b2d701076573593aa76017f824c88e44e623c3efeb903f"
+    },
+    {
+      "path": "src/sdk/memoryHost.ts",
+      "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+    },
+    {
+      "path": "src/sdk/session.test.ts",
+      "sha256": "40d4540b8c41750030ace414b4e4b957c201868f9b59b98064bd98cd02210adf"
+    },
+    {
+      "path": "src/sdk/testHost.ts",
+      "sha256": "5104d089455694ef802507f8188af6e9fedcfa3604f8a2e5226da6b249ac7842"
+    },
+    {
+      "path": "src/sdk/types.ts",
+      "sha256": "57a26cbbf8e8ddfddf4d55fb59854a172a016c71943743a6704d9144c1ae9d2b"
+    },
+    {
+      "path": "src/sdk/version.ts",
+      "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+    },
+    {
+      "path": "src/sdk/wire.ts",
+      "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+    },
+    {
+      "path": "src/services/CDPService.ts",
+      "sha256": "9a0838646f20beaab753aeaf1ffddcac21b0cb3d7f3a93df01b36667bbb4a033"
+    },
+    {
+      "path": "src/services/CatalogIntent.ts",
+      "sha256": "6bbb93b6fbfb2528c4d2864787a0dd85820ce755b4ff68e05176bdb1c70d8bdc"
+    },
+    {
+      "path": "src/services/CatalogService.ts",
+      "sha256": "da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff"
+    },
+    {
+      "path": "src/services/EventDispatcher.ts",
+      "sha256": "8205adb855e120afe83bb33944114483428a3289401efe8ac89bebb7c8094b1a"
+    },
+    {
+      "path": "src/services/FeatureVariableManager.ts",
+      "sha256": "42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357"
+    },
+    {
+      "path": "src/services/JourneyStage.test.ts",
+      "sha256": "f87363cf769b8e440c1def2b81d5abdb49b3f2b969ef439ba09fdece08ec8a49"
+    },
+    {
+      "path": "src/services/JourneyStage.ts",
+      "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+    },
+    {
+      "path": "src/services/OptimizelyService.ts",
+      "sha256": "97b7e40f98e2775e3e2b6d7caed0f32e5d0fe1c30a96d4ac5041a62dd4f01951"
+    },
+    {
+      "path": "src/services/PixelDecoder.ts",
+      "sha256": "547961dcbc091d2cb24fe10021d3fa4617fc33e49895f6081084da2e17ef6889"
+    },
+    {
+      "path": "src/services/RealtimeSegmentEngine.ts",
+      "sha256": "9e1d83d968a1d2d970959a053a8b890b23b492bb014f0ac486000a854e9e6ee8"
+    },
+    {
+      "path": "src/services/SessionManager.identity.test.ts",
+      "sha256": "fb5bb65d7af96124367545977ca17014f3b5af03a94cdb097d42255972b82d1b"
+    },
+    {
+      "path": "src/services/SessionManager.ts",
+      "sha256": "083fba6ff166ee6beadbdbda4b19c6c12c97bec3f1e7a33074dfa5eea62b014b"
+    },
+    {
+      "path": "src/services/SessionManager.visit.test.ts",
+      "sha256": "551c011af5f992eda69817c5c444647a77fee08a36724e5f067aecaad8995f9d"
+    },
+    {
+      "path": "src/services/cmab.ts",
+      "sha256": "0846b6352912c0ec3546036c3ab4583ea02bf5ca3afce731cc06e4dba9742bc8"
+    },
+    {
+      "path": "src/services/demoEventCapture.ts",
+      "sha256": "eb64be869e76f3db40288e4a1da135f62de84806dc8a0b9dc0de653eb8ff5456"
+    },
+    {
+      "path": "src/services/experimentFx.ts",
+      "sha256": "eca1a25a02188b419340ff27a3ee8948191f74e5f5fa26d6c10a6027926ed7c4"
+    },
+    {
+      "path": "src/services/experimentRun.ts",
+      "sha256": "83b3886b26afaeaf454074cb9e1fe9cbaf9dd8896c84df7d122ca628ba54d006"
+    },
+    {
+      "path": "src/services/experimentScenarios.ts",
+      "sha256": "6f0cf44c27c637e1b162811129e7b1f848922c532eafbcbfa3a0c1b160579cb3"
+    },
+    {
+      "path": "src/services/funnel/compute.ts",
+      "sha256": "11264dcab83275c5a163b45d42097ded85fc2a395bfcf44d136070933bd9551d"
+    },
+    {
+      "path": "src/services/funnel/contract.ts",
+      "sha256": "8b2ab459d4f3889c652ea929a3346e3ab418f508c8355cbf46a50ea94878242e"
+    },
+    {
+      "path": "src/services/funnel/diagnose.ts",
+      "sha256": "91c619834f0d80f0dc27b61e3ef89f136e260f3ac36e9fe96ae8b841f96c3395"
+    },
+    {
+      "path": "src/services/funnel/sim.ts",
+      "sha256": "5df1c1d9b5859324492d6f1a3e331aadbb603720fbeafe50b991f517465d5346"
+    },
+    {
+      "path": "src/services/fxEnv.ts",
+      "sha256": "0d4c7bd1aa077cb6790eed95578f445396ddb188387d6dca15aa2c662db421fd"
+    },
+    {
+      "path": "src/services/geo/cohort.ts",
+      "sha256": "925076a0a7cda8fbd5bed44150702bdf21f2e71cf19cf905b3099aa8f2b89fe2"
+    },
+    {
+      "path": "src/services/odpLoop.ts",
+      "sha256": "98728815a95026843840ea4c4443790485cdf1899eddd26a99da02964bf5e63b"
+    },
+    {
+      "path": "src/services/optimizelyFx.ts",
+      "sha256": "89a8683a5980d830e64768ed755a061d345a2bf7a7de1f11b8795d97694af0c3"
+    },
+    {
+      "path": "src/services/sceneGen.ts",
+      "sha256": "81f64caf0e818e557c9ce4a80b90d0d7fdeb09e2d1882f467f492c5447f5428f"
+    },
+    {
+      "path": "src/services/sessionConsent.test.ts",
+      "sha256": "a71663f1786835dd7ef631b9a27f7c9e925d765b4bfcc0500e771ca45e4cb8a5"
+    },
+    {
+      "path": "src/services/sessionDefer.test.ts",
+      "sha256": "7c61a083b9edd6cfceef5aef4ba8006b8b86359924241230be663fd9aba435a6"
+    },
+    {
+      "path": "src/services/telemetry.boundary.test.ts",
+      "sha256": "73f6da32636ccc7b671b4b5403512c3c6d30561dac447163e12a007c01769a80"
+    },
+    {
+      "path": "src/services/visit.test.ts",
+      "sha256": "02b7063134dba70de980ed6889f51dcec412cb82816f0ab419948819b3db6224"
+    },
+    {
+      "path": "src/services/visit.ts",
+      "sha256": "27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d"
+    },
+    {
+      "path": "src/telemetry.boundary.test.ts",
+      "sha256": "287b65e4535b287d904bcdf6c08f8f687828438a74953b454b2250d414131dba"
+    },
+    {
+      "path": "src/tenancy/d1.test.ts",
+      "sha256": "b565e4d8465a4dcb4db4d3fe8309a8991889e895debad4d626810dd9bb7fdd57"
+    },
+    {
+      "path": "src/tenancy/d1.ts",
+      "sha256": "3f278c372b6e2e205ba3b49ef7f952245dc994ea5ac29b33864f253cce5bb412"
+    },
+    {
+      "path": "src/tenancy/middleware.test.ts",
+      "sha256": "1c5079cc7fe3dd6da3216cbc19009ea55d42a91884577c1e15ae05d6d9cd92f2"
+    },
+    {
+      "path": "src/tenancy/middleware.ts",
+      "sha256": "70e3a8f242ebaa540ee09b6e3cf803c34c044623cd617747a91380c3d11631be"
+    },
+    {
+      "path": "src/tenancy/objects.test.ts",
+      "sha256": "30af9221bd937f21011f6f4ecdb853157df55b4d1741a0ea3b546712637ac93c"
+    },
+    {
+      "path": "src/tenancy/objects.ts",
+      "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+    },
+    {
+      "path": "src/tenancy/routeEscape.test.ts",
+      "sha256": "772e9af9d5b3eed362c2432380387c9839736ec393026fa706bdd40e5bf45506"
+    },
+    {
+      "path": "src/tenancy/storeIsolation.test.ts",
+      "sha256": "dd9e6b45db7104cb1b490f42f9aa96f416f331eb16e053c05e2700f4ffeb31f7"
+    },
+    {
+      "path": "src/tenancy/tenant.test.ts",
+      "sha256": "75a80db6450b72323ad38c0f4ac5e4fe381a16a226fae53490402e73fa32975b"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "sha256": "2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072"
+    },
+    {
+      "path": "src/types/env.ts",
+      "sha256": "b010da846a26b62e155c4b940a8fe6c6ce0000dc989fd22ae89e35ac6fae1046"
+    },
+    {
+      "path": "src/types/events.ts",
+      "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb"
+    },
+    {
+      "path": "src/utils/context.ts",
+      "sha256": "64969bfb7d22959c072ac2a3425861f20658a502b3590c7205b050cb96231475"
+    },
+    {
+      "path": "src/utils/pixel.ts",
+      "sha256": "a54f03bb984f590ceb22fbe9dcb15fd959d1f6ebcdb297ac50b37b4ec21420f8"
+    }
+  ],
+  "protected": "All unowned current source and dirty work remain untouched. W12 shared dependency proof qualified before mutation; its monitor source unchanged, W08 unaffected. No source drift at entry."
+}

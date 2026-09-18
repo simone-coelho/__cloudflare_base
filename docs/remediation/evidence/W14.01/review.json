@@ -1,0 +1,115 @@
+{
+  "task_id": "W14.01",
+  "actor_id": "w1401-reviewer",
+  "run_id": "/root/w1401_design_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "verdict": "pass",
+  "at": "2026-09-10 23:20:14 UTC",
+  "artifact_digest": "737abc177fbd8f6dd13a3fa85782b5de13accaa1fed88412361cb8204fafbec1",
+  "contract_digest": "591a44b564a9a2836092cb9935e0639c29ecedebad7f853077ab19cea43e2536",
+  "summary": "Independent source and frozen-artifact review plus the exact two-file runtime command pass C1-C3 for the bounded structured-intent candidate-ranking leg. No blocking defect found; lead acceptance remains separate.",
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W14.01/plan.md",
+      "sha256": "d392ef1547319035a397ecef016b9236b8819340801d307fcc4cd2c6e2aeb3d1"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W14.01/artifact.json",
+      "sha256": "5ae92709d60dc8e50a81eb5b7ad4fa9ad00bb3fb0032033c3478c6b0eec6b49e"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W14.01/worker.json",
+      "sha256": "3127077963ec426ba555caa110062668ec86ecf4ad5666cae718aa6aacac3e8f"
+    },
+    "source_stopped_at": "2026-09-10T23:11:27.531Z",
+    "source_frozen_at": "2026-09-10T23:13:55Z",
+    "review": "Read exact plan/full task/canonical scope and customer clause, all final source, complete four forward deltas and relevant inherited interfaces. Recomputed artifact/contract digests and verified all four forward/reverse patches in memory."
+  },
+  "criteria": [
+    {
+      "id": "W14.01-C1",
+      "verdict": "pass",
+      "evidence": "Source and exact K3 prove first canonical-ID ownership before stock/filters, explicit true stock, registry AND/OR exact normalized value filters, unknown/duplicate-dimension refusal, configured derived band, no relaxation/backfill, stable affinity/feed-order ranking and original feedRank, postranking limit/default9, and full prelimit eligible/filter/drop counts."
+    },
+    {
+      "id": "W14.01-C2",
+      "verdict": "pass",
+      "evidence": "Actual signed capabilities and SessionManager with synthetic KV exercise two nondefault configurations, warm/cold server affinity, tenant/subject/session refusal and no unintended profile reads on invalid request structure. Controlled DO replies exercise signed tenant/subject forwarding and consent envelope handling. Stored/cookie/body refusals remove private drivers and influence; behavioral state/visit metadata remains unchanged apart from permitted refusal preferences. Actual streamed byte limits ignore absent/false Content-Length, authenticate before pulls and reject overflow/malformed inputs with generic errors. Existing /sort remains passing; /ai withdrawal is unchanged source/dependency assurance, not a rerun of the full perimeter."
+    },
+    {
+      "id": "W14.01-C3",
+      "verdict": "pass",
+      "evidence": "Exactly four source/document changes and three additions to the existing route tests; independent fixed two-file run25/25. Complete worker static outputs inspected: compiler exit0; lint zero errors and one identical historical warning shifted by imports, with embedded baseline/final fixture source verified; tracked/untracked whitespace exit0. Kit states partial structured-intent scope and feed assertions without model/catalog/customer acceptance claims."
+    }
+  ],
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/sort.test.ts src/reflex/sortCandidates.test.ts --maxWorkers=1 --minWorkers=1",
+    "started_at": "2026-09-10 23:16:58 UTC",
+    "captures": [
+      {
+        "chunk_id": "4b2e4b",
+        "wall_time_seconds": 1.000915935,
+        "session_id": 36576,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b62b4f",
+        "wall_time_seconds": 0.000002227,
+        "exit_code": 0,
+        "original_token_count": 184,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/sort.test.ts > W14.01 POST /sort/intent > enforces owned consent, generic failures and authenticated streamed request bounds without behavior writes\n[config] read failed, serving fallback\n\n ✓ src/routes/sort.test.ts  (10 tests) 138ms\n ✓ src/reflex/sortCandidates.test.ts  (15 tests) 7ms\n\n Test Files  2 passed (2)\n      Tests  25 passed (25)\n   Start at  19:17:05\n   Duration  17.31s (transform 3.24s, setup 0ms, collect 8.03s, tests 145ms, environment 0ms, prepare 6.32s)\n\n"
+      }
+    ],
+    "completed_at": "2026-09-10 23:17:31 UTC",
+    "exit_status": 0,
+    "drained": true,
+    "result": "25/25 pass:10 route tests and15 existing pure-sorter tests; reported17.31s, route138ms, sorter7ms; fixture timings only."
+  },
+  "artifact_verification": {
+    "at": "2026-09-10T23:19:06.695Z",
+    "artifact_files": 115,
+    "source_pins": 110,
+    "protected_unchanged": 106,
+    "before_and_after_runtime": "All current pins match;106 unowned pins match admission. Existing POST /sort and affinityFor exactly preserve baseline.",
+    "digest_and_delta_capture": {
+      "chunk_id": "403721",
+      "exit_code": 0,
+      "artifact_digest": "737abc177fbd8f6dd13a3fa85782b5de13accaa1fed88412361cb8204fafbec1",
+      "contract_digest": "591a44b564a9a2836092cb9935e0639c29ecedebad7f853077ab19cea43e2536",
+      "four_bidirectional_deltas_exact": true
+    },
+    "final_pin_capture": {
+      "chunk_id": "d29a00",
+      "exit_code": 0,
+      "mismatches": []
+    }
+  },
+  "reused_worker_checks": {
+    "evidence": {
+      "path": "docs/remediation/evidence/W14.01/worker.json",
+      "sha256": "3127077963ec426ba555caa110062668ec86ecf4ad5666cae718aa6aacac3e8f"
+    },
+    "review": "Complete original worker captures reviewed. Baseline/final lint JSON parsed with all messages and embedded fixture bytes verified against admitted/frozen source. All final required checks exit0/drained.",
+    "compiler": "95677/4a1d52: no output, exit0.",
+    "lint": "51876/83a55f:0 errors,1 unchanged no-explicit-any warning moved92→97; baseline4472/6914b6. No new or suppressed warning.",
+    "whitespace": "fea31e tracked scope and23adaa explicit new-module whitespace both exit0.",
+    "primary": "21552/6aebdb:25/25 pass; final independent run above confirms frozen runtime source.",
+    "qualifications": "Worker primary predates only the documented kit credential-wording correction; source/types/fixture were unchanged. Two worker command metadata strings corrected from retained tool inputs; prior record hash retained, no source/check rerun. No byte-identical initial whole-document execution claim."
+  },
+  "limitations": [
+    "Partial W14 §1.10 only: no natural-language interpretation, whole-catalog retrieval/ownership, inventory freshness or entitlement attestation. IDs, stock and attributes are caller commerce-feed assertions.",
+    "Configured extraction/ranking semantics are reused; this does not establish numeric-price/currency/gift policy or full customer taxonomy/feed acceptance. Full W14 workflows and D05/D10/customer decisions remain open.",
+    "Controlled DO responses verify route integration with the existing signed projection, not new native Durable Object, deployed/runtime, complete perimeter/privacy or customer acceptance. Existing unmodified authority/consent assurance is reused.",
+    "Necessary existing refusal preference persistence is retained, including a minimal cold refusal record. No new behavioral/event/queue/learning/persistence workflow is delivered.",
+    "115 selected artifact pins are not an exhaustive installed runtime graph or deployed attestation. Local fixture durations are not SLO, scale or relevance/lift evidence.",
+    "No package/finding/gate/customer/release acceptance is granted by this review; root owns disposition and durable tracker handoff."
+  ],
+  "diagnostics": [
+    "Independent runtime expected Vite CJS deprecation notice and fixed [config] read failed, serving fallback diagnostic from deliberate invalid nondefault configuration; route response remained generic503 with no candidate result.",
+    "Early read-only metadata/diff displays were oversized and an evidence-directory read preceded its creation. Bounded complete source/delta reads and parsed hash/output inspections replaced those displays; they were not passing checks or source changes."
+  ],
+  "pending_sessions": [],
+  "writes": "Only this review.json; no source edits, extra suites, boards, runtime graphs, external/model/customer calls or cloud/deployment operations."
+}

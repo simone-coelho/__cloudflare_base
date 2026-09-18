@@ -1,0 +1,159 @@
+{
+  "at": "2026-09-13 23:52:57 UTC",
+  "task_id": "W15.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "a4804282f552120fa528100124daed509430f6a84c0d163876ec77440938117b",
+  "contract_digest": "1974a51270a1c2079305a03643c84816bf920ecca5de608a3ff0eab9de1c8fbf",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W15.01-C1",
+      "verdict": "PASS",
+      "evidence": "Actual receiveUpdate uses one finite high-water across HTTP/socket, strict older-than refusal, pre-callback exact JSON fingerprints with FIFO 32-entry/65536-UTF16-unit bounds, and nonfinite/untimed or unrepresentable/oversized compatibility. The new grouped case executes source and both shipped SDK forms, including equal-time distinct payloads, both echo orders, capacity boundaries and bypass high-water advancement."
+    },
+    {
+      "id": "W15.01-C2",
+      "verdict": "PASS",
+      "evidence": "Inspected generation reset, delivery ownership, serialization reentry and send acknowledgment ordering. Accepted nested delivery invalidates obsolete fanout/returned state; rejected stale/echo reentry does not steal ownership. Sent/receipt remain independent; consent/ABA, reconnect and browsing-session controls pass. Identity generation resets the guard; reconnect/session touch do not."
+    },
+    {
+      "id": "W15.01-C3",
+      "verdict": "PASS",
+      "evidence": "Six exact bidirectional deltas reviewed, all 48 frozen pins and 36 protected files match before/after, contract matches actual tracker, and both installed write:false esbuild outputs exactly match current artifacts and worker generation records. Independent fixed28 passed; final static reused. SDK/kit text accurately limits generic-update containment and does not imply automatic refresh or correlated exposure acceptance."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W15.01/plan.md",
+      "sha256": "f651c899694a78fbbae912a8337d698c11f00100df6ea70a5f9131a52e9fb3b9"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W15.01/artifact.json",
+      "sha256": "3b490666e77fb9c8e3c657404f42119c9a14bde932556e91d39569d17cba15b6"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W15.01/worker.json",
+      "sha256": "81afea1c70c98d568cdb74b19c8b6916aaa54de5957285f1a9047894ccb9c3a9"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W15.01/source-deltas.json",
+      "sha256": "c23a88daa78bfc68bf8661a1d48826b8a1fa63c37c04454ae5186228cd206329"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W15.01/source-freeze.json",
+      "sha256": "57946e38cdb4708885f416693fcdbb1e8e3a7f7325337b826c37bf257c5b1125"
+    },
+    "reads": "Complete plan 2821ed; actual task/criteria 57487d; complete worker 3fa331; full production source 47bf3a/daf2c1; shipped output deltas ab0abf; complete fixture/doc deltas a9c4ca. Valid prior personally read governance, complete W15/findings and unchanged affected dependency source are reused, not newly executed proof."
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/listen.test.ts src/sdk/session.test.ts --maxWorkers=1 --minWorkers=1",
+    "session_id": 31680,
+    "invocations": 1,
+    "launched_at": "2026-09-13 23:50:25 UTC",
+    "drained_at": "2026-09-13 23:51:07 UTC",
+    "captures": [
+      {
+        "chunk_id": "7370ce",
+        "wall_time_seconds": 1.001265163,
+        "session_id": 31680,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "a83609",
+        "wall_time_seconds": 0.0000021,
+        "exit_code": 0,
+        "original_token_count": 140,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/sdk/core.test.ts  (14 tests) 128ms\n ✓ src/sdk/listen.test.ts  (12 tests) 148ms\n ✓ src/sdk/session.test.ts  (2 tests) 4ms\n\n Test Files  3 passed (3)\n      Tests  28 passed (28)\n   Start at  19:50:28\n   Duration  7.97s (transform 324ms, setup 0ms, collect 792ms, tests 280ms, environment 0ms, prepare 5.00s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0,
+      "unselected": 0,
+      "files_passed": 3,
+      "duration_seconds": 7.97
+    },
+    "capture_qualification": "All independent runtime output returned completely; no truncation or rerun."
+  },
+  "source_verification": {
+    "source_stopped_at": "2026-09-13T23:47:01.776Z",
+    "freeze_at": "2026-09-13T23:49:20.110Z",
+    "before": {
+      "chunk_id": "7fb3f3",
+      "wall_time_seconds": 0.00000432,
+      "exit_code": 0,
+      "original_token_count": 98,
+      "output": "{\n  \"at\": \"2026-09-13T23:50:25.766Z\",\n  \"files\": 48,\n  \"source_pins\": 42,\n  \"owned\": 6,\n  \"protected\": 36,\n  \"artifact_digest\": \"a4804282f552120fa528100124daed509430f6a84c0d163876ec77440938117b\",\n  \"contract_digest\": \"1974a51270a1c2079305a03643c84816bf920ecca5de608a3ff0eab9de1c8fbf\",\n  \"worker_sha256\": \"81afea1c70c98d568cdb74b19c8b6916aaa54de5957285f1a9047894ccb9c3a9\",\n  \"failures\": []\n}\n"
+    },
+    "after": {
+      "chunk_id": "ca5c8d",
+      "wall_time_seconds": 0.090952413,
+      "exit_code": 0,
+      "original_token_count": 98,
+      "output": "{\n  \"at\": \"2026-09-13T23:52:57.039Z\",\n  \"files\": 48,\n  \"source_pins\": 42,\n  \"owned\": 6,\n  \"protected\": 36,\n  \"artifact_digest\": \"a4804282f552120fa528100124daed509430f6a84c0d163876ec77440938117b\",\n  \"contract_digest\": \"1974a51270a1c2079305a03643c84816bf920ecca5de608a3ff0eab9de1c8fbf\",\n  \"worker_sha256\": \"81afea1c70c98d568cdb74b19c8b6916aaa54de5957285f1a9047894ccb9c3a9\",\n  \"failures\": []\n}\n"
+    },
+    "delta_reconstruction": {
+      "chunk_id": "228e4c",
+      "wall_time_seconds": 0.091728963,
+      "exit_code": 0,
+      "original_token_count": 417,
+      "output": "{\n  \"at\": \"2026-09-13T23:51:33.609Z\",\n  \"artifact_digest\": \"a4804282f552120fa528100124daed509430f6a84c0d163876ec77440938117b\",\n  \"manifest_sha256\": \"3b490666e77fb9c8e3c657404f42119c9a14bde932556e91d39569d17cba15b6\",\n  \"pins\": 48,\n  \"bad\": [],\n  \"protected_count\": 36,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/sdk/core.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/sdk/core.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"public/sdk/edge-personalization.js\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"public/sdk/edge-personalization.esm.js\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/sdk/README.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/01-integration-guide.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W15.01/plan.md\",\n      \"sha256\": \"f651c899694a78fbbae912a8337d698c11f00100df6ea70a5f9131a52e9fb3b9\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W15.01/artifact.json\",\n      \"sha256\": \"3b490666e77fb9c8e3c657404f42119c9a14bde932556e91d39569d17cba15b6\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W15.01/worker.json\",\n      \"sha256\": \"81afea1c70c98d568cdb74b19c8b6916aaa54de5957285f1a9047894ccb9c3a9\"\n    }\n  ]\n}\n"
+    },
+    "contract_check": {
+      "chunk_id": "ee3e7e",
+      "wall_time_seconds": 0.035193795,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T23:51:33.977Z\",\"task\":\"W15.01\",\"state\":\"verification\",\"contract_digest\":\"1974a51270a1c2079305a03643c84816bf920ecca5de608a3ff0eab9de1c8fbf\",\"artifact_digest\":\"a4804282f552120fa528100124daed509430f6a84c0d163876ec77440938117b\"}\n"
+    },
+    "method": "SHA-256 all artifact bytes; unchanged baseline protected pins; gunzip retained six before files and apply each exact forward/reverse unified patch in memory, requiring current/original byte equality. Artifact digest reconstructed from configuration/contract and sorted path/hash/role tuples; task contract reconstructed from admitted fields. No restoration or source writes.",
+    "qualification": "One combined metadata/source display included truncated compressed-baseline text. Verification used actual decompressed bytes; all changed meaningful source, fixture and documentation were reread in complete targeted captures. No criterion depends on the omitted compressed display."
+  },
+  "bundle_parity": {
+    "command": "node --input-type=module <<'NODE'\nimport * as esbuild from 'esbuild';import fs from 'node:fs';import crypto from 'node:crypto';\nconst sha=b=>crypto.createHash('sha256').update(b).digest('hex'),a=JSON.parse(fs.readFileSync('docs/remediation/evidence/W15.01/artifact.json')),w=JSON.parse(fs.readFileSync('docs/remediation/evidence/W15.01/worker.json'));\nconst version=fs.readFileSync('src/sdk/version.ts','utf8').match(/'([^']+)'/)[1];\nconst common={bundle:true,platform:'browser',target:'es2022',minify:false,sourcemap:false,legalComments:'none',logLevel:'silent',metafile:true,write:false,banner:{js:`/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */`}};\nconst results=[];\nfor(const [entry,path,format] of [['src/sdk/index.ts','public/sdk/edge-personalization.esm.js','esm'],['src/sdk/browser.ts','public/sdk/edge-personalization.js','iife']]){\n const result=await esbuild.build({...common,entryPoints:[entry],outfile:path,format}),bytes=result.outputFiles[0].contents,current=fs.readFileSync(path),expected=w.bundle_generation.artifacts.find(x=>x.path===path),inputs=Object.keys(result.metafile.inputs);\n results.push({path,bytes:bytes.length,sha256:sha(bytes),exact_current:Buffer.from(bytes).equals(current),exact_worker:sha(bytes)===expected.sha256&&bytes.length===expected.bytes,inputs,exact_worker_inputs:JSON.stringify(inputs)===JSON.stringify(expected.inputs),all_inputs_pinned:inputs.every(p=>a.files.some(x=>x.path===p&&x.sha256===sha(fs.readFileSync(p))))});\n}\nconsole.log(JSON.stringify({at:new Date().toISOString(),write:false,esbuild_version:esbuild.version,results},null,2));\nif(results.some(x=>!x.exact_current||!x.exact_worker||!x.exact_worker_inputs||!x.all_inputs_pinned))process.exitCode=1;\nNODE",
+    "capture": {
+      "chunk_id": "e8b1b2",
+      "wall_time_seconds": 0.16484417,
+      "exit_code": 0,
+      "original_token_count": 360,
+      "output": "{\n  \"at\": \"2026-09-13T23:52:28.841Z\",\n  \"write\": false,\n  \"esbuild_version\": \"0.28.1\",\n  \"results\": [\n    {\n      \"path\": \"public/sdk/edge-personalization.esm.js\",\n      \"bytes\": 51313,\n      \"sha256\": \"2d40227cd42188fe035d5670a8483c52d16ddc6c3f4fe21218981c2f19206e39\",\n      \"exact_current\": true,\n      \"exact_worker\": true,\n      \"inputs\": [\n        \"src/sdk/identity.ts\",\n        \"src/sdk/wire.ts\",\n        \"src/events/actionTypes.ts\",\n        \"src/sdk/core.ts\",\n        \"src/sdk/emit.ts\",\n        \"src/sdk/listen.ts\",\n        \"src/sdk/identify.ts\",\n        \"src/sdk/memoryHost.ts\",\n        \"src/sdk/host.ts\",\n        \"src/sdk/version.ts\",\n        \"src/sdk/index.ts\"\n      ],\n      \"exact_worker_inputs\": true,\n      \"all_inputs_pinned\": true\n    },\n    {\n      \"path\": \"public/sdk/edge-personalization.js\",\n      \"bytes\": 54112,\n      \"sha256\": \"90aded65709ceb8210a9eb05a4795cb660527eccc18ddb0a6eef13f3a412a85c\",\n      \"exact_current\": true,\n      \"exact_worker\": true,\n      \"inputs\": [\n        \"src/sdk/identity.ts\",\n        \"src/sdk/wire.ts\",\n        \"src/events/actionTypes.ts\",\n        \"src/sdk/core.ts\",\n        \"src/sdk/emit.ts\",\n        \"src/sdk/listen.ts\",\n        \"src/sdk/identify.ts\",\n        \"src/sdk/memoryHost.ts\",\n        \"src/sdk/host.ts\",\n        \"src/sdk/version.ts\",\n        \"src/sdk/index.ts\",\n        \"src/sdk/browser.ts\"\n      ],\n      \"exact_worker_inputs\": true,\n      \"all_inputs_pinned\": true\n    }\n  ]\n}\n"
+    },
+    "write": false,
+    "exit_status": 0,
+    "drained": true
+  },
+  "static_reuse": {
+    "worker_record": "docs/remediation/evidence/W15.01/worker.json",
+    "sha256": "81afea1c70c98d568cdb74b19c8b6916aaa54de5957285f1a9047894ccb9c3a9",
+    "evidence": "command_captures.static2",
+    "session_id": 20294,
+    "captures": [
+      "167299",
+      "952a9f",
+      "293a1e"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": "Full and SDK compilers pass; scoped lint 0 errors, exactly 2 inherited no-explicit-any warnings; all six owned whitespace checks pass. Root direct owned whitespace also recorded in pinned source-freeze.",
+    "reviewer_static_invocations": 0
+  },
+  "retained_history": [
+    "Worker static1/session27217 passed both compiler stages, then failed one new fixture no-inner-declarations lint error plus two inherited warnings; whitespace was not reached. Only the grouped setup declaration/terminator changed to async const after drain. Final static2 passed; no production or bundle change from that correction.",
+    "Worker's sole fixed28 runtime/session5450 passed on final bytes in 9.39s; independent runtime is the separate execution recorded above. No pre-fix failing-runtime or performance improvement claim."
+  ],
+  "limitations": [
+    "Finite timestamps are advisory, not causal server sequence numbers; clock rollback may suppress valid older-clock updates. Exact JSON key-order differences, FIFO eviction, oversized/unserializable bypass and untimed/nonfinite updates can redeliver echoes. No global exactly-once guarantee.",
+    "The bound is retained fingerprint entries/UTF16 units, not total JS heap or transient JSON serialization work. Non-wire cyclic/toJSON/nonfinite fixture inputs exercise compatibility through synthetic adapters, not literal JSON network payloads.",
+    "Generic updates only: separate sent/receipt/audience/content_decisions behavior and underlying authority remain. Synthetic Node/VM source/IIFE/ESM checks are not a deployed browser, real provider delivery, native capacity, latency SLO or customer acceptance.",
+    "No automatic refresh/polling, established server content_decisions sender, impression-loop closure, exposure identity/ack/unit change or first-paint/no-flash/customer/SSO acceptance. Snapshot serving still counts served decisions before rendering; content_impression is not the correlated exposure join. Full W15 and linked measurement scopes remain open.",
+    "W20.06 remedies remain implemented; overlapping prior exact-byte proof stays qualified and relevant same-byte listen controls are rerun here. W08.04 and other protected dependencies retain their prior assurance. Lead acceptance and release approval remain separate."
+  ],
+  "ownership": "Independent review only; sole written file is this review.json. No source/governance edits, subdelegation, broad/static rerun, external operation or build script."
+}

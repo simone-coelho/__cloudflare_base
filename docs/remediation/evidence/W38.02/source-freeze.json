@@ -1,0 +1,157 @@
+{
+  "at": "2026-09-13T04:30:04.407Z",
+  "task_id": "W38.02",
+  "contract_digest": "028d1e7b2371c445cbab8149ebd755611f5a6699ff8f9fe1118a9074363a71e7",
+  "source": "Root inspected two actual deltas and complete final worker captures. Final-byte exact admitted selection (17 actual)/static passed, protected pins match pre-GO; distinct frozen review remains required. Actual legacy residency/charges/hits/misses, caller mutation isolation, dual-clock invalidation races and unchanged publication authority are checked in exact admitted selection (17 actual); no native capacity or total heap claim.",
+  "source_stopped_at": "2026-09-13T04:28:10.642Z",
+  "owned_whitespace": {
+    "method": "Direct final source line check of both tracked owned files, alongside scoped git whitespace.",
+    "results": [
+      {
+        "path": "src/config/versionedStore.ts",
+        "trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/config/versionedStore.test.ts",
+        "trailing_whitespace_lines": []
+      }
+    ]
+  },
+  "owned": [
+    "src/config/versionedStore.ts",
+    "src/config/versionedStore.test.ts"
+  ],
+  "pins": [
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "output",
+      "sha256": "906928a653f79dd395c03a30b1bd6b0ca59fdab62204adb98e085664dfb5f0b2"
+    },
+    {
+      "path": "src/config/versionedStore.test.ts",
+      "role": "output",
+      "sha256": "178aae18f1634b6eb641924638a22c8be4667ae12b9db0473b8a7ebbc1b6453a"
+    },
+    {
+      "path": "src/config/publication.ts",
+      "role": "source",
+      "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+    },
+    {
+      "path": "src/reflex/configStore.ts",
+      "role": "source",
+      "sha256": "a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53"
+    },
+    {
+      "path": "src/reflex/configStore.test.ts",
+      "role": "source",
+      "sha256": "a65c44dc36816a11c9c47c2e28eacbd555ecc9e0bd7bb19ffbbbcd9e0d7ba05d"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "source",
+      "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+    },
+    {
+      "path": "src/content/service.ts",
+      "role": "source",
+      "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "role": "source",
+      "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+    },
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "role": "source",
+      "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+    },
+    {
+      "path": "src/learn/cycle.ts",
+      "role": "source",
+      "sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c"
+    },
+    {
+      "path": "src/learn/priors.ts",
+      "role": "source",
+      "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+    },
+    {
+      "path": "src/learn/route.ts",
+      "role": "source",
+      "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+    },
+    {
+      "path": "src/learn/replay.ts",
+      "role": "source",
+      "sha256": "659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "role": "source",
+      "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da"
+    },
+    {
+      "path": "src/routes/content.ts",
+      "role": "source",
+      "sha256": "38ca715650d602fb7ce07316494911dad6a657a614114f3b00ccca850b69e0ee"
+    },
+    {
+      "path": "src/types/env.ts",
+      "role": "source",
+      "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "role": "source",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "docs/architecture/33-adversarial-audit-brief.md",
+      "role": "source",
+      "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.01/acceptance.md",
+      "role": "source",
+      "sha256": "1c0076af128b09e23a1ebc556d2fa8abc32ccc18a8c6bdda9f58f62c45dbd7e9"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.01/worker.json",
+      "role": "source",
+      "sha256": "127d3c6303ed1b37b9b193867d329174029569be403b88d40165787afa298ee8"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    }
+  ],
+  "unowned_unchanged": 24
+}

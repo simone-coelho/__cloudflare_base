@@ -1,0 +1,283 @@
+{
+  "task_id": "W02.08",
+  "at": "2026-09-16T22:12:00.478Z",
+  "scope": "Reject refresh-as-access, migrate access/service claims and tool tokens, enforce temporary-password/account/session revocation policy, and reject unsafe/missing configured signing material at readiness. Add abuse budgets and bounded account lockout/audit growth for N14. Prove logout/disable/delete/demotion/password/rotation transitions and recovery without locking legitimate operators out. Complete remaining local work under explicit shared-identity/tenant-membership/separate-stamp-owner and individually revocable registered-service choices. Preserve existing W02.01–.07 remedies and full live acceptance.",
+  "user_decision": {
+    "path": "docs/remediation/decisions/W02-authority-model-approved-2026-09-16.json",
+    "sha256": "0cb46c91f360708c2c596e6713ffc43e0d5f274a3c8828a693fd7d53e332e717"
+  },
+  "baseline": {
+    "source_case": "Enforced global administration unavailable; service tokens lack registry/revocation; direct consumers use static grants; signing transition lacks proof, not a demonstrated need for a keyring. Retain W02.01–.07 fixes.",
+    "files": [
+      {
+        "path": "src/auth/authority.ts",
+        "sha256": null
+      },
+      {
+        "path": "migrations/0012_operator_authority.sql",
+        "sha256": null
+      },
+      {
+        "path": "src/middleware/auth.ts",
+        "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+      },
+      {
+        "path": "src/middleware/operatorAuth.ts",
+        "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+      },
+      {
+        "path": "src/routes/auth.ts",
+        "sha256": "50822373d16974d80b0ad1440d039d5cb7a3812c3ce07ec418a309012d48ed36"
+      },
+      {
+        "path": "src/routes/content.ts",
+        "sha256": "06c2ea4f18954bf919314afef75c18ec4b5a51c2ed0f8b8023ea0567d72d90fc"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "a57afc69cd6296713021a4943f120c86ebb257cd6c6e3c19436a8c412a1fd910"
+      },
+      {
+        "path": "src/auth/subjectAudit.ts",
+        "sha256": "1406b782f3f7543a34160a36b6acac7f442a336ffc5e24b8fcd0edcd622eb6af"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "7e5de02934a72b4e1b2ed39cb79d57f60d2faf8066bff236d0a4f394b5f27963"
+      },
+      {
+        "path": "src/customerBoundary.ts",
+        "sha256": "2d58c722287dab3bc709fef68d6e419467e5357f198cd5e27bd7af9a3adba724"
+      },
+      {
+        "path": "scripts/operator-seed.mjs",
+        "sha256": "50e0b53e3b902c35013be6c38d4ee4e37319c496e5fc778f8c87e1bd16af3373"
+      },
+      {
+        "path": "scripts/operator-seed.test.mjs",
+        "sha256": "5e963036f6918bf3ceea551ba2fb46df6fddd54644d10f8d083cc25ac6782b95"
+      },
+      {
+        "path": "scripts/lib/tool-token.mjs",
+        "sha256": "c56375399a8bdc6b58e33b966cb8967fa73f015c433095778cc0f70cef10256e"
+      },
+      {
+        "path": "scripts/lib/tool-token.test.mjs",
+        "sha256": "4e314386d6077a6ebfcf9ab984645b9fc55f9417049c1f0ed886728c9d9b4362"
+      },
+      {
+        "path": "public/console/views-accounts.js",
+        "sha256": "4f7a2c72206496ab8900cac6d3a9d19d3d32777ff3bc49662664e2fda22956c0"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "53747df01ea85cee7f5094e29507bea3d1f991d54abdbe4670023b6c84f17137"
+      },
+      {
+        "path": "src/routes/auth.test.ts",
+        "sha256": "b0101100183ccc39a486fb2150db4102c8eef3260e073f6e47b1880125598b18"
+      },
+      {
+        "path": "src/middleware/auth.claims-boundary.test.ts",
+        "sha256": "8bbd40ff8cf9a20b33a1bf3e12f7548fa39a9566f028eef9a7410b0bb5f2dfb2"
+      },
+      {
+        "path": "src/auth/signing-config.boundary.test.ts",
+        "sha256": "e80b603ddd40847b55e8bf4f8a8816b9329dfdf918cf8149a1a86e96b2f02b24"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "a2c4dcbc910eb8e1098dc7624d03a14de748bbf1e9617ea091d8fbc69d68b48f"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248"
+      }
+    ],
+    "checks": "Existing source-backed design case. At2056 board check/status valid;2057 authority-only check found subject key authority instead of established local, corrected before admission. Failed patch-generation attempts made no product changes."
+  },
+  "implementation": [
+    "Add D1 current memberships/tenant roles and registered credentials; trusted snapshots replace every direct static-grant recheck without customer fallback.",
+    "Shared identities remain global; completed human session plus explicit configured owner allowlist gates global account administration. Tenant membership controls cannot change global accounts/passwords/sessions. Accounts view distinguishes controls.",
+    "Registered services bind ID/token hash/subject/expiry/current grants/revocation; explicit conditional/atomic issuance/replacement/revocation, independent from human logout.",
+    "Explicit last-owner recovery extends existing target-validated seed tool; create-only default unchanged. Bind database/account/email/revision/flags/operation/password commitment. Purpose-separated unique operation-derived salt preserves existing PBKDF2 policy and stable same-password retry; changed payload conflicts.",
+    "Only successful fresh INSERT triggers atomic recovery/audit/revocation; abort all on target mismatch/fault. Committed retry reports historical outcome, never resets again or promises current credential usability after later disable/delete/change. No deleted identity resurrection.",
+    "No plaintext/token/hash in logs/evidence. Ambiguous CLI outcome is not rollback; reconcile same operation rather than automatic new ID. Existing hash-bearing SQL process/query exposure remains explicit.",
+    "Preserve all earlier auth/N14 and W01 boundary remedies; focused native faults/stale/retry, two-tenant, key-transition, tool and UI cases in existing fixtures."
+  ],
+  "exclusive_outputs": [
+    "src/auth/authority.ts",
+    "migrations/0012_operator_authority.sql",
+    "src/middleware/auth.ts",
+    "src/middleware/operatorAuth.ts",
+    "src/routes/auth.ts",
+    "src/routes/content.ts",
+    "src/routes/decisions.ts",
+    "src/auth/subjectAudit.ts",
+    "src/types/env.ts",
+    "src/customerBoundary.ts",
+    "scripts/operator-seed.mjs",
+    "scripts/operator-seed.test.mjs",
+    "scripts/lib/tool-token.mjs",
+    "scripts/lib/tool-token.test.mjs",
+    "public/console/views-accounts.js",
+    "src/console/console.render.test.ts",
+    "src/routes/auth.test.ts",
+    "src/middleware/auth.claims-boundary.test.ts",
+    "src/auth/signing-config.boundary.test.ts",
+    "src/index.api-boundary.test.ts",
+    "docs/kit/02-api-reference.md"
+  ],
+  "acceptance": [
+    {
+      "id": "W02.08-C1",
+      "description": "Retain full original W02 typed access/refresh separation, required claims, current human account/session revocation, restricted onboarding, conditional lifecycle/removal barriers, safe signing readiness and N14 bounded login/audit behavior; do not redo unaffected fixes or claim helper-only closure.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W02.08-C2",
+      "description": "Shared identities with current tenant memberships/roles: tenant admins manage only their tenant membership; explicit configured stamp owners with current completed human sessions alone administer global accounts. Native atomic revision/target/payload-bound last-owner recovery is retry safe and cannot resurrect deleted identities or overwrite later changes.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W02.08-C3",
+      "description": "Individually registered service credentials bind ID/token hash/subject/expiry/current grants/revocation before effects. Conditional atomic issuance/replacement/revocation cannot revive retired state; machines remain independent of human sessions. Tool migration is explicit and does not silently self-mint unregistered customer authority.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W02.08-C4",
+      "description": "Integrate trusted current authority through all direct content/decision/audit/operator consumers, exact customer route/method/upgrade controls and account UI. Two-tenant refusals precede effects. Synthetic signing A to unsafe to B rejects stale human/service tokens and recovers current legitimate users/tools without changing site keys/identity salt/accounts; onboarding remains enforced.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W02.08-C5",
+      "description": "Distinct frozen-artifact review inspects every original W02 requirement, actual task-only deltas and primary evidence; preserve failed attempts and full operational limits.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    },
+    {
+      "id": "W02.08-C6",
+      "description": "Separately authorized deployed schema, owner/membership/credential migration, secure handoff, key rotation and real operator/tool recovery/readiness evidence for selected artifact. Required live acceptance remains open for final batch.",
+      "required_evidence_kinds": [
+        "deployed_test"
+      ],
+      "minimum_claim": "deployed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W02.08-K1",
+      "criterion_ids": [
+        "W02.08-C1",
+        "W02.08-C2",
+        "W02.08-C3",
+        "W02.08-C4"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/auth.test.ts src/middleware/auth.claims-boundary.test.ts src/auth/signing-config.boundary.test.ts src/index.api-boundary.test.ts src/console/console.render.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd with synthetic bindings/native local D1",
+      "workload": "Five existing affected fixtures: current human/member/service authority, two-tenant isolation, conditional native D1/recovery trigger faults and stale/retry cases, signing transition, exact customer ingress and accounts UI. Preserve earlier assertions when updating synthetic credential fixtures.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W02.08-K2",
+      "criterion_ids": [
+        "W02.08-C2",
+        "W02.08-C3",
+        "W02.08-C4"
+      ],
+      "required": true,
+      "command": "node --test scripts/lib/tool-token.test.mjs scripts/operator-seed.test.mjs",
+      "runtime": "Installed local Node; existing stubbed adapter/bootstrap fixtures",
+      "workload": "Explicit credential migration; default create-only unchanged; exact target/revision/operation recovery inputs, no secret echo and truthful unknown/retry outcomes. Never execute actual seed/recovery.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W02.08-K3",
+      "criterion_ids": [
+        "W02.08-C1",
+        "W02.08-C2",
+        "W02.08-C3",
+        "W02.08-C4"
+      ],
+      "required": true,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/auth/authority.ts src/middleware/auth.ts src/middleware/operatorAuth.ts src/routes/auth.ts src/routes/content.ts src/routes/decisions.ts src/auth/subjectAudit.ts src/types/env.ts src/customerBoundary.ts src/console/console.render.test.ts src/routes/auth.test.ts src/middleware/auth.claims-boundary.test.ts src/auth/signing-config.boundary.test.ts src/index.api-boundary.test.ts && node --check scripts/operator-seed.mjs && node --check scripts/operator-seed.test.mjs && node --check scripts/lib/tool-token.mjs && node --check scripts/lib/tool-token.test.mjs && node --check public/console/views-accounts.js && git diff --check -- src/auth/authority.ts migrations/0012_operator_authority.sql src/middleware/auth.ts src/middleware/operatorAuth.ts src/routes/auth.ts src/routes/content.ts src/routes/decisions.ts src/auth/subjectAudit.ts src/types/env.ts src/customerBoundary.ts scripts/operator-seed.mjs scripts/operator-seed.test.mjs scripts/lib/tool-token.mjs scripts/lib/tool-token.test.mjs public/console/views-accounts.js src/console/console.render.test.ts src/routes/auth.test.ts src/middleware/auth.claims-boundary.test.ts src/auth/signing-config.boundary.test.ts src/index.api-boundary.test.ts docs/kit/02-api-reference.md",
+      "runtime": "Installed compiler and owned-output lint/syntax/whitespace",
+      "workload": "No broad CI/build/deploy. Distinguish inherited warning signatures; inspect new-file whitespace too.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W02.08-K4",
+      "criterion_ids": [
+        "W02.08-C5"
+      ],
+      "required": true,
+      "command": "Independent frozen-artifact and complete original W02 requirement review",
+      "runtime": "Distinct gpt-6-astra/xhigh reviewer",
+      "workload": "Exact source/task-only deltas, original scope, selected user policies and primary runtime proof; no self-review or unsupported full acceptance.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W02.08-K5",
+      "criterion_ids": [
+        "W02.08-C2",
+        "W02.08-C3",
+        "W02.08-C4"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/middleware/auth.claims-boundary.test.ts -t 'W02.08' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Distinct reviewer on installed local Node/Vitest/Miniflare/workerd native D1",
+      "workload": "One independent run of new current-authority, tenant separation, registered-service and atomic recovery/stale-writer cases in existing fixture after source freeze.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W02.08-K6",
+      "criterion_ids": [
+        "W02.08-C6"
+      ],
+      "required": true,
+      "command": "Inspect separately authorized deployed W02 schema, authority, credential migration and rotation/recovery evidence for selected artifact",
+      "runtime": "Authorized selected-deployment and credential owners; not executed by local mandate",
+      "workload": "Real schema/authority rollout, secure credential handoff, key rotation and legitimate operator/tool recovery; retained for final live batch.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W01.08",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Locally reviewed strict customer profile; full live acceptance remains open under user-authorized ordered local workflow.",
+      "rationale": "Preserve/integrate existing boundary and recheck affected ingress; live-only W01 evidence does not block this explicitly authorized local item."
+    }
+  ],
+  "rollback": "Restore only task-specific local deltas against captured dirty baseline, preserving unrelated work. Additive schema is unapplied; no destructive schema rollback/existing-data operation.",
+  "independent_preflight": "Distinct /root/w01_reviewer source review supports selected choices with current-actor, direct-consumer, scope and payload-bound atomic recovery safeguards above.",
+  "contract_digest": "2c941305db5604c52064a002348f6e70827d424418e58bf05f0957969fa4a61b",
+  "approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T22:12:00.478Z",
+    "rationale": "Explicit owner choices and independent source challenge; coherent remaining full-local-W02 scope with focused affected-fixture checks. Product GO follows valid admission check."
+  }
+}

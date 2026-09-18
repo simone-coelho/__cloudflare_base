@@ -1,0 +1,58 @@
+{
+  "task_id": "W06.01",
+  "actor_id": "w01-lead",
+  "run_id": "/root",
+  "at": "2026-09-08T12:48:18Z",
+  "artifact_digest": "0976bb2e00d968d006c8e1bff3f1f626682c19f2260c19401ea9e75d8b1f64d3",
+  "source_review": "Root inspected the complete three-production/two-fixture delta against six retained originals, actual identity/ledger route callers, TenantKV/SessionManager semantics and both reset implementations. IdentityStore stayed byte-identical; all 76 frozen pins and 63 local graph inputs match.",
+  "observations": [
+    "Discovery/job creation now precedes effects; immutable same-selector targets, actor/cutoff and bound destinations survive removed links/pointers. Each idempotent local step is checkpointed with conditional create/ETag CAS; failed, ambiguous or conflicting checkpoints stop that executor.",
+    "Strict captured KV deletion covers session records and pointers while both configured profile hosts reset regardless of active host. Links are removed last. Current relinks/pointers, malformed stored jobs/tombstones, lost required bindings and bad reset acknowledgments fail closed.",
+    "Receipts distinguish local completion, continuation, conflict and failure with HTTP 200/202/409/503. complete remains false and erased remains empty; physical ledger/external erasure is not claimed. Same/earlier tombstone cutoff preserves counts, cursor and actor; a later explicit erasure restarts the window.",
+    "This route is outside the relevance/scoring hot path. Deterministic affinity, ranking, content and served SDK files were not changed; no North Star latency or relevance claim was manufactured."
+  ],
+  "worker_proof_review": {
+    "files": [
+      {
+        "path": "docs/remediation/evidence/W06.01/worker.md",
+        "sha256": "067b617a1d5d97d2afabe15b487c3739528a451ca9e4ab6685b124ac2699aef6"
+      },
+      {
+        "path": "docs/remediation/evidence/W06.01/worker-checks.json",
+        "sha256": "4713ce7a70a2d17ef35bb7817fab519f964b85b28a0dd723c4a94b78c7f49289"
+      }
+    ],
+    "final_K1": "33/33, two existing suites, exit 0; final source.",
+    "compiler": "Application tsc --noEmit exit 0, no diagnostics.",
+    "scoped_diff": "Six exact originals validated; five changed paths and IdentityStore unchanged; git diff --check pass.",
+    "history": "Initial K1 pass retained. First compiler run failed nullable/inference diagnostics; pre-crash second compiler run is explicitly lost/incomplete; final compiler and K1 supersede them. Root-requested stored-target and strict tombstone validation corrections are recorded."
+  },
+  "independent_review": {
+    "record": {
+      "path": "docs/remediation/evidence/W06.01/review-v1.md",
+      "sha256": "37147f7dbbc1ee042c088e648161ab2c575842d0d483594d5a662e3bb92e635a"
+    },
+    "proof": {
+      "path": "docs/remediation/evidence/W06.01/review-checks-v1.json",
+      "sha256": "506291c3730d333d6674cd670958713f529e2ac5434e225774272f2161eab082"
+    },
+    "completed": "2026-09-08T12:47:21Z",
+    "verdict": "PASS C1-C3",
+    "exact_K1_once": "33/33, two existing suites, exit 0, 18.10s.",
+    "physical_identity": "All 76 artifact pins, six originals and independent 63-input graph match. Complete worker proof and relevant caller/reset sources inspected."
+  },
+  "worktree": {
+    "entry_to_final_membership": "Two newly dirty paths are the expected W06.01 ledger production/test files; every other pre-existing status entry remains. Exact retained originals attribute all six scoped paths; unrelated dirt/deletions preserved."
+  },
+  "lead_disposition": {
+    "status": "accepted",
+    "at": "2026-09-08T12:48:18Z",
+    "criteria": [
+      "W06.01-C1",
+      "W06.01-C2",
+      "W06.01-C3"
+    ],
+    "scope": "Bounded local task only; final tracker consistency checks follow closure."
+  },
+  "limits": "Bounded same-original-selector, manually resumable immediate-local erasure only. Actual local Hono/identity/ledger/ShopperReflex/DecisionRing code with synthetic tenant KV/R2 conditional-write and Durable Object state; no deployed/native R2/CAS, runtime latency/SLO, customer or release acceptance. No deletion epoch/replay or concurrent-ingestion/cross-selector transaction, uncapped/orphan discovery, CACHE/seen/D1/historical telemetry/log/external reconciliation, physical ledger rewrite/retained suppression/retention accountability, or D01/D03/D06 policy approval. Both configured profile hosts only; unbound destinations remain explicit. Full W06 and linked finding/gate scopes remain open; W05.08 shared-input assurance remains qualified, not reaccepted."
+}

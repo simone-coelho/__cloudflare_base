@@ -1,0 +1,16 @@
+# W07.04 — lead acceptance and handoff
+
+Accepted 2026-09-07T15:12:47.760Z by /root (w01-lead), separately from Astra/xhigh implementer and reviewer. Bounded task only: contractb62ddcc80f5a1e05c1f50ca6070b80f10fd6bd9faf5f4d896bd5e101665dc91e; artifact5e8afb8ff659d9cecc9eeeae5d0fdbc9178637993b9f4aa0e496f1f4de79bb1c,183 files/168 relevant local inputs.
+
+Implemented18-source fixed-label/numeric-only logging and removal of the monitor AE raw-problem tail. First4 category blobs/4 doubles/index and returned/KV/alert diagnostics remain. Config/provider/DO/scene/webhook/tenant behavior, scheduled jobs/waitUntil/retry/fallback and deterministic core are preserved. Independent review caught malformed stored counts leaking through daily summaries: only2 console args now use finite guards; original hour/report data remains unchanged.
+
+Lead inspected primary scope/baseline/probe, actual18-file diff, all new grouped controls, exact worker and independent outputs. Both61/61 focused and6/6 selected workerd cases pass; application noEmit/scoped diff pass.183 physical pins/20 outputs and contract/source match. Lead additionally verified161 untouched prior pins, both fixture originals and original17 service body; reviewer independently verified original index assertion block and exact168-input graph. Review5d954ad7a4d0c0ce66b1ac36c59294011ec5186afcf7972874684431ebd0f67f; review checks0a76ef5b541c636e368f5494b5d8638cfb08a047ee4aeaf6c613ddf5cf43ee58; worker proof86657efca880bcd7ac1f1e98c5ce1b1e4259f1b21458af81866e77b8a0ad4778.
+
+Retain initial scheduled assertion failures (concurrent order, actual:* key), corrected assertions, numeric-boundary review rework and superseding passes.19 unrelated index cases deliberately excluded. Source qualification preserves original doc35 and unchanged parsed register. Prior W03.01/W07.03 acceptance is historical, not erased or automatically reclosed; their implemented protections remain.
+
+No exhaustive catch/platform/dependency log, universal aggregate privacy, auth/customer/SLO/lift/deployed/full W07 or release claim. Historical data, retained diagnostics, schema/access/retention/datasets and human decisions remain separate. No external/cloud/credential/customer operations, stage/commit/push or cleanup. Rollback only owned hunks using retained18 originals/two fixtures; preserve unrelated work.
+
+Next: Admit the next bounded W04 account-proof/session-ownership remediation under the standing local G0 mandate: read its full parent/linked F04/F06/N05 and current session/SDK source, reproduce the existing proof/ownership gap, then implement one coherent protection with focused existing checks. Coordinate consent/deletion-generation dependencies without a new framework or full retrospective revalidation. Keep customer identity/SSO choices and deployment outside local authority. W07 historical data, permitted schema/access/retention/datasets and diagnostic-store privacy remain explicit separate work; do not start another per-callsite logging sweep.
+
+Final board check/status and trusted seq159 comparison are retained in final-checks-v1.json when complete; missing/failed results are not a pass. Tracker validity is not engine/customer/release acceptance.
+

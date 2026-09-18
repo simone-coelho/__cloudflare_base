@@ -1,0 +1,29 @@
+{
+  "reason": "Retain pre-remediation monitor raw-error AE/console inventory qualification under existing F05/F06,N06/N11; parsed canonical register unchanged and historical/privacy limits preserved.",
+  "before": {
+    "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+    "sha256": "34b5c7d286650d879223062be352d244b176c9def6d2ebfb543a2dd7e985aedf",
+    "sections": {
+      "packages": 5,
+      "findings": [
+        2,
+        3
+      ],
+      "requirements": 4,
+      "decisions": 7
+    }
+  },
+  "after": {
+    "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+    "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+    "sections": {
+      "packages": 5,
+      "findings": [
+        2,
+        3
+      ],
+      "requirements": 4,
+      "decisions": 7
+    }
+  }
+}

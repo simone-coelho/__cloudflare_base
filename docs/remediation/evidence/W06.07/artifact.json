@@ -1,0 +1,193 @@
+{
+  "status": "recorded",
+  "contract_digest": "bffd9b3e2319853bbbbbeb530d9135d414209b4dadbb1ebf4ed159f774a1d6d2",
+  "configuration": "W06.07 compatible persisted seenAt cutoff witnesses and per-brand date-scoped seenIncomplete; preserve proven post-cutoff membership independently of rings, suppress unknown legacy residue with truthful report/UI warning, strict per-shard state/date failure and retry. Worker exact hourly K1 first/only 14/14, app noEmit/scoped diff pass. Root in-memory esbuild write:false/metafile/packages:external over existing hourly fixture identified 16 local runtime inputs, all pinned with direct caller/type/config and installed tool metadata. One module, one existing fixture and one console string, no emitted build/new R2 reads/serving path or SLO claim. No cross-shard transaction, scheduled sweep, historical aggregate reconstruction or full-W06 closure.",
+  "files": [
+    {
+      "path": "docs/remediation/design/W06.07/plan-v1.md",
+      "role": "configuration",
+      "sha256": "2054a714deb7bc5caf212fb84233adbb00b39865cda3a96b2697d8a9db12c02c"
+    },
+    {
+      "path": "docs/remediation/design/W06.07/plan-v2.md",
+      "role": "configuration",
+      "sha256": "48dbc38f5dde826a9c17ab6a41ee1b3b7173a21fcdd6d840e649b7ec7c95728f"
+    },
+    {
+      "path": "docs/remediation/design/W06.07/task-contract-v1.json",
+      "role": "configuration",
+      "sha256": "0c61bf7177d3c88fcc0f41626bd90a3dccdfeb13dab176d16e5cab70d6880df5"
+    },
+    {
+      "path": "docs/remediation/design/W06.07/task-contract-v2.json",
+      "role": "configuration",
+      "sha256": "4c458cf6d18b8f2e50520a4ec1d312824f7a0baa9bce9e211c9dd79fe9d645a8"
+    },
+    {
+      "path": "docs/remediation/evidence/W06.07/baseline.json",
+      "role": "configuration",
+      "sha256": "596dbe8ccbc1c56410bbca96a0f4dc06439fb4e7f124c9f40e6e354aa6572e21"
+    },
+    {
+      "path": "docs/remediation/evidence/W06.07/contract-amendment-v2.json",
+      "role": "configuration",
+      "sha256": "964673c5594863c133168fc54e321bf05822b54991f2d75ecc0fb966b220d7ae"
+    },
+    {
+      "path": "docs/remediation/evidence/W06.07/package-scope.json",
+      "role": "configuration",
+      "sha256": "57eea0dbde08d2500f0c0b8637f47edf0d33595600f7f57b7ed9b43db4842191"
+    },
+    {
+      "path": "docs/remediation/evidence/W06.07/worker.json",
+      "role": "output",
+      "sha256": "bfb16c9d6d20bba709e766ef89eb23db3d6d15977739901e5dba62a0bff69efe"
+    },
+    {
+      "path": "node_modules/@cloudflare/workers-types/index.d.ts",
+      "role": "configuration",
+      "sha256": "5b2fafdb708c615a4d2b4a0c06d65d60987e328bccf232989080322f3d259c86"
+    },
+    {
+      "path": "node_modules/esbuild/package.json",
+      "role": "configuration",
+      "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a"
+    },
+    {
+      "path": "node_modules/typescript/package.json",
+      "role": "configuration",
+      "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3"
+    },
+    {
+      "path": "node_modules/vitest/package.json",
+      "role": "configuration",
+      "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "configuration",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "package.json",
+      "role": "configuration",
+      "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c"
+    },
+    {
+      "path": "public/console/views-measure.js",
+      "role": "output",
+      "sha256": "928b170d9f60c9b105d55e2ce70df9562404da0cb07f630ee963a9adaa7e4612"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "source",
+      "sha256": "c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3"
+    },
+    {
+      "path": "src/content/import.ts",
+      "role": "source",
+      "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "source",
+      "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+    },
+    {
+      "path": "src/index.ts",
+      "role": "source",
+      "sha256": "4f3ed7ab4eb8e0016f09931b794041c1aea649e7eccacab076e7da1dc943fcfb"
+    },
+    {
+      "path": "src/learn/fan.ts",
+      "role": "source",
+      "sha256": "110192a195b7d18d001e17ba657ddd54adb96d30823262ee74ef9ddeabaf3273"
+    },
+    {
+      "path": "src/learn/hourly.test.ts",
+      "role": "output",
+      "sha256": "d1610148f4966f5c24a81969ab52be08576f5290483af144315e725a2aa3d196"
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "role": "output",
+      "sha256": "2321148bd9dcde28b7997c33065ce4e3c08503b0347f79ab6b9f0e601e1837da"
+    },
+    {
+      "path": "src/learn/policy.ts",
+      "role": "source",
+      "sha256": "6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73"
+    },
+    {
+      "path": "src/learn/priors.ts",
+      "role": "source",
+      "sha256": "bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f"
+    },
+    {
+      "path": "src/learn/report.ts",
+      "role": "source",
+      "sha256": "ace43a542d4f5ef96ecc5d7eb17256cb391390832092c319bd0a0e01c3ab57ff"
+    },
+    {
+      "path": "src/learn/route.ts",
+      "role": "source",
+      "sha256": "fb7ba5e29cc20de154510626f7250632adf62e568cb353a9174d2f8bf1eb592e"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "role": "source",
+      "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "role": "source",
+      "sha256": "e5508888c2491dab8b5bbe0ec9d5e01c4beb68be63e96d6e6761281b0ffc530b"
+    },
+    {
+      "path": "src/ledger/records.ts",
+      "role": "source",
+      "sha256": "73f8fbd34413425c34c3ac64a9ef853e302a18278f84b5df8bfb58073235f11e"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "role": "source",
+      "sha256": "4b6c25ead40c75908aa683c0c49c3a8f1945861f40cda598925f18e74c850e5b"
+    },
+    {
+      "path": "src/measure/holdout.ts",
+      "role": "source",
+      "sha256": "cd421bae32093f09b37c2d36e3253d85ce9c4cfad9cb8d5913730e92098ace9b"
+    },
+    {
+      "path": "src/reflex/core.ts",
+      "role": "source",
+      "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "role": "source",
+      "sha256": "595014de054f86c1412cd4beb9c65fd464ec4bdcbd8361970440942f9a040902"
+    },
+    {
+      "path": "src/types/env.ts",
+      "role": "source",
+      "sha256": "7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "configuration",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "configuration",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    }
+  ],
+  "digest": "e6d2f8c750f302685cc60ee2a1d980bd48488333fb4755901a9a5c521a673e9c"
+}

@@ -1,0 +1,9 @@
+# W05.08 worker — frozen for independent review
+
+Frozen 2026-09-08 02:14:14 UTC. Four production files, existing boundary fixture and these two worker proof files only. Full command/output history, exact retained-baseline/candidate pins and scoped unified diff are in worker-checks.json; root owns final artifact/graph pins and acceptance.
+
+Owned preferences now use one strict read/one preference-only write, preserving counters/timestamps/profile and user pointer. Response cookies contain only the two necessary consent mirrors. Omitted switches honor false cookies; explicit booleans deliberately enable. Refused owned personalization/segments/reflex return empty maps/segments or null affinity/stage before private work; manual segment POST denies403. Strict state and persistence failures are not acknowledged. Resolved state is reused; consenting cold session personalization needs one session read.
+
+Exact K1 passed24/24; app noEmit and scoped diff/whitespace checks passed. First K1 failed22/24 on two new-fixture assumptions (warm DO reseeding; recognized subject syntax); failures and corrected rerun remain intact. Root-reviewed expiry guards are covered in the existing grouped case. Positive checks observe actual local seed/qualification/decision implementations and preserve all existing boundary regressions.
+
+Fresh never-set all-consenting DO preference404 is an admitted normalization, not unchanged behavior; an existing cold refusal can re-enable. Analytics self-access and headerless internal/live snapshots/identity remain unchanged. No new suite/build/API docs, external operation or delegation. Partial W05 only: no global unknown/retention or atomic revocation policy, browser-reset, live vendor/deployed/customer/SLO/release acceptance. Independent review and lead disposition remain required.

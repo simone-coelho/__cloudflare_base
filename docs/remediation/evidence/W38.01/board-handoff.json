@@ -1,0 +1,106 @@
+{
+  "at": "2026-09-13T03:37:07.854Z",
+  "task_id": "W38.01",
+  "artifact_digest": "f2923b36e2eac7dd3caa5c02171b1da6445beefe05f859f7d71abdb50842b82e",
+  "journal_seq": 1392,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "3e01dd",
+        "wall_time_seconds": 1.001306746,
+        "session_id": 3271,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "c9d483",
+        "wall_time_seconds": 5.001055331,
+        "session_id": 3271,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b9eede",
+        "wall_time_seconds": 5.001069714,
+        "session_id": 3271,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "164fa1",
+        "wall_time_seconds": 20.000578208,
+        "session_id": 3271,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "eef466",
+        "wall_time_seconds": 20.001535133,
+        "session_id": 3271,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b5b19c",
+        "wall_time_seconds": 20.001025673,
+        "session_id": 3271,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "de32ee",
+        "wall_time_seconds": 16.59033442,
+        "exit_code": 0,
+        "original_token_count": 575,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=30, unscoped=11\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=96, closed=3; evidence records=288\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W38.01 — Inspect and admit the remaining W38 legacy configuration-cache bounds: current versionedStore isolateCache is unbounded and keyed only by kind/scope. Read its real callers and validators, then bound retained entries/bytes and binding identity while preserving fallback, freshness, write invalidation and value semantics. Reuse existing fixtures and the accepted content-cache design where appropriate; do not create a new caching framework or reopen unrelated remedies. Catalog piece/input bounds, revision retention, whole-path workload qualification, W35 transactional authority, human/customer decisions and deployment remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19884\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=30, unscoped=11\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=96, closed=3; evidence records=288\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W38.01 — Inspect and admit the remaining W38 legacy configuration-cache bounds: current versionedStore isolateCache is unbounded and keyed only by kind/scope. Read its real callers and validators, then bound retained entries/bytes and binding identity while preserving fallback, freshness, write invalidation and value semantics. Reuse existing fixtures and the accepted content-cache design where appropriate; do not create a new caching framework or reopen unrelated remedies. Catalog piece/input bounds, revision retention, whole-path workload qualification, W35 transactional authority, human/customer decisions and deployment remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19884\n"
+      }
+    ],
+    "session_id": 3271,
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      19884,
+      19884
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';import assert from 'node:assert/strict';import {sha256,artifactDigest,taskContractDigest}from'./scripts/remediation/board.mjs';const t=JSON.parse(fs.readFileSync('docs/remediation/tracker.json','utf8')),k=t.tasks.find(x=>x.id==='W38.01'),b=JSON.parse(fs.readFileSync('docs/remediation/design/W38.01/baseline.json','utf8'));for(const f of k.artifact.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);assert.equal(artifactDigest(k.artifact),k.artifact.digest);assert.equal(taskContractDigest(k),k.preflight.contract_digest);assert.equal(sha256(JSON.stringify(t.journal.slice(0,b.prior_journal_length))),b.prior_journal_sha256);console.log(JSON.stringify({at:new Date().toISOString(),status:'passed',state:k.state,journal:t.journal.length,pins:k.artifact.files.length,prior_journal_preserved:b.prior_journal_length,artifact:k.artifact.digest,contract:k.preflight.contract_digest,lead_signoff:k.lead_signoff.status}));\nNODE",
+    "captures": [
+      {
+        "chunk_id": "88d15c",
+        "wall_time_seconds": 0.367059526,
+        "exit_code": 0,
+        "original_token_count": 77,
+        "output": "{\"at\":\"2026-09-13T03:34:42.080Z\",\"status\":\"passed\",\"state\":\"closed\",\"journal\":1392,\"pins\":26,\"prior_journal_preserved\":1382,\"artifact\":\"f2923b36e2eac7dd3caa5c02171b1da6445beefe05f859f7d71abdb50842b82e\",\"contract\":\"837a994a11c3e933d1128edf1ef4fa3fb8095aee518e90fd0c191f0fd6f7a25e\",\"lead_signoff\":\"accepted\"}\n"
+      }
+    ],
+    "exit_code": 0,
+    "drained": true
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_content_publication_cache",
+    "package_W38": "open",
+    "package_W31": "open",
+    "package_W32": "open",
+    "finding_F34": "open",
+    "finding_F32": "open",
+    "finding_N20": "open",
+    "finding_N21": "open",
+    "finding_N24": "open",
+    "package_W33": "open",
+    "finding_N09": "open",
+    "package_W30": "open",
+    "finding_F17": "open",
+    "finding_F18": "open",
+    "finding_F25": "open",
+    "finding_N08": "open",
+    "finding_N23": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Inspect and admit the remaining W38 legacy configuration-cache bounds: current versionedStore isolateCache is unbounded and keyed only by kind/scope. Read its real callers and validators, then bound retained entries/bytes and binding identity while preserving fallback, freshness, write invalidation and value semantics. Reuse existing fixtures and the accepted content-cache design where appropriate; do not create a new caching framework or reopen unrelated remedies. Catalog piece/input bounds, revision retention, whole-path workload qualification, W35 transactional authority, human/customer decisions and deployment remain separate."
+  },
+  "limitations": "Content-publication cache containment only, not full W38/F32/F08/N07, total JS heap, concurrent-miss allocation, native CPU/latency, customer corpus or release acceptance. Global32-entry/8MiB charged-byte residency budget is an application limit, not a heap measurement. Expiry cleanup is opportunistic; idle entries remain bounded. Existing30s read-start freshness and remote-binding/isolate staleness remain; already-running calls may return their original validated revision but cannot refill after local invalidation. Legacy KV caches/documents, archive retention/cutover, whole-catalog parse/validation/compose, ranking optimization and customer-scale evidence remain separate. No ranking/candidate/model/schema/customer-policy change, history cleanup, cloud/deploy/install/emitted-build/provision/seed/credential/customer-data/commit/push/destructive/external authority."
+}

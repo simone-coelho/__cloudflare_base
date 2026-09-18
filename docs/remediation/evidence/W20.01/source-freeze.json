@@ -1,0 +1,241 @@
+{
+  "at": "2026-09-13T14:37:14.356Z",
+  "task_id": "W20.01",
+  "contract_digest": "f97f18fdacd9181bd32cfd54129f7e8310afce4fbbda92b6e39c23eeb5859d0c",
+  "source": "Root inspected nine actual deltas and complete final worker captures. Final-byte exact admitted selection (21 actual)/static passed, protected pins match pre-GO; distinct frozen review remains required. Valid pin reservation/ownership/refusal, current publication and historical replay checked in exact21; existing serve-only explanations retained, no new timing/native/heap claim.",
+  "source_stopped_at": "2026-09-13T14:36:39.689Z",
+  "owned_whitespace": {
+    "method": "Final source lines compared with retained baseline, admitting only unchanged inherited whitespace, alongside scoped git whitespace.",
+    "results": [
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/reflex/contentCompose.test.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/content/decide.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/content/types.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      }
+    ]
+  },
+  "owned": [
+    "src/reflex/contentCompose.ts",
+    "src/reflex/contentCompose.test.ts",
+    "src/content/decide.ts",
+    "src/content/types.ts",
+    "src/content/kinds.ts",
+    "src/learn/replay.ts",
+    "src/learn/phase3.test.ts",
+    "src/routes/content.test.ts",
+    "src/content/consent.test.ts"
+  ],
+  "pins": [
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "role": "output",
+      "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+    },
+    {
+      "path": "src/reflex/contentCompose.test.ts",
+      "role": "output",
+      "sha256": "f7b701a167c5d1e73a2c42cd1d195747a5aca06a300f5a28e4089207f4de10b5"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "role": "output",
+      "sha256": "25cb30a37549a662cd60a5e5dbcdac81ddc26e0c455cbe53f86cf2361a5694ff"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "output",
+      "sha256": "d04666cef4f89021ec1332d398912012727f6367a897fe5dec5c41220af2fc40"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "output",
+      "sha256": "1d388ecebfacf8c977d4aefdc6e325736fcb06a708515149a8b76efa4c134564"
+    },
+    {
+      "path": "src/learn/replay.ts",
+      "role": "output",
+      "sha256": "f344688f18cbecd678dfd6c40566f4f86d20492eea9334603c82c903c160af31"
+    },
+    {
+      "path": "src/learn/phase3.test.ts",
+      "role": "output",
+      "sha256": "f810a3427d878ae906bdaab874c8c5742888fe9c7d2a4cae5d66abfa599ed301"
+    },
+    {
+      "path": "src/routes/content.test.ts",
+      "role": "output",
+      "sha256": "5a056b6dd0d3c9a11333bff4f554b9b5a2b604fa91063ba5719eae316789c2fc"
+    },
+    {
+      "path": "src/content/decide.test.ts",
+      "role": "source",
+      "sha256": "56946e6ad16abec73520f0dfe79003ec280cc272a062d744b8c766489cb6af6f"
+    },
+    {
+      "path": "src/content/inventoryDiversity.test.ts",
+      "role": "source",
+      "sha256": "7fc426419ee9eed15b41f47ab0758e70eb420f4fc019dcdce1dc140431124c74"
+    },
+    {
+      "path": "src/content/lifecycle.ts",
+      "role": "source",
+      "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+    },
+    {
+      "path": "src/content/service.ts",
+      "role": "source",
+      "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+    },
+    {
+      "path": "src/routes/content.ts",
+      "role": "source",
+      "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "role": "source",
+      "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "source",
+      "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+    },
+    {
+      "path": "src/config/publication.ts",
+      "role": "source",
+      "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+    },
+    {
+      "path": "src/learn/explore.ts",
+      "role": "source",
+      "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "role": "source",
+      "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+    },
+    {
+      "path": "src/learn/priors.ts",
+      "role": "source",
+      "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+    },
+    {
+      "path": "src/reflex/merchandising.ts",
+      "role": "source",
+      "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "role": "source",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "docs/architecture/33-adversarial-audit-brief.md",
+      "role": "source",
+      "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F28.md",
+      "role": "source",
+      "sha256": "121a07ed372126d8e1741d374865e8af6eef55357b76a955b4db18fba236da9f"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F26.md",
+      "role": "source",
+      "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+    },
+    {
+      "path": "docs/architecture/18-content-affinity-engine.md",
+      "role": "source",
+      "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+    },
+    {
+      "path": "docs/PS-Implementation-Delivery-Guide.md",
+      "role": "source",
+      "sha256": "b71665cb95a72b95b5f9cf438985561935e59601678b09b48852f11af2d1cc68"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.05/acceptance.md",
+      "role": "source",
+      "sha256": "3417c4e7dc0fb071632f12d9626507b671cdd51dc86d9ac6117c961b5a7be26e"
+    },
+    {
+      "path": "docs/remediation/design/W38.05/baseline.json",
+      "role": "source",
+      "sha256": "bcc7f9d575cdbb8167ddd6f52e186d0c67c7246b5dcb1f6f1dbb4c6b0a2bcbdd"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    },
+    {
+      "path": "src/content/consent.test.ts",
+      "role": "output",
+      "sha256": "c1975bde7315606863c15395dadf872c24f75bc9a9452c0b28ee2d4d0862545f"
+    }
+  ],
+  "unowned_unchanged": 25
+}

@@ -1,0 +1,145 @@
+{
+  "phase": "composed-original-verifier/current-dependencies",
+  "at": "2026-09-07T02:16:04.908Z",
+  "bundleSha256": "d7c9e9b47ca6fcbad94351d20fc08d9bce3119b6e2b202cb11c20b0601c73f06",
+  "inputCount": 199,
+  "results": [
+    {
+      "before": true,
+      "mode": "open",
+      "revoked": false,
+      "statuses": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "accountReads": 2,
+      "configWrites": 6,
+      "revision": 4,
+      "K": 3
+    },
+    {
+      "before": true,
+      "mode": "open",
+      "revoked": true,
+      "statuses": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "accountReads": 2,
+      "configWrites": 6,
+      "revision": 4,
+      "K": 3
+    },
+    {
+      "before": true,
+      "mode": "enforced",
+      "revoked": false,
+      "statuses": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "accountReads": 2,
+      "configWrites": 6,
+      "revision": 4,
+      "K": 3
+    },
+    {
+      "before": true,
+      "mode": "enforced",
+      "revoked": true,
+      "statuses": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "accountReads": 2,
+      "configWrites": 6,
+      "revision": 4,
+      "K": 3
+    }
+  ]
+}
+{
+  "phase": "frozen-current",
+  "at": "2026-09-07T02:16:06.044Z",
+  "bundleSha256": "63f9632961705902ed213c453f4f4d5cb593c3005b73d6076c0300d10aeefb24",
+  "inputCount": 199,
+  "results": [
+    {
+      "before": false,
+      "mode": "open",
+      "revoked": false,
+      "statuses": [
+        401,
+        401,
+        401,
+        401
+      ],
+      "accountReads": 0,
+      "configWrites": 0,
+      "revision": 2,
+      "K": 7
+    },
+    {
+      "before": false,
+      "mode": "open",
+      "revoked": true,
+      "statuses": [
+        401,
+        401,
+        401,
+        401
+      ],
+      "accountReads": 0,
+      "configWrites": 0,
+      "revision": 2,
+      "K": 7
+    },
+    {
+      "before": false,
+      "mode": "enforced",
+      "revoked": false,
+      "statuses": [
+        401,
+        401,
+        401,
+        401
+      ],
+      "accountReads": 0,
+      "configWrites": 0,
+      "revision": 2,
+      "K": 7
+    },
+    {
+      "before": false,
+      "mode": "enforced",
+      "revoked": true,
+      "statuses": [
+        401,
+        401,
+        401,
+        401
+      ],
+      "accountReads": 0,
+      "configWrites": 0,
+      "revision": 2,
+      "K": 7
+    },
+    {
+      "optionalInvalidPurposeSignatureExpired": "passed",
+      "edgeRefreshDenied": 3,
+      "edgeToolAllowed": 3,
+      "independentKeyAllowed": 1,
+      "wrongKeyDenied": 1,
+      "malformedBodiesDenied": 4,
+      "subOnlyToolPutRollbackControls": 8
+    }
+  ]
+}

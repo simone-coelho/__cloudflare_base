@@ -1,0 +1,219 @@
+{
+  "task_id": "W30.04",
+  "actor_id": "w3004-reviewer",
+  "run_id": "/root/w30_recovery_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "role": "independent_reviewer",
+  "at": "2026-09-15T08:08:28.870Z",
+  "verdict": "pass",
+  "artifact_digest": "06ebd99f0713be56d6a44856b866baba5defc76ac1eb7346a8ea6e10603e3c43",
+  "contract_digest": "213c7d71f69177952e8382d47fce99bca9730d77a6a84a64ca1056e1993471f0",
+  "claim": "local_runtime",
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W30.04/plan.md",
+      "sha256": "9fa2b02642cc99a274e702ed2a0c379769f0ebe16b95d585e753f0364227bbd3"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W30.04/source-deltas.json",
+      "sha256": "14a3283cc02d17c55d0e5790df8dabe87584d782b62d2c72e103b18ec3c16a17"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W30.04/source-freeze.json",
+      "sha256": "c1df4bdba527e91037c9bd22ebca9bb8c854407a0af810d7cbe205f5f45fd41e"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W30.04/worker.json",
+      "sha256": "9a30ad34d00e5594bbf09e80d07841e4fbca94f19045f0724a3c779db666f71f"
+    },
+    "design_clarification": {
+      "path": "docs/remediation/evidence/W30.04/design-clarification.json",
+      "sha256": "084ca03689b938fe486764c4567ed032653e35dbd47c38e3e7263e62ab5d852a"
+    },
+    "preimplementation_case": "Reused complete governance/W30/linked decision and prospective plan reads. Source-confirmed interrupted forward builds could durably evict carry-in before aggregate publication; retained counts cannot reconstruct that history. This review accepts the bounded existing-key numeric checkpoint/CAS remedy, not arbitrary historical reconstruction or a global lateness cutoff."
+  },
+  "criteria": [
+    {
+      "id": "W30.04-C1",
+      "verdict": "pass",
+      "evidence": "All-shard load, retained-ID validation, dry-run fold and byte admission precede coordinator mutation. The frozen numeric aggregate preserves credits/counters/builtAt when post-fold rings have evicted carry-in. Actual-module grouped fixture exercises coordinator, each nonzero shard, aggregate and completion failures both before and after persistence, a fresh FakeR2 restart, and available lost-ack readback. Recovered hour has 6 credits; next-hour retained decisions yield 3 and the day report 9. Cross-shard collision now refuses with zero writes. Saved aggregate bytes, not matching counts or refolding pruned history, supply interrupted recovery."
+    },
+    {
+      "id": "W30.04-C2",
+      "verdict": "pass",
+      "evidence": "Source hashes full selected physical bytes and observed inventory, effective config/options, suppression predicates and every before/after shard; pending restart validates all observed shards before effects. Fixture refuses changed source/config/tombstones/options, malformed/dense-vector/numeric/ownership checkpoints, absent etags, divergent shards, aggregate conflict and byte overflow without writes. Unrelated erasure progress alone remains compatible. All participating mutations use shard0 coordination and conditional etag/absence writes; null/throw acknowledgment requires bounded exact-body readback. Persistent generation on changed shard and aggregate bodies prevents content-ETag ABA. Paused stale helpers at four write boundaries and a same-numeric aggregate ABA cycle cannot overwrite later state or clear its coordinator."
+    },
+    {
+      "id": "W30.04-C3",
+      "verdict": "pass",
+      "evidence": "Independent fixed35 passes: all 30 existing hourly cases, 3 grouped recovery cases and 2 existing W33.01 caller controls; 17 report tests deliberately unselected. Pending-first recovery is exercised inside/outside lookback, with/without published aggregate, maxHours0 and unresolved identity conflict; pending is counted once and newer folds blocked. Existing W30.03 no-op zero writes, bounded active-date publication, tenant byte isolation, erasure cleanup and explicitly incomplete completed-hour recomputation remain. Only relevant own-shard metadata equality assertions omit generation/pending; retained ring/through/seen content stays asserted, unrelated tenant bytes remain exact. Actual ReportR2 fake only adds faithful conditional-write/etag support. Complete four-file deltas, final helper declaration correction and API boundaries reviewed. Same-byte final compiler/lint/whitespace evidence reused with no expansion."
+    }
+  ],
+  "runtime": {
+    "check_id": "W30.04-K3",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'the hourly fold|W33[.]01' --maxWorkers=1 --minWorkers=1",
+    "initial": {
+      "chunk_id": "3fd7d0",
+      "wall_time_seconds": 1.001127271,
+      "session_id": 94338,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "9d8eaf",
+        "wall_time_seconds": 1.22733147,
+        "exit_code": 0,
+        "original_token_count": 137,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (33 tests) 1530ms\n ✓ src/learn/report.test.ts  (19 tests | 17 skipped) 82ms\n\n Test Files  2 passed (2)\n      Tests  35 passed | 17 skipped (52)\n   Start at  04:04:14\n   Duration  12.22s (transform 2.68s, setup 0ms, collect 5.28s, tests 1.61s, environment 0ms, prepare 3.94s)\n\n"
+      }
+    ],
+    "result": {
+      "exit_code": 0,
+      "passed": 35,
+      "failed": 0,
+      "deliberately_unselected": 17,
+      "files_passed": 2,
+      "assertion_time_ms": 1612,
+      "duration_seconds": 12.22
+    },
+    "drained": true,
+    "runtime_executions": 1,
+    "qualification": "Only the admitted fixed35 command ran independently. Vite emitted its existing CJS Node API deprecation notice; no runtime failure. The aggregate-already-published catchUp case restores the exact pending coordinator to model unfinished completion, not an observed simultaneous completion outage. Other concurrency cases pause actual conditional writes. A serialized null vector element proves malformed persisted JSON, not a sparse JavaScript array surviving JSON."
+  },
+  "reused_static": {
+    "check_id": "W30.04-K2",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts --max-warnings 0 && git diff --check -- src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts docs/kit/02-api-reference.md",
+    "evidence": {
+      "path": "docs/remediation/evidence/W30.04/worker.json",
+      "sha256": "9a30ad34d00e5594bbf09e80d07841e4fbca94f19045f0724a3c779db666f71f"
+    },
+    "attempt": "static_final",
+    "source": {
+      "files": [
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "274cba6686958c77ef609d0a9444ff8d1c20d45e90f34edadb60c00947c906e7"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248"
+        }
+      ]
+    },
+    "initial": {
+      "chunk_id": "c8d703",
+      "wall_time_seconds": 1.001009405,
+      "session_id": 81770,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "39d957",
+        "wall_time_seconds": 5.000324448,
+        "session_id": 81770,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "eca685",
+        "wall_time_seconds": 0.000001127,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    ],
+    "drained": true,
+    "result": {
+      "exit_code": 0,
+      "compiler_exit_code": 0,
+      "lint_errors": 0,
+      "lint_warnings": 0,
+      "whitespace_exit_code": 0,
+      "component_semantics": "All three commands in the declared && chain ran and exited 0."
+    },
+    "reuse_basis": "All four final source hashes and all artifact/protected pins independently verified before and after K3. Complete final static capture inspected: all three && components ran and exited 0. No independent static rerun."
+  },
+  "pin_verification": {
+    "procedure": "node -e 'const fs=require('\\''fs'\\''),crypto=require('\\''crypto'\\''),zlib=require('\\''zlib'\\''),diff=require('\\''diff'\\''),read=p=>JSON.parse(fs.readFileSync(p,'\\''utf8'\\'')),hash=s=>crypto.createHash('\\''sha256'\\'').update(s).digest('\\''hex'\\''),file=p=>hash(fs.readFileSync(p));const task=read('\\''docs/remediation/tracker.json'\\'').tasks.find(t=>t.id==='\\''W30.04'\\''),a=task.artifact,b=read('\\''docs/remediation/design/W30.04/baseline.json'\\''),d=read('\\''docs/remediation/evidence/W30.04/source-deltas.json'\\''),w=read('\\''docs/remediation/evidence/W30.04/worker.json'\\'');const mismatches=a.files.filter(f=>file(f.path)!==f.sha256),protectedChanges=b.protected.filter(f=>file(f.path)!==f.sha256),deltaChecks=d.files.map(f=>{const old=b.owned_before.find(p=>p.path===f.path),text=zlib.gunzipSync(Buffer.from(old.gzip_base64,'\\''base64'\\'')).toString('\\''utf8'\\'');return{path:f.path,baseline:hash(text)===old.sha256&&old.sha256===f.before_sha256,patchedMatchesCurrent:diff.applyPatch(text,f.diff)===fs.readFileSync(f.path,'\\''utf8'\\''),after:f.after_sha256===file(f.path)};});const artifactDigest=hash(JSON.stringify({contract_digest:a.contract_digest,configuration:a.configuration,files:a.files.map(({path,sha256,role})=>({path,sha256,role})).sort((x,y)=>x.path.localeCompare(y.path))}));const contractDigest=hash(JSON.stringify({id:task.id,package_id:task.package_id,kind:task.kind,scope:task.scope,read_paths:task.read_paths,write_paths:task.write_paths,non_goals:task.non_goals,criteria:task.criteria,checks:task.checks.map(({id,required,criterion_ids,command,runtime,workload})=>({id,required,criterion_ids,command,runtime,workload})),dependencies:task.dependencies,assignments:task.assignments}));const staticBytes=w.attempts.find(x=>x.id==='\\''static_final'\\'').source.files.every(f=>file(f.path)===f.sha256);const result={at:new Date().toISOString(),pins:a.files.length,mismatches,protected:b.protected.length,protectedChanges,deltaChecks,artifactDigest,artifactMatches:artifactDigest===a.digest,contractDigest,contractMatches:contractDigest===a.contract_digest,staticBytes,checks:task.checks.map(({id,command})=>({id,command})),references:Object.fromEntries(['\\''docs/remediation/design/W30.04/plan.md'\\'','\\''docs/remediation/evidence/W30.04/source-deltas.json'\\'','\\''docs/remediation/evidence/W30.04/source-freeze.json'\\'','\\''docs/remediation/evidence/W30.04/worker.json'\\'','\\''docs/remediation/evidence/W30.04/design-clarification.json'\\''].map(p=>[p,file(p)]))};console.log(JSON.stringify(result,null,2));if(mismatches.length||protectedChanges.length||deltaChecks.some(x=>!x.baseline||!x.patchedMatchesCurrent||!x.after)||!staticBytes||artifactDigest!==a.digest||contractDigest!==a.contract_digest)process.exitCode=1;'",
+    "before": {
+      "chunk_id": "896265",
+      "wall_time_seconds": 1.051410645,
+      "exit_code": 0,
+      "original_token_count": 614,
+      "output": "{\n  \"at\": \"2026-09-15T08:04:06.964Z\",\n  \"pins\": 45,\n  \"mismatches\": [],\n  \"protected\": 34,\n  \"protectedChanges\": [],\n  \"deltaChecks\": [\n    {\n      \"path\": \"src/learn/hourly.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/learn/hourly.test.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/learn/report.test.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    }\n  ],\n  \"artifactDigest\": \"06ebd99f0713be56d6a44856b866baba5defc76ac1eb7346a8ea6e10603e3c43\",\n  \"artifactMatches\": true,\n  \"contractDigest\": \"213c7d71f69177952e8382d47fce99bca9730d77a6a84a64ca1056e1993471f0\",\n  \"contractMatches\": true,\n  \"staticBytes\": true,\n  \"checks\": [\n    {\n      \"id\": \"W30.04-K1\",\n      \"command\": \"node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'the hourly fold|W33[.]01' --maxWorkers=1 --minWorkers=1\"\n    },\n    {\n      \"id\": \"W30.04-K2\",\n      \"command\": \"node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts --max-warnings 0 && git diff --check -- src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts docs/kit/02-api-reference.md\"\n    },\n    {\n      \"id\": \"W30.04-K3\",\n      \"command\": \"node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'the hourly fold|W33[.]01' --maxWorkers=1 --minWorkers=1\"\n    }\n  ],\n  \"references\": {\n    \"docs/remediation/design/W30.04/plan.md\": \"9fa2b02642cc99a274e702ed2a0c379769f0ebe16b95d585e753f0364227bbd3\",\n    \"docs/remediation/evidence/W30.04/source-deltas.json\": \"14a3283cc02d17c55d0e5790df8dabe87584d782b62d2c72e103b18ec3c16a17\",\n    \"docs/remediation/evidence/W30.04/source-freeze.json\": \"c1df4bdba527e91037c9bd22ebca9bb8c854407a0af810d7cbe205f5f45fd41e\",\n    \"docs/remediation/evidence/W30.04/worker.json\": \"9a30ad34d00e5594bbf09e80d07841e4fbca94f19045f0724a3c779db666f71f\",\n    \"docs/remediation/evidence/W30.04/design-clarification.json\": \"084ca03689b938fe486764c4567ed032653e35dbd47c38e3e7263e62ab5d852a\"\n  }\n}\n"
+    },
+    "after": {
+      "chunk_id": "eda6f2",
+      "wall_time_seconds": 0.68804155,
+      "exit_code": 0,
+      "original_token_count": 614,
+      "output": "{\n  \"at\": \"2026-09-15T08:07:19.299Z\",\n  \"pins\": 45,\n  \"mismatches\": [],\n  \"protected\": 34,\n  \"protectedChanges\": [],\n  \"deltaChecks\": [\n    {\n      \"path\": \"src/learn/hourly.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/learn/hourly.test.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/learn/report.test.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    }\n  ],\n  \"artifactDigest\": \"06ebd99f0713be56d6a44856b866baba5defc76ac1eb7346a8ea6e10603e3c43\",\n  \"artifactMatches\": true,\n  \"contractDigest\": \"213c7d71f69177952e8382d47fce99bca9730d77a6a84a64ca1056e1993471f0\",\n  \"contractMatches\": true,\n  \"staticBytes\": true,\n  \"checks\": [\n    {\n      \"id\": \"W30.04-K1\",\n      \"command\": \"node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'the hourly fold|W33[.]01' --maxWorkers=1 --minWorkers=1\"\n    },\n    {\n      \"id\": \"W30.04-K2\",\n      \"command\": \"node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts --max-warnings 0 && git diff --check -- src/learn/hourly.ts src/learn/hourly.test.ts src/learn/report.test.ts docs/kit/02-api-reference.md\"\n    },\n    {\n      \"id\": \"W30.04-K3\",\n      \"command\": \"node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'the hourly fold|W33[.]01' --maxWorkers=1 --minWorkers=1\"\n    }\n  ],\n  \"references\": {\n    \"docs/remediation/design/W30.04/plan.md\": \"9fa2b02642cc99a274e702ed2a0c379769f0ebe16b95d585e753f0364227bbd3\",\n    \"docs/remediation/evidence/W30.04/source-deltas.json\": \"14a3283cc02d17c55d0e5790df8dabe87584d782b62d2c72e103b18ec3c16a17\",\n    \"docs/remediation/evidence/W30.04/source-freeze.json\": \"c1df4bdba527e91037c9bd22ebca9bb8c854407a0af810d7cbe205f5f45fd41e\",\n    \"docs/remediation/evidence/W30.04/worker.json\": \"9a30ad34d00e5594bbf09e80d07841e4fbca94f19045f0724a3c779db666f71f\",\n    \"docs/remediation/evidence/W30.04/design-clarification.json\": \"084ca03689b938fe486764c4567ed032653e35dbd47c38e3e7263e62ab5d852a\"\n  }\n}\n"
+    },
+    "summary": "Before and after: 45/45 artifact pins match; 34/34 protected paths unchanged; all 4 retained baseline hashes and baseline-relative patches reconstruct exact current bytes; artifact and contract digests recompute exactly; final static source bytes match. No pinned changes occurred during review."
+  },
+  "source_inspection": {
+    "paths": [
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "274cba6686958c77ef609d0a9444ff8d1c20d45e90f34edadb60c00947c906e7"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248"
+      }
+    ],
+    "scope": "Complete final baseline-relative deltas and actual corresponding code/fixtures; complete source-freeze, worker failure/correction/final evidence and approved design clarification. Earlier full source/governance/plan review reused; no unrelated rereads, runtime suites, board or external operations.",
+    "assertions": [
+      "Pending stores bounded numeric aggregate, hashes/options and technical generations beside existing bounded ring state; no new object namespace or subject-history journal.",
+      "Retained nonce is necessary for changed-body ABA protection; unchanged nonzero shards keep exact bytes. Coordinator phase and aggregate original-etag conditions prevent stale completion from rewinding later participating transactions.",
+      "Mixed before/after restart envelope, staged state and aggregate checkpoint are admitted under existing byte limits before writes; request-local catchUp metering counts actual storage method calls.",
+      "Completed explicit replay still recomputes from surviving history and applies erasure cleanup. Pending identity conflict does not return cached pre-erasure numeric data."
+    ]
+  },
+  "failures": [
+    {
+      "stage": "worker fixed35_candidate1",
+      "disposition": "superseded",
+      "observed": "33 passed, 2 fixture failures: the intended next-hour click was outside the 30-minute window; the mutation helper parsed multi-line NDJSON as one JSON value. Worker corrected event times and one-line mutation, preserving the intended assertions."
+    },
+    {
+      "stage": "worker static_candidate2",
+      "disposition": "superseded",
+      "observed": "Compiler exited 2 on optional etag/pending narrowing; lint and whitespace did not run in that failed && chain. Named never-returning recoveryConflict declaration corrected narrowing. Exact final static and worker/independent fixed35 subsequently passed."
+    }
+  ],
+  "limitations": [
+    "Acceptance is local runtime/source confirmation of interrupted transaction recovery only; W30, linked findings, D06/customer decisions and release/deployed-runtime acceptance remain open or separate.",
+    "Completed-hour replay remains limited by surviving ring/history and may lose an evicted carry-in credit; no arbitrary historical rebuild, backfill completeness, multi-month maturity policy or universal event-age cutoff is claimed.",
+    "Recovery requires exact selected raw/config/suppression/options identity and recoverable bounded checkpoint state. A changed or corrupt pending transaction remains an explicit blocker; no automatic reset/discard decision is introduced.",
+    "Participating updated writers are coordinated; old unconditional writers and atomicity across independently changing raw/config/erasure stores are not established by these tests. Day-report publication retains its existing separate concurrency boundary.",
+    "Existing byte/work/ID ceilings remain; catchUp budget gates starting the next fold and is not a hard bound on an already-started invocation. An outside-lookback pending date can be recovered while day publication is explicitly deferred.",
+    "No new retention, privacy/business approval, deployment, latency/SLO measurement, cloud operation or package/finding closure is inferred."
+  ],
+  "disposition": {
+    "status": "review_complete_source_stop",
+    "running_commands": [],
+    "independent_review": "pass",
+    "lead_acceptance": "pending",
+    "next_action": "Lead read this review and exact captures, record bounded disposition and durable handoff, then run existing final board checks. Reviewer owns no further source/evidence/runtime work."
+  }
+}

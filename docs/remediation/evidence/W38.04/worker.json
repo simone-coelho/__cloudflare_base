@@ -1,0 +1,389 @@
+{
+  "task_id": "W38.04",
+  "actor_id": "w1405-worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T12:23:55.545Z",
+  "contract_digest": "7caca3e31f35c13a6c6470f363594732da084720e0ab9f05168f885ff40e1991",
+  "references": [
+    {
+      "path": "docs/remediation/design/W38.04/plan.md",
+      "sha256": "2e8719753464ca73df2897e28b2b7e09a978a1c1fcb5eb160b78d574cf63b7a1"
+    },
+    {
+      "path": "docs/remediation/design/W38.04/baseline.json",
+      "sha256": "aa69d13869a718047976060d88db9f798027b9e946361d1a890129661a47975a"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.04/admission.json",
+      "sha256": "1b3b28ec33a6aa302bea0c7eedb8fa28ffe281aa29cec040a550ff62c83066cb"
+    }
+  ],
+  "baseline": {
+    "kind": "source_confirmed_design_case",
+    "runtime_baseline": "not_run; not required",
+    "entry": "Root83592/6bebab VALID1424, direct1860a6 journal1433 reused",
+    "scoped_lint": "Five existing files0 errors/0 warnings, root33780/c3a089 reused",
+    "dependency_assurance": "Unchanged W38.03 store/wrapper and W11 publication source assurance reused; overlapping route/fixture byte proof qualified by root."
+  },
+  "summary": "Bound actual HTTP and remote input bytes before parsing; count selected raw records before normalization/direct catalog/prior validation; bound CSV scanned fields and projected output cells. Whole-input refusals retain authority, optional malformed-JSON rollback behavior, CSV semantics and publication replay.",
+  "criteria": [
+    {
+      "id": "W38.04-C1",
+      "verdict": "local_runtime_pass",
+      "evidence": "20 mounted consuming lanes; exact2MiB accepted; overflow cancelled before JSON.parse; stream failures400 and size413 remain failures; auth/preconditions, remote413 and optional rollback preserved."
+    },
+    {
+      "id": "W38.04-C2",
+      "verdict": "local_runtime_pass",
+      "evidence": "Raw/null/sparse records counted before filtering; direct pieces/prior rows before validator; CSV rows/fields/scanned and materialized cells refused wholly;501-piece actual import and replay accepted."
+    },
+    {
+      "id": "W38.04-C3",
+      "verdict": "worker_checks_pass_independent_review_pending",
+      "evidence": "Six exact owned files, three new groups, fixed19, full compiler, six-file lint0, tracked and actual new-helper whitespace passed; independent frozen review remains lead-owned."
+    }
+  ],
+  "source_ready_history": [
+    {
+      "at": "2026-09-13T12:29:27.786Z",
+      "files": [
+        {
+          "path": "src/config/input.ts",
+          "sha256": "9a0946d710af38f404f825cd91eeec84623297181f664df8ecd0b99c20372d8c"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "sha256": "c68b26d85e6ab2b5434f65436f30497f4b9191ea297df49c3a3a9f35adce1355"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+        },
+        {
+          "path": "src/content/import.ts",
+          "sha256": "d2e2b5143824c930afabea2e9e012be8f3d639ae253f260e9b5d13d409adb69f"
+        },
+        {
+          "path": "src/content/import.test.ts",
+          "sha256": "161da825624daab353a40f30aaab743f3e4040f52105c17154fd54d1f86f7880"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "sha256": "aaf30fbb81f7ae88ed055ed3c10ff59a63fde10060f9f46289a5977763dd9412"
+        }
+      ],
+      "checks_run": false,
+      "note": "Coherent initial candidate; root requested truthful text_code_units label for the bounded direct-string early rejection."
+    },
+    {
+      "at": "2026-09-13T12:33:02.583Z",
+      "files": [
+        {
+          "path": "src/config/input.ts",
+          "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "sha256": "c68b26d85e6ab2b5434f65436f30497f4b9191ea297df49c3a3a9f35adce1355"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+        },
+        {
+          "path": "src/content/import.ts",
+          "sha256": "d2e2b5143824c930afabea2e9e012be8f3d639ae253f260e9b5d13d409adb69f"
+        },
+        {
+          "path": "src/content/import.test.ts",
+          "sha256": "161da825624daab353a40f30aaab743f3e4040f52105c17154fd54d1f86f7880"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "sha256": "aaf30fbb81f7ae88ed055ed3c10ff59a63fde10060f9f46289a5977763dd9412"
+        }
+      ],
+      "checks_run": true,
+      "root_review": "2b508c; all final bytes reviewed before K2/K1"
+    }
+  ],
+  "fixture_adaptations": [
+    "Three JSON-only fetch mocks replaced with fresh real Response bodies; existing assertions and recovery semantics retained.",
+    "CSV ragged-row projection bounded by existing100000-cell budget; no new group/constant. Root clarification retained in current admission."
+  ],
+  "final_results": {
+    "runtime": {
+      "passed": 19,
+      "unselected": 15,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 8.34
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "final_bytes": true
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "coverage": "Five tracked files via git diff --check; untracked input.ts directly read and checked for trailing whitespace."
+    }
+  },
+  "command_captures": {
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/input.ts src/routes/config.ts src/routes/content.ts src/content/import.ts src/content/import.test.ts src/routes/content.test.ts --max-warnings 0 && git diff --check -- src/routes/config.ts src/routes/content.ts src/content/import.ts src/content/import.test.ts src/routes/content.test.ts && node --input-type=module -e 'import fs from \"node:fs\";import assert from \"node:assert/strict\";assert(!/[\\t ]+$/m.test(fs.readFileSync(\"src/config/input.ts\",\"utf8\")),\"New input helper trailing whitespace\");'",
+      "started_at": "2026-09-13T12:33:02.627Z",
+      "captures": [
+        {
+          "chunk_id": "d06b73",
+          "wall_time_seconds": 1.000462896,
+          "session_id": 14373,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "149bcb",
+          "wall_time_seconds": 5.001210921,
+          "session_id": 14373,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fe16e2",
+          "wall_time_seconds": 5.001603974,
+          "session_id": 14373,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fc56ba",
+          "wall_time_seconds": 1.171164925,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 14373,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13T12:33:42.157Z"
+    },
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/routes/content.test.ts -t 'W38.04|reads tags from an object|accepts the demo catalog shape|finds the records in a JSON export|parses quoted fields|a csv export becomes|replace drops what is not|the publish window gates|the http source pulls|requires explicit initialization|authenticated validation runs|history lists revisions|imports JSON \\(replace\\)|pulls from a URL|binds both modes to typed tenant authority|preserves stored reads, merged validation|W38.03 returns typed' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13T12:33:50.619Z",
+      "captures": [
+        {
+          "chunk_id": "d0a783",
+          "wall_time_seconds": 1.000693339,
+          "session_id": 95274,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4e8953",
+          "wall_time_seconds": 0.000001799,
+          "exit_code": 0,
+          "original_token_count": 282,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/content.test.ts  (24 tests | 15 skipped) 230ms\nstdout | src/routes/content.test.ts > authenticated reflex administration > W38.04 bounds every consuming route before effects and preserves authority optional rollback and import replay\nW38.04 mounted admission {\"guarded_lanes\":20,\"admitted_pieces\":501,\"remote_refusals\":2,\"writes_before_refusal\":0}\n\nstdout | src/content/import.test.ts > W38.04 input admission > W38.04 counts streamed local and direct remote bytes before parsing and preserves HTTP decoding\nW38.04 stream admission {\"exact_bytes\":2097152,\"overflow_pulls\":2,\"overflow_cancelled\":true,\"oversize_parsed\":false}\n\n ✓ src/content/import.test.ts  (10 tests) 79ms\n\n Test Files  2 passed (2)\n      Tests  19 passed | 15 skipped (34)\n   Start at  08:33:52\n   Duration  8.34s (transform 1.00s, setup 0ms, collect 2.63s, tests 309ms, environment 0ms, prepare 3.57s)\n\n"
+        }
+      ],
+      "session_id": 95274,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13T12:34:04.690Z"
+    }
+  },
+  "failed_attempts": [],
+  "measurements": {
+    "exact_stream_bytes": 2097152,
+    "overflow_pulls": 2,
+    "overflow_cancelled": true,
+    "oversize_parsed": false,
+    "guarded_mounted_lanes": 20,
+    "admitted_pieces": 501,
+    "remote_refusals": 2,
+    "writes_before_refusal": 0,
+    "source": "Actual grouped test stdout and assertions; synthetic streams/storage, no native/network workload."
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T12:34:23.702Z",
+    "files": [
+      {
+        "path": "src/config/input.ts",
+        "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+      },
+      {
+        "path": "src/routes/config.ts",
+        "sha256": "c68b26d85e6ab2b5434f65436f30497f4b9191ea297df49c3a3a9f35adce1355"
+      },
+      {
+        "path": "src/routes/content.ts",
+        "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+      },
+      {
+        "path": "src/content/import.ts",
+        "sha256": "d2e2b5143824c930afabea2e9e012be8f3d639ae253f260e9b5d13d409adb69f"
+      },
+      {
+        "path": "src/content/import.test.ts",
+        "sha256": "161da825624daab353a40f30aaab743f3e4040f52105c17154fd54d1f86f7880"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "aaf30fbb81f7ae88ed055ed3c10ff59a63fde10060f9f46289a5977763dd9412"
+      }
+    ]
+  },
+  "protected_comparison": {
+    "at": "2026-09-13T12:34:23.702Z",
+    "count": 24,
+    "all_match": true,
+    "files": [
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+        "matches": true
+      },
+      {
+        "path": "src/config/publication.ts",
+        "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956",
+        "matches": true
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145",
+        "matches": true
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+        "matches": true
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8",
+        "matches": true
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df",
+        "matches": true
+      },
+      {
+        "path": "src/learn/priors.ts",
+        "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad",
+        "matches": true
+      },
+      {
+        "path": "src/content/enrichment.ts",
+        "sha256": "a3ab80fadee98504369bda570531679044f913b1c956a4d07a6a1bac10670b5f",
+        "matches": true
+      },
+      {
+        "path": "src/content/enrichmentPublication.ts",
+        "sha256": "8956b007c0a9a766d794d7f33f07ca268607dfbd7f4921f4bb23e9a8edbcb21d",
+        "matches": true
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b",
+        "matches": true
+      },
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe",
+        "matches": true
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+        "matches": true
+      },
+      {
+        "path": "src/tenancy/middleware.ts",
+        "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8",
+        "matches": true
+      },
+      {
+        "path": "src/middleware/operatorAuth.ts",
+        "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d",
+        "matches": true
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+        "matches": true
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+        "matches": true
+      },
+      {
+        "path": "docs/architecture/33-adversarial-audit-brief.md",
+        "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028",
+        "matches": true
+      },
+      {
+        "path": "docs/remediation/evidence/W38.03/acceptance.md",
+        "sha256": "62f0729d303f96ebcf40c8d6b1c63710bd0313dc2908ca6c148ecfd7d860a177",
+        "matches": true
+      },
+      {
+        "path": "docs/remediation/evidence/W38.03/worker.json",
+        "sha256": "5bb54a75b05bc8f88b2206339ec12f28cfcbf30f6c1a2a3abd3df7ecdf5ebb7b",
+        "matches": true
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+        "matches": true
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+        "matches": true
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+        "matches": true
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+        "matches": true
+      },
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+        "matches": true
+      }
+    ],
+    "capture": "2d768a"
+  },
+  "limitations": [
+    "Application admission budgets, not customer catalog capacity or complete W38/F32/F08/N07 closure:2MiB per input,10000 raw records,256 CSV fields,100000 scanned and projected cells.",
+    "JSON collection checks occur after bounded parsing; no tokenizer, total heap/CPU/concurrency or native limit proof. Upstream chunk allocation and arbitrary validator/normalizer expansion remain.",
+    "Historical/internal validators, merged corpus growth, ranking/candidates, enrichment500-sample limits and stored compatibility fields are unchanged. Retention, URL policy/fetch timeout and transactional KV authority remain separate.",
+    "Stream errors map400; ordinary remote failures retain502. Existing HTTP replacement/BOM handling and optional malformed/empty rollback JSON fallback retained only after successful bounded reading.",
+    "No external/cloud/install/build/commit/customer operations. Frozen independent review, lead disposition, customer/scientific/release acceptance not performed by this worker."
+  ],
+  "independent_review": {
+    "status": "pending",
+    "owner": "w1405-reviewer"
+  }
+}

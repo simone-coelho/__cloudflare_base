@@ -1,0 +1,83 @@
+{
+  "task": "W01.08",
+  "actor": "/root/w01_reviewer",
+  "role": "independent reviewer; no implementation ownership",
+  "at": "2026-09-16T21:34:49Z",
+  "verdict": "PASS_LOCAL_BOUNDARY; full W01.08/W01 acceptance withheld",
+  "artifact": {
+    "manifest": "docs/remediation/evidence/W01.08/source-freeze.json",
+    "digest": "6d7ec05e7c531ac28ab498391c66d3a626946346924b3751a4761e4344514281",
+    "contract_digest": "e2ded875c514ed45ae3d186ada13916040454c5435448fc9d840b02218f77082",
+    "worker_evidence": "docs/remediation/evidence/W01.08/worker.json",
+    "worker_sha256": "870418c0e367cd95d3de4a5395753bcfad995830a6729d245697fc46a22d3696",
+    "identity_check": "All 40 frozen pins verified before and after independent K1; manifest digest independently recomputed with existing artifactDigest helper, matching. All nine final hashes and exact forward/inverse worker patches verified in memory against the admitted dirty baseline hashes; zero mismatch. No source edits.",
+    "output_pin_count": 9
+  },
+  "K1": {
+    "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+    "started": "2026-09-16 21:29:43 UTC",
+    "session": 98116,
+    "exit": 0,
+    "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/index.api-boundary.test.ts > W09.06 forwards exhausted native retries to the isolated DLQ while a healthy sibling persists once\nW09.06_NATIVE {\"bundleSha256\":\"b9a320a1c272c3383c0b37bd46949305367927910ee84ae9ad1c0318d89f1374\",\"sourceAttempts\":[1,2,3],\"healthyAttempts\":[1],\"forwardedBodies\":1,\"persistedRecords\":1,\"outbound\":{\"source\":0,\"collector\":0}}\n\n ✓ src/index.api-boundary.test.ts  (61 tests) 33775ms\n\n Test Files  1 passed (1)\n      Tests  61 passed (61)\n   Start at  17:29:46\n   Duration  42.13s (transform 5.04s, setup 0ms, collect 5.50s, tests 33.77s, environment 0ms, prepare 1.99s)\n\n",
+    "result": "61 passed, 0 skipped; exactly one independent execution on frozen bytes; session drained.",
+    "note": "Worker session85030 remains historical unchanged-input evidence, not a newly dated execution."
+  },
+  "reused_checks": [
+    {
+      "id": "K2",
+      "source": "worker.json#final_checks.K2",
+      "session": 27751,
+      "exit": 0,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.ts src/customerBoundary.ts src/types/env.ts src/routes/operator.ts src/services/RealtimeSegmentEngine.ts src/index.api-boundary.test.ts src/demos/brighthour/surface.test.ts src/reflex/shopperReflex.test.ts && git diff --check -- src/index.ts src/customerBoundary.ts src/types/env.ts src/routes/operator.ts src/services/RealtimeSegmentEngine.ts wrangler.toml src/index.api-boundary.test.ts src/demos/brighthour/surface.test.ts src/reflex/shopperReflex.test.ts",
+      "result": "Compiler/lint/whitespace pass; 0 errors, 49 inherited warnings. Exact final output and baseline/final warning comparison retained in pinned worker evidence; not rerun."
+    },
+    {
+      "id": "K3",
+      "source": "worker.json#final_checks.K3",
+      "session": 73395,
+      "exit": 0,
+      "command": "node node_modules/vitest/vitest.mjs run src/demos/brighthour/surface.test.ts src/reflex/shopperReflex.test.ts src/routes/realtime.sdkContract.test.ts -t 'generates the coach audience set|three brisk views enter|before any environment or catalog access' --maxWorkers=1 --minWorkers=1",
+      "result": "3 selected passed, 107 deliberately unselected, no selected skip/failure. Exact final fixtures and signed-grant setup reviewed; not rerun."
+    }
+  ],
+  "full_original_W01_review": [
+    {
+      "requirement": "Policy before dispatch; generic API N01/N04; prohibited demo/agent/activation ingress (F01/F03).",
+      "assessment": "PASS locally. src/index.ts rejects raw API before environment access; explicit profile fails closed independently of AUTH_MODE. Customer exact route/method/upgrade policy precedes Hono, SDK discovery and destination work. Webhooks/legacy tracking/CDP/activation and shared realtime diagnostics are withdrawn, not falsely reported as tenant-authorized."
+    },
+    {
+      "requirement": "Actual mounted methods/upgrades and destination-state negative checks.",
+      "assessment": "PASS locally. Test-only esbuild exports actual Hono app.routes; no alternate router. Fixture checks each admitted method is mounted, denies unadmitted actual operations and unknown methods/upgrades with zero destination/body/log/deferred effects and unchanged snapshots. Effectful HEAD aliases for personalization/reflex/decision snapshot are refused; owned reads retain downstream authority."
+    },
+    {
+      "requirement": "Retained shopper/operator authority, scoped reads/history/validation, both report GETs (F03/F25/N03).",
+      "assessment": "PASS for W01 boundary. Unchanged requireShopper, operatorJwt, canonical tenant/selector and named-key checks remain downstream. Existing full boundary fixture preserves two-nondefault-tenant destination/refusal tests, config/content revisions and validation, report GET/HEAD gates, and both native socket hosts. New customer positives cover scoped writes/readback/reports and owned connections. Global account administration remains deliberately refused by its existing enforced-mode guard; allowlist admission does not bypass it. Broader W02/W03/W04 contracts are not accepted here."
+    },
+    {
+      "requirement": "Customer static and binding separation (F01/F33; selected D01).",
+      "assessment": "PASS locally. Named staging/production manifests select customer/enforced, Worker-first assets with no SPA/HTML fallback, and omit OpalAgent/MERIDIAN_REFLEX/BROWSER/STATE_MANAGER. Actual local asset-router dispatch returns exact SDK/console bytes and rejects every other current public file, unknown/navigation/encoded escapes and shadow paths. STATE_MANAGER is used by withdrawn bare health only, not product monitor (LEARN_STATS), ledger or cron. Exports/migrations/existing objects are retained."
+    },
+    {
+      "requirement": "Customer ingress must not indirectly initialize bundled demo audiences.",
+      "assessment": "Both early findings corrected. Operator ensureSeeded and shared RealtimeSegmentEngine ensureAudiencesSeeded/ensureSeeded require explicit demo; tenant-first shared guard preserves non-default zero-access behavior. Customer Coach list and owned segments leave authored records unchanged without catalog/seed calls. Customer /operator/audiences/suggest is absent from the allowlist, denying the hard-coded demo provider. K3 preserves explicit demo seeds, affinity, decisions and socket frames."
+    },
+    {
+      "requirement": "Queue/scheduled boundary and retained customer operations.",
+      "assessment": "PASS locally. Invalid profile/binding configuration retries all queue messages and stops schedules. Customer/enforced scene work calls retry, never ack/drop or storage/model/assets; mixed ledger siblings retain independent successful/failed dispositions. Valid customer schedules still run. Explicit open-demo W07 scene success/failure privacy controls remain. CORS retains PATCH and If-Match/Idempotency-Key; HEAD's safelisted Fetch semantics do not require adding HEAD to allowMethods."
+    }
+  ],
+  "fixture_oracle_review": [
+    "KV stream correction matches versionedStore legacyJson's real get(key,'stream') contract. Conditional synthetic R2 publication setup and exact head/revision destinations replace an obsolete catalog-KV assumption; no product fallback was added.",
+    "Catalog publication assertions retain exact same-tenant writes plus the two real same-tenant Reflex advisory reads. Malformed aggregate test now asserts current validation refusal/no report publication while retaining input/no-disclosure checks. Window fixture asserts unknown_basis, empty pooled arms and exact sourceCounts; unchanged measurement code forbids pooling its unversioned synthetic basis.",
+    "Native short/live capabilities retain bootstrap epoch and are explicitly registered in synthetic grantAuthority storage. Product assertGrant, signature/target checks, native upgrade, expiry, foreign-frame closure and untouched victim assertions remain real and unchanged; the fixture setup endpoint is not a product route.",
+    "Selected K3 shopper test uses genuine signed ingest with current one-time durable adoption, matching state.id/SHOPPER_REFLEX identity, principal attachment and cloned storage.list. Seed/membership/choreography/frame timestamp/alarm assertions remain; no authority verdict is stubbed. Other fixture deltas only add explicit demo/profile reads, type annotation and actual-route instrumentation.",
+    "All 12 prior failed/superseded attempts remain in pinned worker evidence, including initial 53/8 K1, compiler TS7006, native unregistered-grant failure, unknown-basis and successive K3 fixture failures. No failed selected test was skipped or changed to a status-only success."
+  ],
+  "open_requirements": {
+    "missing_local_code": "No residual concrete W01 local route/method/upgrade/static/binding defect found in the frozen reviewed artifact.",
+    "missing_local_evidence": "No admitted focused local check remains missing. This is synthetic/local-runtime assurance, not exhaustive customer-browser, SLO or other W-package acceptance.",
+    "human_or_deployed": "W01.08-C4/K5 selected deployed route/asset/binding/resource ownership attestation remains absent and unauthorized. D01 is resolved; no further topology choice is needed for this local artifact. Actual selected deployment/resource owners must supply authorized evidence before full W01 acceptance.",
+    "disposition": "Do not close W01.08 or original W01, findings, customer acceptance or release approval from this record; lead disposition required. No W02 advancement is authorized by this review."
+  },
+  "safety": "Reviewer ran only the agreed K1 runtime once plus read-only source/hash/delta inspection; reused K2/K3 and parent board status. No source/governance edits, delegation, broad suite, provisioning, cloud/customer operation, deployment, commit/push/merge or external message."
+}

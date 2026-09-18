@@ -1,0 +1,170 @@
+{
+  "task_id": "W37.09",
+  "role": "implementer",
+  "actor": "w3709-worker",
+  "run": "/root/w3708_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-09T16:13:48.064Z",
+  "status": "ready_for_independent_acceptance",
+  "scope": "Disable wildcard-derived grants on enforced multi-brand stamps while retaining explicit named authority; one runtime file and two existing fixtures.",
+  "authority": "Root GO after repaired admission VALID618 exit0/session46207 drained, contract ee13db7cde57233c8839bc94c24018b65e808fcf2bb070d7a8bf400a0b5b6636. Standing bounded local G0 mandate; no external or project build operations.",
+  "preflight": {
+    "basis": "Current AGENTS/README/RESUME/governance and complete canonical W37/W03/F03/F31/F33/N29/customer requirements plus linked evidence/source read. Root entry610/admission618 checks reused. Source-confirmed wildcard grant case; no executed pre-implementation failing baseline.",
+    "plan": "docs/remediation/design/W37.09/plan.md",
+    "contract_digest": "ee13db7cde57233c8839bc94c24018b65e808fcf2bb070d7a8bf400a0b5b6636",
+    "baseline": {
+      "path": "docs/remediation/design/W37.09/baseline.json",
+      "sha256": "f2f786d4fb633a6887515f0b3b211b3aa346a9012268aecd3412a680ff3c2319"
+    }
+  },
+  "artifact": {
+    "files": [
+      {
+        "path": "src/middleware/edgeAccess.ts",
+        "sha256": "270ff0948f5ae0bd654cbd67ef688fa3bda7bb10e27b61c346c0e32010b280b9"
+      },
+      {
+        "path": "src/middleware/edgeAccess.test.ts",
+        "sha256": "7d2e3f37f36d0df89f6a0301da73237e7d257ebfb8ec107ce27c3159db49f192"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "275ca3a6f8876ea2f212192fd48a2c62b53268a8705821d5bb6ed706d0aa8895"
+      }
+    ],
+    "digest": "0e7dc9a625ab88f0b44a78ff3938127351b06d3dd7526c8508532363ad63af9a",
+    "digest_encoding": "SHA256 of JSON.stringify(files) in recorded order",
+    "captured_at": "2026-09-09T16:13:48.052Z",
+    "source_stopped_at": "2026-09-09T16:12:33.013Z",
+    "source_mutations_after_final_commands": false
+  },
+  "acceptance_checks": {
+    "K1": "PASS first exact runtime run:6 passed/27 filtered.",
+    "K2": "PASS helper12,compiler0,three-file lint0 with0 errors/0 warnings,whitespace0.",
+    "K3": "Independent frozen review and lead acceptance remain lead-owned; implementer does not self-accept."
+  },
+  "behavior": [
+    "verifySdkKey evaluates explicit named grants before wildcard eligibility, including wildcard/name overlap and deliberate grants of the same key to multiple named tenants. Named-only and null named-owner lookup do not read the registry.",
+    "Only wildcard reliance in enforced mode calls the existing canonical tenantConfig. Exactly one distinct provisioned tenant permits wildcard; multiple tenants or invalid configuration deny403. Open mode and absent/single/duplicate-single manifest compatibility remain.",
+    "Existing SDK middleware retains valid canonical context, missing/unknown401, wrong-owner403/no-store, explicit-key precedence over Bearer, and no-key verified JWT. No permissive override flags, new state or registry infrastructure.",
+    "Actual Worker probes carry valid target capabilities for acme/globex. Wildcard-only and disallowed wildcard/name overlap GET/POST/query-key WS calls fail before destination calls,state changes or pending work. Matching explicit grants,including one key named for both brands,read/write exactly the selected namespace.",
+    "Existing W37.08 named-key/CORS fixtures and both-host native acme socket capability,ownership,heartbeat,expiry and victim-state safeguards pass."
+  ],
+  "workload": "Existing local Node/Hono and actual Worker/workerd fixtures with synthetic bindings/credentials and blocked egress. Generic positive HTTP effects use the existing DO facade; actual native named-key sockets cover acme on both hosts. Test timings are not performance acceptance.",
+  "compatibility_fixture_changes": [
+    "Existing multi-brand wildcard expectations now assert refusal; compact helper/Hono checks retain single/default/open compatibility,canonical deduplication,invalid-manifest refusal and named grant precedence.",
+    "Existing Worker fixture adds only a synthetic SDK_KEYS override and one bounded two-brand wildcard/overlap destination test."
+  ],
+  "rework": [],
+  "commands": [
+    {
+      "name": "runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --testNamePattern=\"W37.09|W37.08|retains SDK-authorized|W04.02\" --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-09T16:11:36.643Z",
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (33 tests | 27 skipped) 9971ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 27 skipped (33)\n   Start at  12:11:41\n   Duration  28.13s (transform 1.63s, setup 0ms, collect 13.40s, tests 9.97s, environment 0ms, prepare 3.20s)\n\n",
+      "exit_code": 0,
+      "output_complete": true,
+      "completion_observed_at": "2026-09-09T16:12:33.011Z"
+    },
+    {
+      "name": "edge",
+      "command": "node node_modules/vitest/vitest.mjs run src/middleware/edgeAccess.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-09T16:11:36.641Z",
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/middleware/edgeAccess.test.ts  (12 tests) 87ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  12:11:41\n   Duration  8.63s (transform 812ms, setup 0ms, collect 3.78s, tests 87ms, environment 0ms, prepare 3.20s)\n\n",
+      "exit_code": 0,
+      "output_complete": true,
+      "completion_observed_at": "2026-09-09T16:11:51.292Z"
+    },
+    {
+      "name": "compiler",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "started_at": "2026-09-09T16:11:36.643Z",
+      "output": "",
+      "exit_code": 0,
+      "output_complete": true,
+      "completion_observed_at": "2026-09-09T16:12:33.012Z"
+    },
+    {
+      "name": "lint",
+      "command": "node node_modules/eslint/bin/eslint.js src/middleware/edgeAccess.ts src/middleware/edgeAccess.test.ts src/index.api-boundary.test.ts --format json --max-warnings 0",
+      "started_at": "2026-09-09T16:11:38.049Z",
+      "exit_code": 0,
+      "subprocess_completed_at": "2026-09-09T16:12:19.443Z",
+      "stdout_sha256": "7bd896d043408ec9b0110ca670a5896221d7fc7e1f5743d8a326a5eb9c84d211",
+      "stdout_gzip_base64": "H4sIAAAAAAAAA+2Qu04DMRBF/2Xq3Zh6O14FBRKioYii1aznJljySx6bbIjy7ygRBQk1okk5V+fqjs5yT2vn8cL1nQYyIVZjTVMUNZ7fjSTbAmJVM46CD/iUj6dJubrgPuF3ZhytT03WngvGiRVGizUuCuYFZ9dPqUXhsltUaF1UpY4CVHkDpWG56khbzgWqkOezHKWkcp9arDTcdLTmyv7xPNtyiS5ufkBu5snjAvtO3y7pppAH5ALLFfLa/Gl6T6V5PAkNFFOPuRbuFcFRRwXZs4Xc7Y4vHrpzNLgZ0mtmC+05Sl950t+tU+9PpAcn4rHlAgPZ4NZaqF69/5f3q/LVYfUFiTI3TmEEAAA=",
+      "stderr": "",
+      "output_complete": true,
+      "errors": 0,
+      "warnings": 0,
+      "stdout_format": "ESLint JSON records without embedded source; all messages/counts preserved",
+      "completion_observed_at": "2026-09-09T16:12:33.013Z"
+    },
+    {
+      "name": "whitespace",
+      "command": "git diff --check -- src/middleware/edgeAccess.ts src/middleware/edgeAccess.test.ts src/index.api-boundary.test.ts",
+      "started_at": "2026-09-09T16:11:39.449Z",
+      "exit_code": 0,
+      "output": "",
+      "completion_observed_at": "2026-09-09T16:11:39.709Z",
+      "output_complete": true
+    }
+  ],
+  "warning_lineage": {
+    "method": "Final three-file ESLint has no errors or warnings",
+    "total": 0,
+    "unmapped": [],
+    "lines_gzip_base64": "H4sIAAAAAAAAA4uOBQApu0wNAgAAAA=="
+  },
+  "delta_validation": [
+    {
+      "path": "src/middleware/edgeAccess.ts",
+      "admission_sha256": "17671c06a23f6de8055c5c9004b53be904ad723f8471de166f4f80b116222e69",
+      "current_sha256": "270ff0948f5ae0bd654cbd67ef688fa3bda7bb10e27b61c346c0e32010b280b9",
+      "admission_matches": true,
+      "forward_reproduces": true,
+      "reverse_reproduces": true,
+      "diff_sha256": "c9d28062fb2fb2b406dda4697876b4e0be0bac16d375661009a4579ac4de6edb",
+      "diff_gzip_base64": "H4sIAAAAAAAAA9VW7W7bNhT976c4+RNJtiwnTdYudpUPtAFaFOkGJCswBEXDSlcxZ5nUSMqJ5gToQ/QJ+yQDSfkrTbthw34sCCCJvPfcew/vPfRrkdPtEFplgynP85JumKIB5dd0kmWkdWJ0J/33f51+v//9IL1e7/sGx8fo7z6Nf0Rv92l8gOPjDvi0ksrANBVhjhdSGLo1Mc6WEK+YyEtSuEeh5BTBWAoZjJaOc2SKmKGVw4bloGCZkapZ82hDnYrZ0vJ4YBf1gMRsA5rrd6zk+QUJJszrPPa+/vMdU5x9LEmvo9idrPFPE4w6vSWUX3ohRcGvH/FYUbaRwG83ZmmcDFhtxna7A7pdlXJSm/GZzAkpAlmRCHCHgEQhVUa5M7e0P9uLD9B7th/v7jjeBwN8+fzpy+dPOH/5BhNqdPv9v/633Ay63Q7QtXV9eHP66zm4xpWnfzih5vJuQs2T97FfeWKX9q4SnLQnBFngqnsFlmVUGQ0zJstOp48uCqnARNNaJrgYE2asrMmGYNCUKTIj51JINWXGrgtpkk7vK2/cjEnghpd5xlSOa8WE0bDtW5GacmMox8fGYWnDphUqWfKs8VB/PzDQHSzbpahFZrgU0PnkDTUXtn1DErMhfubZ5PmpmMUIFrQFh9EQZ6x6ro3i4jrGOZn2/fAQ8w6ATAptYCwMUgi6+aZ9GI2sg6Ug9F4kjGos2TaBZHlWR0cIgijRVclNGMRBFGHu+vdgL97dR+/gh/jJU9fA6yNw7up5RyrnmUFqQ91hDjkZwqiaRi3nQ/h8cL9uUbBS08iybGo9xP7OLu6wv7M3giKmpVh52VnqP+RyRooXjc8gnFCzMI8fBr2DqMsyxncJ36xk3un9d+GsTJz8cvHqw9lPL0/d18Xp25O3F48nAoAXCLcm1ERQZGol1vmL1/mLl8wFrbhA0e81V5QHjsWHrfOgH6M1E3kjSGmkuEySxNkntnU46TB6nxS8NKTC8DJ2EvY+Qnro3pIx05aeKEqmrArDS+P3jMe2pXjkpCRxbcZI0xQ7/6QyIQ0UZfJa8D/a+vo+QDvo29vYamNxkZV1Trrdih7dC7q+63uwIn16W5U84waCTWmpE4qmjAurATwHzUjYgGbMtUuJlVpizKw0LASmRXNTZ8XO9sZCibiGFKXXmqpWhDGVFalA+5h9lyBKKSd1ZfWnPRmfULpAOcK3ihwudrSckqfdHoV/2UpT2IpHFrgks5LEtJ1Mu+Fazwfc3v4q0Bpj3pS1V6JrJne0/maM1tGdMngfKjUt/B1PG7e1IpZrtMPhqWIih66rquSkkTEhBc9YiZxrw0Vm8FExketkDfG18IeVOcxaMTfN09oSSTNS/mRX+dkSpOKmWYJYvZxvFLCWpK0UTNtfNVFSKTnjmktB+Xp7745wj4yZbLyJ0wrgvQ/kHvdfk7618Ii8GuAvZmXvkVnh2t+CyHlRkCJh2iIWsuCEeQPXntJK2xa9drQc34KLPAyNH+5lN7l7xD4t7H3nTwFjCPMiCwAA"
+    },
+    {
+      "path": "src/middleware/edgeAccess.test.ts",
+      "admission_sha256": "b876e876aead75664c12be896febdb82f39b3ed4bd153e11d60d95a30c1c8d71",
+      "current_sha256": "7d2e3f37f36d0df89f6a0301da73237e7d257ebfb8ec107ce27c3159db49f192",
+      "admission_matches": true,
+      "forward_reproduces": true,
+      "reverse_reproduces": true,
+      "diff_sha256": "3b74eab5bab7f024f2d262bac4759ea561d3c6b5ac2e84b0f21be7316f9597c7",
+      "diff_gzip_base64": "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"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "admission_sha256": "705e1c8d9309e1cfea160451aa2f478c23fb7ab647f53e3dd68e55e5e277d234",
+      "current_sha256": "275ca3a6f8876ea2f212192fd48a2c62b53268a8705821d5bb6ed706d0aa8895",
+      "admission_matches": true,
+      "forward_reproduces": true,
+      "reverse_reproduces": true,
+      "diff_sha256": "5497b1631bf0e189fa891142cffd40ca169395aa5894a4da8e3ad82c2a696e09",
+      "diff_gzip_base64": "H4sIAAAAAAAAA6VXW3PaSBZ+51ecqUq5YZEwDt7JRC6GZGPNxuMJpAyeyZTLZTfSEfQiupnuloEi+u9b3bogROJMdvWApe5z+87dVzzEjQdKBqfMvHboirlTkfCQym1Ho9IdrRr9//9puK77LTXtdvtbJG/egNs7d36Cdu/ceQ1v3jQAgE4Vcv2Bchah0gMPpkLESPmFuZT4V4JKvxf2RmnJ+Cy/CMQTSl9SlUiscam5WK1QvqMrOmUx09uBBzvQyCnXpRRQyfQ/GFQPUCkm+FVYHEF60WgDqHBxjVtVNSC9aIDerhBuUCWxhj7srGJNdaI84MlyitLaMhXhds9oPHBmwbfPev8sfQAQCK40TBkPGZ+pQp553t5O3j98GF36HjC+SnRnKUKEfr8PJOEKNYEBJDzEiHEM4YBoMACCPBIywJA4hUB/+PvVzWj4wR9OPCDr7ln3pau2XM9Rs2BP9usfk4ex/+7Gn3jwYvfreDTsZChYtG1mF63UsWRX4/Gtf1MII9nh29vLK3/4zt8fN9xM8vjy+uHa/3PsAaHBEr1SuWs+3QVunVksprip3GQH5o44JiaHcjLMeZws7P9NcA690+k0c5H1TIIB7ODG/+U3/9PD+9HYeDAUBFLwYJe2SgkTf/h2OCktO8zxWsBGNg07c6pGa57pdYBk2VqwkBYMclmHF4VCAA9qMdrBSoonZlIaQw/urE+IAySDbN7syb0Dc6G0MjViTzq4octVjCQP0J6nepNLgRQquPeeOyxQ67bf/Mt/+zcPN/7EH06uRsOHy7c2Cc4q/jMF8mOvZ3rEj71z5/xlWSFpI/tJWxcNaLSZbpI/eq863dcgMUoUKlizOAyoDGEmKdcKphgJiXndA0YRBlrBes5iBImaMm5qHDermAVMA6dLLHiJA1RteQDNFvR/hp1JuaxEiyTrA/lHJY3WLMTP+88l22DofCUJ63SV76nQ8+dytEZKbH+KhIRmZl2OVUTH4b5vZTBKIEep3S+bpLNvjuSJKbebP/bFPTc/PxWf+fOaONUGSta9V93Xbn5C8k5a6A5RacapZoJDHx6192KXKU69F7sjwzq5MeljLqQCeMF4mMGVSEMDdy2ZtriT1UzSECvADzlxmzEeBtFw1uJzeGT9XpVZgMr1QT8zKuvQuQ0XdWIaBLjSGBpq3GbENR3w+TM0v3CZ2QQnJ0W07b2Ndquih0XQLEw6OSkVtowBmvEEL+D0FPwNM6GYgVHpmj4AEdtoU7K4QRkwU1g00AmNwQTsCbM6MclYIFadOrp8bHvwUYop2sTK68Y5zjunOuU9IGpOJYZlq3H2wgFWVM+90tMDeDyVSGPNlni6VoPMH/0ymU4ShfIq7D+XUydl0n6ZrLhNTzIE/Re7BW7Tx6pVpvnuY54lIAyA7I2jgbZl4FUtlhjFuBn8DSMfD5wwRxqiVFU/7OA2ezeVh1MlgoXZDGxbBfLJnViHEK+sb/LJHV9eu9e4JZ7NwPRAhenjX0C0gyXquTD1/XE0nhAnX2+OJo/ZjTwgKzrDhyeGa+JABtM7jn+B0jl0aXUb+3pYHAippmZ4OKBEIgOjVoULAmlrP1VKwelRIcpigaNryrQZmVNs5glZLSfcrDDQzYy8ky16rY4W/8JmWcsDeNntggfn3V69En/Y19+uijMXax24olJhocE4tmUU+H8lNG7uQCw8iGis0AGUUkgPyPjy2saOKdvYKIQsilAiLwYBsdPyWF2uI0+kOxLQYI6uaQxSxOQ+x0W4cJUW0vSVGmdA41jtrbu7f04NjTTKPXEB0E7nI8krtCtwbkK3KjcFjBV+r/8+UB3Msx2ruTuYPM/6po7wjozfjz5+tPuL2f46LPxFiuWQ2iFbEXvvwBHtDPW3iSLUwbxGVvOryaR6WbYKww/cDVSZpqupRg8SvuBize/uIW3Z1EUD7J3gZgfK8VW0Ooaz/Ofoq+UK+IRcT+qVDmk9GUzQvicjKhEvXvMX+ydttG3kGlDugK/sCGESVXXnBTqTiGa45fUMCmMMtJD13XAt5AIoDyFkyq6tCgSPt6DnCMtiBa+vhPBdm5eFUaGvzDzLlPO3gewn39Es3Et6tn3t8jn5ePp0dlpOw1MtkYcDiTMmeP927A7/fDyYvU7jv9v4UG5REAAA"
+    }
+  ],
+  "artifact_inspection": {
+    "all_three_admission_hashes_verified": true,
+    "all_three_forward_and_reverse_deltas_verified": true,
+    "source_pin_count": 310,
+    "unchanged_unowned_pin_count": 307,
+    "unowned_drift": [],
+    "method": "Decode exact admission bytes,retain gzip createPatch deltas,apply forward/reverse in memory and compare exact bytes; compare every unowned baseline pin. No rollback performed."
+  },
+  "limitations": [
+    "This is local enforced multi-brand wildcard containment,not complete F03/W03/W37 isolation. Operator membership/audit,managed provisioning/stamps/resources,customer destinations/SDK distribution and complete export/erasure remain open.",
+    "Single-brand/default/open compatibility is local Hono/helper proof,not deployed or browser acceptance. Generic positive HTTP storage is a synthetic destination facade; native positive sockets retain the existing acme both-host scope.",
+    "Prior unchanged auth/signing/refresh,registry/cron,config/catalog/ODP/consent and erasure assurance reused as admitted. No broad suite or extra native overlap matrix run.",
+    "Erasure v1-v4 formats/readers/recovery and pending-tenant lifecycle requirements unchanged. No cloud,credential,customer-data,release,gate,finding,North Star relevance/latency/lift or business acceptance claim."
+  ],
+  "handoff": {
+    "source_frozen": true,
+    "active_command_sessions": [],
+    "next_action": "Root freeze/register artifact and resume independent reviewer for exact K1/source/evidence review; root alone handles acceptance/tracker/checkpoint. Worker finishes with no further source edits/tests."
+  }
+}

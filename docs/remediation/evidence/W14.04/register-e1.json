@@ -1,0 +1,217 @@
+{
+  "before": null,
+  "after": {
+    "id": "W14.04-E1",
+    "task_id": "W14.04",
+    "check_id": "W14.04-K1",
+    "criterion_ids": [
+      "W14.04-C1",
+      "W14.04-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1404-reviewer",
+    "run_id": "/root/w1404_review",
+    "file": {
+      "path": "docs/remediation/evidence/W14.04/review.json",
+      "sha256": "ddfa5ed6fb2cf0e2ebcd96601aaac65ddaa4a0d3134fc44fa7afdeb45043c8f0"
+    },
+    "at": "2026-09-11T04:46:40.000Z",
+    "limitations": "Bounded local supplied-proposal human-approved additive catalog publication only. Actual Hono/JWT/current-account and deterministic selection checks use synthetic tenants/storage; unchanged W11 primitive/native source assurance reused, not new deployed R2 or customer proof. No AI/provider egress, autoapproval, UI, taxonomy/asset/customer/retention calibration, real initialization/cutover, immediate serving effect, full W11/W14/findings/gates/release or D05/D10 approval. Serving cache <=30s excluding in-flight reads; generic recovery finishes retained intent. Historical dependency acceptance and prospective whole-artifact qualifications retained; no source regression inferred. Current-artifact runtime is the independent final-byte primary; worker fixed execution and any initial failures remain retained.",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest actual Hono/JWT/current account session and publication modules with existing synthetic conditional R2; unchanged W11 native primitive assurance reused.",
+    "workload": "At most3 grouped existing route additions: approved application/preservation/relevance/explain, unchanged-state negatives, both-mode/two-tenant/human authority and concurrency/retry/recovery; retain existing18cases.",
+    "result": "pass",
+    "artifact_digest": "db8d45f22d9eaaa4f84307845793fd66b9c9e95e3ac9bf246f3fd5e4ba78fb64",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "f863dc6b45282b591e4c099bf5268c53055816244ed35666b67695425365683e",
+      "configuration": "Bounded local supplied-proposal human-approved additive catalog publication only. Actual Hono/JWT/current-account and deterministic selection checks use synthetic tenants/storage; unchanged W11 primitive/native source assurance reused, not new deployed R2 or customer proof. No AI/provider egress, autoapproval, UI, taxonomy/asset/customer/retention calibration, real initialization/cutover, immediate serving effect, full W11/W14/findings/gates/release or D05/D10 approval. Serving cache <=30s excluding in-flight reads; generic recovery finishes retained intent. Historical dependency acceptance and prospective whole-artifact qualifications retained; no source regression inferred.",
+      "files": [
+        {
+          "path": "src/routes/content.ts",
+          "role": "output",
+          "sha256": "38ca715650d602fb7ce07316494911dad6a657a614114f3b00ccca850b69e0ee"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "68d111cd19045415e0f486f573eb168b92281585d84b0df3037b496ad7e56fad"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "749ed9c30312df9ad456dc6f46ecc4a9b5657d026371e4e91396cbcffd0b21c5"
+        },
+        {
+          "path": "src/content/enrichment.ts",
+          "role": "source",
+          "sha256": "a3ab80fadee98504369bda570531679044f913b1c956a4d07a6a1bac10670b5f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "role": "source",
+          "sha256": "f12a965dd3ff0faddfe05f43491c7eddccbe11aa2de47f51c8839f81d91b68f8"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "8f3aac28cf969f9b11591a9c324cdbacdf290407d8b429d543e2090de720caad"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+        },
+        {
+          "path": "src/reflex/merchandising.ts",
+          "role": "source",
+          "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c"
+        },
+        {
+          "path": "src/services/JourneyStage.ts",
+          "role": "source",
+          "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+        },
+        {
+          "path": "src/content/import.ts",
+          "role": "source",
+          "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "role": "source",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "role": "source",
+          "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": "src/content/enrichmentPublication.ts",
+          "role": "output",
+          "sha256": "8956b007c0a9a766d794d7f33f07ca268607dfbd7f4921f4bb23e9a8edbcb21d"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.04/worker.json",
+          "role": "output",
+          "sha256": "22218a82d98f94b62b5275f9d4c70cc8ad1315bf66d005a98b6277955dc93dc3"
+        },
+        {
+          "path": "docs/remediation/design/W14.04/plan.md",
+          "role": "configuration",
+          "sha256": "9e70bd636896f2250bc25a55126ba5220531a1c39f99ddaa3e62f55d75cd8902"
+        },
+        {
+          "path": "docs/remediation/design/W14.04/baseline.json",
+          "role": "configuration",
+          "sha256": "ec59165d859fc9598e15260670685d6171095fb92f02ef7eb73c61c24c818f59"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.04/source-freeze.json",
+          "role": "configuration",
+          "sha256": "55faede90d9e8aaed4c1bc9142f56b580c83080fe829f81eabfe5ffd2ce74000"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.04/source-deltas.json",
+          "role": "configuration",
+          "sha256": "2f76f448123f5b260e9eb6f658f7002d819027ef1c9196ad82ce7597fd04f5fc"
+        }
+      ],
+      "digest": "db8d45f22d9eaaa4f84307845793fd66b9c9e95e3ac9bf246f3fd5e4ba78fb64"
+    }
+  }
+}

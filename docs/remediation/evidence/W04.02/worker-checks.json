@@ -1,0 +1,600 @@
+{
+  "task": "W04.02",
+  "actor": "w0202-worker",
+  "role": "implementer (not independent verifier)",
+  "plan": "docs/remediation/design/W04.02/plan-v2.md",
+  "contract": "docs/remediation/design/W04.02/task-contract-v2.json",
+  "frozenAt": "2026-09-07T17:29:01.994Z",
+  "pendingProcesses": [],
+  "timingNote": "UTC launch/observed-completion timestamps, not inferred process end times. application-initial startedAt was captured immediately after its initial one-second tool yield. sdk-build completed in its sole exit-0 tool response; no separate completion timestamp was captured. Runner output retains its own local start/duration.",
+  "frozenFiles": [
+    {
+      "path": "src/identity/sessionCapability.ts",
+      "sha256": "7d5a2b4e2da2400705c8346041c8a650c479ee680531d65a6fc332b5e82a598c"
+    },
+    {
+      "path": "src/identity/link.ts",
+      "sha256": "3c526f1db971c080d310e21799d94f2f68a232b2a7cfeae34e8fd1e67e1646b9"
+    },
+    {
+      "path": "src/routes/identity.ts",
+      "sha256": "8c0bd782c37ee57ea941e8b85d0838512886fd694c58e3a56253640ccf392d22"
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "sha256": "ce1d31ec6b1312d059249834ed12112b6403fd47e76bfb9c5f68bc4b30e976c8"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "sha256": "e85a6737bfdda20d3b73d229240280923328bf100c7dda7a328ce49aa1c57180"
+    },
+    {
+      "path": "src/routes/sort.ts",
+      "sha256": "ed3af85d4e3bce814b26e000e0e92a4fcf969b7e62558be455d8f8ebb196e9c3"
+    },
+    {
+      "path": "src/content/service.ts",
+      "sha256": "8e7990af92db0cf2d2ad85a19b5bf633ef2bd392d8b06dc7557adc990caddb68"
+    },
+    {
+      "path": "src/services/SessionManager.ts",
+      "sha256": "3847b6edbd6a7ec91302cd4eb9451b7c5a265fad6880d961d73b1b85bba68845"
+    },
+    {
+      "path": "src/services/RealtimeSegmentEngine.ts",
+      "sha256": "718f8737a39e3fdb66754d253fb024db89ae2eed967a0cc240931974d074fa75"
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "sha256": "1e62baf9a685fa24aff48721f9ffd898a83246af875589e15ca9385411ef6d85"
+    },
+    {
+      "path": "src/durable-objects/PersonalizationWebSocket.ts",
+      "sha256": "6e7ab3fc0c6a0204656f2dd718d2c40d40ae9fc45e4b8ccc876718af7f1108d4"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "4f3ed7ab4eb8e0016f09931b794041c1aea649e7eccacab076e7da1dc943fcfb"
+    },
+    {
+      "path": "src/sdk/core.ts",
+      "sha256": "6fdcf3a5a762f6eec915973c606997f31139e89931e6d3263fa44c6f1665a24a"
+    },
+    {
+      "path": "src/sdk/identity.ts",
+      "sha256": "a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f"
+    },
+    {
+      "path": "src/sdk/identify.ts",
+      "sha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1"
+    },
+    {
+      "path": "src/sdk/listen.ts",
+      "sha256": "133d551d4ede19bb8db6830d05e0a924e0967ecbfe0feb2b40152b9e8093e33a"
+    },
+    {
+      "path": "src/sdk/types.ts",
+      "sha256": "57a26cbbf8e8ddfddf4d55fb59854a172a016c71943743a6704d9144c1ae9d2b"
+    },
+    {
+      "path": "src/sdk/host.ts",
+      "sha256": "89be6a22cfc7932a74ba2ae68c0596569bed7d599caa0fb103ac9b8b75d11c03"
+    },
+    {
+      "path": "src/sdk/testHost.ts",
+      "sha256": "5104d089455694ef802507f8188af6e9fedcfa3604f8a2e5226da6b249ac7842"
+    },
+    {
+      "path": "src/sdk/README.md",
+      "sha256": "e502bff8e310313c06750e03fd66ff7fb509d3b39f35b1283a82c29e30340cc9"
+    },
+    {
+      "path": "docs/architecture/25-identity-stitching.md",
+      "sha256": "f31ba54426d095d291251f54b597a3003e95be3d0b1cad8232a5314bea3cd87b"
+    },
+    {
+      "path": "src/routes/identity.test.ts",
+      "sha256": "6e3f71b619ccf997adda6350dcfa0375c1323b8770aff044df9d8e6cf076e88d"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "sha256": "d8c89a9a5a5d10d6289807da381701f5cdb18d2a5a9168f176b3eb0540ef2710"
+    },
+    {
+      "path": "src/routes/sort.test.ts",
+      "sha256": "021590d09ffafdf929379f03d8bcaefba03a215a5db7ccb2578aeeae634256e5"
+    },
+    {
+      "path": "src/services/SessionManager.identity.test.ts",
+      "sha256": "fb5bb65d7af96124367545977ca17014f3b5af03a94cdb097d42255972b82d1b"
+    },
+    {
+      "path": "src/services/sessionDefer.test.ts",
+      "sha256": "7c61a083b9edd6cfceef5aef4ba8006b8b86359924241230be663fd9aba435a6"
+    },
+    {
+      "path": "src/reflex/shopperReflex.identity.test.ts",
+      "sha256": "fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced"
+    },
+    {
+      "path": "src/content/consent.test.ts",
+      "sha256": "22f06bdcd9e230a6608d31ea11200b61d60fe6a898ff03431bf03670790b2304"
+    },
+    {
+      "path": "src/sdk/core.test.ts",
+      "sha256": "0f4b5e87edefc9062b9c27884c55ca8277c1f933550018b9fc2ad9fc1af7874d"
+    },
+    {
+      "path": "src/sdk/identify.test.ts",
+      "sha256": "2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333"
+    },
+    {
+      "path": "src/sdk/listen.test.ts",
+      "sha256": "f75f3637528b5ffbe3c086ac078895cc63b408030d506bdae5764e6a2aed8fcc"
+    },
+    {
+      "path": "src/sdk/session.test.ts",
+      "sha256": "40d4540b8c41750030ace414b4e4b957c201868f9b59b98064bd98cd02210adf"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "sha256": "00fc6f4e6377d2d42584c73c02a6d7ed2eb3364a71211a9c2a4c7564a109754c"
+    },
+    {
+      "path": "public/sdk/edge-personalization.js",
+      "sha256": "90c93376330a7dc0b761bb5f5c760a2d23a015c985ea17d115216fab2966b056"
+    },
+    {
+      "path": "public/sdk/edge-personalization.esm.js",
+      "sha256": "bb3a6d0386ea95a9ec280fc8505e08a60689a6f818360747cc32fc0f5ca6677f"
+    }
+  ],
+  "finalChecks": {
+    "K1": {
+      "record": "K1-consent-final",
+      "passed": 72,
+      "failed": 0,
+      "files": 7
+    },
+    "K2": {
+      "record": "K2-final",
+      "passed": 25,
+      "failed": 0,
+      "files": 4,
+      "scopeNote": "SDK inputs unchanged after this execution; last delta only server helper/DO/route fixture."
+    },
+    "K3": {
+      "record": "K3-consent-final",
+      "passed": 2,
+      "failed": 0,
+      "filtered": 25,
+      "scopeNote": "Both hosts, actual native upgrades, frames, private delivery and expiry; filtered historical cases not claimed."
+    },
+    "application": {
+      "record": "application-consent-final",
+      "exit": 0
+    },
+    "sdk": {
+      "record": "sdk-typecheck",
+      "exit": 0
+    },
+    "build": {
+      "record": "sdk-build",
+      "exit": 0
+    },
+    "syntax": {
+      "record": "bundle-syntax",
+      "exit": 0
+    },
+    "diff": {
+      "record": "scoped-diff-final",
+      "exit": 0
+    },
+    "K4": "Pending independent frozen-source review and reruns; worker does not accept."
+  },
+  "operationCounts": {
+    "sessionHost": {
+      "analyticsReads": 1,
+      "preferencesReads": 3,
+      "preferencesWrites": 2
+    },
+    "doHost": {
+      "sessionKvAnalyticsReads": 0,
+      "sessionKvPreferencesReads": 0,
+      "sessionKvPreferencesWrites": 0
+    },
+    "limits": "Selected successful synthetic operations only. DO counters describe KV calls, not total DO work. No auth-store lookup, benchmark or latency/SLO claim."
+  },
+  "rework": [
+    {
+      "kind": "compiler failure",
+      "record": "application-initial",
+      "correction": "Explicit ignoreBOM:false in fatal UTF-8 TextDecoder options; application-consent-final supersedes."
+    },
+    {
+      "kind": "fixture failures",
+      "record": "K1-initial",
+      "correction": "Two historical expected values intentionally superseded: conflicting/invalid subject authority is 401, and successful DO link now returns actual canonical pipeline SID instead of null. Later fixtures add owned positives and terminal denials; K1-consent-final supersedes."
+    },
+    {
+      "kind": "source review rework (no test failure implied)",
+      "correction": "Root/reviewer requested exact link source validation before identity stores, all supplied alias checks, DO-owned named projections and canonical SID continuity, separate 30-minute browsing attribution, and DO segment consent refusal."
+    },
+    {
+      "kind": "source review rework (no test failure implied)",
+      "correction": "SDK transition pause, one-attempt persisted-grant recovery, failed-logout forgetting, reentrant callback/microtask continuation guards, captured generation/socket epochs, and readiness-inclusive hydration deadline were integrated before final SDK checks/build."
+    },
+    {
+      "kind": "last pre-freeze source review rework (no test failure implied)",
+      "correction": "False-only consent hints now reach owned DO HTTP/upgrade operations and are applied after ownership validation inside serialization. The grouped cold-owned control retains only refusal storage; true cookies cannot re-enable it. Affected K1/K3/application/diff rerun successfully."
+    }
+  ],
+  "limitations": [
+    "Only the admitted shared customer SDK lane and local synthetic/runtime workloads; no full W04, engine-wide isolation, finding/customer/deployed/release acceptance.",
+    "Copied unexpired grants, cross-tab/client logout, already admitted server effects, strong revocation/transactional consent-deletion epochs, KV consistency and forwarding lifecycle remain open.",
+    "Bespoke legacy demo clients, CDP/tracking/operator interfaces and customer policy/provisioning decisions remain outside this batch. No external operations or real credentials/customer records.",
+    "Cold DO refusal assertion covers owned profile refusal storage; it does not newly certify all historical event capture, aggregate, consent or egress writers.",
+    "Baseline and originals remain immutable; root owns canonical/tracker/history/artifact identity and lead acceptance. No broad historical suite was rerun."
+  ],
+  "checks": [
+    {
+      "name": "application-initial",
+      "command": "w0402_typecheck_dir=$(mktemp -d /tmp/w0402-typecheck.XXXXXX)\nnode node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile \"$w0402_typecheck_dir/application.tsbuildinfo\"",
+      "startedAt": "2026-09-07T16:58:36.799Z",
+      "outputs": [
+        {
+          "chunk_id": "0821de",
+          "wall_time_seconds": 1.001085068,
+          "session_id": 87778,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5ee93f",
+          "wall_time_seconds": 0.000002819,
+          "exit_code": 2,
+          "original_token_count": 70,
+          "output": "src/identity/sessionCapability.ts(73,59): error TS2345: Argument of type '{ fatal: true; }' is not assignable to parameter of type 'TextDecoderConstructorOptions'.\n  Property 'ignoreBOM' is missing in type '{ fatal: true; }' but required in type 'TextDecoderConstructorOptions'.\n"
+        }
+      ],
+      "completedAt": "2026-09-07T16:59:05.394Z"
+    },
+    {
+      "name": "K1-initial",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/routes/sort.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/reflex/shopperReflex.identity.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T17:06:28.109Z",
+      "outputs": [
+        {
+          "chunk_id": "441a6c",
+          "wall_time_seconds": 1.000847587,
+          "session_id": 54499,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "73c06f",
+          "wall_time_seconds": 0.000002423,
+          "exit_code": 1,
+          "original_token_count": 1023,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/routes/identity.test.ts  (22 tests | 1 failed) 143ms\n   ❯ src/routes/identity.test.ts > the link, on the session host > validates the body and the tenant\n     → expected 401 to be 400 // Object.is equality\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > export → absorb: the person carries what the browser learned, under the person’s id\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > absorb twice, from two devices: counters add and the vector is the sum\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > forward: the browser’s object hands ingest and snapshot to the person’s\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > linkVisitor on the object host > does the whole thing: export, absorb, forward, and answers the person’s audiences\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ❯ src/reflex/shopperReflex.identity.test.ts  (8 tests | 1 failed) 73ms\n   ❯ src/reflex/shopperReflex.identity.test.ts > linkVisitor on the object host > does the whole thing: export, absorb, forward, and answers the person’s audiences\n     → expected '7abcd416-1300-4bca-a6fe-503633cae2ff' to be null\nstdout | src/reflex/shopperReflex.identity.test.ts > CW29: the snapshot says the stage > reports the journey stage the object last derived, and null before any event\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/content/consent.test.ts  (10 tests) 16ms\n ✓ src/services/SessionManager.identity.test.ts  (10 tests) 10ms\n ✓ src/services/sessionDefer.test.ts  (10 tests) 226ms\n ✓ src/routes/sort.test.ts  (5 tests) 32ms\n ✓ src/routes/realtime.sdkContract.test.ts  (2 tests) 4ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/reflex/shopperReflex.identity.test.ts > linkVisitor on the object host > does the whole thing: export, absorb, forward, and answers the person’s audiences\nAssertionError: expected '7abcd416-1300-4bca-a6fe-503633cae2ff' to be null\n ❯ src/reflex/shopperReflex.identity.test.ts:180:25\n    178|     expect(r.outcome).toBe('linked');\n    179|     expect(r.audiences).toContain(TABBY);\n    180|     expect(r.sessionId).toBeNull();\n       |                         ^\n    181|     expect((await get('vis-phone', '/identity/export')).body.forwardTo…\n    182|     // Linking again from the same browser folds nothing and reports t…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/routes/identity.test.ts > the link, on the session host > validates the body and the tenant\nAssertionError: expected 401 to be 400 // Object.is equality\n\n- Expected\n+ Received\n\n- 400\n+ 401\n\n ❯ src/routes/identity.test.ts:169:176\n    167|   it('validates the body and the tenant', async () => {\n    168|     expect((await ownedCall('/coach/identity/link', { method: 'POST', …\n    169|     expect((await ownedCall('/coach/identity/link', { method: 'POST', …\n       |                                                                                                                                                                                ^\n    170|     expect((await ownedCall('/not a tenant/identity/link', { method: '…\n    171|   });\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  2 failed | 5 passed (7)\n      Tests  2 failed | 65 passed (67)\n   Start at  13:06:30\n   Duration  29.58s (transform 3.39s, setup 0ms, collect 11.30s, tests 504ms, environment 1ms, prepare 13.37s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T17:07:20.624Z"
+    },
+    {
+      "name": "K1-expanded",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/routes/sort.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/reflex/shopperReflex.identity.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T17:11:59.253Z",
+      "outputs": [
+        {
+          "chunk_id": "60fa14",
+          "wall_time_seconds": 1.00139433,
+          "session_id": 75194,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "dede89",
+          "wall_time_seconds": 5.001649559,
+          "session_id": 75194,
+          "original_token_count": 699,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (22 tests) 107ms\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/routes/realtime.sdkContract.test.ts  (4 tests) 95ms\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > export → absorb: the person carries what the browser learned, under the person’s id\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > absorb twice, from two devices: counters add and the vector is the sum\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > forward: the browser’s object hands ingest and snapshot to the person’s\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > linkVisitor on the object host > does the whole thing: export, absorb, forward, and answers the person’s audiences\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/reflex/shopperReflex.identity.test.ts  (8 tests) 54ms\nstdout | src/reflex/shopperReflex.identity.test.ts > CW29: the snapshot says the stage > reports the journey stage the object last derived, and null before any event\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/content/consent.test.ts  (10 tests) 16ms\n"
+        },
+        {
+          "chunk_id": "c41f89",
+          "wall_time_seconds": 0.000002687,
+          "exit_code": 0,
+          "original_token_count": 90,
+          "output": " ✓ src/services/SessionManager.identity.test.ts  (10 tests) 12ms\n ✓ src/services/sessionDefer.test.ts  (10 tests) 225ms\n ✓ src/routes/sort.test.ts  (5 tests) 34ms\n\n Test Files  7 passed (7)\n      Tests  69 passed (69)\n   Start at  13:12:01\n   Duration  29.41s (transform 3.50s, setup 0ms, collect 12.40s, tests 543ms, environment 1ms, prepare 12.30s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T17:15:16.414Z"
+    },
+    {
+      "name": "K2-initial",
+      "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/sdk/session.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T17:12:00.606Z",
+      "outputs": [
+        {
+          "chunk_id": "29a703",
+          "wall_time_seconds": 1.00118262,
+          "session_id": 81046,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e69fa5",
+          "wall_time_seconds": 0.000001654,
+          "exit_code": 0,
+          "original_token_count": 150,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/sdk/identify.test.ts  (8 tests) 14ms\n ✓ src/sdk/listen.test.ts  (6 tests) 8ms\n ✓ src/sdk/core.test.ts  (6 tests) 8ms\n ✓ src/sdk/session.test.ts  (2 tests) 3ms\n\n Test Files  4 passed (4)\n      Tests  22 passed (22)\n   Start at  13:12:02\n   Duration  10.93s (transform 295ms, setup 0ms, collect 820ms, tests 33ms, environment 1ms, prepare 7.47s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T17:12:21.621Z"
+    },
+    {
+      "name": "K3-initial",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t W04.02",
+      "startedAt": "2026-09-07T17:15:16.414Z",
+      "outputs": [
+        {
+          "chunk_id": "2f3b31",
+          "wall_time_seconds": 1.000207944,
+          "session_id": 74789,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "1a9547",
+          "wall_time_seconds": 0.000002615,
+          "exit_code": 0,
+          "original_token_count": 127,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (27 tests | 25 skipped) 9782ms\n\n Test Files  1 passed (1)\n      Tests  2 passed | 25 skipped (27)\n   Start at  13:15:19\n   Duration  23.06s (transform 4.82s, setup 0ms, collect 10.63s, tests 9.78s, environment 0ms, prepare 1.86s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T17:17:24.663Z"
+    },
+    {
+      "name": "K1-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/routes/sort.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/reflex/shopperReflex.identity.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T17:18:38.014Z",
+      "outputs": [
+        {
+          "chunk_id": "0a91d0",
+          "wall_time_seconds": 1.000869309,
+          "session_id": 89404,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "24c79b",
+          "wall_time_seconds": 0.00000256,
+          "exit_code": 0,
+          "original_token_count": 892,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (22 tests) 113ms\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\nW04.02 owned operation counts {\"host\":\"session\",\"analyticsReads\":1,\"preferencesReads\":3,\"preferencesWrites\":2}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nW04.02 owned operation counts {\"host\":\"do\",\"analyticsReads\":0,\"preferencesReads\":0,\"preferencesWrites\":0}\n\n ✓ src/routes/realtime.sdkContract.test.ts  (4 tests) 110ms\n ✓ src/services/SessionManager.identity.test.ts  (11 tests) 16ms\n ✓ src/content/consent.test.ts  (11 tests) 22ms\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > export → absorb: the person carries what the browser learned, under the person’s id\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > absorb twice, from two devices: counters add and the vector is the sum\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > forward: the browser’s object hands ingest and snapshot to the person’s\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > linkVisitor on the object host > does the whole thing: export, absorb, forward, and answers the person’s audiences\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/reflex/shopperReflex.identity.test.ts  (8 tests) 49ms\nstdout | src/reflex/shopperReflex.identity.test.ts > CW29: the snapshot says the stage > reports the journey stage the object last derived, and null before any event\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/services/sessionDefer.test.ts  (11 tests) 287ms\n ✓ src/routes/sort.test.ts  (5 tests) 32ms\n\n Test Files  7 passed (7)\n      Tests  72 passed (72)\n   Start at  13:18:40\n   Duration  32.37s (transform 3.84s, setup 0ms, collect 13.31s, tests 629ms, environment 1ms, prepare 13.78s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T17:19:51.606Z"
+    },
+    {
+      "name": "K2-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/sdk/session.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T17:18:39.518Z",
+      "outputs": [
+        {
+          "chunk_id": "47c7ed",
+          "wall_time_seconds": 1.001237923,
+          "session_id": 86402,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "26e610",
+          "wall_time_seconds": 0.000001353,
+          "exit_code": 0,
+          "original_token_count": 150,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/sdk/identify.test.ts  (8 tests) 11ms\n ✓ src/sdk/core.test.ts  (8 tests) 10ms\n ✓ src/sdk/listen.test.ts  (7 tests) 10ms\n ✓ src/sdk/session.test.ts  (2 tests) 5ms\n\n Test Files  4 passed (4)\n      Tests  25 passed (25)\n   Start at  13:18:42\n   Duration  11.98s (transform 318ms, setup 1ms, collect 880ms, tests 36ms, environment 0ms, prepare 8.09s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T17:19:51.607Z"
+    },
+    {
+      "name": "application-final",
+      "command": "w0402_typecheck_dir=$(mktemp -d /tmp/w0402-typecheck.XXXXXX)\nnode node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile \"$w0402_typecheck_dir/application.tsbuildinfo\"",
+      "startedAt": "2026-09-07T17:18:40.848Z",
+      "outputs": [
+        {
+          "chunk_id": "f59ce9",
+          "wall_time_seconds": 1.001230393,
+          "session_id": 31290,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c6da3a",
+          "wall_time_seconds": 7.05e-7,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "completedAt": "2026-09-07T17:19:51.609Z"
+    },
+    {
+      "name": "sdk-typecheck",
+      "command": "node node_modules/typescript/bin/tsc --project src/sdk/tsconfig.json --noEmit",
+      "startedAt": "2026-09-07T17:18:42.208Z",
+      "outputs": [
+        {
+          "chunk_id": "02a08f",
+          "wall_time_seconds": 1.001320745,
+          "session_id": 43766,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fb3e75",
+          "wall_time_seconds": 6.2e-7,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "completedAt": "2026-09-07T17:19:51.610Z"
+    },
+    {
+      "name": "K3-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t W04.02",
+      "startedAt": "2026-09-07T17:20:43.940Z",
+      "outputs": [
+        {
+          "chunk_id": "ca7d94",
+          "wall_time_seconds": 1.000794709,
+          "session_id": 11432,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "314edb",
+          "wall_time_seconds": 0.000002309,
+          "exit_code": 0,
+          "original_token_count": 127,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (27 tests | 25 skipped) 9894ms\n\n Test Files  1 passed (1)\n      Tests  2 passed | 25 skipped (27)\n   Start at  13:20:46\n   Duration  19.47s (transform 2.84s, setup 0ms, collect 6.88s, tests 9.89s, environment 0ms, prepare 1.86s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T17:21:43.355Z"
+    },
+    {
+      "name": "sdk-build",
+      "command": "node scripts/build-sdk.mjs",
+      "startedAt": "2026-09-07T17:20:45.273Z",
+      "outputs": [
+        {
+          "chunk_id": "c71c31",
+          "wall_time_seconds": 0.204595242,
+          "exit_code": 0,
+          "original_token_count": 57,
+          "output": "\n  public/sdk/edge-personalization.esm.js  35.0kb\n\n⚡ Done in 114ms\n\n  public/sdk/edge-personalization.js  37.0kb\n\n⚡ Done in 83ms\npublic/sdk/edge-personalization.esm.js  35.0 KB\npublic/sdk/edge-personalization.js  37.0 KB\n"
+        }
+      ]
+    },
+    {
+      "name": "bundle-syntax",
+      "command": "node --check public/sdk/edge-personalization.js\nnode --check public/sdk/edge-personalization.esm.js",
+      "startedAt": "2026-09-07T17:21:31.444Z",
+      "outputs": [
+        {
+          "chunk_id": "ffad9e",
+          "wall_time_seconds": 0.000004334,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "completedAt": "2026-09-07T17:21:31.713Z"
+    },
+    {
+      "name": "scoped-diff",
+      "command": "git diff --check -- 'src/identity/sessionCapability.ts' 'src/identity/link.ts' 'src/routes/identity.ts' 'src/routes/realtime.ts' 'src/routes/decisions.ts' 'src/routes/sort.ts' 'src/content/service.ts' 'src/services/SessionManager.ts' 'src/services/RealtimeSegmentEngine.ts' 'src/durable-objects/ShopperReflex.ts' 'src/durable-objects/PersonalizationWebSocket.ts' 'src/index.ts' 'src/sdk/core.ts' 'src/sdk/identity.ts' 'src/sdk/identify.ts' 'src/sdk/listen.ts' 'src/sdk/types.ts' 'src/sdk/host.ts' 'src/sdk/testHost.ts' 'src/sdk/README.md' 'docs/architecture/25-identity-stitching.md' 'src/routes/identity.test.ts' 'src/routes/realtime.sdkContract.test.ts' 'src/routes/sort.test.ts' 'src/services/SessionManager.identity.test.ts' 'src/services/sessionDefer.test.ts' 'src/reflex/shopperReflex.identity.test.ts' 'src/content/consent.test.ts' 'src/sdk/core.test.ts' 'src/sdk/identify.test.ts' 'src/sdk/listen.test.ts' 'src/sdk/session.test.ts' 'src/index.api-boundary.test.ts' 'public/sdk/edge-personalization.js' 'public/sdk/edge-personalization.esm.js'",
+      "startedAt": "2026-09-07T17:21:32.461Z",
+      "outputs": [
+        {
+          "chunk_id": "1da293",
+          "wall_time_seconds": 0.424421739,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "completedAt": "2026-09-07T17:21:32.461Z"
+    },
+    {
+      "name": "K1-consent-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/routes/sort.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/reflex/shopperReflex.identity.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T17:28:13.303Z",
+      "outputs": [
+        {
+          "chunk_id": "d78172",
+          "wall_time_seconds": 1.000899224,
+          "session_id": 2272,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "7e631f",
+          "wall_time_seconds": 5.001276995,
+          "session_id": 2272,
+          "original_token_count": 833,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (22 tests) 110ms\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\nW04.02 owned operation counts {\"host\":\"session\",\"analyticsReads\":1,\"preferencesReads\":3,\"preferencesWrites\":2}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nW04.02 owned operation counts {\"host\":\"do\",\"analyticsReads\":0,\"preferencesReads\":0,\"preferencesWrites\":0}\n\n ✓ src/routes/realtime.sdkContract.test.ts  (4 tests) 124ms\n ✓ src/services/SessionManager.identity.test.ts  (11 tests) 18ms\n ✓ src/content/consent.test.ts  (11 tests) 18ms\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > export → absorb: the person carries what the browser learned, under the person’s id\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > absorb twice, from two devices: counters add and the vector is the sum\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > forward: the browser’s object hands ingest and snapshot to the person’s\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > linkVisitor on the object host > does the whole thing: export, absorb, forward, and answers the person’s audiences\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/reflex/shopperReflex.identity.test.ts  (8 tests) 62ms\nstdout | src/reflex/shopperReflex.identity.test.ts > CW29: the snapshot says the stage > reports the journey stage the object last derived, and null before any event\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/services/sessionDefer.test.ts  (11 tests) 285ms\n"
+        },
+        {
+          "chunk_id": "17471c",
+          "wall_time_seconds": 0.000003378,
+          "exit_code": 0,
+          "original_token_count": 59,
+          "output": " ✓ src/routes/sort.test.ts  (5 tests) 35ms\n\n Test Files  7 passed (7)\n      Tests  72 passed (72)\n   Start at  13:28:16\n   Duration  32.07s (transform 3.87s, setup 0ms, collect 13.40s, tests 652ms, environment 1ms, prepare 13.49s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T17:29:00.987Z"
+    },
+    {
+      "name": "K3-consent-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t W04.02",
+      "startedAt": "2026-09-07T17:28:14.658Z",
+      "outputs": [
+        {
+          "chunk_id": "cd8f87",
+          "wall_time_seconds": 1.001320071,
+          "session_id": 43974,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "a3a949",
+          "wall_time_seconds": 0.000001757,
+          "exit_code": 0,
+          "original_token_count": 127,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (27 tests | 25 skipped) 9495ms\n\n Test Files  1 passed (1)\n      Tests  2 passed | 25 skipped (27)\n   Start at  13:28:16\n   Duration  19.08s (transform 1.69s, setup 0ms, collect 6.51s, tests 9.49s, environment 0ms, prepare 2.08s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T17:28:44.934Z"
+    },
+    {
+      "name": "application-consent-final",
+      "command": "w0402_typecheck_dir=$(mktemp -d /tmp/w0402-typecheck.XXXXXX)\nnode node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile \"$w0402_typecheck_dir/application.tsbuildinfo\"",
+      "startedAt": "2026-09-07T17:28:16.022Z",
+      "outputs": [
+        {
+          "chunk_id": "17fb7b",
+          "wall_time_seconds": 1.000515857,
+          "session_id": 77044,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "1a964b",
+          "wall_time_seconds": 8.43e-7,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "completedAt": "2026-09-07T17:28:44.936Z"
+    },
+    {
+      "name": "scoped-diff-final",
+      "command": "git diff --check -- 'src/identity/sessionCapability.ts' 'src/identity/link.ts' 'src/routes/identity.ts' 'src/routes/realtime.ts' 'src/routes/decisions.ts' 'src/routes/sort.ts' 'src/content/service.ts' 'src/services/SessionManager.ts' 'src/services/RealtimeSegmentEngine.ts' 'src/durable-objects/ShopperReflex.ts' 'src/durable-objects/PersonalizationWebSocket.ts' 'src/index.ts' 'src/sdk/core.ts' 'src/sdk/identity.ts' 'src/sdk/identify.ts' 'src/sdk/listen.ts' 'src/sdk/types.ts' 'src/sdk/host.ts' 'src/sdk/testHost.ts' 'src/sdk/README.md' 'docs/architecture/25-identity-stitching.md' 'src/routes/identity.test.ts' 'src/routes/realtime.sdkContract.test.ts' 'src/routes/sort.test.ts' 'src/services/SessionManager.identity.test.ts' 'src/services/sessionDefer.test.ts' 'src/reflex/shopperReflex.identity.test.ts' 'src/content/consent.test.ts' 'src/sdk/core.test.ts' 'src/sdk/identify.test.ts' 'src/sdk/listen.test.ts' 'src/sdk/session.test.ts' 'src/index.api-boundary.test.ts' 'public/sdk/edge-personalization.js' 'public/sdk/edge-personalization.esm.js'",
+      "startedAt": "2026-09-07T17:29:00.987Z",
+      "outputs": [
+        {
+          "chunk_id": "3ef366",
+          "wall_time_seconds": 0.434759946,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "completedAt": "2026-09-07T17:29:01.782Z"
+    }
+  ]
+}

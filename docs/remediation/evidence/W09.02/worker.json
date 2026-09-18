@@ -1,0 +1,456 @@
+{
+  "task": "W09.02",
+  "actor": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "source_stopped_awaiting_independent_review",
+  "authority": {
+    "baseline": {
+      "path": "docs/remediation/design/W09.02/baseline.json",
+      "sha256": "9991143a6e2aa808cf1dba5dc5d84c38a59d418602770f54314a9c6920cb2a25"
+    },
+    "plan": {
+      "path": "docs/remediation/design/W09.02/plan.md",
+      "sha256": "aea3b55308804c2f6123028dbdf862d97bff1d3389790802e07ac528d25ac846"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W09.02/admission.json",
+      "sha256": "5d44585bd0542023f09550d5fc738681921c31bc786ce8982ec452bb5c7699b6"
+    },
+    "contract_sha256": "d6b695151d6933c0f60f0a11d5e5301c2b1257c3935ca7c1dbf0aeb0bdf6a8af",
+    "admission_journal": 1028,
+    "direct_admission": "59fd8a PASS exit 0/drained; 75 pins including 65 protected and ten owned",
+    "entry_assurance": "Root entry 96601 VALID1019 and actual partial-retry baseline ac98e9 reused, not rerun by worker",
+    "scope": "User-approved local W09 recovery including duplicate prevention and erasure safeguards; exact ten source/fixture/kit files plus this record. No deployment or new cloud resources."
+  },
+  "implemented": [
+    "Exact LEDGER_RECOVERY_ENABLED==='true' gates producer managed identities and fallback; consumers/eraser recognize managed data independently. Legacy/default-off producer behavior and existing logical IDs remain.",
+    "Frozen delivery UUID plus full-delivery digest/count commitment rejects reuse across changed payload/carrier/partition. Immutable part claims bind UUID, tenant/hour/stream, digest/count and canonical range-key destination. Metadata resides under fixed non-date ledger-delivery/identities and ledger-delivery/claims namespaces, outside canonical tenant/date listings.",
+    "Canonical NDJSON retains original fields plus reserved _ledger_delivery {id,ordinal}. The common sink conditionally creates/appends by original destination across regrouped/partial/uncertain retries, deduplicates transport identity rather than logical IDs, and rejects conflicting provenance.",
+    "New claims retain grouped canonical objects with 100-part/16MiB bounds. Part bytes are cached, and each CAS attempt reloads the object before fresh journal/tombstone checks. Existing rows are append-only in the sink; incoming cutoff rows are suppressed. At most three retries after explicit null preconditions; thrown storage errors are terminal.",
+    "Producer queue rejection, missing capability and oversized queue rows can use the same frozen-identity sink. Queue receipt and R2 capture counts remain separate, with conserved newlyStored/alreadyPresent/suppressed/unknown/notAttempted disposition and one fixed-code/numeric failure diagnostic.",
+    "Managed erasure preserves marker/custom metadata and conditionally replaces bodies, including empty bodies instead of deleting managed data objects. Conflict or unexpected body retains durable intent and fails closed, without rebase or guessed credits. Exact after-state reconciles a lost acknowledgement.",
+    "Three added ledger groups and one added erasure group exercise actual shared producer/consumer/sink paths. Embedded Miniflare native R2 smoke verifies conditional create, stale ETag refusal, empty-body metadata retention and concurrent same-delivery capture; no emitted build or external service."
+  ],
+  "final_results": {
+    "runtime": {
+      "command": "runtime-final-2",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "70c609",
+      "passed": 32,
+      "failed": 0,
+      "intentionally_skipped": 0,
+      "new_groups": 4,
+      "components": [
+        {
+          "fixture": "src/ledger/ledger.test.ts",
+          "passed": 20,
+          "new_groups": 3
+        },
+        {
+          "fixture": "src/ledger/erasure.test.ts",
+          "passed": 12,
+          "new_groups": 1
+        }
+      ],
+      "native_scope": "Installed in-memory Miniflare R2 binding: actual conditional operations and shared sink calls through that binding, not a deployed full-worker/latency claim."
+    },
+    "compiler": {
+      "command": "compiler-final-2",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "14a488"
+    },
+    "lint": {
+      "command": "lint-final",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "12b7cf",
+      "errors": 0,
+      "warnings": 0,
+      "baseline_warnings": 0,
+      "new_warnings": 0
+    },
+    "whitespace": {
+      "command": "whitespace",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "4e7be6",
+      "new_untracked_file": {
+        "files": [
+          "src/ledger/delivery.ts"
+        ],
+        "ok": true
+      }
+    },
+    "protected_sources": {
+      "command": "source-stop",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "9bb023",
+      "checked": 65,
+      "mismatches": []
+    }
+  },
+  "failures_and_superseding_validation": [
+    {
+      "candidate": "runtime-1",
+      "result": "31 passed / 1 failed; exit 1/drained 061892.",
+      "cause": "The new erasure fixture crossed an hour boundary and injected a row into the wrong managed object's hour, so strict object validation preceded the intended active-journal assertion.",
+      "correction": "Aligned synthetic target/cutoff/survivor/racer times within one original canonical hour/range. No production behavior changed. runtime-2 then passed all32."
+    },
+    {
+      "candidate": "compiler-1 and lint-1",
+      "result": "Compiler exit2/drained d2cc13: two TS2355 fixture return errors. Lint exit0/drained fdf35b nevertheless failed the zero-warning criterion with two new unused-variable warnings.",
+      "correction": "Explicit undefined returns in two synthetic base put methods; removed one unused type import and changed the test provenance projection to avoid an unused binding. runtime-final and compiler-final passed; those passes are superseded by the final guards below."
+    },
+    {
+      "candidate": "Pre-STOP strictness alignment",
+      "result": "No runtime failure; source review found acknowledgement/range validation asymmetries before freeze.",
+      "correction": "Managed erasure now refuses empty-string acknowledgement ETags; managed-body validation checks original filename timestamp bounds. Added an out-of-range carrier refusal within the existing malformed-state group. Same fixed32 plus compiler/lint/whitespace passed on final bytes."
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-11T23:09:54.519Z",
+    "files": [
+      {
+        "path": "src/ledger/enqueue.ts",
+        "sha256": "7874967b3c197812b16aad956f71bf1e93881984ef7ea84f7bba5dcb21b4b156"
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "7061023d9e05636367778a0d1b67de6c6763dd3d08a29ff78ce274207027faf4"
+      },
+      {
+        "path": "src/ledger/writer.ts",
+        "sha256": "607cf3fdea9f8b8703cd8c9ae016a3d8aa922ebce91a74e89428d0049279f069"
+      },
+      {
+        "path": "src/ledger/consume.ts",
+        "sha256": "2e8a6bd2d3a6d2d0cb9b6ddfd11b64ca2ecb85aed9965eb5cf7c4bf7220f6655"
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+      },
+      {
+        "path": "src/ledger/delivery.ts",
+        "sha256": "4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995"
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "83cf1ecc997f49ff5bc89cd5878400fc918a09a3ab95c50b7abc8e15a33bceac"
+      },
+      {
+        "path": "src/ledger/erasure.test.ts",
+        "sha256": "28c8ed6fb54aa07595767c3a7bb2accc3419efab087a162cceff1c1c5cb6abbf"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "35438951a871ff66afd51690ec1712630b3d678e976d490f4290a89c013d1676"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "baseline": {
+      "path": "docs/remediation/design/W09.02/baseline.json",
+      "sha256": "9991143a6e2aa808cf1dba5dc5d84c38a59d418602770f54314a9c6920cb2a25"
+    },
+    "selection": "All baseline.pins entries with role source",
+    "checked": 65,
+    "mismatches": []
+  },
+  "limitations": [
+    "Bounded local managed capture only; independent frozen review/lead acceptance pending. Full W09/F16/N07/N08/N10, customer/contractual/release acceptance are not claimed.",
+    "Default-off; consumer-and-eraser-first rollout/activation is not performed or authorized by this record. Old consumers and unmarked legacy retry/partial-write behavior remain qualified residuals.",
+    "No durable raw outbox, DLQ/quarantine, process-kill-before-acknowledged-capture recovery, online fan-out reconciliation, SDK logical-event idempotency or automatic late-hour aggregate reconstruction.",
+    "Canonical grouping is preserved for healthy managed batches within explicit limits; exceptional fallback/regroup fragmentation and fold capacity are not a deployed throughput guarantee.",
+    "Fresh journal/tombstone reads and object CAS are not a global erasure transaction. Stale pre-journal/cutoff writes, body-ETag ABA, concurrent unconditional journal coordination and manifest omissions remain limitations. Unexpected body conflicts intentionally hold the durable intent; no automatic rebase/recovery coordinator is added.",
+    "Metadata-only commitments/claims and retained empty managed objects have no automatic purge/retention policy. D06 claim/key/retention lifecycle and D10 customer policy remain human decisions.",
+    "Serialization/AE scheduling begin synchronously; queue/R2 I/O remains in the existing unawaited background path. Queue acceptance, canonical capture and client delivery are distinct; no latency/SLO or complete durable recording claim.",
+    "Native evidence uses ephemeral synthetic Miniflare R2, with outbound access disabled. No external/customer-data/cloud-resource/credential operations, install/emitted build, deployment, commit/push or governance edits were performed."
+  ],
+  "capture_notes": "All required acceptance commands and every yielded output chunk are retained, including failures and superseded passes. Commands ran sequentially, without source edits during execution. Source STOP freezes all ten files. The fixed git diff whitespace check is supplemented at STOP for the new untracked delivery.ts file, which git diff alone would not inspect. Vite's existing CJS deprecation diagnostic is preserved in runtime captures.",
+  "command_captures": [
+    {
+      "kind": "runtime-1",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "acb3af",
+          "wall_time_seconds": 1.001074857,
+          "session_id": 81354,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "061892",
+          "wall_time_seconds": 0.000002613,
+          "exit_code": 1,
+          "original_token_count": 488,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (20 tests) 5281ms\n ❯ src/ledger/erasure.test.ts  (12 tests | 1 failed) 83ms\n   ❯ src/ledger/erasure.test.ts > CW28 erasure across the ledger > W09.02 managed erasure holds CAS conflicts, reconciles lost acknowledgements, and retains empty-object provenance\n     → expected { ok: false, total: 2, …(7) } to match object { ok: false, …(2) }\n(6 matching properties omitted from actual)\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/ledger/erasure.test.ts > CW28 erasure across the ledger > W09.02 managed erasure holds CAS conflicts, reconciles lost acknowledgements, and retains empty-object provenance\nAssertionError: expected { ok: false, total: 2, …(7) } to match object { ok: false, …(2) }\n(6 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  Object {\n-   \"code\": \"recovery_required\",\n+   \"code\": \"storage_unavailable\",\n    \"newlyStored\": 0,\n    \"ok\": false,\n  }\n\n ❯ src/ledger/erasure.test.ts:94:57\n     92|         expect((await loadTombstones(r2, 'coach')).get('v-managed')?.r…\n     93|         const puts = r2.puts, before = r2.store.get(key);\n     94|         expect(await persistDeliveries(r2, [delivery])).toMatchObject(…\n       |                                                         ^\n     95|         expect(r2.puts).toBe(puts); expect(r2.store.get(key)).toBe(bef…\n     96|         if (mode === 'conflict') {\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed | 1 passed (2)\n      Tests  1 failed | 31 passed (32)\n   Start at  19:00:40\n   Duration  26.18s (transform 5.43s, setup 0ms, collect 14.46s, tests 5.36s, environment 0ms, prepare 4.72s)\n\n"
+        }
+      ],
+      "id": "runtime-1",
+      "exit_code": 1,
+      "drained": true
+    },
+    {
+      "kind": "runtime-2",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "d977f0",
+          "wall_time_seconds": 1.001888297,
+          "session_id": 62713,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "758521",
+          "wall_time_seconds": 5.001776876,
+          "session_id": 62713,
+          "original_token_count": 72,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (20 tests) 5876ms\n"
+        },
+        {
+          "chunk_id": "3ee5d2",
+          "wall_time_seconds": 0.000002519,
+          "exit_code": 0,
+          "original_token_count": 60,
+          "output": " ✓ src/ledger/erasure.test.ts  (12 tests) 74ms\n\n Test Files  2 passed (2)\n      Tests  32 passed (32)\n   Start at  19:01:52\n   Duration  26.00s (transform 4.69s, setup 0ms, collect 12.67s, tests 5.95s, environment 0ms, prepare 5.35s)\n\n"
+        }
+      ],
+      "id": "runtime-2",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "compiler-1",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "captures": [
+        {
+          "chunk_id": "e667e4",
+          "wall_time_seconds": 1.001061058,
+          "session_id": 88619,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6b4191",
+          "wall_time_seconds": 5.001042562,
+          "session_id": 88619,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d2cc13",
+          "wall_time_seconds": 0.000002087,
+          "exit_code": 2,
+          "original_token_count": 72,
+          "output": "src/ledger/erasure.test.ts(19,41): error TS2355: A function whose declared type is neither 'undefined', 'void', nor 'any' must return a value.\nsrc/ledger/ledger.test.ts(33,41): error TS2355: A function whose declared type is neither 'undefined', 'void', nor 'any' must return a value.\n"
+        }
+      ],
+      "id": "compiler-1",
+      "exit_code": 2,
+      "drained": true
+    },
+    {
+      "kind": "lint-1",
+      "command": "node --input-type=module -e 'import{spawnSync}from\"node:child_process\";const r=spawnSync(process.execPath,[\"--max-old-space-size=512\",\"node_modules/eslint/bin/eslint.js\",...[\"src/ledger/enqueue.ts\",\"src/ledger/records.ts\",\"src/ledger/writer.ts\",\"src/ledger/consume.ts\",\"src/ledger/erasure.ts\",\"src/types/env.ts\",\"src/ledger/ledger.test.ts\",\"src/ledger/erasure.test.ts\",\"src/ledger/delivery.ts\"],\"--format\",\"json\"],{encoding:\"utf8\",maxBuffer:33554432});if(r.stderr)process.stderr.write(r.stderr);try{console.log(JSON.stringify(JSON.parse(r.stdout).map(({source,...rest})=>rest)));}catch{process.stdout.write(r.stdout);}process.exitCode=r.status??1;'",
+      "captures": [
+        {
+          "chunk_id": "bad8e1",
+          "wall_time_seconds": 1.001296167,
+          "session_id": 29107,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "37919e",
+          "wall_time_seconds": 5.003984702,
+          "session_id": 29107,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fdf35b",
+          "wall_time_seconds": 0.000002248,
+          "exit_code": 0,
+          "original_token_count": 925,
+          "output": "[{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/consume.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/delivery.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/enqueue.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/erasure.test.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/erasure.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/ledger.test.ts\",\"messages\":[{\"ruleId\":\"@typescript-eslint/no-unused-vars\",\"severity\":1,\"message\":\"'Delivery' is defined but never used.\",\"line\":29,\"column\":109,\"nodeType\":null,\"messageId\":\"unusedVar\",\"endLine\":29,\"endColumn\":117},{\"ruleId\":\"@typescript-eslint/no-unused-vars\",\"severity\":1,\"message\":\"'_provenance' is assigned a value but never used.\",\"line\":670,\"column\":72,\"nodeType\":null,\"messageId\":\"unusedVar\",\"endLine\":670,\"endColumn\":83}],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":2,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/records.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/writer.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/types/env.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]}]\n"
+        }
+      ],
+      "id": "lint-1",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "runtime-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "3bfc07",
+          "wall_time_seconds": 1.001571476,
+          "session_id": 74351,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c63277",
+          "wall_time_seconds": 5.001341386,
+          "session_id": 74351,
+          "original_token_count": 72,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (20 tests) 9949ms\n"
+        },
+        {
+          "chunk_id": "2d4b48",
+          "wall_time_seconds": 0.000002626,
+          "exit_code": 0,
+          "original_token_count": 60,
+          "output": " ✓ src/ledger/erasure.test.ts  (12 tests) 93ms\n\n Test Files  2 passed (2)\n      Tests  32 passed (32)\n   Start at  19:04:35\n   Duration  47.29s (transform 10.92s, setup 0ms, collect 27.43s, tests 10.04s, environment 0ms, prepare 6.99s)\n\n"
+        }
+      ],
+      "id": "runtime-final",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "compiler-final",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "captures": [
+        {
+          "chunk_id": "b99fab",
+          "wall_time_seconds": 1.003212283,
+          "session_id": 97610,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e2981b",
+          "wall_time_seconds": 0.000002149,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "id": "compiler-final",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "runtime-final-2",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "e206a0",
+          "wall_time_seconds": 1.001274761,
+          "session_id": 64365,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "70c609",
+          "wall_time_seconds": 0.000002266,
+          "exit_code": 0,
+          "original_token_count": 132,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (20 tests) 5177ms\n ✓ src/ledger/erasure.test.ts  (12 tests) 62ms\n\n Test Files  2 passed (2)\n      Tests  32 passed (32)\n   Start at  19:06:48\n   Duration  26.56s (transform 4.71s, setup 0ms, collect 14.01s, tests 5.24s, environment 0ms, prepare 5.19s)\n\n"
+        }
+      ],
+      "id": "runtime-final-2",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "compiler-final-2",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "captures": [
+        {
+          "chunk_id": "1823f2",
+          "wall_time_seconds": 1.000945343,
+          "session_id": 60540,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "14a488",
+          "wall_time_seconds": 0.00000189,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "id": "compiler-final-2",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "lint-final",
+      "command": "node --input-type=module -e 'import{spawnSync}from\"node:child_process\";const r=spawnSync(process.execPath,[\"--max-old-space-size=512\",\"node_modules/eslint/bin/eslint.js\",...[\"src/ledger/enqueue.ts\",\"src/ledger/records.ts\",\"src/ledger/writer.ts\",\"src/ledger/consume.ts\",\"src/ledger/erasure.ts\",\"src/types/env.ts\",\"src/ledger/ledger.test.ts\",\"src/ledger/erasure.test.ts\",\"src/ledger/delivery.ts\"],\"--format\",\"json\"],{encoding:\"utf8\",maxBuffer:33554432});if(r.stderr)process.stderr.write(r.stderr);try{console.log(JSON.stringify(JSON.parse(r.stdout).map(({source,...rest})=>rest)));}catch{process.stdout.write(r.stdout);}process.exitCode=r.status??1;'",
+      "captures": [
+        {
+          "chunk_id": "891d0d",
+          "wall_time_seconds": 1.00065977,
+          "session_id": 83128,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4b8502",
+          "wall_time_seconds": 5.000764365,
+          "session_id": 83128,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "12b7cf",
+          "wall_time_seconds": 0.000002446,
+          "exit_code": 0,
+          "original_token_count": 821,
+          "output": "[{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/consume.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/delivery.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/enqueue.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/erasure.test.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/erasure.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/ledger.test.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/records.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/writer.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/types/env.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]}]\n"
+        }
+      ],
+      "id": "lint-final",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "whitespace",
+      "command": "git diff --check -- src/ledger/enqueue.ts src/ledger/records.ts src/ledger/writer.ts src/ledger/consume.ts src/ledger/erasure.ts src/types/env.ts src/ledger/delivery.ts src/ledger/ledger.test.ts src/ledger/erasure.test.ts docs/kit/02-api-reference.md",
+      "captures": [
+        {
+          "chunk_id": "4e7be6",
+          "wall_time_seconds": 0.361708178,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "id": "whitespace",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "source-stop",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=p=>createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\"),baseline=\"docs/remediation/design/W09.02/baseline.json\",plan=\"docs/remediation/design/W09.02/plan.md\",admission=\"docs/remediation/evidence/W09.02/admission.json\",b=JSON.parse(fs.readFileSync(baseline,\"utf8\")),protectedPins=b.pins.filter(p=>p.role===\"source\"),mismatches=protectedPins.filter(p=>hash(p.path)!==p.sha256).map(p=>p.path),added=b.owned.filter(p=>p.absent).map(p=>p.path);for(const path of added){const raw=fs.readFileSync(path,\"utf8\");if(/[ \\t]+$/m.test(raw)||/\\n\\n$/.test(raw))throw Error(\"New-file whitespace: \"+path);}if(protectedPins.length!==65||b.owned.length!==10||mismatches.length)throw Error(JSON.stringify({protected:protectedPins.length,owned:b.owned.length,mismatches}));console.log(JSON.stringify({at:new Date().toISOString(),files:b.owned.map(p=>({path:p.path,sha256:hash(p.path)})),protected_sources:{checked:protectedPins.length,mismatches},new_file_whitespace:{files:added,ok:true},authority:{baseline:{path:baseline,sha256:hash(baseline)},plan:{path:plan,sha256:hash(plan)},admission:{path:admission,sha256:hash(admission)}}}));'",
+      "captures": [
+        {
+          "chunk_id": "9bb023",
+          "wall_time_seconds": 0.171275405,
+          "exit_code": 0,
+          "original_token_count": 426,
+          "output": "{\"at\":\"2026-09-11T23:09:54.519Z\",\"files\":[{\"path\":\"src/ledger/enqueue.ts\",\"sha256\":\"7874967b3c197812b16aad956f71bf1e93881984ef7ea84f7bba5dcb21b4b156\"},{\"path\":\"src/ledger/records.ts\",\"sha256\":\"7061023d9e05636367778a0d1b67de6c6763dd3d08a29ff78ce274207027faf4\"},{\"path\":\"src/ledger/writer.ts\",\"sha256\":\"607cf3fdea9f8b8703cd8c9ae016a3d8aa922ebce91a74e89428d0049279f069\"},{\"path\":\"src/ledger/consume.ts\",\"sha256\":\"2e8a6bd2d3a6d2d0cb9b6ddfd11b64ca2ecb85aed9965eb5cf7c4bf7220f6655\"},{\"path\":\"src/ledger/erasure.ts\",\"sha256\":\"0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f\"},{\"path\":\"src/types/env.ts\",\"sha256\":\"222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab\"},{\"path\":\"src/ledger/delivery.ts\",\"sha256\":\"4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995\"},{\"path\":\"src/ledger/ledger.test.ts\",\"sha256\":\"83cf1ecc997f49ff5bc89cd5878400fc918a09a3ab95c50b7abc8e15a33bceac\"},{\"path\":\"src/ledger/erasure.test.ts\",\"sha256\":\"28c8ed6fb54aa07595767c3a7bb2accc3419efab087a162cceff1c1c5cb6abbf\"},{\"path\":\"docs/kit/02-api-reference.md\",\"sha256\":\"35438951a871ff66afd51690ec1712630b3d678e976d490f4290a89c013d1676\"}],\"protected_sources\":{\"checked\":65,\"mismatches\":[]},\"new_file_whitespace\":{\"files\":[\"src/ledger/delivery.ts\"],\"ok\":true},\"authority\":{\"baseline\":{\"path\":\"docs/remediation/design/W09.02/baseline.json\",\"sha256\":\"9991143a6e2aa808cf1dba5dc5d84c38a59d418602770f54314a9c6920cb2a25\"},\"plan\":{\"path\":\"docs/remediation/design/W09.02/plan.md\",\"sha256\":\"aea3b55308804c2f6123028dbdf862d97bff1d3389790802e07ac528d25ac846\"},\"admission\":{\"path\":\"docs/remediation/evidence/W09.02/admission.json\",\"sha256\":\"5d44585bd0542023f09550d5fc738681921c31bc786ce8982ec452bb5c7699b6\"}}}\n"
+        }
+      ],
+      "id": "source-stop",
+      "exit_code": 0,
+      "drained": true
+    }
+  ]
+}

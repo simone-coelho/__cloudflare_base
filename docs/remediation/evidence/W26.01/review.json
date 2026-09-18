@@ -1,0 +1,142 @@
+{
+  "task_id": "W26.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T13:04:08.247Z",
+  "verdict": "pass",
+  "artifact_digest": "85032f438faf65920370711f5516bf83f05a070fa5cf7d868cf13d5fc3b3d38b",
+  "contract_digest": "7c050cd8dd81d7c3450dd484eb09ef0a2ba3675e68ca651336fd74702f3c2c88",
+  "summary": "Independent frozen source and fixed7 runtime PASS for named-slot direct-attribution containment. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W26.01-C1",
+      "verdict": "pass",
+      "evidence": "Reviewed the actual policy delta against captured pre-GO source and canonical W26/F21/F16/F34/doc22 requirements. One shared direct-branch equality guard precedes item/featured-product matching; every reward uses it, and a named miss cannot broaden. First/last sorting, session/window/time filters and per-slot selection are unchanged. Independent runtime covers all seven reward types with both item/product matches, first/last, absent named placement, exact case/whitespace names, unmatched item, time/session refusal, unspecified null/missing/blank/literal unknown and intentionally broad match:any. No policy axis, schema, fatigue or I/O change."
+    },
+    {
+      "id": "W26.01-C2",
+      "verdict": "pass",
+      "evidence": "Inspected and independently executed the actual outcomeFromAction → DecisionRing → LearnStats group for named click and featured-product purchase. Distinct decision identities and matching explicit configs are asserted. A named miss yields zero attributed/eligible/processed receipts, no sends and unchanged stored counters; a hero match forwards once only to hero, records exactly one success, preserves exposures and leaves rail storage unchanged. The cross-hour group uses actual buildHour/reportFromHours and buildReport: exact counts/grids/policies/holdout/exploration parity, one named direct credit, four intentional any-item overlay credits and unchanged per-slot exposure mass. These are actual modules with clone-boundary synthetic storage, not deployed delivery or full-history assurance."
+    },
+    {
+      "id": "W26.01-C3",
+      "verdict": "pass",
+      "evidence": "All four exact forward/reverse deltas and all120 artifact pins/114 source-and-output pins/110 protected sources verified before and after the sole independent fixed7 run. Two grouped additions only; existing three policy cases, W09.04 cascade and hourly/raw parity also passed. Complete worker captures inspected, including failed/superseded candidates. Final K2 session55805, captures8e2cf0/eac091/6ab1b7/32f308/de7c45, exit0/drained, supplies compiler/scopedlint/whitespace proof: zero errors and the same three inherited unused _key/_url/_init warnings confirmed in baseline source. Static and board checks were not replayed. Kit retains unknown/any, placement identity, viewability/fatigue/SDK, policy-version and historical limitations."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W26.01/plan.md",
+      "sha256": "5784ed610ce3114ca098265b5a8ec4eb81213b0a5d21cf4934656527a6605b03"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W26.01/artifact.json",
+      "sha256": "a934de4b2c0b39ca13f71a2d405b77e7365d1b47cb21e54b8de2a9b9b3ac933a"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W26.01/worker.json",
+      "sha256": "e162fbba3c691695d0997e77c2101ce7046e2e3fc4e21947669a18f117057659"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/hourly.test.ts -t 'W26.01|direct match, last credit|respects the window|match any credits|W09.04 reports acknowledged|the day from its hours is the day from its records' --maxWorkers=1 --minWorkers=1",
+    "session_id": 37455,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "captures": [
+      {
+        "chunk_id": "99d1c0",
+        "wall_time_seconds": 1.001165283,
+        "session_id": 37455,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "eb3360",
+        "wall_time_seconds": 0.000002085,
+        "exit_code": 0,
+        "original_token_count": 251,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (23 tests | 18 skipped) 51ms\n ✓ src/learn/hourly.test.ts  (17 tests | 15 skipped) 18ms\n\n Test Files  2 passed (2)\n      Tests  7 passed | 33 skipped (40)\n   Start at  09:02:09\n   Duration  9.06s (transform 1.26s, setup 0ms, collect 2.73s, tests 69ms, environment 0ms, prepare 4.73s)\n\n"
+      }
+    ],
+    "result": {
+      "passed": 7,
+      "unselected": 33,
+      "total": 40,
+      "test_files": 2,
+      "new_grouped_cases": 2,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "before": {
+      "at": "2026-09-12T13:01:56.403Z",
+      "captures": [
+        "cf1afa"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T13:02:58.607Z",
+      "captures": [
+        "cbe07c"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "artifact_pins": 120,
+    "source_and_output_pins": 114,
+    "protected_pins": 110,
+    "changed_protected": [],
+    "pin_mismatches": [],
+    "exact_forward_and_reverse_deltas": 4,
+    "manifest_sha256": "a934de4b2c0b39ca13f71a2d405b77e7365d1b47cb21e54b8de2a9b9b3ac933a",
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "f562e4",
+          "wall_time_seconds": 0.018037982,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T13:01:56.125Z\",\"task\":\"W26.01\",\"state\":\"verification\",\"contract_digest\":\"7c050cd8dd81d7c3450dd484eb09ef0a2ba3675e68ca651336fd74702f3c2c88\",\"artifact_digest\":\"85032f438faf65920370711f5516bf83f05a070fa5cf7d868cf13d5fc3b3d38b\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "e598a2",
+          "wall_time_seconds": 0.067274926,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T13:02:58.186Z\",\"task\":\"W26.01\",\"state\":\"verification\",\"contract_digest\":\"7c050cd8dd81d7c3450dd484eb09ef0a2ba3675e68ca651336fd74702f3c2c88\",\"artifact_digest\":\"85032f438faf65920370711f5516bf83f05a070fa5cf7d868cf13d5fc3b3d38b\"}\n"
+        }
+      ]
+    },
+    "inspection": {
+      "plan_criteria_and_freeze_capture": "603ace",
+      "all_four_actual_delta_capture": "30c673",
+      "complete_worker_record_and_captures": "0ccc24",
+      "baseline_metadata_and_inherited_warning_source": "d4a293",
+      "linked_doc22_clauses": "78f147",
+      "basis": "Independent current source/consumer design inspection reused only where final protected hashes and exact owned deltas preserve it; no agent summary substituted for the actual contract/source."
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Worker K1 candidate1 (9116;c9c1f7/88af4f) passed6/failed1/unselected33: the new purchase fixture incorrectly used unsupported action.data.products. Actual mapping correctly supplied no product match. Owned correction uses supported items:[{productId:'bag-1'}] and asserts mapped type/products; production mapper and guard were not weakened.",
+    "Worker candidate2 (23434;1c3e78/de783e) passed7 but is superseded. K2 candidate (13918;037441/a0460a) exited2 because the synthetic hourly LearnConfig omitted required holdout; lint/whitespace did not execute in that failed compound. Reusing existing learn.holdout corrected only the owned fixture. Final worker fixed7 (45473;85ff7f/9e041d/908389) and final K2 passed on frozen bytes.",
+    "Independent execution retains Vite CJS deprecation and eight existing config-read fallback messages from the selected W09.04 case. These are not new strict configuration-read or publication guarantees. No numerical tolerance, acknowledgement expectation or production behavior was weakened to obtain the final pass.",
+    "The 33 unselected cases were not executed or claimed passing. Prior W25 and other accepted implementation/history assurance is reused only where its relevant source remains unchanged, not as whole-artifact reacceptance."
+  ],
+  "limitations": [
+    "Named-slot direct-attribution containment only; full W26/F21/F16/F34, customer/scientific acceptance and release readiness remain open.",
+    "Null/missing/blank and literal unknown remain unspecified broad direct inputs; a real slot named unknown cannot be distinguished from the SDK sentinel. match:any remains intentionally broad. Exact nonblank names are not case-folded or remapped; the existing wire mapper still trims its inputs.",
+    "Same slot across pages/brands/positions remains ambiguous. No correlated decision/outcome identity, served/rendered/viewable-unit migration, position correction, fatigue model change, SDK lifecycle/refresh or dedup guarantee.",
+    "No policy-version migration, automatic reset/rebuild or historical repair. Old online counters, snapshots and stored hour/day reports are unchanged; new recomputation can differ under the same policy label.",
+    "Actual modules run locally with synthetic storage/namespaces. This does not prove provider/runtime capacity, durable cross-sink delivery, atomic erasure, full horizon/completeness or deployed operation.",
+    "Reviewer ran only the admitted fixed7 runtime once and read-only artifact checks; final static proof was reused. No external/customer-data operations, source/governance edits or subdelegation. Only this review record was written; root owns disposition."
+  ]
+}

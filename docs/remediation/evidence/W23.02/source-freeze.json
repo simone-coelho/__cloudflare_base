@@ -1,0 +1,149 @@
+{
+  "task_id": "W23.02",
+  "at": "2026-09-15T17:24:21.925Z",
+  "contract_digest": "3ef5aefd63ef099ce8a41b227df9db843a596e74bd2ee348295d4e530a669a07",
+  "worker": {
+    "path": "docs/remediation/evidence/W23.02/worker.json",
+    "sha256": "054d9a6bff2e0b65784dfa7f0d54993e9e5d3c6fb836d0869d4e520c041030c8"
+  },
+  "files": [
+    {
+      "path": "src/reflex/regionTrend.ts",
+      "sha256": "e5ab4379a4fab720fe04eeb1ed1af55e390db033caad91c3afd7e45e7e6430e0"
+    },
+    {
+      "path": "src/durable-objects/RegionTrend.ts",
+      "sha256": "1244d0bfd4869a0385b7734694ea88c309a584fb597ae0f2e1b7b6d3503dcc0d"
+    },
+    {
+      "path": "src/reflex/regionTrend.test.ts",
+      "sha256": "d12fb0c7d3a230a3d8a8a22c191018b627fd941f9f2fb89b09117d9962ae231f"
+    }
+  ],
+  "protected": [
+    {
+      "path": "src/reflex/core.ts",
+      "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+      "role": "source"
+    },
+    {
+      "path": "src/reflex/identityMerge.ts",
+      "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508",
+      "role": "source"
+    },
+    {
+      "path": "src/events/actionTypes.ts",
+      "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+      "role": "source"
+    },
+    {
+      "path": "src/services/RealtimeSegmentEngine.ts",
+      "sha256": "9dfec44e96b4bcbaeac12042bebb1d12dbf71614a1d42c31349449baa474b424",
+      "role": "source"
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db",
+      "role": "source"
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b",
+      "role": "source"
+    },
+    {
+      "path": "src/identity/history.ts",
+      "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7",
+      "role": "source"
+    },
+    {
+      "path": "src/types/env.ts",
+      "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+      "role": "source"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+      "role": "source"
+    },
+    {
+      "path": "package.json",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+      "role": "source"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+      "role": "source"
+    },
+    {
+      "path": ".eslintrc.json",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+      "role": "source"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+      "role": "source"
+    },
+    {
+      "path": "vitest.config.ts",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+      "role": "source"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/16-edge-affinity-reflex.md",
+      "sha256": "b30b96e1edb2ee468742b180c0dba544d3f21ddb30cb2404f62e12509605de43",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F18.md",
+      "sha256": "f4305909762cdb691c46ae8f9db55b560bf19fc60b8a37b5c202da95fe934bb9",
+      "role": "source"
+    },
+    {
+      "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+      "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72",
+      "role": "source"
+    }
+  ],
+  "accepted_dependencies": [
+    {
+      "task_id": "W09.08",
+      "artifact_digest": "6e643f5ff488f5b0f2ed54afc51115e081884a9805d55dcd0c436755c734ad01",
+      "all_artifact_pins_and_review_unchanged": true
+    },
+    {
+      "task_id": "W22.06",
+      "artifact_digest": "10937364913882ed5f15f0789f2e988d86ed0b860d2f535dd359a0e4026f0d1b",
+      "all_artifact_pins_and_review_unchanged": true
+    }
+  ],
+  "root_review": {
+    "actor_id": "w01-lead",
+    "run_id": "/root",
+    "captures": [
+      "adccd7",
+      "e18c6c",
+      "0fd647",
+      "938fab"
+    ],
+    "result": "PASS complete three baseline-relative deltas: existing mergeEntries preserves retained mass/latest per-key time; cap candidates share latest reference; existing numeric timestamp validator guards reducer and object before effects while preserving zero. Two grouped fixtures assert independent exponential expectations, cap edge, invalid no-effects and independent persisted reload/publication. Existing four controls unchanged. Fixed6/3deliberately unselected and compiler1536/three-file lint0/0/whitespace passed on same77 pins, no failed required checks or source rework. Worker initial empty diff inspection is explicitly uncredited, corrected actual diff retained; root independently read complete delta. Protected20 and accepted W09.08/W22.06 artifacts/reviews unchanged; no policy or historical repair claim.",
+    "limitations": "Forward regional retained-counter arithmetic and numeric timestamp integrity only. Preserve browser/server clock purpose, current personal affinity/visit/ODP/geo policy, existing generation/cap/rounding/fan-in and accepted W09.08/W22.06. No evicted/corrupted-state reconstruction, reset/idempotency/lifecycle/retention/age cutoff or full W23/F18/customer/SLO/release claim. No install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/commit/push/external actions."
+  }
+}

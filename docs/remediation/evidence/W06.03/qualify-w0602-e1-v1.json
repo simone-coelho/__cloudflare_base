@@ -1,0 +1,473 @@
+{
+  "subject_type": "evidence",
+  "subject_id": "W06.02-E1",
+  "before": {
+    "id": "W06.02-E1",
+    "task_id": "W06.02",
+    "check_id": "W06.02-K1",
+    "criterion_ids": [
+      "W06.02-C1",
+      "W06.02-C2"
+    ],
+    "kind": "integration_test",
+    "claim": "local_synthetic",
+    "actor_id": "w0602-worker",
+    "run_id": "/root/sdk_consent_preflight",
+    "file": {
+      "path": "docs/remediation/evidence/W06.02/worker-checks.json",
+      "sha256": "0ec5ebe1b13a1272de00f0c35b8fc33bd2f6710f2dac41d76f221a682062ef56"
+    },
+    "at": "2026-09-08T14:12:58Z",
+    "limitations": "Bounded local synthetic delayed/pre-cutoff ledger replay suppression only. No concurrent erasure/write fence, shopper deletion generation, cookie/session/socket revocation, DecisionRing/online-learning/seen/D1/AE/log/external reconciliation, approved retention/physical SLA, deployed/customer/SLO/full W06/finding/gate/release acceptance. Existing /receipts blanket 410 and operator pending counts remain durable for completed barriers; post-cutoff receipts/re-entry UX is not accepted. D03/D06 remain open; W06.01 prior proof is historical.",
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest; actual ledger consumer/writer/erasure modules with existing synthetic R2 seams. No external network.",
+    "workload": "Two existing ledger suites only; grouped delayed decision/outcome, persistent barrier, strict carrier/failure/tenant and ordinary batching cases. Worker app noEmit and scoped diff; no engine latency claim.",
+    "result": "pass",
+    "artifact_digest": "0b46c7e75c3bb6ff912e3933bf212a058bcdf71987db5f85513226ff8ef5b60d",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "56ad9cc4340635299ff863054f26771acf26197ec2a3a6be7eecb0cad1d6e7b9",
+      "configuration": "W06.02 bounded persistent tenant/visitor ledger erasure barrier and delayed pre-cutoff decision/outcome suppression. Three production files, two existing ledger suites and complete worker proof; actual R2-facing erasure/consumer/writer code with synthetic R2 seams. Exact K1 17/17, app noEmit and scoped diff. Packages-external write:false local test import graph plus direct queue/cron/reader/identity callers and configuration pins. Not concurrent cross-store fencing, shopper capability/deletion generation, stale-cookie/session/socket revocation, receipts/re-entry UX, ring/online-learning/D1/AE/log/external erasure, approved retention/physical SLA, deployed/customer/SLO/full W06/finding/gate/release acceptance.",
+      "files": [
+        {
+          "path": "docs/remediation/design/W06.02/plan-v1.md",
+          "role": "configuration",
+          "sha256": "f555ae48bee87d8fd2f35d747d553a3b84333989063456f4e1686abf0a7473b7"
+        },
+        {
+          "path": "docs/remediation/design/W06.02/task-contract-v1.json",
+          "role": "configuration",
+          "sha256": "6ec68e0b6b8108a2f5650752869a37b41d0bc5a524646c0bb1eb6b36130fae6b"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/baseline-v1.json",
+          "role": "configuration",
+          "sha256": "3de3d1c05e33adac14e6fa5f2f97da0e988611a12441f40abb920722cd295636"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/before-sources-v1.json",
+          "role": "configuration",
+          "sha256": "0d2b1a4750d011561c7590a8be8a183f2e50440b3cbe80b3ba2039bd8cd00fd7"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/package-scope-v1.json",
+          "role": "configuration",
+          "sha256": "8d3c50a5dc4d0c99eaa8622e7ad53335894f940c2970e7c0be473bd89d1ec536"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/worker-checks.json",
+          "role": "output",
+          "sha256": "0ec5ebe1b13a1272de00f0c35b8fc33bd2f6710f2dac41d76f221a682062ef56"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/worker.md",
+          "role": "output",
+          "sha256": "143fe376e659aee736b9fe4694ff95bf553bf6ea33d0791379505c53afd5b4ba"
+        },
+        {
+          "path": "node_modules/@cloudflare/workers-types/index.d.ts",
+          "role": "configuration",
+          "sha256": "5b2fafdb708c615a4d2b4a0c06d65d60987e328bccf232989080322f3d259c86"
+        },
+        {
+          "path": "node_modules/esbuild/package.json",
+          "role": "configuration",
+          "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a"
+        },
+        {
+          "path": "node_modules/typescript/package.json",
+          "role": "configuration",
+          "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3"
+        },
+        {
+          "path": "node_modules/vitest/package.json",
+          "role": "configuration",
+          "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "configuration",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "package.json",
+          "role": "configuration",
+          "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+        },
+        {
+          "path": "src/content/holdout.ts",
+          "role": "source",
+          "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc"
+        },
+        {
+          "path": "src/content/import.ts",
+          "role": "source",
+          "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "role": "source",
+          "sha256": "1706f0087516cb45865a1a04904663e5bc314eabd0f7087e1fe9e75bce33d8f6"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "4f3ed7ab4eb8e0016f09931b794041c1aea649e7eccacab076e7da1dc943fcfb"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "source",
+          "sha256": "2959c467763850b5de6d7c904d6bc5ec8ffd2c56e440753f3a284488cd0279e1"
+        },
+        {
+          "path": "src/learn/priors.ts",
+          "role": "source",
+          "sha256": "bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "role": "source",
+          "sha256": "ace43a542d4f5ef96ecc5d7eb17256cb391390832092c319bd0a0e01c3ab57ff"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a"
+        },
+        {
+          "path": "src/ledger/consume.ts",
+          "role": "output",
+          "sha256": "bea6cc737317a20033372e73df2f58e91b79751c0fc8cd6980de4ae1a16ac5c5"
+        },
+        {
+          "path": "src/ledger/enqueue.ts",
+          "role": "source",
+          "sha256": "1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830"
+        },
+        {
+          "path": "src/ledger/erasure.test.ts",
+          "role": "output",
+          "sha256": "5f0fd09a6904bb636c64a2d80e45d116e40658bdaccf27a6b94ae4cd4d9e7905"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "output",
+          "sha256": "cb76469bbb606eba781116ba85bc0d685933f43ce5fcd8986ea580559929877a"
+        },
+        {
+          "path": "src/ledger/ledger.test.ts",
+          "role": "output",
+          "sha256": "8990fbeea353848e1c0a1819de16811e7874dc1ce527df8f3f7131f2f92149db"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "73f8fbd34413425c34c3ac64a9ef853e302a18278f84b5df8bfb58073235f11e"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "output",
+          "sha256": "4b6c25ead40c75908aa683c0c49c3a8f1945861f40cda598925f18e74c850e5b"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+        },
+        {
+          "path": "src/reflex/merchandising.ts",
+          "role": "source",
+          "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "595014de054f86c1412cd4beb9c65fd464ec4bdcbd8361970440942f9a040902"
+        },
+        {
+          "path": "src/services/JourneyStage.ts",
+          "role": "source",
+          "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "configuration",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "configuration",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        }
+      ],
+      "digest": "0b46c7e75c3bb6ff912e3933bf212a058bcdf71987db5f85513226ff8ef5b60d"
+    }
+  },
+  "after": {
+    "id": "W06.02-E1",
+    "task_id": "W06.02",
+    "check_id": "W06.02-K1",
+    "criterion_ids": [
+      "W06.02-C1",
+      "W06.02-C2"
+    ],
+    "kind": "integration_test",
+    "claim": "local_synthetic",
+    "actor_id": "w0602-worker",
+    "run_id": "/root/sdk_consent_preflight",
+    "file": {
+      "path": "docs/remediation/evidence/W06.02/worker-checks.json",
+      "sha256": "0ec5ebe1b13a1272de00f0c35b8fc33bd2f6710f2dac41d76f221a682062ef56"
+    },
+    "at": "2026-09-08T14:12:58Z",
+    "limitations": "Bounded local synthetic delayed/pre-cutoff ledger replay suppression only. No concurrent erasure/write fence, shopper deletion generation, cookie/session/socket revocation, DecisionRing/online-learning/seen/D1/AE/log/external reconciliation, approved retention/physical SLA, deployed/customer/SLO/full W06/finding/gate/release acceptance. Existing /receipts blanket 410 and operator pending counts remain durable for completed barriers; post-cutoff receipts/re-entry UX is not accepted. D03/D06 remain open; W06.01 prior proof is historical.",
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest; actual ledger consumer/writer/erasure modules with existing synthetic R2 seams. No external network.",
+    "workload": "Two existing ledger suites only; grouped delayed decision/outcome, persistent barrier, strict carrier/failure/tenant and ordinary batching cases. Worker app noEmit and scoped diff; no engine latency claim.",
+    "result": "pass",
+    "artifact_digest": "0b46c7e75c3bb6ff912e3933bf212a058bcdf71987db5f85513226ff8ef5b60d",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "56ad9cc4340635299ff863054f26771acf26197ec2a3a6be7eecb0cad1d6e7b9",
+      "configuration": "W06.02 bounded persistent tenant/visitor ledger erasure barrier and delayed pre-cutoff decision/outcome suppression. Three production files, two existing ledger suites and complete worker proof; actual R2-facing erasure/consumer/writer code with synthetic R2 seams. Exact K1 17/17, app noEmit and scoped diff. Packages-external write:false local test import graph plus direct queue/cron/reader/identity callers and configuration pins. Not concurrent cross-store fencing, shopper capability/deletion generation, stale-cookie/session/socket revocation, receipts/re-entry UX, ring/online-learning/D1/AE/log/external erasure, approved retention/physical SLA, deployed/customer/SLO/full W06/finding/gate/release acceptance.",
+      "files": [
+        {
+          "path": "docs/remediation/design/W06.02/plan-v1.md",
+          "role": "configuration",
+          "sha256": "f555ae48bee87d8fd2f35d747d553a3b84333989063456f4e1686abf0a7473b7"
+        },
+        {
+          "path": "docs/remediation/design/W06.02/task-contract-v1.json",
+          "role": "configuration",
+          "sha256": "6ec68e0b6b8108a2f5650752869a37b41d0bc5a524646c0bb1eb6b36130fae6b"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/baseline-v1.json",
+          "role": "configuration",
+          "sha256": "3de3d1c05e33adac14e6fa5f2f97da0e988611a12441f40abb920722cd295636"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/before-sources-v1.json",
+          "role": "configuration",
+          "sha256": "0d2b1a4750d011561c7590a8be8a183f2e50440b3cbe80b3ba2039bd8cd00fd7"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/package-scope-v1.json",
+          "role": "configuration",
+          "sha256": "8d3c50a5dc4d0c99eaa8622e7ad53335894f940c2970e7c0be473bd89d1ec536"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/worker-checks.json",
+          "role": "output",
+          "sha256": "0ec5ebe1b13a1272de00f0c35b8fc33bd2f6710f2dac41d76f221a682062ef56"
+        },
+        {
+          "path": "docs/remediation/evidence/W06.02/worker.md",
+          "role": "output",
+          "sha256": "143fe376e659aee736b9fe4694ff95bf553bf6ea33d0791379505c53afd5b4ba"
+        },
+        {
+          "path": "node_modules/@cloudflare/workers-types/index.d.ts",
+          "role": "configuration",
+          "sha256": "5b2fafdb708c615a4d2b4a0c06d65d60987e328bccf232989080322f3d259c86"
+        },
+        {
+          "path": "node_modules/esbuild/package.json",
+          "role": "configuration",
+          "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a"
+        },
+        {
+          "path": "node_modules/typescript/package.json",
+          "role": "configuration",
+          "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3"
+        },
+        {
+          "path": "node_modules/vitest/package.json",
+          "role": "configuration",
+          "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "configuration",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "package.json",
+          "role": "configuration",
+          "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+        },
+        {
+          "path": "src/content/holdout.ts",
+          "role": "source",
+          "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc"
+        },
+        {
+          "path": "src/content/import.ts",
+          "role": "source",
+          "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "role": "source",
+          "sha256": "1706f0087516cb45865a1a04904663e5bc314eabd0f7087e1fe9e75bce33d8f6"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "4f3ed7ab4eb8e0016f09931b794041c1aea649e7eccacab076e7da1dc943fcfb"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "source",
+          "sha256": "2959c467763850b5de6d7c904d6bc5ec8ffd2c56e440753f3a284488cd0279e1"
+        },
+        {
+          "path": "src/learn/priors.ts",
+          "role": "source",
+          "sha256": "bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "role": "source",
+          "sha256": "ace43a542d4f5ef96ecc5d7eb17256cb391390832092c319bd0a0e01c3ab57ff"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a"
+        },
+        {
+          "path": "src/ledger/consume.ts",
+          "role": "output",
+          "sha256": "bea6cc737317a20033372e73df2f58e91b79751c0fc8cd6980de4ae1a16ac5c5"
+        },
+        {
+          "path": "src/ledger/enqueue.ts",
+          "role": "source",
+          "sha256": "1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830"
+        },
+        {
+          "path": "src/ledger/erasure.test.ts",
+          "role": "output",
+          "sha256": "5f0fd09a6904bb636c64a2d80e45d116e40658bdaccf27a6b94ae4cd4d9e7905"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "output",
+          "sha256": "cb76469bbb606eba781116ba85bc0d685933f43ce5fcd8986ea580559929877a"
+        },
+        {
+          "path": "src/ledger/ledger.test.ts",
+          "role": "output",
+          "sha256": "8990fbeea353848e1c0a1819de16811e7874dc1ce527df8f3f7131f2f92149db"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "73f8fbd34413425c34c3ac64a9ef853e302a18278f84b5df8bfb58073235f11e"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "output",
+          "sha256": "4b6c25ead40c75908aa683c0c49c3a8f1945861f40cda598925f18e74c850e5b"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+        },
+        {
+          "path": "src/reflex/merchandising.ts",
+          "role": "source",
+          "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "595014de054f86c1412cd4beb9c65fd464ec4bdcbd8361970440942f9a040902"
+        },
+        {
+          "path": "src/services/JourneyStage.ts",
+          "role": "source",
+          "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "configuration",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "configuration",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        }
+      ],
+      "digest": "0b46c7e75c3bb6ff912e3933bf212a058bcdf71987db5f85513226ff8ef5b60d"
+    }
+  },
+  "reason": "W06.03 will change W06.02 overlapping erasure source/fixture bytes; preserve its accepted snapshot historically and require revalidation for current bytes."
+}

@@ -1,0 +1,28 @@
+{
+  "task_id": "W35.01",
+  "at": "2026-09-15T20:37:23.549Z",
+  "plan": {
+    "path": "docs/remediation/design/W35.01/plan.md",
+    "sha256": "8f53f8f0fb4360a445ecbcdcc98922ee971cebda1a966b906931bfc30ca2d5b9"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W35.01/baseline.json",
+    "sha256": "0d5eed2cd53de3dcc5a4bc77040e4d06c01d9a9641ce859eeaf7953e2ab38bf6"
+  },
+  "contract_digest": "bc1a3df39ea29c77a75dec4bd6d9e8909a5115c2b3dace55ff7b865d16ed14ed",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T20:37:23.549Z",
+    "plan_sha256": "8f53f8f0fb4360a445ecbcdcc98922ee971cebda1a966b906931bfc30ca2d5b9",
+    "rationale": "Root read complete canonical W35/linked findings/D03 and affected source. Local candidate recovery is decision-independent, whole authority/parity/runtime obligations retained. Independent exact-plan review checked before source GO."
+  },
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "plan_sha256": "8f53f8f0fb4360a445ecbcdcc98922ee971cebda1a966b906931bfc30ca2d5b9",
+    "result": "PASS exact plan: candidate staging/reload/publication addresses existing defect without D03; fixed8 retains security and buffered controls; official write-buffer/output-gate limit retained."
+  },
+  "limitations": "Candidate-host local commit/recovery and personalization publication ordering only. D03 pending, no production authority selection, REFLEX_HOST change, migration, schema/retention/identity/consent policy, retry activation or exactly-once external delivery. W35 full parity/races/browser/server/runtime tails and F14 default KV race remain open. W22.07 overlapping exact proof qualified with history/unowned assurance retained; W22.09/W26.04 unchanged. No installs/emitted build/stage/commit/push/deploy/cloud/credentials/customer-data/destructive/external operations."
+}

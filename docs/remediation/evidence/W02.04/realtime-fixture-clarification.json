@@ -1,0 +1,16 @@
+{
+  "before": "93761d871cf4f2921b0ebe4b7f64484600086202a966c09410c440a3051603db",
+  "after": "93761d871cf4f2921b0ebe4b7f64484600086202a966c09410c440a3051603db",
+  "at": "2026-09-10T03:22:53Z",
+  "actor_id": "w01-lead",
+  "task_id": "W02.04",
+  "reason": "Retained selected realtime failure exposes missing fixture operatorGrants. Lead approves correction within the same admitted test/file/command: assert missing-grant403 with zero CACHE/SESSIONS effects, then grant only its exact synthetic subject meridian and kate-spade before the existing positive workflow. This expands the original helper-only delta assumption, not runtime implementation, test-suite breadth, customer authority or task acceptance scope.",
+  "plan_unchanged": {
+    "path": "docs/remediation/design/W02.04/plan.md",
+    "sha256": "a837118e5a63fb632c52bf11ff81551769d11c0440a4b127c9070ccc0d2307d5"
+  },
+  "ownership_unchanged": true,
+  "command_unchanged": true,
+  "failed_output": "Worker retains the first selected realtime command child1 output in worker.json; not a passing result.",
+  "approved_before_edit": true
+}

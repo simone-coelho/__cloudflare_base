@@ -1,0 +1,16 @@
+# W05.06 worker handoff
+
+SDK refusal now precedes behavioral payload/entry/DOM/dataLayer reads and action transport; defaults and necessary identity remain usable. Tracking-only measurement resumes after server acknowledgment. Deliberate current owned preferences alone enable requested switches; old false cookies are expired and rechecked, while failures, stale replies, newly arriving false cookies and partial acknowledgments remain restrictive. Collectors reset dwell/dedupe across withdrawal and identity changes; neither refused events nor old replay/dwell are carried into re-enable.
+
+Scope: four SDK production files, four existing fixtures, concise README, both generated bundles, this handoff and [worker-checks.json](worker-checks.json). Sole worker w0506-worker, gpt-6-astra/xhigh; no subdelegation or governance edits. [Contract](../../design/W05.06/task-contract-v1.json) and retained [baseline](baseline-v1.json)/[originals](before-sources-v1.json) govern. This is an implementation handoff, not independent verification or lead acceptance.
+
+Final fixed K1 passed55/55 across all6 suites. Final sequential app+SDK noEmit, normal SDK build, actual ESM/IIFE smoke and scoped diff passed. In each actual built entrypoint, refusal produced0 behavioral reads,0 actions,0 attribution writes and1 default callback; successful deliberate preferences then allowed1 positive action/payload read without replay. Exact commands/full available outputs and file hashes are in worker-checks.json. Scoped worker source/output digest: `7522ddea773b46c589ab06ad6f1a8200b072f959d28b257312b0ad5818b4a21d`; the lead still owns the complete dependency manifest.
+
+Rework retained: root baseline43/4 exposed the all-POST emit counter; assertion coverage remains. First worker K1 was incomplete (5 suites,46 pass/1 fixture-hook failure plus ENOMEM preventing identify); one intermediate output chunk was truncated and is explicitly unavailable. Second K1 completed6 suites with54/55 and exposed an actual snapshot epoch/default-delivery defect, corrected before third K1 passed55/55 with complete output. Pre-freeze root/independent source review also corrected transport epochs, observer/replay cleanup, cookie ordering and first-bootstrap liveness. No prior failure was rewritten as a pass.
+
+The lead-approved pending-personalization-refusal hold prevents a failed withdrawal with blocked cookies from sending events to a still-personalizing server. It uses existing preferences/session/snapshot acknowledgment and false-only snapshot hints; unanchored measurement is dropped, not queued. No server protocol or per-event round trip was added.
+
+Limitations: local synthetic evidence only, including VM execution of actual built browser hosts; no native-browser/deployed/customer/SLO proof. Existing absent-state compatibility, D03/D06, necessary-record lifecycle, cross-tab/copied-grant/transactional revocation, already-admitted server effects, full W05/finding/gate and customer/release acceptance remain separate. Prior user changes and historical W05.05 proof remain intact under root's recorded qualification.
+
+Next: root freezes the scoped candidate and full manifest; the independent reviewer inspects actual before/final source and complete evidence, reruns exact K1 and bundle smoke, then root dispositions the bounded task. No worker check process remains.
+

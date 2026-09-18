@@ -1,0 +1,11 @@
+# W26.03 — lead acceptance
+
+Accepted 2026-09-14T02:33:45.491Z by w01-lead. Artifact 3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af, contract 41daf7a67d737b929b3a3b982c1f96120cc7ab40b75d374b8a0841ea04cdaa42, review 2e4ee33cfa2784d19c839927bc0ae8f1fd8325143ed0cf12fe9e89e9dd9ef402.
+
+Exact retained/in-batch decision retries no longer duplicate ring/index history. Conflicting, ambiguous or index-only IDs refuse whole append before persistence. New v2 receipts distinguish duplicates; fan preserves legacy v1 meaning. No change to independent statistics writes, served denominators or historical ambiguity.
+
+Root inspected4 owned deltas and exact evidence/pins. Fixed8 passed by worker and independently by Astra/xhigh; full compiler, scoped lint0errors/3inheritedwarnings/no new diagnostic multiplicities, owned whitespace passed. No failed checks or check reruns. Before checks, existing capacity fixtures were adapted to distinct IDs without weakening overflow or independent-statistics assertions; the existing exact append receipt expectation was updated to v2.
+
+Forward retained DecisionRing append containment only. Not statistics exposure/outcome dedup, fan-out retry safety, exactly-once pipeline, historical repair, new retention/schema, served/rendered/viewable denominator or fatigue policy. Existing ambiguous/index-only collisions refuse; no dedup assurance after history expiry/reset. No SDK/ranking/report change, customer/native/SLO/release acceptance, external/cloud/customer-data/deployment/commit/destructive operations. Full W26/F16/F21 remain open; prior accepted overlapping exact-byte proof qualified, implementation/history retained.
+
+Next: Continue decision-independent W22/F16 sink reconciliation: assess bounded duplicate/conflicting-record handling in existing raw/hourly report reads before caps, using existing IDs and erasure/versioned-computation boundaries. Read full W22 scope and linked requirements before admission; no new statistics identifiers or outcome seen-before-send flag. Actual rendered exposure ingestion still requires explicit served/rendered/viewable measurement and accumulation/retention transition; keep current denominators and automatic refresh unchanged. Full pipeline, customer/native and release acceptance remain open.

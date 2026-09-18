@@ -1,0 +1,37 @@
+{
+  "task_id": "W04.03",
+  "at": "2026-09-17T03:34:03.349Z",
+  "actor_id": "w01-lead",
+  "verdict": "LOCAL_W04_IMPLEMENTED_AND_INDEPENDENTLY_VERIFIED; full acceptance withheld",
+  "artifact_digest": "dec5cafe0a7cbd29cc927e9edb6cefac126323d53569f882ebca9b9c79b9240c",
+  "contract_digest": "dfbbecbf7135869e6b481ca27a0bab25f49d9056437739bac99d71540990c392",
+  "review": {
+    "path": "docs/remediation/evidence/W04.03/review-v2.json",
+    "sha256": "129956e8b74f1218c7cf62069d2aa2461552ea0da565a674992854e33bebd9ee",
+    "verdict": "PASS_LOCAL"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W04.03/worker-v2.json",
+    "sha256": "982783651e33d741cec08d921d551b26e84efae39f01648c6c97ccbf9e552ac2"
+  },
+  "independent": {
+    "path": "docs/remediation/evidence/W04.03/independent-R1.json",
+    "sha256": "0c2571f4e5fcbbeb1708d8db4b0c48f2421804358d28a8ac62cd743cefbc8b29"
+  },
+  "source_freeze": {
+    "path": "docs/remediation/evidence/W04.03/source-freeze-v2.json",
+    "sha256": "4f78454b29a92312113b145e154e63bf57613d3713f796791f24fe2b83beaaed"
+  },
+  "results": {
+    "K1": "Compound current local assurance: retained worker-v1 K1.6 passed63/175unselected and affected W35.02 passed1/77; final R1.affected2 passed22/112unselected on the new3-file artifact. Whole original K1/native run is historical, not relabeled a final-artifact rerun. Exact source/delta review qualifies unaffected behavior reuse and current erasure/history replacement. Earlier failed attempts/capture limits retained.",
+    "K2": "Unchanged consumed inputs: worker-v1 K2.5 SDK39 plus tool4, superseding final tool4/syntax/whitespace and second byte-identical ESM/IIFE generation. SDK source/bundles and material/provisioning adapter are byte-identical; no new SDK build/run or real provisioning operation claimed.",
+    "K3": "Final R1.static3 server compiler, three-file lint and whitespace exit0;121/121 scoped warnings exactly match v1. Reuse unchanged SDK compiler, remaining scoped lint/syntax/new-file whitespace and generator proof from v1. Prior whole lint201 warnings, including18 genuinely new original-W04 warnings, remains qualified historical evidence; no whole static command rerun claimed.",
+    "K4": "Distinct final full-original-W04/C1–C7 source/delta/evidence review on stopped artifact;3 R1 roundtrips and119 unchanged pins, original43 remedies/dirty baselines and all earlier review/attempt history retained. Prior REWORK is not rewritten. Local scope only; C7/K6 live acceptance withheld.",
+    "K5": "Independent original K5 passed15/262unselected plus4tool on retained v1, including both native local socket hosts; final independent R1 affected selector passed22/112unselected on all122 before/after matching new pins. Two explicit executions, not a final whole K5 rerun. Changed owner class means native result stays qualified historical assurance; R1 fixtures use actual modules with synthetic demo-config bindings, not native/strict-customer/deployed proof."
+  },
+  "lead_checks": "Read complete final whole-W04 review; checked all122 current pins,3 v1-relative reversible deltas (+545/-37),119 unchanged inputs, unchanged old test prefix/identity fixture and4 immutable v1 records. Verified all10 worker-v2 captured output hashes, edit history and actual final commands/summaries, and independent three-stream hashes/counts/command on same artifact. No product writes or new runtime by lead. Original43 dirty-baseline verification is retained in v1 freeze/review.",
+  "resolution": "R1 measured metadata/import/erasure ordering corrected using digest-only immutable owner cutoff and exact durable-publication attestation; retained raw-byte guard regression fixed without changing its test. Required local C1–C6 passed distinct full-W04 review with explicit component/native reuse qualifications; C7/K6 remains NOT RUN.",
+  "history": "Retain v1 REWORK/artifact,29 worker attempts and15+4 K5, plus all10 R1 attempts, initial two-host failures, intermediate compiler/over-admission failures and capture limitations. Current121 scoped warnings are unchanged from v1; original whole-task201 warning history, including18 genuinely new original-W04 diagnostics, remains explicit.",
+  "live": "Selected deployed backend/material provisioning, actual credentials/resources, customer/real-browser old-cookie/stale-tab/in-flight/multi-account and both-host timing/SLO/release acceptance require separate final-batch authority. No deployed operation, release approval, full W04/F04/F06 closure or W05 policy choice inferred.",
+  "next_action": "W05 is next in original local order. Await the two unanswered owner choices: off until explicit consent including legacy default-generated true; minimal scoped instruction30days from explicit choice, refreshed only by explicit choice, missing/expired=>off. Then admit/delegate the coherent W05 local implementation; do not skip W05 or begin without the choices."
+}

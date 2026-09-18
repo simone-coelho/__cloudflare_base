@@ -1,0 +1,76 @@
+{
+  "at": "2026-09-11T22:11:24Z",
+  "status": "read_only_next_step_no_source_go",
+  "task_basis": "W09.01 accepted; no new task admitted",
+  "journal_seq": 1019,
+  "authority": "Recorded G1 scope is W09.01 only. Latest continue permits resuming the next-step assessment; broader recovery implementation and cloud/resource/customer-data operations have not been approved.",
+  "entry": {
+    "command": "node --max-old-space-size=768 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>134217728&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "session_id": 64476,
+    "exit_status": 0,
+    "drained": true,
+    "result": "check and status VALID1019; 12411 historical/limitation notes each",
+    "captures": [
+      {
+        "chunk_id": "397980",
+        "wall_time_seconds": 1.001440285,
+        "session_id": 64476,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "bc805b",
+        "wall_time_seconds": 5.001505796,
+        "session_id": 64476,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "1d5179",
+        "wall_time_seconds": 2.292497102,
+        "exit_code": 0,
+        "original_token_count": 385,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=18, unscoped=23\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=72, closed=2; evidence records=210\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.01 — W09.01 local containment complete. Next discuss a separately bounded durable producer-recovery slice and its authority/operational choices before implementation; full W09/DLQ/reconciliation/fold and cloud/customer operations are not authorized by this task.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 12411\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=18, unscoped=23\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=72, closed=2; evidence records=210\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.01 — W09.01 local containment complete. Next discuss a separately bounded durable producer-recovery slice and its authority/operational choices before implementation; full W09/DLQ/reconciliation/fold and cloud/customer operations are not authorized by this task.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 12411\n"
+      }
+    ]
+  },
+  "source_findings": [
+    {
+      "path": "src/ledger/consume.ts",
+      "finding": "Random batch identity and zeroed failure receipt after earlier writes; current whole-ledger retry can duplicate already-persisted rows."
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "finding": "Append-to-new-range-object writes; no shared immutable delivery identity or duplicate-safe recovery sink."
+    },
+    {
+      "path": "src/index.ts",
+      "finding": "Acknowledges/retries the complete ledger subset from one aggregate consumer result."
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "finding": "Strict retained barriers exist, but read-then-put is not an atomic erasure fence. Recovery must not recreate rewritten erased content."
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "finding": "Existing fold/object capacity and already-folded-hour repair constrain recovered evidence; more delivery objects cannot be called a capacity remedy."
+    }
+  ],
+  "independent_read_only_assessment": {
+    "actor": "w1405-worker",
+    "run": "/root/w1405_design",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "writes": false,
+    "tests": false,
+    "recommendation": "Retry-safe existing canonical-ledger persistence before automatic producer recovery. No new raw outbox or blind recovery of unknown queue acceptance."
+  },
+  "proposed_next_scope": "Request local W09 delivery-recovery implementation authority: retry-safe ledger persistence and bounded recovery using the existing storage lane, preserving erasure and batching/capacity constraints. Resolve technical dependencies on delivery identity and late folds without claiming full W22/W30 closure. No implementation design is approved by this note.",
+  "rejected_shortcuts": [
+    "Blind re-enqueue/direct fallback after unknown queue acceptance can double-count evidence.",
+    "Adding raw pending/deadletter copies without a retention/deletion owner introduces unapproved storage obligations.",
+    "One object per delivery can amplify the existing fold bottleneck; do not adopt it as a free idempotency fix."
+  ],
+  "limitations": "No new engine changes, tests, deployment, cloud/resource/customer-data operations or package/finding acceptance. One missing raw-report filename read was corrected using rg; one combined historical-report display was truncated and is not new verification evidence. Current source and canonical requirements, not raw recommendations, support this bounded next-step assessment.",
+  "next_action": "Obtain a bounded local W09 recovery mandate; then admit one coherent implementation task with exclusive ownership and the smallest relevant checks. Existing W09.01 accepted implementation remains unchanged."
+}

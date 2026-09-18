@@ -1,0 +1,20 @@
+{
+  "task_id": "W06.05",
+  "recorded_at": "2026-09-08T17:24:19Z",
+  "basis": "Source-confirmed design case: history applies validated old rows to SessionManager or ShopperReflex and records person history without consulting erasure state; fanDecisions/fanOutcome post to DecisionRing/LearnStats without consulting erasure state. The ledger barrier is retained and inclusive but these paths bypass it.",
+  "source_observations": [
+    "src/identity/history.ts applyHistory groups and writes every eligible row without a tombstone read.",
+    "src/learn/fan.ts fanDecisions posts all records to ring and personalized exposures; fanOutcome posts every outcome.",
+    "src/ledger/erasure.ts retains validated pending tombstones after physical rewrite and defines hidden as ts <= erased_at."
+  ],
+  "files": [
+    {"path": "src/ledger/erasure.ts", "sha256": "0d6fb0f80b25041788c6219bae9c365e78a02abec8081365d68888e9eb910765"},
+    {"path": "src/identity/history.ts", "sha256": "010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21"},
+    {"path": "src/learn/fan.ts", "sha256": "13d090c8e11c42916b01ec81e4c5b7ccc2cbedc93ee97fe8f4be4d1a25150496"},
+    {"path": "src/routes/identity.test.ts", "sha256": "b466d97a8d4c16df43251b61370006469aade91ca05b0b2e27cd1c44129d6bda"},
+    {"path": "src/learn/holdoutArms.test.ts", "sha256": "2e51773caa54404635f2d420a6a755da80bfe72cf08f20b03ca7f66dd4384a96"},
+    {"path": "src/content/consent.test.ts", "sha256": "db91d4c984b5a41807421601a9f11b6ed6e55e7616a99d18ea5117682f0a83ed"}
+  ],
+  "acceptance": "One exact three-fixture K1, app noEmit, scoped diff/whitespace, then independent exact K1 review. No new suite or performance programme.",
+  "rollback": "Retain an equivalent active-cutoff enforcement path; deleting the guard reopens both replay paths."
+}

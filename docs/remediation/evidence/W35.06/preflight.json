@@ -1,0 +1,23 @@
+{
+  "task_id": "W35.06",
+  "at": "2026-09-16T02:33:20.319Z",
+  "actor_id": "w3506-reviewer",
+  "run_id": "/root/w3505_source_scout",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "result": "PASS",
+  "reviewed": [
+    "docs/remediation/design/W35.06/plan.md",
+    "docs/remediation/design/W35.06/baseline.json",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/identity/erase.ts",
+    "docs/architecture/35-audit-verification-and-source-of-truth.md"
+  ],
+  "disposition": "PASS after correction: use an atomic target generation barrier and monotonic registration high-water; persist immutable source intent before admission; reuse one erasure id so exact source cleanup and later duplicate object cleanup cannot erase a newer generation; preserve v4 session branches; run affected W35.03-.06 and W06.08-.09 controls.",
+  "requirements": [
+    "Retain admission, erasure and source-cleanup idempotency witnesses across reset and retention.",
+    "Refuse cleanup without an exact generation witness; do not delete newer state.",
+    "Never call target to source while target serialization is held."
+  ],
+  "limitations": "Prospective registrations only; no historical unregistered-source discovery, deployment, migration, customer-data operation, external/physical erasure or release acceptance."
+}

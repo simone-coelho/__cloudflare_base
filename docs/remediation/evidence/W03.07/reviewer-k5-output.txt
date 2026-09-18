@@ -1,0 +1,459 @@
+Command: node node_modules/vitest/vitest.mjs run src/reflex/odpLoop.test.ts src/identity/identity.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/routes/identity.test.ts -t 'W03[.]07' --maxWorkers=1 --minWorkers=1
+Started UTC: 2026-09-17 00:04:20 UTC
+Completion observed UTC: 2026-09-17 00:06:11 UTC
+Exit code: 0
+Execution: one independent run; session 81261 drained.
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+Failed to initialize Optimizely, falling back to mock client
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+Failed to initialize Optimizely, falling back to mock client
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+ledger_delivery_failed {
+  code: 'queue_unavailable',
+  prepared: 1,
+  records: 1,
+  acknowledgedRecords: 0,
+  unknownRecords: 0,
+  notAttemptedRecords: 1,
+  plannedMessages: 1,
+  acknowledgedMessages: 0,
+  unknownMessages: 0,
+  notAttemptedMessages: 1
+}
+learning_incomplete {
+  version: 1,
+  kind: 0,
+  code: 4,
+  received: 1,
+  cutoffSkipped: 0,
+  coalesced: 0,
+  ringAcknowledged: 0,
+  ringUnknown: 0,
+  ringNotAttempted: 1,
+  exposureProcessed: 0,
+  exposureSkipped: 0,
+  exposureUnknown: 0,
+  exposureNotAttempted: 1,
+  creditPlanKnown: 0,
+  attributed: 0,
+  eligible: 0,
+  weightSkipped: 0,
+  creditProcessed: 0,
+  creditSkipped: 0,
+  creditUnknown: 0,
+  creditNotAttempted: 0,
+  alarmsUnknown: 0
+}
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+Failed to initialize Optimizely, falling back to mock client
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+Failed to initialize Optimizely, falling back to mock client
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+Failed to initialize Optimizely, falling back to mock client
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+Failed to initialize Optimizely, falling back to mock client
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+ledger_delivery_failed {
+  code: 'queue_unavailable',
+  prepared: 1,
+  records: 1,
+  acknowledgedRecords: 0,
+  unknownRecords: 0,
+  notAttemptedRecords: 1,
+  plannedMessages: 1,
+  acknowledgedMessages: 0,
+  unknownMessages: 0,
+  notAttemptedMessages: 1
+}
+learning_incomplete {
+  version: 1,
+  kind: 0,
+  code: 4,
+  received: 1,
+  cutoffSkipped: 0,
+  coalesced: 0,
+  ringAcknowledged: 0,
+  ringUnknown: 0,
+  ringNotAttempted: 1,
+  exposureProcessed: 0,
+  exposureSkipped: 0,
+  exposureUnknown: 0,
+  exposureNotAttempted: 1,
+  creditPlanKnown: 0,
+  attributed: 0,
+  eligible: 0,
+  weightSkipped: 0,
+  creditProcessed: 0,
+  creditSkipped: 0,
+  creditUnknown: 0,
+  creditNotAttempted: 0,
+  alarmsUnknown: 0
+}
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+Failed to initialize Optimizely, falling back to mock client
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+Failed to initialize Optimizely, falling back to mock client
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+Error checking feature flag
+Error getting all feature variables
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+ledger_delivery_failed {
+  code: 'queue_unavailable',
+  prepared: 1,
+  records: 1,
+  acknowledgedRecords: 0,
+  unknownRecords: 0,
+  notAttemptedRecords: 1,
+  plannedMessages: 1,
+  acknowledgedMessages: 0,
+  unknownMessages: 0,
+  notAttemptedMessages: 1
+}
+learning_incomplete {
+  version: 1,
+  kind: 0,
+  code: 4,
+  received: 1,
+  cutoffSkipped: 0,
+  coalesced: 0,
+  ringAcknowledged: 0,
+  ringUnknown: 0,
+  ringNotAttempted: 1,
+  exposureProcessed: 0,
+  exposureSkipped: 0,
+  exposureUnknown: 0,
+  exposureNotAttempted: 1,
+  creditPlanKnown: 0,
+  attributed: 0,
+  eligible: 0,
+  weightSkipped: 0,
+  creditProcessed: 0,
+  creditSkipped: 0,
+  creditUnknown: 0,
+  creditNotAttempted: 0,
+  alarmsUnknown: 0
+}
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+ledger_delivery_failed {
+  code: 'queue_unavailable',
+  prepared: 1,
+  records: 1,
+  acknowledgedRecords: 0,
+  unknownRecords: 0,
+  notAttemptedRecords: 1,
+  plannedMessages: 1,
+  acknowledgedMessages: 0,
+  unknownMessages: 0,
+  notAttemptedMessages: 1
+}
+learning_incomplete {
+  version: 1,
+  kind: 0,
+  code: 4,
+  received: 1,
+  cutoffSkipped: 0,
+  coalesced: 0,
+  ringAcknowledged: 0,
+  ringUnknown: 0,
+  ringNotAttempted: 1,
+  exposureProcessed: 0,
+  exposureSkipped: 0,
+  exposureUnknown: 0,
+  exposureNotAttempted: 1,
+  creditPlanKnown: 0,
+  attributed: 0,
+  eligible: 0,
+  weightSkipped: 0,
+  creditProcessed: 0,
+  creditSkipped: 0,
+  creditUnknown: 0,
+  creditNotAttempted: 0,
+  alarmsUnknown: 0
+}
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates
+LiveDecisionProvider: datafile/client init failed — using mock fallback
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > does not add configured provider network or retained activity to buffered processing
+learning_incomplete {
+  version: 1,
+  kind: 1,
+  code: 4,
+  received: 1,
+  cutoffSkipped: 0,
+  coalesced: 0,
+  ringAcknowledged: 0,
+  ringUnknown: 1,
+  ringNotAttempted: 0,
+  exposureProcessed: 0,
+  exposureSkipped: 0,
+  exposureUnknown: 0,
+  exposureNotAttempted: 0,
+  creditPlanKnown: 0,
+  attributed: 0,
+  eligible: 0,
+  weightSkipped: 0,
+  creditProcessed: 0,
+  creditSkipped: 0,
+  creditUnknown: 0,
+  creditNotAttempted: 0,
+  alarmsUnknown: 0
+}
+
+stderr | src/routes/realtime.sdkContract.test.ts > W03.07 configured ODP provenance on both hosts > does not add configured provider network or retained activity to buffered processing
+learning_incomplete {
+  version: 1,
+  kind: 1,
+  code: 4,
+  received: 1,
+  cutoffSkipped: 0,
+  coalesced: 0,
+  ringAcknowledged: 0,
+  ringUnknown: 1,
+  ringNotAttempted: 0,
+  exposureProcessed: 0,
+  exposureSkipped: 0,
+  exposureUnknown: 0,
+  exposureNotAttempted: 0,
+  creditPlanKnown: 0,
+  attributed: 0,
+  eligible: 0,
+  weightSkipped: 0,
+  creditProcessed: 0,
+  creditSkipped: 0,
+  creditUnknown: 0,
+  creditNotAttempted: 0,
+  alarmsUnknown: 0
+}
+
+ ✓ src/routes/realtime.sdkContract.test.ts  (71 tests | 69 skipped) 383ms
+ ✓ src/index.api-boundary.test.ts  (64 tests | 62 skipped) 3358ms
+ ✓ src/routes/identity.test.ts  (46 tests | 45 skipped) 34ms
+ ✓ src/ledger/ledger.test.ts  (28 tests | 27 skipped) 9ms
+stdout | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+Fetched and cached new Optimizely datafile
+Optimizely client initialized successfully (lite/edge build)
+
+stdout | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+Using cached Optimizely datafile
+Optimizely client initialized successfully (lite/edge build)
+
+stdout | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+LiveDecisionProvider: datafile loaded; feature flags 1
+
+stdout | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+Fetched and cached new Optimizely datafile
+
+stdout | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+Using cached Optimizely datafile
+Optimizely client initialized successfully (lite/edge build)
+Fetched and cached new Optimizely datafile
+Optimizely client initialized successfully (lite/edge build)
+
+stdout | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+Using cached Optimizely datafile
+Optimizely client initialized successfully (lite/edge build)
+
+stdout | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+LiveDecisionProvider: datafile loaded; feature flags 1
+
+stdout | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+Fetched and cached new Optimizely datafile
+
+stderr | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+Error refreshing datafile
+
+stdout | src/reflex/odpLoop.test.ts > W03.07 configured customer connectors > binds ordinary, direct variable, raw fresh decisions and both refresh paths to tenant FX identity/cache/destination
+Using cached Optimizely datafile
+Optimizely client initialized successfully (lite/edge build)
+
+ ✓ src/reflex/odpLoop.test.ts  (25 tests | 22 skipped) 35ms
+ ✓ src/identity/identity.test.ts  (17 tests | 16 skipped) 6ms
+
+ Test Files  6 passed (6)
+      Tests  10 passed | 241 skipped (251)
+   Start at  20:04:22
+   Duration  37.39s (transform 6.05s, setup 0ms, collect 19.60s, tests 3.83s, environment 1ms, prepare 10.45s)
+

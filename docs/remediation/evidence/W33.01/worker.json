@@ -1,0 +1,221 @@
+{
+  "task_id": "W33.01",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T19:29:54.794Z",
+  "source_go_at": "2026-09-12T19:23:49.627Z",
+  "contract_digest": "2bec65459bb26297566c5ec273fb9fca3910fc5771c9183c5e025bc9f37aeb2e",
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W33.01/plan.md",
+      "sha256": "179492d94b54bfb45dca513f806a8557ffcc6f7198128e38f4b21bfb055b4551"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W33.01/baseline.json",
+      "sha256": "9361f7c72349b70484665ae180d578fc081e00786ad69b394879e9c971edb40b"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W33.01/admission.json",
+      "sha256": "d2341d910d069569010e4dd3e302c1a485a487d4a7c82002df9a00f02c12f465"
+    }
+  },
+  "implementation_summary": [
+    "Shared raw report writer invokes canonical put only when reporting===null. Explicit empty/custom/preset-equivalent arrays retain computed response data with no writes; aggregate and null raw fallback paths are unchanged.",
+    "Two existing-fixture groups exercise absent/existing keys, meaningful capped aggregate versus raw credits, authenticated POST/GET/window, controlled overlapping custom/canonical completions in both orders, exact bytes/put counts and tenant/brand/date sentinels.",
+    "Kit describes ephemeral custom results/local CSV and canonical reload behavior without claiming historical repair or stronger canonical acknowledgement."
+  ],
+  "criterion_verdicts": {
+    "W33.01-C1": {
+      "worker_result": "pass",
+      "basis": "Direct shared builder and runDayReport prove []/custom/preset arrays cannot create or overwrite canonical storage, while null raw/aggregate publication works; raw2decisions/1credit versus capped aggregate1decision/0credits is non-vacuous."
+    },
+    "W33.01-C2": {
+      "worker_result": "pass",
+      "basis": "Actual enforced operator JWT+tenant middleware and Hono POST/GET/window preserve canonical counts/coverage and bytes; read/put barriers prove overlapping completions in both orders, with one canonical put only and distinct tenant/brand/date sentinels unchanged."
+    },
+    "W33.01-C3": {
+      "worker_result": "worker_checks_pass_independent_review_pending",
+      "basis": "Three owned files, two grouped additions/fixed6, compiler/zero-warning scoped lint/whitespace and29 exact protected pins. Separate frozen review/lead disposition pending."
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 6,
+      "unselected": 24,
+      "files": 2,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 75254,
+      "chunk_id": "633dbb",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w3301_static1"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "command_capture": "w3301_static1"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w3301_static1"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 48070,
+      "chunk_id": "2dcbdc",
+      "component_semantics": "Exact admitted && chain completed with exit0; compiler, scoped lint and whitespace all ran and returned0."
+    }
+  },
+  "execution_history": [
+    {
+      "operation": "apply_patch",
+      "error": "Verification failed: incomplete kit paragraph context did not match; neither source nor kit changed (read-back a517d8).",
+      "corrected": "Retried with exact report row and separate paragraph insertion."
+    },
+    {
+      "capture": "w3301_runtime1",
+      "disposition": "final_pass",
+      "passed": 6,
+      "unselected": 24
+    },
+    {
+      "capture": "w3301_static1",
+      "disposition": "final_pass"
+    },
+    {
+      "capture": "w3301_stop_capture",
+      "disposition": "source_stop_and_protected_pins_pass"
+    },
+    {
+      "runtime_static_failures": [],
+      "qualification": "No failed or superseded runtime/static attempt. One patch verification failure was corrected before the first run."
+    }
+  ],
+  "command_captures": {
+    "w3301_runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W33.01|W30.02|W21 retains repeated credits|the day report comes from the hours' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T19:27:32.634Z",
+      "captures": [
+        {
+          "chunk_id": "c79fb2",
+          "wall_time_seconds": 1.001411113,
+          "session_id": 75254,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "633dbb",
+          "wall_time_seconds": 0.400623492,
+          "exit_code": 0,
+          "original_token_count": 139,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (21 tests | 19 skipped) 36ms\n ✓ src/learn/report.test.ts  (9 tests | 5 skipped) 52ms\n\n Test Files  2 passed (2)\n      Tests  6 passed | 24 skipped (30)\n   Start at  15:27:35\n   Duration  14.91s (transform 3.33s, setup 0ms, collect 7.61s, tests 88ms, environment 0ms, prepare 5.15s)\n\n"
+        }
+      ],
+      "session_id": 75254,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T19:27:50.076Z"
+    },
+    "w3301_static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/report.test.ts --max-warnings 0 && git diff --check -- src/learn/report.ts src/learn/report.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T19:27:57.253Z",
+      "captures": [
+        {
+          "chunk_id": "01f2b8",
+          "wall_time_seconds": 1.00061509,
+          "session_id": 48070,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fdbe28",
+          "wall_time_seconds": 5.000655481,
+          "session_id": 48070,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "948b8c",
+          "wall_time_seconds": 5.001692832,
+          "session_id": 48070,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d51880",
+          "wall_time_seconds": 5.00031564,
+          "session_id": 48070,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2dcbdc",
+          "wall_time_seconds": 0.000001387,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 48070,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T19:28:52.243Z"
+    },
+    "w3301_stop_capture": {
+      "command": "node -e 'const fs=require(\"fs\"),crypto=require(\"crypto\");const hash=p=>crypto.createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\");const base=JSON.parse(fs.readFileSync(\"docs/remediation/design/W33.01/baseline.json\",\"utf8\"));const owned=new Set(base.owned.map(f=>f.path));const protectedPins=base.pins.filter(f=>!owned.has(f.path));const mismatches=protectedPins.filter(f=>hash(f.path)!==f.sha256).map(f=>({path:f.path,expected:f.sha256,actual:hash(f.path)}));console.log(JSON.stringify({final_source_stop:{at:new Date().toISOString(),files:base.owned.map(f=>({path:f.path,sha256:hash(f.path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},references:Object.fromEntries([\"plan\",\"baseline\",\"admission\"].map(k=>{const p=k===\"admission\"?\"docs/remediation/evidence/W33.01/admission.json\":\"docs/remediation/design/W33.01/\"+k+(k===\"plan\"?\".md\":\".json\");return[k,{path:p,sha256:hash(p)}]}))},null,2));if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T19:29:09.882Z",
+      "captures": [
+        {
+          "chunk_id": "c8fea9",
+          "wall_time_seconds": 0.000004613,
+          "exit_code": 0,
+          "original_token_count": 289,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T19:29:10.071Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/report.ts\",\n        \"sha256\": \"40c6a18bc0c65aa562ca9ee905bef07854adb6b97d4d4f97574add652b9bc7ca\"\n      },\n      {\n        \"path\": \"src/learn/report.test.ts\",\n        \"sha256\": \"0572e307386608bbfdbcfcd1c4595505dea181302fac7ebe5e970a8889eb2763\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"94f180647f94692d505b6520c4ae4ab71be6708130355845bae9596f476cf640\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 29,\n    \"matched\": 29,\n    \"mismatches\": []\n  },\n  \"references\": {\n    \"plan\": {\n      \"path\": \"docs/remediation/design/W33.01/plan.md\",\n      \"sha256\": \"179492d94b54bfb45dca513f806a8557ffcc6f7198128e38f4b21bfb055b4551\"\n    },\n    \"baseline\": {\n      \"path\": \"docs/remediation/design/W33.01/baseline.json\",\n      \"sha256\": \"9361f7c72349b70484665ae180d578fc081e00786ad69b394879e9c971edb40b\"\n    },\n    \"admission\": {\n      \"path\": \"docs/remediation/evidence/W33.01/admission.json\",\n      \"sha256\": \"d2341d910d069569010e4dd3e302c1a485a487d4a7c82002df9a00f02c12f465\"\n    }\n  }\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T19:29:10.128Z"
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-12T19:29:10.071Z",
+    "files": [
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "40c6a18bc0c65aa562ca9ee905bef07854adb6b97d4d4f97574add652b9bc7ca"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "0572e307386608bbfdbcfcd1c4595505dea181302fac7ebe5e970a8889eb2763"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "94f180647f94692d505b6520c4ae4ab71be6708130355845bae9596f476cf640"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 29,
+    "matched": 29,
+    "mismatches": []
+  },
+  "limitations": [
+    "Forward isolation in upgraded writer only, not full W33/N09/F17/F25 closure or customer/deployed acceptance. No historical overwrite detection, provenance recovery, backfill or customer-data repair.",
+    "Old binaries and canonical-versus-canonical races remain unresolved. Existing canonical put failure is still swallowed and response does not establish durable save; this guard strengthens neither write acknowledgements nor auth policy.",
+    "Existing malformed non-array POST coercion remains unchanged. Explicit arrays including [] are ephemeral; legacy UI/local CSV can use the response, but subsequent GET/window reads canonical.",
+    "Canonical raw fallback keeps existing history/erasure/cap limits. Attribution, counts, W30.01 temporal correction, W30.02 coverage and UI implementation remain unchanged; relevant selected dependency cases run without claiming broader renewed assurance.",
+    "Only installed Node/Vitest actual builders and authenticated Hono stack with synthetic R2/credentials; no native/cloud/customer-data/deployment/commit/governance changes. Independent frozen review and lead acceptance pending."
+  ]
+}

@@ -1,0 +1,231 @@
+{
+  "task_id": "W01.06",
+  "actor": {
+    "id": "w0106-worker",
+    "run_id": "/root/w0106_worker",
+    "role": "implementer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "provenance": "Lead assignment and delegated run configuration; no subdelegation."
+  },
+  "claim": "local_runtime",
+  "verdict": "pass_pending_independent_review_and_lead_acceptance",
+  "canonical": {
+    "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+    "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+  },
+  "plan": {
+    "path": "docs/remediation/design/W01.06/plan.md",
+    "sha256": "90173f4622cd5c42e5c808c7cd7b2ca3278ab5403e074469c0914e55077dd34b",
+    "contract_digest": "cf5626b9c1326fb75b816e27f8ee5b6ff9631d91f0cdeff846fbb8cbd6031ff1"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W01.06/baseline.json",
+    "sha256": "53aabbd1dea8c506d6220fe5bf4642f91613f895fca6c32aed4fd5f54d5129b1",
+    "case": "Source-confirmed design case admitted by lead, not a newly executed pre-fix exploit. Eight diagnostic GETs accepted site keys; brands exposed all provisioned IDs. Baseline retains exact owned bytes and 333 scoped pins. Root owns reversible frozen deltas and protected-input attestation."
+  },
+  "source_stop_at": "2026-09-10T00:54:57.386Z",
+  "files": [
+    {
+      "path": "src/routes/decisions.ts",
+      "sha256": "fca0b292dbbde7b7ff66ccaf626c56ba4e0e21e5de78f40d39ad9f8e3b3158af"
+    },
+    {
+      "path": "src/middleware/operatorAuth.ts",
+      "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "sha256": "9814eb646018ac10046aeaaa718f40e3827931e82a560af2c88c1a9ab3e539fb"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "6401225bfd2743a6ebd92bf2834680b16fa51d318e2d20834db23fa76550ecfd"
+    }
+  ],
+  "changes": [
+    "Existing operatorWrites() is attached to exactly eight diagnostic GET registrations. It reuses operatorJwt and unchanged TENANTS grant validation only when AUTH_MODE is exactly enforced; HEAD inherits GET authorization.",
+    "hasOperatorGrant is exported without logic changes and reused to filter brands using the verified AuthContext subject. Original manifest order and default flags are mapped before filtering. Open/unset/nonexact modes retain full registry reads.",
+    "Kit changes are limited to two obsolete site-key diagnostic labels, explicit-grant brand discovery and a short mode note. Existing console/learning credential propagation and customer trend/shopper snapshot handlers remain unchanged.",
+    "Existing boundary fixture adds exactly three grouped cases, opt-in populated acme/globex diagnostics, opt-in R2 JSON decoding and synthetic expired/refresh tokens. Two prior brand-discovery positives now use explicit granted JWTs."
+  ],
+  "criteria": {
+    "W01.06-C1": "All eight GET/HEAD families, including current/archive lift variations, are exercised in acme and globex with absent, site-header-only, site-query-only, malformed/refresh/expired JWTs and wrong-tenant operator JWT plus correct target key. Encoded aliases, conflicting selectors and a valid issued shopper capability are refused with no diagnostic destination calls, body reads, state changes, logs or deferred work. Credential validation legitimately reads middleware configuration/crypto inputs. Normal preflight and unknown-method behavior remain.",
+    "W01.06-C2": "Populated current/archive snapshots, joined rows, slot evidence/controls, exploring data and stored day/window reports succeed with each tenant's granted token both with and without target key. Exact CACHE/R2 calls and unchanged stores are asserted. Stored obsolete inference and stale arm rates are sanitized by existing readers; incomplete report hours remain visible. Single/dual grants preserve order/default:false, hide the third tenant, and malformed/missing/wildcard grants fail closed. Open/unset/misspelled modes retain populated diagnostics/full registry. Existing 45 controls execute alongside three additions.",
+    "W01.06-C3": "Four final file hashes, admitted baseline and complete child-command outputs retained here. Independent review, root source freeze/protected-input verification and lead acceptance remain required and are not performed by this worker."
+  },
+  "checks": [
+    {
+      "name": "lint_before",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/routes/decisions.ts src/middleware/operatorAuth.ts src/index.api-boundary.test.ts --format json",
+      "started_at": "2026-09-10T00:47:53.195Z",
+      "completion_observed_at": "2026-09-10T00:48:17.137Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "237ea56af3efaec9c577cbd17b494cba0638aaef40a56a38dc8ac1df449d4bd8",
+      "stdout_gzip_base64": "H4sIAAAAAAAAA+2QPW8CMRBEe36G6zuc+rp8FSkiRWlSIHTa8w5gyWdbu3Y4gvLfo0MpAqnpKHf0RrN6q6PZ+IA3KjvTGTvGYp2tClEbaGc5uToiFrV9z/hESHk+bcrFj/4L4WD73oVUeRNI0A+ksCrO+siYlpR9O6QameSwLNCyLGoaM0KVtlDTrdaN0ZqzQBX8epZDJMljqrGY7q4xGyoUns+zPUn0cfsH8hMNARfYb/pxSVcFPyELHBXwew2n6aORGvDCpjMxtZiKUKsYvWmMIAdy4IfD/OJ3c46OfgK3mslBW4rcFhr0f+vUu4r00TMH7ElgU4ZQSXJfy+4m/ZrSJdUCtQzn1aeoN9uz7fVi8QN7ooASWwQAAA==",
+      "stdout_format": "Complete child stdout then newline then complete child stderr; gzip/base64, no chronological interleaving.",
+      "lint": [
+        {
+          "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.api-boundary.test.ts",
+          "errorCount": 0,
+          "warningCount": 0,
+          "messages": []
+        },
+        {
+          "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/middleware/operatorAuth.ts",
+          "errorCount": 0,
+          "warningCount": 0,
+          "messages": []
+        },
+        {
+          "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/decisions.ts",
+          "errorCount": 0,
+          "warningCount": 0,
+          "messages": []
+        }
+      ],
+      "session_id": 44666,
+      "session_drained": true
+    },
+    {
+      "name": "runtime_first",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-10T00:52:29.165Z",
+      "completion_observed_at": "2026-09-10T00:52:53.825Z",
+      "exit_code": 1,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "945679ba3a21b82a267aa0a23bb351680c310ca0c9261929dd3cc33e7f14c64a",
+      "stdout_gzip_base64": "H4sIAAAAAAAAA8VUTY8cNRC991/I5UkcMqPs2N093x2ItJBdCEIh2l3gsIKRp12z41W33XFVTzIwSJw4cuDOlWv+0/4S6JkhIAgicMGyZJf9/OyqeuUEF589BTaZmqgMuvaiS90yRdaVWWsbyrYmL6wXC0sbqkLTmTo04mr3NVVbvViUVWjtqjKRFkvDlCS4++kVOJbaeUsvlWncYBlab03cKiEWJQz0RjN0BmOHDCvjKrJ9ZMPJbFxzArwNySN8kWYqnSDS89ZFYoSGopEQYVpZh+hkiyWtQiTQhuIW1pkbH1hciQ/PrmC8xUdnp49hicV5Iy747m7g7vsfQS8bKoUsxmkKCVgS8jSF1vh0eUulKMeg562pnGyTBFfEgnNXEeO1R+hl/QPhfvuPOzuMpmgMc4cazfawSzFRYATI02KcF8O8W33cxv3LgDxT4yGjJ9F4XoVYI1PZmE/AJG2DtOYTlKGqqBSM1GzKJ8cYZ0M1mfMJyG9cDL5L4gHdRGpMJOQqzbmfJMm96+GwvloTPvj4EsvWVRZhhc+d0H3G02AJp8+ewDEsNZFKI2QVLomwFmm40HrjhJSljb5pnSUtMbTLingdgjh/o9ZSV+90mEF5ywMfLA263P7OhlWIqLuUWRLjKlb3rofzOrn74dVfO84PwTwEN8MbQUmC89Mnn+D/kdMpM8VudhZjiMW/VNUAZ0d88gAXVJLbkO2W8zRNHnQcx3prYljSP3hYjCbTIp/uBTmajHcwvPUlVq0v9/rac/Scb1op8Kwz+vuxdkzvXhC3lTzCN8fjkx2AMngWROImeCa8B/PCOEFsvbialHXcGCnX5yTlune/k0ih9Ys0S3NVhdJU+tcr7777+Ug57SgP8en9xqlYjLTcVxLep16epv2Hx4LCDn/fvjpSzjpQJGmjf/1MdcvB9/ow/GfnHh5PzXf49m2+sSJL52mRzZM3q/M/9OtMZ1/uNfsLLH3825sFAAA=",
+      "stdout_format": "Complete child stdout then newline then complete child stderr; gzip/base64, no chronological interleaving.",
+      "session_id": 95584,
+      "session_drained": true
+    },
+    {
+      "name": "compiler",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "started_at": "2026-09-10T00:53:42.849Z",
+      "completion_observed_at": "2026-09-10T00:53:57.127Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "stdout_gzip_base64": "H4sIAAAAAAAAA+MCAJMG1zIBAAAA",
+      "stdout_format": "Complete child stdout then newline then complete child stderr; gzip/base64, no chronological interleaving.",
+      "session_id": 12305,
+      "session_drained": true
+    },
+    {
+      "name": "lint_final",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/routes/decisions.ts src/middleware/operatorAuth.ts src/index.api-boundary.test.ts --format json",
+      "started_at": "2026-09-10T00:53:42.869Z",
+      "completion_observed_at": "2026-09-10T00:54:02.586Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "237ea56af3efaec9c577cbd17b494cba0638aaef40a56a38dc8ac1df449d4bd8",
+      "stdout_gzip_base64": "H4sIAAAAAAAAA+2QPW8CMRBEe36G6zuc+rp8FSkiRWlSIHTa8w5gyWdbu3Y4gvLfo0MpAqnpKHf0RrN6q6PZ+IA3KjvTGTvGYp2tClEbaGc5uToiFrV9z/hESHk+bcrFj/4L4WD73oVUeRNI0A+ksCrO+siYlpR9O6QameSwLNCyLGoaM0KVtlDTrdaN0ZqzQBX8epZDJMljqrGY7q4xGyoUns+zPUn0cfsH8hMNARfYb/pxSVcFPyELHBXwew2n6aORGvDCpjMxtZiKUKsYvWmMIAdy4IfD/OJ3c46OfgK3mslBW4rcFhr0f+vUu4r00TMH7ElgU4ZQSXJfy+4m/ZrSJdUCtQzn1aeoN9uz7fVi8QN7ooASWwQAAA==",
+      "stdout_format": "Complete child stdout then newline then complete child stderr; gzip/base64, no chronological interleaving.",
+      "lint": [
+        {
+          "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.api-boundary.test.ts",
+          "errorCount": 0,
+          "warningCount": 0,
+          "messages": []
+        },
+        {
+          "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/middleware/operatorAuth.ts",
+          "errorCount": 0,
+          "warningCount": 0,
+          "messages": []
+        },
+        {
+          "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/decisions.ts",
+          "errorCount": 0,
+          "warningCount": 0,
+          "messages": []
+        }
+      ],
+      "session_id": 93954,
+      "session_drained": true
+    },
+    {
+      "name": "whitespace",
+      "command": "git diff --check -- src/routes/decisions.ts src/middleware/operatorAuth.ts src/index.api-boundary.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-10T00:54:30.850Z",
+      "completion_observed_at": "2026-09-10T00:54:30.933Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "stdout_gzip_base64": "H4sIAAAAAAAAA+MCAJMG1zIBAAAA",
+      "stdout_format": "Complete child stdout then newline then complete child stderr; gzip/base64, no chronological interleaving.",
+      "session_drained": true
+    },
+    {
+      "name": "runtime_final",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-10T00:54:14.000Z",
+      "completion_observed_at": "2026-09-10T00:54:37.612Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "c75521743e4f32067d74a6d1887451e055cb80fc06740f37d720eaa239387f64",
+      "stdout_gzip_base64": "H4sIAAAAAAAAA0WQzW4TQRCE7/MKuZTEAVuyZzLeJd74hkBIcIgQDlxyWI132tlB87Oa7rUIr8GVp+NJ0CYS9K36K5WqW+HL1zvgYvWNtjApixnMzFTZRDcaX4Y5URY2fe/pQrFMizRlkpDCT4pPpu+HWGZ/jq5Sf3JMSuHP71/gOpiQPf3QbgrbU5mzd/VJC7FoYWDVdlgEr2F3TbNLrBTuiQUfQiQGLCbHTB4ru1Z4ngUz0Hb/UNs9s6O4KnAC7K4Pb9qD3S/b93N1EkoG7K3et4yVVJf5XGqC1XbPGzDJPOE68QZDiZEGQau7jjcv3WB3uml4A8qXUEtejn9xT5UmVwlW7294rZS6emiadD8S3n064jSH6FHO+BaEXjPuiie8/fwRgeFpqjQ4Ia9xJMIoMvHBmEsQ0p4u5nEOnozUMp8i8ViKhPyoR0nx1eLZDt95m4un7fLY/2k4l4pUKsGTuBBZXz00t0n9BUGvCnTjAQAA",
+      "stdout_format": "Complete child stdout then newline then complete child stderr; gzip/base64, no chronological interleaving.",
+      "session_id": 50056,
+      "session_drained": true
+    }
+  ],
+  "failures_and_rework": [
+    {
+      "name": "runtime_first",
+      "session_id": 95584,
+      "result": "47/48 passed; one new test failed transport 500 before worker route dispatch.",
+      "cause": "The fixture's anonymous shopper subject 'synthetic-shopper' failed the existing /^vis-[0-9a-f-]{36}$/ requirement in issueSessionCapability.",
+      "correction": "After the failed session drained, replace the synthetic subject with vis-00000000-0000-4000-8000-000000000006. Production authorization code was unchanged. runtime_final supersedes the failed runtime result; original output is retained.",
+      "source": "Root identified the invalid fixture subject while first K1 was running; worker confirmed exact capability validation source and completed the correction."
+    }
+  ],
+  "verification_summary": {
+    "runtime_first": {
+      "passed": 47,
+      "total": 48,
+      "exit_code": 1
+    },
+    "runtime_final": {
+      "passed": 48,
+      "total": 48,
+      "exit_code": 0,
+      "vitest_total_seconds": 19.74,
+      "vitest_tests_seconds": 12.332
+    },
+    "compiler_exit_code": 0,
+    "baseline_lint": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "final_lint": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "whitespace_exit_code": 0,
+    "all_sessions_drained": true
+  },
+  "warnings": "Both runtime runs emit the existing Vite CJS Node API deprecation notice. Scoped baseline/final ESLint reports zero errors and zero warnings on all three source files.",
+  "limitations": [
+    "This is local authorization containment with actual Worker/Hono/JWT routing in workerd and synthetic destinations; there is no deployed binding/resource/credential/customer attestation.",
+    "No report arithmetic, ranking, learning, schema, UI/script, shopper snapshot, trend, consent or erasure implementation changed. Existing accepted/qualified dependency assurance is reused within the admitted contract; no report or shopper suite was added.",
+    "Full W01/W03 scope, role/session revocation, global resource/stamp separation, geo/cohort and health exposure, all-store erasure, long-window/experiment/scientific/lift acceptance and customer gates remain open.",
+    "Open/unset/nonexact modes retain existing demo policy. Site-key-only legacy diagnostic scripts are intentionally refused in enforced mode; no script was repaired or invoked.",
+    "No external operations, deployment, provisioning, seed/project build/install/migration, cloud/credential/customer-data actions, external messages, staging, commit/push or destructive actions were performed."
+  ],
+  "handoff": {
+    "next_action": "Independent reviewer inspects root-frozen actual four-file artifact and complete outputs, runs the single declared K1, then lead records bounded disposition.",
+    "pending_sessions": [],
+    "source_writer_stopped": true,
+    "rollback": "Exact inverse of the four owned deltas against the admitted retained baseline, under lead review; preserve pre-existing worktree changes."
+  }
+}

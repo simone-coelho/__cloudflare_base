@@ -1,0 +1,215 @@
+{
+  "task_id": "W35.01",
+  "actor_id": "w2205-reviewer",
+  "run_id": "/root/late_hour_next_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15T21:03:31.148Z",
+  "artifact_digest": "3cb9e6ae1ddbc63374a95b21b10b9d7c2b3ea6f2a5bfc252ae7f7c363f9c56ee",
+  "contract_digest": "bc1a3df39ea29c77a75dec4bd6d9e8909a5115c2b3dace55ff7b865d16ed14ed",
+  "verification_journal": 1909,
+  "verdict": "PASS",
+  "blocking_findings": [],
+  "identity_basis": {
+    "plan": {
+      "path": "docs/remediation/design/W35.01/plan.md",
+      "sha256": "8f53f8f0fb4360a445ecbcdcc98922ee971cebda1a966b906931bfc30ca2d5b9"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W35.01/baseline.json",
+      "sha256": "0d5eed2cd53de3dcc5a4bc77040e4d06c01d9a9641ce859eeaf7953e2ab38bf6"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W35.01/source-freeze.json",
+      "sha256": "35725a101e2d55699bca3ec2bcc0cd8cb3a3952db454bfe0c8c436c3b6fbab5c"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W35.01/source-deltas.json",
+      "sha256": "8dc2a751f80dc11b102ac83b7e3d671e25c9a839b5ba41e6c7e8c5a1e0b88143"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W35.01/worker.json",
+      "sha256": "d18db55e114682154ecbadd4d6dfefd17c6feb000ab35b96bdcc0e20dc947230"
+    },
+    "canonical_map": "worker.canonical_source defines the 95 unique owned/protected/dependency pins; baseline fixes unowned hashes and source-freeze.files fixes final owned hashes. The tracker artifact fixes all 58 artifact pins. Independently recomputed artifact digest and checked actual bytes before/after.",
+    "accepted_dependency_checks": "W22.07: all 49 unowned artifact pins plus review unchanged; two owned overlaps prospectively qualified and all four affected controls rerun. W22.09: all 32 artifact pins plus review unchanged. W26.04: all 40 artifact pins plus review unchanged. No old owned hash demanded or old acceptance erased.",
+    "before": {
+      "capture": "93b7e7",
+      "exit_code": 0,
+      "at": "2026-09-15T20:59:41.197Z",
+      "artifact_digest": "3cb9e6ae1ddbc63374a95b21b10b9d7c2b3ea6f2a5bfc252ae7f7c363f9c56ee",
+      "artifact_pins": 58,
+      "protected_count": 50,
+      "canonical_count": 95,
+      "canonical_digest": "e47827ba2c57e14106dd9434ee89e56cd0b1677ae6895dfa9c32ad764f4921a2",
+      "artifact_mismatches": [],
+      "protected_mismatches": [],
+      "dependency_mismatches": [],
+      "worker_matches": true
+    },
+    "after": {
+      "capture": "d6c53b",
+      "exit_code": 0,
+      "at": "2026-09-15T21:01:58.833Z",
+      "artifact_digest": "3cb9e6ae1ddbc63374a95b21b10b9d7c2b3ea6f2a5bfc252ae7f7c363f9c56ee",
+      "artifact_pins": 58,
+      "protected_count": 50,
+      "canonical_count": 95,
+      "canonical_digest": "e47827ba2c57e14106dd9434ee89e56cd0b1677ae6895dfa9c32ad764f4921a2",
+      "artifact_mismatches": [],
+      "protected_mismatches": [],
+      "dependency_mismatches": [],
+      "worker_matches": true
+    },
+    "delta_verification": [
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "before_matches": true,
+        "after_matches": true,
+        "patch_matches": true
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "before_matches": true,
+        "after_matches": true,
+        "patch_matches": true
+      }
+    ]
+  },
+  "source_review": {
+    "captures": [
+      "9be780",
+      "7df04e",
+      "e61feb",
+      "5736f3",
+      "2173ad",
+      "d6c53b"
+    ],
+    "method": "Independent complete two-file baseline-relative delta and affected actual source read. Reused stopped-source review after exact frozen hash match; reconstructed both frozen deltas from baseline gzip originals and matched actual final bytes.",
+    "result": "Candidate-aware update/enrichment no longer relies on temporary committed-mirror assignment. Pure reflex copy-on-write and cloned pipeline/attributes/segments preserve prior records during fallible derivation. Six audience-state writers share accepted-put publication/reload recovery. Load validates records and enrichment before assigning mirrors; owner gates remain separate and unchanged.",
+    "fixture_review": "Read actual pending-put/queued-reader assertions, persisted socket counts [2,3], actual write-then-reject loops, failed recovery read and invalid-enrichment assertions, alarm entry/exit, postcommit scheduling failure, and buffered two-key ambiguous commit. Explicit consent now reaches both intended import write paths; ceil(mock crossing)+5 keeps simulated Date.now integral without weakening validation. Existing wrong-tenant/owner, null/absent legacy, refusal and four buffered controls remain."
+  },
+  "criteria": [
+    {
+      "id": "W35.01-C1",
+      "verdict": "PASS",
+      "claim": "local_runtime",
+      "finding": "Frozen fixed8 shows no changed stored/health projection or socket personalization while the put is pending; serialized following actions and queued export observe all accepted updates. Failed candidate derivation performs no put or push. Manual/live/alarm publication follows accepted storage put; mirrors are not rolled back by later scheduling failure."
+    },
+    {
+      "id": "W35.01-C2",
+      "verdict": "PASS",
+      "claim": "local_runtime",
+      "finding": "Rejected/ambiguous puts invalidate cached authority. Subsequent reads fail closed on unavailable/malformed storage and recover actual accepted bytes after repair, without automatic event retry. Live/manual/absorb/import, alarm and buffered boundaries are exercised. Undefined/null/exact owner semantics, no buffered owner write, consent/ownership negatives and lifetime controls remain intact."
+    },
+    {
+      "id": "W35.01-C3",
+      "verdict": "PASS",
+      "claim": "source_confirmed",
+      "finding": "Independent exact fixed8 passed on the same two final source hashes as worker runtime/static. All 58 artifact and 50 protected pins plus accepted dependency assurance matched before/after. Retained lint signatures match baseline exactly: 15 production + 94 fixture; compiler and whitespace reuse is limited to frozen bytes."
+    }
+  ],
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts -t 'W35[.]01|invalidates internal import/absorb authority|qualifies signed HTTP/read/WS and real restarted crossing alarms|contains unbound/corrupt/forwarded/refused alarms|W22[.]07' --maxWorkers=1 --minWorkers=1",
+    "cwd": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base",
+    "started_at": "2026-09-15T20:59:48.612Z",
+    "drained_at": "2026-09-15T21:00:14.236Z",
+    "initial": {
+      "chunk_id": "772084",
+      "wall_time_seconds": 1.000564265,
+      "session_id": 80084,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "c6f1c0",
+        "wall_time_seconds": 0.000001845,
+        "exit_code": 0,
+        "original_token_count": 4827,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 applies age-decayed interest on both hosts with fresh local membership and unchanged live activity\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 validates explicit buffered context before effects and transports zero or very old original outcomes without websocket processing\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 gates both hosts on owned profiles consent and observed erasure barriers before interest or destinations\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 gates both hosts on owned profiles consent and observed erasure barriers before interest or destinations\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 gates both hosts on owned profiles consent and observed erasure barriers before interest or destinations\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 gates both hosts on owned profiles consent and observed erasure barriers before interest or destinations\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 gates both hosts on owned profiles consent and observed erasure barriers before interest or destinations\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 gates both hosts on owned profiles consent and observed erasure barriers before interest or destinations\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W22.07 preserves exact session expiry metadata and DO commit mirrors with bounded audience and retention alarms\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > qualifies signed HTTP/read/WS and real restarted crossing alarms in two physical non-default stores\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > qualifies signed HTTP/read/WS and real restarted crossing alarms in two physical non-default stores\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > qualifies signed HTTP/read/WS and real restarted crossing alarms in two physical non-default stores\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > qualifies signed HTTP/read/WS and real restarted crossing alarms in two physical non-default stores\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > qualifies signed HTTP/read/WS and real restarted crossing alarms in two physical non-default stores\nledger_delivery_failed {\n  code: 'queue_unavailable',\n  prepared: 1,\n  records: 1,\n  acknowledgedRecords: 0,\n  unknownRecords: 0,\n  notAttemptedRecords: 1,\n  plannedMessages: 1,\n  acknowledgedMessages: 0,\n  unknownMessages: 0,\n  notAttemptedMessages: 1\n}\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 1,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.03 tenant-owned DO audiences > invalidates internal import/absorb authority including failed writes and allows only absent-marker legacy default ingest\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/routes/realtime.sdkContract.test.ts  (58 tests | 50 skipped) 730ms\n\n Test Files  1 passed (1)\n      Tests  8 passed | 50 skipped (58)\n   Start at  16:59:50\n   Duration  10.29s (transform 4.60s, setup 0ms, collect 7.02s, tests 730ms, environment 0ms, prepare 1.74s)\n\n"
+      }
+    ],
+    "exit_code": 0,
+    "session_drained": true,
+    "selected_passed": 8,
+    "unselected": 50,
+    "failed": 0,
+    "duration_seconds": 10.29,
+    "test_duration_ms": 730,
+    "attempts": 1,
+    "diagnostics": {
+      "learning_incomplete": 22,
+      "queue_unavailable": 6,
+      "action_error": 35,
+      "interpretation": "Retained synthetic missing-binding and negative-control diagnostics, plus existing Vite CJS warning and synthetic catalog seeding. These are not evidence of successful durable learning/ledger delivery."
+    }
+  },
+  "static_reuse": {
+    "reference": "worker.attempts[3] and worker.attempts[4], actual complete raw outputs inspected in capture 3d0351; independent stored-signature comparison in d6c53b.",
+    "compiler_lint_whitespace": {
+      "session_id": 13306,
+      "captures": [
+        "73a707",
+        "fb59a5",
+        "401de7"
+      ],
+      "exit_code": 0,
+      "session_drained": true,
+      "compiler_heap_mib": 1536,
+      "lint_heap_mib": 512,
+      "errors": 0,
+      "warnings": 109,
+      "scope": "Existing no-emit/nonincremental compiler; only two owned files linted and whitespace-checked. Chained exit 0 establishes all three commands ran."
+    },
+    "signature_comparison": {
+      "session_id": 31109,
+      "captures": [
+        "0667df",
+        "25afe7",
+        "3431d4"
+      ],
+      "exit_code": 0,
+      "session_drained": true,
+      "rows": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "errors": 0,
+          "warnings": 15,
+          "signatures_match": true
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "errors": 0,
+          "warnings": 94,
+          "signatures_match": true
+        }
+      ],
+      "added": []
+    },
+    "same_bytes": "Worker snapshots 83a349 → 3cd9b0 → 251265 and both independent snapshots share canonical digest e47827ba2c57e14106dd9434ee89e56cd0b1677ae6895dfa9c32ad764f4921a2. No independent static or additional suite was run."
+  },
+  "failures_and_rework": {
+    "reference": "Complete worker.attempts and worker.failures_and_rework retained at the pinned worker file; inspected raw failures and final outputs, including completion capture c28ca0.",
+    "disposition": [
+      "Before first runtime, buffered owner omission and explicit-null loading compatibility were corrected in production and retained in worker history; all three runtime attempts then used identical final production bytes.",
+      "Worker attempt1 e81c94 → c3623b: exit 1, 3 failed/5 passed/50 unselected. Two import fixtures lacked explicit persisted consent and did not reach the intended write; two-tenant route also returned 500. Root-approved fixture consent setup corrected actual path reachability.",
+      "Worker attempt2 7bf44d → 25b01c: exit 1, 2 failed/6 passed/50 unselected. Actual stack establishes fractional enrichment timestamp; the separate route 500 explanation is source inference, not a captured route stack. Root-approved integer fake clocks at both alarm crossings and removal of temporary diagnostic wrapper changed fixtures only.",
+      "Worker final fixed8 passed with no further source changes. Independent frozen fixed8 passed once. Prior failures remain failures on superseded fixture bytes; neither is rewritten as passing evidence."
+    ]
+  },
+  "limitations": [
+    "Application accepted-put ordering/cache recovery with synthetic Node storage/socket mocks only. Awaited put may be buffered; no measured Cloudflare disk flush, native input/output-gate scheduling, process-failure durability or exactly-once delivery claim.",
+    "Region/ODP fanout remains nontransactional and can precede local commit. Failure does not imply zero external effects; synthetic incomplete-delivery diagnostics are retained.",
+    "The user approved the existing DO as local shopper-authority direction during this task. Full D03, production configuration/host change, migration and deployment remain unapproved here.",
+    "Full W35 transactional authority, identity/session/visit/channel/consent and link/erase/SDK/sort/fatigue parity, races/stale pointers/delayed creates/restart/ownership/rollback and exact browser/server/runtime tails remain open beyond this bounded slice. F14 default KV lost-update race, customer acceptance and latency SLO are not closed.",
+    "No new retention, event-age cutoff, schema, personal retry/history, SDK offline queue or historical reconstruction; no source/governance/external writes by reviewer."
+  ],
+  "disposition": {
+    "status": "STOP",
+    "active_commands": [],
+    "written_path": "docs/remediation/evidence/W35.01/review.json",
+    "next_action": "Lead alone reviews this record and decides bounded task acceptance/handoff.",
+    "lead_acceptance": false
+  }
+}

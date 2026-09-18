@@ -1,0 +1,139 @@
+{
+  "task_id": "W01.07",
+  "actor": {
+    "id": "w0107-reviewer",
+    "role": "independent_verifier",
+    "run": "/root/w0107_review",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "implementer_run": "/root/w0107_worker"
+  },
+  "verdict": "PASS",
+  "at": "2026-09-10T01:54:44Z",
+  "scope": "Bounded local withdrawal of the shared geo/cohort family and bare health resource probe in exact enforced mode, preserving caller edge context and limited liveness/signing readiness. Lead acceptance remains separate.",
+  "basis": {
+    "contract_digest": "4cbfa26f8c07f551b6fcb5466fc66cb867674aec7bc8db449fe35eb523946be8",
+    "plan": {
+      "path": "docs/remediation/design/W01.07/plan.md",
+      "sha256": "fc04ab12c80709ad6324cacc3c34ad59f9d65f6ff32b0a1df42ec7faee7a691a"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W01.07/baseline.json",
+      "sha256": "cb2d3bf841d6760c7a903870f02b1bc595b0f35decb58b3a4b9fcec1bf57e235"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W01.07/source-freeze.json",
+      "sha256": "75cbaafe96dfe6a23ba71885a08021ada0765c8d29474e25f2b713c6838d809c",
+      "at": "2026-09-10T01:50:06Z",
+      "worker_stop": "2026-09-10T01:49:49.977Z"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W01.07/source-deltas.json",
+      "sha256": "5aa189103bc91a74abe36aecff030009eaa865159c29edb45b2efc1620f3d002"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W01.07/worker.json",
+      "sha256": "d78d851f6725d075564e3bcf2b2df92c5831041097ec481c9ac7e7c4641ed2b5"
+    },
+    "reads": "Read AGENTS, execution README, complete governance36/RESUME, canonical complete W01/W03/W12 and linked F01/F03/F10/F25/F31/F33/N01/N03/N04/N13/N19/N29 dispositions and customer clauses, selected raw finding evidence, admitted final task/plan C1-C3, actual entry/geo/cohort/health/StateManager/signing/routing code, existing fixture and health callers. Inspected all five complete retained baseline-to-frozen patches and corresponding actual source."
+  },
+  "artifact": {
+    "path": "docs/remediation/evidence/W01.07/artifact.json",
+    "sha256": "0ef0ba822ea13dabd977b3cee915e71f4bc8feffa243ee2355ebb0f2d59f1143",
+    "digest": "3b13026dac2b30a3ac83715e182ee4ccd6da840ba7cd5d1d0468b77f35a34fa0",
+    "manifest_file_count": 340,
+    "registered_journal": 712,
+    "owned": [
+      {
+        "path": "src/index.ts",
+        "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "8c3f75a1693fc56e19b43baa991984d86d437750d7a87fcc1ef176f93849ec07"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "3b83cc06b8e6b9a60a73abbc396314e922eafa323be921cc8e9e4117164f8ec5"
+      },
+      {
+        "path": "docs/kit/04-staging-connection.md",
+        "sha256": "ff60fc62714a89b5dc8999d349898e8f7a9d9fc682b1932b7c55fef9e8fddf5c"
+      },
+      {
+        "path": "scripts/verify-origin.sh",
+        "sha256": "f6db5070d73c55dad8598b97b54048b02518b64f5e9475a1288341d3148fd9e0"
+      }
+    ],
+    "manifest_and_contract_digests_verified": true,
+    "verification": "Recomputed official artifact and current task-contract digests through existing board exports. All 335 freeze entries occur unchanged in the official 340-file manifest; its five proof/config additions were individually hashed. Independently hash-verified five current owned files, decompressed baseline bytes and retained patches, then applied every patch forward and reverse in memory: exact baseline and frozen bytes matched. Compared all 330 protected baseline/freeze records; none changed. Root live dependency attestation reused explicitly."
+  },
+  "independent_check": {
+    "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+    "attempts": 1,
+    "exit_code": 0,
+    "session_id": 36082,
+    "session_drained": true,
+    "command_invocation_observed_at": "2026-09-10 01:50:40 UTC",
+    "runner_start": "2026-09-09 21:50:42 America/New_York (UTC-04:00), as reported by Vitest",
+    "completion_observed_at": "2026-09-10 01:51:17 UTC",
+    "tests": 51,
+    "passed": 51,
+    "test_duration_ms": 13321,
+    "total_duration_seconds": 21.08,
+    "runtime": "Actual exported Worker/Hono/JWT and installed routing code bundled in memory into local workerd, synthetic bindings and outbound-denying fixture; existing native shopper/socket controls retained.",
+    "output_complete": true,
+    "output_format": "Complete exec/write_stdin output chunks concatenated in arrival order; terminal control sequences and existing Vite deprecation warning retained.",
+    "output_sha256": "074bd1251f476b12e22fd41594df6d7e18d3ad8cfec252d0f8bc343a75f437c8",
+    "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (51 tests) 13321ms\n\n Test Files  1 passed (1)\n      Tests  51 passed (51)\n   Start at  21:50:42\n   Duration  21.08s (transform 1.15s, setup 0ms, collect 5.10s, tests 13.32s, environment 0ms, prepare 1.82s)\n\n",
+    "measurement_limit": "One local fixture run; durations do not qualify deployed latency, throughput, SLO, browser behavior, customer acceptance or installed binary provenance."
+  },
+  "criteria": [
+    {
+      "id": "W01.07-C1",
+      "verdict": "PASS",
+      "evidence": "Two exact-enforced predicates extend the existing pre-dispatch guard after the unconditional raw API guard and before tenant middleware, CORS, body parsing or agent discovery. Real entry requests cover two nondefault tenants, absent/forged/site/granted operator/issued shopper/combined credentials, cohort query overrides, GET/HEAD/OPTIONS/mutating/unsupported methods, Upgrade, decoded-letter/repeated-slash/dot-segment/descendant aliases and invalid registry/conflicting selectors. Existing assertDenied checks exact 404/no-store/empty HEAD, only AUTH_MODE access, no destination attempts or state change, body reads, logs, deferred work, cookies/CORS/rate-limit headers or marker disclosure. Previous predicates are unchanged."
+    },
+    {
+      "id": "W01.07-C2",
+      "verdict": "PASS",
+      "evidence": "Exactly three grouped additions preserve all 48 prior tests. Populated synthetic cf proves /geo returns actual fixture geography and southern hemisphere in all four modes. Live/signing-ready return their unchanged limited responses without resource calls, with readiness no-store. API info advertises the retained endpoint per mode. Open/unset/misspelled cohort calls from both tenant hosts execute Coach purchase/profile/census query flow and return the same populated shared marker; the opt-in spy cannot pass merely through an empty fallback. Open bare health exercises exact CACHE/R2/StateManager/storage.get/Analytics calls with no queue submission. Its string-to-Request fixture adjustment preserves the real StateManager handler and is opt-in. Kit health wording and verify-origin URL/label consistently describe signing configuration only; unrelated script behavior remains unaccepted."
+    },
+    {
+      "id": "W01.07-C3",
+      "verdict": "PASS",
+      "evidence": "Five exact reversible source deltas, official 340-file identity and current contract verified. All six complete primary check outputs were decompressed, length/hash checked and inspected, including actual child status/session metadata: first runtime 51/51, compiler exit0, baseline/final lint zero errors and identical seven index warnings, whitespace exit0 and bash syntax exit0. Lint embedded index source hashes match admitted/frozen bytes; fixture lint has no embedded source and is not represented as having one. Independent exact K1 ran once, passed51/51 and drained. Root protected330 live-file attestation is explicitly reused. Technical review passes; lead disposition remains pending."
+    }
+  ],
+  "primary_outputs_reviewed": [
+    "baseline_lint",
+    "runtime",
+    "final_lint",
+    "compiler",
+    "whitespace",
+    "shell_syntax"
+  ],
+  "failures_and_rework": [
+    "Worker retained a capture-only serialization incident for the initial fast whitespace/shell checks: absent session_id was passed to store(undefined), losing captured result/status. Only those two read-only checks were repeated successfully. No runtime failure/retry or product rework is hidden; independent review inspected retained corrected outputs and the incident.",
+    "Initial reviewer displays of large freeze/baseline JSON were truncated. No conclusion relied on truncated content: bounded parsing subsequently verified all relevant records/owned bytes, complete decoded patches and complete primary outputs; embedded lint source was checked against exact admitted/frozen bytes."
+  ],
+  "protected_input_assurance": {
+    "source": "Root source-freeze.json at 2026-09-10T01:50:06Z: 335 pins, 330 unowned unchanged.",
+    "reuse": "Explicitly reuse root's live-file attestation for 330 protected source/dependency inputs under admitted sole-writer ownership. Reviewer independently compared every protected baseline/freeze hash and freeze/official-manifest entry, hashed five changed owned and five proof/config additions, and inspected relevant actual routing/health/cohort dependencies. No claim that reviewer independently rehashed all330 live files or reaccepted historical whole-task proof."
+  },
+  "limitations": [
+    "Source-confirmed pre-change design case; no newly executed pre-fix exploit. Populated D1 is a synthetic statement spy, not SQLite, real customer data or warehouse acceptance; cf is explicitly synthetic.",
+    "Exact enforced mode withdraws these shared entry paths. Open/unset/nonexact modes intentionally retain global cohort and health behavior. Legacy health ignores the missing StateManager key's 404; preserving that effect does not establish readiness.",
+    "Live/ready do not prove schema, queue delivery, tenant continuity or full operational readiness. Unchanged signing configuration assurance is reused; no new signing matrix or deployed probe.",
+    "verify-origin.sh received only health URL/label correction and syntax validation; no customer-origin script executed. Other stale shopper/bootstrap assumptions and README/deployment/console-preview health claims remain residual scope.",
+    "Full W01/W03/W12, findings, customer stamp/resource/job isolation, generic first-party cohort/AI Search/enrichment delivery, customer behavior, all-store privacy, scientific/SLO/gate/release acceptance remain open. W36 does not close F14; gamma zero is not ingestion disable.",
+    "No ranking/learning/report arithmetic, SDK/customer route ownership, underlying cohort/health service, consent/erasure/session semantics or v4 recovery changed. No external operations or source edits by reviewer; no additional runtime attempts, suites, compiler/lint reruns or subdelegation.",
+    "Any subsequent relevant artifact/configuration change needs scoped revalidation; lead owns final acceptance and durable tracker/checkpoint updates."
+  ],
+  "handoff": {
+    "next_action": "Lead inspect this independent review and retained evidence, record bounded disposition and durable checkpoint.",
+    "pending_sessions": [],
+    "source_writer_stopped": true,
+    "independent_run_drained": true
+  }
+}

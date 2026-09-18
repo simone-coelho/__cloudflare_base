@@ -1,0 +1,39 @@
+{
+  "at": "2026-09-06T23:27:46.881Z",
+  "head": "e49aef83c9a9843dd21479f1b08d53e7709fac41",
+  "files": [
+    {
+      "path": "docs/remediation/tracker.json",
+      "sha256": "f758af6b7822d19537bf74899b94be9865941acff5c6f8c172d6c08fff4bee5c"
+    },
+    {
+      "path": "docs/remediation/evidence/W01.02/authorization.md",
+      "sha256": "67f30789c71bff1f416497106ee6d3760f53630d93eebdcbeff648ff37d55f70"
+    },
+    {
+      "path": "docs/remediation/design/W01.02/plan-v1.md",
+      "sha256": "5c8fbd7638ff92a1e151387c7c5a9176cae8f1442a5d10af61457f5076443437"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "a9ca5ae49c3741d9375bd0245c7e377bfd779021055df9d90671b0f580f9f4f1"
+    },
+    {
+      "path": "src/routes/api.ts",
+      "sha256": "905f2512b23e6639441067a45864fe25634b3fbf2d9fc977b34370fbd90dca58"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "sha256": null
+    },
+    {
+      "path": "examples/usage-examples.js",
+      "sha256": "26299bd461e8fc2430a15bd784462acfa5f7aa7a0de6613cfdb0ae7b42c9ff34"
+    },
+    {
+      "path": "docs/api/01-rest-endpoints.md",
+      "sha256": "9929e9235d6a5263a9703de7f68cc82b4809a09a90f184853284406e9f1e06fa"
+    }
+  ],
+  "protected_prior": "docs/remediation/evidence/W01.01/source-baseline.json"
+}

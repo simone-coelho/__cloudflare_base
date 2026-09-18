@@ -1,0 +1,2308 @@
+{
+  "before": {
+    "id": "W02.01-E4",
+    "task_id": "W02.01",
+    "check_id": "W02.01-K2",
+    "criterion_ids": [
+      "W02.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0202-reviewer",
+    "run_id": "/root/w0202_review",
+    "command": "Independent W02.01 episode2 frozen source/config-delta and evidence review, composed original-verifier replay and K1 rerun; inspect accepted current-source W02.02 regression/typecheck assurance and retain exact commands/verdict in review-v2.md.",
+    "runtime": "Independent local source and focused Node integration checks with synthetic stores; no deployed/customer/credential operations.",
+    "workload": "All W02.01 C1-C3 obligations, exact guard, actual config effects and legitimate controls; prior W01 proof preserved and its revalidation explicitly scheduled.",
+    "result": "pass",
+    "limitations": "Independent30/30 and composed-original replay passed: original16 unauthorized successes/8account reads/24KV writes; current16denials/zeroeffects and validPUT/rollback/SDK controls. All224files and both199-input executed bundles independently matched; source/config change limited to accepted W02.02 inputs. Not default-export/native/deployed/customer/release acceptance.",
+    "at": "2026-09-07T02:18:30Z",
+    "file": {
+      "path": "docs/remediation/evidence/W02.01/review-v2.md",
+      "sha256": "514b08c13e71def38fcd696c7e4541e471e30ed7cb8813757ea6f93a9631a866"
+    },
+    "artifact_digest": "7fdffd2cd80790ce59805565314dfbab1138b054c93fb3dce1d2a798232ac009",
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "c391f6996f7c663430ade90dfe707bc5a330a99929c738b381b05a247c76cde6",
+      "configuration": "W02.01 episode2 unchanged30-case Node22.15/Vitest real-route proof after accepted W02.02. Actual focused local graph (packages external) and complete current independent Node replay bundle inputs rebuilt and pinned, with config/lockfile/package identities. Original proof files remain historical inputs, not new execution. Baseline composes original common verifier with current dependencies. No engine/test edits, external services, native/deployed/customer/release or complete runner-binary attestation.",
+      "files": [
+        {
+          "path": "docs/remediation/evidence/W02.01/.gitignore",
+          "sha256": "9793d4560524120f68360373a7b077e40249d6a5b239255f42b2ed0ca3824d0c",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/baseline-test-v1.ts.txt",
+          "sha256": "321d8a931d9700fd09fb9d0f54392aa30873b932b123825f35aa4ae1ab60261f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/before-auth.ts.txt",
+          "sha256": "34ba6e4b31733f8ea318cad9139c7838a5d2fe83400127d515bdac892cb503cb",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-baseline-v1.log",
+          "sha256": "41336cd596cdf56cabc0f776bf704394350e8bb38d532d0586fabc7091635138",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-final-v1.log",
+          "sha256": "3b5fdb20bc6d6cba22cdfadd09341b30a6c3021e3cb6dd1ac404358e5014db18",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-green-v1.log",
+          "sha256": "73b1b435cc7d632fcb8b1a2d9260a055aec218c0806ffe1ef692985ec8867398",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-type-corrected-v1.log",
+          "sha256": "1e384528f7dee0e739fcc274bdcbaa7477fe4756976805299612e682e54ecdcb",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/lead-artifact-v2.mjs",
+          "sha256": "bc5407e6b813060fa4c7d61cba008753f7473de2953facdfe19eab118b923551",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/regressions-v1.log",
+          "sha256": "5c6cc38a39d80754574b64f7df4e910506ad1c44244ec43acaa1e23871650c36",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/reviewer-probe-v2.mjs",
+          "sha256": "53642fcd545a84f9327c159bf0944f3b99a0b67b5038b20ffc47195a6edb287f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/source-test-dependencies-v1.json",
+          "sha256": "15b66b2a0409c2e517be78d3463a2b482382e26e2c670462667c6fb52003d42f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/typecheck-initial-failure-v1.log",
+          "sha256": "2eb4eb1f92525cfdd4888535b532902dd5338703647adfd0b5c82795b43e1670",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/worker-k1-v2.log",
+          "sha256": "5786c61c80fe5f1668e447d6015155cc2c4b4754c3c062511a8f9e5d2d73f788",
+          "role": "output"
+        },
+        {
+          "path": "node_modules/esbuild/package.json",
+          "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/hono/dist/compose.js",
+          "sha256": "8096ae2158a8723431973682d2ed9383a53e7d6b50a54058eb56a9c224274a99",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/context.js",
+          "sha256": "b640fbe611f307ac7682921ba749abefe39481332c1c07e459e9088aeb81cd65",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/helper/factory/index.js",
+          "sha256": "f8efb2295df78c815c4ba6e1e3929595ff08cbdb9b871dd74d458314fa6e37cf",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/hono-base.js",
+          "sha256": "59bb88ced3ac86331450dd053ea902d8d054ccf5f1b8ce4a90746edd9a33102b",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/hono.js",
+          "sha256": "3d0eac9be4217867c05be9c53402f71ff00c82c16bd149543a0a35199e353f6e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/http-exception.js",
+          "sha256": "925be0a17f9fe8df0f64273705f963752173eb86f5c77a7038612bab44b1ea24",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/index.js",
+          "sha256": "c3fb6cdc50d0a17806d7a14090c024781235137df973ae524ee0aadcca1d136d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/request.js",
+          "sha256": "e73e56dea2db1567e50bbea658f42359b68438eda438ab56d2357f6cc7d2dcf3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/request/constants.js",
+          "sha256": "5a0125551dca7af892fda98bb7624b1b0f84f27920857651bbd37ae886cc45b9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router.js",
+          "sha256": "07f705575d6a0ee63f4003edd0c4ba4daf750752b6da2d76de42fcba7a9679de",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/index.js",
+          "sha256": "257a811ced87e838bdaa213e2ca546ff6e66498bdf862e1be2d510c75514182a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/matcher.js",
+          "sha256": "4297e046b6e31aaee9754ddd38119540710b92b9e1859c6a2bd826c85cf7dd7c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/node.js",
+          "sha256": "407c1385c1c7e937987c1e9eb00cd397e5f64ad4ad91345b82684f281951193f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/prepared-router.js",
+          "sha256": "ceedea940beebf4bdbcf7a4d215134c9883604d18ef0da0d76522be957cf37ae",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/router.js",
+          "sha256": "9bfdbf3e742c04b34486e50b5c52676ec27cea5203b87a3627d8b2d2a4b0f027",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/trie.js",
+          "sha256": "d3b22654c7c5a5d71eb9a36e59c6059eebfb84cdcc9e917bd3633a241b7020a3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/smart-router/index.js",
+          "sha256": "59d6f46a642afad06577a2adc2e64ccd5e81816a10524064411625e2a02951f9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/smart-router/router.js",
+          "sha256": "edb460493a773d9e507fdf18cc0929c6a274219d24d1c704250556e9b3ef64a8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/trie-router/index.js",
+          "sha256": "b65f8ff8017b981954bec49adaa928647561acb5fc0d4df9470998907c897b83",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/trie-router/node.js",
+          "sha256": "adfd07a5a35e9ae154f7956459c2dcdfa96fa115b5818caf5032b0fd5da22467",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/trie-router/router.js",
+          "sha256": "847a56d47729c2ae46681d560172dfb5cc790fcabd5106d053213f2600e9ae70",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/utils/body.js",
+          "sha256": "7c9483c6098dfbcd44e7f879ee134670daf7c9b1113ff06e9bf0a88a474c5d28",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/utils/constants.js",
+          "sha256": "bc31295f1640ebebf990612b3132690e0256a90fdd23042e56f9e50169e1e6ec",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/utils/html.js",
+          "sha256": "302d0766b88ea47d28044a621aeaa2ba6d4a798b484dea4794f198aa547e43fc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/utils/url.js",
+          "sha256": "2cc4e2597d52a0c87cea7ea6cbba64b15f928d52031ed671402d1d9c6f41a473",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/package.json",
+          "sha256": "0190ed73085e7509f652e5877691ea52063628ad633add49e7ffef4a375389cd",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/index.js",
+          "sha256": "44c315d5a0ffabb93fa3e70be939e468b1de6c2ca425742e81c8bab826af9ff4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/compact/decrypt.js",
+          "sha256": "5b9b92a4af569e143761511dbad7b41f23477dc58848f3c4bd8d9f1039ad3a17",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/compact/encrypt.js",
+          "sha256": "a9deccaf3f33c0c481f20193f5bd4d71dd40900458f61c49b73cf83f4d6ba3af",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/flattened/decrypt.js",
+          "sha256": "70eec653ee263b397f42e527abc5a3f3d68cafaee955b5b8874f679762032c45",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/flattened/encrypt.js",
+          "sha256": "50a463f7552235210fd5f1401c7ab96fc08b21172d83f2f185411bbc62b20c0a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/general/decrypt.js",
+          "sha256": "698d06becb39f1c8fe874aed6f15839afb2fd580790446a37d20055179f31b6f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/general/encrypt.js",
+          "sha256": "ad8918a52263e4a6109fcb4b0a0cc30e113f3bfa923a8470bb0d1193494e466d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwk/embedded.js",
+          "sha256": "f0f8af4e76bf81a61470c298f95bd51a0997a52bf4bd31df951905e7e44256b7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwk/thumbprint.js",
+          "sha256": "b7119d12105f3c5b9e2c6daa805300d2e57ca29c8f75beaa6f1935cf0fd9846f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwks/local.js",
+          "sha256": "1ae422044886a7453cd3b671c86a7737d9e734fc5a21610252a37d351380539e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwks/remote.js",
+          "sha256": "b222c35c9c5b2ac9a0b4e685e1df2dcd27b8d2984e49f21b9985e3d85108caf7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/compact/sign.js",
+          "sha256": "774e259038f8776f3ad83621df19863268fd594662db575054b709556add08f9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/compact/verify.js",
+          "sha256": "dfc153ab0ef9d96bc90f2d6a0cb65ed088e19aabcc45b952bb3d74b6aa00c711",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/flattened/sign.js",
+          "sha256": "fe5bc281b2100679d28972c70b93fe925543827cd15baa30e60185d9f32fe8d2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/flattened/verify.js",
+          "sha256": "2d56b08878b14554d662a11dda8fdc20fa0950e0c39add3f62a474a4b2b42eff",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/general/sign.js",
+          "sha256": "a70201cb8e88e133f8f88086fbb0ce708ddf8e02c5cb56f639b98a2b1fb04055",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/general/verify.js",
+          "sha256": "f6cea1202c13d573a08b7c69163b920ba1eebb03415ae71d8cfa9588bfb0de30",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/decrypt.js",
+          "sha256": "32221d8f03b7cb602396d264a0887257bfe90faa9dac317e2f822fa8d25540ed",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/encrypt.js",
+          "sha256": "358e0ca90122127cc293d3104a9fcc4b414776be129a414b609689fa688bd338",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/produce.js",
+          "sha256": "967df32622eb9e5b3a1d79ea50ed2be06a6cd5ce5a513b9cbfda70bd89949296",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/sign.js",
+          "sha256": "3123dffb9ea31519428b3cbc58b82296cd0f81aba44d086302be27939527e0c2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/unsecured.js",
+          "sha256": "0b10721382551b68829a23a101ac72d1f8c9279e6ed08d29282ddb7431548fc2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/verify.js",
+          "sha256": "9c60ae259e47c9181308789ac3f138799c8af6052842871e8e138bba59e6478a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/key/export.js",
+          "sha256": "94f4eaa1c61e64a93f3872e8c2e6cb7740d5c453d5d695a78672480ef1f5c29e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/key/generate_key_pair.js",
+          "sha256": "2998217e439db8f891444f1ac819e4a04047f529675f0bcc3b0a264fb643bcdf",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/key/generate_secret.js",
+          "sha256": "81a6b435a10aa4341c8ea8b0399f12102c2a2dda609aa96294e901b98ba02e69",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/key/import.js",
+          "sha256": "6dd83f5dbdc335cd808d8ff470e98f6710742b79e7d6a2ab54430f936e127b08",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/aesgcmkw.js",
+          "sha256": "4ef85779e7013804b0c041a2289f2fce7fbaee23407c9bb136933a8dd1347e50",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/buffer_utils.js",
+          "sha256": "fd29923afa04ada8c646bc45bdf90b1d1e39e643eb24434ed80d047c3f784e3f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/cek.js",
+          "sha256": "4d93b2a244d211544ed3873e2e43405cf0d01ab055e2bdf213446dcb639ecf9a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/check_iv_length.js",
+          "sha256": "a9226823e66422db2749cfc826c3c84454f635341d33552db1e12b463a0c2d80",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/check_key_type.js",
+          "sha256": "d511838719a93531638c02e7f9ef63519aa880db0efa656bd21fb26374847fb3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/check_p2s.js",
+          "sha256": "8b2d452514692e5d59e1a339d89cb0b635c6c0c9891fbbed1698ff16064cec7c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/crypto_key.js",
+          "sha256": "1ae3222d038a8caf303cba71c6a2613118d1a9f2805d3e9ca8da80bea1e68eff",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/decrypt_key_management.js",
+          "sha256": "17d70c815ea94bee3db93b486b90002c3258f0ec7561f4d720c85177c59d2af7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/encrypt_key_management.js",
+          "sha256": "774f80c1841e9251082b2f650ad20a53d8e343e88737bfdf61b56db12dff6ff1",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/epoch.js",
+          "sha256": "bb41597bb596d58398470ea6b54d55949d8e6535078d6f75cdf3a7c1019d636a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/invalid_key_input.js",
+          "sha256": "5c48d61e2a6f762397a95071f23265d1ba7be330af25feac1d8181e1f5e57658",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/is_disjoint.js",
+          "sha256": "d5d2e6def8faaa5d9a0c6166178bf1f133f351e315098a49b435274c486f37f4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/is_jwk.js",
+          "sha256": "b1fe114e567d29b51ca880a10f0c710b7e1800d3cc33f0191e7113a99f2eaae0",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/is_object.js",
+          "sha256": "96fea80594a48ad5c0c5b162b711f31426d37d00c39445c56b532853c6e45f9c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/iv.js",
+          "sha256": "9a7f7a52367a8c97dc0cdab0b3a73bc544720065aa2c132aa037c8d6acf5fcfa",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/jwt_claims_set.js",
+          "sha256": "3692f02b6c30948784651352c4f57e72fa77651f8ca1a378a9925c6e5c8ddad3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/private_symbols.js",
+          "sha256": "b99d79c797549a1ab957bb75abfc12cc95ec74b429ea63eeba14abf2fcd138f7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/secs.js",
+          "sha256": "35a237e8dfce09138436bc855b4d324f7a2d3cabdfa026a982e1e87099c51502",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/validate_algorithms.js",
+          "sha256": "90ee4a92af2b491f257acaeef4955aa0439593618225bebd76371169472f02cd",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/validate_crit.js",
+          "sha256": "97f8f58abe0396297059493a0933de993a78416b2a0e7e2f30b83e5dbc32adb4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/aeskw.js",
+          "sha256": "867884b4e316fbe4dde42fce37feea08e937ffa77b2738f1542810ecc791e650",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/asn1.js",
+          "sha256": "4a13c5994e99d2ded42b7388655eba7d398b328e0a848ed6348ffde0fb7522ea",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/base64url.js",
+          "sha256": "ade3f70527bd1813ae58ecc98e04452534adbbecceccae7bd85d80393f9cf10e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/cbc_tag.js",
+          "sha256": "49c350f40723a4c6bcb445b04e7bf58436f74cb711e784c2aee56d9c77afd054",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/check_cek_length.js",
+          "sha256": "919e2a0fb287f6dd644a313fe777b2dda4bd6e82ff7372b17a00936e3e5970fc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/check_key_length.js",
+          "sha256": "98dc7ae405ec602004a1f997c48b5dc2e2d2039f1d7f4bf5c32a858a793ed3b3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/ciphers.js",
+          "sha256": "1d43337121f08ced34342e16c88b11a27c37b70862da3ad5274e1f5909391d1f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/decrypt.js",
+          "sha256": "4c590b607ca243bb4bdca3e2f7692e88b36d5e9dc461b93db58dec9e63f4d3b9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/digest.js",
+          "sha256": "a1d698e8aae05318534af00e20faef52a2902bf0357cec13fd14738338321afa",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/dsa_digest.js",
+          "sha256": "dc635113b49168ab31768cfec3fcf0c39eb782c21fec679cb7e43fa5c1206ee7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/ecdhes.js",
+          "sha256": "d943458f7a58daf820d64ebd5825218a3bed74ccd07c07eab7eecdd606268610",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/encrypt.js",
+          "sha256": "f0e829ac9d7b096ee0a0663059ed910ee020c653be1572489412178acb3a3508",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/fetch_jwks.js",
+          "sha256": "f0b6ef8f3aa84b3d83386ed24de8a7a7a692cffdf4405ca9e49c04a50f6c3a2f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/generate.js",
+          "sha256": "80edd5856354e4a48e41061680da9aa72582b030126f8a49b75de0b589e0787e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/get_named_curve.js",
+          "sha256": "38c86757dd5bd0ac44fb59a9f79d112a50028a118c178b0612eb545a4bb186cb",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/get_sign_verify_key.js",
+          "sha256": "8ae5642c1ceff8433c70500a81832253e1bf5a13409ec8e9afbf7fdfa24a0cfd",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/hmac_digest.js",
+          "sha256": "90570fabfb34fad77e3e4d1e9ac2c99765597df0a6063ae84ed964af75ef5651",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/is_key_like.js",
+          "sha256": "f858f9f04d02b0da92b6da8adf1b2dfed635b6f1708c572284e8472bc6bad64a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/is_key_object.js",
+          "sha256": "ff4a321521ec52695792da9a889bee3100dda0b344c00b34a2a63dafe4ce2631",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/jwk_to_key.js",
+          "sha256": "64f3a74aabe9a879ad83aa8da012961e70d3c95860f7a71e2c68532d1a7e0c6b",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/key_to_jwk.js",
+          "sha256": "76242ffc7e9eb3a5ce5c370537ec5821e79b689dcc244e12c3852e93912b462a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/node_key.js",
+          "sha256": "7bee0cdaf13643cc891a694b9156cb01100a26f4a00975bdc6035d2431224354",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/normalize_key.js",
+          "sha256": "450f0af4f4c1ecc4c7180f2e364c8a59bfed69dd350fb6b47bce8641c2a37786",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/pbes2kw.js",
+          "sha256": "c0b1f428931c5805a72a745a3d3220f8987c45bc800e3ef83bed3a8735c72f85",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/random.js",
+          "sha256": "8fc5a799452863a04a7afe8f3a150667c0bcd3ae49d03b3ff2d26cd960b9e75e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/rsaes.js",
+          "sha256": "f487a2c1008d2743c1a720c0a5aee7b039de91c7ba6858189bf67196cee7f9b6",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/runtime.js",
+          "sha256": "716dc510471adac06ec0178e9addc7e536dbdd7b52ac14094a971d09f663233d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/sign.js",
+          "sha256": "17c572494ad456beedae1111bb6001ffd35f900c73f5468e26879338f782c505",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/timing_safe_equal.js",
+          "sha256": "2c5034f5fb322e68a9a8f0c92f9a6b1473eec0a2d16baf9f6afc967f0b95ae77",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/verify.js",
+          "sha256": "12ab8cfa2441ef70f845d6cfb615a8df426994c0b03eb8ef0452b24fb1bf31fb",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/webcrypto.js",
+          "sha256": "5742254fe61eb163d82472a3aa5d09c88de0d3339659081fa20d8fde2650407e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/base64url.js",
+          "sha256": "d29fea359805e098702dc12a2807ae37e931e40594ba738948dbfd280619ee55",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/decode_jwt.js",
+          "sha256": "58e791506e0c9cb4de73ac16852331a41ed26d7d6975c7dad529e59d6316c808",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/decode_protected_header.js",
+          "sha256": "4c29af3a70a26872e4e412ff4230ec15dceafb8a27005a606f8d15c4598c202c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/errors.js",
+          "sha256": "e567c2321364b5a0d944416b2d926b5b0674775bbcd6690b17e0f1d249db5a25",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/runtime.js",
+          "sha256": "9de78c758107d34eff70f30765a1ffe860206ea0c06a11633fed0e5187ded7a5",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/package.json",
+          "sha256": "3cb0f73674b50b4e99f35c883e10c9e541e3b8d20368825379515547af1d804d",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/typescript/package.json",
+          "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/vitest/package.json",
+          "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/zod/index.js",
+          "sha256": "c733a1897d6b4b30dad6998597f6896b265b094a65534359ada34b08ecf8932c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/package.json",
+          "sha256": "c630bd10b52dcf71c112a2bf78dbf2734b9db58d62de663b8d86c2ec2c8cda2e",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/checks.js",
+          "sha256": "78a162d29e06001b4d919e1ed08f6e7d0d665bba0ef983201373745410d7b354",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/coerce.js",
+          "sha256": "fb2efe3b6eacc475c77cbb571b5fb8650d92a10f316dc869e49b722973d83c3c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/compat.js",
+          "sha256": "0e948b101771cc0e7b753e54b3f5b486929d3db9bd4c09d98fe4ce86271bcf7b",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/errors.js",
+          "sha256": "b155316267f79068ddc2dddc7046e13785804b768ca36e6deff1691d154f7c20",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/external.js",
+          "sha256": "179a03ace3d1d77895cc5b3c54a3fcbf2b7f8bad44d6f030092491c10e5d9097",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/from-json-schema.js",
+          "sha256": "d8866bf5232e55d12cda032bde6a56a05a0a8b276945c2e4eed66432ef5cc9b2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/iso.js",
+          "sha256": "3cc5e6b4da086b8ffc7ee3188c69e4d3c945b368092e78d2299b5321182752c5",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/parse.js",
+          "sha256": "14cbcc416ab9169abc2cde97af77da54ca769684eac1e03a3753c16ea4a7cd95",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/schemas.js",
+          "sha256": "eb4af7946a092aff8678b9251728ea58dab40154920cd65ec4a2ca1d4df68393",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/api.js",
+          "sha256": "00cb5edcfde8098e5a169e66c1dce50c101484d21436e3d78e137e1fa87c4836",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/checks.js",
+          "sha256": "5a33a20dcad372b4d18ead8d1e58b1950454f136a2216e62f247e0e5601ac838",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/core.js",
+          "sha256": "a5e713beaac4647151e03716a83f51ab714e5337cf66850f3b28eaf072a0bbfe",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/doc.js",
+          "sha256": "e084bbcc536746a8942fd33b08afe4db345554b3a0383114f1dca95261c958d9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/errors.js",
+          "sha256": "bdd0ed8fd4a6e9d04fe6423b0f9df3a0b403939bc7dcedd8930a4b8df1fb118c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/index.js",
+          "sha256": "f9698820ee8371215e8d015cfa060230c62e65428397dce83f78e6538976301c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/json-schema-generator.js",
+          "sha256": "9cc884cdb535a9c87b85b66e61a593ff6b686222f038834f81c5e92552cd6e23",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/json-schema-processors.js",
+          "sha256": "ff15f567c9401dd7d3151ce11736283ff747c9a9e205cc08ee96f90eadc1c0c6",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/json-schema.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/parse.js",
+          "sha256": "2578b8d1341c3882a6c089f9ec57ce1c1a16b8b2b477721d4d89ba3d3ee50c9c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/regexes.js",
+          "sha256": "3cb122080c1154321331322ebc0cbe04878fe104c8c7b335891d9f85fc4b3f63",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/registries.js",
+          "sha256": "620ea1a715ccc4e6e605a271343bf47942dccae90885dc71f137b1f08a972e50",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/schemas.js",
+          "sha256": "09da9b0cb9b9d2d795c349bc47c7521d5aaffe241885f0c9728f2aa7de3834c9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/to-json-schema.js",
+          "sha256": "fb3c9ab59947582f7671a53c8e20a3ced5eaa92d1c220ce8b27717a59033ad0d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/util.js",
+          "sha256": "968e3433e810cf7ba5efb609a1cb6d9a6cfb51215fd1f699938228f7ac25deb3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/versions.js",
+          "sha256": "bf082fde98fa7725412d713c7f56da3a5603bdef199d68d5769263f30ce9c756",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ar.js",
+          "sha256": "220ca3ca8cf67e4ccc05d789eeed2692d970269fe0cd82f05db8fd899b661b9e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/az.js",
+          "sha256": "4725ffef0b2f2df947194f9698c792b69f52a8c3a5a1e1bdfabbf62259a1dd46",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/be.js",
+          "sha256": "da4bda7fbc940dd9f50efdd914caa9397243be779a505b82bd4be5395d3b795e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/bg.js",
+          "sha256": "48511ad2f86043f0eea6e7673d5e2b848a3295a26c9c4650e96b3884d640196d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ca.js",
+          "sha256": "796f9ba7dcd53648171aa0132c50271ef358936765cec0a44a642c41d05b3e8c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/cs.js",
+          "sha256": "670a75fe1db1104db090c95aabb01e4eb6decd451fe77fd830c2e4dafc79b49a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/da.js",
+          "sha256": "cdaad7a1fa370abda1943fe9c2caba961e7896b9808d51275daf33f964af49cc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/de.js",
+          "sha256": "521a4ed29fcaf3f781163875dc282cfb5262047773aa2b70a852996b1d8a51b9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/el.js",
+          "sha256": "9857a9e4909282b2efd86317fc3e67ed86e24287f32329cfa5ab833c05fc0d81",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/en.js",
+          "sha256": "232a0828d64df8e410b23ac9825a667bd9d485fd70acdc4b4d0870539faef0a4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/eo.js",
+          "sha256": "ebe08048aa3ee9871ce9fe1271e254cb672b1968ec40ac253066d08d176e8a65",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/es.js",
+          "sha256": "4edd9302e9724c408b024220e99092fbd2f90100ac3c6407a94543b79843610c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/fa.js",
+          "sha256": "2dc1bee1e984e8a15191fb3c69aaecaa26c922e12a0d4486ac005a0372b78565",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/fi.js",
+          "sha256": "3911184979f01d2ae580ce611710ee40597eff97a410d0fa823ab6ea27cee88c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/fr-CA.js",
+          "sha256": "f8716c2baaccdfd1d958743bbc5250c9bdef5152d0801470e9b9a380d618f4ab",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/fr.js",
+          "sha256": "3ea466ca5737984bb5acc9008822060272f596317004618cfe1e05109f707577",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/he.js",
+          "sha256": "290512e43d2907700211da09dc3959fd98d120bfb89f8836e6e3f83a472e26fe",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/hr.js",
+          "sha256": "1ea65433c32b89bead43113ac69b3acc520bb73ae231dd2e05fedf8e8c5656d6",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/hu.js",
+          "sha256": "913ee94a253db79b31463ae23a337060b6fe28be73dfc7657d8a83a4942bd8a8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/hy.js",
+          "sha256": "0d3bbb96c0f8bc74468a2dfc7d066e838bb56fab64fd5ec03ce9c4d89eccbe99",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/id.js",
+          "sha256": "cd2c19b5c30dade3ed91ffcff3deb0b068713be24f02248e7e46b87b2b9553ee",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/index.js",
+          "sha256": "d73f41a76614855d43eea493030a1aa05dca30c9a17015a0da5b8b70da61b6b1",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/is.js",
+          "sha256": "ead5b14eac892229f915fe38ec94ab3b1e676f8aa2df2a8450848ba9ca9a1612",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/it.js",
+          "sha256": "439969d199427d77ebf1e477bf2295b226712804b25437d442f9dfc78aca95e0",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ja.js",
+          "sha256": "43ee10378cac22b0b8aee912a66c3f36a834d5b4c76e9748f88a784044f248fd",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ka.js",
+          "sha256": "0ab5322368f9ac6e6b58f93dac484a4f4f06cdf4c0677f4df88164e9d8b4bf81",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/kh.js",
+          "sha256": "78c3d1991041bb8c8fc0f7c5d745aae422d4c2e4e8f30bae44f3fef4765900a8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/km.js",
+          "sha256": "dbdabda94dd93d4a1827e6c809505c79fa6aa7abefec91dc50fa0871382c99cc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ko.js",
+          "sha256": "d2efe22ac069d9b32b0109fa07713ac0695ac1c1357afc4e4277056466f2e196",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/lt.js",
+          "sha256": "dad886e52c56a1329d22e072f8b08dc8730f69c3dc5e5acf8267cac18df1ab28",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/mk.js",
+          "sha256": "9eb4af0392fc5b9c438cdc6ceea446acc541b59e221dba918f7b80800d9da3d1",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ms.js",
+          "sha256": "c550a9185d997e8fcd17311951aa1e29793a50b8e825e18310efd5a46c641795",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/nl.js",
+          "sha256": "acba414579c5bbd7f83dc6661fa1a12d65f1822f9b0f5035549ac60f46d93763",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/no.js",
+          "sha256": "1854483c7cf158b8f97f0faf6fd799eb1f762009018b5fde893ca33f2fb0b313",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ota.js",
+          "sha256": "34ae496104bc17fea7d30c3d45c94cfe3d1d569b5d39a6ca51de6c177690c556",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/pl.js",
+          "sha256": "18eab58f395e30b906e8e3fddc5f212eb19f2c4362410889a5c5e0141ebe2144",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ps.js",
+          "sha256": "f977b5141fa8fb6a8459372e0b2895d74b381c9f2ff4899141f7ee3e639a4513",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/pt.js",
+          "sha256": "df172afc585544dee7c063c484f5a07b5ed103e2c1072a782c763ad8ceb08e17",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ro.js",
+          "sha256": "ecae409f4299ab91e2aff1095db14e23f3cf2c05b3654e242047655352c7f46b",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ru.js",
+          "sha256": "c397a473e94d7d189a9c09c7890fe379c4f6f46d9556d52a040a90ffa56f7b93",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/sl.js",
+          "sha256": "ee2ff3a19b62cd2f89b54b165088773b937de15df7253df220bef07d9adf2d80",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/sv.js",
+          "sha256": "97d6718fb643e05d6fe30fa4f9f09b8d9a3eda4a3a350b57dfb2944943d19502",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ta.js",
+          "sha256": "04bbde9766251f9047e786fdd77632f2ecd53aec2eb060eb2fc85bf576ad729d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/th.js",
+          "sha256": "aea70c9ac2b399fe4749e19ba3aa99c3efb4dfb50eadfb62b0b2a6e005748f3d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/tr.js",
+          "sha256": "4449f41d22c6f15ede5066f79d840a52ec45a6b694c859e16f9121062b6fad2f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ua.js",
+          "sha256": "9391169ffbc72f777a83230b6ffcc3f4cf46ab5945ec540de9ef4609dca1f4cc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/uk.js",
+          "sha256": "77136a2a60eef62f7cc803a0f9971aebbc641403af77c1b41fd5ce59abfa5de3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ur.js",
+          "sha256": "858f4f38d651073e7a3fbec7ed356692578b3ad1fae1b453cb3d85312a4f39d2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/uz.js",
+          "sha256": "d540bed482d15c47cb45439cff34e053379c53019c7c7c5fbe43f222d0c81f04",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/vi.js",
+          "sha256": "2c61bd3f4a733f3cbb1ad85e75a053cb15a8ebeb83ab56dc21f2948b1138e12f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/yo.js",
+          "sha256": "98b9cbf31bf00c8b2c00de62725a9dd7cb718ac72d6e8fd4e0a1a7c49723e0f4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/zh-CN.js",
+          "sha256": "99a4b16af598834a0b11607fcdebd1c6de026386ff1d6a5a306b364c154c5899",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/zh-TW.js",
+          "sha256": "37dcae620e1553e9174a4b9434bbcc4e465150a627e80c9c17fd01de8baaf59a",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "configuration"
+        },
+        {
+          "path": "package.json",
+          "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c",
+          "role": "configuration"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "sha256": "7d0513e2456798aff7d448fc79d11ebad4f3b014a74a03b2df1843a2238144cf",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "a0f4de159c1e83a5f81fd5c75f54f74662ce6e6d35a0e4b72de6a8d870801081",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/brighthour/reflexConfig.ts",
+          "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf",
+          "role": "source"
+        },
+        {
+          "path": "src/middleware/auth.refresh-boundary.test.ts",
+          "sha256": "11628a318420ddb8d2d269373a7f23a46f7ad4b7913648db565b0dedd07ee177",
+          "role": "output"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "sha256": "71b8bff20c06df6fdcbddd37678a73fcdfe7b0b3dcafbfba49d16b70587c1316",
+          "role": "output"
+        },
+        {
+          "path": "src/middleware/edgeAccess.ts",
+          "sha256": "ef4935e1c8eaf725efb4c7372faa5ea5b09082b0d238b68de09e1d4934375999",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/auth.ts",
+          "sha256": "f69f9d83d15d869fa1685a23550322b28fe023ece00295a694efd2b4355096b1",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "sha256": "2e1d5c1e42c5ceb498b8011de65d495b185afcbe21da8b326a2d8b6ed9b04560",
+          "role": "source"
+        },
+        {
+          "path": "src/sdk/tsconfig.json",
+          "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "e44f357958d91affcd4610c62a8e23a36d48431ddfff16f2b6d7440598bf2d50",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "configuration"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "configuration"
+        }
+      ],
+      "digest": "7fdffd2cd80790ce59805565314dfbab1138b054c93fb3dce1d2a798232ac009"
+    },
+    "status": "current",
+    "superseded_by": null
+  },
+  "after": {
+    "id": "W02.01-E4",
+    "task_id": "W02.01",
+    "check_id": "W02.01-K2",
+    "criterion_ids": [
+      "W02.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0202-reviewer",
+    "run_id": "/root/w0202_review",
+    "command": "Independent W02.01 episode2 frozen source/config-delta and evidence review, composed original-verifier replay and K1 rerun; inspect accepted current-source W02.02 regression/typecheck assurance and retain exact commands/verdict in review-v2.md.",
+    "runtime": "Independent local source and focused Node integration checks with synthetic stores; no deployed/customer/credential operations.",
+    "workload": "All W02.01 C1-C3 obligations, exact guard, actual config effects and legitimate controls; prior W01 proof preserved and its revalidation explicitly scheduled.",
+    "result": "pass",
+    "limitations": "Independent30/30 and composed-original replay passed: original16 unauthorized successes/8account reads/24KV writes; current16denials/zeroeffects and validPUT/rollback/SDK controls. All224files and both199-input executed bundles independently matched; source/config change limited to accepted W02.02 inputs. Not default-export/native/deployed/customer/release acceptance.",
+    "at": "2026-09-07T02:18:30Z",
+    "file": {
+      "path": "docs/remediation/evidence/W02.01/review-v2.md",
+      "sha256": "514b08c13e71def38fcd696c7e4541e471e30ed7cb8813757ea6f93a9631a866"
+    },
+    "artifact_digest": "7fdffd2cd80790ce59805565314dfbab1138b054c93fb3dce1d2a798232ac009",
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "c391f6996f7c663430ade90dfe707bc5a330a99929c738b381b05a247c76cde6",
+      "configuration": "W02.01 episode2 unchanged30-case Node22.15/Vitest real-route proof after accepted W02.02. Actual focused local graph (packages external) and complete current independent Node replay bundle inputs rebuilt and pinned, with config/lockfile/package identities. Original proof files remain historical inputs, not new execution. Baseline composes original common verifier with current dependencies. No engine/test edits, external services, native/deployed/customer/release or complete runner-binary attestation.",
+      "files": [
+        {
+          "path": "docs/remediation/evidence/W02.01/.gitignore",
+          "sha256": "9793d4560524120f68360373a7b077e40249d6a5b239255f42b2ed0ca3824d0c",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/baseline-test-v1.ts.txt",
+          "sha256": "321d8a931d9700fd09fb9d0f54392aa30873b932b123825f35aa4ae1ab60261f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/before-auth.ts.txt",
+          "sha256": "34ba6e4b31733f8ea318cad9139c7838a5d2fe83400127d515bdac892cb503cb",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-baseline-v1.log",
+          "sha256": "41336cd596cdf56cabc0f776bf704394350e8bb38d532d0586fabc7091635138",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-final-v1.log",
+          "sha256": "3b5fdb20bc6d6cba22cdfadd09341b30a6c3021e3cb6dd1ac404358e5014db18",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-green-v1.log",
+          "sha256": "73b1b435cc7d632fcb8b1a2d9260a055aec218c0806ffe1ef692985ec8867398",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/k1-type-corrected-v1.log",
+          "sha256": "1e384528f7dee0e739fcc274bdcbaa7477fe4756976805299612e682e54ecdcb",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/lead-artifact-v2.mjs",
+          "sha256": "bc5407e6b813060fa4c7d61cba008753f7473de2953facdfe19eab118b923551",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/regressions-v1.log",
+          "sha256": "5c6cc38a39d80754574b64f7df4e910506ad1c44244ec43acaa1e23871650c36",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/reviewer-probe-v2.mjs",
+          "sha256": "53642fcd545a84f9327c159bf0944f3b99a0b67b5038b20ffc47195a6edb287f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/source-test-dependencies-v1.json",
+          "sha256": "15b66b2a0409c2e517be78d3463a2b482382e26e2c670462667c6fb52003d42f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/typecheck-initial-failure-v1.log",
+          "sha256": "2eb4eb1f92525cfdd4888535b532902dd5338703647adfd0b5c82795b43e1670",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W02.01/worker-k1-v2.log",
+          "sha256": "5786c61c80fe5f1668e447d6015155cc2c4b4754c3c062511a8f9e5d2d73f788",
+          "role": "output"
+        },
+        {
+          "path": "node_modules/esbuild/package.json",
+          "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/hono/dist/compose.js",
+          "sha256": "8096ae2158a8723431973682d2ed9383a53e7d6b50a54058eb56a9c224274a99",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/context.js",
+          "sha256": "b640fbe611f307ac7682921ba749abefe39481332c1c07e459e9088aeb81cd65",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/helper/factory/index.js",
+          "sha256": "f8efb2295df78c815c4ba6e1e3929595ff08cbdb9b871dd74d458314fa6e37cf",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/hono-base.js",
+          "sha256": "59bb88ced3ac86331450dd053ea902d8d054ccf5f1b8ce4a90746edd9a33102b",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/hono.js",
+          "sha256": "3d0eac9be4217867c05be9c53402f71ff00c82c16bd149543a0a35199e353f6e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/http-exception.js",
+          "sha256": "925be0a17f9fe8df0f64273705f963752173eb86f5c77a7038612bab44b1ea24",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/index.js",
+          "sha256": "c3fb6cdc50d0a17806d7a14090c024781235137df973ae524ee0aadcca1d136d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/request.js",
+          "sha256": "e73e56dea2db1567e50bbea658f42359b68438eda438ab56d2357f6cc7d2dcf3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/request/constants.js",
+          "sha256": "5a0125551dca7af892fda98bb7624b1b0f84f27920857651bbd37ae886cc45b9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router.js",
+          "sha256": "07f705575d6a0ee63f4003edd0c4ba4daf750752b6da2d76de42fcba7a9679de",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/index.js",
+          "sha256": "257a811ced87e838bdaa213e2ca546ff6e66498bdf862e1be2d510c75514182a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/matcher.js",
+          "sha256": "4297e046b6e31aaee9754ddd38119540710b92b9e1859c6a2bd826c85cf7dd7c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/node.js",
+          "sha256": "407c1385c1c7e937987c1e9eb00cd397e5f64ad4ad91345b82684f281951193f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/prepared-router.js",
+          "sha256": "ceedea940beebf4bdbcf7a4d215134c9883604d18ef0da0d76522be957cf37ae",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/router.js",
+          "sha256": "9bfdbf3e742c04b34486e50b5c52676ec27cea5203b87a3627d8b2d2a4b0f027",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/reg-exp-router/trie.js",
+          "sha256": "d3b22654c7c5a5d71eb9a36e59c6059eebfb84cdcc9e917bd3633a241b7020a3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/smart-router/index.js",
+          "sha256": "59d6f46a642afad06577a2adc2e64ccd5e81816a10524064411625e2a02951f9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/smart-router/router.js",
+          "sha256": "edb460493a773d9e507fdf18cc0929c6a274219d24d1c704250556e9b3ef64a8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/trie-router/index.js",
+          "sha256": "b65f8ff8017b981954bec49adaa928647561acb5fc0d4df9470998907c897b83",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/trie-router/node.js",
+          "sha256": "adfd07a5a35e9ae154f7956459c2dcdfa96fa115b5818caf5032b0fd5da22467",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/router/trie-router/router.js",
+          "sha256": "847a56d47729c2ae46681d560172dfb5cc790fcabd5106d053213f2600e9ae70",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/utils/body.js",
+          "sha256": "7c9483c6098dfbcd44e7f879ee134670daf7c9b1113ff06e9bf0a88a474c5d28",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/utils/constants.js",
+          "sha256": "bc31295f1640ebebf990612b3132690e0256a90fdd23042e56f9e50169e1e6ec",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/utils/html.js",
+          "sha256": "302d0766b88ea47d28044a621aeaa2ba6d4a798b484dea4794f198aa547e43fc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/dist/utils/url.js",
+          "sha256": "2cc4e2597d52a0c87cea7ea6cbba64b15f928d52031ed671402d1d9c6f41a473",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/hono/package.json",
+          "sha256": "0190ed73085e7509f652e5877691ea52063628ad633add49e7ffef4a375389cd",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/index.js",
+          "sha256": "44c315d5a0ffabb93fa3e70be939e468b1de6c2ca425742e81c8bab826af9ff4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/compact/decrypt.js",
+          "sha256": "5b9b92a4af569e143761511dbad7b41f23477dc58848f3c4bd8d9f1039ad3a17",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/compact/encrypt.js",
+          "sha256": "a9deccaf3f33c0c481f20193f5bd4d71dd40900458f61c49b73cf83f4d6ba3af",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/flattened/decrypt.js",
+          "sha256": "70eec653ee263b397f42e527abc5a3f3d68cafaee955b5b8874f679762032c45",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/flattened/encrypt.js",
+          "sha256": "50a463f7552235210fd5f1401c7ab96fc08b21172d83f2f185411bbc62b20c0a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/general/decrypt.js",
+          "sha256": "698d06becb39f1c8fe874aed6f15839afb2fd580790446a37d20055179f31b6f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwe/general/encrypt.js",
+          "sha256": "ad8918a52263e4a6109fcb4b0a0cc30e113f3bfa923a8470bb0d1193494e466d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwk/embedded.js",
+          "sha256": "f0f8af4e76bf81a61470c298f95bd51a0997a52bf4bd31df951905e7e44256b7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwk/thumbprint.js",
+          "sha256": "b7119d12105f3c5b9e2c6daa805300d2e57ca29c8f75beaa6f1935cf0fd9846f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwks/local.js",
+          "sha256": "1ae422044886a7453cd3b671c86a7737d9e734fc5a21610252a37d351380539e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwks/remote.js",
+          "sha256": "b222c35c9c5b2ac9a0b4e685e1df2dcd27b8d2984e49f21b9985e3d85108caf7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/compact/sign.js",
+          "sha256": "774e259038f8776f3ad83621df19863268fd594662db575054b709556add08f9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/compact/verify.js",
+          "sha256": "dfc153ab0ef9d96bc90f2d6a0cb65ed088e19aabcc45b952bb3d74b6aa00c711",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/flattened/sign.js",
+          "sha256": "fe5bc281b2100679d28972c70b93fe925543827cd15baa30e60185d9f32fe8d2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/flattened/verify.js",
+          "sha256": "2d56b08878b14554d662a11dda8fdc20fa0950e0c39add3f62a474a4b2b42eff",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/general/sign.js",
+          "sha256": "a70201cb8e88e133f8f88086fbb0ce708ddf8e02c5cb56f639b98a2b1fb04055",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jws/general/verify.js",
+          "sha256": "f6cea1202c13d573a08b7c69163b920ba1eebb03415ae71d8cfa9588bfb0de30",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/decrypt.js",
+          "sha256": "32221d8f03b7cb602396d264a0887257bfe90faa9dac317e2f822fa8d25540ed",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/encrypt.js",
+          "sha256": "358e0ca90122127cc293d3104a9fcc4b414776be129a414b609689fa688bd338",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/produce.js",
+          "sha256": "967df32622eb9e5b3a1d79ea50ed2be06a6cd5ce5a513b9cbfda70bd89949296",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/sign.js",
+          "sha256": "3123dffb9ea31519428b3cbc58b82296cd0f81aba44d086302be27939527e0c2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/unsecured.js",
+          "sha256": "0b10721382551b68829a23a101ac72d1f8c9279e6ed08d29282ddb7431548fc2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/jwt/verify.js",
+          "sha256": "9c60ae259e47c9181308789ac3f138799c8af6052842871e8e138bba59e6478a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/key/export.js",
+          "sha256": "94f4eaa1c61e64a93f3872e8c2e6cb7740d5c453d5d695a78672480ef1f5c29e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/key/generate_key_pair.js",
+          "sha256": "2998217e439db8f891444f1ac819e4a04047f529675f0bcc3b0a264fb643bcdf",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/key/generate_secret.js",
+          "sha256": "81a6b435a10aa4341c8ea8b0399f12102c2a2dda609aa96294e901b98ba02e69",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/key/import.js",
+          "sha256": "6dd83f5dbdc335cd808d8ff470e98f6710742b79e7d6a2ab54430f936e127b08",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/aesgcmkw.js",
+          "sha256": "4ef85779e7013804b0c041a2289f2fce7fbaee23407c9bb136933a8dd1347e50",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/buffer_utils.js",
+          "sha256": "fd29923afa04ada8c646bc45bdf90b1d1e39e643eb24434ed80d047c3f784e3f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/cek.js",
+          "sha256": "4d93b2a244d211544ed3873e2e43405cf0d01ab055e2bdf213446dcb639ecf9a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/check_iv_length.js",
+          "sha256": "a9226823e66422db2749cfc826c3c84454f635341d33552db1e12b463a0c2d80",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/check_key_type.js",
+          "sha256": "d511838719a93531638c02e7f9ef63519aa880db0efa656bd21fb26374847fb3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/check_p2s.js",
+          "sha256": "8b2d452514692e5d59e1a339d89cb0b635c6c0c9891fbbed1698ff16064cec7c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/crypto_key.js",
+          "sha256": "1ae3222d038a8caf303cba71c6a2613118d1a9f2805d3e9ca8da80bea1e68eff",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/decrypt_key_management.js",
+          "sha256": "17d70c815ea94bee3db93b486b90002c3258f0ec7561f4d720c85177c59d2af7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/encrypt_key_management.js",
+          "sha256": "774f80c1841e9251082b2f650ad20a53d8e343e88737bfdf61b56db12dff6ff1",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/epoch.js",
+          "sha256": "bb41597bb596d58398470ea6b54d55949d8e6535078d6f75cdf3a7c1019d636a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/invalid_key_input.js",
+          "sha256": "5c48d61e2a6f762397a95071f23265d1ba7be330af25feac1d8181e1f5e57658",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/is_disjoint.js",
+          "sha256": "d5d2e6def8faaa5d9a0c6166178bf1f133f351e315098a49b435274c486f37f4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/is_jwk.js",
+          "sha256": "b1fe114e567d29b51ca880a10f0c710b7e1800d3cc33f0191e7113a99f2eaae0",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/is_object.js",
+          "sha256": "96fea80594a48ad5c0c5b162b711f31426d37d00c39445c56b532853c6e45f9c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/iv.js",
+          "sha256": "9a7f7a52367a8c97dc0cdab0b3a73bc544720065aa2c132aa037c8d6acf5fcfa",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/jwt_claims_set.js",
+          "sha256": "3692f02b6c30948784651352c4f57e72fa77651f8ca1a378a9925c6e5c8ddad3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/private_symbols.js",
+          "sha256": "b99d79c797549a1ab957bb75abfc12cc95ec74b429ea63eeba14abf2fcd138f7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/secs.js",
+          "sha256": "35a237e8dfce09138436bc855b4d324f7a2d3cabdfa026a982e1e87099c51502",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/validate_algorithms.js",
+          "sha256": "90ee4a92af2b491f257acaeef4955aa0439593618225bebd76371169472f02cd",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/lib/validate_crit.js",
+          "sha256": "97f8f58abe0396297059493a0933de993a78416b2a0e7e2f30b83e5dbc32adb4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/aeskw.js",
+          "sha256": "867884b4e316fbe4dde42fce37feea08e937ffa77b2738f1542810ecc791e650",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/asn1.js",
+          "sha256": "4a13c5994e99d2ded42b7388655eba7d398b328e0a848ed6348ffde0fb7522ea",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/base64url.js",
+          "sha256": "ade3f70527bd1813ae58ecc98e04452534adbbecceccae7bd85d80393f9cf10e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/cbc_tag.js",
+          "sha256": "49c350f40723a4c6bcb445b04e7bf58436f74cb711e784c2aee56d9c77afd054",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/check_cek_length.js",
+          "sha256": "919e2a0fb287f6dd644a313fe777b2dda4bd6e82ff7372b17a00936e3e5970fc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/check_key_length.js",
+          "sha256": "98dc7ae405ec602004a1f997c48b5dc2e2d2039f1d7f4bf5c32a858a793ed3b3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/ciphers.js",
+          "sha256": "1d43337121f08ced34342e16c88b11a27c37b70862da3ad5274e1f5909391d1f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/decrypt.js",
+          "sha256": "4c590b607ca243bb4bdca3e2f7692e88b36d5e9dc461b93db58dec9e63f4d3b9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/digest.js",
+          "sha256": "a1d698e8aae05318534af00e20faef52a2902bf0357cec13fd14738338321afa",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/dsa_digest.js",
+          "sha256": "dc635113b49168ab31768cfec3fcf0c39eb782c21fec679cb7e43fa5c1206ee7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/ecdhes.js",
+          "sha256": "d943458f7a58daf820d64ebd5825218a3bed74ccd07c07eab7eecdd606268610",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/encrypt.js",
+          "sha256": "f0e829ac9d7b096ee0a0663059ed910ee020c653be1572489412178acb3a3508",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/fetch_jwks.js",
+          "sha256": "f0b6ef8f3aa84b3d83386ed24de8a7a7a692cffdf4405ca9e49c04a50f6c3a2f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/generate.js",
+          "sha256": "80edd5856354e4a48e41061680da9aa72582b030126f8a49b75de0b589e0787e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/get_named_curve.js",
+          "sha256": "38c86757dd5bd0ac44fb59a9f79d112a50028a118c178b0612eb545a4bb186cb",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/get_sign_verify_key.js",
+          "sha256": "8ae5642c1ceff8433c70500a81832253e1bf5a13409ec8e9afbf7fdfa24a0cfd",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/hmac_digest.js",
+          "sha256": "90570fabfb34fad77e3e4d1e9ac2c99765597df0a6063ae84ed964af75ef5651",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/is_key_like.js",
+          "sha256": "f858f9f04d02b0da92b6da8adf1b2dfed635b6f1708c572284e8472bc6bad64a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/is_key_object.js",
+          "sha256": "ff4a321521ec52695792da9a889bee3100dda0b344c00b34a2a63dafe4ce2631",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/jwk_to_key.js",
+          "sha256": "64f3a74aabe9a879ad83aa8da012961e70d3c95860f7a71e2c68532d1a7e0c6b",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/key_to_jwk.js",
+          "sha256": "76242ffc7e9eb3a5ce5c370537ec5821e79b689dcc244e12c3852e93912b462a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/node_key.js",
+          "sha256": "7bee0cdaf13643cc891a694b9156cb01100a26f4a00975bdc6035d2431224354",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/normalize_key.js",
+          "sha256": "450f0af4f4c1ecc4c7180f2e364c8a59bfed69dd350fb6b47bce8641c2a37786",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/pbes2kw.js",
+          "sha256": "c0b1f428931c5805a72a745a3d3220f8987c45bc800e3ef83bed3a8735c72f85",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/random.js",
+          "sha256": "8fc5a799452863a04a7afe8f3a150667c0bcd3ae49d03b3ff2d26cd960b9e75e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/rsaes.js",
+          "sha256": "f487a2c1008d2743c1a720c0a5aee7b039de91c7ba6858189bf67196cee7f9b6",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/runtime.js",
+          "sha256": "716dc510471adac06ec0178e9addc7e536dbdd7b52ac14094a971d09f663233d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/sign.js",
+          "sha256": "17c572494ad456beedae1111bb6001ffd35f900c73f5468e26879338f782c505",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/timing_safe_equal.js",
+          "sha256": "2c5034f5fb322e68a9a8f0c92f9a6b1473eec0a2d16baf9f6afc967f0b95ae77",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/verify.js",
+          "sha256": "12ab8cfa2441ef70f845d6cfb615a8df426994c0b03eb8ef0452b24fb1bf31fb",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/runtime/webcrypto.js",
+          "sha256": "5742254fe61eb163d82472a3aa5d09c88de0d3339659081fa20d8fde2650407e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/base64url.js",
+          "sha256": "d29fea359805e098702dc12a2807ae37e931e40594ba738948dbfd280619ee55",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/decode_jwt.js",
+          "sha256": "58e791506e0c9cb4de73ac16852331a41ed26d7d6975c7dad529e59d6316c808",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/decode_protected_header.js",
+          "sha256": "4c29af3a70a26872e4e412ff4230ec15dceafb8a27005a606f8d15c4598c202c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/errors.js",
+          "sha256": "e567c2321364b5a0d944416b2d926b5b0674775bbcd6690b17e0f1d249db5a25",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/dist/node/esm/util/runtime.js",
+          "sha256": "9de78c758107d34eff70f30765a1ffe860206ea0c06a11633fed0e5187ded7a5",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/jose/package.json",
+          "sha256": "3cb0f73674b50b4e99f35c883e10c9e541e3b8d20368825379515547af1d804d",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/typescript/package.json",
+          "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/vitest/package.json",
+          "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/zod/index.js",
+          "sha256": "c733a1897d6b4b30dad6998597f6896b265b094a65534359ada34b08ecf8932c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/package.json",
+          "sha256": "c630bd10b52dcf71c112a2bf78dbf2734b9db58d62de663b8d86c2ec2c8cda2e",
+          "role": "configuration"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/checks.js",
+          "sha256": "78a162d29e06001b4d919e1ed08f6e7d0d665bba0ef983201373745410d7b354",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/coerce.js",
+          "sha256": "fb2efe3b6eacc475c77cbb571b5fb8650d92a10f316dc869e49b722973d83c3c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/compat.js",
+          "sha256": "0e948b101771cc0e7b753e54b3f5b486929d3db9bd4c09d98fe4ce86271bcf7b",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/errors.js",
+          "sha256": "b155316267f79068ddc2dddc7046e13785804b768ca36e6deff1691d154f7c20",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/external.js",
+          "sha256": "179a03ace3d1d77895cc5b3c54a3fcbf2b7f8bad44d6f030092491c10e5d9097",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/from-json-schema.js",
+          "sha256": "d8866bf5232e55d12cda032bde6a56a05a0a8b276945c2e4eed66432ef5cc9b2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/iso.js",
+          "sha256": "3cc5e6b4da086b8ffc7ee3188c69e4d3c945b368092e78d2299b5321182752c5",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/parse.js",
+          "sha256": "14cbcc416ab9169abc2cde97af77da54ca769684eac1e03a3753c16ea4a7cd95",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/classic/schemas.js",
+          "sha256": "eb4af7946a092aff8678b9251728ea58dab40154920cd65ec4a2ca1d4df68393",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/api.js",
+          "sha256": "00cb5edcfde8098e5a169e66c1dce50c101484d21436e3d78e137e1fa87c4836",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/checks.js",
+          "sha256": "5a33a20dcad372b4d18ead8d1e58b1950454f136a2216e62f247e0e5601ac838",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/core.js",
+          "sha256": "a5e713beaac4647151e03716a83f51ab714e5337cf66850f3b28eaf072a0bbfe",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/doc.js",
+          "sha256": "e084bbcc536746a8942fd33b08afe4db345554b3a0383114f1dca95261c958d9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/errors.js",
+          "sha256": "bdd0ed8fd4a6e9d04fe6423b0f9df3a0b403939bc7dcedd8930a4b8df1fb118c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/index.js",
+          "sha256": "f9698820ee8371215e8d015cfa060230c62e65428397dce83f78e6538976301c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/json-schema-generator.js",
+          "sha256": "9cc884cdb535a9c87b85b66e61a593ff6b686222f038834f81c5e92552cd6e23",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/json-schema-processors.js",
+          "sha256": "ff15f567c9401dd7d3151ce11736283ff747c9a9e205cc08ee96f90eadc1c0c6",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/json-schema.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/parse.js",
+          "sha256": "2578b8d1341c3882a6c089f9ec57ce1c1a16b8b2b477721d4d89ba3d3ee50c9c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/regexes.js",
+          "sha256": "3cb122080c1154321331322ebc0cbe04878fe104c8c7b335891d9f85fc4b3f63",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/registries.js",
+          "sha256": "620ea1a715ccc4e6e605a271343bf47942dccae90885dc71f137b1f08a972e50",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/schemas.js",
+          "sha256": "09da9b0cb9b9d2d795c349bc47c7521d5aaffe241885f0c9728f2aa7de3834c9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/to-json-schema.js",
+          "sha256": "fb3c9ab59947582f7671a53c8e20a3ced5eaa92d1c220ce8b27717a59033ad0d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/util.js",
+          "sha256": "968e3433e810cf7ba5efb609a1cb6d9a6cfb51215fd1f699938228f7ac25deb3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/core/versions.js",
+          "sha256": "bf082fde98fa7725412d713c7f56da3a5603bdef199d68d5769263f30ce9c756",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ar.js",
+          "sha256": "220ca3ca8cf67e4ccc05d789eeed2692d970269fe0cd82f05db8fd899b661b9e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/az.js",
+          "sha256": "4725ffef0b2f2df947194f9698c792b69f52a8c3a5a1e1bdfabbf62259a1dd46",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/be.js",
+          "sha256": "da4bda7fbc940dd9f50efdd914caa9397243be779a505b82bd4be5395d3b795e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/bg.js",
+          "sha256": "48511ad2f86043f0eea6e7673d5e2b848a3295a26c9c4650e96b3884d640196d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ca.js",
+          "sha256": "796f9ba7dcd53648171aa0132c50271ef358936765cec0a44a642c41d05b3e8c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/cs.js",
+          "sha256": "670a75fe1db1104db090c95aabb01e4eb6decd451fe77fd830c2e4dafc79b49a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/da.js",
+          "sha256": "cdaad7a1fa370abda1943fe9c2caba961e7896b9808d51275daf33f964af49cc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/de.js",
+          "sha256": "521a4ed29fcaf3f781163875dc282cfb5262047773aa2b70a852996b1d8a51b9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/el.js",
+          "sha256": "9857a9e4909282b2efd86317fc3e67ed86e24287f32329cfa5ab833c05fc0d81",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/en.js",
+          "sha256": "232a0828d64df8e410b23ac9825a667bd9d485fd70acdc4b4d0870539faef0a4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/eo.js",
+          "sha256": "ebe08048aa3ee9871ce9fe1271e254cb672b1968ec40ac253066d08d176e8a65",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/es.js",
+          "sha256": "4edd9302e9724c408b024220e99092fbd2f90100ac3c6407a94543b79843610c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/fa.js",
+          "sha256": "2dc1bee1e984e8a15191fb3c69aaecaa26c922e12a0d4486ac005a0372b78565",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/fi.js",
+          "sha256": "3911184979f01d2ae580ce611710ee40597eff97a410d0fa823ab6ea27cee88c",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/fr-CA.js",
+          "sha256": "f8716c2baaccdfd1d958743bbc5250c9bdef5152d0801470e9b9a380d618f4ab",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/fr.js",
+          "sha256": "3ea466ca5737984bb5acc9008822060272f596317004618cfe1e05109f707577",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/he.js",
+          "sha256": "290512e43d2907700211da09dc3959fd98d120bfb89f8836e6e3f83a472e26fe",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/hr.js",
+          "sha256": "1ea65433c32b89bead43113ac69b3acc520bb73ae231dd2e05fedf8e8c5656d6",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/hu.js",
+          "sha256": "913ee94a253db79b31463ae23a337060b6fe28be73dfc7657d8a83a4942bd8a8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/hy.js",
+          "sha256": "0d3bbb96c0f8bc74468a2dfc7d066e838bb56fab64fd5ec03ce9c4d89eccbe99",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/id.js",
+          "sha256": "cd2c19b5c30dade3ed91ffcff3deb0b068713be24f02248e7e46b87b2b9553ee",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/index.js",
+          "sha256": "d73f41a76614855d43eea493030a1aa05dca30c9a17015a0da5b8b70da61b6b1",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/is.js",
+          "sha256": "ead5b14eac892229f915fe38ec94ab3b1e676f8aa2df2a8450848ba9ca9a1612",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/it.js",
+          "sha256": "439969d199427d77ebf1e477bf2295b226712804b25437d442f9dfc78aca95e0",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ja.js",
+          "sha256": "43ee10378cac22b0b8aee912a66c3f36a834d5b4c76e9748f88a784044f248fd",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ka.js",
+          "sha256": "0ab5322368f9ac6e6b58f93dac484a4f4f06cdf4c0677f4df88164e9d8b4bf81",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/kh.js",
+          "sha256": "78c3d1991041bb8c8fc0f7c5d745aae422d4c2e4e8f30bae44f3fef4765900a8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/km.js",
+          "sha256": "dbdabda94dd93d4a1827e6c809505c79fa6aa7abefec91dc50fa0871382c99cc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ko.js",
+          "sha256": "d2efe22ac069d9b32b0109fa07713ac0695ac1c1357afc4e4277056466f2e196",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/lt.js",
+          "sha256": "dad886e52c56a1329d22e072f8b08dc8730f69c3dc5e5acf8267cac18df1ab28",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/mk.js",
+          "sha256": "9eb4af0392fc5b9c438cdc6ceea446acc541b59e221dba918f7b80800d9da3d1",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ms.js",
+          "sha256": "c550a9185d997e8fcd17311951aa1e29793a50b8e825e18310efd5a46c641795",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/nl.js",
+          "sha256": "acba414579c5bbd7f83dc6661fa1a12d65f1822f9b0f5035549ac60f46d93763",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/no.js",
+          "sha256": "1854483c7cf158b8f97f0faf6fd799eb1f762009018b5fde893ca33f2fb0b313",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ota.js",
+          "sha256": "34ae496104bc17fea7d30c3d45c94cfe3d1d569b5d39a6ca51de6c177690c556",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/pl.js",
+          "sha256": "18eab58f395e30b906e8e3fddc5f212eb19f2c4362410889a5c5e0141ebe2144",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ps.js",
+          "sha256": "f977b5141fa8fb6a8459372e0b2895d74b381c9f2ff4899141f7ee3e639a4513",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/pt.js",
+          "sha256": "df172afc585544dee7c063c484f5a07b5ed103e2c1072a782c763ad8ceb08e17",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ro.js",
+          "sha256": "ecae409f4299ab91e2aff1095db14e23f3cf2c05b3654e242047655352c7f46b",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ru.js",
+          "sha256": "c397a473e94d7d189a9c09c7890fe379c4f6f46d9556d52a040a90ffa56f7b93",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/sl.js",
+          "sha256": "ee2ff3a19b62cd2f89b54b165088773b937de15df7253df220bef07d9adf2d80",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/sv.js",
+          "sha256": "97d6718fb643e05d6fe30fa4f9f09b8d9a3eda4a3a350b57dfb2944943d19502",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ta.js",
+          "sha256": "04bbde9766251f9047e786fdd77632f2ecd53aec2eb060eb2fc85bf576ad729d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/th.js",
+          "sha256": "aea70c9ac2b399fe4749e19ba3aa99c3efb4dfb50eadfb62b0b2a6e005748f3d",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/tr.js",
+          "sha256": "4449f41d22c6f15ede5066f79d840a52ec45a6b694c859e16f9121062b6fad2f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ua.js",
+          "sha256": "9391169ffbc72f777a83230b6ffcc3f4cf46ab5945ec540de9ef4609dca1f4cc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/uk.js",
+          "sha256": "77136a2a60eef62f7cc803a0f9971aebbc641403af77c1b41fd5ce59abfa5de3",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/ur.js",
+          "sha256": "858f4f38d651073e7a3fbec7ed356692578b3ad1fae1b453cb3d85312a4f39d2",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/uz.js",
+          "sha256": "d540bed482d15c47cb45439cff34e053379c53019c7c7c5fbe43f222d0c81f04",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/vi.js",
+          "sha256": "2c61bd3f4a733f3cbb1ad85e75a053cb15a8ebeb83ab56dc21f2948b1138e12f",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/yo.js",
+          "sha256": "98b9cbf31bf00c8b2c00de62725a9dd7cb718ac72d6e8fd4e0a1a7c49723e0f4",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/zh-CN.js",
+          "sha256": "99a4b16af598834a0b11607fcdebd1c6de026386ff1d6a5a306b364c154c5899",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/zod/v4/locales/zh-TW.js",
+          "sha256": "37dcae620e1553e9174a4b9434bbcc4e465150a627e80c9c17fd01de8baaf59a",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "configuration"
+        },
+        {
+          "path": "package.json",
+          "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c",
+          "role": "configuration"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "sha256": "7d0513e2456798aff7d448fc79d11ebad4f3b014a74a03b2df1843a2238144cf",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "a0f4de159c1e83a5f81fd5c75f54f74662ce6e6d35a0e4b72de6a8d870801081",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/brighthour/reflexConfig.ts",
+          "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf",
+          "role": "source"
+        },
+        {
+          "path": "src/middleware/auth.refresh-boundary.test.ts",
+          "sha256": "11628a318420ddb8d2d269373a7f23a46f7ad4b7913648db565b0dedd07ee177",
+          "role": "output"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "sha256": "71b8bff20c06df6fdcbddd37678a73fcdfe7b0b3dcafbfba49d16b70587c1316",
+          "role": "output"
+        },
+        {
+          "path": "src/middleware/edgeAccess.ts",
+          "sha256": "ef4935e1c8eaf725efb4c7372faa5ea5b09082b0d238b68de09e1d4934375999",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/auth.ts",
+          "sha256": "f69f9d83d15d869fa1685a23550322b28fe023ece00295a694efd2b4355096b1",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "sha256": "2e1d5c1e42c5ceb498b8011de65d495b185afcbe21da8b326a2d8b6ed9b04560",
+          "role": "source"
+        },
+        {
+          "path": "src/sdk/tsconfig.json",
+          "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "e44f357958d91affcd4610c62a8e23a36d48431ddfff16f2b6d7440598bf2d50",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "configuration"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "configuration"
+        }
+      ],
+      "digest": "7fdffd2cd80790ce59805565314dfbab1138b054c93fb3dce1d2a798232ac009"
+    },
+    "status": "revalidation_required",
+    "superseded_by": null
+  }
+}

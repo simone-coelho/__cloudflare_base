@@ -1,0 +1,55 @@
+{
+  "at": "2026-09-14T02:37:48.835Z",
+  "task_id": "W26.03",
+  "journal": 1663,
+  "artifact_digest": "3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af",
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "session_id": 42954,
+    "captures": [
+      {
+        "chunk_id": "00ad18",
+        "wall_time_seconds": 1.001162574,
+        "session_id": 42954,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "250a9d",
+        "wall_time_seconds": 50.001093497,
+        "session_id": 42954,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "d699ab",
+        "wall_time_seconds": 50.001542098,
+        "session_id": 42954,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "357bcb",
+        "wall_time_seconds": 50.001533672,
+        "session_id": 42954,
+        "original_token_count": 281,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=34, unscoped=7\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=114, closed=2; evidence records=339\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W26.03 — Continue decision-independent W22/F16 sink reconciliation: assess bounded duplicate/conflicting-record handling in existing raw/hourly report reads before caps, using existing IDs and erasure/versioned-computation boundaries. Read full W22 scope and linked requirements before admission; no new statistics identifiers or outcome seen-before-send flag. Actual rendered exposure ingestion still requires explicit served/rendered/viewable measurement and accumulation/retention transition; keep current denominators and automatic refresh unchanged. Full pipeline, customer/native and release acceptance remain open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 24470\n"
+      },
+      {
+        "chunk_id": "c9d520",
+        "wall_time_seconds": 0.000002326,
+        "exit_code": 0,
+        "original_token_count": 281,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=34, unscoped=7\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=114, closed=2; evidence records=339\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W26.03 — Continue decision-independent W22/F16 sink reconciliation: assess bounded duplicate/conflicting-record handling in existing raw/hourly report reads before caps, using existing IDs and erasure/versioned-computation boundaries. Read full W22 scope and linked requirements before admission; no new statistics identifiers or outcome seen-before-send flag. Actual rendered exposure ingestion still requires explicit served/rendered/viewable measurement and accumulation/retention transition; keep current denominators and automatic refresh unchanged. Full pipeline, customer/native and release acceptance remain open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 24470\n"
+      }
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=34, unscoped=7\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=114, closed=2; evidence records=339\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W26.03 — Continue decision-independent W22/F16 sink reconciliation: assess bounded duplicate/conflicting-record handling in existing raw/hourly report reads before caps, using existing IDs and erasure/versioned-computation boundaries. Read full W22 scope and linked requirements before admission; no new statistics identifiers or outcome seen-before-send flag. Actual rendered exposure ingestion still requires explicit served/rendered/viewable measurement and accumulation/retention transition; keep current denominators and automatic refresh unchanged. Full pipeline, customer/native and release acceptance remain open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 24470\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=34, unscoped=7\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=114, closed=2; evidence records=339\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W26.03 — Continue decision-independent W22/F16 sink reconciliation: assess bounded duplicate/conflicting-record handling in existing raw/hourly report reads before caps, using existing IDs and erasure/versioned-computation boundaries. Read full W22 scope and linked requirements before admission; no new statistics identifiers or outcome seen-before-send flag. Actual rendered exposure ingestion still requires explicit served/rendered/viewable measurement and accumulation/retention transition; keep current denominators and automatic refresh unchanged. Full pipeline, customer/native and release acceptance remain open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 24470\n",
+    "note_counts": {
+      "check": 24470,
+      "status": 24470
+    }
+  },
+  "qualification": "Current tracker consistency only, not package/customer/native/release acceptance. Actual engine remedy remains ring-local; historical qualified proof and implementations retained."
+}

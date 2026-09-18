@@ -1,0 +1,70 @@
+{
+  "at": "2026-09-14T00:56:12.841Z",
+  "task_id": "W26.02",
+  "journal": 1636,
+  "contract_digest": "b24b6a05b4d4a84a504882be56f6ab6bf6e187c7a5fc6bc1265a81c54e37cf6c",
+  "plan": {
+    "path": "docs/remediation/design/W26.02/plan.md",
+    "sha256": "7c7512e93f01f45c13b946164171fb465575192ad1bd1a42cb28db0ad699f4c6"
+  },
+  "scope": "Optional exact public decision/event/outcome identity with scoped narrowing-only online/raw/hour attribution; explicit painted SDK receipt, pre-host validation and versioned report computation. No exposure denominator change.",
+  "owned": [
+    "src/content/types.ts",
+    "src/content/service.ts",
+    "src/content/consent.test.ts",
+    "src/sdk/types.ts",
+    "src/sdk/listen.ts",
+    "src/sdk/emit.ts",
+    "src/sdk/emit.test.ts",
+    "src/sdk/README.md",
+    "src/ledger/records.ts",
+    "src/routes/realtime.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/learn/policy.ts",
+    "src/learn/fan.ts",
+    "src/learn/report.ts",
+    "src/learn/hourly.ts",
+    "src/learn/learn.test.ts",
+    "src/learn/hourly.test.ts",
+    "src/learn/report.test.ts",
+    "public/sdk/edge-personalization.js",
+    "public/sdk/edge-personalization.esm.js",
+    "docs/kit/01-integration-guide.md"
+  ],
+  "source_pins": 151,
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "99cb94",
+        "wall_time_seconds": 1.001038297,
+        "session_id": 94397,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "1ac6c7",
+        "wall_time_seconds": 5.001813714,
+        "session_id": 94397,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "d3d834",
+        "wall_time_seconds": 0.000002259,
+        "exit_code": 0,
+        "original_token_count": 534,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=34, unscoped=7\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=112, closed=2; evidence records=333\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W15.01 — Before adding automatic refresh, resolve the correlated decision/exposure/outcome path across snapshot serving, SDK rendered events and raw/hourly reports under the existing W15/W26/W21 measurement contract. Preserve the delivered update/default/pin fixes; do not add a naive update-to-hydrate loop or equate non-counting refresh with correct displayed exposure. Server-snapshot/first-paint/customer integration and the genuine content push remain separate; admit the next decision-independent implementation or surface the precise required owner decision.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 23565\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=34, unscoped=7\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=112, closed=2; evidence records=333\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W15.01 — Before adding automatic refresh, resolve the correlated decision/exposure/outcome path across snapshot serving, SDK rendered events and raw/hourly reports under the existing W15/W26/W21 measurement contract. Preserve the delivered update/default/pin fixes; do not add a naive update-to-hydrate loop or equate non-counting refresh with correct displayed exposure. Server-snapshot/first-paint/customer integration and the genuine content push remain separate; admit the next decision-independent implementation or surface the precise required owner decision.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 23565\n"
+      }
+    ],
+    "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=34, unscoped=7\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=112, closed=2; evidence records=333\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W15.01 — Before adding automatic refresh, resolve the correlated decision/exposure/outcome path across snapshot serving, SDK rendered events and raw/hourly reports under the existing W15/W26/W21 measurement contract. Preserve the delivered update/default/pin fixes; do not add a naive update-to-hydrate loop or equate non-counting refresh with correct displayed exposure. Server-snapshot/first-paint/customer integration and the genuine content push remain separate; admit the next decision-independent implementation or surface the precise required owner decision.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 23565\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=34, unscoped=7\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=112, closed=2; evidence records=333\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W15.01 — Before adding automatic refresh, resolve the correlated decision/exposure/outcome path across snapshot serving, SDK rendered events and raw/hourly reports under the existing W15/W26/W21 measurement contract. Preserve the delivered update/default/pin fixes; do not add a naive update-to-hydrate loop or equate non-counting refresh with correct displayed exposure. Server-snapshot/first-paint/customer integration and the genuine content push remain separate; admit the next decision-independent implementation or surface the precise required owner decision.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 23565\n",
+    "exit_code": 0,
+    "drained": true
+  },
+  "prior_journal_length": 1627,
+  "prior_journal_sha256": "14b606b952419f75cd1a7731552ff910732c4aed106f60e688ad990230a8e198",
+  "closed_pins_verified": 63,
+  "qualification": "Optional exact decision correlation only, not exposure gating, rendered/viewable equivalence, causal lift or global exactly-once delivery. Served decision denominators, repeat-event counts, fatigue and statistics placement identity remain unchanged. Legacy absent-ID events retain existing attribution; malformed/unknown/ambiguous explicit targets receive no fallback credit. Existing online counters and historical aggregates are not rebuilt or declared semantically clean. New report computation basis2 identifies exact-ID-aware attribution; basis1 is retained as old, never relabeled, and mixed bases withheld. Reader/producer/SDK rollout remains required; old binaries may ignore additive IDs and are not accepted. SDK legacy three-argument rendered calls and untagged/explicit events remain uncorrelated; do not infer a clicked receipt from latest served state. Automatic refresh, genuine push, impression/exposure persistence/idempotency, first-paint/no-flash/customer/SSO/native/SLO/release acceptance remain open. No scoring, composer/replay, consent/identity authority or customer/DS policy change. Existing dirty worktree and implemented fixes/history preserved; W15.01 overlapping exact-byte proof qualified, W08.04 unchanged. No new suite/framework/infrastructure, build script, install, deploy/cloud/customer-data/credential/commit/push/destructive/external operations. Installed esbuild write:false plus apply_patch of the two owned bundles only.",
+  "lead": "w01-lead",
+  "source_go": "Pending direct pins/contract verification; no source edits before GO."
+}

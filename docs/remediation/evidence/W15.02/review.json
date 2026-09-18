@@ -1,0 +1,75 @@
+{
+  "task_id": "W15.02",
+  "reviewer": "/root/w1202_review",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "recorded_at": "2026-09-18T18:57:35Z",
+  "verdict": "REWORK",
+  "scope": "Complete original W15/F12/F21/F29/F30/N17/N25 and current C1-C12; no local/full/customer acceptance.",
+  "authority": "Root authorized only this independent review record. No reviewer product edits, tests, builds, board commands, external operations or subdelegation. Product/evidence remains STOP pending lead rework transition.",
+  "artifact": {
+    "digest": "851b205284912e0383666deaf4ab0caa890f8124c58de6b89b47e88691b18b9c",
+    "contract_digest": "a6f51718893ca7c585de995e3db8b6d952991672a6b20f665486e25d5a09846a",
+    "worker": { "path": "docs/remediation/evidence/W15.02/worker.json", "bytes": 19682342, "sha256": "87d5e3e0b8e4af061b28a322f3abfbcab470a8677397347c32222d40cb24ad37" },
+    "freeze": { "path": "docs/remediation/evidence/W15.02/source-freeze.json", "bytes": 4551, "sha256": "dc3a0ff6a4f823d6c96144e2acff02a0d18a84add2fa06282950b2b9b4d83214" },
+    "identity_qualification": "Worker/freeze raw identities independently verified. Root's 1219 physical-pin, 95-original/bidirectional-delta and 293-protected verification is referenced, not represented as a reviewer test or duplicate full-pin execution."
+  },
+  "findings": [
+    {
+      "id": "R8",
+      "criteria": ["C2", "C7"],
+      "status": "OPEN",
+      "basis": "src/sdk/listen.test.ts:409-449 calls refresh/apply directly; src/sdk/core.test.ts:585 exercises generic updates; src/sdk/emit.test.ts:203 gates aliases; scripts/stamp-workflow.test.mjs:670ff exercises a CLI renderer simulation. These do not execute the published guide callback through acknowledged ordinary interaction -> automatic refresh -> changed DOM/render receipt, or publication/CMS-failure/default handling. Worker independently confirmed the gap.",
+      "failure_contract": "docs/kit/01-integration-guide.md:69-78 calls renderHero and then unconditionally rendered. The snippet does not define a failed/missing/deleted/cross-category CMS lookup's success-only admission/default contract; SDK callback exception swallowing cannot establish that contract.",
+      "required_correction": "Within the existing admitted SDK fixture, execute the literal published callback with source and both retained bundles. Prove one-to-three actual acknowledged ordinary interactions cause bounded automatic refresh and changed DOM/original painted receipt, publication is observed without reload, and unavailable/failed CMS lookup restores defaults without false render admission. Define the narrow renderer success/failure contract in place. Preserve existing stale owner/page/consent/default assertions; no new harness or Worker build."
+    },
+    {
+      "id": "R9",
+      "criteria": ["C6"],
+      "status": "OPEN",
+      "basis": "src/sdk/listen.test.ts:481-489 supplies hand-built getAttribute/querySelectorAll element stubs for SSR adoption. This proves matching logic, not actual DOM adoption/node preservation for the promised local server-first-paint contract. Worker independently confirmed this fixture limitation.",
+      "required_correction": "Use the existing fixture's actual DOM support for the server helper/bootstrap and source/both-bundle adoption. Assert the exact existing nodes survive same-grant adoption without subscriber repaint, and stale/mismatched authority restores defaults. Reuse existing bounded broker/refusal controls. This remains local DOM evidence, not customer browser/no-flash acceptance."
+    }
+  ],
+  "whole_scope_readback": {
+    "C1": "Original scope, linked findings, agreement, admission chain and actual connected changes reviewed; full-item acceptance withheld for R8/R9 and unrun K10.",
+    "C2": "Coalescing/latest-intent, owner/page/consent guards, original painted receipt and exact bundles source-supported; exact-kit proof incomplete under R8.",
+    "C3": "Purpose-separated encrypted offers bind exact original receipt/grant/epoch/page/placement/config/consent/expiry; read-only polls have no capture side effects. Component/native evidence supports correction.",
+    "C4": "Original render ID/time, first-transaction expiry rollback, existing durable recovery, exact buffered ACK/lost-reply retry and alias gates reviewed. ACK is source admission, not sink completion or human visibility.",
+    "C5": "Explicit served/rendered basis traced through current state, receipts, fan, priors, online/hourly/replay/report/UI/CSV; legacy v1-v3 reports remain historical and current v4 guards are preserved. Optional row metadata is erased legacy-input typing, not current-state weakening.",
+    "C6": "Bounded first-party broker, canonical current grant, private no-store minimal inert bootstrap, same-grant/refusal/lease and adoption guards source-supported; actual DOM proof incomplete under R9.",
+    "C7": "Run-owned conditional publication/cleanup, signed protocol, lost render ACK identity and operator-private receipt readback reviewed. CLI/hand-built element evidence does not replace the missing exact kit flow in R8/R9. Tag-plan/debug and customer limitations preserved.",
+    "C8": "Disabled explicitly configured/preprovisioned OIDC, exact issuer-subject links, bounded endpoint/body work, nonce/PKCE and current local memberships reviewed. Browser S256 correction is a genuine runtime repair and is covered by exact stored-verifier assertions, not labeled type-only.",
+    "C9": "0013 nullable-password migration, existing IDs/FKs/triggers/recovery, immutable provenance, account/link/config revisions and database-execution-time expiry barriers reviewed with native/local SQL evidence.",
+    "C10": "One-use current-browser completion, renewal/audit late-authority checks, current tenant membership, versioned package/schema and safe older-artifact restore inspected. Local logout is not IdP-wide deprovisioning.",
+    "C11": "Full-source/primary review performed; candidate is REWORK. Required frozen K10 deliberately NOT_RUN. One retained Worker package only; no second build/full CI.",
+    "C12": "OPEN; no customer/live/commercial acceptance or external authority inferred."
+  },
+  "primary_readbacks": {
+    "location": "Immutable worker reference above: checks[].streams, finalCheckQualification, postCheckCorrections, compilerCorrectionBasis and packagedArtifact. Complete streams remain there, not duplicated here.",
+    "read_and_integrity_checked": ["W15.02-K1.4", "W15.02-K2.3", "W15.02-K3.4", "W15.02-K4.7", "W15.02-K5.1", "W15.02-K6.4", "W15.02-K7.3", "W15.02-K8.2", "W15.02-K9.1"],
+    "qualification": "Complete semantic outputs read; large runtime manifests and embedded package blobs parsed and hash/length checked rather than visually reproducing encoded bytes. K4 current/original verifier manifests are distinct intentional bases. Nested lint warning changes compared with accepted W14 baseline; unchanged warnings are not a zero-warning claim.",
+    "package": { "digest": "bc30b41a5fb64aaa9b5ee12d15b4e75ba25515872f18594f25ae66db9c1ceea7", "raw_bytes": 11350807, "raw_sha256": "2a8b255d65f3e9b811974b75ffb7b42efd95efa67072a8c34d776f2ae22d6f91", "worker_bytes": 7408702, "exact_assets": 13, "sdk_version": "0.2.0", "native_outbound": 0, "build_count": 1 },
+    "nested_checks": "Actual retained K7.3 fixed lint PASS 0 errors/581 warnings with unchanged 582 ceiling, app+SDK compilers PASS, rendered selection PASS3; 478 before/after basis pins equal. K7.3 selected20 is local package evidence, not full/trusted CI."
+  },
+  "prior_findings_and_reuse": {
+    "R1_R7": "Original-wire identity, buffered ACK, transactional first-admission expiry, latest refresh intent, callback/completion expiry, exact issuer, and post-sign current session/account corrections source-supported with the retained focused/native evidence. No reopening solely because R8/R9 remain.",
+    "connected_residuals": "Content aliases/core.send ACK gating, same-ID changed assets, stale refresh delivery, bounded reader cancellation, basis/fatigue/report semantics, DB-clock federation expiry and pre/post subject-audit membership barriers reviewed and source-supported.",
+    "qualified_checks": "K1.4 later SDK/server/bundle change is explicit default ignoreBOM:false; K2.3 later consumed changes are discarded-value void reads, erased annotation/row typing and the same decoder default; K5.1 relevant fixture delta is erased typing; K8.2 directly consumed seed/schema inputs unchanged. Current K3.4/K4.7/K6.4/K7.3 cover non-neutral parser/JWK/PKCE/native changes. Exact retained correction bytes/patches inspected; no blanket all-source-unchanged claim.",
+    "next_review": "Reuse this full connected review and immutable primaries after examining the bounded actual correction and affected evidence. Preserve original candidate/failures; do not silently relabel this review PASS."
+  },
+  "K10": {
+    "status": "NOT_RUN",
+    "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/listen.test.ts src/routes/auth.test.ts src/console/console.render.test.ts -t 'W15' --maxWorkers=1 --minWorkers=1",
+    "reason": "Intentionally deferred before execution because actual frozen C2/C7 and C6 proof gaps require bounded correction and a new root freeze/GO. No reviewer runtime primary or test pin snapshots are claimed."
+  },
+  "limitations": [
+    "Native W12 decision/event latency thresholds still fail; complete delivery stages are not an SLO pass. Intentional post-deadline cross-request promise warning remains visible.",
+    "Historical cold Node Request.clone cause remains unproved; subsequent passing checks do not establish that cause as fixed.",
+    "Earlier failed attempts and K1.1 unavailable separate streams/completion/pins remain historical limitations, not rewritten proof.",
+    "Local DOM/workerd/SQLite and intercepted providers do not prove actual customer browser/SSR/SFCC/IdP/warehouse/cloud behavior, first-paint latency, human visibility, causal impact or commercial acceptance.",
+    "OIDC activation/material/recognition/privacy/session policy and actual operator/customer acceptance remain separately authorized; no deployment, credential or customer-data operations performed."
+  ],
+  "reviewer_sessions": [],
+  "review_state": "REVIEW/EVIDENCE STOP; lead alone owns rework transition and final disposition."
+}

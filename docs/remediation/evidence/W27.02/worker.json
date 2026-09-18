@@ -1,0 +1,328 @@
+{
+  "task_id": "W27.02",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T15:19:49.980Z",
+  "source_go_at": "2026-09-12T15:05:36.318Z",
+  "contract_digest": "cadfde6c36efdc4546588e6576330d601c755e95ced577de0b7dcb9e924f4ce0",
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W27.02/plan.md",
+      "sha256": "e1a2fa8eb9d8bad851e294dc3372b16c66c272079e5d866a172855d58e8e6547"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W27.02/baseline.json",
+      "sha256": "49eac8f078d93d2388f8c6d52cd0e039207884a1cd074ff5633aaa01843724de"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W27.02/admission.json",
+      "sha256": "5b35012d821fa668a75653fdf66fbc84fed1e8dc690370568a0643d492496186"
+    }
+  },
+  "implementation_summary": [
+    "New complete records carry detached ordered version1 page dependencies, effective learning presence and exact candidateLimit; true pins/default arm name zero unused snapshot dependencies.",
+    "Replay validates the full manifest and required archive owner/slot/version/prior/basic consumed numeric structure, runs only target prefix or genuine catalog pin, and preserves detached full original inputs on returned records.",
+    "Authority and full exploration metadata join existing comparisons; consumed target lift/prior are truthful, including legacy pins. Invalid-present metadata never downgrades to legacy; personalized legacy multi-slot and ambiguous zero-lift settings refuse.",
+    "Three grouped additions exercise pure coupled/gamma0/exploration/pin/negative paths and actual service, publisher archives, enqueue, canonical storage and replay. Existing packing fixture retains old metadata-free byte baselines and measures actual additive bytes/budgeted roundtrips."
+  ],
+  "criterion_verdicts": {
+    "W27.02-C1": "Local runtime PASS: full ordered metadata, unchanged choice inputs, actual full-record queue/canonical roundtrip and four byte measurements. No publisher or live I/O changes.",
+    "W27.02-C2": "Local runtime PASS: coupled picks/candidates, gamma0 rotation/Thompson, pin independence, missing/malformed dependencies, qualified legacy handling, detached returned page context and choice comparison.",
+    "W27.02-C3": "Worker checks PASS: fixed11, scoped static, seven source STOP hashes and 110 protected matches. Independent frozen review and lead acceptance remain pending."
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 11,
+      "unselected": 44,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 64438,
+      "chunk_id": "1332da",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "K2 final candidate"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 3,
+      "inherited_warnings": 3,
+      "command_capture": "K2 final candidate"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "K2 final candidate"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 86180,
+      "chunk_id": "3f3969",
+      "final_bytes": true
+    }
+  },
+  "execution_history": [
+    {
+      "capture": "K1 candidate 1",
+      "outcome": "9 passed / 2 failed / 44 unselected; exit1 drained, retained and superseded.",
+      "corrections": [
+        "New service fixture initially expected service.afterResponse to enqueue, but actual service schedules only learning; the actual mounted caller enqueues. The grouped fixture now explicitly invokes actual enqueueDecisions after asserting service.write, without production changes or archive bypass.",
+        "W09.05 identity fixture inherited a compatible same-scope cached lift from a prior fresh synthetic environment, while its own archive lacked that snapshot. Existing consent fixture beforeEach now invalidates lift cache alongside config cache. This was uncovered fixture contamination, not a claimed product parity pass."
+      ]
+    },
+    {
+      "capture": "K1 candidate 2 after fixture wiring/cache isolation",
+      "outcome": "11 passed / 44 unselected, exit0 drained on final source bytes."
+    },
+    {
+      "capture": "K2 final candidate",
+      "outcome": "Compiler, scoped lint and whitespace exit0/drained; only the three inherited decide/replay warnings."
+    },
+    {
+      "capture": "Final source STOP and protected comparison",
+      "outcome": "Seven final hashes, all 110 protected pins unchanged; no source edits after STOP."
+    }
+  ],
+  "byte_measurements": {
+    "basis": "UTF-8 JSON full set envelope. Legacy projection deletes only inputs.replay. Added field bytes counted independently per record; actual queue message/body and batch limits asserted.",
+    "body_budget_bytes": 120000,
+    "batch_budget_bytes": 240000,
+    "batch_message_limit": 100,
+    "cases": [
+      {
+        "positions": 8,
+        "dimensions": 8,
+        "values": 24,
+        "regional": false,
+        "legacy_bytes": 36032,
+        "added_bytes": 2928,
+        "current_bytes": 38960,
+        "queue_messages": 1,
+        "queue_batches": 1
+      },
+      {
+        "positions": 30,
+        "dimensions": 8,
+        "values": 24,
+        "regional": false,
+        "legacy_bytes": 135062,
+        "added_bytes": 36000,
+        "current_bytes": 171062,
+        "queue_messages": 2,
+        "queue_batches": 1
+      },
+      {
+        "positions": 30,
+        "dimensions": 6,
+        "values": 24,
+        "regional": true,
+        "legacy_bytes": 188672,
+        "added_bytes": 36000,
+        "current_bytes": 224672,
+        "queue_messages": 2,
+        "queue_batches": 1
+      },
+      {
+        "positions": 8,
+        "dimensions": 8,
+        "values": 128,
+        "regional": true,
+        "legacy_bytes": 291941,
+        "added_bytes": 2928,
+        "current_bytes": 294869,
+        "queue_messages": 3,
+        "queue_batches": 2
+      }
+    ]
+  },
+  "command_captures": [
+    {
+      "label": "K1 candidate 1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/phase3.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts -t 'W27.02|the term on the decision|the same record decided again|a tampered receipt is caught|W27.01 keeps|W09.05 separates|W09.01 packs' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T15:13:42.903Z",
+      "captures": [
+        {
+          "chunk_id": "2a4cb6",
+          "wall_time_seconds": 1.001327358,
+          "session_id": 24419,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "baa7ca",
+          "wall_time_seconds": 5.001328462,
+          "session_id": 24419,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "595b7f",
+          "wall_time_seconds": 5.00114197,
+          "session_id": 24419,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "579261",
+          "wall_time_seconds": 0.000002007,
+          "exit_code": 1,
+          "original_token_count": 2530,
+          "output": "stdout | src/ledger/ledger.test.ts > producer > W09.01 packs real decision sets by UTF-8 bytes with lossless legacy expansion, storage and receipts\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 36032,\n  manifestBytes: 366,\n  addedBytes: 2928,\n  actualBytes: 38960,\n  messages: 1,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 135062,\n  manifestBytes: 1200,\n  addedBytes: 36000,\n  actualBytes: 171062,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 6,\n  values: 24,\n  regional: true,\n  baselineBytes: 188672,\n  manifestBytes: 1200,\n  addedBytes: 36000,\n  actualBytes: 224672,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 128,\n  regional: true,\n  baselineBytes: 291941,\n  manifestBytes: 366,\n  addedBytes: 2928,\n  actualBytes: 294869,\n  messages: 3,\n  batches: 2\n}\n\n ✓ src/ledger/ledger.test.ts  (22 tests | 21 skipped) 141ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ❯ src/content/consent.test.ts  (20 tests | 2 failed | 17 skipped) 124ms\n   ❯ src/content/consent.test.ts > CW31 consent on the content service > W27.02 replays the actual coupled service decision after complete queue and canonical ledger serialization\n     → expected [] to deeply equal [ { …(22) }, { …(22) } ]\n   ❯ src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\n     → expected { ok: false, equal: false, …(5) } to match object { ok: true, equal: true }\n(27 matching properties omitted from actual)\n ✓ src/learn/phase3.test.ts  (13 tests | 6 skipped) 34ms\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/content/consent.test.ts > CW31 consent on the content service > W27.02 replays the actual coupled service decision after complete queue and canonical ledger serialization\n\nAssertionError: expected [] to deeply equal [ { …(22) }, { …(22) } ]\n\n- Expected\n+ Received\n\n- Array [\n-   Object {\n-     \"arm\": \"personalized\",\n-     \"authority\": \"engine\",\n-     \"brand\": \"coach\",\n-     \"candidates\": Array [\n-       Object {\n-         \"contentId\": \"b\",\n-         \"score\": 0.789,\n-       },\n-       Object {\n-         \"contentId\": \"a\",\n-         \"score\": 0.225,\n-       },\n-     ],\n-     \"cell\": Object {\n-       \"affinity\": \"line:Drover\",\n-       \"channel\": \"direct\",\n-       \"region\": null,\n-       \"stage\": \"mid\",\n-       \"visit_bucket\": \"unknown\",\n-     },\n-     \"config_label\": \"reflex-demo-v1\",\n-     \"customer_item_id\": \"cms-b\",\n-     \"decision_id\": \"coach:mtyj06sa:vis-00000000-0000-4000-8000-000000000001:home:first:0:n1:f468fec8-b5d3-492d-8850-85b6fcaa6fa9\",\n-     \"explain\": Object {\n-       \"drivers\": Array [\n-         Object {\n-           \"a\": 0.9,\n-           \"dim\": \"line\",\n-           \"value\": \"Drover\",\n-           \"weight\": 0.5,\n-         },\n-       ],\n-       \"lift\": Object {\n-         \"gamma\": 1,\n-         \"level\": 5,\n-         \"level_words\": \"channel, visit bucket, stage, region and affinity cell\",\n-         \"lift\": 1.7523245954164806,\n-         \"n\": 99.99999823633159,\n-         \"n0\": 30,\n-         \"objective\": \"unit\",\n-         \"p0\": 0.455,\n-         \"p_hat\": 0.7973076909144987,\n-         \"reward\": \"click\",\n-         \"s\": 89.99999841269843,\n-       },\n-       \"score_base\": 0.45,\n-       \"score_final\": 0.789,\n-     },\n-     \"explored\": false,\n-     \"identity_anchor\": \"visitor\",\n-     \"inputs\": Object {\n-       \"affinity\": Object {\n-         \"line\": Object {\n-           \"Drover\": 0.9,\n-         },\n-       },\n-       \"replay\": Object {\n-         \"candidateLimit\": 10,\n-         \"learning\": true,\n-         \"slots\": Array [\n-           Object {\n-             \"lift\": 1789226069369,\n-             \"prior\": 0,\n-             \"slot\": \"first\",\n-           },\n-           Object {\n-             \"lift\": 1789226069381,\n-             \"prior\": 0,\n-             \"slot\": \"hero\",\n-           },\n-         ],\n-         \"version\": 1,\n-       },\n-     },\n-     \"item_id\": \"b\",\n-     \"page\": \"home\",\n-     \"position\": 0,\n-     \"request_id\": \"f468fec8-b5d3-492d-8850-85b6fcaa6fa9\",\n-     \"session_id\": \"s1\",\n-     \"slot\": \"first\",\n-     \"tenant\": \"coach\",\n-     \"ts\": 1789226069338,\n-     \"versions\": Object {\n-       \"catalog\": 1,\n-       \"config\": 0,\n-       \"learn\": 1,\n-       \"lift\": 1789226069369,\n-       \"policy\": 1,\n-       \"prior\": 0,\n-       \"slots\": 1,\n-     },\n-     \"visitor_id\": \"vis-00000000-0000-4000-8000-000000000001\",\n-   },\n-   Object {\n-     \"arm\": \"personalized\",\n-     \"authority\": \"engine\",\n-     \"brand\": \"coach\",\n-     \"candidates\": Array [\n-       Object {\n-         \"contentId\": \"a\",\n-         \"score\": 0.45,\n-       },\n-     ],\n-     \"cell\": Object {\n-       \"affinity\": \"line:Drover\",\n-       \"channel\": \"direct\",\n-       \"region\": null,\n-       \"stage\": \"mid\",\n-       \"visit_bucket\": \"unknown\",\n-     },\n-     \"config_label\": \"reflex-demo-v1\",\n-     \"customer_item_id\": \"cms-a\",\n-     \"decision_id\": \"coach:mtyj06sa:vis-00000000-0000-4000-8000-000000000001:home:hero:0:n1:f468fec8-b5d3-492d-8850-85b6fcaa6fa9\",\n-     \"explain\": Object {\n-       \"drivers\": Array [\n-         Object {\n-           \"a\": 0.9,\n-           \"dim\": \"line\",\n-           \"value\": \"Drover\",\n-           \"weight\": 0.5,\n-         },\n-       ],\n-       \"lift\": Object {\n-         \"gamma\": 0,\n-         \"level\": 5,\n-         \"level_words\": \"channel, visit bucket, stage, region and affinity cell\",\n-         \"lift\": 0.5,\n-         \"n\": 99.99999757495594,\n-         \"n0\": 30,\n-         \"objective\": \"unit\",\n-         \"p0\": 0.455,\n-         \"p_hat\": 0.11269230960794904,\n-         \"reward\": \"click\",\n-         \"s\": 0.9999999757495593,\n-       },\n-       \"score_base\": 0.45,\n-       \"score_final\": 0.45,\n-     },\n-     \"explored\": false,\n-     \"identity_anchor\": \"visitor\",\n-     \"inputs\": Object {\n-       \"affinity\": Object {\n-         \"line\": Object {\n-           \"Drover\": 0.9,\n-         },\n-       },\n-       \"replay\": Object {\n-         \"candidateLimit\": 10,\n-         \"learning\": true,\n-         \"slots\": Array [\n-           Object {\n-             \"lift\": 1789226069369,\n-             \"prior\": 0,\n-             \"slot\": \"first\",\n-           },\n-           Object {\n-             \"lift\": 1789226069381,\n-             \"prior\": 0,\n-             \"slot\": \"hero\",\n-           },\n-         ],\n-         \"version\": 1,\n-       },\n-     },\n-     \"item_id\": \"a\",\n-     \"page\": \"home\",\n-     \"position\": 0,\n-     \"request_id\": \"f468fec8-b5d3-492d-8850-85b6fcaa6fa9\",\n-     \"session_id\": \"s1\",\n-     \"slot\": \"hero\",\n-     \"tenant\": \"coach\",\n-     \"ts\": 1789226069338,\n-     \"versions\": Object {\n-       \"catalog\": 1,\n-       \"config\": 0,\n-       \"learn\": 1,\n-       \"lift\": 1789226069381,\n-       \"policy\": 1,\n-       \"prior\": 0,\n-       \"slots\": 1,\n-     },\n-     \"visitor_id\": \"vis-00000000-0000-4000-8000-000000000001\",\n-   },\n- ]\n+ Array []\n\n ❯ src/content/consent.test.ts:134:78\n    132|     expect(served.records.map(record => record.item_id)).toEqual(['b',…\n    133|     expect(served.records[0]!.explain.lift!.lift).toBeGreaterThan(1);\n    134|     expect(wire.flatMap(expandLedgerMessage).map(message => message.re…\n       |                                                                              ^\n    135|     expect(await consumeLedger(env, wire, now + 2)).toMatchObject({ ok…\n    136|     const target = served.records[1]!, persisted = (await findById<Dec…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nAssertionError: expected { ok: false, equal: false, …(5) } to match object { ok: true, equal: true }\n(27 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  Object {\n-   \"equal\": true,\n-   \"ok\": true,\n+   \"equal\": false,\n+   \"ok\": false,\n  }\n\n ❯ src/content/consent.test.ts:350:69\n    348|     expect(compareRecords(first, second).map(d => d.field)).toEqual(['…\n    349|     expect(parseId(first.decision_id)).toMatchObject({ tenant: 'coach'…\n    350|     const replay = await replayDecision(env, first); expect(replay).to…\n       |                                                                     ^\n    351|     expect(replay.replayed!.decision_id).toBe(first.decision_id);\n    352|     const legacy = { ...first }; delete legacy.request_id;\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  1 failed | 2 passed (3)\n      Tests  2 failed | 9 passed | 44 skipped (55)\n   Start at  11:13:50\n   Duration  46.66s (transform 7.08s, setup 0ms, collect 29.17s, tests 299ms, environment 0ms, prepare 12.97s)\n\n"
+        }
+      ],
+      "session_id": 24419,
+      "exit_code": 1,
+      "drained": true,
+      "finished_at": "2026-09-12T15:14:45.366Z"
+    },
+    {
+      "label": "K1 candidate 2 after fixture wiring/cache isolation",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/phase3.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts -t 'W27.02|the term on the decision|the same record decided again|a tampered receipt is caught|W27.01 keeps|W09.05 separates|W09.01 packs' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T15:15:22.991Z",
+      "captures": [
+        {
+          "chunk_id": "27d398",
+          "wall_time_seconds": 1.001222057,
+          "session_id": 64438,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "09a853",
+          "wall_time_seconds": 5.001422265,
+          "session_id": 64438,
+          "original_token_count": 651,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/ledger/ledger.test.ts > producer > W09.01 packs real decision sets by UTF-8 bytes with lossless legacy expansion, storage and receipts\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 36032,\n  manifestBytes: 366,\n  addedBytes: 2928,\n  actualBytes: 38960,\n  messages: 1,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 135062,\n  manifestBytes: 1200,\n  addedBytes: 36000,\n  actualBytes: 171062,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 6,\n  values: 24,\n  regional: true,\n  baselineBytes: 188672,\n  manifestBytes: 1200,\n  addedBytes: 36000,\n  actualBytes: 224672,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 128,\n  regional: true,\n  baselineBytes: 291941,\n  manifestBytes: 366,\n  addedBytes: 2928,\n  actualBytes: 294869,\n  messages: 3,\n  batches: 2\n}\n\n ✓ src/ledger/ledger.test.ts  (22 tests | 21 skipped) 129ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (20 tests | 17 skipped) 69ms\n"
+        },
+        {
+          "chunk_id": "1332da",
+          "wall_time_seconds": 0.000002452,
+          "exit_code": 0,
+          "original_token_count": 66,
+          "output": " ✓ src/learn/phase3.test.ts  (13 tests | 6 skipped) 30ms\n\n Test Files  3 passed (3)\n      Tests  11 passed | 44 skipped (55)\n   Start at  11:15:27\n   Duration  35.08s (transform 6.67s, setup 1ms, collect 16.30s, tests 228ms, environment 0ms, prepare 13.85s)\n\n"
+        }
+      ],
+      "session_id": 64438,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T15:16:12.533Z"
+    },
+    {
+      "label": "K2 final candidate",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/decide.ts src/learn/replay.ts src/learn/phase3.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts --max-warnings 3 && git diff --check -- src/content/types.ts src/content/decide.ts src/learn/replay.ts src/learn/phase3.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T15:16:12.533Z",
+      "captures": [
+        {
+          "chunk_id": "b5bdb2",
+          "wall_time_seconds": 1.001445287,
+          "session_id": 86180,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ce1bcd",
+          "wall_time_seconds": 5.000937365,
+          "session_id": 86180,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "395116",
+          "wall_time_seconds": 5.000487444,
+          "session_id": 86180,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c160d1",
+          "wall_time_seconds": 50.001128074,
+          "session_id": 86180,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3f3969",
+          "wall_time_seconds": 0.000002369,
+          "exit_code": 0,
+          "original_token_count": 127,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/decide.ts\n  210:20  warning  '_share' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  298:62  warning  '_s' is defined but never used               @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  158:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 86180,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T15:18:14.460Z"
+    },
+    {
+      "label": "Final source STOP and protected comparison",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\"; import {createHash} from \"node:crypto\"; const b=JSON.parse(fs.readFileSync(\"docs/remediation/design/W27.02/baseline.json\",\"utf8\")); const hash=p=>createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\"); const owned=new Set(b.owned.map(x=>x.path)); const protectedPins=b.pins.filter(x=>!owned.has(x.path)); const mismatches=protectedPins.filter(x=>hash(x.path)!==x.sha256).map(x=>({path:x.path,expected:x.sha256,actual:hash(x.path)})); const at=new Date().toISOString(); console.log(JSON.stringify({final_source_stop:{at,files:b.owned.map(x=>({path:x.path,sha256:hash(x.path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},plan_sha256:hash(\"docs/remediation/design/W27.02/plan.md\"),baseline_sha256:hash(\"docs/remediation/design/W27.02/baseline.json\"),admission_sha256:hash(\"docs/remediation/evidence/W27.02/admission.json\")},null,2)); if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T15:18:35.737Z",
+      "captures": [
+        {
+          "chunk_id": "799ce9",
+          "wall_time_seconds": 0.385339585,
+          "exit_code": 0,
+          "original_token_count": 369,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T15:18:36.310Z\",\n    \"files\": [\n      {\n        \"path\": \"src/content/types.ts\",\n        \"sha256\": \"7cb7859d231de8baf54180a03faaf3c56ec9772237bb0bb8b6f198373e792597\"\n      },\n      {\n        \"path\": \"src/content/decide.ts\",\n        \"sha256\": \"88a2364e09e532bd0585aebc1941f25630edc13968530cf758bfe0790ed487a4\"\n      },\n      {\n        \"path\": \"src/learn/replay.ts\",\n        \"sha256\": \"77bb2a4b1a4bcae7f6c6f22b341d9940bb265ad84f40b5dcf0450a6421acc355\"\n      },\n      {\n        \"path\": \"src/learn/phase3.test.ts\",\n        \"sha256\": \"5401816759f5877f358bc4f6341467cce78242caba9aa31a7354fd67f7279e18\"\n      },\n      {\n        \"path\": \"src/content/consent.test.ts\",\n        \"sha256\": \"79c19cb3d3e3fea3077ad6a20d43d60559a9b35303064624c7f283ae71c0d967\"\n      },\n      {\n        \"path\": \"src/ledger/ledger.test.ts\",\n        \"sha256\": \"fdff3c1530dad4a41e03f719d0fe9a0ed4bd4d1dabe72d6b756ae830b312732a\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"f56d660cdaa8c8650452ff49d22895c8753807f2c320d510716185d7a24f4828\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 110,\n    \"matched\": 110,\n    \"mismatches\": []\n  },\n  \"plan_sha256\": \"e1a2fa8eb9d8bad851e294dc3372b16c66c272079e5d866a172855d58e8e6547\",\n  \"baseline_sha256\": \"49eac8f078d93d2388f8c6d52cd0e039207884a1cd074ff5633aaa01843724de\",\n  \"admission_sha256\": \"5b35012d821fa668a75653fdf66fbc84fed1e8dc690370568a0643d492496186\"\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T15:18:36.358Z"
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T15:18:36.310Z",
+    "files": [
+      {
+        "path": "src/content/types.ts",
+        "sha256": "7cb7859d231de8baf54180a03faaf3c56ec9772237bb0bb8b6f198373e792597"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "88a2364e09e532bd0585aebc1941f25630edc13968530cf758bfe0790ed487a4"
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "77bb2a4b1a4bcae7f6c6f22b341d9940bb265ad84f40b5dcf0450a6421acc355"
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "sha256": "5401816759f5877f358bc4f6341467cce78242caba9aa31a7354fd67f7279e18"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "79c19cb3d3e3fea3077ad6a20d43d60559a9b35303064624c7f283ae71c0d967"
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "fdff3c1530dad4a41e03f719d0fe9a0ed4bd4d1dabe72d6b756ae830b312732a"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "f56d660cdaa8c8650452ff49d22895c8753807f2c320d510716185d7a24f4828"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 110,
+    "matched": 110,
+    "mismatches": []
+  },
+  "limitations": [
+    "Forward local deterministic replay correction, not full W27/F22, customer/native/deployed acceptance, cryptographic record integrity or trustworthy learning/statistical correctness.",
+    "Legacy personalized multi-slot records without a manifest refuse; single-slot compatibility cannot reconstruct arbitrary historical pure-call candidateLimit or ambiguous zero-lift learning/exploration/control presence. Supplied old snapshots are not repaired.",
+    "Only required prefix/pin dependencies are read. Returned full manifest can identify later archives that were not read; used lift/prior describe the consumed target only.",
+    "Required archive checks cover identity, prior and basic consumed structure, not complete schema, Byzantine store or resource/SLO proof. Old publisher/readers, mixed-version rollout, retention and absent/corrupt historical archives remain open.",
+    "Current gamma-zero rotation/Thompson is reproduced, not statistically validated; no choice/scoring/model/consent/attribution changes or new decision-path I/O.",
+    "Manifest repetition adds measured bytes and can reach existing queue/ring limits sooner. These four synthetic workloads are not arbitrary catalog/page capacity or latency acceptance.",
+    "No source ownership expansion, subdelegation, governance mutation, deployment, resources, credentials, customer data, repairs/resets, commits or external actions."
+  ]
+}

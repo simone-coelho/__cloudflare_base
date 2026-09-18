@@ -1,0 +1,60 @@
+{
+  "task_id": "W14.06",
+  "journal_seq": 948,
+  "at": "2026-09-11T13:43:20Z",
+  "actor_id": "w01-lead",
+  "commands": [
+    "node scripts/remediation/board.mjs check",
+    "node scripts/remediation/board.mjs status"
+  ],
+  "actual_command": "node --max-old-space-size=768 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>134217728&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+  "execution": "Actual read-only check/status entry points via existing bounded memoized filesystem reads/errors wrapper; NOTE lines counted/filtered, no validation skipped. No file changes while pair ran.",
+  "session_id": 42088,
+  "exit_status": 0,
+  "drained": true,
+  "result": "Tracker VALID at journal948; check and status exit0,11891 historical/limitation notes each. Register consistency only, not engine/customer/release acceptance.",
+  "captures": [
+    {
+      "chunk_id": "487138",
+      "wall_time_seconds": 1.001829505,
+      "session_id": 42088,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "d21247",
+      "wall_time_seconds": 10.000795467,
+      "session_id": 42088,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "ded5ec",
+      "wall_time_seconds": 10.000982844,
+      "session_id": 42088,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "79e3fb",
+      "wall_time_seconds": 20.001661708,
+      "session_id": 42088,
+      "original_token_count": 317,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=17, unscoped=24\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=66, closed=3; evidence records=195\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W14.06 — Preflight the next remaining W14 §1.12 delivery gap against the accepted-view clause and actual src/routes/decisions.ts ledger export readers, src/ledger/writer.ts, src/ledger/erasure.ts, src/index.ts scheduled dispatcher and src/identity/history.ts input boundary. Reuse accepted typed JSON/CSV ingestion and unchanged downstream assurance; select one coherent already-authorized local implementation only where destination, identity, deletion and cadence can be explicit without inventing customer policy. Surface any required customer destination/credentials/external authority before external work. No new framework, broad validation replay, deployment, provider/customer-data calls, build/install/commit/push/cleanup, full package or release claim.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 11891\n"
+    },
+    {
+      "chunk_id": "535496",
+      "wall_time_seconds": 10.000883054,
+      "session_id": 42088,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "068a43",
+      "wall_time_seconds": 0.000002521,
+      "exit_code": 0,
+      "original_token_count": 317,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=17, unscoped=24\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=66, closed=3; evidence records=195\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W14.06 — Preflight the next remaining W14 §1.12 delivery gap against the accepted-view clause and actual src/routes/decisions.ts ledger export readers, src/ledger/writer.ts, src/ledger/erasure.ts, src/index.ts scheduled dispatcher and src/identity/history.ts input boundary. Reuse accepted typed JSON/CSV ingestion and unchanged downstream assurance; select one coherent already-authorized local implementation only where destination, identity, deletion and cadence can be explicit without inventing customer policy. Surface any required customer destination/credentials/external authority before external work. No new framework, broad validation replay, deployment, provider/customer-data calls, build/install/commit/push/cleanup, full package or release claim.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 11891\n"
+    }
+  ]
+}

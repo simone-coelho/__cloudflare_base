@@ -1,0 +1,30 @@
+{
+  "task_id": "W30.04",
+  "at": "2026-09-15T07:45:43.087Z",
+  "plan": {
+    "path": "docs/remediation/design/W30.04/plan.md",
+    "sha256": "9fa2b02642cc99a274e702ed2a0c379769f0ebe16b95d585e753f0364227bbd3"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W30.04/baseline.json",
+    "sha256": "bdace88b4c66c34474b53c02af9d93503d9fc0919acb4ed9709abb40e919dfa2"
+  },
+  "contract_digest": "213c7d71f69177952e8382d47fce99bca9730d77a6a84a64ca1056e1993471f0",
+  "independent_preflight": {
+    "actor_id": "w3004-reviewer",
+    "run_id": "/root/w30_recovery_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "9fa2b02642cc99a274e702ed2a0c379769f0ebe16b95d585e753f0364227bbd3",
+    "scope": "Prospective exact plan only, not product acceptance."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T07:45:43.087Z",
+    "plan_sha256": "9fa2b02642cc99a274e702ed2a0c379769f0ebe16b95d585e753f0364227bbd3",
+    "rationale": "Root read full canonical scope/source and current delayed-event clarification; distinct Astra/xhigh exact-plan PASS9fa2b026. Existing-key conditional numeric checkpoint, no added subject history; fixed35 covers all changed buildHour callers/fakes, no broad suite."
+  },
+  "fixed_checks": 35,
+  "limitations": "Identical-basis interrupted-work recovery only. Completed same/older-hour recomputation still has surviving-history limits. Pending source/config/erasure conflicts require separate recovery; no event-age cutoff, new personal history/retention, generation reset, arbitrary late/mutable/higher-cap dependent rebuild, cross-store erasure atomicity, old-binary coordination, day-report global CAS, online/export parity or customer/SLO/release claim. No install/build/commit/push/deploy/provision/cloud/credential/customer-data/destructive/external operations."
+}

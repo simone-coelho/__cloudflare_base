@@ -1,0 +1,30 @@
+{
+  "task_id": "W30.03",
+  "at": "2026-09-14T21:33:09.891Z",
+  "plan": {
+    "path": "docs/remediation/design/W30.03/plan.md",
+    "sha256": "bb488d16dc7e0b0c08c635987ed60c4a57ef72d5f8be76890327ba286633afa3"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W30.03/baseline.json",
+    "sha256": "bb21b4ba8fa0762cc842ea6d4ff052886c7be5b54a586c9b583c00b8b1e0c54f"
+  },
+  "contract_digest": "888baa98abb8958e2b54b5d6cc95fb7cf8e18d3a1cfc20d34b990a5d56799ead",
+  "independent_preflight": {
+    "actor_id": "w3003-reviewer",
+    "run_id": "/root/w3003_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "bb488d16dc7e0b0c08c635987ed60c4a57ef72d5f8be76890327ba286633afa3",
+    "scope": "Exact corrected plan only; no implementation acceptance."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-14T21:33:09.891Z",
+    "plan_sha256": "bb488d16dc7e0b0c08c635987ed60c4a57ef72d5f8be76890327ba286633afa3",
+    "rationale": "Root completed full parent/linked requirements and actual source/selected fixture reads; independent Astra/xhigh exact-plan PASS bb488d16. Reuse existing summary and aggregate data, no durable new state or serving changes. Corrected test escaping before admission; fixed10 and scoped static only."
+  },
+  "fixed_checks": 10,
+  "limitations": "Active-lookback aggregate-backed canonical day publication only. No same-hour mutation/late-arrival detection, dependent-hour or partial-shard reconstruction, historical backfill, new retention policy, policy/erasure freshness proof, global canonical CAS/concurrent publication fencing, raw-fallback/nightly durability, complete delivery/export/online reconciliation, customer/scientific/SLO/release acceptance. Summary match only indicates known hour membership. Dates leaving lookback or deferred by custom large lookback need separate recovery. D06/D08/W24 and full W09/W22/W30 remain open. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations."
+}

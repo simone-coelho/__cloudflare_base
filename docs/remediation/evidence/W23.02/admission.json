@@ -1,0 +1,40 @@
+{
+  "task_id": "W23.02",
+  "at": "2026-09-15T17:13:07.372Z",
+  "plan": {
+    "path": "docs/remediation/design/W23.02/plan.md",
+    "sha256": "7701d5e67cadd7efb2cbe396ae395d3bdb3ebe470efefb51c08a72b5add1af07"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W23.02/baseline.json",
+    "sha256": "c4a30de5cdcdc07a79347cdfb347b190887966e3d157630956279797b58e3192"
+  },
+  "contract_digest": "3ef5aefd63ef099ce8a41b227df9db843a596e74bd2ee348295d4e530a669a07",
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "7701d5e67cadd7efb2cbe396ae395d3bdb3ebe470efefb51c08a72b5add1af07",
+    "result": "Monotonic accumulator, common-time cap comparison and numeric-only timestamp boundary fit defect without client-clock/lifecycle/retention changes; fixed6 sufficient."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T17:13:07.372Z",
+    "plan_sha256": "7701d5e67cadd7efb2cbe396ae395d3bdb3ebe470efefb51c08a72b5add1af07",
+    "rationale": "Root actual source/requirements and distinct exact-plan PASS; coherent regional F18 path, fixed6, no policy or storage expansion."
+  },
+  "source_captures": [
+    "418771",
+    "c97537",
+    "1d1db5",
+    "4cab17",
+    "1c71c5",
+    "d16a10",
+    "c4f9a9",
+    "766d5c",
+    "639da9"
+  ],
+  "limitations": "Forward regional retained-counter arithmetic and numeric timestamp integrity only. Preserve browser/server clock purpose, current personal affinity/visit/ODP/geo policy, existing generation/cap/rounding/fan-in and accepted W09.08/W22.06. No evicted/corrupted-state reconstruction, reset/idempotency/lifecycle/retention/age cutoff or full W23/F18/customer/SLO/release claim. No install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/commit/push/external actions."
+}

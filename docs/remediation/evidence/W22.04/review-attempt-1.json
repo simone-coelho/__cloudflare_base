@@ -1,0 +1,91 @@
+{
+  "task_id": "W22.04",
+  "verdict": "fail",
+  "artifact_digest": "6cf2a48bf7d7f073a62ce7f3cf1645c4090b61342bddaa7633d1aebd5cb6dd63",
+  "contract_digest": "654a5f53b1631379685824545d9f57c6270d041ead2d57e3dbc4863cae941020",
+  "actor": {
+    "actor_id": "w2204-reviewer",
+    "run_id": "/root/w2204_review",
+    "role": "independent_reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "at": "2026-09-14T16:02:22Z",
+  "artifact_verification": {
+    "captures": [
+      "fe96b6",
+      "dff512"
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "pins": 49,
+    "mismatches": [],
+    "protected_pins": 38,
+    "protected_mismatches": [],
+    "five_baseline_payload_hashes_and_current_hashes_match": true,
+    "five_retained_forward_deltas_reconstruct_current_bytes": true
+  },
+  "inspected": {
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W22.04/source-deltas.json",
+      "sha256": "25f40efaf96091ff1ebf7c852b7b66476b7f8cea60bf9711fe19a75e48c55ffb"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W22.04/worker.json",
+      "sha256": "291c7bceb8a21c3d43e2bb892ffa466e98a89b8ee77d39827d340ea083121ba6"
+    },
+    "captures": [
+      "fd7026",
+      "dfe0a5",
+      "6ef773",
+      "b72569"
+    ],
+    "scope": "Complete five task-relative deltas, current relevant source, original acceptance plan and task C1-C3, complete canonical W22/W09/W24/F16/F19 and doc22 attribution/statistics/privacy requirements."
+  },
+  "criteria": [
+    {
+      "id": "W22.04-C1",
+      "verdict": "fail",
+      "reason": "The input array remains live during row serialization. A row toJSON callback can add or remove members after the one-time physical length check, so detached inputs can differ from received and exceed the claimed physical row ceiling."
+    },
+    {
+      "id": "W22.04-C2",
+      "verdict": "insufficient_evidence",
+      "reason": "Source guard is before current()/credit planning and introduces no retained identity; independent runtime withheld after the C1 source failure. No complete independent pass claimed."
+    },
+    {
+      "id": "W22.04-C3",
+      "verdict": "fail",
+      "reason": "Frozen source does not meet C1; independent fixed12 intentionally not run on known-failing source by lead direction. Worker final checks do not replace required independent acceptance."
+    }
+  ],
+  "finding": {
+    "location": "src/learn/fan.ts:215",
+    "classification": "source_confirmed",
+    "trigger": "A valid-owned first decision has a toJSON callback that appends another valid distinct decision to the supplied records array before returning its own valid wire record.",
+    "reasoning": "received is captured as 1 and input.length is checked once. The subsequent for-of over input observes the appended element. Both rows detach and pass scope/identity checks, then can reach ring/statistics while received remains 1. A callback that shortens the same array can instead omit an original member. The 1000-row admission check similarly applies only before mutation; later byte/work bounds do not restore truthful physical accounting.",
+    "reproduction": "Source reasoning only; no new probe or product runtime executed.",
+    "recommendation": "Capture bounded array membership/count before invoking row serialization, then iterate that captured membership. Preserve existing original/detached validation and add append/shrink callback controls within the existing grouped case."
+  },
+  "runtime": {
+    "result": "not_run",
+    "reason": "Lead stopped the agreed fixed12 run after the concrete C1 source failure, before any independent product runtime invocation.",
+    "running_commands": []
+  },
+  "worker_static_inspected": {
+    "attempt": "static-final",
+    "exit_code": 0,
+    "drained": true,
+    "final_capture": "3f4b45",
+    "errors": 0,
+    "inherited_warnings": 7,
+    "warning_signature_match": "Baseline c42739 independently compared with final worker output: three unused-variable messages in learn.test.ts, three explicit-any and one empty-setAlarm message in holdoutArms.test.ts. First TS2339 failure and explicit-this annotation correction retained.",
+    "independent_acceptance": false
+  },
+  "disposition": {
+    "next": "STOP. Lead retains this failed artifact/review, records within-contract membership-snapshot rework, then freezes replacement evidence for independent review.",
+    "running_commands": [],
+    "source_edits": 0
+  },
+  "limitations": "Same-call decision coalescing and malformed outcome identity admission only. Separate calls still repeat statistics; retained ring collisions can coexist with statistics acceptance. D06 retained identifiers/erasure/retention, W24 generations/recovery and full W22/W09/customer/release acceptance remain unresolved. Cancelled duplicate board diagnostics were not product tests or passes."
+}

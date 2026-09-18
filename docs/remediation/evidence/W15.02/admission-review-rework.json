@@ -1,0 +1,67 @@
+{
+  "task_id": "W15.02",
+  "at": "2026-09-18T19:39:38.092Z",
+  "kind": "independent_review_rework",
+  "review": {
+    "path": "docs/remediation/evidence/W15.02/review.json",
+    "bytes": 10343,
+    "sha256": "6120f7a944ad960a60f8578521c3e77af9f14328bacfc7a4f87cccec3002bd16",
+    "verdict": "REWORK",
+    "findings": [
+      "R8",
+      "R9"
+    ]
+  },
+  "rejected_artifact": {
+    "digest": "851b205284912e0383666deaf4ab0caa890f8124c58de6b89b47e88691b18b9c",
+    "freeze": {
+      "path": "docs/remediation/evidence/W15.02/source-freeze.json",
+      "sha256": "dc3a0ff6a4f823d6c96144e2acff02a0d18a84add2fa06282950b2b9b4d83214"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W15.02/worker.json",
+      "sha256": "87d5e3e0b8e4af061b28a322f3abfbcab470a8677397347c32222d40cb24ad37"
+    },
+    "package_digest": "bc30b41a5fb64aaa9b5ee12d15b4e75ba25515872f18594f25ae66db9c1ceea7"
+  },
+  "scope": "Correct only the independently confirmed W15 C2/C6/C7 proof and published failure contract. Extend the existing SDK listener fixture with actual DOM execution of the literal published callback against SDK source and both retained bundles. Prove one to three acknowledged ordinary interactions trigger bounded automatic refresh and changed DOM/original painted receipt; publication changes are observed without reload; missing, deleted, cross-category or failed CMS lookup restores defaults with zero false render admission. Use actual DOM for same-grant server bootstrap adoption and prove existing nodes survive without subscriber repaint; stale or mismatched authority restores defaults. Narrowly state success-only render acknowledgement in the existing integration guide and SDK README. Preserve all existing assertions and production code.",
+  "exclusive_outputs": [
+    "src/sdk/listen.test.ts",
+    "docs/kit/01-integration-guide.md",
+    "src/sdk/README.md"
+  ],
+  "baselines": [
+    {
+      "path": "src/sdk/listen.test.ts",
+      "bytes": 53149,
+      "sha256": "143973dd928e5b104cf806e711d07f9ebbfb08a0c4379487d6c0d141dcc0e1ec"
+    },
+    {
+      "path": "docs/kit/01-integration-guide.md",
+      "bytes": 19791,
+      "sha256": "64fbdbcb5efb4202119a133b2dd1500de4f8cf7258c73e7a7afc0deb5ffffaf7"
+    },
+    {
+      "path": "src/sdk/README.md",
+      "bytes": 17834,
+      "sha256": "a1126e8954f7ccddc39cf8593dddde735c5e1de63d3dcd1faba0839c5a954fe3"
+    }
+  ],
+  "acceptance": [
+    "One existing focused fixture executes the literal documented callback against source, IIFE and ESM with actual DOM nodes.",
+    "One to three real acknowledged ordinary interactions cause bounded automatic refresh, publication repaint without page reload and new render admission only after successful CMS paint.",
+    "Missing, deleted, cross-category and failed CMS resolution restores defaults and creates no rendered admission or correlated outcome.",
+    "Same-grant server bootstrap adoption preserves the exact existing DOM nodes and produces no subscriber repaint; stale or mismatched authority restores defaults.",
+    "Guide and SDK README state the renderer success/refusal contract and acknowledge rendering only after successful paint.",
+    "No production or generated bundle changes, new harness, Worker rebuild, broad CI, live browser/customer/deployment claim or external operation."
+  ],
+  "checks": {
+    "worker": "node node_modules/vitest/vitest.mjs run src/sdk/listen.test.ts -t 'W15 exact published callback|W15 actual DOM server adoption' --maxWorkers=1 --minWorkers=1",
+    "static": "node --max-old-space-size=512 node_modules/typescript/bin/tsc -p src/sdk --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/sdk/listen.test.ts && git diff --check -- src/sdk/listen.test.ts docs/kit/01-integration-guide.md src/sdk/README.md",
+    "independent": "Existing W15 K10 on the corrected frozen artifact plus full R8/R9 delta and reusable prior whole-source/full-primary review; no second Worker build.",
+    "reuse": "Retain all rejected-artifact evidence and limitations. Reuse production/package/runtime results only after exact proof that the three-file delta is fixture/documentation-only and both generated bundles remain byte-identical. The first Worker package remains immutable and is qualified against the changed non-payload pins."
+  },
+  "rollback": "Reverse only the three retained rework deltas onto the exact frozen baselines; preserve all prior user/task changes.",
+  "authority": "Existing local W02–W41 ordered implementation mandate and unchanged W15 contract. No deployment, cloud/resource mutation, credentials, customer data, commit, push or merge.",
+  "status": "approved_waiting_board_GO"
+}

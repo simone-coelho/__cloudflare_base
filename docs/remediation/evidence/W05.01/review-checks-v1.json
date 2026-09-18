@@ -1,0 +1,633 @@
+{
+  "task": "W05.01",
+  "actor": "w0202-reviewer",
+  "run": "/root/w0202_review",
+  "role": "independent reviewer",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "completedAt": "2026-09-07T18:42:02.958Z",
+  "artifact": {
+    "path": "docs/remediation/evidence/W05.01/artifact-v2.json",
+    "digest": "76b454f0882e85ae7d18187555532e0c2ba9b75820bf5853cc804045e795f963",
+    "sha256": "d7396d40ac974e2461cd6389c49841202cfe38483c416220de341460eb8c78d0",
+    "files": 126,
+    "contract_digest": "3014ca47a9cb8972c51902b7610faa653841397a338cafa62f66c60ddcaf30ce"
+  },
+  "verdict": "accept bounded W05.01 C1-C3; lead disposition separate",
+  "evidence_mapping": {
+    "W05.01-E1": "Reviewed worker K1-anchor-final, 66 passed; reviewer independently reran exact K1.",
+    "W05.01-E2": "Reviewed worker K2-anchor-final, 26 passed; reviewer independently reran exact K2.",
+    "W05.01-E3": "This independent K3 actual source/evidence/identity review and exact K1/K2 reruns."
+  },
+  "timingNote": "UTC command launches and observed completion timestamps; complete test outputs retain runner start and duration. Poll collection time is not a runtime/latency measure.",
+  "checks": [
+    {
+      "name": "K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/services/SessionManager.identity.test.ts src/reflex/shopperReflex.identity.test.ts src/reflex/shopperReflex.consent.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T18:37:51.507Z",
+      "outputs": [
+        {
+          "chunk_id": "348682",
+          "wall_time_seconds": 1.001681818,
+          "session_id": 48884,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "a3c3c5",
+          "wall_time_seconds": 0.000002654,
+          "exit_code": 0,
+          "original_token_count": 3899,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (22 tests) 101ms\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\nW04.02 owned operation counts {\"host\":\"session\",\"analyticsReads\":1,\"preferencesReads\":3,\"preferencesWrites\":2}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W04.02 owned shopper lane > preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts\nW04.02 owned operation counts {\"host\":\"do\",\"analyticsReads\":0,\"preferencesReads\":0,\"preferencesWrites\":0}\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > fails transitions on malformed/unreadable state or failed replacement persistence without clearing refusal or issuing a grant\nError: synthetic write failure\n    at BoundaryKV.put (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts:34:100)\n    at TenantKV.put (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/tenancy/tenant.ts:233:20)\n    at SessionManager.restrictConsent (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/services/SessionManager.ts:393:19)\n    at Module.anonymousWithConsent (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/identity/consentContinuity.ts:41:33)\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/identity.ts:128:19\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:17)\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/identity/sessionCapability.ts:120:3\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:17)\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/tenancy/middleware.ts:101:5\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:17)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > fails transitions on malformed/unreadable state or failed replacement persistence without clearing refusal or issuing a grant\nError: synthetic write failure\n    at BoundaryKV.put (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts:34:100)\n    at TenantKV.put (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/tenancy/tenant.ts:233:20)\n    at SessionManager.restrictConsent (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/services/SessionManager.ts:393:19)\n    at Module.anonymousWithConsent (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/identity/consentContinuity.ts:41:33)\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.ts:383:19\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:17)\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/identity/sessionCapability.ts:120:3\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:17)\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/tenancy/middleware.ts:101:5\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:17)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.01 withdrawal continuity > actual SDK with blocked cookies recovers failed logout restrictively before activity and account switching on both hosts\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\nUsing mock Optimizely client (no SDK key configured)\n\n ✓ src/routes/realtime.sdkContract.test.ts  (7 tests) 357ms\n ✓ src/services/SessionManager.identity.test.ts  (11 tests) 16ms\n ✓ src/content/consent.test.ts  (11 tests) 19ms\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > export → absorb: the person carries what the browser learned, under the person’s id\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > absorb twice, from two devices: counters add and the vector is the sum\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > the doors > forward: the browser’s object hands ingest and snapshot to the person’s\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.identity.test.ts > linkVisitor on the object host > does the whole thing: export, absorb, forward, and answers the person’s audiences\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/reflex/shopperReflex.identity.test.ts  (8 tests) 53ms\nstdout | src/reflex/shopperReflex.identity.test.ts > CW29: the snapshot says the stage > reports the journey stage the object last derived, and null before any event\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.consent.test.ts > the switches > are consenting when nothing was ever said, on the snapshot and the envelope\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.consent.test.ts > the switches > can arrive on an event, under data.consent\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.consent.test.ts > tracking off > answers the request but keeps nothing: no affinity written, the object unchanged\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\nstdout | src/reflex/shopperReflex.consent.test.ts > tracking off > turned back on, the next event is kept\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/reflex/shopperReflex.consent.test.ts  (7 tests) 29ms\n\n Test Files  6 passed (6)\n      Tests  66 passed (66)\n   Start at  14:37:53\n   Duration  25.29s (transform 3.45s, setup 0ms, collect 11.18s, tests 575ms, environment 1ms, prepare 9.82s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T18:39:03.417Z",
+      "passed": 66,
+      "failed": 0
+    },
+    {
+      "name": "K2",
+      "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/sdk/session.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T18:37:51.508Z",
+      "outputs": [
+        {
+          "chunk_id": "8512c4",
+          "wall_time_seconds": 1.000975367,
+          "session_id": 49442,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b861e6",
+          "wall_time_seconds": 0.000002622,
+          "exit_code": 0,
+          "original_token_count": 150,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/sdk/core.test.ts  (9 tests) 11ms\n ✓ src/sdk/identify.test.ts  (8 tests) 12ms\n ✓ src/sdk/listen.test.ts  (7 tests) 9ms\n ✓ src/sdk/session.test.ts  (2 tests) 4ms\n\n Test Files  4 passed (4)\n      Tests  26 passed (26)\n   Start at  14:37:53\n   Duration  10.02s (transform 318ms, setup 0ms, collect 868ms, tests 36ms, environment 0ms, prepare 6.70s)\n\n"
+        }
+      ],
+      "completedAt": "2026-09-07T18:39:03.419Z",
+      "passed": 26,
+      "failed": 0
+    }
+  ],
+  "identityChecks": {
+    "preExecution": {
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import crypto from \"node:crypto\";const path=\"docs/remediation/evidence/W05.01/artifact-v1.json\";const a=JSON.parse(fs.readFileSync(path,\"utf8\"));const hash=v=>crypto.createHash(\"sha256\").update(v).digest(\"hex\");const results=a.files.map(f=>({path:f.path,expected:f.sha256,actual:hash(fs.readFileSync(f.path))}));const mismatch=results.filter(f=>f.expected!==f.actual);console.log(JSON.stringify({at:new Date().toISOString(),artifactDigest:a.digest,manifestSha256:hash(fs.readFileSync(path)),count:results.length,mismatches:mismatch,files:results}));if(mismatch.length)process.exitCode=1;'",
+      "startedAt": "2026-09-07T18:37:51.035Z",
+      "result": {
+        "chunk_id": "855364",
+        "wall_time_seconds": 0.114559052,
+        "exit_code": 0,
+        "original_token_count": 6053,
+        "output": "{\"at\":\"2026-09-07T18:37:51.494Z\",\"artifactDigest\":\"57960af1d837adef71a557ecc1cdb6febdda918b36dc55658f2f6c257749a061\",\"manifestSha256\":\"0a7966ff77046e25e2e0e7603bdb5255aa3380cd2f7cc52f2f708390842b9a81\",\"count\":125,\"mismatches\":[],\"files\":[{\"path\":\"docs/remediation/design/W05.01/plan-v1.md\",\"expected\":\"1b64bcee817a7fe03fa109686f0a075a37e4fe2c6851221b4cb4cf1dc8201d9c\",\"actual\":\"1b64bcee817a7fe03fa109686f0a075a37e4fe2c6851221b4cb4cf1dc8201d9c\"},{\"path\":\"docs/remediation/design/W05.01/task-contract-v1.json\",\"expected\":\"5bc536faba348f1899eb8eba5a72f0760ae79ff75e262563b10e83aefa580c7f\",\"actual\":\"5bc536faba348f1899eb8eba5a72f0760ae79ff75e262563b10e83aefa580c7f\"},{\"path\":\"docs/remediation/evidence/W05.01/baseline-v1.json\",\"expected\":\"90786c9099fc5995f24193eac9c78d5c6965f4b30f5e95b59903f66a8714f02d\",\"actual\":\"90786c9099fc5995f24193eac9c78d5c6965f4b30f5e95b59903f66a8714f02d\"},{\"path\":\"docs/remediation/evidence/W05.01/before-sources-v1.json\",\"expected\":\"a412663c793c82dc8145157819cb09e8fa7cf44222ab2cac0a4777d6e2f3ee29\",\"actual\":\"a412663c793c82dc8145157819cb09e8fa7cf44222ab2cac0a4777d6e2f3ee29\"},{\"path\":\"docs/remediation/evidence/W05.01/entry-checks-v1.json\",\"expected\":\"e79ba423eab4425ce4b46efc27ffe55d23e63c2654442dd63a89ac05fcc130d7\",\"actual\":\"e79ba423eab4425ce4b46efc27ffe55d23e63c2654442dd63a89ac05fcc130d7\"},{\"path\":\"docs/remediation/evidence/W05.01/source-inputs-v1.json\",\"expected\":\"1283c2db3eaefe939faad746eb47bb652fd19326424442d441716cf1fd7a196c\",\"actual\":\"1283c2db3eaefe939faad746eb47bb652fd19326424442d441716cf1fd7a196c\"},{\"path\":\"docs/remediation/evidence/W05.01/worker-checks.json\",\"expected\":\"79d36f58722fef73d6a4ae60b25e46773e3aa80e14f8791378840091357da9db\",\"actual\":\"79d36f58722fef73d6a4ae60b25e46773e3aa80e14f8791378840091357da9db\"},{\"path\":\"docs/remediation/evidence/W05.01/worker.md\",\"expected\":\"1037bec5a39c64ce443748f94304c343829792a71c099e69bdcf9644814c9ae7\",\"actual\":\"1037bec5a39c64ce443748f94304c343829792a71c099e69bdcf9644814c9ae7\"},{\"path\":\"package-lock.json\",\"expected\":\"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\",\"actual\":\"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\"},{\"path\":\"package.json\",\"expected\":\"593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c\",\"actual\":\"593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c\"},{\"path\":\"public/sdk/edge-personalization.esm.js\",\"expected\":\"f3e9f58ddc08a4fa117894163ddbfa9d06b2c3456c901dfcc1df904f948d60d3\",\"actual\":\"f3e9f58ddc08a4fa117894163ddbfa9d06b2c3456c901dfcc1df904f948d60d3\"},{\"path\":\"public/sdk/edge-personalization.js\",\"expected\":\"9fee6aa07c0e9e4956241530293723a86895c49daf65754517d2df8aee69282f\",\"actual\":\"9fee6aa07c0e9e4956241530293723a86895c49daf65754517d2df8aee69282f\"},{\"path\":\"scripts/build-sdk.mjs\",\"expected\":\"bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79\",\"actual\":\"bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79\"},{\"path\":\"src/auth/signingConfig.mjs\",\"expected\":\"82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084\",\"actual\":\"82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084\"},{\"path\":\"src/config/versionedStore.ts\",\"expected\":\"c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3\",\"actual\":\"c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3\"},{\"path\":\"src/connectors/AudienceAuthoring.ts\",\"expected\":\"58757744a3bfbb5d7d9f64ed15a1c0837aac97be57bb7e1906742fa09087ce42\",\"actual\":\"58757744a3bfbb5d7d9f64ed15a1c0837aac97be57bb7e1906742fa09087ce42\"},{\"path\":\"src/connectors/AudienceStore.ts\",\"expected\":\"a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf\",\"actual\":\"a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf\"},{\"path\":\"src/connectors/DecisionProvider.ts\",\"expected\":\"5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f\",\"actual\":\"5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f\"},{\"path\":\"src/connectors/evaluateCondition.ts\",\"expected\":\"55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59\",\"actual\":\"55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59\"},{\"path\":\"src/connectors/index.ts\",\"expected\":\"efa519931607a1319d33fcbb5b1b9c1526a7e164845a99cd9e6e60878d935871\",\"actual\":\"efa519931607a1319d33fcbb5b1b9c1526a7e164845a99cd9e6e60878d935871\"},{\"path\":\"src/connectors/SegmentProvider.ts\",\"expected\":\"ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359\",\"actual\":\"ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359\"},{\"path\":\"src/connectors/SignalProvider.ts\",\"expected\":\"81936e5cf88c48ad7e31fddbb631ae24717c1e3d2ef9dab3fd921616a47e2965\",\"actual\":\"81936e5cf88c48ad7e31fddbb631ae24717c1e3d2ef9dab3fd921616a47e2965\"},{\"path\":\"src/connectors/types.ts\",\"expected\":\"b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3\",\"actual\":\"b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3\"},{\"path\":\"src/content/cell.ts\",\"expected\":\"b3fc57930c43d36681edda47d040f46691c4a442c5d84d816102dc906a203b6c\",\"actual\":\"b3fc57930c43d36681edda47d040f46691c4a442c5d84d816102dc906a203b6c\"},{\"path\":\"src/content/consent.test.ts\",\"expected\":\"22f06bdcd9e230a6608d31ea11200b61d60fe6a898ff03431bf03670790b2304\",\"actual\":\"22f06bdcd9e230a6608d31ea11200b61d60fe6a898ff03431bf03670790b2304\"},{\"path\":\"src/content/consent.ts\",\"expected\":\"38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930\",\"actual\":\"38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930\"},{\"path\":\"src/content/decide.ts\",\"expected\":\"d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5\",\"actual\":\"d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5\"},{\"path\":\"src/content/holdout.ts\",\"expected\":\"0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc\",\"actual\":\"0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc\"},{\"path\":\"src/content/import.ts\",\"expected\":\"af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc\",\"actual\":\"af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc\"},{\"path\":\"src/content/kinds.ts\",\"expected\":\"e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b\",\"actual\":\"e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b\"},{\"path\":\"src/content/lifecycle.ts\",\"expected\":\"cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd\",\"actual\":\"cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd\"},{\"path\":\"src/content/service.ts\",\"expected\":\"8e7990af92db0cf2d2ad85a19b5bf633ef2bd392d8b06dc7557adc990caddb68\",\"actual\":\"8e7990af92db0cf2d2ad85a19b5bf633ef2bd392d8b06dc7557adc990caddb68\"},{\"path\":\"src/data/coach-catalog.json\",\"expected\":\"43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e\",\"actual\":\"43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e\"},{\"path\":\"src/data/insights.json\",\"expected\":\"e6b29448440dd4e4712feb38c99ce485e6badee2aaee1f14401f40211caf3bf9\",\"actual\":\"e6b29448440dd4e4712feb38c99ce485e6badee2aaee1f14401f40211caf3bf9\"},{\"path\":\"src/data/seed-audiences.ts\",\"expected\":\"3e8e23f7cf778e27c76b67025d3c734624bf801627a6a864830725e6cd449f78\",\"actual\":\"3e8e23f7cf778e27c76b67025d3c734624bf801627a6a864830725e6cd449f78\"},{\"path\":\"src/data/signals.json\",\"expected\":\"3dfc6d73e161483092232fadecfc66ed5747daeb8aa57147b118a6a5529877c3\",\"actual\":\"3dfc6d73e161483092232fadecfc66ed5747daeb8aa57147b118a6a5529877c3\"},{\"path\":\"src/demos/brighthour/catalog.data.json\",\"expected\":\"a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6\",\"actual\":\"a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6\"},{\"path\":\"src/demos/brighthour/catalog.ts\",\"expected\":\"c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd\",\"actual\":\"c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd\"},{\"path\":\"src/demos/brighthour/demoClock.ts\",\"expected\":\"a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce\",\"actual\":\"a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce\"},{\"path\":\"src/demos/brighthour/offerLifecycle.ts\",\"expected\":\"7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82\",\"actual\":\"7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82\"},{\"path\":\"src/demos/brighthour/reflexConfig.ts\",\"expected\":\"524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf\",\"actual\":\"524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf\"},{\"path\":\"src/demos/registry.ts\",\"expected\":\"18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb\",\"actual\":\"18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb\"},{\"path\":\"src/durable-objects/ShopperReflex.ts\",\"expected\":\"a0ece8ea20f0880b01834edb43b40ec94cb3916f27a071cad559fc5ba7b0f204\",\"actual\":\"a0ece8ea20f0880b01834edb43b40ec94cb3916f27a071cad559fc5ba7b0f204\"},{\"path\":\"src/events/actionTypes.ts\",\"expected\":\"865d11512ca0af01c6104789b2e2155cb5272deeafd12bd890ccff6e9064712a\",\"actual\":\"865d11512ca0af01c6104789b2e2155cb5272deeafd12bd890ccff6e9064712a\"},{\"path\":\"src/identity/assertion.ts\",\"expected\":\"46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d\",\"actual\":\"46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d\"},{\"path\":\"src/identity/consentContinuity.ts\",\"expected\":\"504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af\",\"actual\":\"504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af\"},{\"path\":\"src/identity/erase.ts\",\"expected\":\"e2d348577a5295430b5f85cb3f685b7eda8d8a1e7f806508e44aee6ed2e9f802\",\"actual\":\"e2d348577a5295430b5f85cb3f685b7eda8d8a1e7f806508e44aee6ed2e9f802\"},{\"path\":\"src/identity/history.ts\",\"expected\":\"010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21\",\"actual\":\"010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21\"},{\"path\":\"src/identity/link.ts\",\"expected\":\"52bb959a00d4df5b8cb6717c7445a972bb2e8e9fc0363bd179b1391e46628eed\",\"actual\":\"52bb959a00d4df5b8cb6717c7445a972bb2e8e9fc0363bd179b1391e46628eed\"},{\"path\":\"src/identity/sessionCapability.ts\",\"expected\":\"7d5a2b4e2da2400705c8346041c8a650c479ee680531d65a6fc332b5e82a598c\",\"actual\":\"7d5a2b4e2da2400705c8346041c8a650c479ee680531d65a6fc332b5e82a598c\"},{\"path\":\"src/identity/shopperId.ts\",\"expected\":\"210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3\",\"actual\":\"210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3\"},{\"path\":\"src/identity/store.ts\",\"expected\":\"a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5\",\"actual\":\"a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5\"},{\"path\":\"src/learn/autonomy.ts\",\"expected\":\"667a6083d145ab6f4f35944a8b290738396b6fdac006abcc7baaf919903ebc60\",\"actual\":\"667a6083d145ab6f4f35944a8b290738396b6fdac006abcc7baaf919903ebc60\"},{\"path\":\"src/learn/cycle.ts\",\"expected\":\"708c1702ed09dc70adb3a3ee9744b41d896183cbe969e0c5b73d70be2ebec34c\",\"actual\":\"708c1702ed09dc70adb3a3ee9744b41d896183cbe969e0c5b73d70be2ebec34c\"},{\"path\":\"src/learn/explore.ts\",\"expected\":\"90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c\",\"actual\":\"90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c\"},{\"path\":\"src/learn/external.ts\",\"expected\":\"af5bb4cb5ec6a4080d3aeec190bdf9c1fe67c69b4f1a2a9905618ad330efda0d\",\"actual\":\"af5bb4cb5ec6a4080d3aeec190bdf9c1fe67c69b4f1a2a9905618ad330efda0d\"},{\"path\":\"src/learn/fan.ts\",\"expected\":\"13d090c8e11c42916b01ec81e4c5b7ccc2cbedc93ee97fe8f4be4d1a25150496\",\"actual\":\"13d090c8e11c42916b01ec81e4c5b7ccc2cbedc93ee97fe8f4be4d1a25150496\"},{\"path\":\"src/learn/hourly.ts\",\"expected\":\"2959c467763850b5de6d7c904d6bc5ec8ffd2c56e440753f3a284488cd0279e1\",\"actual\":\"2959c467763850b5de6d7c904d6bc5ec8ffd2c56e440753f3a284488cd0279e1\"},{\"path\":\"src/learn/policy.ts\",\"expected\":\"6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73\",\"actual\":\"6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73\"},{\"path\":\"src/learn/priors.ts\",\"expected\":\"bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f\",\"actual\":\"bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f\"},{\"path\":\"src/learn/queue.ts\",\"expected\":\"47411c4358b60caac52a36c0e8bacc8a678334bac7d3cedc2555af33ccc6246c\",\"actual\":\"47411c4358b60caac52a36c0e8bacc8a678334bac7d3cedc2555af33ccc6246c\"},{\"path\":\"src/learn/receipts.ts\",\"expected\":\"e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c\",\"actual\":\"e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c\"},{\"path\":\"src/learn/replay.ts\",\"expected\":\"2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5\",\"actual\":\"2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5\"},{\"path\":\"src/learn/report.ts\",\"expected\":\"ace43a542d4f5ef96ecc5d7eb17256cb391390832092c319bd0a0e01c3ab57ff\",\"actual\":\"ace43a542d4f5ef96ecc5d7eb17256cb391390832092c319bd0a0e01c3ab57ff\"},{\"path\":\"src/learn/route.ts\",\"expected\":\"fb7ba5e29cc20de154510626f7250632adf62e568cb353a9174d2f8bf1eb592e\",\"actual\":\"fb7ba5e29cc20de154510626f7250632adf62e568cb353a9174d2f8bf1eb592e\"},{\"path\":\"src/learn/rows.ts\",\"expected\":\"3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614\",\"actual\":\"3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614\"},{\"path\":\"src/learn/stats.ts\",\"expected\":\"8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a\",\"actual\":\"8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a\"},{\"path\":\"src/ledger/enqueue.ts\",\"expected\":\"1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830\",\"actual\":\"1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830\"},{\"path\":\"src/ledger/erasure.ts\",\"expected\":\"410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c\",\"actual\":\"410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c\"},{\"path\":\"src/ledger/records.ts\",\"expected\":\"73f8fbd34413425c34c3ac64a9ef853e302a18278f84b5df8bfb58073235f11e\",\"actual\":\"73f8fbd34413425c34c3ac64a9ef853e302a18278f84b5df8bfb58073235f11e\"},{\"path\":\"src/ledger/writer.ts\",\"expected\":\"c1d51c467ae6a8623677a36c7df43750b28c85a945d85278e68ad6900742b002\",\"actual\":\"c1d51c467ae6a8623677a36c7df43750b28c85a945d85278e68ad6900742b002\"},{\"path\":\"src/measure/holdout.ts\",\"expected\":\"cd421bae32093f09b37c2d36e3253d85ce9c4cfad9cb8d5913730e92098ace9b\",\"actual\":\"cd421bae32093f09b37c2d36e3253d85ce9c4cfad9cb8d5913730e92098ace9b\"},{\"path\":\"src/measure/window.ts\",\"expected\":\"652f123b5f28f2907f7cf831a24f6e5afe8b80c025d93d0f32634fd42a8ff6ba\",\"actual\":\"652f123b5f28f2907f7cf831a24f6e5afe8b80c025d93d0f32634fd42a8ff6ba\"},{\"path\":\"src/middleware/auth.ts\",\"expected\":\"9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01\",\"actual\":\"9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01\"},{\"path\":\"src/ops/monitor.ts\",\"expected\":\"3553d6aaef8e9f1ced60a7521daf55230f86baeacb423093665bd5f791ce8aad\",\"actual\":\"3553d6aaef8e9f1ced60a7521daf55230f86baeacb423093665bd5f791ce8aad\"},{\"path\":\"src/reflex/audienceGenerator.ts\",\"expected\":\"663c87b162c7373c138d0c40ce50c16051c0d31ce5e34d2a8e3aa366f2bd8940\",\"actual\":\"663c87b162c7373c138d0c40ce50c16051c0d31ce5e34d2a8e3aa366f2bd8940\"},{\"path\":\"src/reflex/configStore.ts\",\"expected\":\"0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2\",\"actual\":\"0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2\"},{\"path\":\"src/reflex/contentCompose.ts\",\"expected\":\"0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe\",\"actual\":\"0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe\"},{\"path\":\"src/reflex/contentTelemetry.ts\",\"expected\":\"ec6ef52dd9800f7488bcb03d6def18f2fe084208dca0b0f48ca604d9a74c5e41\",\"actual\":\"ec6ef52dd9800f7488bcb03d6def18f2fe084208dca0b0f48ca604d9a74c5e41\"},{\"path\":\"src/reflex/core.ts\",\"expected\":\"287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db\",\"actual\":\"287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db\"},{\"path\":\"src/reflex/identityMerge.ts\",\"expected\":\"c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508\",\"actual\":\"c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508\"},{\"path\":\"src/reflex/merchandising.ts\",\"expected\":\"4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48\",\"actual\":\"4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48\"},{\"path\":\"src/reflex/regionTrend.ts\",\"expected\":\"94c0fa6e51313f8a361e05088cc20c04563f40a37b8fb5a6a2db9382302d0531\",\"actual\":\"94c0fa6e51313f8a361e05088cc20c04563f40a37b8fb5a6a2db9382302d0531\"},{\"path\":\"src/reflex/shopperReflex.consent.test.ts\",\"expected\":\"9336442ab1b05cb7d81edf3cde29c60d54b8b146d75b6b245e77c92aedfbe141\",\"actual\":\"9336442ab1b05cb7d81edf3cde29c60d54b8b146d75b6b245e77c92aedfbe141\"},{\"path\":\"src/reflex/shopperReflex.identity.test.ts\",\"expected\":\"fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced\",\"actual\":\"fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced\"},{\"path\":\"src/reflex/sortCandidates.ts\",\"expected\":\"e7e195583c7e96452a646108e6eca583b2d59a88f77f95721a2607cecf900bbe\",\"actual\":\"e7e195583c7e96452a646108e6eca583b2d59a88f77f95721a2607cecf900bbe\"},{\"path\":\"src/routes/decisions.ts\",\"expected\":\"e85a6737bfdda20d3b73d229240280923328bf100c7dda7a328ce49aa1c57180\",\"actual\":\"e85a6737bfdda20d3b73d229240280923328bf100c7dda7a328ce49aa1c57180\"},{\"path\":\"src/routes/identity.test.ts\",\"expected\":\"074ff30b91596e246806c726b60e2b634beeb54d78ae357fe8fa93e275140ff7\",\"actual\":\"074ff30b91596e246806c726b60e2b634beeb54d78ae357fe8fa93e275140ff7\"},{\"path\":\"src/routes/identity.ts\",\"expected\":\"863d85eaf53c9171bfdadbaa8c60cb9cf935b772323de0bdf6060ae86588a44b\",\"actual\":\"863d85eaf53c9171bfdadbaa8c60cb9cf935b772323de0bdf6060ae86588a44b\"},{\"path\":\"src/routes/realtime.sdkContract.test.ts\",\"expected\":\"1ebc3a2eda93c989d68ef12ae3c264cd1de135791e296368b477987d8ed20192\",\"actual\":\"1ebc3a2eda93c989d68ef12ae3c264cd1de135791e296368b477987d8ed20192\"},{\"path\":\"src/routes/realtime.ts\",\"expected\":\"f8fa74b295585ce23abfd86be8ca7b07df1dcf700072c44f77c3533d4225e22d\",\"actual\":\"f8fa74b295585ce23abfd86be8ca7b07df1dcf700072c44f77c3533d4225e22d\"},{\"path\":\"src/routes/sort.ts\",\"expected\":\"ed3af85d4e3bce814b26e000e0e92a4fcf969b7e62558be455d8f8ebb196e9c3\",\"actual\":\"ed3af85d4e3bce814b26e000e0e92a4fcf969b7e62558be455d8f8ebb196e9c3\"},{\"path\":\"src/sdk/core.test.ts\",\"expected\":\"0df93469e9119b428a035367b77132f54404b4fcc43be5bca1606bdeed65fed8\",\"actual\":\"0df93469e9119b428a035367b77132f54404b4fcc43be5bca1606bdeed65fed8\"},{\"path\":\"src/sdk/core.ts\",\"expected\":\"385227b402676b86a24e84d23aab27b27a1b23bd9a9399c68271713ac18fa67b\",\"actual\":\"385227b402676b86a24e84d23aab27b27a1b23bd9a9399c68271713ac18fa67b\"},{\"path\":\"src/sdk/emit.ts\",\"expected\":\"537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731\",\"actual\":\"537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731\"},{\"path\":\"src/sdk/host.ts\",\"expected\":\"89be6a22cfc7932a74ba2ae68c0596569bed7d599caa0fb103ac9b8b75d11c03\",\"actual\":\"89be6a22cfc7932a74ba2ae68c0596569bed7d599caa0fb103ac9b8b75d11c03\"},{\"path\":\"src/sdk/identify.test.ts\",\"expected\":\"2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333\",\"actual\":\"2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333\"},{\"path\":\"src/sdk/identify.ts\",\"expected\":\"c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1\",\"actual\":\"c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1\"},{\"path\":\"src/sdk/identity.ts\",\"expected\":\"a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f\",\"actual\":\"a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f\"},{\"path\":\"src/sdk/index.ts\",\"expected\":\"fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa\",\"actual\":\"fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa\"},{\"path\":\"src/sdk/listen.test.ts\",\"expected\":\"f75f3637528b5ffbe3c086ac078895cc63b408030d506bdae5764e6a2aed8fcc\",\"actual\":\"f75f3637528b5ffbe3c086ac078895cc63b408030d506bdae5764e6a2aed8fcc\"},{\"path\":\"src/sdk/listen.ts\",\"expected\":\"133d551d4ede19bb8db6830d05e0a924e0967ecbfe0feb2b40152b9e8093e33a\",\"actual\":\"133d551d4ede19bb8db6830d05e0a924e0967ecbfe0feb2b40152b9e8093e33a\"},{\"path\":\"src/sdk/memoryHost.ts\",\"expected\":\"34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1\",\"actual\":\"34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1\"},{\"path\":\"src/sdk/README.md\",\"expected\":\"df3d7d11e075778613522600851df1346569f5c5484eb49993b50be844381ead\",\"actual\":\"df3d7d11e075778613522600851df1346569f5c5484eb49993b50be844381ead\"},{\"path\":\"src/sdk/session.test.ts\",\"expected\":\"40d4540b8c41750030ace414b4e4b957c201868f9b59b98064bd98cd02210adf\",\"actual\":\"40d4540b8c41750030ace414b4e4b957c201868f9b59b98064bd98cd02210adf\"},{\"path\":\"src/sdk/testHost.ts\",\"expected\":\"5104d089455694ef802507f8188af6e9fedcfa3604f8a2e5226da6b249ac7842\",\"actual\":\"5104d089455694ef802507f8188af6e9fedcfa3604f8a2e5226da6b249ac7842\"},{\"path\":\"src/sdk/tsconfig.json\",\"expected\":\"cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360\",\"actual\":\"cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360\"},{\"path\":\"src/sdk/types.ts\",\"expected\":\"57a26cbbf8e8ddfddf4d55fb59854a172a016c71943743a6704d9144c1ae9d2b\",\"actual\":\"57a26cbbf8e8ddfddf4d55fb59854a172a016c71943743a6704d9144c1ae9d2b\"},{\"path\":\"src/sdk/version.ts\",\"expected\":\"64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f\",\"actual\":\"64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f\"},{\"path\":\"src/sdk/wire.ts\",\"expected\":\"91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6\",\"actual\":\"91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6\"},{\"path\":\"src/services/CatalogService.ts\",\"expected\":\"da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff\",\"actual\":\"da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff\"},{\"path\":\"src/services/FeatureVariableManager.ts\",\"expected\":\"42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357\",\"actual\":\"42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357\"},{\"path\":\"src/services/JourneyStage.ts\",\"expected\":\"ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331\",\"actual\":\"ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331\"},{\"path\":\"src/services/odpLoop.ts\",\"expected\":\"98728815a95026843840ea4c4443790485cdf1899eddd26a99da02964bf5e63b\",\"actual\":\"98728815a95026843840ea4c4443790485cdf1899eddd26a99da02964bf5e63b\"},{\"path\":\"src/services/OptimizelyService.ts\",\"expected\":\"97b7e40f98e2775e3e2b6d7caed0f32e5d0fe1c30a96d4ac5041a62dd4f01951\",\"actual\":\"97b7e40f98e2775e3e2b6d7caed0f32e5d0fe1c30a96d4ac5041a62dd4f01951\"},{\"path\":\"src/services/RealtimeSegmentEngine.ts\",\"expected\":\"718f8737a39e3fdb66754d253fb024db89ae2eed967a0cc240931974d074fa75\",\"actual\":\"718f8737a39e3fdb66754d253fb024db89ae2eed967a0cc240931974d074fa75\"},{\"path\":\"src/services/SessionManager.identity.test.ts\",\"expected\":\"fb5bb65d7af96124367545977ca17014f3b5af03a94cdb097d42255972b82d1b\",\"actual\":\"fb5bb65d7af96124367545977ca17014f3b5af03a94cdb097d42255972b82d1b\"},{\"path\":\"src/services/SessionManager.ts\",\"expected\":\"f471af12b03fac18b4087b64026af3141cc2ff270af2e32bc6d6edc944beae6c\",\"actual\":\"f471af12b03fac18b4087b64026af3141cc2ff270af2e32bc6d6edc944beae6c\"},{\"path\":\"src/services/visit.ts\",\"expected\":\"27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d\",\"actual\":\"27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d\"},{\"path\":\"src/tenancy/middleware.ts\",\"expected\":\"70e3a8f242ebaa540ee09b6e3cf803c34c044623cd617747a91380c3d11631be\",\"actual\":\"70e3a8f242ebaa540ee09b6e3cf803c34c044623cd617747a91380c3d11631be\"},{\"path\":\"src/tenancy/objects.ts\",\"expected\":\"e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67\",\"actual\":\"e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67\"},{\"path\":\"src/tenancy/tenant.ts\",\"expected\":\"2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072\",\"actual\":\"2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072\"},{\"path\":\"src/types/env.ts\",\"expected\":\"7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f\",\"actual\":\"7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f\"},{\"path\":\"tsconfig.json\",\"expected\":\"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\",\"actual\":\"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\"},{\"path\":\"vitest.config.ts\",\"expected\":\"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\",\"actual\":\"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\"}]}\n"
+      },
+      "completedAt": "2026-09-07T18:37:51.507Z"
+    },
+    "graphAndBundles": {
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import path from \"node:path\";import crypto from \"node:crypto\";import {build} from \"esbuild\";import {artifactDigest,taskContractDigest} from \"./scripts/remediation/board.mjs\";\nconst hash=v=>crypto.createHash(\"sha256\").update(v).digest(\"hex\");\nconst a=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W05.01/artifact-v1.json\",\"utf8\")),graph=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W05.01/source-inputs-v1.json\",\"utf8\")),contract=JSON.parse(fs.readFileSync(\"docs/remediation/design/W05.01/task-contract-v1.json\",\"utf8\"));\nconst manifest=new Map(a.files.map(f=>[f.path,f.sha256]));\nconst rg=await build({...graph.options,entryPoints:graph.entry_points,outdir:\"w0501-review-readonly-graph\",metafile:true,logLevel:\"silent\"});\nconst graphFiles=Object.keys(rg.metafile.inputs).filter(p=>!p.startsWith(\"node_modules/\")).sort().map(path=>({path,sha256:hash(fs.readFileSync(path))}));\nconst ROOT=process.cwd(),version=fs.readFileSync(\"src/sdk/version.ts\",\"utf8\").match(/'\\''([^'\\'']+)'\\''/)[1],banner=\"/* edge-personalization SDK v\"+version+\" — one package: core (identity, transport), emit (four capture paths), listen (decisions). */\";\nconst common={bundle:true,write:false,platform:\"browser\",target:\"es2022\",minify:false,sourcemap:false,legalComments:\"none\",logLevel:\"silent\",metafile:true,banner:{js:banner}};\nconst bundles=await Promise.all([[\"src/sdk/index.ts\",\"public/sdk/edge-personalization.esm.js\",\"esm\"],[\"src/sdk/browser.ts\",\"public/sdk/edge-personalization.js\",\"iife\"]].map(async([input,out,format])=>{const r=await build({...common,entryPoints:[path.join(ROOT,input)],outfile:path.join(ROOT,out),format});const bytes=r.outputFiles[0].contents;const inputs=Object.keys(r.metafile.inputs).sort().map(path=>({path,sha256:hash(fs.readFileSync(path)),pinned:manifest.has(path)}));return {output:out,bytes:bytes.length,sha256:hash(bytes),diskSha256:hash(fs.readFileSync(out)),equal:Buffer.from(bytes).equals(fs.readFileSync(out)),inputs};}));\nconst before=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W05.01/before-sources-v1.json\",\"utf8\"));const originals=before.files.map(f=>({path:f.path,originalValid:f.content===null?f.sha256===null:hash(f.content)===f.sha256,currentSha256:hash(fs.readFileSync(f.path)),originalSha256:f.sha256}));\nconst result={at:new Date().toISOString(),artifactDigest:artifactDigest(a),artifactDigestMatch:artifactDigest(a)===a.digest,contractDigest:taskContractDigest(contract),contractMatch:taskContractDigest(contract)===a.contract_digest,graph:{count:graphFiles.length,exactMatch:JSON.stringify(graphFiles)===JSON.stringify(graph.files),unpinned:graphFiles.filter(f=>manifest.get(f.path)!==f.sha256)},bundles,originals};\nconsole.log(JSON.stringify(result));if(!result.artifactDigestMatch||!result.contractMatch||!result.graph.exactMatch||result.graph.unpinned.length||bundles.some(b=>!b.equal)||originals.some(f=>!f.originalValid))process.exitCode=1;'",
+      "startedAt": "2026-09-07T18:39:02.367Z",
+      "outputs": [
+        {
+          "chunk_id": "4e95d7",
+          "wall_time_seconds": 0.690248746,
+          "exit_code": 0,
+          "original_token_count": 1957,
+          "output": "{\"at\":\"2026-09-07T18:39:03.400Z\",\"artifactDigest\":\"57960af1d837adef71a557ecc1cdb6febdda918b36dc55658f2f6c257749a061\",\"artifactDigestMatch\":true,\"contractDigest\":\"3014ca47a9cb8972c51902b7610faa653841397a338cafa62f66c60ddcaf30ce\",\"contractMatch\":true,\"graph\":{\"count\":106,\"exactMatch\":true,\"unpinned\":[]},\"bundles\":[{\"output\":\"public/sdk/edge-personalization.esm.js\",\"bytes\":37655,\"sha256\":\"f3e9f58ddc08a4fa117894163ddbfa9d06b2c3456c901dfcc1df904f948d60d3\",\"diskSha256\":\"f3e9f58ddc08a4fa117894163ddbfa9d06b2c3456c901dfcc1df904f948d60d3\",\"equal\":true,\"inputs\":[{\"path\":\"src/sdk/core.ts\",\"sha256\":\"385227b402676b86a24e84d23aab27b27a1b23bd9a9399c68271713ac18fa67b\",\"pinned\":true},{\"path\":\"src/sdk/emit.ts\",\"sha256\":\"537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731\",\"pinned\":true},{\"path\":\"src/sdk/host.ts\",\"sha256\":\"89be6a22cfc7932a74ba2ae68c0596569bed7d599caa0fb103ac9b8b75d11c03\",\"pinned\":true},{\"path\":\"src/sdk/identify.ts\",\"sha256\":\"c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1\",\"pinned\":true},{\"path\":\"src/sdk/identity.ts\",\"sha256\":\"a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f\",\"pinned\":true},{\"path\":\"src/sdk/index.ts\",\"sha256\":\"fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa\",\"pinned\":true},{\"path\":\"src/sdk/listen.ts\",\"sha256\":\"133d551d4ede19bb8db6830d05e0a924e0967ecbfe0feb2b40152b9e8093e33a\",\"pinned\":true},{\"path\":\"src/sdk/memoryHost.ts\",\"sha256\":\"34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1\",\"pinned\":true},{\"path\":\"src/sdk/version.ts\",\"sha256\":\"64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f\",\"pinned\":true},{\"path\":\"src/sdk/wire.ts\",\"sha256\":\"91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6\",\"pinned\":true}]},{\"output\":\"public/sdk/edge-personalization.js\",\"bytes\":39808,\"sha256\":\"9fee6aa07c0e9e4956241530293723a86895c49daf65754517d2df8aee69282f\",\"diskSha256\":\"9fee6aa07c0e9e4956241530293723a86895c49daf65754517d2df8aee69282f\",\"equal\":true,\"inputs\":[{\"path\":\"src/sdk/browser.ts\",\"sha256\":\"52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321\",\"pinned\":false},{\"path\":\"src/sdk/core.ts\",\"sha256\":\"385227b402676b86a24e84d23aab27b27a1b23bd9a9399c68271713ac18fa67b\",\"pinned\":true},{\"path\":\"src/sdk/emit.ts\",\"sha256\":\"537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731\",\"pinned\":true},{\"path\":\"src/sdk/host.ts\",\"sha256\":\"89be6a22cfc7932a74ba2ae68c0596569bed7d599caa0fb103ac9b8b75d11c03\",\"pinned\":true},{\"path\":\"src/sdk/identify.ts\",\"sha256\":\"c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1\",\"pinned\":true},{\"path\":\"src/sdk/identity.ts\",\"sha256\":\"a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f\",\"pinned\":true},{\"path\":\"src/sdk/index.ts\",\"sha256\":\"fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa\",\"pinned\":true},{\"path\":\"src/sdk/listen.ts\",\"sha256\":\"133d551d4ede19bb8db6830d05e0a924e0967ecbfe0feb2b40152b9e8093e33a\",\"pinned\":true},{\"path\":\"src/sdk/memoryHost.ts\",\"sha256\":\"34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1\",\"pinned\":true},{\"path\":\"src/sdk/version.ts\",\"sha256\":\"64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f\",\"pinned\":true},{\"path\":\"src/sdk/wire.ts\",\"sha256\":\"91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6\",\"pinned\":true}]}],\"originals\":[{\"path\":\"src/content/consent.ts\",\"originalValid\":true,\"currentSha256\":\"38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930\",\"originalSha256\":\"987fca9a029f08e0fbd98fa3e201dac3062a5a0bef562aecabfd724031e0fbad\"},{\"path\":\"src/identity/consentContinuity.ts\",\"originalValid\":true,\"currentSha256\":\"504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af\",\"originalSha256\":null},{\"path\":\"src/identity/link.ts\",\"originalValid\":true,\"currentSha256\":\"52bb959a00d4df5b8cb6717c7445a972bb2e8e9fc0363bd179b1391e46628eed\",\"originalSha256\":\"3c526f1db971c080d310e21799d94f2f68a232b2a7cfeae34e8fd1e67e1646b9\"},{\"path\":\"src/routes/identity.ts\",\"originalValid\":true,\"currentSha256\":\"863d85eaf53c9171bfdadbaa8c60cb9cf935b772323de0bdf6060ae86588a44b\",\"originalSha256\":\"8c0bd782c37ee57ea941e8b85d0838512886fd694c58e3a56253640ccf392d22\"},{\"path\":\"src/routes/realtime.ts\",\"originalValid\":true,\"currentSha256\":\"f8fa74b295585ce23abfd86be8ca7b07df1dcf700072c44f77c3533d4225e22d\",\"originalSha256\":\"ce1d31ec6b1312d059249834ed12112b6403fd47e76bfb9c5f68bc4b30e976c8\"},{\"path\":\"src/services/SessionManager.ts\",\"originalValid\":true,\"currentSha256\":\"f471af12b03fac18b4087b64026af3141cc2ff270af2e32bc6d6edc944beae6c\",\"originalSha256\":\"3847b6edbd6a7ec91302cd4eb9451b7c5a265fad6880d961d73b1b85bba68845\"},{\"path\":\"src/durable-objects/ShopperReflex.ts\",\"originalValid\":true,\"currentSha256\":\"a0ece8ea20f0880b01834edb43b40ec94cb3916f27a071cad559fc5ba7b0f204\",\"originalSha256\":\"1e62baf9a685fa24aff48721f9ffd898a83246af875589e15ca9385411ef6d85\"},{\"path\":\"src/sdk/core.ts\",\"originalValid\":true,\"currentSha256\":\"385227b402676b86a24e84d23aab27b27a1b23bd9a9399c68271713ac18fa67b\",\"originalSha256\":\"6fdcf3a5a762f6eec915973c606997f31139e89931e6d3263fa44c6f1665a24a\"},{\"path\":\"src/sdk/identify.ts\",\"originalValid\":true,\"currentSha256\":\"c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1\",\"originalSha256\":\"c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1\"},{\"path\":\"src/sdk/README.md\",\"originalValid\":true,\"currentSha256\":\"df3d7d11e075778613522600851df1346569f5c5484eb49993b50be844381ead\",\"originalSha256\":\"e502bff8e310313c06750e03fd66ff7fb509d3b39f35b1283a82c29e30340cc9\"},{\"path\":\"src/routes/identity.test.ts\",\"originalValid\":true,\"currentSha256\":\"074ff30b91596e246806c726b60e2b634beeb54d78ae357fe8fa93e275140ff7\",\"originalSha256\":\"6e3f71b619ccf997adda6350dcfa0375c1323b8770aff044df9d8e6cf076e88d\"},{\"path\":\"src/routes/realtime.sdkContract.test.ts\",\"originalValid\":true,\"currentSha256\":\"1ebc3a2eda93c989d68ef12ae3c264cd1de135791e296368b477987d8ed20192\",\"originalSha256\":\"d8c89a9a5a5d10d6289807da381701f5cdb18d2a5a9168f176b3eb0540ef2710\"},{\"path\":\"src/services/SessionManager.identity.test.ts\",\"originalValid\":true,\"currentSha256\":\"fb5bb65d7af96124367545977ca17014f3b5af03a94cdb097d42255972b82d1b\",\"originalSha256\":\"fb5bb65d7af96124367545977ca17014f3b5af03a94cdb097d42255972b82d1b\"},{\"path\":\"src/reflex/shopperReflex.identity.test.ts\",\"originalValid\":true,\"currentSha256\":\"fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced\",\"originalSha256\":\"fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced\"},{\"path\":\"src/reflex/shopperReflex.consent.test.ts\",\"originalValid\":true,\"currentSha256\":\"9336442ab1b05cb7d81edf3cde29c60d54b8b146d75b6b245e77c92aedfbe141\",\"originalSha256\":\"0525d9e8cd413ae551185e98baea221e09bf5d2a65b41177b61e47a922ac90cb\"},{\"path\":\"src/content/consent.test.ts\",\"originalValid\":true,\"currentSha256\":\"22f06bdcd9e230a6608d31ea11200b61d60fe6a898ff03431bf03670790b2304\",\"originalSha256\":\"22f06bdcd9e230a6608d31ea11200b61d60fe6a898ff03431bf03670790b2304\"},{\"path\":\"src/sdk/core.test.ts\",\"originalValid\":true,\"currentSha256\":\"0df93469e9119b428a035367b77132f54404b4fcc43be5bca1606bdeed65fed8\",\"originalSha256\":\"0f4b5e87edefc9062b9c27884c55ca8277c1f933550018b9fc2ad9fc1af7874d\"},{\"path\":\"src/sdk/identify.test.ts\",\"originalValid\":true,\"currentSha256\":\"2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333\",\"originalSha256\":\"2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333\"},{\"path\":\"public/sdk/edge-personalization.js\",\"originalValid\":true,\"currentSha256\":\"9fee6aa07c0e9e4956241530293723a86895c49daf65754517d2df8aee69282f\",\"originalSha256\":\"90c93376330a7dc0b761bb5f5c760a2d23a015c985ea17d115216fab2966b056\"},{\"path\":\"public/sdk/edge-personalization.esm.js\",\"originalValid\":true,\"currentSha256\":\"f3e9f58ddc08a4fa117894163ddbfa9d06b2c3456c901dfcc1df904f948d60d3\",\"originalSha256\":\"bb3a6d0386ea95a9ec280fc8505e08a60689a6f818360747cc32fc0f5ca6677f\"}]}\n"
+        }
+      ],
+      "completedAt": "2026-09-07T18:39:03.415Z"
+    },
+    "finalV2Bridge": {
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import crypto from \"node:crypto\";import {artifactDigest,taskContractDigest} from \"./scripts/remediation/board.mjs\";\nconst hash=v=>crypto.createHash(\"sha256\").update(v).digest(\"hex\"),dir=\"docs/remediation/evidence/W05.01/\";\nconst a=JSON.parse(fs.readFileSync(dir+\"artifact-v1.json\",\"utf8\")),b=JSON.parse(fs.readFileSync(dir+\"artifact-v2.json\",\"utf8\"));\nconst bm=new Map(b.files.map(f=>[f.path,f])),am=new Map(a.files.map(f=>[f.path,f]));\nconst changed=a.files.filter(f=>JSON.stringify(f)!==JSON.stringify(bm.get(f.path)));\nconst added=b.files.filter(f=>!am.has(f.path));\nconst mismatches=b.files.filter(f=>hash(fs.readFileSync(f.path))!==f.sha256);\nconst w=JSON.parse(fs.readFileSync(dir+\"worker-checks.json\",\"utf8\")),graph=JSON.parse(fs.readFileSync(dir+\"source-inputs-v1.json\",\"utf8\")),contract=JSON.parse(fs.readFileSync(\"docs/remediation/design/W05.01/task-contract-v1.json\",\"utf8\"));\nconst result={at:new Date().toISOString(),artifactV1:{digest:artifactDigest(a),sha256:hash(fs.readFileSync(dir+\"artifact-v1.json\")),count:a.files.length},artifactV2:{digest:artifactDigest(b),sha256:hash(fs.readFileSync(dir+\"artifact-v2.json\")),count:b.files.length,configuration:b.configuration},sameContract:a.contract_digest===b.contract_digest&&taskContractDigest(contract)===b.contract_digest,unchangedPriorPins:changed.length===0,changed,added,mismatches,workerFilesMatch:w.frozenFiles.every(f=>bm.get(f.path)?.sha256===f.sha256),graphFilesMatch:graph.files.every(f=>bm.get(f.path)?.sha256===f.sha256),workerSha256:hash(fs.readFileSync(dir+\"worker-checks.json\")),workerReportSha256:hash(fs.readFileSync(dir+\"worker.md\"))};\nconsole.log(JSON.stringify(result));if(result.artifactV2.digest!==b.digest||result.artifactV1.digest!==a.digest||!result.sameContract||changed.length||added.length!==1||added[0]?.path!==\"src/sdk/browser.ts\"||mismatches.length||!result.workerFilesMatch||!result.graphFilesMatch)process.exitCode=1;'",
+      "startedAt": "2026-09-07T18:40:44.305Z",
+      "result": {
+        "chunk_id": "f00ee5",
+        "wall_time_seconds": 0.18491874,
+        "exit_code": 0,
+        "original_token_count": 408,
+        "output": "{\"at\":\"2026-09-07T18:40:44.820Z\",\"artifactV1\":{\"digest\":\"57960af1d837adef71a557ecc1cdb6febdda918b36dc55658f2f6c257749a061\",\"sha256\":\"0a7966ff77046e25e2e0e7603bdb5255aa3380cd2f7cc52f2f708390842b9a81\",\"count\":125},\"artifactV2\":{\"digest\":\"76b454f0882e85ae7d18187555532e0c2ba9b75820bf5853cc804045e795f963\",\"sha256\":\"d7396d40ac974e2461cd6389c49841202cfe38483c416220de341460eb8c78d0\",\"count\":126,\"configuration\":\"W05.01 bounded refusal continuity on owned session/DO identity transitions and shared SDK recovery. Frozen 20 declared outputs plus 106 packages-external local graph inputs and explicit source/configuration/build/baseline/worker proof pins. Installed Node22.15.0/Vitest1.6.1; worker final K1 66 and K2 26, app/SDK noEmit and bundle build/syntax/scoped diff pass. Local synthetic actual modules, not native workerd/browser, installed full dependency graph, deployed SLO, all-egress/full W05, customer or release acceptance. No scoring/event/decision-path new RPC or store. Provenance-only v2 adds unchanged src/sdk/browser.ts IIFE entry identified by independent write:false bundle reconstruction; v1 retained, every prior pin unchanged and passing source/checks bridged, no implementation change.\"},\"sameContract\":true,\"unchangedPriorPins\":true,\"changed\":[],\"added\":[{\"path\":\"src/sdk/browser.ts\",\"sha256\":\"52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321\",\"role\":\"source\"}],\"mismatches\":[],\"workerFilesMatch\":true,\"graphFilesMatch\":true,\"workerSha256\":\"79d36f58722fef73d6a4ae60b25e46773e3aa80e14f8791378840091357da9db\",\"workerReportSha256\":\"1037bec5a39c64ce443748f94304c343829792a71c099e69bdcf9644814c9ae7\"}\n"
+      },
+      "completedAt": "2026-09-07T18:40:44.845Z"
+    }
+  },
+  "workerInspection": {
+    "path": "docs/remediation/evidence/W05.01/worker-checks.json",
+    "sha256": "79d36f58722fef73d6a4ae60b25e46773e3aa80e14f8791378840091357da9db",
+    "reportSha256": "1037bec5a39c64ce443748f94304c343829792a71c099e69bdcf9644814c9ae7",
+    "frozenAt": "2026-09-07T18:30:03.711Z",
+    "finalChecks": {
+      "K1": {
+        "record": "K1-anchor-final",
+        "passed": 66,
+        "failed": 0,
+        "files": 6
+      },
+      "K2": {
+        "record": "K2-anchor-final",
+        "passed": 26,
+        "failed": 0,
+        "files": 4
+      },
+      "application": {
+        "record": "application-anchor-final",
+        "exit": 0
+      },
+      "sdk": {
+        "record": "sdk-typecheck-anchor-final",
+        "exit": 0
+      },
+      "build": {
+        "record": "sdk-build-anchor-final",
+        "exit": 0
+      },
+      "syntax": {
+        "record": "bundle-syntax-final",
+        "exit": 0
+      },
+      "diff": {
+        "record": "scoped-diff-final",
+        "exit": 0
+      },
+      "K3": "Independent frozen-source review and K1/K2 reruns pending; worker makes no acceptance claim."
+    },
+    "pendingProcesses": [],
+    "checks": [
+      {
+        "name": "application-initial",
+        "command": "w0501_typecheck_dir=$(mktemp -d /tmp/w0501-typecheck.XXXXXX)\nnode node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile \"$w0501_typecheck_dir/application.tsbuildinfo\"",
+        "startedAt": "2026-09-07T18:20:51.913Z",
+        "outputs": [
+          {
+            "chunk_id": "aa69f0",
+            "wall_time_seconds": 1.000922671,
+            "session_id": 25570,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "c17cdd",
+            "wall_time_seconds": 0.000002535,
+            "exit_code": 0,
+            "original_token_count": 0,
+            "output": ""
+          }
+        ],
+        "completedAt": "2026-09-07T18:21:24.548Z"
+      },
+      {
+        "name": "K1-initial",
+        "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/services/SessionManager.identity.test.ts src/reflex/shopperReflex.identity.test.ts src/reflex/shopperReflex.consent.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+        "startedAt": "2026-09-07T18:25:18.326Z",
+        "outputs": [
+          {
+            "chunk_id": "ed0653",
+            "wall_time_seconds": 1.001181477,
+            "session_id": 29600,
+            "original_token_count": 0
+          },
+          {
+            "chunk_id": "6c11b2",
+            "wall_time_seconds": 0.00000239,
+            "exit_code": 0,
+            "original_token_count": 4006
+          }
+        ],
+        "completedAt": "2026-09-07T18:26:09.420Z"
+      },
+      {
+        "name": "K2-initial",
+        "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/sdk/session.test.ts --maxWorkers=1 --minWorkers=1",
+        "startedAt": "2026-09-07T18:25:19.705Z",
+        "outputs": [
+          {
+            "chunk_id": "a873f9",
+            "wall_time_seconds": 1.001631546,
+            "session_id": 38678,
+            "original_token_count": 0
+          },
+          {
+            "chunk_id": "20aa48",
+            "wall_time_seconds": 0.000002443,
+            "exit_code": 0,
+            "original_token_count": 150
+          }
+        ],
+        "completedAt": "2026-09-07T18:26:09.422Z"
+      },
+      {
+        "name": "K1-final",
+        "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/services/SessionManager.identity.test.ts src/reflex/shopperReflex.identity.test.ts src/reflex/shopperReflex.consent.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+        "startedAt": "2026-09-07T18:27:17.863Z",
+        "outputs": [
+          {
+            "chunk_id": "a51ba8",
+            "wall_time_seconds": 1.001303442,
+            "session_id": 77859,
+            "original_token_count": 0
+          },
+          {
+            "chunk_id": "00a4a3",
+            "wall_time_seconds": 0.000002264,
+            "exit_code": 0,
+            "original_token_count": 3899
+          }
+        ],
+        "completedAt": "2026-09-07T18:28:37.608Z"
+      },
+      {
+        "name": "K2-final",
+        "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/sdk/session.test.ts --maxWorkers=1 --minWorkers=1",
+        "startedAt": "2026-09-07T18:27:19.240Z",
+        "outputs": [
+          {
+            "chunk_id": "3d893a",
+            "wall_time_seconds": 1.001722028,
+            "session_id": 70368,
+            "original_token_count": 0
+          },
+          {
+            "chunk_id": "72cf90",
+            "wall_time_seconds": 0.000002244,
+            "exit_code": 0,
+            "original_token_count": 150
+          }
+        ],
+        "completedAt": "2026-09-07T18:28:37.611Z"
+      },
+      {
+        "name": "application-final",
+        "command": "w0501_typecheck_dir=$(mktemp -d /tmp/w0501-typecheck.XXXXXX)\nnode node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile \"$w0501_typecheck_dir/application.tsbuildinfo\"",
+        "startedAt": "2026-09-07T18:27:20.606Z",
+        "outputs": [
+          {
+            "chunk_id": "697e26",
+            "wall_time_seconds": 1.00041035,
+            "session_id": 40296,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "308824",
+            "wall_time_seconds": 0.000001178,
+            "exit_code": 0,
+            "original_token_count": 0,
+            "output": ""
+          }
+        ],
+        "completedAt": "2026-09-07T18:28:37.613Z"
+      },
+      {
+        "name": "sdk-typecheck",
+        "command": "node node_modules/typescript/bin/tsc --project src/sdk/tsconfig.json --noEmit",
+        "startedAt": "2026-09-07T18:27:21.963Z",
+        "outputs": [
+          {
+            "chunk_id": "8b91fa",
+            "wall_time_seconds": 1.001042481,
+            "session_id": 72874,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "daa5b8",
+            "wall_time_seconds": 9.91e-7,
+            "exit_code": 0,
+            "original_token_count": 0,
+            "output": ""
+          }
+        ],
+        "completedAt": "2026-09-07T18:28:37.615Z"
+      },
+      {
+        "name": "sdk-build",
+        "command": "node scripts/build-sdk.mjs",
+        "startedAt": "2026-09-07T18:27:23.327Z",
+        "outputs": [
+          {
+            "chunk_id": "238690",
+            "wall_time_seconds": 0.185908488,
+            "exit_code": 0,
+            "original_token_count": 57,
+            "output": "\n  public/sdk/edge-personalization.esm.js  36.5kb\n\n⚡ Done in 99ms\n\n  public/sdk/edge-personalization.js  38.6kb\n\n⚡ Done in 101ms\npublic/sdk/edge-personalization.esm.js  36.5 KB\npublic/sdk/edge-personalization.js  38.6 KB\n"
+          }
+        ],
+        "completedAt": "2026-09-07T18:27:23.887Z"
+      },
+      {
+        "name": "K1-anchor-final",
+        "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/routes/realtime.sdkContract.test.ts src/services/SessionManager.identity.test.ts src/reflex/shopperReflex.identity.test.ts src/reflex/shopperReflex.consent.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+        "startedAt": "2026-09-07T18:29:11.702Z",
+        "outputs": [
+          {
+            "chunk_id": "5e5f4e",
+            "wall_time_seconds": 1.001050946,
+            "session_id": 11895,
+            "original_token_count": 0
+          },
+          {
+            "chunk_id": "e65a8d",
+            "wall_time_seconds": 0.000002644,
+            "exit_code": 0,
+            "original_token_count": 3952
+          }
+        ],
+        "completedAt": "2026-09-07T18:29:51.116Z"
+      },
+      {
+        "name": "K2-anchor-final",
+        "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/sdk/session.test.ts --maxWorkers=1 --minWorkers=1",
+        "startedAt": "2026-09-07T18:29:13.089Z",
+        "outputs": [
+          {
+            "chunk_id": "ec6207",
+            "wall_time_seconds": 1.000741532,
+            "session_id": 70921,
+            "original_token_count": 0
+          },
+          {
+            "chunk_id": "4733b7",
+            "wall_time_seconds": 0.000002404,
+            "exit_code": 0,
+            "original_token_count": 150
+          }
+        ],
+        "completedAt": "2026-09-07T18:29:51.118Z"
+      },
+      {
+        "name": "application-anchor-final",
+        "command": "w0501_typecheck_dir=$(mktemp -d /tmp/w0501-typecheck.XXXXXX)\nnode node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile \"$w0501_typecheck_dir/application.tsbuildinfo\"",
+        "startedAt": "2026-09-07T18:29:14.462Z",
+        "outputs": [
+          {
+            "chunk_id": "86d2d6",
+            "wall_time_seconds": 1.001152423,
+            "session_id": 20646,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "31af47",
+            "wall_time_seconds": 0.000001068,
+            "exit_code": 0,
+            "original_token_count": 0,
+            "output": ""
+          }
+        ],
+        "completedAt": "2026-09-07T18:29:51.120Z"
+      },
+      {
+        "name": "sdk-typecheck-anchor-final",
+        "command": "node node_modules/typescript/bin/tsc --project src/sdk/tsconfig.json --noEmit",
+        "startedAt": "2026-09-07T18:29:15.859Z",
+        "outputs": [
+          {
+            "chunk_id": "0a425d",
+            "wall_time_seconds": 1.000779815,
+            "session_id": 91552,
+            "original_token_count": 0,
+            "output": ""
+          },
+          {
+            "chunk_id": "9d32da",
+            "wall_time_seconds": 7.25e-7,
+            "exit_code": 0,
+            "original_token_count": 0,
+            "output": ""
+          }
+        ],
+        "completedAt": "2026-09-07T18:29:51.123Z"
+      },
+      {
+        "name": "sdk-build-anchor-final",
+        "command": "node scripts/build-sdk.mjs",
+        "startedAt": "2026-09-07T18:29:17.234Z",
+        "outputs": [
+          {
+            "chunk_id": "1b49ff",
+            "wall_time_seconds": 0.154877531,
+            "exit_code": 0,
+            "original_token_count": 56,
+            "output": "\n  public/sdk/edge-personalization.esm.js  36.8kb\n\n⚡ Done in 83ms\n\n  public/sdk/edge-personalization.js  38.9kb\n\n⚡ Done in 76ms\npublic/sdk/edge-personalization.esm.js  36.8 KB\npublic/sdk/edge-personalization.js  38.9 KB\n"
+          }
+        ],
+        "completedAt": "2026-09-07T18:29:17.758Z"
+      },
+      {
+        "name": "bundle-syntax-final",
+        "command": "node --check public/sdk/edge-personalization.js\nnode --check public/sdk/edge-personalization.esm.js",
+        "startedAt": "2026-09-07T18:29:17.759Z",
+        "outputs": [
+          {
+            "chunk_id": "60b5f3",
+            "wall_time_seconds": 0.000007121,
+            "exit_code": 0,
+            "original_token_count": 0,
+            "output": ""
+          }
+        ],
+        "completedAt": "2026-09-07T18:29:18.071Z"
+      },
+      {
+        "name": "scoped-diff-final",
+        "command": "git diff --check -- 'src/content/consent.ts' 'src/identity/consentContinuity.ts' 'src/identity/link.ts' 'src/routes/identity.ts' 'src/routes/realtime.ts' 'src/services/SessionManager.ts' 'src/durable-objects/ShopperReflex.ts' 'src/sdk/core.ts' 'src/sdk/identify.ts' 'src/sdk/README.md' 'src/routes/identity.test.ts' 'src/routes/realtime.sdkContract.test.ts' 'src/services/SessionManager.identity.test.ts' 'src/reflex/shopperReflex.identity.test.ts' 'src/reflex/shopperReflex.consent.test.ts' 'src/content/consent.test.ts' 'src/sdk/core.test.ts' 'src/sdk/identify.test.ts' 'public/sdk/edge-personalization.js' 'public/sdk/edge-personalization.esm.js'",
+        "startedAt": "2026-09-07T18:29:18.072Z",
+        "outputs": [
+          {
+            "chunk_id": "a60012",
+            "wall_time_seconds": 0.316948638,
+            "exit_code": 0,
+            "original_token_count": 0,
+            "output": ""
+          }
+        ],
+        "completedAt": "2026-09-07T18:29:18.755Z"
+      }
+    ],
+    "note": "All 15 retained worker command records and full outputs reviewed. Compiler/build/syntax/diff records inspected, not rerun. Initial green checks were superseded after source-review corrections; no worker failure is invented. Full original logs remain in pinned worker-checks.json; test output is omitted only from this duplicated inspection index."
+  },
+  "baseline": {
+    "path": "docs/remediation/evidence/W05.01/baseline-v1.json",
+    "sha256": "90786c9099fc5995f24193eac9c78d5c6965f4b30f5e95b59903f66a8714f02d",
+    "reproduced": "Retained root actual identity detach returns 200, expires both false cookies, fresh preferences true/true while original preferences remain false/false.",
+    "limits": "Reviewer read actual command/output; no additional original-source reproduction. Two retained launcher failures: missing tsx, then ESM data-URL external import resolution (error text truncated); CJS installed-esbuild reproduction passed."
+  },
+  "sourceReview": {
+    "basis": "Actual owned source, retained before-sources-v1.json contents, final changed assertions and unchanged relevant fixtures; source-review corrections independently inspected before freeze and final identities checked.",
+    "originals": [
+      {
+        "path": "src/content/consent.ts",
+        "originalValid": true,
+        "currentSha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930",
+        "originalSha256": "987fca9a029f08e0fbd98fa3e201dac3062a5a0bef562aecabfd724031e0fbad"
+      },
+      {
+        "path": "src/identity/consentContinuity.ts",
+        "originalValid": true,
+        "currentSha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af",
+        "originalSha256": null
+      },
+      {
+        "path": "src/identity/link.ts",
+        "originalValid": true,
+        "currentSha256": "52bb959a00d4df5b8cb6717c7445a972bb2e8e9fc0363bd179b1391e46628eed",
+        "originalSha256": "3c526f1db971c080d310e21799d94f2f68a232b2a7cfeae34e8fd1e67e1646b9"
+      },
+      {
+        "path": "src/routes/identity.ts",
+        "originalValid": true,
+        "currentSha256": "863d85eaf53c9171bfdadbaa8c60cb9cf935b772323de0bdf6060ae86588a44b",
+        "originalSha256": "8c0bd782c37ee57ea941e8b85d0838512886fd694c58e3a56253640ccf392d22"
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "originalValid": true,
+        "currentSha256": "f8fa74b295585ce23abfd86be8ca7b07df1dcf700072c44f77c3533d4225e22d",
+        "originalSha256": "ce1d31ec6b1312d059249834ed12112b6403fd47e76bfb9c5f68bc4b30e976c8"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "originalValid": true,
+        "currentSha256": "f471af12b03fac18b4087b64026af3141cc2ff270af2e32bc6d6edc944beae6c",
+        "originalSha256": "3847b6edbd6a7ec91302cd4eb9451b7c5a265fad6880d961d73b1b85bba68845"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "originalValid": true,
+        "currentSha256": "a0ece8ea20f0880b01834edb43b40ec94cb3916f27a071cad559fc5ba7b0f204",
+        "originalSha256": "1e62baf9a685fa24aff48721f9ffd898a83246af875589e15ca9385411ef6d85"
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "originalValid": true,
+        "currentSha256": "385227b402676b86a24e84d23aab27b27a1b23bd9a9399c68271713ac18fa67b",
+        "originalSha256": "6fdcf3a5a762f6eec915973c606997f31139e89931e6d3263fa44c6f1665a24a"
+      },
+      {
+        "path": "src/sdk/identify.ts",
+        "originalValid": true,
+        "currentSha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1",
+        "originalSha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1"
+      },
+      {
+        "path": "src/sdk/README.md",
+        "originalValid": true,
+        "currentSha256": "df3d7d11e075778613522600851df1346569f5c5484eb49993b50be844381ead",
+        "originalSha256": "e502bff8e310313c06750e03fd66ff7fb509d3b39f35b1283a82c29e30340cc9"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "originalValid": true,
+        "currentSha256": "074ff30b91596e246806c726b60e2b634beeb54d78ae357fe8fa93e275140ff7",
+        "originalSha256": "6e3f71b619ccf997adda6350dcfa0375c1323b8770aff044df9d8e6cf076e88d"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "originalValid": true,
+        "currentSha256": "1ebc3a2eda93c989d68ef12ae3c264cd1de135791e296368b477987d8ed20192",
+        "originalSha256": "d8c89a9a5a5d10d6289807da381701f5cdb18d2a5a9168f176b3eb0540ef2710"
+      },
+      {
+        "path": "src/services/SessionManager.identity.test.ts",
+        "originalValid": true,
+        "currentSha256": "fb5bb65d7af96124367545977ca17014f3b5af03a94cdb097d42255972b82d1b",
+        "originalSha256": "fb5bb65d7af96124367545977ca17014f3b5af03a94cdb097d42255972b82d1b"
+      },
+      {
+        "path": "src/reflex/shopperReflex.identity.test.ts",
+        "originalValid": true,
+        "currentSha256": "fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced",
+        "originalSha256": "fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced"
+      },
+      {
+        "path": "src/reflex/shopperReflex.consent.test.ts",
+        "originalValid": true,
+        "currentSha256": "9336442ab1b05cb7d81edf3cde29c60d54b8b146d75b6b245e77c92aedfbe141",
+        "originalSha256": "0525d9e8cd413ae551185e98baea221e09bf5d2a65b41177b61e47a922ac90cb"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "originalValid": true,
+        "currentSha256": "22f06bdcd9e230a6608d31ea11200b61d60fe6a898ff03431bf03670790b2304",
+        "originalSha256": "22f06bdcd9e230a6608d31ea11200b61d60fe6a898ff03431bf03670790b2304"
+      },
+      {
+        "path": "src/sdk/core.test.ts",
+        "originalValid": true,
+        "currentSha256": "0df93469e9119b428a035367b77132f54404b4fcc43be5bca1606bdeed65fed8",
+        "originalSha256": "0f4b5e87edefc9062b9c27884c55ca8277c1f933550018b9fc2ad9fc1af7874d"
+      },
+      {
+        "path": "src/sdk/identify.test.ts",
+        "originalValid": true,
+        "currentSha256": "2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333",
+        "originalSha256": "2a48fff8bda4c11829020cfd94b35088b82869924de177e7ade3d2b81c47c333"
+      },
+      {
+        "path": "public/sdk/edge-personalization.js",
+        "originalValid": true,
+        "currentSha256": "9fee6aa07c0e9e4956241530293723a86895c49daf65754517d2df8aee69282f",
+        "originalSha256": "90c93376330a7dc0b761bb5f5c760a2d23a015c985ea17d115216fab2966b056"
+      },
+      {
+        "path": "public/sdk/edge-personalization.esm.js",
+        "originalValid": true,
+        "currentSha256": "f3e9f58ddc08a4fa117894163ddbfa9d06b2c3456c901dfcc1df904f948d60d3",
+        "originalSha256": "bb3a6d0386ea95a9ec280fc8505e08a60689a6f818360747cc32fc0f5ca6677f"
+      }
+    ],
+    "unchangedAssignedPaths": [
+      "src/sdk/identify.ts",
+      "src/services/SessionManager.identity.test.ts",
+      "src/reflex/shopperReflex.identity.test.ts",
+      "src/content/consent.test.ts",
+      "src/sdk/identify.test.ts"
+    ],
+    "findings": [
+      "Strict source reads now distinguish absent KV text null from stored JSON null/false/0; DO absent undefined from malformed null. Unknown/malformed transition state fails rather than granting.",
+      "Bootstrap/detach/reset carry independently false switches into only necessary replacement records before grant return and before reset deletion; private cookie clearing excludes both refusal cookies.",
+      "Public link validates source ownership/backend assertion before transfer, intersects Cookie refusal with exact source state, transfers it through both host destination merge/short-circuit paths, and checks DO response status/ok/SID/consent. Legacy private cookies do not select source state.",
+      "DO consent cache updates only after successful storage.put; rejected writes preserve old state and the next attempt still writes.",
+      "SDK unknown recovery uses scoped false-only markers, requires restrictive server acknowledgment, verifies saved replacement credential before durable-marker release and ignores old persisted credentials while a marker remains. Readback failure after consenting success also creates unknown recovery; stale generations remain guarded.",
+      "Grouped real-router/crypto/actual-SDK synthetic-store tests cover both hosts and all four switch combinations; blocked-cookie failed logout/account change and explicit successful preference re-enablement remain distinct. Existing domain/identity regressions are retained."
+    ]
+  },
+  "rework": [
+    {
+      "stage": "pre-freeze source review",
+      "resolved": true,
+      "detail": "Missing-sentinel, truthful DO returned-consent/status, commit-aware memory, partial SDK persistence, expired in-memory grant and stale recognized-anchor corrections retained in worker history; no failing test invented for source-only findings."
+    },
+    {
+      "stage": "independent frozen provenance review",
+      "resolved": true,
+      "detail": "V1 125 pins and declared106-input graph matched, but actual IIFE graph additionally required unpinned src/sdk/browser.ts. In-memory ESM/IIFE outputs already matched. Root preserved v1 and produced v2 with exactly one added unchanged source pin, same contract/all125 prior records unchanged. Tests and bundle reconstruction reused via this explicit identity bridge; no additional rerun claimed.",
+      "oldArtifact": {
+        "digest": "57960af1d837adef71a557ecc1cdb6febdda918b36dc55658f2f6c257749a061",
+        "sha256": "0a7966ff77046e25e2e0e7603bdb5255aa3380cd2f7cc52f2f708390842b9a81",
+        "count": 125
+      },
+      "newArtifact": {
+        "digest": "76b454f0882e85ae7d18187555532e0c2ba9b75820bf5853cc804045e795f963",
+        "sha256": "d7396d40ac974e2461cd6389c49841202cfe38483c416220de341460eb8c78d0",
+        "count": 126,
+        "configuration": "W05.01 bounded refusal continuity on owned session/DO identity transitions and shared SDK recovery. Frozen 20 declared outputs plus 106 packages-external local graph inputs and explicit source/configuration/build/baseline/worker proof pins. Installed Node22.15.0/Vitest1.6.1; worker final K1 66 and K2 26, app/SDK noEmit and bundle build/syntax/scoped diff pass. Local synthetic actual modules, not native workerd/browser, installed full dependency graph, deployed SLO, all-egress/full W05, customer or release acceptance. No scoring/event/decision-path new RPC or store. Provenance-only v2 adds unchanged src/sdk/browser.ts IIFE entry identified by independent write:false bundle reconstruction; v1 retained, every prior pin unchanged and passing source/checks bridged, no implementation change."
+      },
+      "added": [
+        {
+          "path": "src/sdk/browser.ts",
+          "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321",
+          "role": "source"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Local installed Node/Vitest and actual modules with synthetic KV/DO/browser transport; no native workerd/browser persistence, live deployment, installed dependency/full TS-program graph, performance/SLO or customer acceptance.",
+    "106 packages-external local test/shared-entry inputs reproduced exactly; actual ESM/IIFE build inputs are covered by final126-file manifest. Package-lock/configuration are pinned, not proof of all installed binaries.",
+    "Only withdrawal through admitted owned bootstrap/detach/reset/link and shared SDK recovery. Full W05/F05/F10/N06/N11/N12, event/capture/sort/learning/telemetry/ODP/regional enforcement, global unknown/default policy and historic retention remain open.",
+    "No transactional/cross-tab/copied-grant/server-effect revocation, KV consistency or atomic multi-store rollback; partial necessary records may remain on failure. Deliberate clearing or total unavailability of client persistence across reloads cannot preserve continuity.",
+    "Explicit successful preference updates and existing event consent semantics remain outside automatic refusal merging. D03/D06 and all customer/privacy/release authority remain with their owners.",
+    "No historical full-contract revalidation, engine/package/finding/gate/release closure or external operations. Root owns governance and separate lead acceptance."
+  ],
+  "pendingProcesses": []
+}

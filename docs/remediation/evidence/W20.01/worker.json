@@ -1,0 +1,292 @@
+{
+  "task_id": "W20.01",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T14:22:49.602Z",
+  "supplemental_source_go_at": "2026-09-13T14:32:52.664Z",
+  "contract_digest": "f97f18fdacd9181bd32cfd54129f7e8310afce4fbbda92b6e39c23eeb5859d0c",
+  "references": [
+    {
+      "path": "docs/remediation/design/W20.01/plan.md",
+      "sha256": "ae3616d15e5341e91a128b39a1de8e5e72dd27c2d624f03f8c300ea5dc53b052"
+    },
+    {
+      "path": "docs/remediation/design/W20.01/plan-v2.md",
+      "sha256": "ac679008361f2f9d29ec8bea25dc82f3b2b734b654b435d1258e887fef8cd6cb"
+    },
+    {
+      "path": "docs/remediation/design/W20.01/baseline.json",
+      "sha256": "330f31bffeb057c08d8b01bcad4b5dc531fd81c1db813cb0f2abe17a79e2e7b8"
+    },
+    {
+      "path": "docs/remediation/design/W20.01/baseline-supplement.json",
+      "sha256": "d9c3020945a36cc32bddbbbf9615e2953865bfb31bc28ed820575c88d6d37fd9"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.01/admission-v2.json",
+      "sha256": "594a4407601a1912c045764775984f98374f61134ca50a96b2222361b9e7117a"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.01/admission-v3.json",
+      "sha256": "6706f1b36c2dee8999ab5a6a2bf3f89b9c205dd82938ab99e423ee0f0c974d59"
+    }
+  ],
+  "baseline": {
+    "kind": "source_confirmed_design_case",
+    "entry": "Root11041/730333 VALID1452; corrected admission-v2 journal1464 and supplemental admission-v3 journal1467 reused. No worker board duplication.",
+    "scoped_lint": "Original root50467/8b006b exit1 only inherited decide _share/_s and replay _c warnings; supplemental consent lint72917/97aa9d clean.",
+    "qualification": "No pre-GO runtime or new benchmark claimed. Immutable eight-file baseline plus separately admitted one-file baseline; existing W38.05 original-source oracle retained. No edits occurred before corrected initial GO or to consent before supplemental GO."
+  },
+  "summary": "Reserve valid live/slotTypes/take1 pins before ranking with first-valid ownership, truthful refused-pin diagnostics and no arbitrary fill. Current publications reject per-page duplicate pins and multi-take pins; stored structural reads preserve revisions. Independent recorded pin semantics retain legacy replay and include every page pin in current replay context. No scoring/driver-path or store primitive changes.",
+  "criteria": [
+    {
+      "id": "W20.01-C1",
+      "verdict": "local_runtime_pass",
+      "evidence": "New composer group covers late reservations, candidate exclusion, cold/affinity choices, first valid owner, missing/draft/wrong-slot/take0/take2 refusal, no invalid reservation or arbitrary fill, and no pin scoring/exploration callbacks. Actual decide/replay group covers default/no_learning/personalized and unchanged draft/expired/window/stock gates with diagnostics but no fake decisions/records; existing W38.05 complete output/hook parity remains passing."
+    },
+    {
+      "id": "W20.01-C2",
+      "verdict": "local_runtime_pass",
+      "evidence": "Independent HISTORICAL_PINS and replay.pins marker tested against old slot/take/duplicate behavior, both marker dimensions, malformed pins refusal, page-prefix plus later pins, all-pin ownership replay with unused archives unavailable, cloned full manifests and unchanged source pages. Existing coupled W27/W28 assertions retain explicit old-pin generation; affected exact receipt expectations updated. Actual service/queue/ledger/replay control passes."
+    },
+    {
+      "id": "W20.01-C3",
+      "verdict": "worker_checks_pass_independent_review_pending",
+      "evidence": "Mounted authenticated validation/write and existing patch/rollback reject duplicate/take contradictions without KV writes; absent credentials rejected, old current/revision bytes read, corrected publication/readback succeeds and cross-page repeated pins remain allowed. Fixed21/full compiler/nine-file lint exact3 inherited warnings/whitespace pass on stopped bytes; independent frozen review and lead disposition remain pending."
+    }
+  ],
+  "source_ready": {
+    "at": "2026-09-13T14:33:50.931Z",
+    "files": [
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+      },
+      {
+        "path": "src/reflex/contentCompose.test.ts",
+        "sha256": "f7b701a167c5d1e73a2c42cd1d195747a5aca06a300f5a28e4089207f4de10b5"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "25cb30a37549a662cd60a5e5dbcdac81ddc26e0c455cbe53f86cf2361a5694ff"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "d04666cef4f89021ec1332d398912012727f6367a897fe5dec5c41220af2fc40"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "1d388ecebfacf8c977d4aefdc6e325736fcb06a708515149a8b76efa4c134564"
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "f344688f18cbecd678dfd6c40566f4f86d20492eea9334603c82c903c160af31"
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "sha256": "f810a3427d878ae906bdaab874c8c5742888fe9c7d2a4cae5d66abfa599ed301"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "5a056b6dd0d3c9a11333bff4f554b9b5a2b604fa91063ba5719eae316789c2fc"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "c1975bde7315606863c15395dadf872c24f75bc9a9452c0b28ee2d4d0862545f"
+      }
+    ],
+    "capture": "0b209a"
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 21,
+      "unselected": 63,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 28.44
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 3,
+      "inherited_warnings": 3,
+      "new_warnings": 0,
+      "signatures": [
+        "src/content/decide.ts:_share",
+        "src/content/decide.ts:_s",
+        "src/learn/replay.ts:_c"
+      ],
+      "final_bytes": true
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    }
+  },
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/content/decide.test.ts src/content/inventoryDiversity.test.ts src/learn/phase3.test.ts src/routes/content.test.ts -t 'W20.01|W38.05 preserves|returns exactly the decisions|records the ranked candidates|honours the candidate limit|emits the delivery contract|the default arm serves the defaults|a piece marked out of stock|at most max per value|relaxes rather than leave|W27.02|W27.03|W28.01|authenticated validation runs' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 14:30:09 UTC",
+      "captures": [
+        {
+          "chunk_id": "ca0255",
+          "wall_time_seconds": 1.001453142,
+          "session_id": 26397,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c12636",
+          "wall_time_seconds": 0.000002497,
+          "exit_code": 1,
+          "original_token_count": 512,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/routes/content.test.ts  (25 tests | 1 failed | 22 skipped) 54ms\n   ❯ src/routes/content.test.ts > /content routes > W20.01 rejects contradictory pin publication without writes and preserves retained reads through corrected publication\n     → expected { valid: false, errors: [ …(2) ] } to match object { ok: false, …(1) }\n(1 matching property omitted from actual)\n ✓ src/learn/phase3.test.ts  (16 tests | 11 skipped) 51ms\n ✓ src/reflex/contentCompose.test.ts  (6 tests | 1 skipped) 104ms\n ✓ src/content/decide.test.ts  (10 tests | 8 skipped) 4ms\n ✓ src/content/inventoryDiversity.test.ts  (6 tests | 3 skipped) 4ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/routes/content.test.ts > /content routes > W20.01 rejects contradictory pin publication without writes and preserves retained reads through corrected publication\nAssertionError: expected { valid: false, errors: [ …(2) ] } to match object { ok: false, …(1) }\n(1 matching property omitted from actual)\n\n- Expected\n+ Received\n\n  Object {\n    \"errors\": ArrayContaining [\n      StringContaining \"pin\",\n    ],\n-   \"ok\": false,\n  }\n\n ❯ src/routes/content.test.ts:81:39\n     79|         const response = await request(suffix, method, { document });\n     80|         expect(response.status).toBe(422); expect(response.headers.get…\n     81|         expect(await response.json()).toMatchObject({ ok: false, error…\n       |                                       ^\n     82|       }\n     83|     }\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed | 4 passed (5)\n      Tests  1 failed | 17 passed | 45 skipped (63)\n   Start at  10:30:12\n   Duration  19.14s (transform 2.80s, setup 0ms, collect 5.82s, tests 217ms, environment 1ms, prepare 9.37s)\n\n"
+        }
+      ],
+      "session_id": 26397,
+      "drained": true,
+      "exit_code": 1,
+      "finished_at": "2026-09-13 14:30:35 UTC"
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/content/decide.test.ts src/content/inventoryDiversity.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts -t 'W20.01|W38.05 preserves|returns exactly the decisions|records the ranked candidates|honours the candidate limit|emits the delivery contract|the default arm serves the defaults|a piece marked out of stock|at most max per value|relaxes rather than leave|W27.02|W27.03|W28.01|authenticated validation runs|w_ext × score joins' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 14:33:50 UTC",
+      "captures": [
+        {
+          "chunk_id": "8482de",
+          "wall_time_seconds": 1.001359751,
+          "session_id": 81331,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "204d24",
+          "wall_time_seconds": 5.00127875,
+          "session_id": 81331,
+          "original_token_count": 755,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/content.test.ts  (25 tests | 22 skipped) 45ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (21 tests | 19 skipped) 67ms\n ✓ src/learn/phase3.test.ts  (16 tests | 10 skipped) 56ms\n ✓ src/reflex/contentCompose.test.ts  (6 tests | 1 skipped) 103ms\n"
+        },
+        {
+          "chunk_id": "6e35fa",
+          "wall_time_seconds": 0.000002347,
+          "exit_code": 0,
+          "original_token_count": 84,
+          "output": " ✓ src/content/decide.test.ts  (10 tests | 8 skipped) 4ms\n ✓ src/content/inventoryDiversity.test.ts  (6 tests | 3 skipped) 4ms\n\n Test Files  6 passed (6)\n      Tests  21 passed | 63 skipped (84)\n   Start at  10:33:54\n   Duration  28.44s (transform 4.65s, setup 1ms, collect 10.96s, tests 279ms, environment 1ms, prepare 12.46s)\n\n"
+        }
+      ],
+      "session_id": 81331,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 14:34:31 UTC"
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts src/content/decide.ts src/content/types.ts src/content/kinds.ts src/learn/replay.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts --max-warnings 3 && git diff --check -- src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts src/content/decide.ts src/content/types.ts src/content/kinds.ts src/learn/replay.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts",
+      "started_at": "2026-09-13 14:34:31 UTC",
+      "captures": [
+        {
+          "chunk_id": "fe2e3f",
+          "wall_time_seconds": 1.001224758,
+          "session_id": 89800,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "04e7c5",
+          "wall_time_seconds": 5.001035755,
+          "session_id": 89800,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3c573b",
+          "wall_time_seconds": 1.402913509,
+          "exit_code": 0,
+          "original_token_count": 127,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/decide.ts\n  210:20  warning  '_share' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  300:62  warning  '_s' is defined but never used               @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  174:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 89800,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 14:35:33 UTC"
+    }
+  },
+  "failed_attempts": [
+    {
+      "command": "runtime1",
+      "contract_digest": "a9e68aa8f01af9825531d13b8231ce5331149513d97d18d915630964acc64fc6",
+      "result": "17 passed/1 failed/45 unselected, exit1/drained ca0255/c12636 session26397.",
+      "cause": "New route fixture incorrectly expected ok:false from validate endpoint, whose established envelope is valid:false. Refusal status/errors were correct.",
+      "correction": "After process drained, corrected new fixture validate success/failure expectations while retaining publication ok fields. No production rework. Added exact receipt marker expectations under supplemental admission; final21 supersedes this attempt."
+    }
+  ],
+  "measurements": [],
+  "measurement_qualification": "Fixed local synthetic runtime only; no new timing/heap/native/SLO benchmark. Existing W38.05 output/hook oracle executes; its timing test remains retained but unselected. Vitest CJS warning and four learning_incomplete logs from retained W28 consent stub-ring fixture preserved in captures, not hidden or represented as successful ingestion.",
+  "final_source_stop": {
+    "at": "2026-09-13T14:36:39.689Z",
+    "files": [
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+      },
+      {
+        "path": "src/reflex/contentCompose.test.ts",
+        "sha256": "f7b701a167c5d1e73a2c42cd1d195747a5aca06a300f5a28e4089207f4de10b5"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "25cb30a37549a662cd60a5e5dbcdac81ddc26e0c455cbe53f86cf2361a5694ff"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "d04666cef4f89021ec1332d398912012727f6367a897fe5dec5c41220af2fc40"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "1d388ecebfacf8c977d4aefdc6e325736fcb06a708515149a8b76efa4c134564"
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "f344688f18cbecd678dfd6c40566f4f86d20492eea9334603c82c903c160af31"
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "sha256": "f810a3427d878ae906bdaab874c8c5742888fe9c7d2a4cae5d66abfa599ed301"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "5a056b6dd0d3c9a11333bff4f554b9b5a2b604fa91063ba5719eae316789c2fc"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "c1975bde7315606863c15395dadf872c24f75bc9a9452c0b28ee2d4d0862545f"
+      }
+    ],
+    "capture": "7efab2",
+    "unchanged_since_source_ready": true
+  },
+  "protected_comparison": {
+    "status": "lead_owned_final_freeze",
+    "basis": "Root admission-v3 confirms protected/remaining accepted pins; root owns final forward/reverse delta and protected-pin comparison. Worker verified all nine final source hashes unchanged across checks."
+  },
+  "limitations": [
+    "Bounded W20 valid-pin reservation/publication contradictions/refusal diagnostics/historical replay only. Full W20/F28/F26 activation/catalog reference warnings, exclusions/off-limits, fallback/priority/multi-position design, actual merchandiser walkthrough and customer acceptance remain open.",
+    "Legacy invalid pins remain readable but are refused without arbitrary fill in current runtime; retained receipts explicitly replay old semantics. No cross-page dedupe, ranking/model/exploration policy change, fake delivery records or store transaction changes.",
+    "W38.05 serve-only explanation optimization and original oracle/benchmark source retained; overlapping whole-artifact assurance is qualified by lead, not silently carried forward. Existing slot KV transaction/propagation and W35 authority remain separate.",
+    "Local synthetic checks are not deployment, capacity/SLO, whole-ledger, customer or release acceptance. No subdelegation, installs, emitted builds, external/cloud/customer operations, destructive cleanup, commits or pushes."
+  ],
+  "independent_review": {
+    "status": "pending",
+    "owner": "w1405-reviewer"
+  }
+}

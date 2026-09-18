@@ -1,0 +1,276 @@
+{
+  "before": null,
+  "after": {
+    "id": "W20.03-E2",
+    "task_id": "W20.03",
+    "check_id": "W20.03-K2",
+    "criterion_ids": [
+      "W20.03-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1404-reviewer",
+    "run_id": "/root/w1404_review",
+    "file": {
+      "path": "docs/remediation/evidence/W20.03/worker.json",
+      "sha256": "833faafb5d7d06f3f23a041c8c913fdb98267684ef2cde4f7ef673e27ed85d7f"
+    },
+    "at": "2026-09-13T19:56:19Z",
+    "limitations": "Bounded customer-neutral off-limits and exact internal-ID exclusions only, not tag/category expressions, customer lists/default assets, priority/multi-position policy or full W20/F28/F26 acceptance. Existing lifecycle/window/stock and slot-type gates, valid-pin reservation, default-arm eligible catalog order and soft diversity remain. Empty engine output hands control to the customer's existing default; no fallback asset selected. Legacy slot documents remain readable with formerly unknown controls stripped; new canonical documents carry governanceVersion:1 and new receipts independently mark slot-gates-v1. Old binaries may silently strip/ignore controls: reader/worker and UI rollout must precede controlled publications; no mixed-binary safety claim. Existing 30-second cache and non-atomic legacy slot publication remain; no immediate-effect/native/SLO guarantee. Unreadable or absent service slot config now yields no selections rather than compiled slots. API authoring defaults are not serving authority. No deployment, cloud mutation, build/install/provision/seed, credentials/customer records, destructive operations, commit/push or external actions. W19.02/W20.02 prior exact-byte assurance is prospectively qualified with implementation/history retained; W08.04 remains unchanged. No package/finding/gate/release promotion.",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/service.ts src/content/slotDiagnostics.ts src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js public/console/views-config.js --env browser --global OperatorSession --max-warnings 2 && git diff --check -- src/content/types.ts src/content/kinds.ts src/reflex/contentCompose.ts src/content/decide.ts src/learn/replay.ts src/content/service.ts src/content/slotDiagnostics.ts public/console/views-config.js src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md docs/kit/03-payload-schemas.md",
+    "runtime": "Installed full compiler, scoped TS/browser lint and15-file whitespace. Five existing unused-binding warnings, zero errors/new warnings.",
+    "workload": "No emitted files/config changes; baseline3TS+2browser warning signature retained.",
+    "result": "pass",
+    "artifact_digest": "927ba24ca50173c18e482fdfea0f2f357824dde2e558e888bdc0701dc894d81d",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "9796c68692e0aeaec9c0d2f0a6a51fca0632e99d28bd91d92724679f3517b43c",
+      "configuration": "Bounded customer-neutral off-limits and exact internal-ID exclusions only, not tag/category expressions, customer lists/default assets, priority/multi-position policy or full W20/F28/F26 acceptance. Existing lifecycle/window/stock and slot-type gates, valid-pin reservation, default-arm eligible catalog order and soft diversity remain. Empty engine output hands control to the customer's existing default; no fallback asset selected. Legacy slot documents remain readable with formerly unknown controls stripped; new canonical documents carry governanceVersion:1 and new receipts independently mark slot-gates-v1. Old binaries may silently strip/ignore controls: reader/worker and UI rollout must precede controlled publications; no mixed-binary safety claim. Existing 30-second cache and non-atomic legacy slot publication remain; no immediate-effect/native/SLO guarantee. Unreadable or absent service slot config now yields no selections rather than compiled slots. API authoring defaults are not serving authority. No deployment, cloud mutation, build/install/provision/seed, credentials/customer records, destructive operations, commit/push or external actions. W19.02/W20.02 prior exact-byte assurance is prospectively qualified with implementation/history retained; W08.04 remains unchanged. No package/finding/gate/release promotion.",
+      "files": [
+        {
+          "path": "src/content/types.ts",
+          "role": "output",
+          "sha256": "43d3b49ea7284c916fa36ddc9d9ad21af41ae95a76d0473521a41de04f84995d"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "output",
+          "sha256": "001a92f8a011aca0cf09d68dc2f6dd4af40009fea803ae65954f276a24cff906"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "output",
+          "sha256": "c8793142496cb64a90e278e8a58bc6ef8307a9bf5f8ce010881ff7172fc8fc4c"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "output",
+          "sha256": "15eef8bb4cb7b4d76a34c056d188ed3dc8f2e27851522b17e4b6f4a990678d96"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "output",
+          "sha256": "594cab7c84f194ab2cc8debc440ae0544eb3c4da4662aa0c3509fb70d4ea1d73"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "output",
+          "sha256": "2dbb3ea87ffa67d34e2acb2088e68fe9f7798959226689daa1f8d903353aadcd"
+        },
+        {
+          "path": "src/content/slotDiagnostics.ts",
+          "role": "output",
+          "sha256": "baef4f136587037621a3cdca4f4f565ae074565316a12627fc1b73566efc9465"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "role": "output",
+          "sha256": "4228d25359aae7a408f64dd5214630ac532f347bc92764bcb269634e79543fb5"
+        },
+        {
+          "path": "src/reflex/contentCompose.test.ts",
+          "role": "output",
+          "sha256": "41fbde1c5cce4bf55fa585c9574b57ce6eee5378fbb4209adc34b033e1366519"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "role": "output",
+          "sha256": "6756b2645313a4d25fe7f27f9826090069bb2819306351793b98229d71b32b55"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "d07af1de8b2d0b5ca2e76410e05f0f7740ce59ea56f5c048c8e93ee0ed10b7d6"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "role": "output",
+          "sha256": "369dcc634e2a029f23d3ab940b15d86ef4a96f32929fdb8245409f90881d5888"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "role": "output",
+          "sha256": "b21f676fafec30cdf21387be0daebded0ecb7ea0af36f6f449261726ccaa3f9b"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "2afcb90850951e6062e46ea61683457b89429325d5cbf435ece0c47d7c2960ff"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "d7d656ca6d8f074c5fb6b16d7b2e31de4422935dd4ee49955eed5fdc6831ec33"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "06c2ea4f18954bf919314afef75c18ec4b5a51c2ed0f8b8023ea0567d72d90fc"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "role": "source",
+          "sha256": "e69b1cbde91aa894f44fe480316340b7317a8aee88c81a52629627e09ad464b3"
+        },
+        {
+          "path": "src/content/catalogDiagnostics.ts",
+          "role": "source",
+          "sha256": "799d71550ae29c10c3947b00da4fd6962b93f04a5eaf699ec789deaa013e4a9d"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/config/input.ts",
+          "role": "source",
+          "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "public/console/shell.js",
+          "role": "source",
+          "sha256": "6ed7abd4a5d20226109d12910f003645fd22620d116d2caead344b9b85d7916e"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F28.md",
+          "role": "source",
+          "sha256": "121a07ed372126d8e1741d374865e8af6eef55357b76a955b4db18fba236da9f"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F26.md",
+          "role": "source",
+          "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+        },
+        {
+          "path": "docs/content-personalization-design-tapestry.html",
+          "role": "source",
+          "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+        },
+        {
+          "path": "docs/architecture/18-content-affinity-engine.md",
+          "role": "source",
+          "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "source",
+          "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "public/console/index.html",
+          "role": "source",
+          "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "role": "source",
+          "sha256": "a52f5d1b39a934c893b2d701076573593aa76017f824c88e44e623c3efeb903f"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+        },
+        {
+          "path": "src/content/typeAffinity.ts",
+          "role": "source",
+          "sha256": "77b15db553d04e72c838fc0844fc72d6fdd862b5986f0557a3d0ff4b6aef79c7"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.03/worker.json",
+          "role": "output",
+          "sha256": "833faafb5d7d06f3f23a041c8c913fdb98267684ef2cde4f7ef673e27ed85d7f"
+        },
+        {
+          "path": "docs/remediation/design/W20.03/plan.md",
+          "role": "configuration",
+          "sha256": "8ae0997d80968092cd9056d4a32ac598ef2e99a27cc10ac6eaac5e2c271bf0af"
+        },
+        {
+          "path": "docs/remediation/design/W20.03/baseline.json",
+          "role": "configuration",
+          "sha256": "9717eadd30d824d30365b4ae3f9f1589a07000ad530a0ba5d184b03fd3433e97"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.03/admission.json",
+          "role": "configuration",
+          "sha256": "f76e5b861244531891455d18c516fffcad7b5bd1986c855f56f85b643124a761"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.03/source-freeze.json",
+          "sha256": "78f8afcbfc493755ffd658b59b195b7f09a2c293efe72426ee0e75c922b1c732",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.03/source-deltas.json",
+          "sha256": "d5331564fee4e4182c1396e40d5727a5f5cf77b3e71bef6cd96f3904a2f054ef",
+          "role": "configuration"
+        }
+      ],
+      "digest": "927ba24ca50173c18e482fdfea0f2f357824dde2e558e888bdc0701dc894d81d"
+    }
+  }
+}

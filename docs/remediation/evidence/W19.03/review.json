@@ -1,0 +1,137 @@
+{
+  "at": "2026-09-13T18:15:29Z",
+  "task_id": "W19.03",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "f015b8caafa67924e3a94c6d4a9d2efa27f4615622c10aef9e0cdb4a08ce0918",
+  "contract_digest": "38af40b3ed91502fbc838e44a163cfa6e0cfd1f8b30b850b4fca11a401d7a7de",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W19.03-C1",
+      "verdict": "PASS",
+      "evidence": "Actual helper and first mounted group establish exact dimension membership, nonblank explicit values without vocabulary normalization, and safe implicit contentType only for an absent own tag and configured non-derived key. Tags remain unchanged. Deterministic 50 samples/90 total/40 omitted, 64-code-unit display/truncation, numeric coordinates and no IDs/values are asserted. Strict missing/corrupt/oversized/read failure yields unavailable with null counts/list; permitted definite demo absence explicitly identifies compiled defaults."
+    },
+    {
+      "id": "W19.03-C2",
+      "verdict": "PASS",
+      "evidence": "Actual route deltas and grouped/retained controls cover authenticated tenant mapping, pre-read denials, current GET/validate and successful PUT/import/CSV/pull/rollback/recover/enrichment. Each diagnostic receives the exact validated or returned catalog; no latest-catalog reread. Old idempotent PUT returns its original document/revision while current registry diagnostics change; receipts remain unchanged. Registry outages preserve committed PUT/current GET and enrichment retry success; failed/pending publication performs no diagnostic read. Human approval, rejected-label exclusion and recovery without remote refetch remain intact."
+    },
+    {
+      "id": "W19.03-C3",
+      "verdict": "PASS",
+      "evidence": "Independent exact K3 ran once on frozen bytes: 11 passed, 19 unselected, exit 0/drained. Full final worker compiler/lint/whitespace captures reused, not rerun. All 35 artifact pins, 25 protected pins and four bidirectional deltas match before/after; current contract remains in verification. Three grouped additions and the existing control's explicitly mapped registry-read-only expectation stay within the admitted scope."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W19.03/plan.md",
+      "sha256": "e3143d5063aacf8f0bcf9b4c81a3cf9b77cbfefaeaa1690970b434165c05880e"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W19.03/artifact.json",
+      "sha256": "1537757c89a6ab63ab32a2fa2f4024f1f8e13d4cbf556fd486a84a10bdd85cca"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W19.03/worker.json",
+      "sha256": "ef256e3875ba5ddf8d825c1b7d4d539f20ff0d06fd222cb78d32058e3cc2cc7c"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts -t 'W19.03|W19.01|authenticated validation|history lists revisions|imports JSON|pulls from a URL|binds both modes|publishes only approved additions' --maxWorkers=1 --minWorkers=1",
+    "session_id": 44437,
+    "invocations": 1,
+    "launched_at": "2026-09-13 18:14:51 UTC",
+    "drained_at": "2026-09-13 18:15:18 UTC",
+    "captures": [
+      {
+        "chunk_id": "b2cc11",
+        "wall_time_seconds": 1.001702381,
+        "session_id": 44437,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "1c0a76",
+        "wall_time_seconds": 0.000002201,
+        "exit_code": 0,
+        "original_token_count": 176,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n[config] stored document is invalid and was ignored\n\n ✓ src/routes/content.test.ts  (30 tests | 19 skipped) 387ms\n\n Test Files  1 passed (1)\n      Tests  11 passed | 19 skipped (30)\n   Start at  14:14:58\n   Duration  15.72s (transform 3.02s, setup 0ms, collect 7.43s, tests 387ms, environment 0ms, prepare 4.88s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 11,
+      "failed": 0,
+      "unselected": 19,
+      "total": 30,
+      "files_passed": 1,
+      "duration_seconds": 15.72
+    }
+  },
+  "source_review": {
+    "inspected": "Actual plan/task C1-C3, admission/baseline qualifications, full worker record and four frozen source deltas. Prior personal governance/full W19/F27/N15 and relevant dependency reads reused; no agent-summary substitution for source review. Helper, route and kit hashes match provisional inspection; final fixture fully inspected.",
+    "source_stopped_at": "2026-09-13T18:11:09.883Z",
+    "freeze_at": "2026-09-13T18:13:12Z",
+    "journal": 1524,
+    "artifact_files": 35,
+    "source_and_output_pins": 29,
+    "protected_unchanged": 25,
+    "bidirectional_deltas": 4,
+    "before": {
+      "at": "2026-09-13T18:14:38.289Z",
+      "pins_capture": "5cdf17",
+      "contract_capture": "0e4e62",
+      "exit_status": 0
+    },
+    "after": {
+      "at": "2026-09-13T18:15:29.638Z",
+      "pins_capture": "f47b0d",
+      "contract_capture": "934568",
+      "exit_status": 0
+    },
+    "result": "All current file hashes, artifact digest and current contract match. Forward reconstruction equals frozen current bytes; reverse reconstruction equals retained before bytes, including the originally absent helper. No source edits.",
+    "inspection_captures": [
+      "2cec7c",
+      "5f39a1",
+      "575f1a",
+      "b1f676",
+      "80fcd8",
+      "1dca09",
+      "7bb87b"
+    ],
+    "dependency_reuse": "Unchanged W19.02/W08.04 accepted assurance and root admission's 61-pin check reused as permitted. Prior W19.01 byte-specific qualification and retained import/history remedies remain; no renewed whole-artifact or customer claim."
+  },
+  "static_reuse": {
+    "reference": "worker.json command_captures.static1",
+    "session_id": 36167,
+    "captures": [
+      "7c992b",
+      "652e60",
+      "39cdce",
+      "9e1830"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "reruns": 0,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace": "Final tracked whitespace check passed. Frozen source-freeze.json directly inspects all four owned files with zero new trailing whitespace, including the new untracked helper omitted by git diff."
+  },
+  "retained_history": [
+    "Worker runtime1 session 91769, 4370d0/dd599d: 10 passed/1 failed/19 unselected, exit 1. The new bounds fixture supplied invalid dimensions:[]; strict validation correctly produced unavailable. Fixture-only valid unrelated dimension replaced it; no production change.",
+    "Worker final runtime2 session 20717, 16a67d/41e956: 11 passed/19 unselected, exit 0/drained, 6.22s. Final static1 then passed. Full original outputs remain in the bound worker record.",
+    "Reviewer initial metadata read 331316 used an incorrect evidence-directory baseline path and exited 1 without writes or runtime. Correct design/W19.03/baseline.json was subsequently read; successful before/after comparisons are recorded above. A compressed-baseline display was truncated (901cb3); complete noncompressed metadata and actual deltas were read separately.",
+    "Admission retains the lead's unapplied dependency-name generator correction. Expected invalid-registry diagnostic and inherited Vite CJS warning remain visible in the independent runtime capture."
+  ],
+  "limitations": [
+    "Advisory dimension membership/nonblank feedback only: not categorical vocabulary, case/locale/slot normalization, learning readiness, inheritance or proof an item cannot rank. Explicit catalog values may be valid membership inputs without being safe canonical learning values.",
+    "Exact response catalog plus current uncached registry is not an atomic activation/serving snapshot. Diagnostics are not persisted receipt metadata and can differ on an idempotent retry; no serving/scoring/SDK/schema or registry rewrite.",
+    "Failure containment is source-confirmed around the whole optional read/scan and locally exercised with registry failures. Synthetic KV/conditional R2 and mounted routes are not native distributed-outage, latency/SLO, customer walkthrough or release assurance; 19 unselected cases are not claimed passing.",
+    "Full W19/F27/N15, package/finding/gate/customer/release obligations remain open. No extra suite, static rerun, external operation or subdelegation. Independent PASS is bounded evidence; lead acceptance remains separate."
+  ]
+}

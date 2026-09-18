@@ -1,0 +1,209 @@
+{
+  "at": "2026-09-13 03:33:54 UTC",
+  "task_id": "W38.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "f2923b36e2eac7dd3caa5c02171b1da6445beefe05f859f7d71abdb50842b82e",
+  "contract_digest": "837a994a11c3e933d1128edf1ef4fa3fb8095aee518e90fd0c191f0fd6f7a25e",
+  "verdict": "PASS",
+  "summary": "Independent source and fixed-five final-byte review passes bounded content-publication cache residency and invalidation. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W38.01-C1",
+      "verdict": "PASS",
+      "evidence": "One Set globally bounds actual binding+scope residents to 32 entries and 8 MiB charged bytes. Charge comes from the exact validated raw revision stream plus UTF-8 key and 256-byte allowance, without another catalog serialization. Removal/replacement/expiry/clear debit once; hits reorder LRU without changing read-start freshness; expired or clock-invalid entries are removed. Actual 33-entry and five-large-revision cases distinguish evicted outage misses from retained no-I/O hits and verify replacement/clear release. Valid reads return their unchanged frozen revision even when cache admission is skipped; the individually-over-budget branch is source-confirmed, while the existing 2 MiB document cap makes that branch unreachable with today's 8 MiB cache limit."
+    },
+    {
+      "id": "W38.01-C2",
+      "verdict": "PASS",
+      "evidence": "A single object epoch captured before awaits fences invalidation without retained key/flight registries; completion rejects stale age/epoch or older-than-resident revision/read start. publish/recover/initialize invalidate at entry and in finally, including rejected, lost-ack and committed no-put paths. Ten controlled race/idempotent scenarios pass, including a read starting during a held write. Original in-flight responses may return revision 1 but cannot repopulate after the tested invalidations. Retained W11 cases pass strict uncached authority, frozen values, read-start 30 s TTL, separate binding staleness, conditional conflicts/history/recovery/size and actual service failure behavior."
+    },
+    {
+      "id": "W38.01-C3",
+      "verdict": "PASS",
+      "evidence": "Both actual baseline-to-final deltas inspected; final fixture-only lifecycle.status as-const correction reverses exactly to the pre-read hash. Before/after checks verify all 26 pins, 18 protected sources, both forward/reverse reconstructions and current contract. Independent K3 ran once: 5 passed/19 unselected, exit 0/drained. Final full compiler/two-file zero-warning lint/git whitespace reused; root's frozen direct line checks cover inherited-untracked publication.ts and the test. The initial compiler failure and superseded runtime remain recorded. No unrelated reporting/authority/ranking changes or broader acceptance inferred."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W38.01/plan.md",
+      "sha256": "62910562742a2b34a939b92961239cde972dae999a3ece7ea4399d92bd6a08e1"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W38.01/artifact.json",
+      "sha256": "47ddeec6188bff5f2dc69c8b9893c57ea57cda4f72971826b82633da9a4d8754"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W38.01/worker.json",
+      "sha256": "127d3c6303ed1b37b9b193867d329174029569be403b88d40165787afa298ee8"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts -t 'W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots' --maxWorkers=1 --minWorkers=1",
+    "session_id": 91128,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "fa49d2",
+        "wall_time_seconds": 1.00049622,
+        "session_id": 91128,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "4ee4da",
+        "wall_time_seconds": 0.000002162,
+        "exit_code": 0,
+        "original_token_count": 336,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 bounds global charged residency with LRU expiry and binding-scope isolation\nW38.01 cache residency {\"entryLimit\":32,\"byteLimit\":8388608,\"countPressure\":{\"inserted\":33,\"retainedHits\":32,\"evictedMisses\":1},\"bytePressure\":{\"inserted\":5,\"retainedHits\":4,\"evictedMisses\":1,\"charges\":[1740886,1740886,1740886,1740886,1740886],\"insertedCharge\":8704430,\"retainedCharge\":6963544},\"measuredHeap\":false}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 fences delayed reads across local writes resets unknown acknowledgements and newer residents\nW38.01 cache fences {\"beforeWriteOrResetCases\":4,\"duringWriteCases\":1,\"newerResidentCases\":2,\"committedNoPutCases\":3,\"originalInflightRevisionPreserved\":true}\n\n ✓ src/config/versionedStore.test.ts  (24 tests | 19 skipped) 3477ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 19 skipped (24)\n   Start at  23:32:09\n   Duration  11.06s (transform 2.45s, setup 0ms, collect 4.50s, tests 3.48s, environment 0ms, prepare 1.96s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 5,
+      "unselected": 19,
+      "total": 24,
+      "test_files": 1,
+      "new_grouped_cases": 2,
+      "retained_selected_cases": 3,
+      "final_bytes": true,
+      "duration_seconds": 11.06
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 26,
+    "source_and_output_pins": 20,
+    "protected_pins": 18,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 2,
+    "manifest_sha256": "47ddeec6188bff5f2dc69c8b9893c57ea57cda4f72971826b82633da9a4d8754",
+    "before": {
+      "at": "2026-09-13T03:31:55.842Z",
+      "capture": "8bb2dd",
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-13T03:32:41.895Z",
+      "capture": "2d89ff",
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_before": {
+      "chunk_id": "87e4ff",
+      "wall_time_seconds": 0.067849934,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T03:31:56.152Z\",\"task\":\"W38.01\",\"state\":\"verification\",\"contract_digest\":\"837a994a11c3e933d1128edf1ef4fa3fb8095aee518e90fd0c191f0fd6f7a25e\",\"artifact_digest\":\"f2923b36e2eac7dd3caa5c02171b1da6445beefe05f859f7d71abdb50842b82e\"}\n"
+    },
+    "contract_after": {
+      "chunk_id": "1bbf47",
+      "wall_time_seconds": 0.00299613,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T03:32:42.158Z\",\"task\":\"W38.01\",\"state\":\"verification\",\"contract_digest\":\"837a994a11c3e933d1128edf1ef4fa3fb8095aee518e90fd0c191f0fd6f7a25e\",\"artifact_digest\":\"f2923b36e2eac7dd3caa5c02171b1da6445beefe05f859f7d71abdb50842b82e\"}\n"
+    },
+    "source_stopped_at": "2026-09-13T03:29:23.684Z",
+    "inspection": {
+      "instructions_checkpoint": "b1e9c8",
+      "protocol_and_full_parent_scope": "969218",
+      "original_production_dispatch_and_W11_fixtures": [
+        "78338e",
+        "6e2fbb"
+      ],
+      "plan_task": "1f87df",
+      "admission": "664e30",
+      "actual_two_deltas": "972ff5",
+      "final_fixture_correction_and_criteria": "5e92fb",
+      "full_worker_and_frozen_evidence": [
+        "d473c8",
+        "bb8dca"
+      ],
+      "qualification": "Reused valid unchanged dependency and root entry-board assurance; did not replay board/native/whole-W11 tests. Direct file-byte checks establish scoped artifact identity, not a deployed resource or total heap guarantee."
+    }
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W38.01/worker.json",
+      "sha256": "127d3c6303ed1b37b9b193867d329174029569be403b88d40165787afa298ee8"
+    },
+    "command_capture": "command_captures.static2",
+    "session_id": 42284,
+    "captures": [
+      "963290",
+      "1ac2a4",
+      "232011",
+      "c77064"
+    ],
+    "inspection_capture": "d473c8",
+    "started_at": "2026-09-13 03:28:04 UTC",
+    "finished_at": "2026-09-13 03:29:09 UTC",
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace": "PASS",
+    "reviewer_reruns": 0,
+    "direct_owned_whitespace": {
+      "path": "docs/remediation/evidence/W38.01/source-freeze.json",
+      "field": "owned_whitespace",
+      "at": "2026-09-13T03:31:06.916Z",
+      "files": 2,
+      "trailing_whitespace_lines": 0
+    },
+    "qualification": "Final && compound completed all three stages. Git diff does not inspect inherited-untracked publication.ts; root's direct final line checks for both owned files are separately retained in the pinned freeze record and reused."
+  },
+  "measurements": {
+    "source": "Independent final capture 4ee4da, matching worker runtime2/15ab3a",
+    "residency": {
+      "entryLimit": 32,
+      "byteLimit": 8388608,
+      "countPressure": {
+        "inserted": 33,
+        "retainedHits": 32,
+        "evictedMisses": 1
+      },
+      "bytePressure": {
+        "inserted": 5,
+        "retainedHits": 4,
+        "evictedMisses": 1,
+        "charges": [
+          1740886,
+          1740886,
+          1740886,
+          1740886,
+          1740886
+        ],
+        "insertedCharge": 8704430,
+        "retainedCharge": 6963544
+      },
+      "measuredHeap": false
+    },
+    "fences": {
+      "beforeWriteOrResetCases": 4,
+      "duringWriteCases": 1,
+      "newerResidentCases": 2,
+      "committedNoPutCases": 3,
+      "originalInflightRevisionPreserved": true
+    },
+    "qualification": "Synthetic storage hooks exercise actual publication serialization/validation/reader/cache through observable hits and misses; charged residency is not JS heap, concurrent-miss allocation or native CPU/latency evidence."
+  },
+  "retained_failures_and_qualifications": [
+    "Candidate1 runtime 29565/b07b8a passed five but is superseded by the fixture-only type correction. Static1 64983/d1b3c6 failed compiler exit 2: TS2322 at versionedStore.test.ts(134,66), lifecycle.status inferred as string; lint/whitespace were not reached.",
+    "Candidate2 changes only the existing fixture's status literal to 'live' as const. Independent reversal 5e92fb matches prior fixture SHA 8b6b00296f47c9861f1b8e38fd23bee1330f4bee08d57a4d3ab532858964f759; production bytes and runtime literal are unchanged. Final worker 89411/15ab3a and static2 pass on current frozen bytes.",
+    "Existing Vite CJS deprecation notice is retained in both runtime records; scoped ESLint reports zero warnings. Nineteen unselected cases are not counted as fresh passing proof."
+  ],
+  "limitations": [
+    "Global 32-entry/8 MiB limits bound charged cache residency, not all JavaScript heap, binding object internals, concurrent outstanding read allocations, native CPU/latency or a supported customer corpus.",
+    "Expiry removal is opportunistic on reads; an idle isolate may retain expired but bounded entries. Hits do not extend freshness. One global epoch conservatively suppresses unrelated in-flight admissions while unrelated resident entries remain available.",
+    "Already-running calls may return their original validated revision; local invalidation fences cache refill, not cancellation. Distinct remote bindings/isolates retain the existing read-start 30 s staleness boundary.",
+    "Legacy KV caches/envelopes, immutable-history retention and old-reader cutover, whole-catalog parse/validate/compose, ranking/candidate optimization and W09/W10 concerns remain separate. This is not full W38/F32/F08/N07 or customer/release acceptance.",
+    "Only this review record was written. No source/governance edits, added suites/static/native/benchmark replay, delegation, cloud/customer/external operation or commit."
+  ]
+}

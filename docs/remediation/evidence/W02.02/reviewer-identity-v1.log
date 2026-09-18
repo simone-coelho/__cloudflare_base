@@ -1,0 +1,7 @@
+Command: node docs/remediation/evidence/W02.02/lead-artifact-v1.mjs --verify
+Started: 2026-09-07T01:59:23.802Z
+Observed complete: 2026-09-07T01:59:55.286Z
+Exit code: 0
+
+{"at":"2026-09-07T01:59:26.957Z","result":"pass","digest":"e96e57fa6b2fa46bbe92e7caac450c70e6d5340b500fbd8d91eb4f9b5960202b","files":348,"localInputs":43,"nodeTokenInputs":85,"runtimeInputs":[{"phase":"before-inputs","count":196},{"phase":"current-inputs","count":197}]}
+

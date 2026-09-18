@@ -1,0 +1,171 @@
+{
+  "before": null,
+  "after": {
+    "id": "W14.03-E3",
+    "task_id": "W14.03",
+    "check_id": "W14.03-K3",
+    "criterion_ids": [
+      "W14.03-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1403-reviewer",
+    "run_id": "/root/w1403_design_review",
+    "file": {
+      "path": "docs/remediation/evidence/W14.03/review.json",
+      "sha256": "2fda3403f1b1e1ce45bd871d45ab8b2c347ab1442ad76350dcc871d185e17eab"
+    },
+    "at": "2026-09-11T02:10:40.000Z",
+    "limitations": "Bounded local supplied-sample/proposal capture, per-label human-session review and approved-only metadata-patch export. No AI generation/provider egress, live catalog publication, UI, taxonomy/customer-sample/retention acceptance, full §1.3/W14/finding/gate/release approval. D05/D10 and W11 publication prerequisite remain open. Synthetic R2 checks are not native/deployed consistency proof; a human credential is not physical-person attestation.",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts --maxWorkers=1 --minWorkers=1",
+    "runtime": "Separate Astra/xhigh actual frozen source/runtime review, same fixed primary once; reuse final static.",
+    "workload": "All C1-C3, exact pins/deltas/evidence/full outputs and partial workflow limitations.",
+    "result": "pass",
+    "artifact_digest": "951566226b6fe19f0c1c6708f208a1de76fd3a4a085dbc0521db5fa1248506c9",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "9575a53d78e06106ea8b0f1de62476fa63a26e72de2c459f4817f50400eef050",
+      "configuration": "Bounded local supplied-sample/proposal capture, per-label human-session review and approved-only metadata-patch export. No AI generation/provider egress, live catalog publication, UI, taxonomy/customer-sample/retention acceptance, full §1.3/W14/finding/gate/release approval. D05/D10 and W11 publication prerequisite remain open. Synthetic R2 checks are not native/deployed consistency proof; a human credential is not physical-person attestation.",
+      "files": [
+        {
+          "path": "src/routes/content.ts",
+          "role": "output",
+          "sha256": "2ee792955390ec262faeedaef52d835278f92b5de836cd4e622d94635c1ea1bb"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "b0e5581cd0da47a729c78639e4a71345578b3b958c941a182997c4c95eb50e3d"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "0d0951b940de1629acdfb7e9d6268a9528d6709bca4aaf465f0f967fa16e749e"
+        },
+        {
+          "path": "src/content/import.ts",
+          "role": "source",
+          "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "role": "source",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "role": "source",
+          "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "role": "source",
+          "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": "src/content/enrichment.ts",
+          "role": "output",
+          "sha256": "a3ab80fadee98504369bda570531679044f913b1c956a4d07a6a1bac10670b5f"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.03/worker.json",
+          "role": "output",
+          "sha256": "b6f5d95846ce490c6507aedf56207de8122b6c69601efa0609f425f7ae3bc43f"
+        },
+        {
+          "path": "docs/remediation/design/W14.03/plan.md",
+          "role": "configuration",
+          "sha256": "8972203b12fb9ca9a9abe2df74b0e8a00864ab643f3d6226fb5df2040afa36a1"
+        },
+        {
+          "path": "docs/remediation/design/W14.03/baseline.json",
+          "role": "configuration",
+          "sha256": "00b4aca2e8c8c15ad30842c548266048e69c475b2bd27732ecf3ab0d46c2e0df"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.03/source-freeze.json",
+          "role": "configuration",
+          "sha256": "92ba5de82abbeb96919d9c4beccd655d8e94dbc7490a831d146a8a5233d46712"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.03/source-deltas.json",
+          "role": "configuration",
+          "sha256": "2e1b6753601e3df4a8858948e0ffbc2d17c221f16af83199b89c778377810acb"
+        }
+      ],
+      "digest": "951566226b6fe19f0c1c6708f208a1de76fd3a4a085dbc0521db5fa1248506c9"
+    }
+  }
+}

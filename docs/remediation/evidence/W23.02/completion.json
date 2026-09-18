@@ -1,0 +1,57 @@
+{
+  "task_id": "W23.02",
+  "at": "2026-09-15T17:30:45.236Z",
+  "journal_seq": 1839,
+  "artifact_digest": "454bbfa2ebc607f9cf2c2fc66b60478a6c8390171203a1bf53a2d3e6198db341",
+  "contract_digest": "3ef5aefd63ef099ce8a41b227df9db843a596e74bd2ee348295d4e530a669a07",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W23.02/acceptance.md",
+    "sha256": "dfe44084f98aa5d5d1432150ebd3c644e58e98c142dd770207d181509c105f0e"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W23.02/review.json",
+    "sha256": "3c8b3a26c2426e617a2520ea5a8564d257bef93b178449b3a9875ef6c3088f4a"
+  },
+  "root_review_capture": [
+    "e18c6c",
+    "0fd647",
+    "434548",
+    "6489f1",
+    "9fa247"
+  ],
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){process.argv=[process.execPath,file,command];const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);await import(entry.href);write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;if(process.exitCode!==0)break;}'",
+    "initial": {
+      "chunk_id": "bf011f",
+      "wall_time_seconds": 1.001796724,
+      "session_id": 24561,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "b54f35",
+        "wall_time_seconds": 20.000658239,
+        "session_id": 24561,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "fb28b2",
+        "wall_time_seconds": 14.875716354,
+        "exit_code": 0,
+        "original_token_count": 703,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=125, closed=3; evidence records=377\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W23.02 — Resolve the explicit buffered browser/app purpose choice recorded in decisions/D06-buffered-action-purpose-2026-09-15.json: age-decayed current interest plus eligible original-time measurement (recommended), or measurement only. Do not infer a choice from async preselection or from ordinary timestamp<now; action purpose must be explicit. This is separate from now-accepted internal server-stamped regional ordering. Preserve consent/erasure and server-clock safety; do not manufacture fresh visits/ODP activity or historical region from receipt geography. Full historical report reconstruction still requires trustworthy retained history/configuration and applicable D04/D06/W24 decisions; no blanket age cutoff, new retention/reset/experiment lifecycle or external operation. W23.02, W09.08 and W22.06 remain accepted; choose the next coherent local task only against complete parent scope.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 26467\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=125, closed=3; evidence records=377\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W23.02 — Resolve the explicit buffered browser/app purpose choice recorded in decisions/D06-buffered-action-purpose-2026-09-15.json: age-decayed current interest plus eligible original-time measurement (recommended), or measurement only. Do not infer a choice from async preselection or from ordinary timestamp<now; action purpose must be explicit. This is separate from now-accepted internal server-stamped regional ordering. Preserve consent/erasure and server-clock safety; do not manufacture fresh visits/ODP activity or historical region from receipt geography. Full historical report reconstruction still requires trustworthy retained history/configuration and applicable D04/D06/W24 decisions; no blanket age cutoff, new retention/reset/experiment lifecycle or external operation. W23.02, W09.08 and W22.06 remain accepted; choose the next coherent local task only against complete parent scope.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 26467\n"
+      }
+    ],
+    "result": "VALID",
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;29 artifact pins plus W09.08/W22.06 accepted artifact pins/reviews unchanged. No worker/reviewer commands running. Tracker consistency is not engine/customer/SLO/release acceptance.",
+  "next_action": "Resolve the explicit buffered browser/app purpose choice recorded in decisions/D06-buffered-action-purpose-2026-09-15.json: age-decayed current interest plus eligible original-time measurement (recommended), or measurement only. Do not infer a choice from async preselection or from ordinary timestamp<now; action purpose must be explicit. This is separate from now-accepted internal server-stamped regional ordering. Preserve consent/erasure and server-clock safety; do not manufacture fresh visits/ODP activity or historical region from receipt geography. Full historical report reconstruction still requires trustworthy retained history/configuration and applicable D04/D06/W24 decisions; no blanket age cutoff, new retention/reset/experiment lifecycle or external operation. W23.02, W09.08 and W22.06 remain accepted; choose the next coherent local task only against complete parent scope.",
+  "pending_buffered_purpose": {
+    "path": "docs/remediation/decisions/D06-buffered-action-purpose-2026-09-15.json",
+    "sha256": "764f707e5c6696036dbd0550949878eac1358ec02cff855bce33f0e9792fd1ea"
+  },
+  "limitations": "Forward regional retained-counter arithmetic and numeric timestamp integrity only. Preserve browser/server clock purpose, current personal affinity/visit/ODP/geo policy, existing generation/cap/rounding/fan-in and accepted W09.08/W22.06. No evicted/corrupted-state reconstruction, reset/idempotency/lifecycle/retention/age cutoff or full W23/F18/customer/SLO/release claim. No install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/commit/push/external actions. Worker and independent reviewer each passed exact6 local synthetic checks. Same-byte compiler1536/three-file lint0errors0warnings/whitespace passed. Not native/cloud failure, customer or SLO evidence."
+}

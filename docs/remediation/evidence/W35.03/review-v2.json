@@ -1,0 +1,108 @@
+{
+  "task_id": "W35.03",
+  "actor_id": "w3503-reviewer",
+  "run_id": "/root/w3503_stale_session_investigation",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T00:15:24.601Z",
+  "verdict": "PASS",
+  "artifact_digest": "182955eb8285eab9e374abbccc7844eede3e7618a2b6177297c35c0b850b0a5f",
+  "contract_digest": "0046f1b04a0e82a0388d32bec7300870adc7dded8c16a69b7408fb639bcd35b1",
+  "plan_sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d",
+  "supersedes": {
+    "review": {
+      "path": "docs/remediation/evidence/W35.03/review.json",
+      "sha256": "bf3ecf393d58b856968fa5889d6f93055ad3546ad64607dd1fdbece6a8ea9e94",
+      "verdict": "REWORK"
+    },
+    "artifact_digest": "111ac5bfdfe72e8aa80200fdc72bae95686668d7a642b68a42432b97956b0659",
+    "preserved": true
+  },
+  "pin_checks": {
+    "before": {
+      "capture": "623696",
+      "count": 29,
+      "mismatches": [],
+      "exit_code": 0
+    },
+    "after": {
+      "capture": "0dd74e",
+      "count": 29,
+      "mismatches": [],
+      "exit_code": 0
+    },
+    "digest_recomputation": {
+      "capture": "4706e2",
+      "artifact_matches": true,
+      "contract_matches": true,
+      "exit_code": 0
+    },
+    "prior_review_unchanged": {
+      "capture": "728159",
+      "sha256": "bf3ecf393d58b856968fa5889d6f93055ad3546ad64607dd1fdbece6a8ea9e94"
+    }
+  },
+  "checks": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]03|W35[.]01|the link, on the session host|detach' --maxWorkers=1 --minWorkers=1",
+      "runs_on_this_artifact": 1,
+      "captures": [
+        "79c1bd",
+        "8eb662"
+      ],
+      "session_id": 45367,
+      "exit_code": 0,
+      "drained": true,
+      "result": "13 passed, 93 skipped; 2 files passed; duration16.20s",
+      "diagnostics": "Synthetic queue_unavailable and learning_incomplete remain in8eb662. These checks do not establish delivery/learning completeness."
+    },
+    "K2": {
+      "disposition": "Reused exact-byte final evidence after independent pin checks",
+      "worker_captures": [
+        "423786",
+        "177d31",
+        "04196c"
+      ],
+      "worker_sha256": "9e68b247e517ce2f157372e6a6030f8d6ee44c1ee56d7afe9fcb857107d352aa",
+      "source_freeze_sha256": "dc3d38bc3bd44b93ee326a26e5cd90df82852291c6ef0fdedb2fc0b3461e06ba",
+      "result": "Final compiler, owned ESLint and whitespace exit0/drained. Zero errors and109 unchanged warning signatures; same path/rule/message/count multiset as retained worker/lead baseline comparison. No static rerun."
+    }
+  },
+  "criteria": {
+    "W35.03-C1": {
+      "verdict": "PASS",
+      "basis": "Durable source preparation serializes with pre-fence events; persisted pending/completed transfer state fences signed/unsigned HTTP ingest, WS messages, buffered ingest, manual assignment, internal absorb/import/forward and alarm qualification. Current focused concurrency/restart checks pass; restrictive consent and explicit reset/retention exclusions retained."
+    },
+    "W35.03-C2": {
+      "verdict": "PASS",
+      "basis": "Target profile/receipt/current membership/consent share one storage put. Rejected or ambiguous commits invalidate mirrors; source retry reuses frozen identity and target retry uses the accepted receipt. Latest authoritative membership republishes before visitor visibility, including older-source retries after a newer source. Completed-source receiptRequired refuses a missing receipt after sequential target reset. Fixed failure/restart/concurrency cases pass."
+    },
+    "W35.03-C3": {
+      "verdict": "PASS",
+      "basis": "Tenant/session/subject/fingerprint conflicts refuse; initial effective consent is the intersection and later refusal tightens without a second merge. R1 retained-target branch preserves exact behavior and skips target config/merge/tick/enrichment/timer work. Actual fixture proves source-tracking and target-personalization refusal preserve lastSeen0, configuration, affinity audiences, pipeline/enrichment/visits, audience owner and existing alarms while adding receipt/current members and consent. A pure tick control would exit its audience, so preservation cannot pass accidentally. Cold-target establishment, existing accepted/later-refusal paths and session-link/detach controls pass. W35.01 recovery and link-time visit/channel preservation remain covered; no W35.02 whole-artifact reclosure."
+    }
+  },
+  "resolved_findings": [
+    {
+      "id": "W35.03-R1",
+      "disposition": "Resolved on this artifact",
+      "source": "src/durable-objects/ShopperReflex.ts:1432",
+      "fixture": "src/routes/realtime.sdkContract.test.ts:300",
+      "basis": "The retained branch is selected before target configuration resolution and uses existing affinity/pipeline directly. writeOwner=false preserves the existing ownership key; receipt/membership/consent remain in the atomic put. cfg is absent on this branch, so no new alarm is scheduled. Cold/consenting paths retain mergedIdentity behavior."
+    }
+  ],
+  "findings": [],
+  "limitations": [
+    "Local Node/Vitest fake bindings are not native workerd, customer/browser, latency/SLO, deployment or release proof.",
+    "Per-grant detach/erase revocation, pushed-frame revocation, prepared/in-flight cross-object erasure and complete deletion epochs remain separate.",
+    "One-time KV compatibility adoption and the existing maximum50 member cap do not prove historical completeness or mixed-version writer safety.",
+    "W35.02 remains reopened/revalidation_required; this review does not restore its superseded exact-byte acceptance.",
+    "Full W35/F14, host cutover, deployment, existing-data migration and historical repair remain open."
+  ],
+  "handoff": {
+    "source_changed": false,
+    "review_only": true,
+    "running_commands": [],
+    "next_action": "Lead inspects this PASS and exact evidence, records bounded task disposition and handoff. Reviewer does not close task/package or edit tracker/RESUME."
+  }
+}

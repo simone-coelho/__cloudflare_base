@@ -1,0 +1,103 @@
+{
+  "task_id": "W22.05",
+  "at": "2026-09-15T15:32:20.140Z",
+  "journal_seq": 1800,
+  "artifact_digest": "f614e13e56b0ece96e278bd6e7240fd9e379d80f11947e8ac5c49929ff7cdaa6",
+  "contract_digest": "b5871d3e160137093f0291862962022418b1949a67e3bd6b0c0521fb1d55cb27",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W22.05/acceptance.md",
+    "sha256": "35eb03c900ac952c6e1fe3d2247e74d8bdd0adf8b0d304e825bbb0dd751fc6fe"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W22.05/review.json",
+    "sha256": "0fda511e7469b71c05cd8ac8127ecb0f03faf353b60f0693a5b495a585fa38ec"
+  },
+  "root_review_capture": [
+    "f0cac9",
+    "42738f",
+    "adf6a0"
+  ],
+  "restart": {
+    "at": "2026-09-15",
+    "state": "verification1797 preserved; no retained independent runtime before restart; worker/source evidence unchanged",
+    "pin_capture": "0c5eab",
+    "board": {
+      "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){process.argv=[process.execPath,file,command];const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);await import(entry.href);write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;if(process.exitCode!==0)break;}'",
+      "initial": {
+        "chunk_id": "d953f8",
+        "wall_time_seconds": 1.00059154,
+        "session_id": 24049,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "be00df",
+          "wall_time_seconds": 5.001273632,
+          "session_id": 24049,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "90de20",
+          "wall_time_seconds": 5.001391391,
+          "session_id": 24049,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "cfa449",
+          "wall_time_seconds": 5.001586346,
+          "session_id": 24049,
+          "original_token_count": 168,
+          "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=123, closed=1, verification=1; evidence records=366\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.05 — Independent exact W22.05 source/contract review and fixed6 once with same-byte final static reuse, then root disposition/final existing board.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 25552\n"
+        },
+        {
+          "chunk_id": "3f0d40",
+          "wall_time_seconds": 0.000001771,
+          "exit_code": 0,
+          "original_token_count": 168,
+          "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=123, closed=1, verification=1; evidence records=366\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.05 — Independent exact W22.05 source/contract review and fixed6 once with same-byte final static reuse, then root disposition/final existing board.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 25552\n"
+        }
+      ]
+    }
+  },
+  "next_admission_source_note": {
+    "capture": "1401da",
+    "path": "src/index.ts",
+    "observed": "Current queue handler handles ledger and scene bodies; other bodies, including generic EventDispatcher type:event/type:retry wrappers, are acknowledged without destination/retry execution.",
+    "disposition": "Read-only source observation for next W22/W09 scope reconciliation alongside swallowed producer rejection. Not a newly accepted scope, durable-delivery proof or change to current W22.05 transport-only acceptance; no consumer edits made."
+  },
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){process.argv=[process.execPath,file,command];const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);await import(entry.href);write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;if(process.exitCode!==0)break;}'",
+    "initial": {
+      "chunk_id": "625321",
+      "wall_time_seconds": 1.001543136,
+      "session_id": 37984,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "36d81c",
+        "wall_time_seconds": 5.001844998,
+        "session_id": 37984,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "201846",
+        "wall_time_seconds": 0.000002178,
+        "exit_code": 0,
+        "original_token_count": 790,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=123, closed=2; evidence records=368\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.05 — Continue remaining document35 event identity/delivery/reconciliation fixes using the recorded scenario-specific late-event decision and actual retained data. Preserve accepted W30.04 interrupted-hour recovery and W22.05 occurrence-time transport. Generic tracking is not the realtime decision/outcome ledger. Next read src/services/EventDispatcher.ts queueEvent/queueForRetry and the /track callers: queue rejection is currently swallowed while callers can report success. Map that concrete acknowledgement/recovery defect to the full W22/W09 contract and current queue consumer before admitting one coherent local fix; keep generic tracking distinct from the ledger and do not promise durable delivery from an error response alone. Completed-hour reconstruction still needs verified carry-in/input/configuration/erasure basis; no silent changed-basis reset, universal age cutoff, invented experiment lifecycle or extra personal retention. Escalate only concrete customer/privacy/business choices. Full package/customer/SLO/release remain open; no external operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 25552\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=123, closed=2; evidence records=368\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.05 — Continue remaining document35 event identity/delivery/reconciliation fixes using the recorded scenario-specific late-event decision and actual retained data. Preserve accepted W30.04 interrupted-hour recovery and W22.05 occurrence-time transport. Generic tracking is not the realtime decision/outcome ledger. Next read src/services/EventDispatcher.ts queueEvent/queueForRetry and the /track callers: queue rejection is currently swallowed while callers can report success. Map that concrete acknowledgement/recovery defect to the full W22/W09 contract and current queue consumer before admitting one coherent local fix; keep generic tracking distinct from the ledger and do not promise durable delivery from an error response alone. Completed-hour reconstruction still needs verified carry-in/input/configuration/erasure basis; no silent changed-basis reset, universal age cutoff, invented experiment lifecycle or extra personal retention. Escalate only concrete customer/privacy/business choices. Full package/customer/SLO/release remain open; no external operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 25552\n"
+      }
+    ],
+    "result": "VALID",
+    "notes_each": 25552,
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;38 exact pins rechecked, no worker/reviewer commands running. Only final handoff metadata/checkpoint updated after validated acceptance state. Tracker consistency is not engine/customer/SLO/release approval.",
+  "next_action": "Continue remaining document35 event identity/delivery/reconciliation fixes using the recorded scenario-specific late-event decision and actual retained data. Preserve accepted W30.04 interrupted-hour recovery and W22.05 occurrence-time transport. Generic tracking is not the realtime decision/outcome ledger. Next read src/services/EventDispatcher.ts queueEvent/queueForRetry and the /track callers: queue rejection is currently swallowed while callers can report success. Map that concrete acknowledgement/recovery defect to the full W22/W09 contract and current queue consumer before admitting one coherent local fix; keep generic tracking distinct from the ledger and do not promise durable delivery from an error response alone. Completed-hour reconstruction still needs verified carry-in/input/configuration/erasure basis; no silent changed-basis reset, universal age cutoff, invented experiment lifecycle or extra personal retention. Escalate only concrete customer/privacy/business choices. Full package/customer/SLO/release remain open; no external operations.",
+  "limitations": "Owned generic tracking occurrence-time preservation only. Not the realtime decision/outcome ledger; no new consumer, downstream experiment eligibility, time authenticity/fraud protection, skew/age policy, buffering, delivery/idempotency, historical reconstruction, live affinity ordering, new retention/reset or customer/SLO/release acceptance. Keep W30.04 exact accepted artifact unchanged. No install/build/commit/push/deploy/provision/cloud/credentials/customer-data/destructive/external operations. Fixed6 local actual-module/synthetic-I/O checks pass in worker and distinct reviewer;74 deliberately unselected. Same-byte final compiler/lint/whitespace reused. Pre-admission max0 lint failure (94 inherited warnings) and worker cwd failure retained; no failed/skipped required check counted as pass."
+}

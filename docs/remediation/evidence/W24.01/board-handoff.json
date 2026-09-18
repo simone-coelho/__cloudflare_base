@@ -1,0 +1,89 @@
+{
+  "at": "2026-09-12T11:59:18.543Z",
+  "task_id": "W24.01",
+  "artifact_digest": "8cde0b46d01b882eeef426a2923cdee3e8de0979c250331516f544e06d04c6ee",
+  "journal_seq": 1139,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "8f8c0b",
+        "wall_time_seconds": 1.001840576,
+        "session_id": 68220,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b1a032",
+        "wall_time_seconds": 5.001547616,
+        "session_id": 68220,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b3466d",
+        "wall_time_seconds": 5.001356446,
+        "session_id": 68220,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "c09ab2",
+        "wall_time_seconds": 0.000002049,
+        "exit_code": 0,
+        "original_token_count": 513,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=21, unscoped=20\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=80, closed=2; evidence records=234\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W24.01 — Next inspect and admit bounded W25 structured prior indexing/materialization against F20: stop multi-component cell keys creating phantom items while preserving prior strength versus observed counts and current capacity checks. Read complete W25/F20/N20/N22 and actual import/publication/receipt/ranking paths first; retain no-event/grammar-version/unit/provenance/zero-reference residuals explicitly. No reset, policy/money/customer choice, historical reconstruction or external/deployment authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 16415\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=21, unscoped=20\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=80, closed=2; evidence records=234\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W24.01 — Next inspect and admit bounded W25 structured prior indexing/materialization against F20: stop multi-component cell keys creating phantom items while preserving prior strength versus observed counts and current capacity checks. Read complete W25/F20/N20/N22 and actual import/publication/receipt/ranking paths first; retain no-event/grammar-version/unit/provenance/zero-reference residuals explicitly. No reset, policy/money/customer choice, historical reconstruction or external/deployment authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 16415\n"
+      }
+    ],
+    "session_id": 68220,
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      16415,
+      16415
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module -e 'import fs from'\\''node:fs'\\'';import assert from'\\''node:assert/strict'\\'';import{gunzipSync}from'\\''node:zlib'\\'';import{applyPatch}from'\\''diff'\\'';import{sha256,artifactDigest,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';const j=p=>JSON.parse(fs.readFileSync(p)),t=j('\\''docs/remediation/tracker.json'\\''),task=t.tasks.find(x=>x.id==='\\''W24.01'\\''),b=j('\\''docs/remediation/design/W24.01/baseline-r2.json'\\''),a=j('\\''docs/remediation/evidence/W24.01/artifact.json'\\''),d=j('\\''docs/remediation/evidence/W24.01/source-deltas.json'\\'');assert.deepEqual(task.artifact,a);assert.equal(a.digest,artifactDigest(a));assert.equal(a.contract_digest,taskContractDigest(task));for(const f of a.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);for(const x of d.deltas){const before=gunzipSync(Buffer.from(b.owned.find(f=>f.path===x.path).content_gzip_base64,'\\''base64'\\'')).toString(),after=fs.readFileSync(x.path,'\\''utf8'\\'');assert.equal(applyPatch(before,x.forward),after,x.path);assert.equal(applyPatch(after,x.reverse),before,x.path);}console.log(JSON.stringify({ok:true,at:new Date().toISOString(),artifact:a.digest,files:a.files.length,source:b.pins.length,protected:b.pins.filter(f=>f.role==='\\''source'\\'').length,deltas:d.deltas.length,contract:a.contract_digest}));'",
+    "captures": [
+      {
+        "chunk_id": "e5c00d",
+        "wall_time_seconds": 1.001808758,
+        "session_id": 36929,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "12aa1b",
+        "wall_time_seconds": 0.00000185,
+        "exit_code": 0,
+        "original_token_count": 63,
+        "output": "{\"ok\":true,\"at\":\"2026-09-12T11:51:27.021Z\",\"artifact\":\"8cde0b46d01b882eeef426a2923cdee3e8de0979c250331516f544e06d04c6ee\",\"files\":120,\"source\":110,\"protected\":101,\"deltas\":9,\"contract\":\"e53bfc54ae838c033c1a148e4f15d76dbeb126c2a94320c3cc67645dd255e33b\"}\n"
+      }
+    ],
+    "drained": true,
+    "session_id": 36929,
+    "exit_code": 0
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_forward_compatibility",
+    "package_W24": "open",
+    "finding_F19": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Next inspect and admit bounded W25 structured prior indexing/materialization against F20: stop multi-component cell keys creating phantom items while preserving prior strength versus observed counts and current capacity checks. Read complete W25/F20/N20/N22 and actual import/publication/receipt/ranking paths first; retain no-event/grammar-version/unit/provenance/zero-reference residuals explicitly. No reset, policy/money/customer choice, historical reconstruction or external/deployment authority is inferred."
+  },
+  "next_read_only_inspection": {
+    "kind": "source_confirmed_next_candidate_only",
+    "observed": "Current stats.ts splits concatenated prior keys at last '|', whereas priorKey concatenates item+'|'+multi-component cell. Canonical F20/W25 and current priors.ts confirm structured-index candidate; no W25 task admission/source/test work.",
+    "source_refs": [
+      "docs/architecture/35-audit-verification-and-source-of-truth.md:F20/W25",
+      "src/learn/priors.ts:priorKey/indexPriors",
+      "src/learn/stats.ts:priorItems"
+    ],
+    "limitations": "Full W25 needs main reading actual complete contract/import-to-receipt/ranking path, grammar/version/no-event/unit/provenance/zero-reference decisions; no new claim from this read-only inspection."
+  },
+  "limitations": "Forward reward/objective/tau compatibility containment only, anchored to existing stored config; it does not prove legacy item or slot counts were accumulated cleanly. No reset, generation transition, migration, automatic replay, historical rewrite/rebuild/promote or stronger delivery claim. Missing legacy snapshot horizon is omitted from live learning, not repaired. Old binaries, policy/denominator transitions, latent reward filter, prior/money/currency/refund/margin-fallback semantics, old hourly/report data and authorized history recovery remain W24/W22/W30 obligations. Estimator-only settings remain editable; active-request snapshot matching is not atomic configuration rollout. Pure archived replay remains compatible. No additional runtime network hop or broad suite; full W24/F19/F08/N17/customer/SLO/release remain open. No external/cloud/resource/credential/customer-data/deployment/commit/push/destructive cleanup authority."
+}

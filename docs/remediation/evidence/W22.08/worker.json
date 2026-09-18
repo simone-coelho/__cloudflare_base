@@ -1,0 +1,504 @@
+{
+  "task_id": "W22.08",
+  "actor_id": "w2206-worker",
+  "run_id": "/root/w2206_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15T19:21:13.723Z",
+  "source_go": {
+    "journal": 1867,
+    "contract_digest": "b4a902e866e064c72950a9b2309659ecaf6a3eb5b93ac5c0cba11d7335736007"
+  },
+  "references": {
+    "docs/remediation/design/W22.08/plan.md": "beddf33de0f0e352368cf503b096ade1967b353cf2d159949c7735d43f0dad05",
+    "docs/remediation/design/W22.08/baseline.json": "9642307a6400bbcb0fdf883b71b8c0824edae305ee991fd005356ec5048b4ece",
+    "docs/remediation/evidence/W22.08/admission.json": "eefe15e1b1941f9c685a2f8a06ab4e6d186e324ef811241844d481d1742d653d"
+  },
+  "pre_edit_verification": {
+    "capture": "7e8841",
+    "at": "2026-09-15T19:15:28.803Z",
+    "exit_code": 0,
+    "owned_originals_and_decoded_baseline_matched": 2,
+    "protected_matched": 24,
+    "accepted_dependency": {
+      "task_id": "W22.07",
+      "files_matched": 51,
+      "review_matched": true,
+      "owned_overlaps": []
+    },
+    "mismatches": [],
+    "description": "Read admitted task/plan/governance/current checkpoint, complete canonical W22/W30 scope and linked finding requirements, doc22 recent200/seven-day/index/attribution contract and actual ring/fixture/policy/fan/hourly source. Verified actual and decoded admitted original hashes plus all protected/accepted files and review before edit. Reused root entry board VALID1862 dc478a to 2abe6a to 19aa31 both0/drained and baseline lint03e707 to a18621 0errors/3warnings. Root admission board VALID1867 ceb5af to 01a1e0 to 46ebe5 reported both0/drained/no drift. No worker board or baseline runtime."
+  },
+  "baseline_case": "Source-confirmed append reconciles full identities, then age-filters retained+unique arrivals and arrival-order slice(-200), so older late rows evict newer correlation evidence. No failed runtime baseline claimed.",
+  "implementation": [
+    "One numeric ascending stable sort on the NEW combined age-eligible ring before the unchanged last200 projection. No comparator ID tie-break, stored/input array mutation, original payload rewrite or ambiguous-history deduplication.",
+    "Seven-day ring and90-day index filters, reference now, index ordering/content, receipts/counts, ownership/tombstone/full-cohort collision checks, request/state/index capacity, serialization and save/cache failure handling are unchanged.",
+    "Exactly two grouped additions (67lines) in existing learn.test.ts. First covers210 distinct times in chronological/reversed/interleaved single and split batches, independent newest200 expectation and full receipts/index order, plus full-cap equal-time old-before-new/input order with frozen cache/input arrays and unchanged first/last credit behavior.",
+    "Second uses actual object HTTP append/recent/outcome, three older arrivals after a full200 ring, independent object recreation, original outcome construction and exact correlated destination/credit payload. The credit destination returns a synthetic valid stats receipt; this is forwarding evidence, not durable LearnStats or external persistence assurance."
+  ],
+  "canonical_source": {
+    "pin_count": 64,
+    "pin_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+    "hash_algorithm": "SHA-256 of JSON.stringify(path-sorted array of {path,sha256}); path.localeCompare ordering",
+    "pins": [
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+      },
+      {
+        "path": "docs/api/01-rest-endpoints.md",
+        "sha256": "e5faf25dc5fbe432a61ebc47de7be6a9137d14c718587d62bf45bd61c18a6238"
+      },
+      {
+        "path": "docs/architecture/16-edge-affinity-reflex.md",
+        "sha256": "b30b96e1edb2ee468742b180c0dba544d3f21ddb30cb2404f62e12509605de43"
+      },
+      {
+        "path": "docs/architecture/22-outcome-learning-design.md",
+        "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+      },
+      {
+        "path": "docs/remediation/decisions/D06-buffered-action-purpose-approved-2026-09-15.json",
+        "sha256": "469cc9e3c566c9430b855e01d200120e5c5f075ef9b595b0ca99db22e64923db"
+      },
+      {
+        "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+        "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72"
+      },
+      {
+        "path": "docs/remediation/design/W22.07/baseline.json",
+        "sha256": "091a30fd9adedc20b05cde6369ec919cf6aaa2c073f41ad75bbf8db0997fe279"
+      },
+      {
+        "path": "docs/remediation/design/W22.07/plan.md",
+        "sha256": "d57a14dde34afb8d662f54149ba38326a8c380663b0cda5b2a87cd35963c784e"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/admission.json",
+        "sha256": "2098cddce90f455c295ec00d6d2e8f4182aa489b80e8ef41957b9c07a65e799d"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/review.json",
+        "sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/source-deltas.json",
+        "sha256": "06466cded378a347ea2cd6a87a6b565f37bf2ae4f515eed24192c6e8b1ff16b8"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/source-freeze.json",
+        "sha256": "286129cc6e8e91b88537c2a3978c2bae29175d77e705b945b7c2bf94cd8621e2"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/worker.json",
+        "sha256": "f193a97d87069b547b4be5be8c95895239781686b0d5e827fa87bb2a3809b41f"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+      },
+      {
+        "path": "src/connectors/AudienceStore.ts",
+        "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf"
+      },
+      {
+        "path": "src/connectors/index.ts",
+        "sha256": "656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67"
+      },
+      {
+        "path": "src/connectors/SegmentProvider.ts",
+        "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359"
+      },
+      {
+        "path": "src/content/consent.ts",
+        "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+      },
+      {
+        "path": "src/demos/registry.ts",
+        "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "be56d2eaa2eba50cc5f12474c2353706689e7e0db94a572182590478ca5c039a"
+      },
+      {
+        "path": "src/durable-objects/LearnStats.ts",
+        "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974"
+      },
+      {
+        "path": "src/durable-objects/RegionTrend.ts",
+        "sha256": "1244d0bfd4869a0385b7734694ea88c309a584fb597ae0f2e1b7b6d3503dcc0d"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "c5f4df17a111772c3c6863e7b27edea2456287df513b2719a49cd7d38ace1ba9"
+      },
+      {
+        "path": "src/events/actionTypes.ts",
+        "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3"
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7"
+      },
+      {
+        "path": "src/identity/profileEnrichment.ts",
+        "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5"
+      },
+      {
+        "path": "src/identity/sessionCapability.ts",
+        "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "897a3fbab9a42425e418b956bdb4998fa1de75aa598f5bfc569081b1535c588e"
+      },
+      {
+        "path": "src/learn/policy.ts",
+        "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98"
+      },
+      {
+        "path": "src/learn/route.ts",
+        "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+      },
+      {
+        "path": "src/learn/stats.ts",
+        "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+      },
+      {
+        "path": "src/ledger/delivery.ts",
+        "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf"
+      },
+      {
+        "path": "src/ledger/enqueue.ts",
+        "sha256": "831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9"
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+      },
+      {
+        "path": "src/ledger/writer.ts",
+        "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d"
+      },
+      {
+        "path": "src/reflex/bufferedAction.ts",
+        "sha256": "272445c8c7518012be0034cc24a96c71ae3c2ca298f8bdef529ef73cba96bb86"
+      },
+      {
+        "path": "src/reflex/contentTelemetry.ts",
+        "sha256": "8153296908e6fbca19b20b45d447b635f1d20539b09d79f723ebb283551a770e"
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+      },
+      {
+        "path": "src/reflex/identityMerge.ts",
+        "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+      },
+      {
+        "path": "src/reflex/regionTrend.ts",
+        "sha256": "e5ab4379a4fab720fe04eeb1ed1af55e390db033caad91c3afd7e45e7e6430e0"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "d48ab9222a2ab660f612c1dfd38f798cfc8b4a9aaf5e475cf4875f21ab911087"
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "sha256": "2b11bcb80a14065164e47922b33b8c7417228e9c87f60c1c605cceae45c9f7d9"
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "d183cc129206527fe5df917502d88904c86728afea3b5a15f8a9058c64c834eb"
+      },
+      {
+        "path": "src/sdk/emit.ts",
+        "sha256": "188cb582218166ceac62005e20e32be068cae03f2b8d99195167bafb3de636a5"
+      },
+      {
+        "path": "src/sdk/types.ts",
+        "sha256": "d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4"
+      },
+      {
+        "path": "src/services/demoEventCapture.ts",
+        "sha256": "eb64be869e76f3db40288e4a1da135f62de84806dc8a0b9dc0de653eb8ff5456"
+      },
+      {
+        "path": "src/services/odpLoop.ts",
+        "sha256": "52348b653a209e56384568f0e73f87690ef68316d3f8b4d9b7f7a7d3c72e029e"
+      },
+      {
+        "path": "src/services/RealtimeSegmentEngine.ts",
+        "sha256": "4231483bd4aafe6b438c15f88350b201a10b3818e7e7439edc0a38bdae970970"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "fd97cf625f3181bed8d5f4b12153e63387603e67913e263a068ceb943bf33efd"
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+      },
+      {
+        "path": "wrangler.toml",
+        "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923"
+      }
+    ],
+    "snapshot_command": "node - digest <<'NODE'\nconst fs=require('node:fs'),c=require('node:crypto');\nconst b=JSON.parse(fs.readFileSync('docs/remediation/design/W22.08/baseline.json','utf8')),hash=bytes=>c.createHash('sha256').update(bytes).digest('hex'),pin=x=>({path:x.path,sha256:hash(fs.readFileSync(x.path))}),owned=new Set(b.owned_before.map(x=>x.path));\nconst expected=[...b.protected,...b.accepted_dependencies.flatMap(d=>[...d.files.filter(x=>!owned.has(x.path)),d.review])];\nconst protectedMismatches=expected.filter(x=>pin(x).sha256!==x.sha256).map(x=>x.path);\nconst map=[...new Map([...b.owned_before,...expected].map(x=>[x.path,pin(x)])).values()].sort((a,b)=>a.path.localeCompare(b.path));\nconsole.log(JSON.stringify({at:new Date().toISOString(),pin_count:map.length,pin_digest:hash(JSON.stringify(map)),protected_mismatches:protectedMismatches,...(process.argv[2]==='full'?{pins:map}:{}),owned:b.owned_before.map(pin)}));\nif(protectedMismatches.length)process.exitCode=1;\nNODE"
+  },
+  "attempts": [
+    {
+      "id": "runtime_final",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W22[.]08|W26[.]03 atomically|W06[.]06 suppresses old|W10[.]02 bounds actual' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "ed9f72",
+        "exit_code": 0,
+        "at": "2026-09-15T19:18:01.677Z",
+        "pin_count": 64,
+        "pin_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "044a03",
+        "wall_time_seconds": 1.001215838,
+        "session_id": 30512,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "1dfd5e",
+          "wall_time_seconds": 0.000001863,
+          "exit_code": 0,
+          "original_token_count": 124,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (31 tests | 26 skipped) 232ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 26 skipped (31)\n   Start at  15:18:03\n   Duration  4.10s (transform 897ms, setup 0ms, collect 1.49s, tests 232ms, environment 0ms, prepare 1.58s)\n\n"
+        }
+      ],
+      "after": {
+        "capture": "1e05ee",
+        "exit_code": 0,
+        "at": "2026-09-15T19:18:22.933Z",
+        "pin_count": 64,
+        "pin_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+        "protected_mismatches": []
+      },
+      "exit_code": 0,
+      "session_drained": true,
+      "result": {
+        "passed": 5,
+        "failed": 0,
+        "deliberately_unselected": 26,
+        "total": 31,
+        "test_files": 1,
+        "duration_seconds": 4.1,
+        "test_seconds": 0.232
+      }
+    },
+    {
+      "id": "static_final",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/learn.test.ts --max-warnings 3 && git diff --check -- src/durable-objects/DecisionRing.ts src/learn/learn.test.ts",
+      "before": {
+        "capture": "1e05ee",
+        "exit_code": 0,
+        "at": "2026-09-15T19:18:22.933Z",
+        "pin_count": 64,
+        "pin_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "3e569c",
+        "wall_time_seconds": 1.001077427,
+        "session_id": 38927,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "25d7ff",
+          "wall_time_seconds": 0.000001912,
+          "exit_code": 0,
+          "original_token_count": 100,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  674:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  675:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  675:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "after": {
+        "capture": "ca47e0",
+        "exit_code": 0,
+        "at": "2026-09-15T19:19:18.448Z",
+        "pin_count": 64,
+        "pin_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+        "protected_mismatches": []
+      },
+      "exit_code": 0,
+      "session_drained": true,
+      "result": {
+        "compiler_exit": 0,
+        "scoped_lint_errors": 0,
+        "scoped_lint_warnings": 3,
+        "whitespace_exit": 0
+      }
+    },
+    {
+      "id": "required_warning_comparison",
+      "command": "node --max-old-space-size=512 --input-type=module <<'NODE'\nimport fs from 'node:fs'; import z from 'node:zlib'; import { ESLint } from 'eslint';\nconst b=JSON.parse(fs.readFileSync('docs/remediation/design/W22.08/baseline.json','utf8')), files=b.owned_before;\nconst results=await new ESLint().lintFiles(files.map(x=>x.path));\nconst rows=results.map(r=>({path:r.filePath.split('/__cloudflare_base/')[1],errors:r.errorCount,warnings:r.warningCount,signatures:r.messages.map(m=>[m.ruleId,m.message]).sort()}));\nconst differences=[],newWarningSource=[];\nfor(const row of rows){const remaining=(b.lint.rows.find(p=>p.path===row.path)?.signatures??[]).map(x=>JSON.stringify(x));\nfor(const signature of row.signatures){const key=JSON.stringify(signature),i=remaining.indexOf(key);if(i<0)differences.push({path:row.path,signature});else remaining.splice(i,1);}\nconst originalLines=new Set(z.gunzipSync(Buffer.from(files.find(p=>p.path===row.path).gzip_base64,'base64')).toString().split('\\n').map(x=>x.trim())),source=fs.readFileSync(row.path,'utf8').split('\\n');\nfor(const m of results.find(r=>r.filePath.endsWith('/'+row.path)).messages)if(!originalLines.has((source[m.line-1]??'').trim()))newWarningSource.push({path:row.path,line:m.line,rule:m.ruleId,message:m.message,source:source[m.line-1]});}\nconst errors=rows.reduce((n,r)=>n+r.errors,0),warnings=rows.reduce((n,r)=>n+r.warnings,0);console.log(JSON.stringify({errors,warnings,baseline_errors:b.lint.errors,baseline_warnings:b.lint.warnings,rows,new_signatures:differences,new_warning_source:newWarningSource}));process.exitCode=errors||warnings>b.lint.warnings||differences.length||newWarningSource.length?1:0;\nNODE",
+      "before": {
+        "capture": "ca47e0",
+        "exit_code": 0,
+        "at": "2026-09-15T19:19:18.448Z",
+        "pin_count": 64,
+        "pin_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "bbb138",
+        "wall_time_seconds": 1.000728737,
+        "session_id": 78469,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "0c1c60",
+          "wall_time_seconds": 5.000768275,
+          "session_id": 78469,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "be5882",
+          "wall_time_seconds": 0.00000185,
+          "exit_code": 0,
+          "original_token_count": 127,
+          "output": "{\"errors\":0,\"warnings\":3,\"baseline_errors\":0,\"baseline_warnings\":3,\"rows\":[{\"path\":\"src/durable-objects/DecisionRing.ts\",\"errors\":0,\"warnings\":0,\"signatures\":[]},{\"path\":\"src/learn/learn.test.ts\",\"errors\":0,\"warnings\":3,\"signatures\":[[\"@typescript-eslint/no-unused-vars\",\"'_init' is defined but never used.\"],[\"@typescript-eslint/no-unused-vars\",\"'_key' is defined but never used.\"],[\"@typescript-eslint/no-unused-vars\",\"'_url' is defined but never used.\"]]}],\"new_signatures\":[],\"new_warning_source\":[]}\n"
+        }
+      ],
+      "after": {
+        "capture": "c02234",
+        "exit_code": 0,
+        "at": "2026-09-15T19:19:58.398Z",
+        "pin_count": 64,
+        "pin_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+        "protected_mismatches": []
+      },
+      "exit_code": 0,
+      "session_drained": true,
+      "result": {
+        "errors": 0,
+        "warnings": 3,
+        "baseline_errors": 0,
+        "baseline_warnings": 3,
+        "new_signatures": [],
+        "new_warning_source": [],
+        "description": "Per-file rule/message multisets match admitted baseline; every current diagnostic source line is present verbatim after trimming in its admitted original."
+      }
+    }
+  ],
+  "failures_and_rework": [],
+  "delta_inspection": {
+    "capture": "ec2011",
+    "description": "Complete two-file admitted-original-relative deltas read; both diff statuses1 (expected differences), empty stderr. One production sort/comment and67 test lines, exactly2new grouped cases. Three selected existing controls and all26 unselected tests unchanged. No source outside assigned files."
+  },
+  "criteria": {
+    "W22.08-C1": "Local runtime pass: newest200 exact payloads survive distinct-time single/split arrival permutations; index stays in existing arrival order; equal-time boundary preserves old-before-new/input order and existing first/last semantics; frozen input/cache arrays remain unmodified.",
+    "W22.08-C2": "Local actual object pass: a newer correlated decision survives older append/restart and forwards exactly one original-time credit with unchanged context/weight/config. Selected collision/retry/ambiguous-save, inclusive erasure and request/candidate-capacity controls pass. Synthetic stats acknowledgment, not durable credit/reconstruction proof.",
+    "W22.08-C3": "Fixed5 once on final source, then compiler1536/scoped lint0errors3unchanged warnings/whitespace and required signature/source comparison pass on same64-pin source basis. All protected and accepted W22.07 artifact/review pins unchanged. Independent review and lead acceptance remain pending."
+  },
+  "measurement": {
+    "selected_tests": 5,
+    "new_grouped_cases": 2,
+    "unchanged_selected_controls": 3,
+    "deliberately_unselected_tests": 26,
+    "test_files": 1,
+    "vitest_duration_seconds": 4.1,
+    "vitest_test_seconds": 0.232,
+    "baseline_lint_errors": 0,
+    "baseline_lint_warnings": 3,
+    "final_lint_errors": 0,
+    "final_lint_warnings": 3,
+    "scope": "Synthetic local correctness checks only, no native capacity, throughput, customer or deployed-runtime/SLO measurement."
+  },
+  "final_source": {
+    "capture": "c02234",
+    "exit_code": 0,
+    "at": "2026-09-15T19:19:58.398Z",
+    "pin_count": 64,
+    "pin_digest": "188d9fc8b1a870250aec20dd54d24e1067cb97d01f39c16b57ab9b9241d48505",
+    "protected_mismatches": [],
+    "same_bytes_for_final_runtime_static_and_warning_comparison": true,
+    "source_rework": false
+  },
+  "limitations": [
+    "Forward ordering of already-received retained decisions only. Previously evicted history, missing ledger inputs, old correlation loss, damaged aggregate state or completed reports are not reconstructed.",
+    "Stable equal-time arrival/old-before-new order is intentional; no equal-time permutation invariance, ID tie policy, legacy ambiguity repair or historical migration.",
+    "No new retention/history/age cutoff, objective/horizon/policy generation/lifecycle/current-interest behavior, receipt schema, index order change or cross-call statistics idempotence.",
+    "Correlated-credit destination is a synthetic acknowledged sink; exact forwarded payload and ring persistence/recreation are observed, but durable LearnStats/customer/external writes are not claimed.",
+    "W22.07 all51pins/review and other protected dependencies unchanged; accepted assurance reused without their suites. No broader/new suite/helper/framework, SDK/API/docs/source-of-truth edits, subdelegation, install/emitted build/stage/commit/push/deploy/provision/cloud/credentials/customer-data/destructive/external actions.",
+    "Worker checks are not independent verification, full W22/W23/W30 or F16/F17/F18/F19/F22/F25 closure, customer/SLO/scientific acceptance or release approval."
+  ],
+  "rollback": "Root-reviewed inverse of the two owned admitted-baseline deltas only; preserve dirty inherited worktree and W22.07 artifacts. No rollback performed.",
+  "disposition": {
+    "status": "worker_checks_passed_review_pending",
+    "source_stopped": true,
+    "source_stopped_at": "2026-09-15T19:19:58.398Z",
+    "evidence_stopped": true,
+    "running_commands": [],
+    "independent_reviewer": "/root/late_hour_next_review pending frozen artifact",
+    "lead_acceptance": "pending",
+    "next_action": "Root freezes exact source/evidence; distinct reviewer inspects actual artifact and runs admitted fixed5 once, reusing same-byte static. Root owns governance and final disposition."
+  }
+}
+

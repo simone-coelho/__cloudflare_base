@@ -1,0 +1,63 @@
+{
+  "task_id": "W15.02",
+  "at": "2026-09-18T19:59:00.176Z",
+  "source_state": "R8/R9 SOURCE/EVIDENCE STOP19:57:30UTC; all sessions drained. Not W15 acceptance.",
+  "rejected": {
+    "artifact": "851b205284912e0383666deaf4ab0caa890f8124c58de6b89b47e88691b18b9c",
+    "review": {
+      "path": "docs/remediation/evidence/W15.02/review.json",
+      "sha256": "6120f7a944ad960a60f8578521c3e77af9f14328bacfc7a4f87cccec3002bd16"
+    }
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W15.02/worker-r1.json",
+    "sha256": "fbb5c6289ebc1315ca3c5565b7b530d13fabd9c21f2a78e8346101c3a68b8c20",
+    "bytes": 684010
+  },
+  "artifact": {
+    "digest": "88ac2332597d22c1521ba1fc9745611a9e7df9ca8c3f20553bfcc1d97d32b44d",
+    "contract_digest": "a6f51718893ca7c585de995e3db8b6d952991672a6b20f665486e25d5a09846a",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W15.02"
+  },
+  "identity": {
+    "prior_files": 1219,
+    "unchanged": 1216,
+    "changed": 3,
+    "after_pin_digest": "1345742dac8eba7a6ec6c77c2ce98ab0d7d7a3b18724dc54dfea01b3adf41e8e",
+    "changes": [
+      {
+        "path": "src/sdk/listen.test.ts",
+        "sha256": "06f5eb5aace0ebb8d1be4132d08e1a7a63e6b72daac97f570fa225613258a33e"
+      },
+      {
+        "path": "docs/kit/01-integration-guide.md",
+        "sha256": "f5e5aa98a04289658e192607965ad32768aeacf9882b5e03b59d86699f5ac00d"
+      },
+      {
+        "path": "src/sdk/README.md",
+        "sha256": "a58a6219becdc17a0530d9b48adbb1cccd039b1b9e0523b2847eaef25cb231a3"
+      }
+    ],
+    "root_verification": "All1219 current physical pins verified with exactly three admitted changes. Three exact original/current bytes and forward deltas verified. All four focused/static stream hashes/timings/pins read; R1 failure and R2 PASS2/static0errors5warnings retained. Immutable raw package11350807B/2a8b255d…d6f91 and14 payload hashes independently verified; no rebuild."
+  },
+  "results": [
+    "R1-focused FAIL1/PASS1 retained fixture timing assumption",
+    "R1-static PASS0errors/5existingwarnings",
+    "R2-focused PASS2/35unselected exact final",
+    "R2-static PASS0errors/5existingwarnings exact final"
+  ],
+  "retained_package": {
+    "raw_bytes": 11350807,
+    "raw_sha256": "2a8b255d65f3e9b811974b75ffb7b42efd95efa67072a8c34d776f2ae22d6f91",
+    "digest": "bc30b41a5fb64aaa9b5ee12d15b4e75ba25515872f18594f25ae66db9c1ceea7",
+    "payloads": 14,
+    "build_count": 1,
+    "qualification": "Original package immutable. Only non-payload listen.test inventory pin changed; two guide files absent from package source inventory. Not exact-all-current-source attestation."
+  },
+  "limitations": [
+    "C12 live/customer/provider/commercial/browser/latency acceptance OPEN; no external operations.",
+    "Local JSDOM/synthetic CMS/publication is not customer browser/no-flash/actual feed acceptance.",
+    "All rejected-candidate failures, latency/cross-request warnings and missing early metadata retained."
+  ]
+}

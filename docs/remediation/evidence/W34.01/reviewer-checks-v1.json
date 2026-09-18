@@ -1,0 +1,60 @@
+{
+  "task": "W34.01",
+  "actor_id": "w0202-reviewer",
+  "run_id": "/root/w0202_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "completed": "2026-09-07 04:42:56 UTC",
+  "plan_sha256": "a89dc247a159a1ede3a07ecd3b66e777d0d47b673ca3958d62c4de00fac58e3f",
+  "contract_digest": "493bc4435de040b1db24f8b58a9aec18bb80e8681d917bd8018a515aadce6dd9",
+  "artifact_digest": "eba761398a7fc71b7e9e7a05d45ed9ff061ddd14a849b13432b0ca1c95a53b1b",
+  "checks": [
+    {
+      "kind": "Independent K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/learn/phase3.test.ts src/content/decide.test.ts src/learn/holdoutArms.test.ts --maxWorkers=1 --minWorkers=1",
+      "started": "2026-09-07 04:41:20 UTC",
+      "collected": "2026-09-07 04:42:17 UTC",
+      "exit_code": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/phase3.test.ts  (10 tests) 20ms\n ✓ src/content/consent.test.ts  (10 tests) 17ms\n ✓ src/content/decide.test.ts  (10 tests) 6ms\n ✓ src/learn/holdoutArms.test.ts  (3 tests) 17ms\n\n Test Files  4 passed (4)\n      Tests  33 passed (33)\n   Start at  00:41:23\n   Duration  13.81s (transform 1.76s, setup 0ms, collect 3.42s, tests 60ms, environment 0ms, prepare 7.65s)\n\n",
+      "reportedDurationSeconds": 13.81,
+      "passed": 33
+    },
+    {
+      "kind": "Independent scoped identity",
+      "command": "node -e 'const fs=require(\"node:fs\"),assert=require(\"node:assert/strict\"),crypto=require(\"node:crypto\"),cp=require(\"node:child_process\");const d=\"docs/remediation/evidence/W34.01/\";const sha=v=>crypto.createHash(\"sha256\").update(v).digest(\"hex\"),hash=p=>sha(fs.readFileSync(p));const a=JSON.parse(fs.readFileSync(d+\"artifact-v1.json\"));const digest=sha(JSON.stringify({contract_digest:a.contract_digest,configuration:a.configuration,files:a.files.map(({path,sha256,role})=>({path,sha256,role})).sort((x,y)=>x.path.localeCompare(y.path))}));assert.equal(digest,\"eba761398a7fc71b7e9e7a05d45ed9ff061ddd14a849b13432b0ca1c95a53b1b\");assert.equal(a.files.length,71);const pins=new Map(a.files.map(f=>[f.path,f.sha256]));assert.equal(pins.size,71);for(const f of a.files)assert.equal(hash(f.path),f.sha256,f.path);const graph=JSON.parse(fs.readFileSync(d+\"source-inputs-v1.json\"));assert.deepEqual(JSON.parse(graph.execution.output),graph.result);assert.equal(graph.execution.exit_code,0);assert.equal(graph.result.inputs.length,60);for(const f of graph.result.inputs)assert.equal(pins.get(f.path),f.sha256,f.path);const baseline=JSON.parse(fs.readFileSync(d+\"baseline.json\"));assert.deepEqual(baseline.execution.completedToolResult.output.trim().split(\"\\n\").map(JSON.parse),baseline.execution.parsedOutput);for(const f of baseline.originalSources){assert.equal(sha(f.source),f.sha256);assert.equal(sha(cp.execFileSync(\"git\",[\"show\",\"HEAD:\"+f.path])),f.sha256);}assert.equal(hash(\"src/middleware/auth.ts\"),\"9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01\");const before=JSON.parse(fs.readFileSync(d+\"start-checks-v1.json\")).git.output.trimEnd().split(\"\\n\"),after=cp.execFileSync(\"git\",[\"status\",\"--short\"],{encoding:\"utf8\"}).trimEnd().split(\"\\n\");const added=after.filter(l=>!before.includes(l)),removed=before.filter(l=>!after.includes(l));assert.deepEqual(added.sort(),[\" M src/content/consent.test.ts\",\" M src/content/service.ts\"].sort());assert.deepEqual(removed,[]);console.log(JSON.stringify({completed:new Date().toISOString(),artifactDigest:digest,artifactFileSha256:hash(d+\"artifact-v1.json\"),verifiedPins:71,localGraphInputs:60,retainedGraphEqualsActualOutput:true,externalPackages:graph.result.externals,baselineOriginalSourcesMatchHEAD:true,baselineRowsEqualOutput:true,sourceStatusChanges:added,removedStatusRows:removed,authUnchanged:true,workerChecksSha256:hash(d+\"worker-checks.json\"),workerReportSha256:hash(d+\"worker.md\"),limitations:\"Static packages-external graph inspected, not independently rebuilt or full installed/runtime/TypeScript program attestation; original baseline graph absent as declared.\"},null,2));'",
+      "chunk_id": "d01112",
+      "wall_time_seconds": 1.505852177,
+      "exit_code": 0,
+      "original_token_count": 263,
+      "output": "{\n  \"completed\": \"2026-09-07T04:42:17.455Z\",\n  \"artifactDigest\": \"eba761398a7fc71b7e9e7a05d45ed9ff061ddd14a849b13432b0ca1c95a53b1b\",\n  \"artifactFileSha256\": \"6ef43a4a16bc810a3b6b9a9739d9915a6fdd8e7f1a508093902eee2dc34d133a\",\n  \"verifiedPins\": 71,\n  \"localGraphInputs\": 60,\n  \"retainedGraphEqualsActualOutput\": true,\n  \"externalPackages\": [\n    \"@optimizely/optimizely-sdk\",\n    \"@optimizely/optimizely-sdk/lite\",\n    \"vitest\",\n    \"zod\"\n  ],\n  \"baselineOriginalSourcesMatchHEAD\": true,\n  \"baselineRowsEqualOutput\": true,\n  \"sourceStatusChanges\": [\n    \" M src/content/consent.test.ts\",\n    \" M src/content/service.ts\"\n  ],\n  \"removedStatusRows\": [],\n  \"authUnchanged\": true,\n  \"workerChecksSha256\": \"f14856ac4ecfc21215970a87f6e8456d597bda1f98d9adbc1632595127f30e17\",\n  \"workerReportSha256\": \"631cc415d7256d20a667602c8d11b30d8be6dcdbdacd28559e362f873622b686\",\n  \"limitations\": \"Static packages-external graph inspected, not independently rebuilt or full installed/runtime/TypeScript program attestation; original baseline graph absent as declared.\"\n}\n"
+    },
+    {
+      "kind": "Independent scoped diff",
+      "command": "git diff --check -- src/content/service.ts src/content/consent.test.ts",
+      "chunk_id": "437ac6",
+      "wall_time_seconds": 0.000004426,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  ],
+  "inspected_worker_application_typecheck": {
+    "evidence": "docs/remediation/evidence/W34.01/worker-checks.json",
+    "sha256": "f14856ac4ecfc21215970a87f6e8456d597bda1f98d9adbc1632595127f30e17",
+    "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w3401-typecheck.Afav3u/application.tsbuildinfo",
+    "started": "2026-09-07 04:37:09 UTC",
+    "collected": "2026-09-07 04:37:33 UTC",
+    "exit_code": 0,
+    "output": "",
+    "limitation": "Actual retained compiler output independently inspected; no duplicate reviewer compiler run claimed."
+  },
+  "source_review": "Actual two-file diff and complete fixture read; sole production external invocation/import, payload and adapter dependency construction removed. Existing inactive/consent/ring/lift/gamma paths and pure adapters/scorer/replay unchanged. Four successful adapter stubs cannot be reached; property reads and ext:* reads checked independently of normal shopper/ring effects. Disabled table receipt and historical successful external receipts replay equal in declared suites.",
+  "retained_history": "Worker initial K1 29pass/4fail was incorrect default-tenant shopper-label assertion, then corrected; initial app TS failure was afterEach returning VitestUtils, corrected to void. Final exact-source 33/33 and app TS pass inspected. No failed assertion deleted. Reviewer had no failing acceptance checks.",
+  "verdict": {
+    "C1": "pass",
+    "C2": "pass",
+    "recommendation": "Accept bounded OFF-only W34.01; separate lead acceptance remains required."
+  },
+  "limitations": "Only local synthetic Node integration/source proof. Static four-suite graph packages external (60 local inputs), not full runner/library/native-binary or TypeScript program attestation. Original five-case baseline emitted 52-input count, no full graph; no reconstruction claimed. Existing helper timeout only proves omission, not cancellation. No runtime/table enablement, publication, customer wording/D05, privacy/seam, SLO, deployed/full W34/F30/gate/release acceptance. Prior security proof remains historical/reopened, not reclosed by these tests. No pending reviewer process or engine/governance edit."
+}
+

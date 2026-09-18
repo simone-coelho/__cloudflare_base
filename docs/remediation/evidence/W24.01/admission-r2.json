@@ -1,0 +1,48 @@
+{
+  "at": "2026-09-12T11:30:59.445Z",
+  "source_go_at": "2026-09-12T11:30:59.445Z",
+  "actor_id": "w01-lead",
+  "task_id": "W24.01",
+  "worker": "w1405-worker",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "e53bfc54ae838c033c1a148e4f15d76dbeb126c2a94320c3cc67645dd255e33b",
+  "plan": {
+    "path": "docs/remediation/design/W24.01/plan-r2.md",
+    "sha256": "06bf76243e0f2e4e59b5f683bd0fd5e507de450823e9efcb3088a6551b916631"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "63cf76",
+        "wall_time_seconds": 1.00033633,
+        "session_id": 13398,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "780f7f",
+        "wall_time_seconds": 0.000002643,
+        "exit_code": 0,
+        "original_token_count": 535,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=20, unscoped=21\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=79, closed=2; evidence records=231\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W23.01 — Next inspect and admit bounded W24 accumulation-configuration compatibility: prevent reward/objective/decay-horizon changes from silently relabeling incompatible item and slot history, while preserving compatible estimator-only settings. Inspect actual ingestion, publication and serving/cache consumers first; no implicit reset/generation rollout, old-state rewrite or historical reconstruction. W23 forward arithmetic is implemented; timestamp/lateness policy and historical repair remain open. No external/customer-policy/deployment authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 16292\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=20, unscoped=21\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=79, closed=2; evidence records=231\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W23.01 — Next inspect and admit bounded W24 accumulation-configuration compatibility: prevent reward/objective/decay-horizon changes from silently relabeling incompatible item and slot history, while preserving compatible estimator-only settings. Inspect actual ingestion, publication and serving/cache consumers first; no implicit reset/generation rollout, old-state rewrite or historical reconstruction. W23 forward arithmetic is implemented; timestamp/lateness policy and historical repair remain open. No external/customer-policy/deployment authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 16298\n"
+      }
+    ],
+    "session_id": 13398,
+    "exit_code": 0,
+    "drained": true
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1134,
+    "pins": 110,
+    "protected": 101,
+    "authority": true,
+    "actual_package_matches": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true
+  },
+  "limitations": "Forward reward/objective/tau compatibility containment only, anchored to existing stored config; it does not prove legacy item or slot counts were accumulated cleanly. No reset, generation transition, migration, automatic replay, historical rewrite/rebuild/promote or stronger delivery claim. Missing legacy snapshot horizon is omitted from live learning, not repaired. Old binaries, policy/denominator transitions, latent reward filter, prior/money/currency/refund/margin-fallback semantics, old hourly/report data and authorized history recovery remain W24/W22/W30 obligations. Estimator-only settings remain editable; active-request snapshot matching is not atomic configuration rollout. Pure archived replay remains compatible. No additional runtime network hop or broad suite; full W24/F19/F08/N17/customer/SLO/release remain open. No external/cloud/resource/credential/customer-data/deployment/commit/push/destructive cleanup authority."
+}

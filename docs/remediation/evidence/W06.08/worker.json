@@ -1,0 +1,116 @@
+{
+  "task_id": "W06.08",
+  "actor": {
+    "id": "w0608-worker",
+    "run": "/root/w0608_worker",
+    "model": "gpt-6-astra",
+    "reasoning": "xhigh"
+  },
+  "recorded_at": "2026-09-08T21:20:14.799Z",
+  "state": "frozen_for_independent_review",
+  "admission": "Read actual AGENTS.md, README, doc36, RESUME, document35 complete W06 and linked F04/F06/F18/N05/N12/N13/customer D9, source and approved plan-v1/task-contract-v1/current tracker before implementation. Admitted journal397 under standing bounded local G0 mandate. Root entry board check/status VALID393/exit0 reused. Worker-started redundant direct checker was intentionally terminated (exit143), not counted as passing. No baseline test run.",
+  "baseline": {
+    "record": "docs/remediation/evidence/W06.08/baseline.json",
+    "kind": "source_confirmed",
+    "observation": "The inverse shopper list keeps 50 visitors while current identity:visitor links remain. Prior erase discovery sees only the capped inverse list and selector, so an erasure using a retained selector misses evicted browsers and their remembered sessions.",
+    "files": [
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "0cb39bd64454dd0bcf17e55dcf0092233a5870717d98da2302583209bc1efa43"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "8f09f1c653e9919dc98fdd52a97bc29d31a5b758a44ebd0fc4ee98e4a4826f2b"
+      }
+    ]
+  },
+  "artifact": {
+    "files": [
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "5bd4f0223db11a68bfbb6af604a51d7550ea1e489bfbe79e6e67d19a96f7c82f"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "668e9673b528871b21ef239e530e15e414f093e77f96edfe83005682d546d807"
+      }
+    ],
+    "imports": "No new production dependency. Existing fixture imports the additional page-limit export from the same erase module."
+  },
+  "implementation": "Fresh recognized jobs use a v3 controller containing the bounded original v2 base plan plus fixed page/cursor/counter fields. One raw tenant-scoped identity:visitor page of at most32 keys is read per invocation. Current shopper matches absent from base discovery become a frozen v2 cleanup capsule with at most32 extra visitors and the canonical shopper retained only for ownership validation. Full capsules and input/output cursors are saved before root cursor CAS; all pages precede cleanup. Cursor-derived hashed page keys reject empty-page cursor cycles without a growing in-memory/controller cursor collection and reuse accepted pages after ambiguous writes. Extra capsules omit every canonical shopper step and every canonical-owned session; an excluded session must already be covered by a matching frozen base session or discovery conflicts. Extra target keys must fall inside their page's lexical interval. Root checkpoints compaction intent before child plan/cursor metadata is compacted, then advances to the next page; base cleanup runs last. The same32 attempted-step budget covers child and base execution. Receipts remain complete:false and label current-batch scope alongside page/extra completion counters.",
+  "legacy_semantics": "Pending v1/v2 jobs retain their exact schemas, numeric cursors and step order. The existing v2 CACHE recovery test explicitly extracts the frozen base v2 plan and saves that historical wire form before exercising nonzero cursor recovery; v1 similarly reconstructs its exact historical wire schema from the captured base. Small recognized one-page/no-extra jobs still complete synchronously where the existing32-step limit permits. Fresh unrecognized selectors retain v2.",
+  "criteria": {
+    "W06.08-C1": "56 seeded links with a retained selector; inverse cap50 leaves6 evicted IDs, one is currently linked to another shopper with previous[] history and is preserved. The other5 extra browsers, all current base browsers, remembered sessions/pointers/caches and retained tombstones are checked through actual route/erasure/reset modules. Two non-default tenants and unrelated/currently relinked records are preserved. Four forced17-key listing pages prove scan-first and one-list-per-invocation behavior; list request limit is32 and every attempted cleanup count is <=32.",
+    "W06.08-C2": "Ten coherent failure states exercise page write, root scan CAS, child cleanup checkpoint, child compaction and root post-compaction checkpoint, each before/after ambiguous writes. Retries preserve actor/cutoff, reuse stored pages without relisting and reach inspected local cleanup/compacted child state. Fifteen malformed/ownership states cover unavailable list, missing list_complete/cursor, explicit null cursor, oversized/foreign/duplicate keys, malformed current link, empty advancing cursor cycle, changed pointer/link, canonical-owned SID absent from base, missing page, wrong-page tenant and out-of-page target interval. Failures retain shopper discovery and execute no subject deletion in those negative cases. Existing legacy cursor, reset, CACHE, concurrent retry and retained-history checks remain passing.",
+    "W06.08-C3": "Independent review pending. Worker does not accept or close the task. Final source identities, all check attempts and limitations retained here; lead owns final integration/tracker/journal/checkpoint."
+  },
+  "checks": [
+    {
+      "id": "W06.08-K1-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Node v22.15.0; installed Vitest1.6.1, Node environment and existing synthetic KV/R2/DO storage seams; actual route, erasure and reset modules.",
+      "source_sha256": "5bd4f0223db11a68bfbb6af604a51d7550ea1e489bfbe79e6e67d19a96f7c82f",
+      "exit_code": 0,
+      "output": "The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/identity.test.ts  (34 tests) 3433ms\n\n Test Files  1 passed (1)\n      Tests  34 passed (34)\n   Start at  17:18:15\n   Duration  11.48s (transform 2.20s, setup 0ms, collect 4.47s, tests 3.43s, environment 0ms, prepare 2.47s)\n"
+    },
+    {
+      "id": "app-noEmit-final",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "exit_code": 0,
+      "output": "",
+      "note": "Application tsconfig checked; incremental/composite disabled to avoid writing the user's existing tsbuildinfo outside assigned files. No SDK compiler or broader suite."
+    },
+    {
+      "id": "scoped-whitespace-final",
+      "command": "git diff --check -- src/identity/erase.ts src/routes/identity.test.ts",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "previous_attempts": [
+    {
+      "artifact_source_sha256": "9bb290e47ba3e2689dd5057396fb622be266d10dff49d7bf816686ad8f6e477d",
+      "test_sha256": "668e9673b528871b21ef239e530e15e414f093e77f96edfe83005682d546d807",
+      "route": {
+        "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1",
+        "exit_code": 0,
+        "tests": "34/34",
+        "output": "✓ src/routes/identity.test.ts (34 tests) 5206ms\nTest Files 1 passed (1)\nTests 34 passed (34)\nStart at 17:14:36\nDuration 16.88s (transform3.62s, setup0ms, collect8.86s, tests5.21s, environment0ms, prepare1.83s)\n"
+      },
+      "compiler": {
+        "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+        "exit_code": 2,
+        "diagnostic_summary": "TS18047 current/storedPage/job possibly null; TS2322 boolean|undefined and compacted/discovered union assignment; TS2339 plan/output unavailable on compacted union; TS2345 nullable job. All at erase.ts330,342,432,445,449-463. No runtime assertion failed."
+      },
+      "correction": "Convert existing failure const-arrow helpers into explicit function declarations with the same never-returning throw behavior so TypeScript control-flow narrowing recognizes guards."
+    },
+    {
+      "artifact_source_sha256": "77069219c28dede173f3058acf8e8693f3730b419d436d0799ff8c1fb37e8993",
+      "test_sha256": "668e9673b528871b21ef239e530e15e414f093e77f96edfe83005682d546d807",
+      "route": {
+        "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1",
+        "exit_code": 0,
+        "tests": "34/34",
+        "output": "✓ src/routes/identity.test.ts (34 tests) 3543ms\nTest Files 1 passed (1)\nTests 34 passed (34)\nStart at 17:16:30\nDuration 12.05s (transform2.67s, setup0ms, collect5.39s, tests3.54s, environment0ms, prepare2.22s)\n"
+      },
+      "compiler": {
+        "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+        "exit_code": 2,
+        "diagnostic_summary": "Remaining erase.ts453-463 TS18047/TS2345 nullable job, TS7022 inferred next cycle, TS2339 plan/output on mutable page union."
+      },
+      "correction": "Use explicitly typed DiscoveryPage and a local non-null plan in the child checkpoint loop. Step order and storage calls unchanged. Compiler passed before final exact K1 rerun."
+    }
+  ],
+  "measurement": "Final fixture:34/34 tests; observed forced discovery4 pages for57 same-tenant visitor keys with pageSize17, requested limit32. Every call asserts at most one SESSIONS.list and at most32 attempted cleanup steps. Timings are test-run wall durations; no serving latency, CPU, load, capacity or SLO claim.",
+  "limitations": [
+    "KV listing is eventually consistent and is not a transactional snapshot; new/relinked/invisible records during the scan remain outside exhaustive/concurrent erasure assurance. D03 remains open.",
+    "An extra visitor pointing to a canonical-owned SID absent from the bounded base plan causes conflict and requires reconciliation; this repair does not silently strand that session or create an unbounded deferred target collection.",
+    "No linkless orphan-session sweep, deletion authorized solely by previous-account history, historical session inventory, isolate-memory cleanup, new service/index or serving-path change.",
+    "Existing CACHE override discovery cost is separate from the32-key SESSIONS scan and32 attempted-step cleanup limits.",
+    "Only child raw discovery/plan metadata is compacted; retained nonidentifying generation/actor/page markers and existing local job/tombstone records are not an approved retention/access-audit policy. D06 remains open.",
+    "D1, telemetry/log history, external/ODP/warehouse reconciliation, runtime/deployed/customer/full-W06/finding/gate/release acceptance remain open. No credentials, customer data, cloud mutations, commits or pushes used.",
+    "Existing dirty worktree preserved; only the two assigned implementation files and this worker evidence were written. Root owns governance and durable checkpoint updates."
+  ],
+  "rollback": "Retain a v3-capable reader/writer and all pending recovery pages until drained. Do not deploy an old v1/v2-only implementation over pending v3 jobs or delete recovery records. No deployment or data cleanup performed.",
+  "next_action": "Independent Astra/xhigh reviewer inspect frozen actual source and this proof, run exact K1 once and save independent review. Root owns tracker/journal/RESUME and acceptance. No worker process or source edit remains active."
+}

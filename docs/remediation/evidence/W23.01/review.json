@@ -1,0 +1,162 @@
+{
+  "task_id": "W23.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T04:21:05.281Z",
+  "verdict": "pass",
+  "artifact_digest": "33f4d52ecaf2a18bb84ce446482539f779a59b142b36ac10baf4c2dadffc499d",
+  "contract_digest": "e6cc73fc693932020d5e81e74563a38a03c5eb4349fcef5c99e6aaef09fa10b7",
+  "summary": "Pass for the admitted forward counter arithmetic and snapshot precision correction, within floating-point tolerance; not historical or full W23/F18 closure.",
+  "criteria": [
+    {
+      "id": "W23.01-C1",
+      "verdict": "pass",
+      "evidence": [
+        "Actual bump keeps max(existing.t,ts), decays acknowledged mass to that reference and discounts the incoming weighted term separately. The shared helper covers item/slot exposures and per-reward successes; it matches existing hourly merge algebra without changing that module.",
+        "Independent fixed runtime passes six arrival permutations and both split-merge orders against separately calculated weighted decay sums for every item/slot key and two rewards. Actual cloned LearnStats persistence, restart and publication preserve corrected values. Repeated input explicitly adds evidence; no idempotency claim."
+      ]
+    },
+    {
+      "id": "W23.01-C2",
+      "verdict": "pass",
+      "evidence": [
+        "Actual snapshot builder removes numeric rounding from n/s, memoized slot rates, p0, n0, p_hat and lift. Existing liftFor consumes those values at the evidence gate; actual decideContent retains the lookup's exact numbers in raw lift explanations. Schema, shrinkage, prior strength, clamps and true-zero-reference fallback remain unchanged.",
+        "Independent fixtures distinguish rare 4/10000 and concentrated-child behavior across the hierarchy, JSON-preserved 29.9996 below nMin30, zero-reference prior fallback and non-vacuous actual decisions with gamma1/gamma0. Legacy supplied rounded snapshots remain unchanged, not silently repaired.",
+        "Selected worked example, decay/clamp, hourly merge, prior and holdout cases retain the bounded dependency assurance; existing human-facing sentence formatting remains presentation-only and outside this numerical correction."
+      ]
+    },
+    {
+      "id": "W23.01-C3",
+      "verdict": "pass",
+      "evidence": [
+        "Exact plan-r2 K3 executed once on frozen bytes:13 passed,41 intentionally unselected across four existing fixtures, exit0/drained. All116 artifact pins,108 source pins/105 protected and three exact bidirectional deltas reconcile before and after runtime; artifact and current contract match.",
+        "All three final hashes match the prior actual-source/fixture/kit inspections. Worker full captures inspected: final sequential compiler/scopedlint/whitespace37901/0a0187 exited0/drained; three inherited unused fixture-parameter warnings, no increase. Static evidence reused, not rerun.",
+        "Plan-r2 and actual C1-C3 govern; selector-only pause/readmission and metadata correction are retained. Protected W10 guards remain and selected W10.01/W10.02 cases pass. Lead acceptance remains separate."
+      ]
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W23.01/plan-r2.md",
+      "sha256": "8a00c0ad8fd77f7efe37eb9c3894c15395ac968949a03d913de8cde34480c477"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W23.01/artifact.json",
+      "sha256": "bcbc8a88a98a941145c1a650322209ef6b45e16abb33661ec1958fbafd803cd4"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W23.01/worker.json",
+      "sha256": "2019b3109aa350b468738cb8987b3929237167115aba739599a5002e6cf616b2"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/phase3.test.ts src/learn/holdoutArms.test.ts -t 'W23.01|the worked example|decays on the long horizon|W10.01|W10.02|W09.04 reports acknowledged|the statistics object counts|two accumulators merge|a prior in force|is personalized, at γ 0' --maxWorkers=1 --minWorkers=1",
+    "session_id": 10688,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 13,
+      "failed": 0,
+      "intentionally_unselected": 41,
+      "total": 54,
+      "test_files_passed": 4,
+      "new_groups": 2,
+      "runtime": "Installed Node/Vitest; actual statistics/merge/decision/DO modules with synthetic storage, not native or deployed proof."
+    },
+    "captures": [
+      {
+        "chunk_id": "082617",
+        "wall_time_seconds": 1.00145636,
+        "session_id": 10688,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "fcb69c",
+        "wall_time_seconds": 0.000001869,
+        "exit_code": 0,
+        "original_token_count": 170,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (21 tests | 11 skipped) 294ms\n ✓ src/learn/hourly.test.ts  (16 tests | 15 skipped) 3ms\n ✓ src/learn/holdoutArms.test.ts  (7 tests | 6 skipped) 9ms\n ✓ src/learn/phase3.test.ts  (10 tests | 9 skipped) 4ms\n\n Test Files  4 passed (4)\n      Tests  13 passed | 41 skipped (54)\n   Start at  00:19:35\n   Duration  12.92s (transform 1.08s, setup 0ms, collect 3.41s, tests 310ms, environment 0ms, prepare 6.80s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "before": {
+      "at": "2026-09-12T04:19:24.867Z",
+      "capture": "849dc4",
+      "exit_status": 0,
+      "pins": 116,
+      "mismatches": [],
+      "protected_count": 105,
+      "protected_mismatches": [],
+      "bidirectional_deltas": 3,
+      "all_exact": true
+    },
+    "after": {
+      "at": "2026-09-12T04:20:04.275Z",
+      "capture": "436ece",
+      "exit_status": 0,
+      "pins": 116,
+      "mismatches": [],
+      "protected_count": 105,
+      "protected_mismatches": [],
+      "bidirectional_deltas": 3,
+      "all_exact": true
+    },
+    "contract_before": {
+      "capture": "3c9642",
+      "at": "2026-09-12T04:19:24.624Z",
+      "task": "W23.01",
+      "state": "verification",
+      "contract_digest": "e6cc73fc693932020d5e81e74563a38a03c5eb4349fcef5c99e6aaef09fa10b7",
+      "artifact_digest": "33f4d52ecaf2a18bb84ce446482539f779a59b142b36ac10baf4c2dadffc499d"
+    },
+    "contract_after": {
+      "capture": "a3d011",
+      "at": "2026-09-12T04:20:04.026Z",
+      "task": "W23.01",
+      "state": "verification",
+      "contract_digest": "e6cc73fc693932020d5e81e74563a38a03c5eb4349fcef5c99e6aaef09fa10b7",
+      "artifact_digest": "33f4d52ecaf2a18bb84ce446482539f779a59b142b36ac10baf4c2dadffc499d"
+    },
+    "source_inspection": {
+      "production_and_consumers": "0814df",
+      "final_fixture_kit_plan_r2": "3ff0e3",
+      "worker_full_evidence_freeze_criteria_hashes": "836648",
+      "source_stopped_at": "2026-09-12T04:17:54.596Z",
+      "all_preliminary_hashes_match": true,
+      "files": [
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "3c833a226f8bf12bfc08a04ea8cdf436f30d7764ea8ef0fe1ce25b1f59b77c06"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "sha256": "4cc839100708f1f57d5958a8b6a48e602b22f6aec7a3e26b9d6b7c3c8beb5a4b"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "662da01df40744564ad8c0fdeb58183ffb2844ac9a5fb211384900aacfd26c7f"
+        }
+      ]
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Original broad W09.04 selector would include an unintended protected holdout test. Source paused after stats.ts-only patch; plan-r2 narrowed to W09.04 reports acknowledged before any runtime. Original plan/admission/start and selector readmission remain; this was not a failed or skipped runtime.",
+    "Lead's selector-admission-metadata-correction.json preserves the original blocked event and adds omitted descriptive blocked metadata before board verification. Reviewed alongside current contract; no source/test scope expansion.",
+    "Worker's first admitted fixed13 and static runs passed. Plan's earlier tsx availability discovery exited1 without running a probe; it is not a runtime reproduction or test result.",
+    "Existing Vite CJS deprecation warning is retained verbatim in independent runtime captures."
+  ],
+  "limitations": [
+    "Forward arithmetic only, within JavaScript floating-point tolerance rather than bitwise order identity. No repair/reset of damaged persisted item/slot counters, old rounded snapshots, archives or prior reports.",
+    "No customer lateness/future-time policy or generation transition. Existing valid future timestamps remain an ingestion-integrity residual; W22/W24/W30 historical reconstruction and full W23/F18 remain open.",
+    "Repeated input remains non-idempotent. No automatic replay/retry, historical refold, recovery or complete measurement/scientific assurance.",
+    "More precise numeric JSON can reach unchanged application byte budgets earlier. Prior indexing/interpretation, estimator/reward/currency choices and human presentation rounding are not changed.",
+    "Local synthetic evidence only;41 cases intentionally unselected, no broad/native/static replay, deployed performance, customer/SLO or release acceptance.",
+    "Reviewer wrote only review.json; no source/governance edits, external operations or further delegation. Root owns disposition."
+  ]
+}

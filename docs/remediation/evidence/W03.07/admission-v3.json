@@ -1,0 +1,109 @@
+{
+  "task_id": "W03.07",
+  "at": "2026-09-16T23:44:34.790Z",
+  "supersedes": {
+    "path": "docs/remediation/evidence/W03.07/admission-v2.json",
+    "sha256": "f229e6c407de4ea0d2aefd53fddc0fd3dfe30a2e9061ad7b0a40fc2077af776e"
+  },
+  "scope": "Original complete W03, prior admissions/criteria/dependencies/rollback retained. Add one existing erasure fixture to make already-required K2 positives conform to retained v6 SID/epoch authority; no production erasure or W04 parity change.",
+  "baseline": {
+    "inherited": {
+      "path": "docs/remediation/evidence/W03.07/admission-v2.json",
+      "sha256": "f229e6c407de4ea0d2aefd53fddc0fd3dfe30a2e9061ad7b0a40fc2077af776e"
+    },
+    "added_files": [
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "7647571649d72ffb48f21c3fd256f2bb3e303a940dffe479cbcadee764412c6c"
+      }
+    ],
+    "source_case": "Distinct reviewer and lead inspected seed, actual bound objects, v6 eraseWithBarrier/session witness and W35.07 setup. Positive legacy KV-only seed has no durable grants, so fails before intended ring fault. Worker compared authority methods to exact admission bytes: unchanged by W03. Current erase retains empty-grant/epoch/denial barriers and v6 compact receipts; old empty-object/version4 oracles are obsolete.",
+    "worker_state": "Sole writer paused after session30858 drained (2 selected passed); no edits/tests running. Added fixture untouched. Initial K1 49pass; initial K2 29pass/12fail/167unselected and initial K3 four type errors retained. Interim corrections/reruns are not final acceptance.",
+    "prior_evidence": "All existing exact proofs consuming added fixture already revalidation_required or superseded; no further current proof invalidated."
+  },
+  "implementation": "Retain seed() legacy semantics for unrelated groups. Add exact current owner/SID/epoch setup only to affected positive groups and later new SID; retain a W03.07 legacy refusal oracle. Preserve foreign KV/cache/object/ring bytes, all physical private-data removal, exact allowed denial metadata, audit actor/cutoff/ambiguity and ring-fault reachability. Do not weaken authority, fabricate invalid grant subjects, hide initial failures, or claim session-host parity.",
+  "exclusive_added_outputs": [
+    "src/routes/identity.test.ts"
+  ],
+  "exclusive_outputs": [
+    "src/connectors/config.ts",
+    "src/connectors/index.ts",
+    "src/connectors/DecisionProvider.ts",
+    "src/services/OptimizelyService.ts",
+    "src/services/FeatureVariableManager.ts",
+    "src/services/odpLoop.ts",
+    "src/services/RealtimeSegmentEngine.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/routes/realtime.ts",
+    "src/tenancy/middleware.ts",
+    "src/types/env.ts",
+    "src/ledger/consume.ts",
+    "src/index.ts",
+    "src/reflex/odpLoop.test.ts",
+    "src/tenancy/middleware.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/index.api-boundary.test.ts",
+    "src/ledger/ledger.test.ts",
+    "src/reflex/bufferedAction.ts",
+    "src/services/SessionManager.ts",
+    "src/identity/assertion.ts",
+    "src/identity/identity.test.ts",
+    "src/routes/identity.test.ts"
+  ],
+  "changed_checks": [
+    {
+      "id": "W03.07-K2",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C4",
+        "W03.07-C5"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/routes/identity.test.ts -t 'W03[.](02|04|05|06|07)|W37[.](06|07|08|09)|W22[.]07|W05[.]02|W09[.](03|07)|consumer and lookup|one message per decision set|cleans both actual bound reset hosts' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd; synthetic bindings/intercepted endpoints only",
+      "workload": "New W03.07 and affected existing both-host/consent/buffered/audit/SDK/customer ingress/cron/queue assertions. Explicitly configure existing two-brand consumer erasure fixture, preserving destination/suppression oracles; correct only the two existing positive erasure groups to authentic current SID/epoch authority, preserving explicit unregistered-legacy refusal and exact tenant/deletion/audit/ring-retry/barrier oracles. Include previously approved actual both-host/two-brand erasure supplement and mounted identity wildcard refusal before state effects.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W03.07-K3",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C2",
+        "W03.07-C3",
+        "W03.07-C4",
+        "W03.07-C5"
+      ],
+      "required": true,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/connectors/config.ts src/connectors/index.ts src/connectors/DecisionProvider.ts src/services/OptimizelyService.ts src/services/FeatureVariableManager.ts src/services/odpLoop.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.ts src/tenancy/middleware.ts src/types/env.ts src/ledger/consume.ts src/index.ts src/reflex/odpLoop.test.ts src/tenancy/middleware.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/reflex/bufferedAction.ts src/services/SessionManager.ts src/identity/assertion.ts src/identity/identity.test.ts src/routes/identity.test.ts && git diff --check -- src/connectors/config.ts src/connectors/index.ts src/connectors/DecisionProvider.ts src/services/OptimizelyService.ts src/services/FeatureVariableManager.ts src/services/odpLoop.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.ts src/tenancy/middleware.ts src/types/env.ts src/ledger/consume.ts src/index.ts src/reflex/odpLoop.test.ts src/tenancy/middleware.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/reflex/bufferedAction.ts src/services/SessionManager.ts src/identity/assertion.ts src/identity/identity.test.ts src/routes/identity.test.ts",
+      "runtime": "Installed compiler and scoped lint",
+      "workload": "Compiler plus23-output lint/whitespace only; inspect new-file whitespace and distinguish old/new warnings. No broad build/CI.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W03.07-K5",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C2",
+        "W03.07-C3",
+        "W03.07-C4",
+        "W03.07-C5"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/odpLoop.test.ts src/identity/identity.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/routes/identity.test.ts -t 'W03[.]07' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd; synthetic bindings/intercepted endpoints only",
+      "workload": "Independent new W03.07 grouped factory/both-host/mounted queue assertions on stopped bytes; reuse valid broader worker checks. Include new backend proof authority refusal and named rotation positives. Include explicit unregistered-legacy erasure refusal; source-review corrected positive erasure groups and reuse final K2 actual deletion/audit evidence.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "rollback": "Capture added file exact dirty baseline and reversible task-only delta; all earlier baselines retained. No restore/reset, external operation or production erasure-policy change.",
+  "review": "Distinct stopped-artifact complete-W03 review remains mandatory; reviewer checks fixture authority realism and original assertions. Live C7/K6 remains open.",
+  "contract_digest": "5619aac5ff2ffe61013e577c6549873aaf50ba3c9c21f380c63348f8c086d91f",
+  "approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T23:44:34.790Z",
+    "rationale": "Approve smallest concrete fixture correction required by already-admitted two-host/two-brand erasure acceptance, preserving product authority and full original scope."
+  }
+}

@@ -1,0 +1,563 @@
+{
+  "task_id": "W11.01",
+  "actor_id": "w1101-worker",
+  "run_id": "/root/w1101_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "source_stopped_pending_independent_review",
+  "admission": {
+    "entry": "Root check/status66408/44959c VALID871, exit0/drained; worker reused and did not run another board.",
+    "initial_go": "2026-09-11T02:43:30Z after root50697/87022a VALID884 exit0/drained and baseline83418/a1e6c8 (one inherited unused-scope warning).",
+    "expanded_go": "2026-09-11T02:50:44Z; plan-v2 and clarifications read before resuming. Root added service dependency at journal888; baseline58723/b99756 and contract/start/pins2f2220 passed. Full VALID884 assurance reused; no claim of a full board888 check.",
+    "plan": "docs/remediation/design/W11.01/plan-v2.md",
+    "plan_sha256": "5ee066b9c819c187d4d23627f39994bc0cc2a61689bdc6946d486f14a0f4eeaf",
+    "contract_digest": "fb4afb32d3f909909870c6b7de232eab00e74762cbadf114cd7b656b0b714e13",
+    "specializations": "Root clarifications: quoted If-Match positive N; N:UUID operation identity; library-only reservation initialization/resume preserving supplied baseline. Frozen bucket/tenant serving cache from read start. Status discovers pending metadata without headers; another currently granted operator can recover original intent/attribution, ordinary write replay binds original actor/digest. Resolved catalog kind enforces authority including case/encoded kind; enrichment needs no publication headers. Pull stale/pending bases refuse before feed and use status/recovery after uncertainty."
+  },
+  "summary": "Eight-file content-only conditional R2 publication implementation: permanent pending reservation, create-only immutable numeric body, CAS pointer+index finalize/readback; generic content readers/writers/patch/rollback/import dispatch; canonical catalog operator boundary and status/recovery; owned refusal preserved on aggregate document failure. No real initialization, deployment or enrichment-to-live application.",
+  "criteria": [
+    {
+      "id": "W11.01-C1",
+      "worker_result": "supporting_runtime_pass",
+      "evidence": "Existing store/route groups prove one winner under races, stale/reused identity refusal, exact-base import/patch, forward rollback, immutable numeric history past recent50 eviction and O(1) historical retrieval; two distinct native workerd workers share in-memory R2 and produce one success/one409. CONTENT_KIND and all generic content entrypoints dispatch to R2, never KV/default write authority."
+    },
+    {
+      "id": "W11.01-C2",
+      "worker_result": "supporting_runtime_pass",
+      "evidence": "All reservation/body/finalization pre/post-put failure positions for ordinary publication and explicit initialization retain/recover exact state; pending historical bodies cannot serve as committed history, mismatched immutable body stays untouched, successor recovery preserves attribution. Strict malformed/unknown/metadata/byte/version bounds, 500-piece catalog, both-mode typed tenant/precondition/encoded-kind route negatives, no-effect auth refusals, pull no-refetch recovery and read-start immutable cache checks. Actual service orchestration sends one owned refusal to synthetic DO boundary on catalog error and none for unsigned refused input."
+    },
+    {
+      "id": "W11.01-C3",
+      "worker_result": "static_pass_pending_independent_frozen_review",
+      "evidence": "Supporting corrected primary40/40; final installed compiler0 and scoped lint0 with only inherited unused-scope warning; exact final scoped whitespace0 and qualified new-file difference1/no whitespace diagnostics. Separate reviewer must run required final frozen40-case primary and inspect actual deltas/pins/full captures. No self-acceptance."
+    }
+  ],
+  "rework": [
+    "Initial primary68763 exited1:38/40. Owned service assertion succeeded; unsigned fixture supplied tracking=false but omitted personalization=false, triggering existing early SessionAccessError. Corrected that fixture to both explicit refusals, preserving the existing guard.",
+    "Initial native case printed input/bundle identity but timed out at30s; location/cause remains unproven. Root authorized only the same case's60s ceiling and compact stage timing. Corrected primary71633 native bundle262ms, workers-ready7214ms, first R2 complete7401ms, race start7420ms and completion7473ms. No deployed/SLO/rate-limit inference. Previous process/session drained; no unrelated process stopped.",
+    "Initial compiler95968 exited2: explicit TextDecoder.ignoreBOM option, optional precondition narrowing and route-header helper inference. Corrected directly; final44375 passed.",
+    "Initial scoped lint28093 used literal --max-warnings 1 and exited1 with0errors/3warnings: two new unused discarded digests plus existing unused scope. Explicit digest discards removed the two new warnings; final exact K2 scoped lint29795 exited0 with only inherited scope warning.",
+    "Before primary, root caught lost original-caller recovery/discovery and prospective index-version bricking risks; implementation allows authorized successor recovery while binding ordinary replay, and validates version/index envelope size before any put. Root admitted the actual service refusal dependency before its edit. One multi-file apply_patch had a mismatched service hunk and applied no changes; corrected patch applied afterward.",
+    "After supporting primary71633, only explicit discarded-digest void statements, a comment grammar correction, and root-required native cf:false fixture option changed. No additional worker primary was requested for these; independent required frozen run supplies final-byte runtime proof."
+  ],
+  "preservation": "Only eight admitted implementation/fixture/doc paths plus this worker evidence were edited. Existing dirty worktree preserved. Root owns tracker/journal/source-truth changes, protected dependency verification, freeze and final acceptance. No board, build, installation, seed, migration, cloud, credential, customer-data, staging, commit, push, cleanup or external message operation was performed by this worker.",
+  "limitations": [
+    "Local content-only capability. Other configuration kinds remain legacy; full W11/F15/F24, multi-document manifests, autonomy, enriched patch application, customer immediate-effect/latency/workload acceptance and release remain open.",
+    "Initialization/cutover was invoked only on synthetic in-memory fixtures. Reviewed supplied baseline, quiesced old writers, real activation and legacy history recovery need separate authority/evidence. Below-floor history explicitly reports legacy_history_unavailable.",
+    "R2 same-key production write throttling is not modeled by synthetic/native local runs. Reservation/finalization can return503/pending; no sleep, blind retry, expiry, abort or reassignment exists. Discovery/recovery completes retained intent; pull cannot silently refetch an uncertain prior operation.",
+    "Serving cache permits an immutable previously verified snapshot for<=30s from read start, excluding already in-flight reads. Admin and write authority bypass it; errors never refresh or fall back. Unowned non-catalog routes may map PublicationError to their existing generic error response.",
+    "Native cf:false now explicitly disables Miniflare host CF metadata fetch; worker outbound service refuses external calls. Supporting predecessor used default test-mode CF fallback; do not infer host egress measurement from its worker externalCalls:0 field. First timeout attribution remains unknown.",
+    "Final compiler omitted K2's optional Node heap cap while using the same installed compiler/options. Root accepted equivalent compiler coverage with this exact-command qualification; it is not an exact planned invocation match."
+  ],
+  "checks": [
+    {
+      "id": "primary-initial",
+      "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/routes/content.test.ts --maxWorkers=1 --minWorkers=1",
+      "command_sha256": "9b015a2547ad6a8280a321b32651ea962540e5ee465eb80011bff31d2bb177e3",
+      "started": "2026-09-11T03:01:29Z",
+      "captures": [
+        {
+          "chunk_id": "debe2c",
+          "wall_time_seconds": 1.001720324,
+          "session_id": 68763,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "015d12",
+          "wall_time_seconds": 5.00147601,
+          "session_id": 68763,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n",
+          "output_sha256": "73db9ef36c5d3ccdb15993ca5115f919b41454f1bedbb874cb0dcbd9eac2e908"
+        },
+        {
+          "chunk_id": "8785b5",
+          "wall_time_seconds": 5.000506813,
+          "session_id": 68763,
+          "original_token_count": 13,
+          "output": " ✓ src/routes/content.test.ts  (18 tests) 1180ms\n",
+          "output_sha256": "bcf697bd187380c6e47e337d2b7b8b3cdb6b27f0584f759fbbfd5b2f10383a98"
+        },
+        {
+          "chunk_id": "c54ff2",
+          "wall_time_seconds": 5.000742672,
+          "session_id": 68763,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "0a5268",
+          "wall_time_seconds": 5.001364432,
+          "session_id": 68763,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "0c6958",
+          "wall_time_seconds": 5.001413961,
+          "session_id": 68763,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "a6cea5",
+          "wall_time_seconds": 5.003221226,
+          "session_id": 68763,
+          "original_token_count": 200,
+          "output": "stdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native input identity {\"source\":\"4242414906244d01d28cc01a88e1a05208b2ff93db702ad7861aeb5b4f0d0ed3\",\"bundle\":\"c15e785167fe66807dc716bf02890e46a2d9683a97afb208207487ab3ecf2aa6\",\"inputs\":[{\"path\":\"src/config/publication.ts\",\"sha256\":\"1e59f74b8497893e71e1541a21aa416995553bf0976768c6608b4b1f9123c999\"},{\"path\":\"src/config/versionedStore.ts\",\"sha256\":\"84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13\"},{\"path\":\"src/content/kinds.ts\",\"sha256\":\"5b4ba46ee564d4dfef0f0325b35b3d7ee6ff0017fd81522b33b1e03ddf628af2\"},{\"path\":\"w1101-native.ts\",\"sha256\":\"4242414906244d01d28cc01a88e1a05208b2ff93db702ad7861aeb5b4f0d0ed3\"}]}\n\n",
+          "output_sha256": "8d27a21b300e98e4b9327d5b07de4bd86ed8df12a6b2ff2d062cb8b5111626ca"
+        },
+        {
+          "chunk_id": "d2fbbe",
+          "wall_time_seconds": 5.001043412,
+          "session_id": 68763,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "3c1dab",
+          "wall_time_seconds": 0.000003317,
+          "exit_code": 1,
+          "original_token_count": 538,
+          "output": " ❯ src/config/versionedStore.test.ts  (22 tests | 2 failed) 47479ms\n   ❯ src/config/versionedStore.test.ts > W11.01 conditional content publication > contains every partial put/lost acknowledgement, recovers retained intent and fails closed on malformed authority or size\n     → expected Error: Shopper session unavailable { …(3) } to be an instance of PublicationError\n   ❯ src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\n     → Test timed out in 30000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > serves the fallback rather than throwing when KV is down\n[config] read failed, serving fallback\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > ignores a stored document that no longer validates\n[config] stored document is invalid and was ignored\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/config/versionedStore.test.ts > W11.01 conditional content publication > contains every partial put/lost acknowledgement, recovers retained intent and fails closed on malformed authority or size\nAssertionError: expected Error: Shopper session unavailable { …(3) } to be an instance of PublicationError\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nError: Test timed out in 30000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n\n Test Files  1 failed | 1 passed (2)\n      Tests  2 failed | 38 passed (40)\n   Start at  23:01:45\n   Duration  142.42s (transform 16.41s, setup 0ms, collect 53.38s, tests 48.66s, environment 0ms, prepare 29.72s)\n\n",
+          "output_sha256": "203c4e60ecc99210038fe8a96436f4e768ee8aaa7ab51ab67e4b71af0cba82b1"
+        }
+      ],
+      "completed": {
+        "exit_status": 1,
+        "drained": true,
+        "full_output": true
+      }
+    },
+    {
+      "id": "compiler-initial",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "command_sha256": "5a302ec23dbb10c57ff45ef3d3c97546f58e1599dc0d3c2202bcbe8395ca0c79",
+      "started": "2026-09-11T03:05:11Z",
+      "captures": [
+        {
+          "chunk_id": "a20d6b",
+          "wall_time_seconds": 1.000941306,
+          "session_id": 95968,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "7294b3",
+          "wall_time_seconds": 5.001343222,
+          "session_id": 95968,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "11f172",
+          "wall_time_seconds": 0.000002083,
+          "exit_code": 2,
+          "original_token_count": 1300,
+          "output": "src/config/publication.ts(81,80): error TS2345: Argument of type '{ fatal: true; }' is not assignable to parameter of type 'TextDecoderConstructorOptions'.\n  Property 'ignoreBOM' is missing in type '{ fatal: true; }' but required in type 'TextDecoderConstructorOptions'.\nsrc/config/publication.ts(264,20): error TS18048: 'meta.expectedRevision' is possibly 'undefined'.\nsrc/routes/content.test.ts(204,83): error TS2353: Object literal may only specify known properties, and ''If-Match'' does not exist in type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\nsrc/routes/content.test.ts(207,83): error TS2345: Argument of type '{ 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(207,149): error TS2345: Argument of type '{ 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(210,65): error TS2345: Argument of type '{ 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(211,67): error TS2345: Argument of type '{ 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(212,65): error TS2345: Argument of type '{ 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(214,52): error TS2345: Argument of type '{ 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(217,52): error TS2345: Argument of type '{ 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(222,52): error TS2345: Argument of type '{ 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(223,67): error TS2345: Argument of type '{ Authorization: string; 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ Authorization: string; 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant'\nsrc/routes/content.test.ts(225,67): error TS2345: Argument of type '{ Authorization: string; 'If-Match': string; 'Idempotency-Key': string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ Authorization: string; 'If-Match': string; 'Idempotency-Key': string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant'\n",
+          "output_sha256": "983b736a1b869d7ea99f72076bdc097d8b309fcebab21be0f20f5e7c7ac50d4e"
+        }
+      ],
+      "completed": {
+        "exit_status": 2,
+        "drained": true,
+        "full_output": true
+      }
+    },
+    {
+      "id": "primary-corrected",
+      "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/routes/content.test.ts --maxWorkers=1 --minWorkers=1",
+      "command_sha256": "9b015a2547ad6a8280a321b32651ea962540e5ee465eb80011bff31d2bb177e3",
+      "started": "2026-09-11T03:07:13Z",
+      "captures": [
+        {
+          "chunk_id": "20e112",
+          "wall_time_seconds": 1.001097983,
+          "session_id": 71633,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "89fee9",
+          "wall_time_seconds": 5.000526169,
+          "session_id": 71633,
+          "original_token_count": 72,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/content.test.ts  (18 tests) 650ms\n",
+          "output_sha256": "ce4d7101559967eb101420d0770f253d5f5cd8affc9cd98757cd0b8528d290ad"
+        },
+        {
+          "chunk_id": "d8a47c",
+          "wall_time_seconds": 0.000003189,
+          "exit_code": 0,
+          "original_token_count": 637,
+          "output": "stdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native input identity {\"source\":\"4242414906244d01d28cc01a88e1a05208b2ff93db702ad7861aeb5b4f0d0ed3\",\"bundle\":\"21a635c50e5e135bc9223014d6f9a191e74eb2b3429c8770065ad08855dc469c\",\"inputs\":[{\"path\":\"src/config/publication.ts\",\"sha256\":\"d9c2559a881585dbaba3475ea47370bf11377394232fc0cca1e684b4996594f3\"},{\"path\":\"src/config/versionedStore.ts\",\"sha256\":\"84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13\"},{\"path\":\"src/content/kinds.ts\",\"sha256\":\"5b4ba46ee564d4dfef0f0325b35b3d7ee6ff0017fd81522b33b1e03ddf628af2\"},{\"path\":\"w1101-native.ts\",\"sha256\":\"4242414906244d01d28cc01a88e1a05208b2ff93db702ad7861aeb5b4f0d0ed3\"}]}\nW11.01 native startup {\"stage\":\"constructed\",\"bundleMs\":262,\"at\":\"2026-09-11T03:07:57.101Z\"}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native startup {\"stage\":\"workers-ready\",\"elapsedMs\":7214}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native startup {\"stage\":\"first-r2-complete\",\"elapsedMs\":7401}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native startup {\"stage\":\"race-start\",\"elapsedMs\":7420}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > uses native in-memory R2 conditional writes across distinct worker instances\nW11.01 native R2 result {\"workers\":2,\"successfulConcurrentWriters\":1,\"conflicts\":1,\"elapsedMs\":7473,\"persistence\":\"memory\",\"externalCalls\":0,\"notDeployedOrSlo\":true}\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > serves the fallback rather than throwing when KV is down\n[config] read failed, serving fallback\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > ignores a stored document that no longer validates\n[config] stored document is invalid and was ignored\n\n ✓ src/config/versionedStore.test.ts  (22 tests) 11767ms\n\n Test Files  2 passed (2)\n      Tests  40 passed (40)\n   Start at  23:07:21\n   Duration  42.65s (transform 4.69s, setup 0ms, collect 13.34s, tests 12.42s, environment 0ms, prepare 9.87s)\n\n",
+          "output_sha256": "0ddf63026c356361c07ff6a3928ba48e9fc9af0f8628122388e76c8d55f32009"
+        }
+      ],
+      "completed": {
+        "exit_status": 0,
+        "drained": true,
+        "full_output": true
+      }
+    },
+    {
+      "id": "lint-initial",
+      "command": "node node_modules/eslint/bin/eslint.js src/config/publication.ts src/config/versionedStore.ts src/content/kinds.ts src/routes/content.ts src/config/versionedStore.test.ts src/routes/content.test.ts src/content/service.ts --max-warnings 1",
+      "command_sha256": "c7ba7efa35330938b1ff91121069c3c5bd759517d56ba452d5e853178a4e7be0",
+      "started": "2026-09-11T03:08:52Z",
+      "captures": [
+        {
+          "chunk_id": "8afbf8",
+          "wall_time_seconds": 1.001678179,
+          "session_id": 28093,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "1189ec",
+          "wall_time_seconds": 5.001293119,
+          "session_id": 28093,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "e243ba",
+          "wall_time_seconds": 5.000661476,
+          "session_id": 28093,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "5526f3",
+          "wall_time_seconds": 5.001449654,
+          "session_id": 28093,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "1355c8",
+          "wall_time_seconds": 5.000796169,
+          "session_id": 28093,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "1ac371",
+          "wall_time_seconds": 0.000002494,
+          "exit_code": 1,
+          "original_token_count": 141,
+          "output": "ESLint found too many warnings (maximum: 1).\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/publication.ts\n  217:19  warning  '_old' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  271:19  warning  '_old' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/versionedStore.ts\n  210:57  warning  'scope' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n",
+          "output_sha256": "2785818de029dd9288a26097739c69fe5eb58b66eb5797547f3a93881b79359b"
+        }
+      ],
+      "completed": {
+        "exit_status": 1,
+        "drained": true,
+        "full_output": true
+      }
+    },
+    {
+      "id": "whitespace",
+      "command": "git diff --check -- src/config/publication.ts src/config/versionedStore.ts src/content/kinds.ts src/routes/content.ts src/config/versionedStore.test.ts src/routes/content.test.ts src/content/service.ts docs/kit/02-api-reference.md",
+      "command_sha256": "0ab7f4d68797615957d73eacc738a9d9638c71650369d930ec5b80e182cc7c4d",
+      "started": "2026-09-11T03:08:52Z",
+      "captures": [
+        {
+          "chunk_id": "139c01",
+          "wall_time_seconds": 0.938955654,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "completed": {
+        "exit_status": 0,
+        "drained": true,
+        "full_output": true
+      }
+    },
+    {
+      "id": "new-file-whitespace",
+      "command": "git diff --no-index --check -- /dev/null src/config/publication.ts",
+      "command_sha256": "355697e1e3898ded264a550bc414b8a3ab42198301090661793d145460d33878",
+      "started": "2026-09-11T03:11:53Z",
+      "captures": [
+        {
+          "chunk_id": "e427c4",
+          "wall_time_seconds": 0.17988231,
+          "exit_code": 1,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "completed": {
+        "exit_status": 1,
+        "drained": true,
+        "full_output": true,
+        "qualification": "git diff --no-index --check against /dev/null reports added-file difference status 1 with empty output; no whitespace diagnostics. This is not relabeled exit 0."
+      }
+    },
+    {
+      "id": "compiler-final",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "command_sha256": "5a302ec23dbb10c57ff45ef3d3c97546f58e1599dc0d3c2202bcbe8395ca0c79",
+      "started": "2026-09-11T03:12:42Z",
+      "captures": [
+        {
+          "chunk_id": "9f8be4",
+          "wall_time_seconds": 1.004418818,
+          "session_id": 44375,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "59db65",
+          "wall_time_seconds": 5.00177016,
+          "session_id": 44375,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "9611c6",
+          "wall_time_seconds": 5.00082531,
+          "session_id": 44375,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "8d25f2",
+          "wall_time_seconds": 0.000001433,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "completed": {
+        "exit_status": 0,
+        "drained": true,
+        "full_output": true
+      }
+    },
+    {
+      "id": "lint-final",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/publication.ts src/config/versionedStore.ts src/content/kinds.ts src/routes/content.ts src/config/versionedStore.test.ts src/routes/content.test.ts src/content/service.ts --format stylish",
+      "command_sha256": "8d026fc84a1d942c76c5095c3b1907e61b4d90cdfc46bdfbb2806a2149eb6949",
+      "started": "2026-09-11T03:15:39Z",
+      "captures": [
+        {
+          "chunk_id": "715d50",
+          "wall_time_seconds": 1.000553175,
+          "session_id": 29795,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "d03625",
+          "wall_time_seconds": 5.005679357,
+          "session_id": 29795,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "ebaed3",
+          "wall_time_seconds": 5.000932236,
+          "session_id": 29795,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "7c26f7",
+          "wall_time_seconds": 5.005012936,
+          "session_id": 29795,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "efab5b",
+          "wall_time_seconds": 5.001605035,
+          "session_id": 29795,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "a0a177",
+          "wall_time_seconds": 0.000002327,
+          "exit_code": 0,
+          "original_token_count": 57,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/versionedStore.ts\n  210:57  warning  'scope' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 1 problem (0 errors, 1 warning)\n\n",
+          "output_sha256": "0db67ffc800c3d01332b481664f8e3af6b184d86c107dbff5f5c47b8b8247d71"
+        }
+      ],
+      "completed": {
+        "exit_status": 0,
+        "drained": true,
+        "full_output": true
+      }
+    },
+    {
+      "id": "whitespace-final",
+      "command": "git diff --check -- src/config/publication.ts src/config/versionedStore.ts src/content/kinds.ts src/routes/content.ts src/config/versionedStore.test.ts src/routes/content.test.ts src/content/service.ts docs/kit/02-api-reference.md",
+      "command_sha256": "0ab7f4d68797615957d73eacc738a9d9638c71650369d930ec5b80e182cc7c4d",
+      "started": "2026-09-11T03:15:39Z",
+      "captures": [
+        {
+          "chunk_id": "67db1e",
+          "wall_time_seconds": 1.000394121,
+          "session_id": 77890,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "c33562",
+          "wall_time_seconds": 0.000001399,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "completed": {
+        "exit_status": 0,
+        "drained": true,
+        "full_output": true
+      }
+    },
+    {
+      "id": "new-file-whitespace-final",
+      "command": "git diff --no-index --check -- /dev/null src/config/publication.ts",
+      "command_sha256": "355697e1e3898ded264a550bc414b8a3ab42198301090661793d145460d33878",
+      "started": "2026-09-11T03:15:39Z",
+      "captures": [
+        {
+          "chunk_id": "f72f24",
+          "wall_time_seconds": 0.367342225,
+          "exit_code": 1,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "completed": {
+        "exit_status": 1,
+        "drained": true,
+        "full_output": true,
+        "qualification": "git diff --no-index --check against /dev/null reports added-file difference status 1 with empty output; no whitespace diagnostics. This is not relabeled exit 0."
+      }
+    }
+  ],
+  "source_stopped_at": "2026-09-11T03:19:00Z",
+  "files": [
+    {
+      "path": "src/config/publication.ts",
+      "sha256": "d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "sha256": "84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "sha256": "2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457"
+    },
+    {
+      "path": "src/routes/content.ts",
+      "sha256": "31dd29adeb811b59f8e13a0bd1577cd49357f75ac40890bf00f56e12c3896de6"
+    },
+    {
+      "path": "src/config/versionedStore.test.ts",
+      "sha256": "f12a965dd3ff0faddfe05f43491c7eddccbe11aa2de47f51c8839f81d91b68f8"
+    },
+    {
+      "path": "src/routes/content.test.ts",
+      "sha256": "4bc72084cb33372e3315b5f9a6d3752810e21d28f711e9d3ba97579a200986bc"
+    },
+    {
+      "path": "src/content/service.ts",
+      "sha256": "8f3aac28cf969f9b11591a9c324cdbacdf290407d8b429d543e2090de720caad"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "88327264f185bb7ba1fa230a2e0c710939aec58e15d8452fa56a2487a6b92728"
+    }
+  ],
+  "primary_artifact_qualification": "71633/40PASS is supporting predecessor evidence. Final publication source differs only by two explicit void discards; kinds by comment grammar; fixture by cf:false. Final compiler/lint/whitespace use final files. Required independent frozen primary remains outstanding; no final-byte runtime pass or package closure is asserted.",
+  "source_identity_capture": {
+    "cmd": "node --input-type=module -e 'import { readFileSync } from \"node:fs\"; import { createHash } from \"node:crypto\"; const files=[\"src/config/publication.ts\",\"src/config/versionedStore.ts\",\"src/content/kinds.ts\",\"src/routes/content.ts\",\"src/config/versionedStore.test.ts\",\"src/routes/content.test.ts\",\"src/content/service.ts\",\"docs/kit/02-api-reference.md\"]; console.log(JSON.stringify(files.map(path=>({path,sha256:createHash(\"sha256\").update(readFileSync(path)).digest(\"hex\")}))));'",
+    "at": {
+      "current_time": "2026-09-11 03:17:14 UTC"
+    },
+    "result": {
+      "chunk_id": "9e5740",
+      "wall_time_seconds": 0.079810364,
+      "exit_code": 0,
+      "original_token_count": 228,
+      "output": "[{\"path\":\"src/config/publication.ts\",\"sha256\":\"d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411\"},{\"path\":\"src/config/versionedStore.ts\",\"sha256\":\"84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13\"},{\"path\":\"src/content/kinds.ts\",\"sha256\":\"2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457\"},{\"path\":\"src/routes/content.ts\",\"sha256\":\"31dd29adeb811b59f8e13a0bd1577cd49357f75ac40890bf00f56e12c3896de6\"},{\"path\":\"src/config/versionedStore.test.ts\",\"sha256\":\"f12a965dd3ff0faddfe05f43491c7eddccbe11aa2de47f51c8839f81d91b68f8\"},{\"path\":\"src/routes/content.test.ts\",\"sha256\":\"4bc72084cb33372e3315b5f9a6d3752810e21d28f711e9d3ba97579a200986bc\"},{\"path\":\"src/content/service.ts\",\"sha256\":\"8f3aac28cf969f9b11591a9c324cdbacdf290407d8b429d543e2090de720caad\"},{\"path\":\"docs/kit/02-api-reference.md\",\"sha256\":\"88327264f185bb7ba1fa230a2e0c710939aec58e15d8452fa56a2487a6b92728\"}]\n"
+    },
+    "files": [
+      {
+        "path": "src/config/publication.ts",
+        "sha256": "d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411"
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457"
+      },
+      {
+        "path": "src/routes/content.ts",
+        "sha256": "31dd29adeb811b59f8e13a0bd1577cd49357f75ac40890bf00f56e12c3896de6"
+      },
+      {
+        "path": "src/config/versionedStore.test.ts",
+        "sha256": "f12a965dd3ff0faddfe05f43491c7eddccbe11aa2de47f51c8839f81d91b68f8"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "4bc72084cb33372e3315b5f9a6d3752810e21d28f711e9d3ba97579a200986bc"
+      },
+      {
+        "path": "src/content/service.ts",
+        "sha256": "8f3aac28cf969f9b11591a9c324cdbacdf290407d8b429d543e2090de720caad"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "88327264f185bb7ba1fa230a2e0c710939aec58e15d8452fa56a2487a6b92728"
+      }
+    ]
+  },
+  "recorded_at": "2026-09-11T03:20:49Z",
+  "handoff": {
+    "next_action": "Root freeze exact eight deltas/dependencies, inspect this full evidence and separate Astra/xhigh final frozen40-case primary/review; accept or return bounded W11.01 only.",
+    "authority": "Worker source STOP. No further source edits without lead-assigned rework; worker cannot accept task/package/finding/gate/customer/release.",
+    "pending_worker_sessions": []
+  }
+}

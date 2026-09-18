@@ -1,0 +1,42 @@
+{
+  "task_id": "W13.02",
+  "at": "2026-09-18T04:35:34.763Z",
+  "verdict": "LOCAL_PASS",
+  "scope": "Correct lint config and actual errors with justified warning policy; include gate in CI. Tie source, SDK/assets, migrations and deployment to an attested build, retaining recovery evidence. Do not disable a useful sanitizer merely to silence a lint error. A green lint command alone does not close release readiness.",
+  "artifact": {
+    "digest": "ae9e25610f5e38a737db2fffa43be42becc912cd6a6c7a4439ab7739bfdb0996",
+    "contract_digest": "3aca5ed4c918f6807759d3b0f4c05ccb97dfe2e276437bd6897b5d1531b06762"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W13.02/worker.json",
+    "sha256": "3a0d40f61955c4ff9120eee673d5f81999e8524d7e76fe325043f5c82660524b"
+  },
+  "source_freeze": {
+    "path": "docs/remediation/evidence/W13.02/source-freeze.json",
+    "sha256": "2321b33a81b4c5fc1f54ea698f08838c3c8f5eed2b9b961abe4f857136092fa0"
+  },
+  "independent_review": {
+    "path": "docs/remediation/evidence/W13.02/review.json",
+    "sha256": "99b20433433e849db3502a32814c844c687225ccfcda2a49bc6bd357a9231cb6"
+  },
+  "verification": {
+    "review_sha256": "99b20433433e849db3502a32814c844c687225ccfcda2a49bc6bd357a9231cb6",
+    "primary_sha256": "a44c256efc74bb3dabed239e8c6e8dd33ce41534d5e1881d3e5ac08c9a332147",
+    "primary_bytes": 391947,
+    "pins": 1191,
+    "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W13|W11[.]02 Meridian' --maxWorkers=1 --minWorkers=1",
+    "exit_code": 0,
+    "passed": 3,
+    "unselected": 43,
+    "whole_verdict": "LOCAL_PASS",
+    "source_identity": "Both1191 snapshots match frozen/current source; worker/freeze hashes stable; exact ordered raw streams reconstructed and complete stdout/stderr read.",
+    "qualifications": [
+      "Historical reviewer phrase type-only fixture correction is imprecise: it included typed runtime member-access aliases. Actual K3.2 nested checks ran after that correction; reuse rests solely on final two unrelated Node-script differences, not on erased-code equivalence.",
+      "K7 elapsedMs29362 includes wrapper overhead; retained command timestamps span26543ms. Neither is a service latency/SLO measure.",
+      "C8/trustedCI/live/release OPEN; repeated lint warnings integrity/aggregate checked, not each interpreted."
+    ]
+  },
+  "lead": "w01-lead",
+  "qualification": "Whole original W13 local implementation and independent review, not full/live/trustedCI/release acceptance. One original Worker build retained; K1/K2/K4 actual unchanged-input reuse, final consumer K3.3 PASS13 and exact final K5.2 plus distinct frozen K7. Both failures preserved.582 measured lint warnings remain.",
+  "next_action": "Continue original W14 locally under standing ordered mandate; batch live acceptance at end."
+}

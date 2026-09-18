@@ -1,0 +1,220 @@
+{
+  "task_id": "W03.07",
+  "at": "2026-09-16T23:18:25.730Z",
+  "supersedes": {
+    "path": "docs/remediation/evidence/W03.07/admission.json",
+    "sha256": "270603753e925153bcc54d2ca7df16f06c6e9af0fd3e00fc049b4b57533b8fad"
+  },
+  "scope": "Original full W03 and initial20-output preflight retained. Add the source-confirmed backend identity-signing wildcard exception to canonical credential binding; complete the same coherent batch.",
+  "baseline": {
+    "inherited": {
+      "path": "docs/remediation/evidence/W03.07/admission.json",
+      "sha256": "270603753e925153bcc54d2ca7df16f06c6e9af0fd3e00fc049b4b57533b8fad"
+    },
+    "added_files": [
+      {
+        "path": "src/identity/assertion.ts",
+        "sha256": "46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d"
+      },
+      {
+        "path": "src/identity/identity.test.ts",
+        "sha256": "452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc"
+      }
+    ],
+    "source_case": "Root and distinct reviewer inspected assertion.ts secretsFor plus actual identity/link. A wildcard-secret holder can mint a new brand-B claim in an enforced multi-tenant stamp; signed tenant prevents replay but not overbroad signer authority. SDK already restricts wildcard authorization in this mode. No runtime reproduction claimed.",
+    "worker_state": "Paused at safe patch boundary before amendment; original20 files partly implemented, no runtime/static commands run or active. Dirty originals retained by worker; no new-file edits yet.",
+    "prior_evidence": "All existing exact proofs consuming added paths already revalidation_required; no further current proof was invalidated."
+  },
+  "implementation": "Require named tenant identity-secret authority in enforced multi-tenant mode, preserving explicit named current/previous secrets and existing open/demo or valid single-tenant compatibility. Invalid TENANTS must not enable wildcard. Do not redesign parser, create owner identity-broker exception, rotate real secrets or alter session protocol. Correct admitted FX refresh and connector raw-key validation source-review issues in existing ownership.",
+  "exclusive_added_outputs": [
+    "src/identity/assertion.ts",
+    "src/identity/identity.test.ts"
+  ],
+  "exclusive_outputs": [
+    "src/connectors/config.ts",
+    "src/connectors/index.ts",
+    "src/connectors/DecisionProvider.ts",
+    "src/services/OptimizelyService.ts",
+    "src/services/FeatureVariableManager.ts",
+    "src/services/odpLoop.ts",
+    "src/services/RealtimeSegmentEngine.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/routes/realtime.ts",
+    "src/tenancy/middleware.ts",
+    "src/types/env.ts",
+    "src/ledger/consume.ts",
+    "src/index.ts",
+    "src/reflex/odpLoop.test.ts",
+    "src/tenancy/middleware.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/index.api-boundary.test.ts",
+    "src/ledger/ledger.test.ts",
+    "src/reflex/bufferedAction.ts",
+    "src/services/SessionManager.ts",
+    "src/identity/assertion.ts",
+    "src/identity/identity.test.ts"
+  ],
+  "criteria": [
+    {
+      "id": "W03.07-C1",
+      "description": "Preserve canonical credential-bound tenant, current operator/admin/service roles, scoped audit and path/header/host/document/SDK/CORS/socket agreement. Prove actual allowed/denied writes, reads, export and erasure in two non-default tenants with existing explicit admin/human exceptions; owner recovery is not product bypass. Require named backend identity-signing authority in enforced multi-tenant mode; wildcard-only credentials cannot mint a new cross-brand proof. Preserve named current/previous rotation and explicit existing demo/single-tenant compatibility; invalid tenant configuration grants no wildcard authority.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W03.07-C2",
+      "description": "Connector settings are subordinate to canonical provisioned TENANTS with explicit destinations/credential references. Unknown, malformed, missing or foreign configuration refuses before foreign secret/cache/destination access; no customer fallback to stamp-global/demo settings.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W03.07-C3",
+      "description": "Bind all actual FX paths: connector factory, direct FeatureVariableManager, ordinary/fresh/refresh datafiles and raw SDK client in DecisionProvider. Prove scoped cache, external identity and two same-shopper non-default destinations with synthetic endpoints; retain explicit demo compatibility.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W03.07-C4",
+      "description": "Configure non-default ODP identity, allowed action/field taxonomy, audience subset/mapping and profile dimensions on both hosts. Require current tenant/configuration provenance for each retained seed/ring source before read/socket/alarm/identity merge or buffered reuse. Unpinned customer state is refused; never bless one source with another pin. Preserve consent/erasure and no new buffered network, seed, retention or fresh-activity effects.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W03.07-C5",
+      "description": "Pre-admit every managed/legacy ledger envelope constituent against canonical provisioned tenants before storage. Unknown/removed/invalid tenants retry without partial envelope effects or acknowledgement; valid siblings retain exact positional dispositions. Preserve erasure/storage guarantees and cron discovery; pending work resumes after authorized configuration restoration, not backlog deletion.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W03.07-C6",
+      "description": "Distinct frozen-artifact review covers complete original W03, preserved prior remedies, actual destination/effect assertions, exact task deltas and primary evidence; no partial-to-full promotion.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    },
+    {
+      "id": "W03.07-C7",
+      "description": "Separately authorized selected-deployment customer/brand/provider/resource/credential mappings and actual two-brand connectors, jobs, export and erasure acceptance. Required final live batch; synthetic local parameters do not approve D08 or customer topology.",
+      "required_evidence_kinds": [
+        "deployed_test"
+      ],
+      "minimum_claim": "deployed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W03.07-K1",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C2",
+        "W03.07-C3",
+        "W03.07-C4"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/odpLoop.test.ts src/tenancy/middleware.test.ts src/identity/identity.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd; synthetic bindings/intercepted endpoints only",
+      "workload": "Existing resolver/ODP fixtures: two-tenant FX/ODP destination, cache, identity, mapping, provenance and refusal; demo compatibility. Existing identity primitives plus W03.07 named/wildcard/rotation/invalid-manifest cases.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W03.07-K2",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C4",
+        "W03.07-C5"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/routes/identity.test.ts -t 'W03[.](02|04|05|06|07)|W37[.](06|07|08|09)|W22[.]07|W05[.]02|W09[.](03|07)|consumer and lookup|one message per decision set|cleans both actual bound reset hosts' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd; synthetic bindings/intercepted endpoints only",
+      "workload": "New W03.07 and affected existing both-host/consent/buffered/audit/SDK/customer ingress/cron/queue assertions. Explicitly configure existing two-brand consumer erasure fixture, preserving destination/suppression oracles; identity fixture unchanged. Include previously approved actual both-host/two-brand erasure supplement and mounted identity wildcard refusal before state effects.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W03.07-K3",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C2",
+        "W03.07-C3",
+        "W03.07-C4",
+        "W03.07-C5"
+      ],
+      "required": true,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/connectors/config.ts src/connectors/index.ts src/connectors/DecisionProvider.ts src/services/OptimizelyService.ts src/services/FeatureVariableManager.ts src/services/odpLoop.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.ts src/tenancy/middleware.ts src/types/env.ts src/ledger/consume.ts src/index.ts src/reflex/odpLoop.test.ts src/tenancy/middleware.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/reflex/bufferedAction.ts src/services/SessionManager.ts src/identity/assertion.ts src/identity/identity.test.ts && git diff --check -- src/connectors/config.ts src/connectors/index.ts src/connectors/DecisionProvider.ts src/services/OptimizelyService.ts src/services/FeatureVariableManager.ts src/services/odpLoop.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.ts src/tenancy/middleware.ts src/types/env.ts src/ledger/consume.ts src/index.ts src/reflex/odpLoop.test.ts src/tenancy/middleware.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/reflex/bufferedAction.ts src/services/SessionManager.ts src/identity/assertion.ts src/identity/identity.test.ts",
+      "runtime": "Installed compiler and scoped lint",
+      "workload": "Compiler plus22-output lint/whitespace only; inspect new-file whitespace and distinguish old/new warnings. No broad build/CI.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W03.07-K4",
+      "criterion_ids": [
+        "W03.07-C6"
+      ],
+      "required": true,
+      "command": "Independent frozen-artifact and complete original W03 requirement review",
+      "runtime": "Distinct gpt-6-astra/xhigh reviewer",
+      "workload": "Distinct actual source/delta/evidence review retains complete W03 and live limitations.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W03.07-K5",
+      "criterion_ids": [
+        "W03.07-C1",
+        "W03.07-C2",
+        "W03.07-C3",
+        "W03.07-C4",
+        "W03.07-C5"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/odpLoop.test.ts src/identity/identity.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts -t 'W03[.]07' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd; synthetic bindings/intercepted endpoints only",
+      "workload": "Independent new W03.07 grouped factory/both-host/mounted queue assertions on stopped bytes; reuse valid broader worker checks. Include new backend proof authority refusal and named rotation positives.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W03.07-K6",
+      "criterion_ids": [
+        "W03.07-C7"
+      ],
+      "required": true,
+      "command": "Inspect separately authorized selected-deployment two-brand authority, connector/resource ownership and actual operation/job/export/erasure acceptance",
+      "runtime": "Authorized deployment/resource/customer owners; not executed by local mandate",
+      "workload": "Real selected resources/provider accounts/credentials and two-brand destinations; separately authorized final batch.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W02.08",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Independently accepted local human/membership/service authority; exact shared proof qualified and retained.",
+      "rationale": "Reuse current authority and implementation; user permits next local item despite live-only acceptance gap."
+    }
+  ],
+  "rollback": "Initial task-only reversible patch approach retained; capture exact dirty originals of both added files before editing. No git restore/reset or external operation.",
+  "review": "Distinct reviewer must inspect mounted refusal and no identity/session side effects; named rotation remains functional. Preserve complete original W03 C1-C7 and required live acceptance.",
+  "contract_digest": "bbd320e8fffacc6e0e6fda6ceca30964b8dc475424eeaaae3cf1cf7b243538d4",
+  "approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T23:18:25.730Z",
+    "rationale": "Approve concrete source-confirmed original-W03 credential gap and smallest affected test extension; no new customer decision or external authority."
+  }
+}

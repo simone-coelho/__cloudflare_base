@@ -1,0 +1,128 @@
+{
+  "task_id": "W09.07",
+  "verdict": "pass",
+  "at": "2026-09-14T19:48:20Z",
+  "actor": {
+    "id": "w0907-reviewer",
+    "run_id": "/root/w0907_review",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "artifact_digest": "2b68f8252cda83e514538f98674cd6535eb3b3ac083237bb4523d5c982cb50ec",
+  "contract_digest": "6d5905c73b4435252feb0b4fafdf09605f952403e4ea5aeea8ce7eb56afd48c6",
+  "plan": {
+    "path": "docs/remediation/design/W09.07/plan.md",
+    "sha256": "cb9518a99ffd5d631672e41ac74b56c93537ab7b1b8c06238b66daf8fa835619",
+    "prospective_verdict": "pass"
+  },
+  "scope": "Independent frozen six-file baseline-relative source/criteria/evidence review and one exact fixed10 execution. Only this review file written; no source, governance, board, extra suite or external operations.",
+  "criteria": [
+    {
+      "id": "W09.07-C1",
+      "verdict": "pass",
+      "evidence": "Read actual writer and all six retained deltas. Same-call full-payload conflicts are collected before commitment writes and all positions for blocked IDs remain retry. Commitment/claim failures exclude that delivery from data groups; destination failures continue later groups. Each input index accumulates its own completed partition-row count, including identical copies, and only equality with its full positive size acknowledges. Fixed10 verifies persisted commitment/claim poison with healthy grouped siblings, all-occurrence conflicts, duplicate positions, first/second-key failure, lost acknowledgements, restored immutable-claim retries, and same-key conservatism. Raw receipt counts remain conserved; unknown writes do not increment handled or acknowledged object counts."
+    },
+    {
+      "id": "W09.07-C2",
+      "verdict": "pass",
+      "evidence": "Read actual consumer, unchanged envelope parser/erasure helpers and native index ack-only adapter. Both writer and consumer retain complete represented-tenant preflight before writes; every data CAS retains object-read then fresh rewrite/tombstone reads. Consumer requires exact-length positional proof and checks dense expected positions, so missing/invalid/sparse proof retries. Managed failures still permit legacy grouped writes; legacy failures preserve completed managed dispositions. Existing malformed, suppression, barrier/storage and managed-erasure controls passed; generic status is derived from actual original dispositions and errors are fixed strings. No aggregate record count is used as per-message completion."
+    },
+    {
+      "id": "W09.07-C3",
+      "verdict": "pass",
+      "evidence": "Independent exact fixed10 passed10 with27 intentionally unselected. Reused full compiler1536/scoped four-code-file lint0 errors0 warnings/tracked whitespace from inspected same-byte worker captures. Recomputed artifact/contract digests and all47 current pins, including35 baseline-protected dependencies. Applied every retained delta to decompressed baseline in memory and matched current bytes. delivery.ts has exactly two added subtype/comment lines with no trailing whitespace and preserved single EOF newline; tracked git diff does not cover this inherited untracked helper. index.ts is exactly the approved one-line comment replacement. API paragraph accurately states per-delivery completion, independent cohorts and remaining limits; producer flag/schema/grouping unchanged."
+    }
+  ],
+  "runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts -t 'W09\\.02|W09\\.03|W09\\.07|an R2 failure reports|suppresses delayed|fails the entire batch|writes one range-named' --maxWorkers=1 --minWorkers=1",
+    "started_at": "2026-09-14 19:45:56 UTC",
+    "initial": {
+      "chunk_id": "8e57a1",
+      "wall_time_seconds": 1.000978281,
+      "session_id": 45778,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "50a80b",
+        "wall_time_seconds": 0.000002639,
+        "exit_code": 0,
+        "original_token_count": 141,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (25 tests | 16 skipped) 3967ms\n ✓ src/ledger/erasure.test.ts  (12 tests | 11 skipped) 21ms\n\n Test Files  2 passed (2)\n      Tests  10 passed | 27 skipped (37)\n   Start at  15:45:59\n   Duration  20.04s (transform 3.56s, setup 0ms, collect 9.77s, tests 3.99s, environment 0ms, prepare 4.13s)\n\n"
+      }
+    ],
+    "result": "pass",
+    "drained": true,
+    "passed": 10,
+    "unselected": 27,
+    "total_discovered": 37,
+    "test_files_passed": 2,
+    "runtime_seconds": 20.04,
+    "test_execution_seconds": 3.99,
+    "completion_observed_at": "2026-09-14T19:47:13.468Z",
+    "fixture": "Actual installed Node/Vitest writer/consumer/producer modules over existing synthetic ManagedR2/FakeR2; existing in-memory Miniflare native R2 conditional/concurrent and managed-erasure controls. Nine existing tests plus one new grouped isolation case; no new suite.",
+    "measurement_boundary": "Local correctness, storage effects and counts only. Includes first/second-key and lost-ack partial work, duplicate input copies, immutable regrouped retry, strict malformed-proof refusal and erasure controls. Test timing is not latency/throughput/SLO or deployed evidence."
+  },
+  "reused_static": {
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/delivery.ts src/ledger/writer.ts src/ledger/consume.ts src/ledger/ledger.test.ts && git diff --check -- src/ledger/delivery.ts src/ledger/writer.ts src/ledger/consume.ts src/ledger/ledger.test.ts src/index.ts docs/kit/02-api-reference.md",
+    "result": "pass",
+    "evidence": {
+      "path": "docs/remediation/evidence/W09.07/worker.json",
+      "sha256": "dced45c85dbd1ecabd7a8f3e9d27e0b4425cbbb139f9d5adb7f7bad2aa314361"
+    },
+    "attempt_id": "static_candidate1",
+    "initial_capture": "850dab",
+    "final_capture": "1a96cb",
+    "exit_code": 0,
+    "drained": true,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "source_identity": "All six pinned source paths match both worker runtime and final static source snapshots;35 protected baseline dependencies also unchanged.",
+    "whitespace_qualification": "Tracked-file diff pass reused only for tracked files. Independently inspected all actual added lines and EOF, including inherited untracked delivery.ts."
+  },
+  "artifact_verification": {
+    "at": "2026-09-14T19:47:13.468Z",
+    "artifact_digest": "2b68f8252cda83e514538f98674cd6535eb3b3ac083237bb4523d5c982cb50ec",
+    "contract_digest": "6d5905c73b4435252feb0b4fafdf09605f952403e4ea5aeea8ce7eb56afd48c6",
+    "files_checked": 47,
+    "mismatches": [],
+    "protected_checked": 35,
+    "protected_mismatches": [],
+    "static_source_files_checked": 6,
+    "static_source_mismatches": [],
+    "worker_evidence": {
+      "path": "docs/remediation/evidence/W09.07/worker.json",
+      "sha256": "dced45c85dbd1ecabd7a8f3e9d27e0b4425cbbb139f9d5adb7f7bad2aa314361"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W09.07/source-freeze.json",
+      "sha256": "d19ee877dc0ce334ca7337ea18980e178908c753d59cf51ed92edfe45ca6064b"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W09.07/source-deltas.json",
+      "sha256": "20091c865e3314f76d7f6331c6296e6fee4c683b484e44830902057075d37bbf"
+    },
+    "pre_runtime_capture": "d6f236",
+    "delta_verification_capture": "5cb64b",
+    "post_runtime_capture": "20c09d",
+    "owned_deltas_checked": 6,
+    "baseline_reconstruction": "Decompressed each owned baseline, verified before hash, applied its recorded patch in memory and matched exact current content/after hash.",
+    "index_comment_only": true,
+    "delivery_added_lines": 2,
+    "added_trailing_whitespace": 0,
+    "dependency_scope": "47-file scoped manifest and actual installed local run; not a full installed-dependency attestation or deployed provenance claim."
+  },
+  "failures_and_rework": [
+    "Root found sparse Array.every positional-proof weakness before the only worker runtime/static run; dense expected-index validation and one sparse variant supersede that source. Independent source review and fixed10 cover corrected final bytes. No failed runtime is fabricated.",
+    "Frozen worker prose says three added delivery.ts subtype lines; actual retained diff and current source contain TWO added subtype/comment lines. This is a factual count qualification only; accepted bytes are unchanged.",
+    "Worker and reviewer oversized combined source/baseline displays were truncated and not credited as complete proof. Reviewer separately read full bounded deltas/source and parsed primary captures, then verified compressed baseline and exact hashes in memory. No product checks were repeated for display issues.",
+    "No independent runtime failures or further implementation rework. Vite emitted its existing CJS Node API deprecation notice; selected tests passed."
+  ],
+  "limitations": "Bounded managed delivery/key failure isolation and managed/legacy cohort independence only. A failed shared destination may retry healthy co-resident deliveries. Legacy partial writes can duplicate and their reported counts remain known lower bounds. Pre-capture process loss, logical-event/online/export reconciliation, quarantine/outbox, automatic replay, activation/retention/claim lifecycle, atomic erasure fence/ABA/journal/manifest races, historical/fold recovery, D06/D08/W24 decisions and full W09/W22/customer/SLO/release acceptance remain open. No producer activation, new persisted schema/identifier, per-message object fanout or claim reassignment.",
+  "disposition": {
+    "status": "REVIEW_AND_RUNTIME_STOPPED",
+    "running_commands": [],
+    "next_action": "Root inspects this separate review and retained evidence, makes lead disposition, then updates tracker/journal/checkpoint and final existing board checks. No further reviewer source work authorized."
+  }
+}

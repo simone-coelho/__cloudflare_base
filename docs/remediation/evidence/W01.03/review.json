@@ -1,0 +1,232 @@
+{
+  "task_id": "W01.03",
+  "actor": {
+    "agent": "/root/w3708_review",
+    "actor_id": "w0103-reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "role": "independent_reviewer",
+    "provenance": "Distinct from sole implementer /root/w3708_worker and lead /root. Bounded preflight, frozen source/proof review and one exact K1; no subdelegation or source/governance edits."
+  },
+  "verdict": "pass",
+  "scope": "W01.03 C1-C3 only: local enforced pre-dispatch withdrawal of global connector/agent families and the Optimizely datafile webhook, with retained-path/open-mode compatibility.",
+  "basis": {
+    "canonical_audit": {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    "plan": {
+      "path": "docs/remediation/design/W01.03/plan.md",
+      "sha256": "d27a7641d1d43185f1a5f919fdf16f78914e2a1b2fa0d963650e05e4ba7582fe"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W01.03/baseline.json",
+      "sha256": "ed294efbb742e2eaec4c5c07f279f776e0e1e05b05b141a5a77d08c35d9e986f"
+    },
+    "contract_digest": "30bdb1aa45343859168a3d4422499d9141e849f4fd4c17128b4b3812f3ba3fe6",
+    "read": [
+      "Complete AGENTS, execution README, governance36, RESUME, canonical parent W01 and linked F01/F03/F25/F33 requirements/qualifications, and admitted plan.",
+      "Both actual admission-to-freeze deltas, applicable mounts/connector destinations, installed Hono/Agents/PartyServer routing, complete retained primary outputs including initial failures, and lint diagnostics/source-line lineage."
+    ],
+    "entry_checks": "Root authoritative entry check/status VALID649 and admission VALID657 reused under explicit direction; no reviewer board run. Official artifact/E1/E2 registered by lead at journal660.",
+    "source_stopped_at": "2026-09-09T21:04:59.183Z",
+    "source_freeze_at": "2026-09-09T21:05:24Z",
+    "baseline_class": "Source-confirmed justified design case; no newly executed failing pre-implementation exploit baseline claimed."
+  },
+  "independent_check": {
+    "id": "W01.03-K1",
+    "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+    "command_issued_at": "2026-09-09T21:05:58Z",
+    "runner_started_at": "2026-09-09T21:06:01Z",
+    "completion_observed_at": "2026-09-09T21:08:10Z",
+    "exit_code": 0,
+    "result": "39 passed of 39; one file passed. Duration 22.75s; tests 12.331s.",
+    "attempts": 1,
+    "session_id": 29547,
+    "session_drained": true,
+    "runtime": "Existing actual Worker/Hono/Agents in workerd with synthetic destinations/credentials, native shopper sockets, blocked egress and zero-outbound assertion/disposal. Local timing is not performance acceptance.",
+    "output_complete": true,
+    "output_format": "Complete combined exec stdout/stderr stream; no separate stderr capture.",
+    "output_sha256": "dc22ffebede7d4dd64af0df963f45a9b7ea5f9564f310eda0decb757cacbb5a2",
+    "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (39 tests) 12331ms\n\n Test Files  1 passed (1)\n      Tests  39 passed (39)\n   Start at  17:06:01\n   Duration  22.75s (transform 1.17s, setup 0ms, collect 7.03s, tests 12.33s, environment 0ms, prepare 2.43s)\n\n"
+  },
+  "criteria": [
+    {
+      "id": "W01.03-C1",
+      "verdict": "pass",
+      "claim": "local_runtime",
+      "evidence": "Frozen actual source, primary full K1 and independent exact full K1.",
+      "findings": "Exact enforced mode skips generic SDK discovery on every request. Decoded nonempty root segments agents/cdp/optimizely and webhook/optimizely-datafile subtree return generic 404/no-store, empty HEAD, before Hono or destination work. Two named tenants cover 17 mounted connector methods, all nine agent namespaces including WebSocket, absent/invalid/separate or combined valid operator/site/shopper credentials, enabled synthetic global destinations, malformed bodies/manifests, supported encoded/dot/empty-segment aliases and multiple methods. Denial oracles observe only AUTH_MODE access, no enumeration/body reads/binding calls/logs/deferred work/state changes/disclosure."
+    },
+    {
+      "id": "W01.03-C2",
+      "verdict": "pass",
+      "claim": "local_runtime",
+      "evidence": "Primary and independent full K1 each 39/39; primary compiler/lint/whitespace exit 0.",
+      "findings": "Raw /api withdrawal remains first in every mode with zero environment reads. Native shopper sockets, named SDK/operator/config/selfservice/health/CORS cases remain passing; near-prefixes and encoded-separator nonroutes remain ordinary Hono paths. Open/unset controls perform exact own-tenant CDP KV write/readback and actual installed SDK dispatch to a synthetic rate-limiter binding; mock Optimizely experiments and webhook signature-handler reachability are explicitly limited positives. Enforced api-info omits only the three withdrawn entries. Existing ledger oracle now observes the accepted tenant tombstone-list guard before write and ack/retry."
+    },
+    {
+      "id": "W01.03-C3",
+      "verdict": "pass",
+      "claim": "source_confirmed",
+      "evidence": "336 official pins, 332 frozen source/input pins, 330 unchanged unowned pins, both exact reversible deltas, complete primary proof and one independent exact K1.",
+      "findings": "No blocker within the admitted two-file containment. Official artifact/current contract/tracker identity agrees. Both patches reproduce exact before/after bytes in memory, unowned inputs remain unchanged, all seven lint warnings preserve baseline rule/message/source-line lineage, and final proof supersedes retained fixture failures without changing the production matcher. Lead disposition remains separate."
+    }
+  ],
+  "rework": "Retained initial K1 was 36/39: noncanonical synthetic anonymous-capability subject failed in setup; reserved %2F separators were incorrectly treated as decoded router aliases; an old ledger assertion omitted the accepted tenant tombstone list. Root-approved fixture-only corrections use a canonical vis-UUID, ordinary valid-tenant controls for reserved-separator nonroutes, and exact list→put→ack/retry assertions. Final production index hash equals its initial-check hash. Final full K1 and compiler/lint/whitespace supersede the failed runtime attempt; no failed or earlier check is substituted for final evidence.",
+  "bookkeeping_caveat": "Two read-only hash attempts were interrupted by host ENOMEM: initial whole-file reads and a later official streaming pass. Subsequent bounded-memory passes verified all frozen/unowned and all official hashes. The first completed official comparison overconstrained role equality and flagged only the two owned source→output labels; a bounded path/hash and exact artifact/contract/tracker comparison confirmed no drift. These are reviewer diagnostic retries, not runtime-test reruns or source failures.",
+  "limitations": [
+    "Partial W01 ingress containment only, not full W01/W03 or F01/F03/F25/F33 closure, package/gate/customer/release acceptance or North Star relevance/latency/explainability/measurement delivery.",
+    "No tenant-aware connector replacement, credential/destination mapping, new grants/platform-admin exception, customer topology choice or activation approval. Direct enforced Optimizely decisions/track are withdrawn; their underlying owned-shopper/consent guards remain unchanged.",
+    "Other webhooks, legacy tracking/live/AI/activation paths and internal global-service consumers remain outside this bounded withdrawal. Open/unset intentionally preserves generic binding discovery and legacy connector behavior.",
+    "Synthetic runtime destinations and credentials, mocked experiment output and fake namespace dispatch are compatibility evidence, not live upstream/model/tool/browser/deployed integration acceptance.",
+    "Preserve accepted v4 erasure recovery and exact v1-v3 semantics. Compiler/scoped lint are at-artifact local diagnostics; source/input hashes are not permanent whole-engine assurance.",
+    "No extra suite, broad probe/framework, source rollback, build/install/deploy/provision/seed/cloud mutation, customer-data operation, credential operation, external message, commit/push or destructive action."
+  ],
+  "handoff": {
+    "status": "independent_pass_pending_lead_acceptance",
+    "pending_commands": [],
+    "command_session": "29547 drained with exit 0; no active reviewer sessions.",
+    "owned_output": "docs/remediation/evidence/W01.03/review.json",
+    "next_action": "Lead inspect exact review/artifact/evidence, record bounded disposition and update tracker/journal/RESUME; reviewer source/tests stopped."
+  },
+  "artifact": {
+    "path": "docs/remediation/evidence/W01.03/artifact.json",
+    "sha256": "f6d77976320d8a93b302a46f8b5a858377fecb5d7d7cc0958c4f663ade17caef",
+    "digest": "617fc0b8ededd9925eb6828fc38df8a60861ba890540112145d279725c7e9052",
+    "pins": 336,
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W01.03/source-freeze.json",
+      "sha256": "ab38deb8cff116bc1053be2149a53748dc81c997274f16920e7089a209666a95"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W01.03/worker.json",
+      "sha256": "aedee4282be8de53c24f1f6a90e7216a898f3cb8368511adae9c4b9d1da7b62d"
+    }
+  },
+  "integrity_verification": {
+    "at": "2026-09-09T21:15:27.439Z",
+    "failures": [],
+    "official_pins": 336,
+    "source_pins": 332,
+    "unowned_pins": 330,
+    "digest": "617fc0b8ededd9925eb6828fc38df8a60861ba890540112145d279725c7e9052",
+    "digest_matches": true,
+    "tracker_artifact_matches": true,
+    "contract_matches": true,
+    "retained_deltas": [
+      {
+        "path": "src/index.ts",
+        "admission_sha256": "9f0b0d219174b005841fd1eb7d8e6ee61398748077dc2afb6ed9a4962350b25e",
+        "current_sha256": "e272016f5dbc4d0d49931277b681a19f95bf24a5ec5f55a3a05fba36ec5031f0",
+        "diff_sha256": "1ca584d0142f3623f5edb94b3dc5a4d6245424d82f95f497e3ff9f9e79ddee88",
+        "roundtrip": true
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "admission_sha256": "638dbb5973a6322761f92a07842dfd61d3cb1437061200e0e5ce45976fdc3231",
+        "current_sha256": "b7b9715e37fddf2e209fb5f80131198c84c5b4e7c487e8334ff521cd596514aa",
+        "diff_sha256": "c980819e1e91be77df00c06eadefe0ff8b0705175f1224210d42cd9534ac3643",
+        "roundtrip": true
+      }
+    ],
+    "primary_outputs": [
+      {
+        "name": "lint_baseline",
+        "command": "node node_modules/eslint/bin/eslint.js src/index.ts src/index.api-boundary.test.ts --format json",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "8e079ca5a7cd848834f23b4cc5280fa12e39bc87fd985e31d1a818fbf0c7d52b"
+      },
+      {
+        "name": "runtime_initial",
+        "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+        "exit_code": 1,
+        "output_complete": true,
+        "stdout_sha256": "e33cc5cf80201a378a69a4e759d3c253e225999d6a97be6a8badbbb955f1290d"
+      },
+      {
+        "name": "compiler_initial",
+        "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "lint_initial",
+        "command": "node node_modules/eslint/bin/eslint.js src/index.ts src/index.api-boundary.test.ts --format json --max-warnings 7",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "7261330525cf9ceef91e525be7d0a1490fb0f78b70c35196f36facb9687b1197"
+      },
+      {
+        "name": "whitespace_initial",
+        "command": "git diff --check -- src/index.ts src/index.api-boundary.test.ts",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "runtime",
+        "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "1db2c03dcf2623120d29ded921f5dab95e89d88148ba358de6afc341c53df78b"
+      },
+      {
+        "name": "compiler",
+        "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "lint",
+        "command": "node node_modules/eslint/bin/eslint.js src/index.ts src/index.api-boundary.test.ts --format json --max-warnings 7",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "7261330525cf9ceef91e525be7d0a1490fb0f78b70c35196f36facb9687b1197"
+      },
+      {
+        "name": "whitespace",
+        "command": "git diff --check -- src/index.ts src/index.api-boundary.test.ts",
+        "exit_code": 0,
+        "output_complete": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "lint": {
+      "warnings": 7,
+      "errors": 0,
+      "unchanged_matches": 7
+    },
+    "references": [
+      {
+        "path": "docs/remediation/evidence/W01.03/artifact.json",
+        "sha256": "f6d77976320d8a93b302a46f8b5a858377fecb5d7d7cc0958c4f663ade17caef"
+      },
+      {
+        "path": "docs/remediation/evidence/W01.03/worker.json",
+        "sha256": "aedee4282be8de53c24f1f6a90e7216a898f3cb8368511adae9c4b9d1da7b62d"
+      },
+      {
+        "path": "docs/remediation/evidence/W01.03/source-freeze.json",
+        "sha256": "ab38deb8cff116bc1053be2149a53748dc81c997274f16920e7089a209666a95"
+      },
+      {
+        "path": "docs/remediation/design/W01.03/plan.md",
+        "sha256": "d27a7641d1d43185f1a5f919fdf16f78914e2a1b2fa0d963650e05e4ba7582fe"
+      },
+      {
+        "path": "docs/remediation/design/W01.03/baseline.json",
+        "sha256": "ed294efbb742e2eaec4c5c07f279f776e0e1e05b05b141a5a77d08c35d9e986f"
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+      }
+    ],
+    "method": "Read-only complete SHA256 of all 332 frozen and 330 unowned inputs at 21:10:44.623Z; independently applied both retained patches forward/reverse in memory and verified every compressed primary output hash and all seven lint source lines. Sequential 4 KiB-buffer reads verified every one of 336 official current file hashes at 21:14:58.462Z. Final exact manifest/contract/tracker comparison through the existing board exports completed at 21:15:27.439Z, without running board commands. All 332 freeze path/hash identities remain present; only the two owned files are legitimately relabeled source→output in the official manifest. No rollback/source mutation performed."
+  },
+  "reviewed_at": "2026-09-09T21:16:14Z"
+}

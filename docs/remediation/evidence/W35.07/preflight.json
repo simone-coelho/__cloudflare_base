@@ -1,0 +1,51 @@
+{
+  "task_id": "W35.07",
+  "actor_id": "w3507-reviewer",
+  "run_id": "/root/w3507_preflight",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T04:23:44.069Z",
+  "verdict": "PASS",
+  "plan_sha256": "1d6c08c288b940a871738a8b02669e1d20f6e1b81ec38decdf1644ddd6d48db3",
+  "baseline_sha256": "226081ee689958b87634e2ef7ac03d5bd7fe2654d5f4162b8b369ef96e9c842d",
+  "reviewed_paths": [
+    "AGENTS.md",
+    "docs/remediation/README.md",
+    "docs/architecture/36-remediation-governance-and-execution.md",
+    "docs/remediation/RESUME.md",
+    "docs/architecture/35-audit-verification-and-source-of-truth.md",
+    "docs/remediation/design/W35.03/plan.md",
+    "docs/remediation/design/W35.04/plan.md",
+    "docs/remediation/design/W35.05/plan.md",
+    "docs/remediation/design/W35.06/plan.md",
+    "docs/remediation/evidence/W35.03/review-v2.json",
+    "docs/remediation/evidence/W35.04/review.json",
+    "docs/remediation/evidence/W35.05/review.json",
+    "docs/remediation/evidence/W35.06/review-v2.json",
+    "docs/remediation/evidence/W35.06/review-v3.json",
+    "docs/remediation/design/W35.07/plan.md",
+    "docs/remediation/design/W35.07/baseline.json",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/identity/erase.ts",
+    "src/services/SessionManager.ts",
+    "src/identity/link.ts",
+    "src/identity/sessionCapability.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/routes/identity.test.ts"
+  ],
+  "basis": "Independent actual-source preflight; all five baseline source/test hashes match current bytes. Lead supplied VALID board check/status at journal1990; no repeated board or runtime check. The exact plan incorporates the corrections to the initial proposal: permanent generic receipts are not session eligibility, raw parsed state is not original bytes, and numeric v5 prefixes cannot be silently reinterpreted.",
+  "requirements": [
+    "Atomically retain pre-barrier eligible SID/epoch witnesses with target/generic cleanup, and exact registration-derived witnesses with source completion including retired generations. Preserve them through reset/retention; never infer missing legacy eligibility from current state.",
+    "Require matching erasure receipt and exact witness at the captured session userId object; refuse observable current grant/pipeline reuse of that SID under a different epoch. Generic receipt success alone is insufficient.",
+    "Capture validated data and original serialized session bytes from one strict read. Compare exact bytes for scan, extra/canonical and base deletes, preserving unknown-field differences. Source cleanup precedes sessions, and object/session guards precede adjacent deletion.",
+    "Use explicit fresh v6 layout. Conditionally tag an untagged v5 page only when unique kind/id/key completed-prefix identities agree; refuse ambiguous progress without mutation and never replay compacted work. Preserve v1-v4 semantics and original job identity.",
+    "Use only the declared three grouped schedules and focused runtime/static checks. Exercise eligibility with actual ShopperReflex modules; permissive destination stubs alone cannot prove generation authority. Inspect side effects and retry state, not status codes alone."
+  ],
+  "limitations": [
+    "Preflight PASS authorizes no task completion or release and is not an implementation/runtime result.",
+    "Prospective DO-authorized eligibility and guarded exact snapshots only. KV read/delete remains nontransactional with legacy writers; unseen SID reuse and full session-host revocation/socket authority remain unproved.",
+    "Fresh object-bound v6 jobs may refuse grantless or legacy session records with no eligibility witness; this is an incomplete-authority refusal, not unchanged legacy session-host erasure parity.",
+    "Historical discovery, external/physical erasure, retention/capacity, migration/cutover/deployment, customer/native/browser/SLO/release acceptance and full W35/F06/F14 remain open. Older binaries require compatible handling of v6 and tagged-v5 records before rollback."
+  ],
+  "effects": "Only this assigned preflight record was created. No source, tracker or other file edits; no tests, board reruns, subdelegation or external operations."
+}

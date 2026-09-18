@@ -1,0 +1,54 @@
+{
+  "at": "2026-09-12T04:09:57.060Z",
+  "source_go_at": "2026-09-12T04:09:57.060Z",
+  "actor_id": "w01-lead",
+  "task_id": "W23.01",
+  "worker": "w1405-worker",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "0a1ce559f12684b8c8762e22914670eebe900096f24232b1755d06888908397b",
+  "plan": {
+    "path": "docs/remediation/design/W23.01/plan.md",
+    "sha256": "7e6b349d0f6ca7d5bc9f093c9a85312747ff4a7f40727f58b6684068eee5be56"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "298a36",
+        "wall_time_seconds": 1.001381695,
+        "session_id": 35435,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f144a6",
+        "wall_time_seconds": 5.001387244,
+        "session_id": 35435,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "972889",
+        "wall_time_seconds": 0.00000228,
+        "exit_code": 0,
+        "original_token_count": 565,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=19, unscoped=22\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=78, closed=2; evidence records=228\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W10.02 — Next inspect and admit the bounded W23 forward counter-arithmetic correction against F18: order-invariant decay and exact internal rates before historical rebuild work. Read complete W23/W24 scope and actual live/hourly consumers first; do not silently choose a lateness policy, reset/rewrite old statistics, or claim repaired historical evidence. W10 statistics/ring application guards are implemented; native sustained capacity, full-record storage redesign and oversized-object reconstruction remain open with W22/W24/W30 recovery dependencies. No external/resource/deployment/customer-policy authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 16259\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=19, unscoped=22\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=78, closed=2; evidence records=228\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W10.02 — Next inspect and admit the bounded W23 forward counter-arithmetic correction against F18: order-invariant decay and exact internal rates before historical rebuild work. Read complete W23/W24 scope and actual live/hourly consumers first; do not silently choose a lateness policy, reset/rewrite old statistics, or claim repaired historical evidence. W10 statistics/ring application guards are implemented; native sustained capacity, full-record storage redesign and oversized-object reconstruction remain open with W22/W24/W30 recovery dependencies. No external/resource/deployment/customer-policy authority is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 16259\n"
+      }
+    ],
+    "session_id": 35435,
+    "exit_code": 0,
+    "drained": true
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1112,
+    "pins": 108,
+    "protected": 105,
+    "authority": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true
+  },
+  "limitations": "Forward arithmetic/precision correction only, within JavaScript floating-point tolerance. No repair/reset of damaged persisted item or slot counters, old rounded snapshots/archives or previously emitted reports; no historical re-fold, migration/generation marker, automatic replay/idempotency, timestamp/lateness or reward/currency/model-policy choice. Valid future timestamps remain an ingestion-integrity residual; existing caller/config validation is not a customer lateness policy. Full W23/F18 and W22/W24/W30 recovery, trustworthy measurement/customer/deployed SLO/release acceptance remain open. More precise JSON can reach existing byte budgets earlier; capacity guards must remain enforced. Preserve deterministic core, gamma0 and current priors/root-zero/clamps; human prose may round only for presentation. No external/cloud/resource/credential/customer-data/deploy/commit/push/cleanup authority."
+}

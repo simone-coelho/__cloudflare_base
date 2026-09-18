@@ -1,0 +1,203 @@
+{
+  "before": null,
+  "after": {
+    "id": "W09.08-E3",
+    "task_id": "W09.08",
+    "check_id": "W09.08-K3",
+    "criterion_ids": [
+      "W09.08-C1",
+      "W09.08-C2",
+      "W09.08-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "file": {
+      "path": "docs/remediation/evidence/W09.08/review.json",
+      "sha256": "364f7c4c64acf7b1eb8b676c0185b59fa3ff1866b41cc2fd4bdb2a6a88d8d012"
+    },
+    "at": "2026-09-15 16:49:00 UTC",
+    "limitations": "Binding-failure handling in existing ledger producers and opted-in canonical recovery only. No recovery activation, new state/retention/outbox/quarantine, changed erasure/identity/event-time/lifecycle policy, historical repair or full W09/W22/customer/SLO/release acceptance. Preserve exact W22.06 and all inherited fixes. No install/emitted build/deploy/provision/cloud/credential/customer-data/destructive/commit/push/external operations. Worker and independent reviewer each passed exact6 local synthetic checks. Same-byte compiler1536/two-file lint0errors0warnings/whitespace passed. Not native/cloud failure, customer or SLO evidence.",
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts -t 'enqueues a small decision set|W09[.]01 (packs|refuses)|W09[.]02 producer fallback|W09[.]08' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct Astra/xhigh source/evidence review and fixed6 once; same-byte static reused.",
+    "workload": "Actual queued/captured payloads, consent/identity/erasure dependency preservation, scope limits.",
+    "result": "pass",
+    "artifact_digest": "6e643f5ff488f5b0f2ed54afc51115e081884a9805d55dcd0c436755c734ad01",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "edfe2f6bf671c5fca5b95535f26c789d999c385563fa5f7fdd17a54d7dbd8ae9",
+      "configuration": "Binding-failure handling in existing ledger producers and opted-in canonical recovery only. No recovery activation, new state/retention/outbox/quarantine, changed erasure/identity/event-time/lifecycle policy, historical repair or full W09/W22/customer/SLO/release acceptance. Preserve exact W22.06 and all inherited fixes. No install/emitted build/deploy/provision/cloud/credential/customer-data/destructive/commit/push/external operations.",
+      "files": [
+        {
+          "path": "src/ledger/enqueue.ts",
+          "sha256": "831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9",
+          "role": "output"
+        },
+        {
+          "path": "src/ledger/ledger.test.ts",
+          "sha256": "68b79fdc39420542e928be9ec73f6ff5a5ad498c564fdf4be907d64d739ea7e9",
+          "role": "output"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/consume.ts",
+          "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/productSort.ts",
+          "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322",
+          "role": "source"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+          "role": "source"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f",
+          "role": "source"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "da430a5a8ed02dca4a9e5db3b925f2e3dbe341265defd465d2e2e71eccac4027",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/receipts.ts",
+          "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+          "role": "source"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.08/worker.json",
+          "sha256": "9b40b42aecfed1cd5fc427cbac7f2a83feb439fa593cb7a79dae2a3af91aab98",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W09.08/plan.md",
+          "sha256": "bf65ebc518b82bf23d12ad9e05ec9fa0e3ed4a6ce0639a026b3bbeb02bc0a2eb",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W09.08/baseline.json",
+          "sha256": "c6d1a4449bdb065f37ec4dd4ff455ca40a19539c5e03efd6bb218273b3a08bff",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.08/admission.json",
+          "sha256": "15cb94b5e7cbaf39ff80c073b9e1ede18b0b457e7a6debf1269e84b40c695b42",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.08/source-freeze.json",
+          "sha256": "4340306afd6c9882f952c2d41e46b0d8fa1a07a092d6e78777274b1c9fe332aa",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.08/source-deltas.json",
+          "sha256": "4a9ce3b8e61599b569f225f4cc6b7bcbf78ffc2ec53dd08c6a7c59f60704ad73",
+          "role": "configuration"
+        }
+      ],
+      "digest": "6e643f5ff488f5b0f2ed54afc51115e081884a9805d55dcd0c436755c734ad01"
+    }
+  }
+}

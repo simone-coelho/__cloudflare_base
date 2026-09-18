@@ -1,0 +1,100 @@
+{
+  "task_id": "W35.03",
+  "actor_id": "w3503-reviewer",
+  "run_id": "/root/w3503_stale_session_investigation",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-15T23:56:02.885Z",
+  "verdict": "REWORK",
+  "artifact_digest": "111ac5bfdfe72e8aa80200fdc72bae95686668d7a642b68a42432b97956b0659",
+  "contract_digest": "0046f1b04a0e82a0388d32bec7300870adc7dded8c16a69b7408fb639bcd35b1",
+  "plan_sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d",
+  "pin_checks": {
+    "before": {
+      "capture": "c630ea",
+      "count": 28,
+      "mismatches": [],
+      "exit_code": 0
+    },
+    "after": {
+      "capture": "1d777c",
+      "count": 28,
+      "mismatches": [],
+      "exit_code": 0
+    },
+    "digest_recomputation": {
+      "capture": "5f89e8",
+      "artifact_matches": true,
+      "contract_matches": true,
+      "exit_code": 0
+    }
+  },
+  "checks": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]03|W35[.]01|the link, on the session host|detach' --maxWorkers=1 --minWorkers=1",
+      "runs": 1,
+      "captures": [
+        "7a8175",
+        "1a8b9b"
+      ],
+      "session_id": 79968,
+      "exit_code": 0,
+      "drained": true,
+      "result": "13 passed, 93 skipped; 2 files passed; duration16.19s",
+      "diagnostics": "Synthetic queue_unavailable and learning_incomplete retained in capture1a8b9b. This is not delivery or learning acceptance."
+    },
+    "K2": {
+      "disposition": "Reused exact-byte evidence",
+      "worker_captures": [
+        "e11135",
+        "e370dc"
+      ],
+      "worker_sha256": "ae4e2fa94f02edaf96459c87de075ee818e0b4cf8e171a0be9ee051fbc49bda0",
+      "source_freeze_sha256": "f239cf1434c3466655078b68809a83a401c051be8531f79ef13110a3958e2323",
+      "result": "Compiler, owned ESLint and whitespace passed;0errors109warnings. Lead source-freeze records identical baseline/final warning multisets. All current input/output manifest pins independently matched."
+    }
+  },
+  "criteria": {
+    "W35.03-C1": {
+      "verdict": "PASS",
+      "basis": "Inspected durable source preparation and per-operation storage fence for signed/unsigned HTTP, WS messages, buffered ingest, manual assignment, internal absorb/import/forward, and alarm qualification; focused concurrency/restart controls passed. Restrictive consent and explicit reset/retention exclusions retained."
+    },
+    "W35.03-C2": {
+      "verdict": "PASS",
+      "basis": "Target profile, receipt, membership and consent use one storage put; rejected/ambiguous writes invalidate mirrors. Source retries consume stored immutable transfer; target retries consume the receipt and latest authoritative members, with visitor projection last. Exact failure/concurrency groups passed. Completed-source receiptRequired refuses replay after sequential target reset."
+    },
+    "W35.03-C3": {
+      "verdict": "REWORK",
+      "basis": "Authority, immutable fingerprint and tightening consent checks pass, but first-commit refusal still re-derives and persists an existing target's behavioral state through mergedIdentity. The refusal fixture populates only the source and leaves the target empty, so its passing assertions do not detect this."
+    }
+  },
+  "findings": [
+    {
+      "id": "W35.03-R1",
+      "criterion": "W35.03-C3",
+      "severity": "blocking_task_acceptance",
+      "evidence_class": "source_confirmed",
+      "locations": [
+        "src/durable-objects/ShopperReflex.ts:1432",
+        "src/durable-objects/ShopperReflex.ts:1507",
+        "src/reflex/identityMerge.ts:85",
+        "src/routes/realtime.sdkContract.test.ts:252"
+      ],
+      "description": "When either effective consent switch is false, handleTransfer sets incoming from/fromPipe to null but still calls mergedIdentity. That calls mergeReflexStates, whose documented behavior includes tick at now even with no incoming profile. It can change existing target memberships/configuration/segments, and the lastSeen expression replaces an existing0 with now. The result is persisted and scheduled despite refusal. This contradicts the retained consent gate and preservation of target behavior during a refused transfer.",
+      "required_change": "For a refused first transfer into an existing valid target, atomically commit necessary receipt/membership/consent while preserving its affinity/pipeline and activity metadata without requalification, enrichment merge or behavioral timer refresh. Retain minimal cold-target identity establishment where necessary. Add existing populated target preservation to the existing authority group, including lastSeen0 and a membership that would change on tick; no new test suite."
+    }
+  ],
+  "limitations": [
+    "Local Node/Vitest fakes, not native workerd/customer/browser/latency/SLO or release proof.",
+    "Per-grant detach/erase and pushed-frame revocation, prepared/in-flight cross-object erasure and complete deletion epochs remain excluded.",
+    "One-time KV adoption and existing maximum50 membership cap do not establish historical completeness or mixed-version writer safety.",
+    "W35.02 stays reopened/revalidation_required; link-time visit preservation does not re-close its whole artifact.",
+    "Full W35/F14, host cutover, deployment, existing-data migration and historical repair remain open."
+  ],
+  "handoff": {
+    "source_changed": false,
+    "review_only": true,
+    "running_commands": [],
+    "next_action": "Lead returns bounded C3 rework to sole implementer, preserving this reviewed artifact and results. Freeze and review the superseding artifact after required checks."
+  }
+}

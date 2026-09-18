@@ -1,0 +1,353 @@
+{
+  "before": null,
+  "after": {
+    "id": "W04.01-E1",
+    "task_id": "W04.01",
+    "check_id": "W04.01-K1",
+    "criterion_ids": [
+      "W04.01-C1",
+      "W04.01-C2"
+    ],
+    "kind": "integration_test",
+    "claim": "local_synthetic",
+    "actor_id": "w0202-worker",
+    "run_id": "/root/w0202_impl",
+    "file": {
+      "path": "docs/remediation/evidence/W04.01/worker-checks.json",
+      "sha256": "9aee21902ebbc3df9abc947d8540c0be164f58d1959e9d73846669174266ff5b"
+    },
+    "at": "2026-09-07T15:56:06.377Z",
+    "limitations": "46 final cases in3 existing fixtures:16 primitives/store,22 route,8 SDK. Both host choices use synthetic seams; real HMAC/raw SDK-to-router verifies fresh retry, zero denial effects, strict failures and caller-visitor guards. Preserve initial probe/compiler failures and reviewed async correction. No full session/ownership/erasure, browser/workerd/deployed/customer acceptance.",
+    "command": "node node_modules/vitest/vitest.mjs run src/identity/identity.test.ts src/routes/identity.test.ts src/sdk/identify.test.ts --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest, real WebCrypto and actual identity subrouter/SDK; synthetic local KV/DO/fetch/browser bindings, no outbound traffic.",
+    "workload": "Existing40 cases plus compact proof/config/host and SDK retry/async/failure controls in the3 existing fixtures. SDK transport must forward submitted proof unchanged; actual SDK/router integration lives in Worker-typed route fixture. No deployed/workerd or full session-ownership acceptance.",
+    "result": "pass",
+    "artifact_digest": "a8d7eff3a36ce88b80323c3f53b9efe2f21f4425466ca76be99d6a6571b494cc",
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "2225c5d17653e7e75b505eb72bbe4adb27c4557179f4b5070d787e8ddb663019",
+      "configuration": "W04.01 mandatory configured backend HMAC account proof in all modes; historical site-assurance/binding/TTL/rotation/wildcard retained. Optional SDK provider captures visitor and freshly signs one successful-detach409 retry; static409 never retries, structural provider failures never fall back, and proof/HTTP/detach/caller-continuation identity changes are refused.11 scoped source/test/current-guidance/generated outputs;46 focused cases in3 existing fixtures, real crypto/raw SDK-to-router, synthetic KV/DO/browser seams. Pin41 relevant packages-external local graph inputs, selected types/config/build/lock, exact baseline/originals/worker proof; both generated SDK bundles rebuilt. Caller-await review rework, two initial probe failures and two fixture-cast TS2352 failures retained.180 prior pins and original privacy assertion block preserved, not old-contract reclosure. No full session capabilities/ownership/rotation/revocation/ABA/generation/erasure/provisioning, full installed/TS/deployed graph, workerd/browser/customer/SLO/lift/gate/release acceptance.",
+      "files": [
+        {
+          "path": "docs/architecture/25-identity-stitching.md",
+          "role": "output",
+          "sha256": "d8f45c82d1c6c21918aebb52c13ac04db30a6cc0b01ba0b518f3d6089f6607de"
+        },
+        {
+          "path": "docs/remediation/design/W04.01/plan-v1.md",
+          "role": "source",
+          "sha256": "80a7876c19576bed0ca3b8e502bf14949c372ebcdfb54f38c7f5a18edee6223a"
+        },
+        {
+          "path": "docs/remediation/design/W04.01/task-contract-v1.json",
+          "role": "source",
+          "sha256": "b4a0a683a0ebd011eb3f87484296a6c6da370d1160028779e455bd05ba167d13"
+        },
+        {
+          "path": "docs/remediation/evidence/W04.01/baseline-probe.mjs",
+          "role": "output",
+          "sha256": "6a78da0074b110e9e515dc19bd4d89cd9f073201161806f9694a7052ac661c89"
+        },
+        {
+          "path": "docs/remediation/evidence/W04.01/baseline.json",
+          "role": "output",
+          "sha256": "7f1197e5ca447baf623e3687417f8417e0084c2240da4f892a313d34485f52d3"
+        },
+        {
+          "path": "docs/remediation/evidence/W04.01/before-sources-v1.json",
+          "role": "output",
+          "sha256": "2e26e2f26543afb8a15a1c0d7bd94c437036ebf8091217e83bcf8d12a3ecd752"
+        },
+        {
+          "path": "docs/remediation/evidence/W04.01/entry-checks-v1.json",
+          "role": "output",
+          "sha256": "3f5ffe752ae166cf4558ce590842d711f8bb51be5456f1a2c73c209d5084319d"
+        },
+        {
+          "path": "docs/remediation/evidence/W04.01/source-inputs-v1.json",
+          "role": "output",
+          "sha256": "32dcfa90c1edc152f79651ca3a5e70fdc82b77dfc6b0814a0eeb327f224a0a14"
+        },
+        {
+          "path": "docs/remediation/evidence/W04.01/worker-checks.json",
+          "role": "output",
+          "sha256": "9aee21902ebbc3df9abc947d8540c0be164f58d1959e9d73846669174266ff5b"
+        },
+        {
+          "path": "docs/remediation/evidence/W04.01/worker.md",
+          "role": "output",
+          "sha256": "3ff3b9659a55a2f4354889225689e1dfa81710905bc29393d0ad9cf8c83c3d61"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "configuration",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "package.json",
+          "role": "configuration",
+          "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c"
+        },
+        {
+          "path": "public/sdk/edge-personalization.esm.js",
+          "role": "output",
+          "sha256": "dda77438ee56f5f2833cc058857566a62ffae7f66062137b77858e26f478cccb"
+        },
+        {
+          "path": "public/sdk/edge-personalization.js",
+          "role": "output",
+          "sha256": "53a9bcbaf25c8785d1ecab8d341666dd8bd3268898117c2cb168cf359b2b3b1e"
+        },
+        {
+          "path": "scripts/build-sdk.mjs",
+          "role": "configuration",
+          "sha256": "bcee22007ecc0d5269f50ce7e434ebff0a23da226599e4297646ab2113971c79"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3"
+        },
+        {
+          "path": "src/data/coach-catalog.json",
+          "role": "source",
+          "sha256": "43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e"
+        },
+        {
+          "path": "src/demos/brighthour/catalog.data.json",
+          "role": "source",
+          "sha256": "a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6"
+        },
+        {
+          "path": "src/demos/brighthour/catalog.ts",
+          "role": "source",
+          "sha256": "c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd"
+        },
+        {
+          "path": "src/demos/brighthour/demoClock.ts",
+          "role": "source",
+          "sha256": "a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce"
+        },
+        {
+          "path": "src/demos/brighthour/offerLifecycle.ts",
+          "role": "source",
+          "sha256": "7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82"
+        },
+        {
+          "path": "src/demos/brighthour/reflexConfig.ts",
+          "role": "source",
+          "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "role": "source",
+          "sha256": "18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb"
+        },
+        {
+          "path": "src/identity/assertion.ts",
+          "role": "output",
+          "sha256": "46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "role": "source",
+          "sha256": "e2d348577a5295430b5f85cb3f685b7eda8d8a1e7f806508e44aee6ed2e9f802"
+        },
+        {
+          "path": "src/identity/history.ts",
+          "role": "source",
+          "sha256": "010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21"
+        },
+        {
+          "path": "src/identity/identity.test.ts",
+          "role": "output",
+          "sha256": "452c69386b5abfadc3fcc1fc9f76917138a9211e679ba15127940d44aaf4f2bc"
+        },
+        {
+          "path": "src/identity/link.ts",
+          "role": "source",
+          "sha256": "6f1738ef48f3a33dfffa3b4a4d81063b44ba30f613430500c8b6d2f0be6ee0b1"
+        },
+        {
+          "path": "src/identity/shopperId.ts",
+          "role": "source",
+          "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+        },
+        {
+          "path": "src/identity/store.ts",
+          "role": "source",
+          "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9b85d4b97e6af7f08c916e2c82c18ebc4e0e3bbd2cf12acb52d00ad2c19dfe01"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+        },
+        {
+          "path": "src/reflex/identityMerge.ts",
+          "role": "source",
+          "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+        },
+        {
+          "path": "src/routes/identity.test.ts",
+          "role": "output",
+          "sha256": "0bcffae8de408ea7ac8a432ff47f5ddf62aa598d6d79f8265d7f8aadff930433"
+        },
+        {
+          "path": "src/routes/identity.ts",
+          "role": "output",
+          "sha256": "e93247553313d1bff591a6860e0837c079cb61ea3baddaff991584c15b717305"
+        },
+        {
+          "path": "src/sdk/browser.ts",
+          "role": "source",
+          "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+        },
+        {
+          "path": "src/sdk/core.ts",
+          "role": "source",
+          "sha256": "4e00b83659eadf40fd58c80de48667f996a165b2e93f97a76ba604f1e598eb24"
+        },
+        {
+          "path": "src/sdk/emit.ts",
+          "role": "source",
+          "sha256": "537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731"
+        },
+        {
+          "path": "src/sdk/host.ts",
+          "role": "source",
+          "sha256": "179b975bbdd1d68ef54e4093ab82848113b35f1cad2dd33c0f994bea094c2896"
+        },
+        {
+          "path": "src/sdk/identify.test.ts",
+          "role": "output",
+          "sha256": "a5116728df0f639f86d50156979aeb41f3ad0516c9e54c3dd029cb93ba421ca3"
+        },
+        {
+          "path": "src/sdk/identify.ts",
+          "role": "output",
+          "sha256": "3f8261768c4bcd07a8e19d0536563fbad079daeb706d762e9bd8ca1d243f088f"
+        },
+        {
+          "path": "src/sdk/identity.ts",
+          "role": "source",
+          "sha256": "3389149258c439a23bfda2138af623e3c0ab7da4f896ef6338095872a1cc4e77"
+        },
+        {
+          "path": "src/sdk/index.ts",
+          "role": "source",
+          "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "role": "source",
+          "sha256": "619c4b51562d85050bd13c0575391040778fb97bedf298797403068106d56007"
+        },
+        {
+          "path": "src/sdk/memoryHost.ts",
+          "role": "source",
+          "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+        },
+        {
+          "path": "src/sdk/README.md",
+          "role": "output",
+          "sha256": "06ab04ca779a78d2359167d941531a000f8a01de8e50c62167ef6ebe49b2383b"
+        },
+        {
+          "path": "src/sdk/testHost.ts",
+          "role": "source",
+          "sha256": "1033bc8f2bcd6bd03f9fb615f33a77100d968be1b6ea41e69d8a07f999d845f1"
+        },
+        {
+          "path": "src/sdk/tsconfig.json",
+          "role": "configuration",
+          "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360"
+        },
+        {
+          "path": "src/sdk/types.ts",
+          "role": "source",
+          "sha256": "4736e6b3a8b931472cfd0fe6eef02021530650b7c8622446b76cc7553db48498"
+        },
+        {
+          "path": "src/sdk/version.ts",
+          "role": "source",
+          "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+        },
+        {
+          "path": "src/sdk/wire.ts",
+          "role": "source",
+          "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+        },
+        {
+          "path": "src/services/CatalogService.ts",
+          "role": "source",
+          "sha256": "da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "role": "source",
+          "sha256": "ca33610c0915daf174e28132a846ea7f1178816dc0425979d262c2f48e2680bd"
+        },
+        {
+          "path": "src/services/visit.ts",
+          "role": "source",
+          "sha256": "27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d"
+        },
+        {
+          "path": "src/tenancy/objects.ts",
+          "role": "source",
+          "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "output",
+          "sha256": "7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f"
+        },
+        {
+          "path": "src/types/events.ts",
+          "role": "source",
+          "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "configuration",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "configuration",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        }
+      ],
+      "digest": "a8d7eff3a36ce88b80323c3f53b9efe2f21f4425466ca76be99d6a6571b494cc"
+    },
+    "status": "current",
+    "superseded_by": null
+  }
+}
+

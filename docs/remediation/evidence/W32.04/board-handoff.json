@@ -1,0 +1,83 @@
+{
+  "at": "2026-09-12T23:01:29.375Z",
+  "task_id": "W32.04",
+  "artifact_digest": "6a75b40ed2f6169f198cbabe0f8c0be2592facd6d659c482b02089b65bd94868",
+  "journal_seq": 1340,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "f3da8b",
+        "wall_time_seconds": 1.001261246,
+        "session_id": 75435,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0f0c1d",
+        "wall_time_seconds": 5.001004366,
+        "session_id": 75435,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "1ccadc",
+        "wall_time_seconds": 5.001725259,
+        "session_id": 75435,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "cac050",
+        "wall_time_seconds": 28.085004409,
+        "exit_code": 0,
+        "original_token_count": 494,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=28, unscoped=13\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=93, closed=2; evidence records=276\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W32.04 — Admit W32.05 under W32/F34 for useful day-report policy-grid paging and wire the existing comparison views (public/console/views-measure.js and public/learning.js) to it. Inspect report GET/full and custom-response/CSV dependencies before fixing the page contract; preserve canonical isolation, exact policy rows and diagnostic coverage, and reuse existing row/cursor/DOM checks. No new framework or broad benchmark; full W31/model/native/customer/release scope remains open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19610\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=28, unscoped=13\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=93, closed=2; evidence records=276\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W32.04 — Admit W32.05 under W32/F34 for useful day-report policy-grid paging and wire the existing comparison views (public/console/views-measure.js and public/learning.js) to it. Inspect report GET/full and custom-response/CSV dependencies before fixing the page contract; preserve canonical isolation, exact policy rows and diagnostic coverage, and reuse existing row/cursor/DOM checks. No new framework or broad benchmark; full W31/model/native/customer/release scope remains open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19610\n"
+      }
+    ],
+    "session_id": 75435,
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      19610,
+      19610
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';import assert from 'node:assert/strict';import {sha256,artifactDigest,taskContractDigest}from'./scripts/remediation/board.mjs';const t=JSON.parse(fs.readFileSync('docs/remediation/tracker.json','utf8')),k=t.tasks.find(x=>x.id==='W32.04'),b=JSON.parse(fs.readFileSync('docs/remediation/design/W32.04/baseline.json','utf8'));for(const f of k.artifact.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);assert.equal(artifactDigest(k.artifact),k.artifact.digest);assert.equal(taskContractDigest(k),k.preflight.contract_digest);assert.equal(sha256(JSON.stringify(t.journal.slice(0,b.prior_journal_length))),b.prior_journal_sha256);console.log(JSON.stringify({at:new Date().toISOString(),status:'passed',state:k.state,journal:t.journal.length,pins:k.artifact.files.length,prior_journal_preserved:b.prior_journal_length,artifact:k.artifact.digest,contract:k.preflight.contract_digest,lead_signoff:k.lead_signoff.status}));\nNODE",
+    "captures": [
+      {
+        "chunk_id": "bc4350",
+        "wall_time_seconds": 0.405786013,
+        "exit_code": 0,
+        "original_token_count": 77,
+        "output": "{\"at\":\"2026-09-12T23:00:17.168Z\",\"status\":\"passed\",\"state\":\"closed\",\"journal\":1340,\"pins\":46,\"prior_journal_preserved\":1326,\"artifact\":\"6a75b40ed2f6169f198cbabe0f8c0be2592facd6d659c482b02089b65bd94868\",\"contract\":\"c470e26db44f8a4b3d8dc5ce6404477a7f2c9be6e2ca6d33085e84c59a781722\",\"lead_signoff\":\"accepted\"}\n"
+      }
+    ],
+    "drained": true,
+    "exit_code": 0
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "single_object_lightweight_summary_and_window_reads",
+    "package_W32": "open",
+    "finding_F34": "open",
+    "finding_F32": "open",
+    "finding_N20": "open",
+    "finding_N21": "open",
+    "finding_N24": "open",
+    "package_W33": "open",
+    "finding_N09": "open",
+    "package_W30": "open",
+    "finding_F17": "open",
+    "finding_F18": "open",
+    "finding_F25": "open",
+    "finding_N08": "open",
+    "finding_N23": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Admit W32.05 under W32/F34 for useful day-report policy-grid paging and wire the existing comparison views (public/console/views-measure.js and public/learning.js) to it. Inspect report GET/full and custom-response/CSV dependencies before fixing the page contract; preserve canonical isolation, exact policy rows and diagnostic coverage, and reuse existing row/cursor/DOM checks. No new framework or broad benchmark; full W31/model/native/customer/release scope remains open."
+  },
+  "limitations": "Bounded consistent lightweight summaries for newly generated canonical reports only, not full W31/W32/F34 acceptance. Single-object framing is additive persisted format; public day/POST shapes and custom-array response-only behavior stay unchanged. Managed window reads validate the summary, not unread grids/tail or historical full-body consistency; day GET retains bounded full validation. Legacy reports remain bounded full-read fallback and may require an additional prefix transfer charged to the existing16MiB request budget; no migration/history rewrite or large-window availability guarantee for legacy writers. Window92days and row/output limits remain; cheap reads are not policy compatibility, experimental maturity, six-month/customer/model/SLO or release proof. One installed Miniflare R2 range smoke proves only local storage primitive behavior, not deployed engine capacity. Existing canonical acknowledgement swallowing/concurrent canonical races, fold/shard/config/tombstone scope, paging and native workload qualification remain separate. No new store/sidecar/framework/serving change, cloud/deploy/credentials/customer-data/commit/push/destructive/external or customer-policy authority."
+}

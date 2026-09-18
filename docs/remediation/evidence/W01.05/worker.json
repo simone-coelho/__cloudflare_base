@@ -1,0 +1,270 @@
+{
+  "task_id": "W01.05",
+  "role": "implementer",
+  "actor": "w0105-worker",
+  "run": "/root/w0105_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-09T23:40:03.368Z",
+  "status": "local_checks_passed_pending_independent_review",
+  "scope": "Two-file exact-enforced entry containment for demo/model/activation families and corresponding api-info omissions; retained customer APIs, static siblings, open/unset behavior.",
+  "authority": "Root GO after admitted checker VALID683 exit0/session99640 drained. Local decision-independent G0 mandate. Exclusive index.ts/existing boundary fixture and this proof only; no subdelegation.",
+  "preflight": {
+    "basis": "Read AGENTS, entry, governance36, RESUME, final admitted plan/task, full canonical W01/W03/W14, linked F01/F03/F33 with canonical qualifications, twelve customer clauses and applicable mounted routes/services/callers. Source-confirmed design case, not a newly executed pre-fix exploit.",
+    "plan": "docs/remediation/design/W01.05/plan.md",
+    "plan_sha256": "1f4458779df91402f5d8b706d4789a4af34f02a6a1b7589a3a13c91284f5aaf5",
+    "contract_digest": "f6c65a6c46311e5661754d4363189d8072a039cc0bb2a7e2cd8f4a25adc2ec25",
+    "baseline": {
+      "path": "docs/remediation/design/W01.05/baseline.json",
+      "sha256": "c3e9d63284a3fca563203232011f48b11001bebd68ceda5765c25de3294633bb"
+    }
+  },
+  "artifact": {
+    "files": [
+      {
+        "path": "src/index.ts",
+        "sha256": "ea31ab30cf0daafceb9374745fe425c0921e3ddf00112a073386a837482d1b45"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "c9c757159411a27d667f89bd73ef67511547e2519ed5634cd81197107775a9b3"
+      }
+    ],
+    "digest": "bd2f6405c9dbe736989c576a0cd45b20bae4efba624ac0d2231ae4197910df56",
+    "digest_encoding": "SHA256 of JSON.stringify(files) in recorded order",
+    "captured_at": "2026-09-09T23:38:31.151Z",
+    "source_stopped_at": "2026-09-09 23:38:38 UTC",
+    "source_mutations_after_final_commands": false
+  },
+  "acceptance_checks": {
+    "K1": "PASS final exact full existing Worker fixture45/45 (prior42 retained plus3 grouped cases); tests11.524s,total19.41s. First44/45 fixture-only memo failure retained below and superseded. Existing in-memory esbuild/workerd only; afterAll enforces outboundAttempts0.",
+    "K2": "PASS compiler768MB/exit0; baseline/final scoped lint512MB/exit0 with0errors and7unchanged warnings; whitespace exit0. All commands completed and sessions drained.",
+    "K3": "Pending independent frozen source/runtime review and root disposition."
+  },
+  "behavior": [
+    "Exact enforced mode extends existing early decoded-segment guard to roots ai,__shot,funnel,experiment,signals and nested live/api,live/ops-api,meridian/api,realtime/demo, including descendants. Every method returns generic404/no-store, empty HEAD, with AUTH_MODE-only access before Hono. Raw /api remains first/zero-env; prior connector/agent/legacy dispatch guards remain.",
+    "Enforced api-info omits ai,aiScene,funnel,experiment,signals. Open/unset keeps advertisements and routes. Static live/meridian siblings, ordinary near-prefix/reserved-separator nonaliases and customer SDK/realtime/v1/operator/sort/content/config/geo/health/pixel paths remain.",
+    "No route/service/core/customer UI/deployment changes. The fix withdraws specific unauthorized/demo dispatch; it does not build tenant-aware replacement model/activation integrations."
+  ],
+  "workload": {
+    "additional_grouped_cases": 3,
+    "total_tests": 45,
+    "tenants": [
+      "acme",
+      "globex"
+    ],
+    "denials": "Enumerated mounted methods and Meridian upgrade under valid named admin/site/shopper credentials together for both nondefault tenants; absent/forged/operator-only/site-only/shopper-only representative family controls; configured synthetic Gemini/FX/SHOT_TOKEN; scene miss/cached/sync routes; aliases, descendant roots, malformed registry/payload, unsupported methods/preflight/upgrades. Existing assertDenied verifies0 body reads/binding attempts/state changes/logs/deferred work/disclosure/cookies/CORS, AUTH_MODE-only access.",
+    "compatibility": "Open/unset no-model AI search/concierge, cached R2 scene reads, async scene queue, sync no-model refusal, screenshot no-token closure, simulator D1 prepare attempt, tenant experiment KV write/readback, signal push/readback, global Offer Desk override KV write, Bright Hour experiment-id read, Meridian named DO dispatch and realtime demo schema entry. Existing42 actual Worker customer/native-socket/operator/config/CORS/raw/legacy/internal-queue controls retained.",
+    "timing_boundary": "Local fixture timings only, not engine SLO, browser/customer or deployed acceptance."
+  },
+  "compatibility_fixture_changes": [
+    "Adds configured synthetic SHOT_TOKEN to existing sharedConnectors fixture for negative proof. No configured model/browser/upstream execution.",
+    "Calls existing clearBhExperimentMemo alongside existing configuration/trend invalidation so each synthetic transport gets fresh binding state. It is solely a fixture reset.",
+    "No pre-existing assertion or internal W07.01 scene queue case changed. D1 reset positive asserts prepare attempt only; no SQLite persistence assertion."
+  ],
+  "rework": [
+    {
+      "attempt": "runtime_first",
+      "exit_code": 1,
+      "result": "44/45 passed; sole failure new open/unset compatibility case expected CACHE.get for second mode but received no calls.",
+      "cause": "Existing Bright Hour module memo cached null experiment IDs for10s across synthetic transports whose KV bindings were recreated. Product route returned its established cached response.",
+      "correction": "Added import/call of existing clearBhExperimentMemo to fixture setup alongside existing config/trend invalidation; product source remained unchanged.",
+      "superseded_by": "runtime_final45/45",
+      "failure_output": "commands runtime_first retains exact full stdout/stderr, timestamps and hash."
+    }
+  ],
+  "commands": [
+    {
+      "name": "lint_baseline",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.ts src/index.api-boundary.test.ts --format json",
+      "started_at": "2026-09-09T23:33:14.436Z",
+      "completion_observed_at": "2026-09-09T23:33:33.710Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "1def6535a21ec2bba2276333fba6e869e6e486c8afb3023c919723ca1581a3b9",
+      "stdout_gzip_base64": "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",
+      "session_id": 95041,
+      "session_drained": true,
+      "stdout_format": "Complete child stdout followed by complete child stderr (not chronological interleaving), gzip/base64. Exact declared command was invoked through node spawnSync; exit_code is the child command status, not the capture wrapper status."
+    },
+    {
+      "name": "runtime_first",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-09T23:36:26.422Z",
+      "completion_observed_at": "2026-09-09T23:36:48.370Z",
+      "exit_code": 1,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "053df670a8b55d80cc11117462fbbc7f994e2657f79d6dc343ad3c15a95b3bcb",
+      "stdout_gzip_base64": "H4sIAAAAAAAAA82TwW7bRhCG73yFXH6kB0mItBQl2ZAYtIDq2miCxi3itD0IqrDijqwtSC67M5Stxoeeeuyh9157zTv5SYqlJDuBU9TtqcQCXM78/Hf325kIr789BzaJOlYJ4qKUOItrJs9xrtexcVldUCkcLxaGNpS7KnzGrhJb2J8p38aLRZa72qxy7Wmx1ExRhNs/3oF9FtvS0LXSle0tXV0a7bdKiEUJA+3REcIH4wYJVtrmZDpIBv3xqOAIeIzJZ/i+n6j+ETyJtiXDU+WJqRQtdkNwFZVxXTIJDBUOtFpRJowrK2tXCwpnKO9i6d0Vk4fzqCsWT7oAXVNWi3Vl2Apw++vvoOuKMiGD2RziYIiqfAv6qdY5Zph6r7ftpIN5FOENseDM5sS4OxzaSWdn1qTfz9xgNEKlmYNqdNTILkR7gRYgmaTD43QwDtEvaq/DrkJUjUaMtnhd8sr5AolKjrgLJqkr9AvuInN5TplgpI4n3N3jTgaqP+YuqNxY78pwnzt15anSnpCo8Zg7UfRkNhwWb9aEk5cXWNY2N3ArfGeFWoxzZwjTb17AMkygnmkho3BBhLVIxWkcb6yQMrSJL2trKBbv6mVOvHZObHmp1lLknwRNL/uRe6Uz1Au3fO+GlfMonCeYcL85qyez4aSIbn9793DgbMdyxzbBR0VRhLPpi6/wvyisKTP5MDv13vn0X9RXD6d7bfQMrykjuyETwo0Is6gHfDAHnp5MT748VZckT7uH0HKdhjW9DTWQWsP71Dy85tGzg8X8US2djidJOhg1JT4eT26aNTJXsiAPzD6FvtJWUHm3pPbbhlEXlZZ1ilYcJLGubHy/o5hFS337y587y0l/Z7nD1A4/qEbBHSXuc2oP+v3O80P65cXX56rSnmmnXDqz7QThKy33lslDy0zneeN4GsC3Z7PWHblWF60HzFrzeef5vq9xg795ftgvOHgfS0HeGqvLf0BzkDV4QhWGjdyfYfjBGQ7ix6G5Uwc8wfLjvfUfxiyJk3nTcX8Bo+Eow2MGAAA=",
+      "session_id": 54021,
+      "session_drained": true,
+      "stdout_format": "Complete child stdout followed by complete child stderr (not chronological interleaving), gzip/base64. Exact declared command was invoked through node spawnSync; exit_code is the child command status, not the capture wrapper status."
+    },
+    {
+      "name": "runtime_final",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-09T23:37:22.166Z",
+      "completion_observed_at": "2026-09-09T23:37:43.900Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "6b1d2b7cf3a48ee5f99dc76d26f3da6be15558959869a1026ba68ca39e81ca0e",
+      "stdout_gzip_base64": "H4sIAAAAAAAAA0WQvW7bQBCEe76CmwFSRAKkO59IxpG6IEEAuzCCyE7jgjjxVuYF90PcLok4r5E2T5cnMWgD8XYz32CxsxW+398Cs1EflIGOSXSvJ6bCOthBu9xPkZKw7jpHM4U8LlLnUXz0vyk86a7rQ57cOdhC3ckyVRX+/f0DLr32ydEvZUe/PeUpOVuelBCLEgZWTYtF8BrGtLsmclXhjljw1QdiwGC0zOSwMusKL7NgBpr2P2raF3YUWwRWALM/1FeHXbO4X6Zixee0uKoxjJUUm/icS4RR9SVvwCTTiMvIG/Q5BOoFrTJXvHm9DcaodscbUJp9yWkp/5oeC422EIz6uOd1VV081HW8Gwifb444TT445DN+eKH3jNvsCJ++XcMzHI2FeivkFI5EGERGPmg9eyHlaNaPk3ekpeTpFIiHnMWnRzVIDO+WzLb/yduUHW2Xv75twzkXxFwIjsT6wOriod7H6hkFlZwD4gEAAA==",
+      "session_id": 23117,
+      "session_drained": true,
+      "stdout_format": "Complete child stdout followed by complete child stderr (not chronological interleaving), gzip/base64. Exact declared command was invoked through node spawnSync; exit_code is the child command status, not the capture wrapper status."
+    },
+    {
+      "name": "compiler",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "started_at": "2026-09-09T23:38:00.240Z",
+      "completion_observed_at": "2026-09-09T23:38:14.664Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA=",
+      "session_id": 10214,
+      "session_drained": true,
+      "stdout_format": "Complete child stdout followed by complete child stderr (not chronological interleaving), gzip/base64. Exact declared command was invoked through node spawnSync; exit_code is the child command status, not the capture wrapper status."
+    },
+    {
+      "name": "lint",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.ts src/index.api-boundary.test.ts --format json",
+      "started_at": "2026-09-09T23:38:00.249Z",
+      "completion_observed_at": "2026-09-09T23:38:21.288Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "4448c720bb98c679bf758a125bad0416f21bf7ba1d0b1b06fc60aa4ed46fe1de",
+      "stdout_gzip_base64": "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",
+      "session_id": 70148,
+      "session_drained": true,
+      "stdout_format": "Complete child stdout followed by complete child stderr (not chronological interleaving), gzip/base64. Exact declared command was invoked through node spawnSync; exit_code is the child command status, not the capture wrapper status."
+    },
+    {
+      "name": "whitespace",
+      "command": "git diff --check -- src/index.ts src/index.api-boundary.test.ts",
+      "started_at": "2026-09-09T23:38:00.267Z",
+      "completion_observed_at": "2026-09-09T23:38:00.316Z",
+      "exit_code": 0,
+      "signal": null,
+      "output_complete": true,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA=",
+      "session_id": null,
+      "session_drained": true,
+      "stdout_format": "Complete child stdout followed by complete child stderr (not chronological interleaving), gzip/base64. Exact declared command was invoked through node spawnSync; exit_code is the child command status, not the capture wrapper status."
+    }
+  ],
+  "warning_lineage": {
+    "baseline_count": 7,
+    "final_count": 7,
+    "new_warnings": 0,
+    "errors": 0,
+    "comparison": "Exact ordered path/rule/severity/message/source-line content, ignoring location/fix-range shifts.",
+    "warnings": [
+      {
+        "path": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts",
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'e' is defined but never used.",
+        "line": 217,
+        "source": "(e) => console.error('monitor failed to run'),"
+      },
+      {
+        "path": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts",
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'e' is defined but never used.",
+        "line": 228,
+        "source": "})().catch((e) => console.error('hourly fold failed')));"
+      },
+      {
+        "path": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts",
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'e' is defined but never used.",
+        "line": 240,
+        "source": "})().catch((e) => console.error('day report failed')));"
+      },
+      {
+        "path": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts",
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'e' is defined but never used.",
+        "line": 246,
+        "source": "(e) => console.error('erasure rewrite failed'),"
+      },
+      {
+        "path": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts",
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'e' is defined but never used.",
+        "line": 256,
+        "source": "(e) => console.error('trend rollup failed'),"
+      },
+      {
+        "path": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts",
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'ctx' is defined but never used.",
+        "line": 263,
+        "source": "queue: async (batch: MessageBatch, env: Env, ctx: ExecutionContext) => {"
+      },
+      {
+        "path": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts",
+        "rule": "@typescript-eslint/no-explicit-any",
+        "severity": 1,
+        "message": "Unexpected any. Specify a different type.",
+        "line": 278,
+        "source": "const event = message.body as any;"
+      }
+    ]
+  },
+  "delta_validation": [
+    {
+      "path": "src/index.ts",
+      "admission_sha256": "6802d0bdb9210c238a7c4866db768983fab7fe42f8573f5437b9dfe78ae6c0a5",
+      "current_sha256": "ea31ab30cf0daafceb9374745fe425c0921e3ddf00112a073386a837482d1b45",
+      "admission_matches": true,
+      "forward_reproduces": true,
+      "reverse_reproduces": true,
+      "diff_sha256": "e61a429698d0ae85d0d8ba43e96fd9279363e16064d172b8f9574b5764f1fd0a",
+      "diff_gzip_base64": "H4sIAAAAAAAAA7VV227cNhB9368Y+CHcxeqSRYzG2MCo3ThFijYp0KRPRWHQ5HjFhuKwnJEvcfzvBaWVV+vWRYuiehAPD+cMZ6jh6Ltg8WYNnEztMqyEZ8f//ZmVZbnvdLlc7hMnJ1CuXhwVq5ew7McXcHIyg+GJ7gb9GlTdA1WMfFVVc1NhuKpOf/749vzdj2dv4Pj4GBSGS0oGrYKv4e4e1nA3SgAkafPJhU3212NVwDVeNESfMrWFu00AKIpr3Wf0t9lgN1MFGBszZ2xUBVDU/nSDQTKlM+A6c2WP6zUjs6OgitlydK1db+tUAdp9MBhwmNecsSrgsgthyH1AqgC8iZhcu91nN1MFsNsE7TnzW7jL437xABNqL67t9xrxzpAiJi2UhmQHrIpZ+TjiHfMXgY/ONkh5YYO0E/w5p3Hl6dRGi6czvN+OlkxezkOto6ufr8qELCUGG8kF4aq1g+Z+8WrWv/riO3perA5huXr5VbE6mhQfQIPaYuI13IF6TUEwSPnxNqJag9Ixeme0OAr1b5w/LqjX2jRYZstEPhsFKlkooXoIcrt5D4bBXcL87yp5AXfjGdQ1/IAbbW7BOo5aTFOAxZbAUAhohBKDDhb6sgMh8gyi0wYFWHQby42nC+3BJLQYxGnPE9dZeeGCdWHDBQQSsMjiQp8jg+6koeQ+o4WLW9AQdIsWBIMOApukg1Rjedc1nGFLBbRk0feO/RC3NuKueoeQqBNk6Bj3g0vI1CWDDJQmDrmhGDFB1NIwXDtpqBOg64AWYnLBuKg9V/C+D6uPh8FSn8dD6CANttX4Jeoa3uVDBIuGLFpg3OSi4wJcML7LJ5EV0N9thg9n3ysGbKPclltT0N5pRq7GczQUWOCXRCS/wnEfbcXRO5mrWi2qS+cF0/wbIo86LF6NCU5kBZjGefuP1NtEcgll6VA5QwNS8OUL7MjcqPaZSTsbg4d9i6FJ7nNjl8xVufzXqick2j2yPz/nhuQRue0Z++SkVewvjE1ib8vJKXl3hQqePYN5f9zbQOIQyYSiyGWmF4unPLWYnHU69N4eOXtS9NB9H4nydVaLxfS/lVC6FCDgNfyEHCkwzhP+3iFL1aI0tJW+fXN6lv97ofMe1qDuDjAlSgfrg/ck8C11wR7cq2LqGvLVk47XcPj8sJjy/0vrG5rfH0lgy05sCAAA"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "admission_sha256": "539b3ac24e647f028840ae1807e881cde4494c520a0297ea3f60436ca41d05fa",
+      "current_sha256": "c9c757159411a27d667f89bd73ef67511547e2519ed5634cd81197107775a9b3",
+      "admission_matches": true,
+      "forward_reproduces": true,
+      "reverse_reproduces": true,
+      "diff_sha256": "043547f363baa01a501913b27fa7105b36364c57846dddafd0763a6fec345707",
+      "diff_gzip_base64": "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"
+    }
+  ],
+  "artifact_inspection": {
+    "owned_admission_bytes_verified": true,
+    "owned_forward_and_reverse_deltas_verified": true,
+    "method": "Decoded both admitted owned snapshots, verified SHA256, generated exact source patches and checked forward/reverse roundtrips in memory. No rollback performed.",
+    "baseline_pin_count": 332,
+    "protected_pin_basis": "Root owns protected-input scan/freeze/official artifact identity; worker did not duplicate broad scans."
+  },
+  "limitations": [
+    "Partial local W01 containment only; no full W01/W03/W14/F01/F03/F33/F30, finding/gate/release/customer/deployed acceptance or North Star relevance/latency/explainability/lift claim.",
+    "Generic customer AI Search §1.10 and enrichment §1.3 remain delivery obligations under W14/W37. Demo removal does not waive them. Same-host Meridian demo catalog import shortcut is unavailable enforced; customer content/catalog/pull remains.",
+    "Static asset availability, bound resources, scheduled/internal model consumers, retained geo/operator/health and complete stamp/isolation/privacy authority remain outside this slice. W34 external-scoring containment is unchanged.",
+    "Open/unset deliberately retains legacy/demo behavior. Positive controls disable external credentials/model/browser calls and use synthetic bindings. Signal module-global memory is exercised by response readback but is not part of destination snapshots. D1 is a call spy; Meridian DO dispatch is a stub, not native upgrade acceptance. Existing current customer sockets still have separate native workerd controls.",
+    "Some withdrawn paths were already refused by downstream guards; no successful end-to-end pre-fix abuse is claimed. The shot no-token positive is existing closure, not a new screenshot remedy. The simulator prepare positive is not evidence of an actual D1 deletion.",
+    "No cloud/deployment/provision/seed/project build/install/migration/credential/customer-data/external-message/commit/push/destructive operations. Preserve v4 erasure recovery and exact v1-v3 semantics; gamma zero is not ingestion kill and W36 does not close F14."
+  ],
+  "handoff": {
+    "source_stopped": true,
+    "all_command_sessions_drained": true,
+    "proof_only_after_stop": true,
+    "next_action": "Root frozen artifact registration; independent Astra/xhigh exact K1/source/full evidence review; root disposition and tracker/checkpoint updates."
+  }
+}

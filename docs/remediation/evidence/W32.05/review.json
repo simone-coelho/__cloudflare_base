@@ -1,0 +1,207 @@
+{
+  "at": "2026-09-13 00:04:51 UTC",
+  "task_id": "W32.05",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "2c82ae64a8c3f51cca7d4bb2135486b33689f470e13e3b82f6fb1058e2ec1bda",
+  "contract_digest": "89d032169b12772c0e8686eede2d3cd0e9d5de82f7973890f480201b41e06ed9",
+  "verdict": "PASS",
+  "summary": "Independent source/evidence review and the one admitted final-byte runtime pass for bounded day-report response and browser grid paging. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W32.05-C1",
+      "verdict": "PASS",
+      "evidence": "Actual report/route delta uses one bounded saved-body read and hashes that consumed UTF8 text. Before storage it validates owner/date/slot/limit, cursor structure/query/aligned offset and worst-width escaped encoding. Same-builtAt content replacement yields409; malformed queries400; existing unavailable/missing/budget/no-write semantics remain. Sorted cross-policy item union, only selected-slot pooled items/slotRates, blank missing evidence and all same-report diagnostic metadata are preserved. Actual authenticated Hono group verifies pages/back/union/empty/denials/no-write, unpaged full equality and revision-bound full export."
+    },
+    {
+      "id": "W32.05-C2",
+      "verdict": "PASS",
+      "evidence": "Actual modern/legacy scripts use page controls and context/user/generation checks. Final capture-phase repaint clears prior report/window DOM before delayed shell context loading; both read/build supersession directions clear obsolete loading flags. Normal user-preserving refresh remains usable. Modern POST candidate is discarded in favor of explicitly labeled latest saved state. Legacy custom full report stays response-only for local slot/pages/all-cell CSV; canonical CSV explicitly requests the full matching revision and suppresses stale downloads. Existing real-DOM groups pass with protocol-shaped platform stubs:121 items,50 rendered/page,242 all-cell CSV rows,zero report GETs during custom navigation."
+    },
+    {
+      "id": "W32.05-C3",
+      "verdict": "PASS",
+      "evidence": "Personally read actual admission/task C1-C3 and eight baseline deltas, then reconciled final source and fixture corrections. All58 artifact pins/43 protected pins/current contract and eight forward/reverse reconstructions match before and after one exact fixed18 invocation (18pass,73unselected). Full worker six runtime/three static/STOP captures and five historical candidate source reconstructions inspected; final static3 reused, no extra suite/static/benchmark. Prior W32.04 writers/summary/window source and diagnostic controls preserved; residuals remain explicit."
+    }
+  ],
+  "findings": [],
+  "resolved_pre_freeze_findings": [
+    "Modern hashchange previously cleared state without repainting before shell loadSlots awaited. Final local C.render() plus existing-group delayed context assertion resolves the stale visible report/window gap.",
+    "Accepted legacy/raw slot or brand characters could expand JSON cursor beyond its reader's2048-character cap. Final pre-I/O worst-offset/fixed-revision encoded-length admission covers both; current published slot catalog itself uses safe slugs.",
+    "Known reverse read/build loading flags and explicit Worker TextDecoder ignoreBOM:false are reconciled; two empty fixture mocks now return undefined without behavioral change."
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W32.05/plan.md",
+      "sha256": "7927c0753c3b31ea980494a30f4c0488014851013b98a7fb1582f82caead25ae"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W32.05/artifact.json",
+      "sha256": "5cb07af905b043e902db14830397c1210f4d7683974fe3a0bc49ad3973bb7fec"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.05/worker.json",
+      "sha256": "c1b2f842f549682a6e6c9019724bbe925ef683f179ac0df46d7e2c693c5c9e7d"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts src/console/console.render.test.ts src/console/learning.render.test.ts -t 'W32.05|W32.04|W32.03|W33.01|W30.02|preserves repeated credits and zero-denominator|W21 legacy report|measurement shows raw attribution diagnostics' --maxWorkers=1 --minWorkers=1",
+    "session_id": 22556,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "35a083",
+        "wall_time_seconds": 1.001248011,
+        "session_id": 22556,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "6935fc",
+        "wall_time_seconds": 5.000428906,
+        "session_id": 22556,
+        "original_token_count": 278,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/console/console.render.test.ts > the operator application, rendered > W32.05 pages saved comparisons and withholds stale context, navigation and build completions\nW32.05 modern DOM {\"union_items\":121,\"rendered_page_items\":50,\"canonical_gets_paged\":true,\"build_candidate_not_rendered\":true}\n\n ✓ src/console/console.render.test.ts  (34 tests | 31 skipped) 7807ms\nstdout | src/learn/report.test.ts > the day report > W32.05 pages authenticated saved reports by exact content and query while preserving full exports and diagnostics\nW32.05 response bytes {\"full_get_bytes\":184962,\"page_envelope_bytes\":7428,\"union_items\":121,\"page_items\":50,\"gets_per_page\":1,\"note\":\"same bounded full server read; no CPU/storage-read improvement claimed\"}\n\n ✓ src/learn/report.test.ts  (16 tests | 10 skipped) 218ms\n ✓ src/learn/hourly.test.ts  (23 tests | 20 skipped) 195ms\n"
+      },
+      {
+        "chunk_id": "0b7896",
+        "wall_time_seconds": 0.000001977,
+        "exit_code": 0,
+        "original_token_count": 265,
+        "output": "stdout | src/console/learning.render.test.ts > the learning console, rendered > W32.05 pages canonical and response-only custom reports while exporting all cells and refusing stale downloads\nW32.05 legacy DOM {\"union_items\":121,\"rendered_page_items\":50,\"full_csv_data_rows\":242,\"custom_navigation_report_gets\":0}\n\n ✓ src/console/learning.render.test.ts  (11 tests | 8 skipped) 3206ms\nW32.04 byte_measurement [{\"days\":28,\"requests\":28,\"full_canonical_bytes\":18197938,\"delivered_and_charged_prefix_bytes\":1835008,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":92,\"requests\":92,\"full_canonical_bytes\":59793216,\"delivered_and_charged_prefix_bytes\":6029312,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"}]\n ✓ src/measure/window.test.ts  (7 tests | 4 skipped) 3327ms\n\n Test Files  5 passed (5)\n      Tests  18 passed | 73 skipped (91)\n   Start at  20:01:52\n   Duration  71.35s (transform 3.11s, setup 0ms, collect 45.13s, tests 14.75s, environment 1ms, prepare 8.47s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 18,
+      "unselected": 73,
+      "total": 91,
+      "test_files": 5,
+      "new_grouped_cases": 3,
+      "retained_selected_cases": 15,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 58,
+    "source_and_output_pins": 51,
+    "protected_pins": 43,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 8,
+    "manifest_sha256": "5cb07af905b043e902db14830397c1210f4d7683974fe3a0bc49ad3973bb7fec",
+    "before": {
+      "at": "2026-09-13T00:01:39.991Z",
+      "capture": "10dc0e",
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-13T00:03:33.352Z",
+      "capture": "196a46",
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_before": {
+      "chunk_id": "aa4e9e",
+      "wall_time_seconds": 0.002611051,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T00:01:40.240Z\",\"task\":\"W32.05\",\"state\":\"verification\",\"contract_digest\":\"89d032169b12772c0e8686eede2d3cd0e9d5de82f7973890f480201b41e06ed9\",\"artifact_digest\":\"2c82ae64a8c3f51cca7d4bb2135486b33689f470e13e3b82f6fb1058e2ec1bda\"}\n"
+    },
+    "contract_after": {
+      "chunk_id": "379a5a",
+      "wall_time_seconds": 0.029496192,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T00:03:33.622Z\",\"task\":\"W32.05\",\"state\":\"verification\",\"contract_digest\":\"89d032169b12772c0e8686eede2d3cd0e9d5de82f7973890f480201b41e06ed9\",\"artifact_digest\":\"2c82ae64a8c3f51cca7d4bb2135486b33689f470e13e3b82f6fb1058e2ec1bda\"}\n"
+    },
+    "source_stopped_at": "2026-09-12T23:57:35.254Z",
+    "inspection": {
+      "plan_task": [
+        "df1b66",
+        "dfaf94"
+      ],
+      "initial_eight_deltas": [
+        "405fea",
+        "36b877",
+        "963d0a",
+        "e0f7bb",
+        "f508a4",
+        "b10fc9"
+      ],
+      "dependencies": [
+        "c7dcb7",
+        "dfaf94",
+        "cd2b29",
+        "9526c3"
+      ],
+      "final_source_reconciliation": "d71ec6",
+      "worker_complete_metadata_and_captures": [
+        "3f2436",
+        "e06104",
+        "c11af0"
+      ],
+      "qualification": "Initial truncated metadata display3e0079 superseded by the complete structured reads. Candidate3 reconstruction matches personally inspected source; final differences directly inspected. Root entry/governance and prior accepted protected dependency assurance reused; no board replay."
+    }
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.05/worker.json",
+      "sha256": "c1b2f842f549682a6e6c9019724bbe925ef683f179ac0df46d7e2c693c5c9e7d"
+    },
+    "command_capture": "command_captures.static3",
+    "session_id": 30589,
+    "captures": [
+      "e6340e",
+      "aa37e7"
+    ],
+    "inspection_capture": "e06104",
+    "started_at": "2026-09-12T23:56:25.758Z",
+    "finished_at": "2026-09-12T23:57:21.824Z",
+    "exit_status": 0,
+    "drained": true,
+    "compiler_exit_status": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "javascript_syntax_files": 2,
+    "whitespace": "PASS",
+    "reviewer_reruns": 0
+  },
+  "measurement": {
+    "basis": "Actual independent runtime output and selected fixture assertions; not a separate benchmark.",
+    "full_get_bytes": 184962,
+    "page_envelope_bytes": 7428,
+    "selected_slot_union_items": 121,
+    "page_items": 50,
+    "gets_per_page": 1,
+    "modern_rendered_items": 50,
+    "legacy_rendered_items": 50,
+    "legacy_full_csv_data_rows": 242,
+    "custom_navigation_report_gets": 0,
+    "qualification": "Returned UTF8 envelopes, DOM item counts, request shapes and complete CSV are measured. Each page still reads/validates the full saved object and hashes its text. Prior W32.04 selected28/92-day synthetic range/byte parity and installed local R2 primitive remain retained dependency proof, not new native-engine or browser-layout capacity."
+  },
+  "retained_failures_and_qualifications": [
+    {
+      "path": "docs/remediation/evidence/W32.05/candidate-attempts.json",
+      "sha256": "4359dee22e85a3565085a6f390405e512ac815e45a49ac265bce4681232a2855",
+      "inspection": "d71ec6 reconstructs all five chronological candidate states from the admitted gzip baseline; each of eight pins matches both root capture and worker source identity. No history rewritten."
+    },
+    "All six worker runtime attempts passed18/73, but candidates1-5 are superseded and not final-byte acceptance. Source review identified both supersession directions, immediate navigation repaint and escaped-cursor admission despite earlier green runs; corrections stayed in the three admitted groups.",
+    "Worker static1 session89523/bf2c50 exited2 at TS2345 because installed Worker TextDecoder options require ignoreBOM. Lint/JS syntax/whitespace were not reached.",
+    "Worker static2 session49686/5c0050 passed compiler then exited1 for two empty-arrow fixture warnings; later JS syntax/whitespace were not reached. Explicit undefined mocks and worker runtime6/static3 establish final bytes.",
+    "Candidate5 narrative retains the earlier proposed proof-reuse plan; actual worker runtime6 session14532/ecac2b/545a78/65d928 subsequently ran and drained18pass on final bytes. It is not relabeled candidate5 proof. This review's independent session22556 is one additional admitted invocation.",
+    "Runtime Vite CJS deprecation warning is retained verbatim; final scoped lint has zero errors and zero warnings. The73 unselected tests are not passing coverage."
+  ],
+  "limitations": [
+    "Bounded optional response/browser policy-grid paging only, not full W32/F34, W31, model/reference, policy compatibility, customer acceptance, release approval or a native/runtime workload guarantee.",
+    "Every canonical page still incurs one full saved-object read/validation under existing8MiB/cell bounds and a full-text hash. No storage-read, CPU, browser-layout latency or SLO improvement is claimed.",
+    "Unpaged full GET/export and full custom POST retain explicit compatibility payload costs; custom reports remain local response-only. No summary format change, sidecar, saved-history repair or new storage protocol.",
+    "Existing swallowed canonical publication acknowledgement and concurrent canonical writer limits remain; the latest saved report may differ from a successful POST candidate. Cursors refuse changed content rather than proving stable historical storage.",
+    "Counts/arms/coverage remain diagnostics, maturity unknown; paging does not establish causal lift, compatible attribution policies or complete source/outcome delivery. Managed window prefixes still do not verify unread full-tail integrity.",
+    "Authenticated API tests use actual route/middleware/helpers with synthetic storage; DOM fixtures execute actual scripts against protocol-shaped platform stubs. No deployed HTTP/cloud/customer-data operations or new native/benchmark suite was performed."
+  ]
+}

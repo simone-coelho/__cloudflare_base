@@ -1,0 +1,238 @@
+{
+  "task_id": "W09.09",
+  "at": "2026-09-17T21:11:01.644Z",
+  "contract_digest": "ea9b09b82fe2a51aff057120bac7c3cc0b2067f54eed3356af0ba137cfd6a70b",
+  "scope": "One coherent correction for independent whole-original-W09 R1–R4 rejection. Unchanged full C1–C9 requirements and original37-file contract; narrower15-file rework ownership, not reduced item scope.",
+  "previous_tracker_sha256": "083e484c469cfc3661ec4ca6b3ded23dcefadd206cffe2d927ed8139abac8a46",
+  "previous_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/evidence/W09.09/admission.json",
+      "sha256": "769017f79781bee96e0acc0a63dea8ff60e40ab375c39e97ec57c068cea29986"
+    },
+    "contract_digest": "ea9b09b82fe2a51aff057120bac7c3cc0b2067f54eed3356af0ba137cfd6a70b",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-17T19:08:40.000Z",
+      "plan_sha256": "769017f79781bee96e0acc0a63dea8ff60e40ab375c39e97ec57c068cea29986",
+      "rationale": "Approve coherent whole-original-W09 local delivery/recovery batch within37exclusiveoutputs, focused actual sink/owner/native fault checks and distinctreview; preserve all live/privacy/business authority limits."
+    }
+  },
+  "baseline": {
+    "kind": "Whole-source independent rejection; add grouped existing-fixture regressions before product fixes, preserving failed primary evidence. Prior green subsets did not cover these schedules.",
+    "review": {
+      "path": "docs/remediation/evidence/W09.09/review.json",
+      "sha256": "ebd5428a8a4397a0ae65df39377bed14486a09121648e8b21c6c1578ed35863d",
+      "bytes": 22670
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W09.09/worker.json",
+      "sha256": "17cf54c621f9d8db79cf161386bfc057d65b877b78683bf561b539a281c97670",
+      "bytes": 1916708
+    },
+    "freeze": {
+      "path": "docs/remediation/evidence/W09.09/source-freeze.json",
+      "sha256": "ef2becfaf999bc953b3aff52c5a113a8fff23cce597504f5023026e06cff837d",
+      "bytes": 5243
+    },
+    "findings": [
+      {
+        "id": "W09.09-R1",
+        "title": "Actual shopper alarm can leave expired recovery bodies behind unrelated or earlier remote maintenance",
+        "required_correction": "Run a bounded local strip-all phase for all expired/retired recovery payloads before unrelated external maintenance or any recovery child's remote await. Preserve exact cleanup references and truthful terminal reasons until acknowledged continuation; an unavailable remote service must not block independently authorized local raw expiry.",
+        "minimal_cases": [
+          "Live tracking consent, an external session projection whose provider-copy deadline has expired, and an expired admitted recovery operation. Fail the projection KV read/publication: alarm exits before recoveryBody deletion.",
+          "Two expired admitted recovery operations. Hold the first operation's R2 or child cleanup await: the second operation's expired raw body remains present although its local expiry is already independently known."
+        ]
+      },
+      {
+        "id": "W09.09-R2",
+        "title": "Frozen credit attribution loses the selected decision's original online lifetime",
+        "required_correction": "Preserve and enforce the selected decisions' immutable online retention dependencies in frozen attribution, credit effects and physical plan cleanup, combining compatible copied cohorts at their earliest lifetime and refusing incompatible/expired proof. Keep original-time arithmetic, stable effect IDs, partial-credit idempotency and reset fences; do not recalculate attribution or renew its lifetime.",
+        "minimal_cases": [
+          "Decision online expiry T+100; later outcome online expiry T+200 under the same policy. Prepare immutable multi-destination attribution at T+50, let one destination fail, recreate/retry at T+150. The saved plan still retains copied decision attribution and the missing credit remains eligible until T+200.",
+          "An await during preparation or credit delivery crosses the selected decision's earlier deadline while the outcome/consent remain live; current final guards cannot detect the dropped dependency."
+        ]
+      },
+      {
+        "id": "W09.09-R3",
+        "title": "Policy-unset desired state still activates a DLQ consumer known to refuse every unknown case",
+        "required_correction": "Hold or refuse activation of an intake consumer lacking its explicit capture/disposal prerequisites, independently of producer opt-in. Preserve required environment declarations and already-managed readers/erasers, do not invent policy values, and retain W08 protected receipt/current-state/both-queue maintenance safety. Operational finite-retention limits must remain explicit.",
+        "minimal_cases": [
+          "Promote desired state with LEDGER_RECOVERY_ENABLED='false' and valid source/DLQ configuration but no unknown policy. An unrecognized source poison message reaches the newly attached DLQ consumer, cannot be quarantined, and exhausts the consumer without a retained case or authorized terminal disposition."
+        ]
+      },
+      {
+        "id": "W09.09-R4",
+        "title": "One unrelated unreadable quarantine case prevents valid later expiry and erasure",
+        "required_correction": "Isolate per-case failures within the existing bounded scan/checkpoint mechanism so independently authenticated cases can be processed while bad proof remains held and unresolved. Do not report complete erasure, discard uncertainty, lose retry discovery or authorize deletion of the invalid case merely to advance the scan.",
+        "minimal_cases": [
+          "First listed case has an invalid HMAC or a persistent per-key read failure; a later correctly authenticated case is expired. Scheduled cleanup repeatedly fails before deleting the valid expired payload.",
+          "The first bad case is unrelated to a subject being erased; a later authenticated case contains that subject. Current subject erasure stops before processing the valid case."
+        ]
+      }
+    ],
+    "rejected_artifact": {
+      "encoding": "gzip+base64",
+      "sha256": "cc9cdb174ace7b3c688bf2d834526451f4bcaca6e920fb2ff9f6b32decdfaf05",
+      "bytes": 13805,
+      "gzip_base64": "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"
+    },
+    "rework_files": [
+      {
+        "path": "src/ledger/recovery.ts",
+        "sha256": "413827b5d7b397a86df2b86c9c43f9e07e992957dbffca29488628bc10ae5dca",
+        "bytes": 23748
+      },
+      {
+        "path": "src/ledger/quarantine.ts",
+        "sha256": "65dadb6404d4997a1b8e2210755b1672acff935237c86ddb1a6f87b14ad581dd",
+        "bytes": 26141
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "939872003fbafa621192362883fcae3c76ea297e40a63b6dea879107b3c8739e",
+        "bytes": 224718
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "94c284fe1883380e387d5933eb7255c2d128a5b209af773581b2cf10b5e05748",
+        "bytes": 30582
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "1dbd6a9451580e267705d6144eca72fb1de8974613e2c6f3ca06b43fc0eac852",
+        "bytes": 19376
+      },
+      {
+        "path": "scripts/stamp-workflow.mjs",
+        "sha256": "1e43310d4bbeae9fafd4df2fb5670d494c1c80573c74f356ed91be030d122217",
+        "bytes": 74740
+      },
+      {
+        "path": "wrangler.toml",
+        "sha256": "b2de589feb5383d3c5d40b77ef74f8898e14c6de02a10235b17e111484b6d525",
+        "bytes": 15399
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "d27789050782db338e094b509b19d7e9085896ca867586e72afbd201c1028209",
+        "bytes": 149492
+      },
+      {
+        "path": "src/ledger/erasure.test.ts",
+        "sha256": "78295b27d90db374b16018aba6e51b24889f212a6032d77cddef472af17d9939",
+        "bytes": 48994
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "f0aad8674877ac00e22e1e120c44046063c328df4b2c3606c83da39bcdc4de9b",
+        "bytes": 125632
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "48a28e804403057878e315f4506a19c783b4cb49b218ce7f09688b5e6cc0c264",
+        "bytes": 507743
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "86390d76dfae067de2c6ebf2c6ab087ac6017c3eecdb4b21ca7f804d1bd6c864",
+        "bytes": 182886
+      },
+      {
+        "path": "scripts/stamp-workflow.test.mjs",
+        "sha256": "998acc6fe86acc89c5f4bdb14b4ecede07639aee04e5e04d6a9dbbb0a5c9e111",
+        "bytes": 46785
+      },
+      {
+        "path": "docs/deployment/01-deploy.md",
+        "sha256": "addf556327fb26a48806e6c9e98c7560c0e581e2a1dfcf6fd3a10b608f728366",
+        "bytes": 13517
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "e0ddcd395d73a25e688809520782a9b19908996da7e1d443b4bb4662ebf67852",
+        "bytes": 97215
+      }
+    ],
+    "protected_pin_count": 87
+  },
+  "acceptance": [
+    "R1: actual owner alarm strips every independently expired/retired raw recovery body in its bounded local cohort before unrelated KV/R2/child waits; retain minimal exact debt/reason/destinations/original lifetime and truthful continuation. Cover failed external-copy maintenance and held first child with later expired operation.",
+    "R2: selected-decision immutable online lifetime survives attribution into saved plans/effects/cleanup. Earliest compatible cohort governs copies; incompatible or expired dependencies refuse. Cover later outcome/earlier decision, partial credit then restart/retry after earlier expiry, and expiry across an await. Preserve original event time, effect identity, atomic marker/counters, reset fences and missing-only retry.",
+    "R3: desired-state activation cannot attach or resume a quarantine intake consumer without explicit required tenant/unknown capture-disposal policies, independent of producer false/true. No duration defaults, no unreadable-as-ready state. Preserve all3 environment declarations, already-managed readers/erasers, current-state ownership/protected receipts and both-queue maintenance/pause/fresh-resume guards. Add policy-unset refusal plus explicit-policy producer-off valid-reader controls.",
+    "R4: bounded per-case quarantine expiry/erasure isolation processes valid independent later cases despite unreadable/provenance-invalid cases. Invalid proof stays held, discoverable and unresolved, no unsafe deletion/false complete erasure; checkpoint/wrap and retries must not starve later pages or lose earlier errors. Cover invalid first/valid later cases, repeat/restart continuation and truthful incomplete state.",
+    "Retain whole original W09 and earlier remedies. Only after new stopped artifact, distinct whole C1–C9 review and exact K8 may lead report local acceptance; C9/K9 stays OPEN for final separately authorized live batch."
+  ],
+  "checks": {
+    "red_runtime": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts src/learn/learn.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts -t 'W09[.]09 rework' --maxWorkers=1 --minWorkers=1",
+    "red_workflow": "node --test --test-name-pattern='W09[.]09 rework' scripts/stamp-workflow.test.mjs",
+    "affected": [
+      {
+        "id": "W09.09-K1",
+        "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts -t 'W09|W06[.]12 (authenticates actual partial-survivor|resumes only claim-proven|retains complete large|preserves full managed grouping|preserves earlier cohort proof)' --maxWorkers=1 --minWorkers=1"
+      },
+      {
+        "id": "W09.09-K2",
+        "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts -t 'W09|W24[.]01|W23[.]01 keeps weighted|W22[.](04|08|09)|W26[.]03|W06[.]12 expires|W06[.]06 rejects an append|W10[.](01|02)' --maxWorkers=1 --minWorkers=1"
+      },
+      {
+        "id": "W09.09-K3",
+        "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts -t 'W09|W24[.]01|drains unawaited private I/O|W06[.]12 propagates|W22[.]07 gates|uses stored switches for both hosts' --maxWorkers=1 --minWorkers=1"
+      },
+      {
+        "id": "W09.09-K4",
+        "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W09|W06[.]12 native owner/R2|W07[.]01 preserves successful ledger' --maxWorkers=1 --minWorkers=1"
+      },
+      {
+        "id": "W09.09-K5",
+        "command": "node --test --test-name-pattern='W09|W08[.]05 (strict intent|protected receipts|actual restore transport|restore resumes)' scripts/stamp-workflow.test.mjs"
+      },
+      {
+        "id": "W09.09-K6",
+        "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/eslint/bin/eslint.js src/ledger/enqueue.ts src/ledger/consume.ts src/ledger/writer.ts src/ledger/delivery.ts src/ledger/erasure.ts src/ledger/recovery.ts src/ledger/quarantine.ts src/learn/fan.ts src/learn/route.ts src/durable-objects/ShopperReflex.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/identity/sessionAuthority.ts src/identity/erase.ts src/content/service.ts src/routes/realtime.ts src/routes/decisions.ts src/routes/health.ts src/routes/ledgerRecovery.ts src/index.ts src/customerBoundary.ts src/auth/store.ts src/auth/subjectAudit.ts src/retention.ts src/types/env.ts src/ledger/ledger.test.ts src/ledger/erasure.test.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts && node --check scripts/stamp-workflow.mjs && node --check scripts/stamp-workflow.test.mjs && git diff --check -- src/ledger/enqueue.ts src/ledger/consume.ts src/ledger/writer.ts src/ledger/delivery.ts src/ledger/erasure.ts src/ledger/recovery.ts src/ledger/quarantine.ts src/learn/fan.ts src/learn/route.ts src/durable-objects/ShopperReflex.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/identity/sessionAuthority.ts src/identity/erase.ts src/content/service.ts src/routes/realtime.ts src/routes/decisions.ts src/routes/health.ts src/routes/ledgerRecovery.ts src/index.ts src/customerBoundary.ts src/auth/store.ts src/auth/subjectAudit.ts src/retention.ts src/types/env.ts scripts/stamp-workflow.mjs wrangler.toml src/ledger/ledger.test.ts src/ledger/erasure.test.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts scripts/stamp-workflow.test.mjs docs/kit/02-api-reference.md docs/deployment/01-deploy.md"
+      }
+    ],
+    "reason": "All six already-admitted focused checks touch corrected modules: quarantine/recovery, learning plans, owner routes, actual queue/scheduled/native entry, lifecycle activation, and typed/static boundaries. No broadening or package/SDK rebuild. Reuse valid unaffected prior component assurance with explicit source qualification, never a false final full-command pass.",
+    "independent": "Distinct whole-original-W09/K7 review and exact unchanged K8 on corrected frozen artifact; reviewer owns review-r1.json only after GO. K9 NOT_RUN."
+  },
+  "ownership": {
+    "worker_actor": "w0909-worker",
+    "worker_run": "/root/w0705_recover",
+    "exclusive_product_files": [
+      "src/ledger/recovery.ts",
+      "src/ledger/quarantine.ts",
+      "src/durable-objects/ShopperReflex.ts",
+      "src/durable-objects/DecisionRing.ts",
+      "src/index.ts",
+      "scripts/stamp-workflow.mjs",
+      "wrangler.toml",
+      "src/ledger/ledger.test.ts",
+      "src/ledger/erasure.test.ts",
+      "src/learn/learn.test.ts",
+      "src/routes/realtime.sdkContract.test.ts",
+      "src/index.api-boundary.test.ts",
+      "scripts/stamp-workflow.test.mjs",
+      "docs/deployment/01-deploy.md",
+      "docs/kit/02-api-reference.md"
+    ],
+    "evidence_file": "docs/remediation/evidence/W09.09/worker-r1.json",
+    "immutable_evidence": [
+      "docs/remediation/evidence/W09.09/review.json",
+      "docs/remediation/evidence/W09.09/worker.json",
+      "docs/remediation/evidence/W09.09/source-freeze.json"
+    ],
+    "reviewer_actor": "w0909-reviewer",
+    "reviewer_run": "/root/w0705_review_r2",
+    "reviewer": "Read-only during rework; review-r1.json/exactK8 only after corrected freeze GO.",
+    "lead": "Existing execution records only; no product implementation/checks."
+  },
+  "dependencies": "No new customer/business decision. Existing original-policy fail-closed mandate and user-approved ordered local continuation/live-final batch reused. W10 remains unadmitted until W09 independent local PASS.",
+  "rollback": "Capture exact15 current dirty baselines and reversible deltas in worker-r1.json. Do not restore automatically or touch unrelated dirty work. Prior102-file manifest preserved here and original worker/review/freeze immutable.",
+  "authority": "Local bounded correction after valid board GO only; no subdelegation, broadCI, new framework, cloud/resource/credential/customer/provider/external operations, commit/merge/push/deploy.",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-17T21:11:01.644Z",
+    "decision": "Approve coherent R1–R4 local rework within15exclusiveoutputs. Product/check GO held for valid board checkpoint."
+  }
+}

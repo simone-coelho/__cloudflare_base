@@ -1,0 +1,58 @@
+{
+  "at": "2026-09-10T18:18:59Z",
+  "task_id": "W08.03",
+  "contract_digest": "3c02b427f334928af227ad95e1abdd438a7ced6e383556047281706af085e01b",
+  "source": "Worker explicit source STOP after fixed checks; root freeze.",
+  "source_stopped_at": "2026-09-10T18:17:23.569Z",
+  "owned": [
+    "scripts/deploy.sh"
+  ],
+  "pins": [
+    {
+      "path": "scripts/deploy.sh",
+      "role": "output",
+      "sha256": "d5f6bd176028afa02ce4da8661ec2a289d3257eed63dce9a955606cc8d74b21f"
+    },
+    {
+      "path": "scripts/provision-stamp.sh",
+      "role": "source",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+    },
+    {
+      "path": "scripts/provision-staging.sh",
+      "role": "source",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "role": "source",
+      "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34"
+    },
+    {
+      "path": "docs/deployment/01-deploy.md",
+      "role": "source",
+      "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c"
+    },
+    {
+      "path": "wrangler.toml",
+      "role": "source",
+      "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa"
+    },
+    {
+      "path": "node_modules/wrangler/package.json",
+      "role": "source",
+      "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8"
+    },
+    {
+      "path": "node_modules/wrangler/wrangler-dist/cli.js",
+      "role": "source",
+      "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889"
+    }
+  ],
+  "unowned_unchanged": 8
+}

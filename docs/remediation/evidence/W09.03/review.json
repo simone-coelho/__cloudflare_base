@@ -1,0 +1,159 @@
+{
+  "task_id": "W09.03",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "at": "2026-09-12T00:09:06Z",
+  "verdict": "pass",
+  "artifact_digest": "1b71a1fbb1abd4b303efa54e48f3cfe43d9534284cb7cafc7dc73953ee44672c",
+  "contract_digest": "ad654fb9be1c7cc87d44475863bac22cb8f581f238131b1bf49cfc05685047b6",
+  "summary": "Pass for the admitted declared-ledger-envelope/placeability and positional acknowledgement containment, with the worker's historical carrier-format explanation corrected below. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W09.03-C1",
+      "verdict": "pass",
+      "evidence": [
+        "Inspected all six actual baseline-to-current deltas; final hashes exactly match the pre-freeze source review. Each supported legacy envelope admits all rows or none using existing carrier/placeability validation; Array.from materializes sparse holes before every-row checking.",
+        "Unversioned and exact own version:1 legacy without delivery_id remain accepted. Unsupported explicit versions, invalid own delivery IDs, empty/malformed sets and reserved row provenance refuse. Managed parsing remains strict, and malformed envelopes are isolated before the unchanged grouped sink.",
+        "Independent ledger21 passed, including the new grouped mixed-envelope case and affected former filtering assertions. Tests establish no valid-subset rows from rejected sets, valid sibling persistence, sparse/null controls, managed replay convergence, legitimate erasure suppression and no storage calls for invalid-only input."
+      ]
+    },
+    {
+      "id": "W09.03-C2",
+      "verdict": "pass",
+      "evidence": [
+        "Dispositions initialize to retry for every original input; only a successfully completed admitted cohort becomes ack. Shared barrier/storage/capture failure retains retry, including managed capture committed before a legacy failure; aggregate stored counts never invent individual completion.",
+        "Actual index.queue applies ledger-subset positions to original message objects and only the explicit ack value acknowledges; missing/unrecognized disposition takes the retry branch. Aggregate ok no longer drives whole-subset acknowledgement; skipped counts rejected envelopes and fixed numeric diagnostics do not expose raw subjects/errors.",
+        "Four selected actual-Worker workerd cases passed: mixed positions with an interleaved non-ledger message, no partial invalid-set writes, storage-failure retry, and the three existing ordinary-event/scene/ledger behaviors. Missing-disposition fallback is source-confirmed; no mocked missing-disposition runtime case is claimed.",
+        "Consumer recognition and retry convergence preserve accepted W09.02 behavior; producer flag, eraser, fan-out and statistics implementation are unchanged."
+      ]
+    },
+    {
+      "id": "W09.03-C3",
+      "verdict": "pass",
+      "evidence": [
+        "Before and after the independent command, all 81 artifact pins, 69 protected source pins, six forward/reverse deltas and exact artifact/contract digests matched. Reviewed plan, actual tracker criteria, artifact, source-freeze/deltas and complete worker captures.",
+        "The exact admitted compound ran once, session 73822, exit 0/drained: ledger21 plus mounted4 passed. Fifty mounted cases were intentionally unselected and receive no passing credit; only the two admitted groups were added.",
+        "Reused final worker static-final, session 59222/final d69023: successful sequential compiler && scoped ESLint && whitespace compound, zero errors and the same seven inherited index warnings. Source STOP ddc419 and unchanged source reconciliation bind these results to frozen bytes. No extra runtime/static suite or implementation edits."
+      ]
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W09.03/plan.md",
+      "sha256": "b7cf4ee1964c95ffa41f191be0b8376c2742ca65456594526ba89e820579e90b"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W09.03/artifact.json",
+      "sha256": "3e0b598e88241d674c712434e8c314f1e958d574df1aab1adac679439662946d"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W09.03/worker.json",
+      "sha256": "99fa20a4427e9171c915fbcf82a35d0c01770c3aca140c6c7f3e17daedb5a5ba"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W07.01 keeps default queue|W07.01 keeps cached-scene|W07.01 preserves successful ledger|W09.03' --maxWorkers=1 --minWorkers=1",
+    "session_id": 73822,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 25,
+      "failed": 0,
+      "ledger_passed": 21,
+      "mounted_passed": 4,
+      "intentionally_unselected_mounted": 50
+    },
+    "captures": [
+      {
+        "chunk_id": "bd5438",
+        "wall_time_seconds": 1.00177001,
+        "session_id": 73822,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "fd0ecc",
+        "wall_time_seconds": 5.001231362,
+        "session_id": 73822,
+        "original_token_count": 60,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+      },
+      {
+        "chunk_id": "6b8829",
+        "wall_time_seconds": 5.001920146,
+        "session_id": 73822,
+        "original_token_count": 119,
+        "output": " ✓ src/ledger/ledger.test.ts  (21 tests) 7282ms\n\n Test Files  1 passed (1)\n      Tests  21 passed (21)\n   Start at  20:07:54\n   Duration  27.98s (transform 6.58s, setup 0ms, collect 14.92s, tests 7.28s, environment 0ms, prepare 3.68s)\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+      },
+      {
+        "chunk_id": "c28218",
+        "wall_time_seconds": 4.518851637,
+        "exit_code": 0,
+        "original_token_count": 67,
+        "output": " ✓ src/index.api-boundary.test.ts  (54 tests | 50 skipped) 9604ms\n\n Test Files  1 passed (1)\n      Tests  4 passed | 50 skipped (54)\n   Start at  20:08:26\n   Duration  29.44s (transform 1.71s, setup 0ms, collect 14.10s, tests 9.60s, environment 0ms, prepare 3.98s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "before": {
+      "chunk_id": "887853",
+      "wall_time_seconds": 0.495311587,
+      "exit_code": 0,
+      "original_token_count": 412,
+      "output": "{\n  \"at\": \"2026-09-12T00:07:33.582Z\",\n  \"artifact_digest\": \"1b71a1fbb1abd4b303efa54e48f3cfe43d9534284cb7cafc7dc73953ee44672c\",\n  \"manifest_sha256\": \"3e0b598e88241d674c712434e8c314f1e958d574df1aab1adac679439662946d\",\n  \"pins\": 81,\n  \"bad\": [],\n  \"protected_count\": 69,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/ledger/writer.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/consume.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/index.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/index.api-boundary.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W09.03/plan.md\",\n      \"sha256\": \"b7cf4ee1964c95ffa41f191be0b8376c2742ca65456594526ba89e820579e90b\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.03/artifact.json\",\n      \"sha256\": \"3e0b598e88241d674c712434e8c314f1e958d574df1aab1adac679439662946d\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.03/worker.json\",\n      \"sha256\": \"99fa20a4427e9171c915fbcf82a35d0c01770c3aca140c6c7f3e17daedb5a5ba\"\n    }\n  ]\n}\n"
+    },
+    "after": {
+      "chunk_id": "cfed86",
+      "wall_time_seconds": 0.568673663,
+      "exit_code": 0,
+      "original_token_count": 412,
+      "output": "{\n  \"at\": \"2026-09-12T00:09:06.258Z\",\n  \"artifact_digest\": \"1b71a1fbb1abd4b303efa54e48f3cfe43d9534284cb7cafc7dc73953ee44672c\",\n  \"manifest_sha256\": \"3e0b598e88241d674c712434e8c314f1e958d574df1aab1adac679439662946d\",\n  \"pins\": 81,\n  \"bad\": [],\n  \"protected_count\": 69,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/ledger/writer.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/consume.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/index.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/index.api-boundary.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W09.03/plan.md\",\n      \"sha256\": \"b7cf4ee1964c95ffa41f191be0b8376c2742ca65456594526ba89e820579e90b\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.03/artifact.json\",\n      \"sha256\": \"3e0b598e88241d674c712434e8c314f1e958d574df1aab1adac679439662946d\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W09.03/worker.json\",\n      \"sha256\": \"99fa20a4427e9171c915fbcf82a35d0c01770c3aca140c6c7f3e17daedb5a5ba\"\n    }\n  ]\n}\n"
+    },
+    "contract_before": {
+      "chunk_id": "5d9586",
+      "wall_time_seconds": 0.098114717,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-12T00:07:33.922Z\",\"task\":\"W09.03\",\"state\":\"verification\",\"contract_digest\":\"ad654fb9be1c7cc87d44475863bac22cb8f581f238131b1bf49cfc05685047b6\",\"artifact_digest\":\"1b71a1fbb1abd4b303efa54e48f3cfe43d9534284cb7cafc7dc73953ee44672c\"}\n"
+    },
+    "contract_after": {
+      "chunk_id": "c668b9",
+      "wall_time_seconds": 0.084097661,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-12T00:09:06.574Z\",\"task\":\"W09.03\",\"state\":\"verification\",\"contract_digest\":\"ad654fb9be1c7cc87d44475863bac22cb8f581f238131b1bf49cfc05685047b6\",\"artifact_digest\":\"1b71a1fbb1abd4b303efa54e48f3cfe43d9534284cb7cafc7dc73953ee44672c\"}\n"
+    },
+    "source_reconciliation": {
+      "chunk_id": "2062fa",
+      "wall_time_seconds": 0.324350016,
+      "exit_code": 0,
+      "original_token_count": 331,
+      "output": "{\"path\":\"src/ledger/writer.ts\",\"reviewed_sha256\":\"463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143\",\"current_sha256\":\"463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143\",\"unchanged\":true}\n{\"path\":\"src/ledger/consume.ts\",\"reviewed_sha256\":\"03ce5c01ac378e0aa7bb99720a669421c93cdc788872844584a5041e4260713b\",\"current_sha256\":\"03ce5c01ac378e0aa7bb99720a669421c93cdc788872844584a5041e4260713b\",\"unchanged\":true}\n{\"path\":\"src/index.ts\",\"reviewed_sha256\":\"c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b\",\"current_sha256\":\"c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b\",\"unchanged\":true}\n{\"path\":\"src/ledger/ledger.test.ts\",\"reviewed_sha256\":\"04aabcc1473a66d6ba8ebdd6c0f72a71954040c41a2ac5d685558f79c29b38bb\",\"current_sha256\":\"04aabcc1473a66d6ba8ebdd6c0f72a71954040c41a2ac5d685558f79c29b38bb\",\"unchanged\":true}\n{\"path\":\"src/index.api-boundary.test.ts\",\"reviewed_sha256\":\"fcba26ca105753a649f9fdaab42c993d9dcbd7d27c423bd580a115932c9afe6b\",\"current_sha256\":\"fcba26ca105753a649f9fdaab42c993d9dcbd7d27c423bd580a115932c9afe6b\",\"unchanged\":true}\n{\"path\":\"docs/kit/02-api-reference.md\",\"reviewed_sha256\":\"348a73547cc5ae8aceb34a0954ed05e4ed3dd2b243033c7b7669251e90a87096\",\"current_sha256\":\"348a73547cc5ae8aceb34a0954ed05e4ed3dd2b243033c7b7669251e90a87096\",\"unchanged\":true}\n"
+    },
+    "inspection": {
+      "plan_contract_capture": "41182f",
+      "actual_six_deltas_capture": "c2c4ba",
+      "worker_complete_capture": "59c3c9",
+      "qualification": "Reused completed actual-source review; all six reviewed hashes are unchanged. Existing producer/managed-sink/erasure/fan assurance is retained within the admitted dependency scope, not replayed or promoted to full-package acceptance."
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Initial worker fixed25 runtime, session 56280/final af55ea, failed only the new mounted storage-count assertion: it counted one pre-existing seeded object in addition to the new object. Ledger21 and mounted3 passed; mounted1 failed and 50 were unselected. The corrected fixture compares before/after storage delta. Full failure and final superseding run remain in worker.json.",
+    "Factual correction to worker.failures_and_superseding_validation and fixed25-runtime-1.correction: the statement that the partial-set carrier needed a padded timestamp is incorrect. Unchanged records.ts parseId accepts variable-width base-36 via [0-9a-z]+. The original unpadded carrier and baseline probe IDs were valid; reusing outcome_id's timestamp component normalizes formatting but was not needed for placeability and did not fix the observed failure. This correction does not alter frozen worker evidence or manufacture a runtime result.",
+    "Pre-runtime sparse-array correction changed map/every to Array.from/every; directly reviewed source and the existing grouped sparse control establish the final behavior.",
+    "Worker retains earlier wrong-path/truncated read-only metadata diagnostics as uncredited diagnostics, not product checks. Final runtime/static captures are complete. Existing Vite CJS deprecation output is preserved in independent captures.",
+    "No independent runtime failure or skipped required check. Fifty deliberately unselected mounted cases are not evidence of passing behavior."
+  ],
+  "limitations": [
+    "Only declared kind:'ledger' inputs and complete application of existing record placeability rules are covered. This is not a complete business-record schema or quarantine of arbitrary unknown/non-ledger bodies; existing non-ledger acknowledgement behavior is unchanged.",
+    "No full W09/F16/N10 closure, durable quarantine/DLQ, provider retry-exhaustion recovery, deployed SLO, customer/contractual/release acceptance or complete recording guarantee.",
+    "Storage/barrier/persisted identity-conflict failures conservatively retry the valid cohort; per-delivery storage-failure isolation is not implemented. Legacy partial writes may still duplicate.",
+    "A managed delivery_id removed entirely is indistinguishable from supported version:1 legacy traffic. Default-off managed producer activation, old-consumer rollout, claim/retention lifecycle and relevant human decisions remain separate.",
+    "Fan-out/logical-event reconciliation, complete atomic erasure fencing, late-fold repair/capacity and pre-capture process loss remain unresolved. No external/cloud-resource/customer-data/credential/deploy/install/emitted-build/commit/push/cleanup/policy operations were performed.",
+    "Independent runtime uses installed local Node/Vitest and synthetic in-memory workerd bindings. Reviewer wrote only this record; root owns acceptance and governance."
+  ]
+}

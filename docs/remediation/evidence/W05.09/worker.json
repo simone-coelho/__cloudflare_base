@@ -1,0 +1,228 @@
+{
+  "task_id": "W05.09",
+  "actor_id": "w0509-worker",
+  "run_id": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "ready_for_independent_review",
+  "admission": {
+    "plan": "docs/remediation/design/W05.09/plan.md",
+    "plan_sha256": "f27c227f7f8aded687f035655c76795da988047f8fdd02aeaaacf7eef502e68f",
+    "contract_digest": "4197ea4370428d976e6ef3e773d1db9a1567c99bae0541ae1c3d9d44877b2c8a",
+    "baseline": "docs/remediation/design/W05.09/baseline.json",
+    "go_at": "2026-09-11T07:47:57Z",
+    "journal": 910,
+    "root_reported_entry": "Full entry64898/6b9719 VALID906 check/status both0/drained,11000 historical notes each; reused, not rerun by worker.",
+    "root_reported_admission": "395acc exit0/drained verified current contract/start/authority/all39 pre-edit pins/seven owned files. No full admission checker claimed.",
+    "root_reported_baselines": "Runtime77438/22f38b exit1/drained47pass/2fail of49: existing W06.05 meridian configuration setup failures before barrier/ack assertions. Lint17298/f54c27 exit0/drained0errors/114 inherited warnings; exact captures and before bytes retained in baseline.json."
+  },
+  "summary": "Historical backend imports now require existing exact canonical profiles and explicitly persisted tracking/personalization booleans true at the mutation boundary. Session import folds raw rows from its current strict read without creating a session or writing a user pointer. DO import is internal-only, serialized, and distinguishes missing records from malformed raw state/forwarding. Strict tenant visitor links, consistent selectors, all derived/original erasure cutoffs and validated application/refusal acknowledgments preserve honest row/history accounting. Behavioral arithmetic and visit fields remain unchanged for eligible imports.",
+  "criteria": [
+    {
+      "id": "W05.09-C1",
+      "worker_result": "pass",
+      "evidence": "First new route group exercises both actual hosts across all four switches, cold/missing profile, missing consent/switch, malformed consent/profile/reflex, wrong owner, missing recognized identity/session shape, forwarding including false, present null/false profile state, undefined reads and read errors. Denials assert unchanged session maps, no KV puts, unchanged DO persisted maps/audienceOwner and no profile/alarm writes. Positive controls prohibit user-pointer writes. Signed shopper DO import is denied before Request.json. Direct SessionManager fixture proves cold refusal and canonical-target-only import."
+    },
+    {
+      "id": "W05.09-C2",
+      "worker_result": "pass",
+      "evidence": "Second group exercises matching account/shopper/linked-visitor selectors, anonymous profiles, two nondefault tenants, mixed accepted/unknown/conflicting rows, decay score and original event timestamps, retained visit metadata and acknowledged history counts. Undefined/corrupt/null/wrong-visitor/invalid-target/failed visitor-link reads fail with no writes. Third group inserts latest session state/refusal at applyImport entry, proving preserved new affinity or refused application; queued DO withdrawal wins before import and remains restrictive after restart. Actual erasure followed by post-cutoff cold import cannot create state. Original W06.05 cutoff/contradictory-selector/malformed-barrier/bad-ack assertions execute after deliberate synthetic tenant-config initialization and eligible-state setup. Named W37.04 history/link case preserves actual tenant-registry arithmetic/context assertions."
+    },
+    {
+      "id": "W05.09-C3",
+      "worker_result": "pass_pending_independent_review",
+      "evidence": "Seven source/fixture/kit files changed; exactly three new grouped route cases, existing SessionManager import cases adapted, named W37.04 case only changed in SDK contract fixture. Fixed compound runtime passed52/52 then1/1, with38 tests intentionally unselected by the declared second command. Compiler and seven-file whitespace passed. Exact six-file lint passed with113 inherited warnings versus114 baseline; only removed warning is the old empty setAlarm fixture, now recording required alarm evidence. No new warnings. Root owns protected-pin verification, exact bidirectional deltas, freeze and independent acceptance."
+    }
+  ],
+  "rework": [
+    {
+      "phase": "before_first_runtime",
+      "description": "Initial mutation implementation was tightened following root source review: explicit import-only ReflexState shape validation prevents reducer empty-state fallback for corruption, and DO raw persisted affinity/pipeline/forwardTo checks replace legacy normalizing load/forward helpers. Present false/null state and false forwarding are covered in the same first grouped case. All changes preceded the first fixed runtime; no failed intermediate implementation check occurred."
+    },
+    {
+      "phase": "accepted_baseline_fixture_correction",
+      "description": "Two pre-existing W06.05 baseline failures were retained and corrected only by explicit meridian/harbor synthetic config setup. Cold-import and post-cutoff positives now establish eligible existing profiles; original cutoff and acknowledgment assertions remain. The legacy headerless DO-only identity fixture was explicitly excluded before admission and remains unchanged/uncredited."
+    },
+    {
+      "phase": "read_only_diagnostics",
+      "description": "Early preflight displays were truncated and task-relevant instructions/source reread in bounded calls. A later baseline-inspection Node command incorrectly used checks.map on an object (5fb517 exit1); corrected by Object.entries inspection (b50668 exit0). A final test -e returned1 because worker.json had not yet been created. These are read-only diagnostics, not implementation checks or passes."
+    }
+  ],
+  "checks": [
+    {
+      "id": "W05.09-K1-final",
+      "role": "final_worker_check",
+      "result": "pass",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/services/SessionManager.identity.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1 -t 'uses tenant config for historical import and link/absorb, with actual internal object context before effects'",
+      "launch_result_observed_at": "2026-09-11T07:58:44.211Z",
+      "completion_observed_at": "2026-09-11T07:59:57.586Z",
+      "session_id": 81544,
+      "results": [
+        {
+          "chunk_id": "09376f",
+          "wall_time_seconds": 1.001276504,
+          "session_id": 81544,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "46d58f",
+          "wall_time_seconds": 5.001172933,
+          "session_id": 81544,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "94b0cc",
+          "wall_time_seconds": 5.000569611,
+          "session_id": 81544,
+          "original_token_count": 77,
+          "output": " ✓ src/routes/identity.test.ts  (41 tests) 7768ms\n ✓ src/services/SessionManager.identity.test.ts  (11 tests) 55ms\n\n Test Files  2 passed (2)\n      Tests  52 passed (52)\n   Start at  03:58:47\n   Duration  33.44s (transform 5.62s, setup 0ms, collect 15.76s, tests 7.82s, environment 0ms, prepare 6.72s)\n\n"
+        },
+        {
+          "chunk_id": "1bd682",
+          "wall_time_seconds": 5.001233673,
+          "session_id": 81544,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "d04d0c",
+          "wall_time_seconds": 0.000002188,
+          "exit_code": 0,
+          "original_token_count": 69,
+          "output": " ✓ src/routes/realtime.sdkContract.test.ts  (39 tests | 38 skipped) 60ms\n\n Test Files  1 passed (1)\n      Tests  1 passed | 38 skipped (39)\n   Start at  03:59:25\n   Duration  21.84s (transform 9.79s, setup 0ms, collect 16.17s, tests 60ms, environment 0ms, prepare 4.30s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "id": "W05.09-K2-compiler",
+      "role": "final_worker_check",
+      "result": "pass",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "requested_at": "2026-09-11T08:00:07.441Z",
+      "completion_observed_at": "2026-09-11T08:00:34.588Z",
+      "session_id": 91713,
+      "results": [
+        {
+          "chunk_id": "317661",
+          "wall_time_seconds": 1.00135887,
+          "session_id": 91713,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "113bd4",
+          "wall_time_seconds": 0.118551789,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "id": "W05.09-K2-lint",
+      "role": "final_worker_check",
+      "result": "pass",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/identity/history.ts src/services/SessionManager.ts src/durable-objects/ShopperReflex.ts src/routes/identity.test.ts src/services/SessionManager.identity.test.ts src/routes/realtime.sdkContract.test.ts --format stylish",
+      "requested_at": "2026-09-11T08:00:43.582Z",
+      "completion_observed_at": "2026-09-11T08:01:38.895Z",
+      "session_id": 84439,
+      "results": [
+        {
+          "chunk_id": "86f2ef",
+          "wall_time_seconds": 1.001695812,
+          "session_id": 84439,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c469a1",
+          "wall_time_seconds": 5.000799959,
+          "session_id": 84439,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "67c3cf",
+          "wall_time_seconds": 3.585726042,
+          "exit_code": 0,
+          "original_token_count": 3068,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/durable-objects/ShopperReflex.ts\n   130:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   505:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   542:24  warning  '_ws' is defined but never used           @typescript-eslint/no-unused-vars\n   542:40  warning  '_code' is defined but never used         @typescript-eslint/no-unused-vars\n   542:55  warning  '_reason' is defined but never used       @typescript-eslint/no-unused-vars\n   542:72  warning  '_wasClean' is defined but never used     @typescript-eslint/no-unused-vars\n   547:24  warning  '_ws' is defined but never used           @typescript-eslint/no-unused-vars\n   547:40  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars\n   554:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   590:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   748:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   895:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n   918:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  1040:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  1252:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/identity.test.ts\n  109:75  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  670:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  780:26  warning  'd' is assigned a value but never used    @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts\n   112:129  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n   975:30   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   976:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   977:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   977:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   980:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   983:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n   994:40   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1022:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1041:95   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1047:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1048:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1085:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1097:173  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1105:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1106:76   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1136:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1137:24   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1138:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1146:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1146:36   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1154:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1167:55   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1168:57   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1174:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1201:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1263:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1267:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1268:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1269:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1282:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1285:47   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  1331:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1335:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1338:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1341:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1341:37   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1433:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1437:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1438:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1439:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1455:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1458:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1462:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1470:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1478:25   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1496:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1502:60   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1515:71   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1522:100  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1540:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1547:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1564:110  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1570:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1571:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1572:68   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1583:52   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1584:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1584:109  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1585:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1588:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1599:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1601:119  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1616:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1621:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1623:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1646:112  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1652:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1653:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1654:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1657:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1705:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1756:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1769:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1792:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1807:101  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1814:65   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1852:153  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1886:55   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1911:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1921:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1938:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1940:77   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1952:64   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1956:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1969:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1972:41   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1977:130  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1980:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1991:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2022:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2023:71   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  2040:125  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2043:122  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/services/SessionManager.ts\n  19:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n✖ 113 problems (0 errors, 113 warnings)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "id": "W05.09-K2-whitespace",
+      "role": "final_worker_check",
+      "result": "pass",
+      "command": "git diff --check -- src/identity/history.ts src/services/SessionManager.ts src/durable-objects/ShopperReflex.ts src/routes/identity.test.ts src/services/SessionManager.identity.test.ts src/routes/realtime.sdkContract.test.ts docs/kit/02-api-reference.md",
+      "requested_at": "2026-09-11T08:01:25.485Z",
+      "completion_observed_at": "2026-09-11T08:01:26.047Z",
+      "session_id": null,
+      "results": [
+        {
+          "chunk_id": "79aa45",
+          "wall_time_seconds": 0.314853565,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    }
+  ],
+  "source_stop": {
+    "at": "2026-09-11T08:02:29.788Z",
+    "status": "source_stopped",
+    "files": [
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "18400fb9812c44c3442020fa82271b67e10daf1bad336c32f7ff1a3fc6421b0b"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "e1560b24b8ec4c12b0d70a62e6baac3dfacec173c5b8ea2fdb9b93f6199fb15a"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "7ccb2e2272c2124da9724cc199ac953e616f34c9bf836b75c515a5adbc923a2a"
+      },
+      {
+        "path": "src/routes/identity.test.ts",
+        "sha256": "b32694c52e1f95b4fda48a6d08da9a468778acbbdc07e77bd887fa60ce60c213"
+      },
+      {
+        "path": "src/services/SessionManager.identity.test.ts",
+        "sha256": "a6d5d16b44a6adeb02c9a84cfaafd7676fba5a12a0803cb8645f59fbbec9ef14"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "1d0ae39829d7660deaebe7e3b5072b08000368583d304e275799d36289583558"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "6a658959963532c2f2387863a6b1976ef76ea654b37c22d722674f77f4be98c7"
+      }
+    ],
+    "pending_commands": [],
+    "statement": "No source edits after fixed runtime launch; no further source edits after this STOP. This final worker record is the only evidence write at handoff."
+  },
+  "limitations": [
+    "Synthetic Node/Hono/session/actual-DO-class tests are not workerd/deployed/customer acceptance or SLO evidence.",
+    "Persisted booleans are not retrospective proof of affirmative customer consent. This import-only cold refusal does not choose global unknown/absent policy.",
+    "Session KV read/write, identity and erasure across stores remain nontransactional. Local latest-state and queued-DO checks do not establish cross-isolate withdrawal or concurrent erasure atomicity.",
+    "Earlier rows may have committed when a later profile/history/acknowledgment operation fails. No batch atomicity, delivery deduplication, physical erasure or retention closure is claimed.",
+    "Typed external attributes/precomputed audiences and full W14 §1.12 remain subsequent work. No event weights, core algorithm, global consent defaults or new storage were added.",
+    "Protected W08.04/W14.04 source assurance and exact seven-file integration acceptance are root responsibilities; worker does not self-accept tasks/packages/findings/gates/releases.",
+    "No external provider/warehouse/customer-data/cloud/deployment/credential/build/install/commit/push/cleanup operations or further delegation."
+  ],
+  "handoff": "Root: inspect full outputs, verify the exact seven current hashes and protected pins against retained baseline, freeze bidirectional deltas, and ask the separate Astra/xhigh reviewer to run the declared fixed compound command once on frozen bytes and inspect C1-C3. Worker is stopped."
+}

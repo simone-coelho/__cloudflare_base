@@ -1,0 +1,183 @@
+{
+  "status": "recorded",
+  "contract_digest": "38af40b3ed91502fbc838e44a163cfa6e0cfd1f8b30b850b4fca11a401d7a7de",
+  "configuration": "Advisory catalog dimension-membership feedback only, not full W19/F27/N15 taxonomy, value/case/locale/slot vocabulary, inheritance or customer feed acceptance. Unknown dimensions and no nonblank registered tags do not imply an item cannot rank; historical/manual affinities, defaults, pins and other scoring terms remain. Shared safe implicit contentType is considered only when own tag is absent and a non-derived key is configured; explicit values otherwise receive membership/nonblank checks, not value-vocabulary or learning-readiness certification. Diagnostic basis is the exact response catalog and an uncached best-available tenant registry revision, not an atomic activation snapshot or serving-cache attestation. Stored success/receipts stay immutable and advisory warnings can change on retries as the registry changes. Strict read/parse/config failures produce unavailable, never fabricated empty assurance; no post-commit diagnostic failure changes committed success. Maximum50 samples,64-unit dimension display with truncation indicator and numeric coordinates; total/omitted warning occurrences count the whole catalog. Full package/finding/gate/native/SLO/customer/release obligations remain open. No serving/scoring/SDK/schema/policy/registry changes, new UI/framework/cache/broad suite, installs/builds/cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external actions.",
+  "files": [
+    {
+      "path": "src/routes/content.ts",
+      "role": "output",
+      "sha256": "b786f7016d19833f7164630085645960846866de6e788b3b73187615d7f5f27d"
+    },
+    {
+      "path": "src/routes/content.test.ts",
+      "role": "output",
+      "sha256": "909c09d30b2bc0b7a9dff4c5319fd17e076c7c008e73080de5c4e1737fbd1975"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "role": "output",
+      "sha256": "467f09625d21ff3eb0c97cc320b9a22b6a134a612725e2d74afb187cbf5e4380"
+    },
+    {
+      "path": "src/content/typeAffinity.ts",
+      "role": "source",
+      "sha256": "77b15db553d04e72c838fc0844fc72d6fdd862b5986f0557a3d0ff4b6aef79c7"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+    },
+    {
+      "path": "src/content/import.ts",
+      "role": "source",
+      "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+    },
+    {
+      "path": "src/content/enrichment.ts",
+      "role": "source",
+      "sha256": "c4c3e9234102b4ca2e577e141b96a285d5b6a0f2a52fdd663138c7eb50c25daa"
+    },
+    {
+      "path": "src/content/enrichmentPublication.ts",
+      "role": "source",
+      "sha256": "8956b007c0a9a766d794d7f33f07ca268607dfbd7f4921f4bb23e9a8edbcb21d"
+    },
+    {
+      "path": "src/reflex/configStore.ts",
+      "role": "source",
+      "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+    },
+    {
+      "path": "src/reflex/core.ts",
+      "role": "source",
+      "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "source",
+      "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+    },
+    {
+      "path": "src/config/publication.ts",
+      "role": "source",
+      "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+    },
+    {
+      "path": "src/config/input.ts",
+      "role": "source",
+      "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "role": "source",
+      "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+    },
+    {
+      "path": "src/tenancy/middleware.ts",
+      "role": "source",
+      "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+    },
+    {
+      "path": "src/middleware/operatorAuth.ts",
+      "role": "source",
+      "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+    },
+    {
+      "path": "src/routes/config.ts",
+      "role": "source",
+      "sha256": "c68b26d85e6ab2b5434f65436f30497f4b9191ea297df49c3a3a9f35adce1355"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "role": "source",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F27.md",
+      "role": "source",
+      "sha256": "61a44d769aa90bf3e064dc91b2b9d44fc4f0bf05906ffa1b41724ef0bc5f1f02"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/sweep-customer-facing-promises.md",
+      "role": "source",
+      "sha256": "b4b6ee77d65101a63557cd38f4c992c6d7cb836be07ae10aefad57835c9859a0"
+    },
+    {
+      "path": "docs/content-personalization-design-tapestry.html",
+      "role": "source",
+      "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+    },
+    {
+      "path": "docs/kit/03-payload-schemas.md",
+      "role": "source",
+      "sha256": "d9a75879b1c760831bb930c4893aac9115147fcffc9ac757a086513bdff0af56"
+    },
+    {
+      "path": "docs/PS-Implementation-Delivery-Guide.md",
+      "role": "source",
+      "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    },
+    {
+      "path": "src/content/catalogDiagnostics.ts",
+      "role": "output",
+      "sha256": "799d71550ae29c10c3947b00da4fd6962b93f04a5eaf699ec789deaa013e4a9d"
+    },
+    {
+      "path": "docs/remediation/evidence/W19.03/worker.json",
+      "role": "output",
+      "sha256": "ef256e3875ba5ddf8d825c1b7d4d539f20ff0d06fd222cb78d32058e3cc2cc7c"
+    },
+    {
+      "path": "docs/remediation/design/W19.03/plan.md",
+      "role": "configuration",
+      "sha256": "e3143d5063aacf8f0bcf9b4c81a3cf9b77cbfefaeaa1690970b434165c05880e"
+    },
+    {
+      "path": "docs/remediation/design/W19.03/baseline.json",
+      "role": "configuration",
+      "sha256": "eb09127f3e6876189d171b6201f4fd45a1fbd4c6e8632981b30a7e2c823da787"
+    },
+    {
+      "path": "docs/remediation/evidence/W19.03/admission.json",
+      "role": "configuration",
+      "sha256": "42f388012aac43076fbebfdb2e66c239df3cc00c9b668fef1be637a6bc58d9ff"
+    },
+    {
+      "path": "docs/remediation/evidence/W19.03/source-freeze.json",
+      "sha256": "9d7da74064aefe24d72d4bfd1290a7fe5b81ebfba459d9f87cfd8c49666b836a",
+      "role": "configuration"
+    },
+    {
+      "path": "docs/remediation/evidence/W19.03/source-deltas.json",
+      "sha256": "913ba01895812a6831079abeef2702a4fe1586b579a5e0bed171f70d796526a1",
+      "role": "configuration"
+    }
+  ],
+  "digest": "f015b8caafa67924e3a94c6d4a9d2efa27f4615622c10aef9e0cdb4a08ce0918"
+}

@@ -1,0 +1,28 @@
+{
+  "task_id": "W22.08",
+  "at": "2026-09-15T19:14:12.083Z",
+  "plan": {
+    "path": "docs/remediation/design/W22.08/plan.md",
+    "sha256": "beddf33de0f0e352368cf503b096ade1967b353cf2d159949c7735d43f0dad05"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W22.08/baseline.json",
+    "sha256": "9642307a6400bbcb0fdf883b71b8c0824edae305ee991fd005356ec5048b4ece"
+  },
+  "contract_digest": "b4a902e866e064c72950a9b2309659ecaf6a3eb5b93ac5c0cba11d7335736007",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T19:14:12.083Z",
+    "plan_sha256": "beddf33de0f0e352368cf503b096ade1967b353cf2d159949c7735d43f0dad05",
+    "rationale": "Root read complete W22/W30 scope/linked findings/doc22/current ring/policy/hourly and selected controls. Distinct exact-plan review PASS; preserve existing ties, no new lifecycle/retention. Two output files and fixed5."
+  },
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "plan_sha256": "beddf33de0f0e352368cf503b096ade1967b353cf2d159949c7735d43f0dad05",
+    "result": "PASS exact plan; stable numeric timestamp ordering before unchanged cap. Initial canonical-ID tie suggestion withdrawn because no such policy exists. No writes/runtime; frozen verification required."
+  },
+  "limitations": "Forward DecisionRing retention ordering only. Stable equal-time arrival order preserved, permutation parity for distinct times only. No new age/lifecycle/policy/retention, evicted-history reconstruction, index migration, receipt change, cross-call statistics idempotence or full W22/W23/W30/customer/SLO/release claim. W22.07 artifact and review unchanged. No install/emitted build/commit/stage/push/deploy/cloud/credentials/customer-data/destructive/external operations."
+}

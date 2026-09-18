@@ -1,0 +1,107 @@
+{
+  "task_id": "W06.01",
+  "actor_id": "w01-lead",
+  "run_id": "/root",
+  "artifact_digest": "0976bb2e00d968d006c8e1bff3f1f626682c19f2260c19401ea9e75d8b1f64d3",
+  "journal_seq": 313,
+  "summary": {
+    "valid": true,
+    "journal": 313,
+    "check_status_outputs_identical": true,
+    "warningCounts": {
+      "stale_proof": 2628,
+      "revalidation_required": 53,
+      "limits": 1
+    },
+    "currentTaskWarnings": [],
+    "errors": [],
+    "trackerSha256": "e4b9175e048146769fa070801be7820eda98b5e73e885fce990f613cff2b5814",
+    "completed_collection_at": "2026-09-08T13:10:22.167Z"
+  },
+  "pre_correction_run": {
+    "started_at": "2026-09-08T12:53:00Z",
+    "board_check": {
+      "command": "node scripts/remediation/board.mjs check",
+      "exit_code": 1,
+      "result": "Tracker INVALID",
+      "errors": [
+        "evidence_link: W06.01-K1 result or execution basis differs from W06.01-E1"
+      ]
+    },
+    "board_status": {
+      "command": "node scripts/remediation/board.mjs status",
+      "completed_at": "2026-09-08T12:59:58.199Z",
+      "exit_code": 1,
+      "raw_output_bytes": 325658,
+      "result": "Tracker INVALID",
+      "errors": [
+        "evidence_link: W06.01-K1 result or execution basis differs from W06.01-E1"
+      ]
+    },
+    "trusted_comparison": {
+      "result": "interrupted after the same deterministic metadata error was known",
+      "exit_code": 130
+    },
+    "disposition": "The implementation, artifact, worker proof, independent proof and acceptance were unchanged. Journal 313 superseded only W06.01-E1 workload wording with register-e1-v2.json so the evidence execution basis is byte-identical to the accepted task check. The failed results remain historical and are not represented as passes."
+  },
+  "commands": [
+    {
+      "command": "node scripts/remediation/board.mjs check",
+      "started_at": "2026-09-08T13:01:30Z",
+      "completed_at": "2026-09-08T13:10:18.937Z",
+      "exit_code": 0,
+      "raw_output_bytes": 325576,
+      "result_header": "Tracker VALID | mode=local_remediation_authorized",
+      "journal": 313,
+      "warningCounts": {
+        "stale_proof": 2628,
+        "revalidation_required": 53,
+        "limits": 1
+      },
+      "currentTaskWarnings": [],
+      "errors": []
+    },
+    {
+      "command": "node scripts/remediation/board.mjs status",
+      "started_at": "2026-09-08T13:01:30Z",
+      "completed_at": "2026-09-08T13:10:18.949Z",
+      "exit_code": 0,
+      "raw_output_bytes": 325576,
+      "result_header": "Tracker VALID | mode=local_remediation_authorized",
+      "journal": 313,
+      "warningCounts": {
+        "stale_proof": 2628,
+        "revalidation_required": 53,
+        "limits": 1
+      },
+      "currentTaskWarnings": [],
+      "errors": []
+    },
+    {
+      "command": "validateTracker(current, { rootDir: process.cwd(), previousTracker }) against docs/remediation/evidence/W06.01/trusted-tracker-301.json after verifying its expected SHA-256",
+      "started_at": "2026-09-08T13:01:30Z",
+      "completed_at": "2026-09-08T13:10:22.167Z",
+      "reported_at": "2026-09-08T13:10:22.082Z",
+      "exit_code": 0,
+      "priorPath": "docs/remediation/evidence/W06.01/trusted-tracker-301.json",
+      "priorSha256": "ad5be2b512f923c172d4e4eb36ceea8fd0ea857e8a797058dcd33743a8017171",
+      "priorJournal": 301,
+      "currentJournal": 313,
+      "trackerSha256": "e4b9175e048146769fa070801be7820eda98b5e73e885fce990f613cff2b5814",
+      "ok": true,
+      "errors": [],
+      "warningCounts": {
+        "stale_proof": 2628,
+        "revalidation_required": 53,
+        "limits": 1
+      },
+      "currentTaskWarnings": [],
+      "currentTask": {
+        "state": "closed",
+        "artifact": "0976bb2e00d968d006c8e1bff3f1f626682c19f2260c19401ea9e75d8b1f64d3"
+      }
+    }
+  ],
+  "limits": "These checks establish local tracker consistency and append-only reconciliation only. They do not establish full W06 scope, deployed or customer acceptance, release approval, physical erasure, replay protection, external reconciliation or retention-policy approval.",
+  "next_action": "Inspect and admit the next decision-independent W06 remedy for deletion epoch/replay and stale-cookie or delayed-ingestion resurrection. Keep physical rewrite, external reconciliation, retention policy and customer decisions explicit; do not reopen W06.01 merely to grow test coverage."
+}

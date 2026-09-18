@@ -1,0 +1,51 @@
+{
+  "task_id": "W04.03",
+  "at": "2026-09-17T00:23:38.014Z",
+  "supersedes": {
+    "path": "docs/remediation/evidence/W04.03/admission.json",
+    "sha256": "1f18cf2342cc8ce7839de54a47d88f7089c51a90bd01d6dcabe0f8cd3ca87c27"
+  },
+  "scope": "Clerical HTTP409 correction before any W04 implementation GO; all41 outputs, exact dirty baselines, design, acceptance, command selections, dependencies and rollback otherwise inherited unchanged.",
+  "correction": "Root admission generator changed signed409/fresh409 to419 while updating output count. Distinct preflight reviewer detected it; no product edit/test or worker GO occurred. Preserve original approval and record superseding exact contract instead of rewriting history.",
+  "baseline": "Original admission baselines remain exact; board2113 check/status VALID,both0,session73539 drained. Reviewer PASS_PREFLIGHT for design, conditional only on restoring original HTTP409 meaning.",
+  "changed_criteria": [
+    {
+      "id": "W04.03-C1",
+      "description": "Retain mandatory tenant/account/visitor-bound backend proof and fresh visitor-bound signed409 retry; no cookie/pointer/forward/profile promotion. Strict per-tenant signing material and salt validation refuse missing/malformed/unsafe customer configuration before identity effects and at readiness, preserving named current/previous rotation and explicit demo compatibility. Never change actual salt or infer a live identity migration.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    },
+    {
+      "id": "W04.03-C4",
+      "description": "SDK source and both shipped bundles synchronously check shared-storage grant/transition ownership at use and write/clear boundaries; cross-tab/same-document notifications invalidate cached decisions and pending HTTP/proof/socket continuations. Old tabs/completions cannot overwrite or clear a newer grant or deliver another account data. Preserve fresh409, failed-persistence fail-closed behavior, signed logout/account transitions and endpoint/tenant independence.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    }
+  ],
+  "changed_checks": [
+    {
+      "id": "W04.03-K1",
+      "criterion_ids": [
+        "W04.03-C1",
+        "W04.03-C2",
+        "W04.03-C3"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts src/index.api-boundary.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/identity/identity.test.ts src/ops/monitor.test.ts -t 'W04[.]0[123]|W35[.]0[345678]|W05[.]01|W06[.]0[89]|W03[.]07|cleans both actual bound reset hosts|the assertion|the shopper id|W12[.]01' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd with synthetic bindings and native local socket boundary; no deployed runtime",
+      "workload": "Existing affected groups plus new W04.03: actual both-host current grants, signed409/bootstrap/link/detach/reset/erase/transfer/import concurrency and fault/restart cases; outer deferred/connector/ledger/response effects; both socket hosts including native boundary; identity material readiness. Retain exact foreign-state, denial-before-effects, witness, consent and prior connector oracles; no broad suite.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "contract_digest": "4146d8cd1c0fecc2be75248f824caa619aa6d4e14c48513ca716f30e90dfce4f",
+  "approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-17T00:23:38.014Z",
+    "rationale": "Restore original W04 signed409 retry meaning before first product GO; no scope or test expansion."
+  }
+}

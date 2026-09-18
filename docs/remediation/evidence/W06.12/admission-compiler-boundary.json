@@ -1,0 +1,69 @@
+{
+  "task_id": "W06.12",
+  "at": "2026-09-17T08:04:42.107Z",
+  "contract_digest": "9d974a3a75aba01dc4d637672aeee0471c0b66a2591a1a53b0f04b611511b67a",
+  "supersedes": {
+    "path": "docs/remediation/evidence/W06.12/admission.json",
+    "sha256": "c67ac434fe675267c0dd0e67516e0bb63a87863b57d0fc4352598633b9c006ec",
+    "contract_digest": "3e933b8a2c294d21b572d2263a1fcd51526d49766aef95b900c571f86c95bc42"
+  },
+  "scope": "Original full W06 and all C1-C8 requirements remain; add one concrete compiler-ownership correction, not a new remediation programme.",
+  "baseline": {
+    "kind": "Worker-reported K3.1 failure plus independently source-confirmed import graph; no baseline command rerun or passing check claimed.",
+    "failed_attempt": "K3.1 server-compiler-only exit2: worker retains primary output and128 stopped pins;12 owned narrowing errors plus17 inherited browser DOM errors. This diagnostic was not complete K3 and does not supply final evidence.",
+    "source_case": "Unchanged SDK listen.test.ts:4 imports real createClient from index.ts, whose intentional host.ts import needs DOM. Root Worker tsconfig excludes browser/index/host but transitive imports still enter. SDK tsconfig includes all SDK TS with DOM; package typecheck already compiles both.",
+    "added_output": {
+      "path": "tsconfig.json",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    "read_dependencies": [
+      {
+        "path": "src/sdk/tsconfig.json",
+        "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360"
+      },
+      {
+        "path": "src/sdk/listen.test.ts",
+        "sha256": "f80b57442b237b5490154c40c1e2c7ca64c2e7405e510183487af30abe4da7b4"
+      },
+      {
+        "path": "src/sdk/index.ts",
+        "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+      },
+      {
+        "path": "src/sdk/host.ts",
+        "sha256": "4720f26f52f903eb8636390e6ee34c493a5e2097efca48ffc9aae1368ec28bd2"
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+      }
+    ],
+    "retained": "Original46 dirty-baseline outputs and all other dependencies remain under original immutable admission; tsconfig moves from its original read-only pin into worker ownership before editing."
+  },
+  "change": "Add exactly src/sdk/listen.test.ts to existing root tsconfig exclusions. Keep fixture/browser/SDK source and all server source/fixtures unchanged; do not use import/typecheck bypass, broad SDK-tree exclusion or Worker DOM globals.",
+  "checks": {
+    "unchanged": [
+      "K1",
+      "K2",
+      "K4 full-W scope",
+      "K5",
+      "K6"
+    ],
+    "K3": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/retention.ts src/types/env.ts src/ops/monitor.ts src/identity/sessionAuthority.ts src/identity/erase.ts src/identity/store.ts src/identity/history.ts src/routes/identity.ts src/routes/decisions.ts src/routes/sort.ts src/durable-objects/ShopperReflex.ts src/durable-objects/DecisionRing.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/services/odpLoop.ts src/services/OptimizelyService.ts src/services/EventDispatcher.ts src/ledger/records.ts src/ledger/delivery.ts src/ledger/enqueue.ts src/ledger/consume.ts src/ledger/writer.ts src/ledger/erasure.ts src/ledger/productSort.ts src/content/types.ts src/learn/fan.ts src/learn/policy.ts src/learn/hourly.ts src/learn/report.ts src/learn/replay.ts src/connectors/config.ts src/index.ts src/content/service.ts src/routes/realtime.ts src/ledger/ledger.test.ts src/ledger/erasure.test.ts src/learn/hourly.test.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts src/reflex/odpLoop.test.ts src/ops/monitor.test.ts src/index.api-boundary.test.ts src/telemetry.boundary.test.ts && git diff --check -- src/retention.ts src/types/env.ts src/ops/monitor.ts src/identity/sessionAuthority.ts src/identity/erase.ts src/identity/store.ts src/identity/history.ts src/routes/identity.ts src/routes/decisions.ts src/routes/sort.ts src/durable-objects/ShopperReflex.ts src/durable-objects/DecisionRing.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/services/odpLoop.ts src/services/OptimizelyService.ts src/services/EventDispatcher.ts src/ledger/records.ts src/ledger/delivery.ts src/ledger/enqueue.ts src/ledger/consume.ts src/ledger/writer.ts src/ledger/erasure.ts src/ledger/productSort.ts src/content/types.ts src/learn/fan.ts src/learn/policy.ts src/learn/hourly.ts src/learn/report.ts src/learn/replay.ts src/connectors/config.ts src/index.ts src/content/service.ts src/routes/realtime.ts src/ledger/ledger.test.ts src/ledger/erasure.test.ts src/learn/hourly.test.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts src/reflex/odpLoop.test.ts src/ops/monitor.test.ts src/index.api-boundary.test.ts src/telemetry.boundary.test.ts docs/kit/02-api-reference.md tsconfig.json",
+    "reason": "Run existing separate SDK compiler to retain static coverage of the unchanged browser-entry fixture after correct project ownership.45-file lint unchanged; whitespace includes47outputs. No new runtime suite or SDK build."
+  },
+  "independent_preflight": {
+    "actor_id": "w0612-reviewer",
+    "run_id": "/root/w01_reviewer",
+    "result": "Source-only diagnosis agrees exact-one-fixture Worker exclusion plus both existing compilers. No edits/commands/pass claimed."
+  },
+  "ownership": {
+    "added_worker_output": "tsconfig.json",
+    "unchanged_worker_outputs": 46,
+    "total_worker_outputs": 47,
+    "worker_evidence": "docs/remediation/evidence/W06.12/worker.json",
+    "reviewer_evidence": "docs/remediation/evidence/W06.12/review.json"
+  },
+  "rollback": "Inverse only this admitted config delta against retained dirty bytes; preserve original46 W06 changes and all earlier/user work.",
+  "authority": "Existing bounded local W01-W41 mandate; original46-output authority continues during amendment. Added tsconfig edit held until lead board-check GO. No product edits by root, external authority or acceptance."
+}

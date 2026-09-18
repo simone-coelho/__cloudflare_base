@@ -1,0 +1,294 @@
+{
+  "before": null,
+  "after": {
+    "id": "W22.07-E3",
+    "task_id": "W22.07",
+    "check_id": "W22.07-K3",
+    "criterion_ids": [
+      "W22.07-C1",
+      "W22.07-C2",
+      "W22.07-C3",
+      "W22.07-C4"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "file": {
+      "path": "docs/remediation/evidence/W22.07/review.json",
+      "sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c"
+    },
+    "at": "2026-09-15 18:49:50 UTC",
+    "limitations": "Explicit HTTP buffered-action purpose/occurrence-time current interest and original-time evidence only. Live traffic unchanged. No SDK offline queue, across-call personal dedup, atomic KV/erasure fence, new retention, original-policy/experiment lifecycle reconstruction, historical report repair, generation reset or full W22/W23/W30/customer/SLO/release claim. Preserve all unowned accepted dependencies; overlapping exact proofs qualified with history retained. No installs/emitted build/commit/stage/push/deploy/cloud/credentials/customer-data/destructive/external operations. Worker and independent reviewer each passed exact6 local synthetic checks. Same-byte compiler1536/six-file lint0errors125unchanged warnings/no new signatures/whitespace passed. Not native/cloud failure, customer or SLO evidence.",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts -t 'W22[.]07|W09[.]05 preserves|W26[.]02 refuses malformed' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct Astra/xhigh actual frozen-source review and fixed6 once; same-byte static reused.",
+    "workload": "Current-interest arithmetic, no fresh recency, expiry/consent/identity/erasure gates and honest measurement limits.",
+    "result": "pass",
+    "artifact_digest": "0c509d8108cb3b7b81f6cfb3f5419bf352fc162dc82bb3939531b5ec9a97dbcc",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "9388bfa39bb92b5b39951df4cfb146f390a9cbce76c90f76dc7dc6666bf67b83",
+      "configuration": "Explicit HTTP buffered-action purpose/occurrence-time current interest and original-time evidence only. Live traffic unchanged. No SDK offline queue, across-call personal dedup, atomic KV/erasure fence, new retention, original-policy/experiment lifecycle reconstruction, historical report repair, generation reset or full W22/W23/W30/customer/SLO/release claim. Preserve all unowned accepted dependencies; overlapping exact proofs qualified with history retained. No installs/emitted build/commit/stage/push/deploy/cloud/credentials/customer-data/destructive/external operations.",
+      "files": [
+        {
+          "path": "docs/api/01-rest-endpoints.md",
+          "sha256": "e5faf25dc5fbe432a61ebc47de7be6a9137d14c718587d62bf45bd61c18a6238",
+          "role": "output"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "c5f4df17a111772c3c6863e7b27edea2456287df513b2719a49cd7d38ace1ba9",
+          "role": "output"
+        },
+        {
+          "path": "src/reflex/bufferedAction.ts",
+          "sha256": "272445c8c7518012be0034cc24a96c71ae3c2ca298f8bdef529ef73cba96bb86",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "d48ab9222a2ab660f612c1dfd38f798cfc8b4a9aaf5e475cf4875f21ab911087",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "2b11bcb80a14065164e47922b33b8c7417228e9c87f60c1c605cceae45c9f7d9",
+          "role": "output"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "sha256": "4231483bd4aafe6b438c15f88350b201a10b3818e7e7439edc0a38bdae970970",
+          "role": "output"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "sha256": "fd97cf625f3181bed8d5f4b12153e63387603e67913e263a068ceb943bf33efd",
+          "role": "output"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/identityMerge.ts",
+          "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/contentTelemetry.ts",
+          "sha256": "8153296908e6fbca19b20b45d447b635f1d20539b09d79f723ebb283551a770e",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/history.ts",
+          "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/profileEnrichment.ts",
+          "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5",
+          "role": "source"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930",
+          "role": "source"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/enqueue.ts",
+          "sha256": "831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+          "role": "source"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/regionTrend.ts",
+          "sha256": "e5ab4379a4fab720fe04eeb1ed1af55e390db033caad91c3afd7e45e7e6430e0",
+          "role": "source"
+        },
+        {
+          "path": "src/durable-objects/RegionTrend.ts",
+          "sha256": "1244d0bfd4869a0385b7734694ea88c309a584fb597ae0f2e1b7b6d3503dcc0d",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/objects.ts",
+          "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67",
+          "role": "source"
+        },
+        {
+          "path": "src/services/odpLoop.ts",
+          "sha256": "52348b653a209e56384568f0e73f87690ef68316d3f8b4d9b7f7a7d3c72e029e",
+          "role": "source"
+        },
+        {
+          "path": "src/services/demoEventCapture.ts",
+          "sha256": "eb64be869e76f3db40288e4a1da135f62de84806dc8a0b9dc0de653eb8ff5456",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/SegmentProvider.ts",
+          "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/AudienceStore.ts",
+          "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf",
+          "role": "source"
+        },
+        {
+          "path": "src/connectors/index.ts",
+          "sha256": "656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67",
+          "role": "source"
+        },
+        {
+          "path": "src/sdk/core.ts",
+          "sha256": "d183cc129206527fe5df917502d88904c86728afea3b5a15f8a9058c64c834eb",
+          "role": "source"
+        },
+        {
+          "path": "src/sdk/emit.ts",
+          "sha256": "188cb582218166ceac62005e20e32be068cae03f2b8d99195167bafb3de636a5",
+          "role": "source"
+        },
+        {
+          "path": "src/sdk/types.ts",
+          "sha256": "d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/16-edge-affinity-reflex.md",
+          "sha256": "b30b96e1edb2ee468742b180c0dba544d3f21ddb30cb2404f62e12509605de43",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/decisions/D06-buffered-action-purpose-approved-2026-09-15.json",
+          "sha256": "469cc9e3c566c9430b855e01d200120e5c5f075ef9b595b0ca99db22e64923db",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+          "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.07/worker.json",
+          "sha256": "f193a97d87069b547b4be5be8c95895239781686b0d5e827fa87bb2a3809b41f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W22.07/plan.md",
+          "sha256": "d57a14dde34afb8d662f54149ba38326a8c380663b0cda5b2a87cd35963c784e",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W22.07/baseline.json",
+          "sha256": "091a30fd9adedc20b05cde6369ec919cf6aaa2c073f41ad75bbf8db0997fe279",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.07/admission.json",
+          "sha256": "2098cddce90f455c295ec00d6d2e8f4182aa489b80e8ef41957b9c07a65e799d",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.07/source-freeze.json",
+          "sha256": "286129cc6e8e91b88537c2a3978c2bae29175d77e705b945b7c2bf94cd8621e2",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.07/source-deltas.json",
+          "sha256": "06466cded378a347ea2cd6a87a6b565f37bf2ae4f515eed24192c6e8b1ff16b8",
+          "role": "configuration"
+        }
+      ],
+      "digest": "0c509d8108cb3b7b81f6cfb3f5419bf352fc162dc82bb3939531b5ec9a97dbcc"
+    }
+  }
+}

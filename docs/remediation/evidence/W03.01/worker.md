@@ -1,0 +1,11 @@
+# W03.01 worker handoff
+
+Both administrative subrouters now apply required JWT authentication and no-store before any handler, replacing their partial/late gates. Anonymous, SDK-only, invalid and refresh credentials cannot reach current/history/revision/validation or write handlers. This does not establish tenant membership.
+
+The admitted caller repairs are complete: importer catalogue GET reuses its access header; Meridian reads with its existing operator token and stays local without one; the Coach demo maps decisions from its existing public CMS snapshot without an operator credential. Preview signs in, requires HTTP200 and recognized JSON/source, skips stored data, and invokes its existing seed command only for compiled-default with OPERATOR_TOKEN forwarded. Failed authentication/HTTP/JSON/source stops without token/body logging. Kit auth labels and only the necessary positive-read headers in two auth fixtures were updated.
+
+Actual commands, complete results, UTC start/collection times and all 11 frozen source hashes are in [worker-checks.json](worker-checks.json). K1 passed 77/77 in 16.11s; final K2 passed 33/33 in 10.22s. Application noEmit TypeScript, four changed-JS syntax checks, bash syntax and scoped diff checks passed. Compiler metadata is under /tmp/w0301-typecheck.y2y0lM.
+
+No test/compiler failure occurred. One tool-call template construction failed before any patch/test execution. Final source inspection identified that curl -f permits redirects: explicit HTTP200 checks and one redirect case corrected this within the contract. The original passing K2 is retained, superseded by the final passing run; unchanged K1/TypeScript results were reused as authorized.
+
+Baseline/probe are unchanged. Evidence is local synthetic/source proof, not native/deployed, browser/customer, latency, full W03/finding/gate/release acceptance. Public demo mapping does not publish later private catalogue edits. Legacy recovery-page adaptation and credential-bound tenant authority remain open; historical auth proof is not automatically reclosed. No operational workflow or real network ran. Sources/proof are frozen, no processes remain, and independent review/lead disposition are next.

@@ -1,0 +1,325 @@
+{
+  "task_id": "W32.02",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T21:27:26.607Z",
+  "source_go_at": "2026-09-12T21:04:02.290Z",
+  "resumed_source_go_at": "2026-09-12T21:12:18.620Z",
+  "contract_digest": "61a2d54d608eb5525991b612c92b220d9f0eccf7f3685140a5034e22c1463250",
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W32.02/plan-r2.md",
+      "sha256": "2885e740b617bbac4cd30c2d05d4d76946c65d074d68d5cf6a44e335247847da"
+    },
+    "original_plan": {
+      "path": "docs/remediation/design/W32.02/plan.md",
+      "sha256": "9ff5b4516e6e5a0803e2563f60d4cc56fddcab469d7b8db2501bcf4512c29cf3"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W32.02/baseline.json",
+      "sha256": "72a80cf387a3a7b566844618aea942b09d9b1c970cddfeac0277703029734492"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W32.02/admission-r2.json",
+      "sha256": "bffd3a3c0b4a0a9d66e6b7ccc5ecdf7c3710fbba079bba640547079a281a2983"
+    },
+    "original_admission": {
+      "path": "docs/remediation/evidence/W32.02/admission.json",
+      "sha256": "6da346c5ca66e3e74ee07815488dcf0df9236cd5da41bebda4c1db029c39f9a9"
+    },
+    "policy_correction": {
+      "path": "docs/remediation/evidence/W32.02/policy-budget-correction.json",
+      "sha256": "5e9a8661cf9cdabf7d3d34716c0c3db4a0f68b25053baca02dc42783cbb90075"
+    }
+  },
+  "implementation_summary": [
+    "One original-order exposure pass and slot/arm/exploration counter pass; full StatsState clones isolate policy successes while retaining first-match IDs, raw precision, duplicate policy overwrite semantics and deterministic sorted output.",
+    "Shared pure/runner admission bounds records, policies, raw bytes, ring construction/filter/sort/featured-product work, projected item/slot/recursive-parent cells and final JSON. Parent closure caching stops duplicate-row expansion.",
+    "Strict raw loading shortlists both streams once, bounds relevant objects and total traversal/cursor progress, checks native sizes before reads plus actual UTF-8 stream/text bytes, refuses overflow rather than publishing first50k, and stops later raw reads. Generic loadDay cap and default-Infinity count behavior remain.",
+    "Actual POST uses64KiB streaming admission, invalid400 or fixed numeric413 before protected report work; cap6 preserves4presets+custom+learning. Existing zero-window omission and W33 strict-null canonical guard remain. Kit explicitly qualifies aggregate/read/window and native capacity residuals."
+  ],
+  "criterion_verdicts": {
+    "W32.02-C1": {
+      "worker_result": "selected_runtime_pass_root_exact_module_comparison_pending",
+      "basis": "Shared recordExposure spy proves three calls for three eligible records across five policies; independent single-policy outputs, input immutability and retained duplicate/learning/W21/W33 controls pass. Root owns retained-pre-GO full JSON paired measurement after this STOP."
+    },
+    "W32.02-C2": {
+      "worker_result": "pass",
+      "basis": "Three grouped checks include exact1m work/16384 parent cells/16MiB raw/8MiB serialized boundary, over-budget/unsafe/multibyte inputs, fifty-thousand raw rows before brand filtering,800/801 objects, no later reads, generic loader truncation, native size and stream cancellation, invalidUTF8, actual authenticated six/seven policy and64KiB/over POST, zero-window compatibility and unchanged canonical sentinel."
+    },
+    "W32.02-C3": {
+      "worker_result": "worker_checks_pass_root_measurement_and_independent_review_pending",
+      "basis": "Five owned files/three new groups/fixed9, final full compiler/zero-warning scoped lint/whitespace and30 protected pins pass. Root paired measurement, distinct frozen review and lead disposition pending."
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 9,
+      "unselected": 25,
+      "files": 2,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 92806,
+      "chunk_id": "f7156b",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w3202_static2"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "command_capture": "w3202_static2"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w3202_static2"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 72428,
+      "chunk_id": "5ae75f",
+      "component_semantics": "Exact admitted && chain completed exit0; all compiler/lint/whitespace components ran and returned0."
+    }
+  },
+  "execution_history": [
+    {
+      "operation": "source_pause_and_readmission",
+      "description": "Root identified existing UI4presets+custom before runtime; source paused with only report.ts/hourly.ts changed. Original plan/admission retained; plan-r2 cap6 approved before further edits. No runtime/static had executed before r2."
+    },
+    {
+      "operation": "apply_patch",
+      "error": "Kit patch verification failed on partial coverage-paragraph context; patch transaction did not apply.",
+      "corrected": "Retried with exact table row and a separate new report-budget paragraph."
+    },
+    {
+      "capture": "w3202_runtime1",
+      "disposition": "pass_superseded",
+      "passed": 9,
+      "unselected": 25
+    },
+    {
+      "capture": "w3202_static1",
+      "disposition": "failed_compiler",
+      "exit_code": 2,
+      "correction": "Installed TextDecoder options require ignoreBOM:false; fixture raw helper now accepts actual runReport storage interface rather than a specific Vitest mock signature. Lint/whitespace were not reached."
+    },
+    {
+      "operation": "source_correction",
+      "description": "Root source review found POST zero-window behavior had changed; restore old positive-only copy/default behavior and assert in existing third group. Pure zero-window policy semantics retained."
+    },
+    {
+      "capture": "w3202_runtime2",
+      "disposition": "pass_superseded",
+      "passed": 9,
+      "unselected": 25
+    },
+    {
+      "operation": "source_correction",
+      "description": "Limit new cursor-history storage to finite raw-count checks, preserving generic Infinity count memory behavior."
+    },
+    {
+      "capture": "w3202_runtime3",
+      "disposition": "final_pass",
+      "passed": 9,
+      "unselected": 25
+    },
+    {
+      "capture": "w3202_static2",
+      "disposition": "final_pass"
+    },
+    {
+      "capture": "w3202_stop_capture",
+      "disposition": "source_stop_and_protected_pins_pass"
+    },
+    {
+      "runtime_failures": [],
+      "qualification": "All three fixed9 runs passed; earlier two explicitly superseded. One failed compiler attempt and one patch-context failure retained. Root measurement not run by worker."
+    }
+  ],
+  "command_captures": {
+    "w3202_runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W32.02|W32.01|W33.01|W21 retains repeated credits|the learning grid, the reporting overlays|the day report comes from the hours' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T21:20:56.448Z",
+      "captures": [
+        {
+          "chunk_id": "968ed1",
+          "wall_time_seconds": 1.001227799,
+          "session_id": 88998,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9b0a08",
+          "wall_time_seconds": 0.000002122,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/report.test.ts  (13 tests | 5 skipped) 2002ms\n ✓ src/learn/hourly.test.ts  (21 tests | 20 skipped) 13ms\n\n Test Files  2 passed (2)\n      Tests  9 passed | 25 skipped (34)\n   Start at  17:21:03\n   Duration  25.08s (transform 5.54s, setup 1ms, collect 11.60s, tests 2.02s, environment 0ms, prepare 7.67s)\n\n"
+        }
+      ],
+      "session_id": 88998,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T21:21:36.286Z"
+    },
+    "w3202_static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/report.test.ts src/learn/hourly.ts src/routes/decisions.ts --max-warnings 0 && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/routes/decisions.ts src/learn/report.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T21:21:57.359Z",
+      "captures": [
+        {
+          "chunk_id": "f0a02b",
+          "wall_time_seconds": 1.001466929,
+          "session_id": 14392,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "8b6f44",
+          "wall_time_seconds": 0.000002024,
+          "exit_code": 2,
+          "original_token_count": 351,
+          "output": "src/learn/report.test.ts(169,22): error TS2345: Argument of type '{ list: Mock<[], Promise<{ objects: never[]; truncated: boolean; cursor: string; }>>; get: Mock<[key: string], Promise<Body | null>>; put: Mock<[], Promise<undefined>>; }' is not assignable to parameter of type '{ get: Mock<[key: string], Promise<Body | null>>; list: Mock<[{ prefix: string; }], Promise<{ objects: { key: string; }[]; truncated: boolean; }>>; put: Mock<[], Promise<...>>; }'.\n  The types of 'list.mock' are incompatible between these types.\n    Type 'MockContext<[], Promise<{ objects: never[]; truncated: boolean; cursor: string; }>>' is not assignable to type 'MockContext<[{ prefix: string; }], Promise<{ objects: { key: string; }[]; truncated: boolean; }>>'.\n      Type '[]' is not assignable to type '[{ prefix: string; }]'.\n        Source has 0 element(s) but target requires 1.\nsrc/learn/report.ts(385,46): error TS2345: Argument of type '{ fatal: true; }' is not assignable to parameter of type 'TextDecoderConstructorOptions'.\n  Property 'ignoreBOM' is missing in type '{ fatal: true; }' but required in type 'TextDecoderConstructorOptions'.\nsrc/routes/decisions.ts(653,79): error TS2345: Argument of type '{ fatal: true; }' is not assignable to parameter of type 'TextDecoderConstructorOptions'.\n  Property 'ignoreBOM' is missing in type '{ fatal: true; }' but required in type 'TextDecoderConstructorOptions'.\n"
+        }
+      ],
+      "session_id": 14392,
+      "exit_code": 2,
+      "drained": true,
+      "finished_at": "2026-09-12T21:22:22.973Z"
+    },
+    "w3202_runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W32.02|W32.01|W33.01|W21 retains repeated credits|the learning grid, the reporting overlays|the day report comes from the hours' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T21:22:48.465Z",
+      "captures": [
+        {
+          "chunk_id": "f27c2a",
+          "wall_time_seconds": 1.001124863,
+          "session_id": 28022,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9ef385",
+          "wall_time_seconds": 0.000002297,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/report.test.ts  (13 tests | 5 skipped) 2273ms\n ✓ src/learn/hourly.test.ts  (21 tests | 20 skipped) 19ms\n\n Test Files  2 passed (2)\n      Tests  9 passed | 25 skipped (34)\n   Start at  17:22:50\n   Duration  19.45s (transform 2.70s, setup 0ms, collect 5.67s, tests 2.29s, environment 0ms, prepare 7.81s)\n\n"
+        }
+      ],
+      "session_id": 28022,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T21:23:37.557Z"
+    },
+    "w3202_runtime3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W32.02|W32.01|W33.01|W21 retains repeated credits|the learning grid, the reporting overlays|the day report comes from the hours' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T21:23:48.762Z",
+      "captures": [
+        {
+          "chunk_id": "ade8d1",
+          "wall_time_seconds": 1.00180724,
+          "session_id": 92806,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f7156b",
+          "wall_time_seconds": 0.000002432,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/report.test.ts  (13 tests | 5 skipped) 1443ms\n ✓ src/learn/hourly.test.ts  (21 tests | 20 skipped) 13ms\n\n Test Files  2 passed (2)\n      Tests  9 passed | 25 skipped (34)\n   Start at  17:23:51\n   Duration  10.88s (transform 2.07s, setup 1ms, collect 4.35s, tests 1.46s, environment 0ms, prepare 3.64s)\n\n"
+        }
+      ],
+      "session_id": 92806,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T21:25:04.233Z"
+    },
+    "w3202_static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/report.test.ts src/learn/hourly.ts src/routes/decisions.ts --max-warnings 0 && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/routes/decisions.ts src/learn/report.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T21:25:12.566Z",
+      "captures": [
+        {
+          "chunk_id": "557b98",
+          "wall_time_seconds": 1.001087478,
+          "session_id": 72428,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5ae75f",
+          "wall_time_seconds": 0.000001299,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 72428,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T21:25:51.374Z"
+    },
+    "w3202_stop_capture": {
+      "command": "node -e 'const fs=require(\"node:fs\"),crypto=require(\"node:crypto\");const hash=p=>crypto.createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\");const b=JSON.parse(fs.readFileSync(\"docs/remediation/design/W32.02/baseline.json\",\"utf8\")),owned=b.owned.map(x=>x.path),protectedPins=b.pins.filter(x=>!owned.includes(x.path));const mismatches=protectedPins.filter(x=>hash(x.path)!==x.sha256);const refs={plan:\"docs/remediation/design/W32.02/plan-r2.md\",original_plan:\"docs/remediation/design/W32.02/plan.md\",baseline:\"docs/remediation/design/W32.02/baseline.json\",admission:\"docs/remediation/evidence/W32.02/admission-r2.json\",original_admission:\"docs/remediation/evidence/W32.02/admission.json\",policy_correction:\"docs/remediation/evidence/W32.02/policy-budget-correction.json\"};console.log(JSON.stringify({final_source_stop:{at:new Date().toISOString(),files:owned.map(path=>({path,sha256:hash(path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},references:Object.fromEntries(Object.entries(refs).map(([name,path])=>[name,{path,sha256:hash(path)}]))},null,2));if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T21:26:06.752Z",
+      "captures": [
+        {
+          "chunk_id": "9acb6f",
+          "wall_time_seconds": 0.00000303,
+          "exit_code": 0,
+          "original_token_count": 499,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T21:26:06.918Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/report.ts\",\n        \"sha256\": \"878e186878523ee2ca4d6d3700983bb9387308f551d9bf5c77871e2aafb9ba4a\"\n      },\n      {\n        \"path\": \"src/learn/hourly.ts\",\n        \"sha256\": \"6ac092272a367af274f1d0c281075dc6ecfdca64cdd23ae529777f28a318d773\"\n      },\n      {\n        \"path\": \"src/routes/decisions.ts\",\n        \"sha256\": \"e3dee7a1c506e49d12b871e3ace4cb83e722cfb16375af59647f39ae41bedfae\"\n      },\n      {\n        \"path\": \"src/learn/report.test.ts\",\n        \"sha256\": \"0f7d25584fa830e33e06ef9a74efd8a3ad44d067e27e354d688cb213562b07d0\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"68546596e5fba3b27e73a4c3f4a35a50e034b235fa8378ffb40981b83a7c1ecf\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 30,\n    \"matched\": 30,\n    \"mismatches\": []\n  },\n  \"references\": {\n    \"plan\": {\n      \"path\": \"docs/remediation/design/W32.02/plan-r2.md\",\n      \"sha256\": \"2885e740b617bbac4cd30c2d05d4d76946c65d074d68d5cf6a44e335247847da\"\n    },\n    \"original_plan\": {\n      \"path\": \"docs/remediation/design/W32.02/plan.md\",\n      \"sha256\": \"9ff5b4516e6e5a0803e2563f60d4cc56fddcab469d7b8db2501bcf4512c29cf3\"\n    },\n    \"baseline\": {\n      \"path\": \"docs/remediation/design/W32.02/baseline.json\",\n      \"sha256\": \"72a80cf387a3a7b566844618aea942b09d9b1c970cddfeac0277703029734492\"\n    },\n    \"admission\": {\n      \"path\": \"docs/remediation/evidence/W32.02/admission-r2.json\",\n      \"sha256\": \"bffd3a3c0b4a0a9d66e6b7ccc5ecdf7c3710fbba079bba640547079a281a2983\"\n    },\n    \"original_admission\": {\n      \"path\": \"docs/remediation/evidence/W32.02/admission.json\",\n      \"sha256\": \"6da346c5ca66e3e74ee07815488dcf0df9236cd5da41bebda4c1db029c39f9a9\"\n    },\n    \"policy_correction\": {\n      \"path\": \"docs/remediation/evidence/W32.02/policy-budget-correction.json\",\n      \"sha256\": \"5e9a8661cf9cdabf7d3d34716c0c3db4a0f68b25053baca02dc42783cbb90075\"\n    }\n  }\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T21:26:06.979Z"
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-12T21:26:06.918Z",
+    "files": [
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "878e186878523ee2ca4d6d3700983bb9387308f551d9bf5c77871e2aafb9ba4a"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "6ac092272a367af274f1d0c281075dc6ecfdca64cdd23ae529777f28a318d773"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "e3dee7a1c506e49d12b871e3ace4cb83e722cfb16375af59647f39ae41bedfae"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "0f7d25584fa830e33e06ef9a74efd8a3ad44d067e27e354d688cb213562b07d0"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "68546596e5fba3b27e73a4c3f4a35a50e034b235fa8378ffb40981b83a7c1ecf"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 30,
+    "matched": 30,
+    "mismatches": []
+  },
+  "limitations": [
+    "Raw-report application containment only:50k/stream,6policies,800rawobjects,16MiB object/combined text,1m estimated work,16384 projected cells,8MiB report,64KiB POST. These are refusal budgets, not qualified Worker CPU/memory, supported traffic, SLO or scientific-policy limits.",
+    "Aggregate construction/loadHours, stored GET/window payloads, lightweight summaries and consistent summary publication remain outside this task. Existing config/auth/tombstone I/O is separately qualified.",
+    "Native size-before-text and bounded available streams aid admission; text-only adapters materialize before actual-byte checks. Already supplied pure records and output serialization are not process-memory-limit proof. Work is a conservative algorithmic estimate, not measured instruction cost.",
+    "Generic loadDay explicit cap/truncation and pure caller supplied truncated coverage remain. No history repair, canonical write-ack improvement, old-writer control, full W30 reconstruction or customer/deployed acceptance.",
+    "First-match duplicate IDs and duplicate policy-name overwrite semantics remain deliberately unchanged. No serving/attribution/estimator/objective/zero-reference/leave-one-out/model changes.",
+    "Only installed Node/Vitest actual builders/authenticated Hono with synthetic storage/credentials; no external/cloud/customer-data/deployment/commit/governance edits or additional suite. Source frozen; root paired measurement and independent review pending."
+  ]
+}

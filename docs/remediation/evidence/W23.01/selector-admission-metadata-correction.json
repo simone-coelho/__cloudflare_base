@@ -1,0 +1,59 @@
+{
+  "at": "2026-09-12T04:13:48.686Z",
+  "actor_id": "w01-lead",
+  "reason": "Lead caught omitted mandatory blocked-event metadata in the just-created, not yet board-verified selector readmission. Supplement descriptive fields only; original event retained below, no earlier journal/time/order/source or acceptance history changed.",
+  "before": {
+    "seq": 1113,
+    "kind": "task_transition",
+    "task_id": "W23.01",
+    "from": "in_progress",
+    "to": "blocked",
+    "assignments": {
+      "implementer": {
+        "actor_id": "w1405-worker",
+        "run_id": "/root/w1405_design"
+      },
+      "independent_reviewer": {
+        "actor_id": "w1405-reviewer",
+        "run_id": "/root/w1405_safety_review"
+      },
+      "lead": {
+        "actor_id": "w01-lead",
+        "run_id": "/root"
+      }
+    },
+    "reason": "Worker found extra protected-file match in broad K1/K3 selector before any runtime; pause for exact acceptance contract correction. Only stats.ts edited under original GO.",
+    "actor_id": "w01-lead",
+    "at": "2026-09-12T04:12:25.998Z"
+  },
+  "after": {
+    "seq": 1113,
+    "kind": "task_transition",
+    "task_id": "W23.01",
+    "from": "in_progress",
+    "to": "blocked",
+    "assignments": {
+      "implementer": {
+        "actor_id": "w1405-worker",
+        "run_id": "/root/w1405_design"
+      },
+      "independent_reviewer": {
+        "actor_id": "w1405-reviewer",
+        "run_id": "/root/w1405_safety_review"
+      },
+      "lead": {
+        "actor_id": "w01-lead",
+        "run_id": "/root"
+      }
+    },
+    "reason": "Worker found extra protected-file match in broad K1/K3 selector before any runtime; pause for exact acceptance contract correction. Only stats.ts edited under original GO.",
+    "actor_id": "w01-lead",
+    "at": "2026-09-12T04:12:25.998Z",
+    "blocked": {
+      "reason": "Unqualified W09.04 selector matched an unintended protected-file test; original command never executed.",
+      "owner": "w01-lead",
+      "next_action": "Lead narrow selector and re-admit exact13 before further source/test work."
+    }
+  },
+  "prior_accepted_journal_preserved": 1103
+}

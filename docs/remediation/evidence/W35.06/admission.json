@@ -1,0 +1,31 @@
+{
+  "task_id": "W35.06",
+  "at": "2026-09-16T02:35:00.000Z",
+  "plan": {
+    "path": "docs/remediation/design/W35.06/plan.md",
+    "sha256": "b743d53fdc077d1c2d273c95af3c516e52495857ea3dd97c624cbe7d914cf79e"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W35.06/baseline.json",
+    "sha256": "5414f20b9d5c71888dfd97c03b7d313860300ce7beb16b7aeb50195222812bbe"
+  },
+  "contract_digest": "79603b833b2804ed29cff7af70dea475db6cae07f8f601ca4a2d842c5c4fbf45",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T02:35:00.000Z",
+    "plan_sha256": "b743d53fdc077d1c2d273c95af3c516e52495857ea3dd97c624cbe7d914cf79e",
+    "rationale": "Complete W35/F04/F05/F06/F13/F14/F29/F32 and actual source review; distinct Astra/xhigh preflight passed after correcting target-generation, high-water and duplicate-cleanup races. Reuse D03, W35.03-.05 and W06 resumability; no cutover or historical migration claim."
+  },
+  "independent_preflight": {
+    "actor_id": "w3506-reviewer",
+    "run_id": "/root/w3505_source_scout",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "record": {
+      "path": "docs/remediation/evidence/W35.06/preflight.json",
+      "sha256": "a54ce20d79a8b7e036acd55cabc1820b8d259a8b0a01cddf35c2711e9f193d08"
+    },
+    "result": "PASS after atomic target barrier/high-water, immutable admission recovery, duplicate generation-safe cleanup and exact affected-control corrections."
+  },
+  "limitations": "Prospective source registrations only; no historical unregistered discovery/migration, external/physical erasure, session-host completion, cutover/deployment, customer data, native/browser/customer/SLO/release acceptance or full W35/F06/F14 closure."
+}

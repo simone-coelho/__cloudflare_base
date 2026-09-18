@@ -1,0 +1,271 @@
+{
+  "task_id": "W27.01",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T13:53:34.445Z",
+  "source_go_at": "2026-09-12T13:40:46.183Z",
+  "contract_digest": "9d91054bb781cda9ab6ca89c31dd36a97ef13362420c70827f55f50a7958afc6",
+  "references": [
+    {
+      "path": "docs/remediation/design/W27.01/baseline.json",
+      "sha256": "fdd8d846595bd4e6c48cef328b4332b2dfda6fc9dcd966a5a14aabf6df1475b6"
+    },
+    {
+      "path": "docs/remediation/design/W27.01/plan.md",
+      "sha256": "996dd84a88edd2b8f5fb6091bc63cafa241e28597cddbf9b1ea76e920494fdf4"
+    },
+    {
+      "path": "docs/remediation/evidence/W27.01/admission.json",
+      "sha256": "7f97d3cceca3f45f15123235a53845155d9d74436669be7c2441efe0cd7a7431"
+    }
+  ],
+  "implementation_summary": [
+    "LearnStats freezes estimates/publication time, allocates at most eight positive safe numeric versions with create-only R2 writes, and validates exact key, bounded nonblank ETag and final UTF-8 size before awaited live KV publication. Only null advances a collision; malformed or thrown acknowledgement stops.",
+    "Publication failures explicitly rearm at now+30s and fail, including scheduling failure. State/prior/snapshot refusals retain their prior semantics; counters are not replayed or reset on publication failure, and ambiguous KV/reset effects never claim applied:false.",
+    "Actual operator publish/reset handlers require HTTP plus coherent success before returning success or appending the reset revision. Failed acknowledgement returns sanitized no-store503; normal empty publication and acknowledged reset/audit revision remain supported.",
+    "Exactly three grouped additions cover publisher ordering/failures/collisions/restart/reset, actual old/new live winners with retained archives and real replayDeps/replayDecision, and authenticated operator outcomes. Existing bounded/normal publication fixtures now provide conditional R2 acknowledgement metadata."
+  ],
+  "criterion_verdicts": {
+    "W27.01-C1": {
+      "worker_result": "local runtime passed",
+      "evidence": "K1 runtime candidate 1: delayed archive before KV, null-only bounded allocation, missing/thrown/malformed ACK, same-ms changed data/restart/reset, unknown KV/archive commits, partial reset, alarm scheduling failures and preserved state guards"
+    },
+    "W27.01-C2": {
+      "worker_result": "local runtime passed",
+      "evidence": "K1 runtime candidate 1: actual single-slot service retains old winner/version after archive failure; acknowledged replacement changes winner and both archives replay exactly; actual authenticated publish/reset handlers withhold failed success/revision"
+    },
+    "W27.01-C3": {
+      "worker_result": "worker fixed9/static/protected checks passed; independent review pending",
+      "evidence": "K1 runtime candidate 1; K2 compiler, scoped lint and whitespace; Final source STOP and protected comparison"
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 9,
+      "unselected": 56,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 23103,
+      "chunk_id": "4b6c02",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "K2 compiler, scoped lint and whitespace"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 3,
+      "inherited_warnings": 3,
+      "command_capture": "K2 compiler, scoped lint and whitespace"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "K2 compiler, scoped lint and whitespace"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 54191,
+      "chunk_id": "5d6de4",
+      "final_bytes": true
+    }
+  },
+  "execution_history": [
+    {
+      "event": "implementation",
+      "detail": "Only six admitted source/fixture/kit paths edited. Affected existing synthetic storage upgraded to create-only ACK semantics before first runtime; no additional groups, suites, production scope or governance edits."
+    },
+    {
+      "event": "final validation",
+      "detail": "First exact fixed9 passed; exact sequential compiler/scopedlint/whitespace passed with the same three inherited fixture warnings. No failed or superseded runtime/static attempt. All109 protected source pins matched; source STOP followed final checks."
+    }
+  ],
+  "command_captures": [
+    {
+      "label": "K1 runtime candidate 1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts -t 'W27.01|W10.01|W23.01 keeps weighted|W24.01 pins|statistics object counts, arms one alarm|W25.01 publishes' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T13:47:10.557Z",
+      "captures": [
+        {
+          "chunk_id": "3f392d",
+          "wall_time_seconds": 1.001039465,
+          "session_id": 23103,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "a3cb9b",
+          "wall_time_seconds": 5.001218436,
+          "session_id": 23103,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "bb693c",
+          "wall_time_seconds": 10.001229687,
+          "session_id": 23103,
+          "original_token_count": 16,
+          "output": " ✓ src/ledger/ledger.test.ts  (22 tests | 21 skipped) 204ms\n"
+        },
+        {
+          "chunk_id": "d9b22d",
+          "wall_time_seconds": 10.000457132,
+          "session_id": 23103,
+          "original_token_count": 15,
+          "output": " ✓ src/learn/learn.test.ts  (24 tests | 18 skipped) 322ms\n"
+        },
+        {
+          "chunk_id": "4b6c02",
+          "wall_time_seconds": 0.000002266,
+          "exit_code": 0,
+          "original_token_count": 67,
+          "output": " ✓ src/content/consent.test.ts  (19 tests | 17 skipped) 185ms\n\n Test Files  3 passed (3)\n      Tests  9 passed | 56 skipped (65)\n   Start at  09:47:20\n   Duration  84.30s (transform 14.02s, setup 0ms, collect 47.76s, tests 711ms, environment 0ms, prepare 25.63s)\n\n"
+        }
+      ],
+      "session_id": 23103,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T13:48:54.559Z"
+    },
+    {
+      "label": "K2 compiler, scoped lint and whitespace",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/LearnStats.ts src/routes/decisions.ts src/learn/learn.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts --max-warnings 3 && git diff --check -- src/durable-objects/LearnStats.ts src/routes/decisions.ts src/learn/learn.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T13:48:54.560Z",
+      "captures": [
+        {
+          "chunk_id": "e0cb12",
+          "wall_time_seconds": 1.001807527,
+          "session_id": 54191,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fbd538",
+          "wall_time_seconds": 10.001384551,
+          "session_id": 54191,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d0b85f",
+          "wall_time_seconds": 10.001001094,
+          "session_id": 54191,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3c4bf0",
+          "wall_time_seconds": 10.003560139,
+          "session_id": 54191,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "223133",
+          "wall_time_seconds": 10.001980457,
+          "session_id": 54191,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3e2a51",
+          "wall_time_seconds": 10.001545853,
+          "session_id": 54191,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "299cef",
+          "wall_time_seconds": 10.000956567,
+          "session_id": 54191,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c7abc9",
+          "wall_time_seconds": 10.001952824,
+          "session_id": 54191,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5d6de4",
+          "wall_time_seconds": 1.196355444,
+          "exit_code": 0,
+          "original_token_count": 100,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  605:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  606:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  606:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 54191,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T13:51:59.127Z"
+    },
+    {
+      "label": "Final source STOP and protected comparison",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const sha=p=>createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\");const baselinePath=\"docs/remediation/design/W27.01/baseline.json\",b=JSON.parse(fs.readFileSync(baselinePath,\"utf8\")),owned=new Set(b.owned.map(x=>x.path)),protectedPins=b.pins.filter(x=>!owned.has(x.path));const mismatches=protectedPins.flatMap(x=>{const actual=sha(x.path);return actual===x.sha256?[]:[{path:x.path,expected:x.sha256,actual}];});const result={final_source_stop:{at:new Date().toISOString(),files:b.owned.map(x=>({path:x.path,sha256:sha(x.path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},references:[baselinePath,\"docs/remediation/design/W27.01/plan.md\",\"docs/remediation/evidence/W27.01/admission.json\"].map(path=>({path,sha256:sha(path)}))};console.log(JSON.stringify(result,null,2));if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T13:52:13.846Z",
+      "captures": [
+        {
+          "chunk_id": "70f7ec",
+          "wall_time_seconds": 0.478716693,
+          "exit_code": 0,
+          "original_token_count": 395,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T13:52:14.499Z\",\n    \"files\": [\n      {\n        \"path\": \"src/durable-objects/LearnStats.ts\",\n        \"sha256\": \"07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974\"\n      },\n      {\n        \"path\": \"src/routes/decisions.ts\",\n        \"sha256\": \"bb8c824603a6f8603562ab35c303642cd87627a3b1e4ef326a3eec3e56387adf\"\n      },\n      {\n        \"path\": \"src/learn/learn.test.ts\",\n        \"sha256\": \"35cbae2676a32723aa03a3e733611849ba8d5b117cf37de956fe170980692e52\"\n      },\n      {\n        \"path\": \"src/content/consent.test.ts\",\n        \"sha256\": \"4fe98d16b2e7995a03dbcf9716a38b84846597aa10fb37b9efd2eca0d645f47d\"\n      },\n      {\n        \"path\": \"src/ledger/ledger.test.ts\",\n        \"sha256\": \"260db8d8b4a8d0c204f6251a2eb76dbacf4b1d1f2268c50c5555a6dc6e90e4a1\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"ddea864e505f8b57256d06a0f1c58cd95bd38f66555122140a2682aef95b2fb6\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 109,\n    \"matched\": 109,\n    \"mismatches\": []\n  },\n  \"references\": [\n    {\n      \"path\": \"docs/remediation/design/W27.01/baseline.json\",\n      \"sha256\": \"fdd8d846595bd4e6c48cef328b4332b2dfda6fc9dcd966a5a14aabf6df1475b6\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W27.01/plan.md\",\n      \"sha256\": \"996dd84a88edd2b8f5fb6091bc63cafa241e28597cddbf9b1ea76e920494fdf4\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W27.01/admission.json\",\n      \"sha256\": \"7f97d3cceca3f45f15123235a53845155d9d74436669be7c2441efe0cd7a7431\"\n    }\n  ]\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T13:52:14.559Z"
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T13:52:14.499Z",
+    "files": [
+      {
+        "path": "src/durable-objects/LearnStats.ts",
+        "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "bb8c824603a6f8603562ab35c303642cd87627a3b1e4ef326a3eec3e56387adf"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "35cbae2676a32723aa03a3e733611849ba8d5b117cf37de956fe170980692e52"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "4fe98d16b2e7995a03dbcf9716a38b84846597aa10fb37b9efd2eca0d645f47d"
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "260db8d8b4a8d0c204f6251a2eb76dbacf4b1d1f2268c50c5555a6dc6e90e4a1"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "ddea864e505f8b57256d06a0f1c58cd95bd38f66555122140a2682aef95b2fb6"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 109,
+    "matched": 109,
+    "mismatches": []
+  },
+  "limitations": [
+    "Forward archive-before-live containment by the upgraded LearnStats publisher only; full W27/F22 remain open. Local actual-module checks use synthetic bindings, not deployed/customer/scientific or release acceptance.",
+    "No immutable page-wide dependency manifest, coupled-slot/exploration/gamma-zero replay parity, choice metadata or dependency-aware pin correction. New replay proof is single-slot only.",
+    "Numeric versions are not globally chronological or stable idempotent publication identities. Conditional creation protects retained keys from this publisher, not old unconditional publishers, external deletion or corruption.",
+    "Existing exposed/missing archives, retention/history repair and mixed-version rollout remain unresolved. Ambiguous archive writes can leave orphan versions; no archive readback or automatic cleanup added.",
+    "KV failure may already have applied and item reset may already have committed. Retry scheduling failure propagates; scheduled retry does not guarantee eventual publication or exactly-once effects.",
+    "No decision hot-path I/O, model/arithmetic/schema change, subdelegation, external/cloud/resource/credential/customer-data/deployment/commit action. Separate frozen review and lead acceptance pending."
+  ]
+}

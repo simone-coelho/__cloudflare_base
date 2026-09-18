@@ -1,0 +1,209 @@
+{
+  "at": "2026-09-12T20:25:29.443Z",
+  "task_id": "W32.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "aa778b38f1979fdeb85e546ec05ef73664bb2535e38ee841875f9d720591b224",
+  "contract_digest": "4643c75175caf8f491f831b95ff1b76913bf9f45eff78dab09b8bbc67ebffebd",
+  "verdict": "PASS",
+  "summary": "The frozen first-match index preserves the declared lookup semantics and output contract. Independent fixed5 passed; retained-source paired measurement supports local performance containment, not report capacity. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W32.01-C1",
+      "verdict": "PASS",
+      "evidence": "Actual two-file delta builds one first-wins Map and replaces only the credited-outcome find. has/set retains original insertion-order winner, including cross-visitor/slot duplicate IDs and default versus personalized arm; fallback and all attribution/output construction remain unchanged. The new four-combination grouped case checks direct/any first/last, repeated credits, distinct learned successes, deterministic output and unchanged serialized input. No input deduplication or mutation introduced."
+    },
+    {
+      "id": "W32.01-C2",
+      "verdict": "PASS",
+      "evidence": "Independent fixed5 retains learning-grid, both W33 canonical-write isolation and W21 repeated-credit controls. Separately inspected and reused the lead’s retained-pre-GO versus final actual-module measurement, not my own benchmark. Exact full JSON equality holds for all eight executions at each declared2k/10k workload with unchanged input; source identities and all92 recorded dependency hashes match. Recorded local median builder times23.21→10.23ms and288.47→45.16ms are descriptive only."
+    },
+    {
+      "id": "W32.01-C3",
+      "verdict": "PASS",
+      "evidence": "Two owned sources/one grouped addition, exact fixed5 once independently, all38 artifact pins/29 protected pins and both forward/inverse deltas match before/after. Complete worker/static and actual measurement command/captures inspected. Final compiler/scoped lint0errors0warnings/whitespace reused unchanged. Full report envelope/model/finding/customer/release scope remains open; no new benchmark infrastructure or serving change."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W32.01/plan.md",
+      "sha256": "733b3864c438e1717498d574d9b49c0523a5913d9b6aff16edf7dc4dfb02d4c1"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W32.01/artifact.json",
+      "sha256": "594b9fbce9175934832b686490e10e1ee46f67bbc517d4a63af00b00b6d7ce50"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.01/worker.json",
+      "sha256": "8dae9a27a2d1dd6ddca55613872adf44e159a6433f11496902353a3d6e63f36f"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts -t 'W32.01|W33.01|W21 retains repeated credits|the learning grid, the reporting overlays' --maxWorkers=1 --minWorkers=1",
+    "session_id": 80423,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "fad5ab",
+        "wall_time_seconds": 1.001946758,
+        "session_id": 80423,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "942943",
+        "wall_time_seconds": 0.000001839,
+        "exit_code": 0,
+        "original_token_count": 124,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/report.test.ts  (10 tests | 5 skipped) 76ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 5 skipped (10)\n   Start at  16:23:38\n   Duration  9.21s (transform 2.44s, setup 0ms, collect 4.63s, tests 76ms, environment 0ms, prepare 2.82s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 5,
+      "unselected": 5,
+      "total": 10,
+      "test_files": 1,
+      "new_grouped_cases": 1,
+      "retained_selected_cases": 4,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 38,
+    "source_and_output_pins": 31,
+    "protected_pins": 29,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 2,
+    "manifest_sha256": "594b9fbce9175934832b686490e10e1ee46f67bbc517d4a63af00b00b6d7ce50",
+    "before": {
+      "at": "2026-09-12T20:23:34.184Z",
+      "captures": [
+        "2eae07"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T20:24:26.166Z",
+      "captures": [
+        "1a767e"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "ad0b7c",
+          "wall_time_seconds": 0.137081867,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T20:23:34.587Z\",\"task\":\"W32.01\",\"state\":\"verification\",\"contract_digest\":\"4643c75175caf8f491f831b95ff1b76913bf9f45eff78dab09b8bbc67ebffebd\",\"artifact_digest\":\"aa778b38f1979fdeb85e546ec05ef73664bb2535e38ee841875f9d720591b224\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "3306f5",
+          "wall_time_seconds": 0.055069226,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T20:24:26.477Z\",\"task\":\"W32.01\",\"state\":\"verification\",\"contract_digest\":\"4643c75175caf8f491f831b95ff1b76913bf9f45eff78dab09b8bbc67ebffebd\",\"artifact_digest\":\"aa778b38f1979fdeb85e546ec05ef73664bb2535e38ee841875f9d720591b224\"}\n"
+        }
+      ]
+    },
+    "inspection": "Actual plan/task, full parent W32 and canonical F34/F32/N20/N21/N24 plus applicable F34/L6 evidence read b6fad6/3471ca; valid governance/root entry and prior source assurance reused. Both actual deltas and relevant builder read5371c0, matching STOP2026-09-12T20:21:34.328Z. Frozen manifest/baseline/deltas verified by exact forward/reverse reconstruction. Worker record/captures read36b08f/a138bb; truncated initial measurement display replaced by complete structured command/result/dependency inspection a138bb/1efcd8."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.01/worker.json",
+      "sha256": "8dae9a27a2d1dd6ddca55613872adf44e159a6433f11496902353a3d6e63f36f"
+    },
+    "command_capture": "w3201_static1",
+    "session_id": 59684,
+    "captures": [
+      "3857ae",
+      "35fed8",
+      "0e009d"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace": "PASS",
+    "qualification": "Exact admitted K2 && chain reached terminal exit0 on final bytes with no diagnostics; inspected, not rerun. Worker fixed5 session44452/58923d is distinct from independent evidence."
+  },
+  "measurement_reuse": {
+    "path": "docs/remediation/evidence/W32.01/measurement.json",
+    "sha256": "7a67c02ba0a5ac1707b95f3d294444e9eb192ff3e92c5d358bd609a578fdc3d9",
+    "actor_id": "w01-lead",
+    "session_id": 13315,
+    "captures": [
+      "d66f6b",
+      "cdabf6"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "reviewer_reruns": 0,
+    "inspection_capture": "1efcd8",
+    "exact_full_capture_equals_record": true,
+    "dependency_count": 92,
+    "dependency_mismatches": [],
+    "before_sha256": "40c6a18bc0c65aa562ca9ee905bef07854adb6b97d4d4f97574add652b9bc7ca",
+    "after_sha256": "62318a298a46c055a861cf0e3a636dfa746bf4a0f9ebcad5741a0e60919a4091",
+    "results": [
+      {
+        "decisions": 2000,
+        "outcomes": 400,
+        "policies": 5,
+        "slots": 2,
+        "items": 10,
+        "warmup_pairs": 1,
+        "measured_pairs": 3,
+        "full_output_equal_every_run": true,
+        "input_unchanged": true,
+        "output_sha256": "87ae6b3865f33bf1eedd1152b02b2e1fd2014d5469b4c8d1a2839f0d718def20",
+        "output_bytes": 60863,
+        "median_ms": {
+          "before": 23.212326000000076,
+          "after": 10.231847000000016
+        }
+      },
+      {
+        "decisions": 10000,
+        "outcomes": 2000,
+        "policies": 5,
+        "slots": 2,
+        "items": 10,
+        "warmup_pairs": 1,
+        "measured_pairs": 3,
+        "full_output_equal_every_run": true,
+        "input_unchanged": true,
+        "output_sha256": "cbd8c86545a7935addae45c8a3f163653c83943bc7aa254647a2b38a19ebeccb",
+        "output_bytes": 60936,
+        "median_ms": {
+          "before": 288.47081500000013,
+          "after": 45.158871999999974
+        }
+      }
+    ],
+    "qualification": "Installed esbuild in-memory bundles use retained actual pre-GO report.ts and final report.ts with identical current dependency graphs. The command verifies byte-identical full JSON on every warmup/measured execution, inputs unchanged, and source/dependency identities. Node22.15.0 linux x64; one warmup and three alternating measured pairs per size. Executed after implementation, not a fresh pre-fix baseline run. Raw timings/full captures remain in the bound record; no benchmark rerun by reviewer."
+  },
+  "retained_failures_and_qualifications": [
+    "No failed or superseded worker runtime/static attempts. Worker record correctly leaves the lead-owned paired measurement pending at its own authorship time; the separate pinned measurement completes that evidence, without rewriting worker history.",
+    "Independent runtime retains the existing Vite CJS deprecation notice. Five unselected tests were not run. Runtime uses actual report builders/authenticated Hono route stack with synthetic storage, not deployed services."
+  ],
+  "limitations": [
+    "This removes only the repeated decision-ID lookup and adds O(distinct decisions) references. Visitor-ring construction/filtering/sorting, repeated exposure/slot scans, grid/response/window payloads and record/byte/time capacity bounds remain unresolved.",
+    "Duplicate IDs retain the existing potentially surprising first-arm behavior across visitors/slots; no logical identity repair, deduplication, objective, estimator, prior, zero-base influence or reference-model change. Full W32/F34/F32/N20/N21/N24 is not closed.",
+    "Paired measurements use two slots/ten items and short five-decision visitor histories. Builder wall time excludes bundling, input creation, serialization and storage I/O; it establishes neither high-cardinality capacity, Worker CPU/memory, latency SLO, causal lift nor customer/release acceptance.",
+    "W33 custom-output isolation and W30 coverage/temporal implementations remain intact; selected controls do not renew every historical artifact or broad dependency assurance. Historical report repair/provenance, canonical write acknowledgements and reconstruction remain open.",
+    "No source/schema/infrastructure changes beyond the two admitted files, external/cloud/customer-data operations, deployment, commit, policy amendment or release approval are claimed."
+  ]
+}

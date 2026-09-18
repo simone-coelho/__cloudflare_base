@@ -1,0 +1,59 @@
+{
+  "before": "d20c9215df6e8ff441ca8eb37bb2fb487e2c5109a8e249e0472399ab7e46e16c",
+  "after": "5d9f3adc50133409691bdaa019c193f04b5a7bb0678276ae056fee99821d0d2f",
+  "at": "2026-09-16T20:50:09.046Z",
+  "mandate": {
+    "path": "docs/remediation/decisions/D01-customer-profile-approved-2026-09-16.json",
+    "sha256": "20b7f1f20a78bdce686ac6812e65c9de8684d29bd7b53a80cd72ef0cbf0164e3"
+  },
+  "baseline": {
+    "src/index.ts": "b161958178f76cf997210fd4c4c139671cc26b1fe87a947f6103199c8834eabf",
+    "src/customerBoundary.ts": null,
+    "src/types/env.ts": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+    "src/routes/operator.ts": "0e9f3f2dfef869d054d3f484f1b7c592e53ede5da052ebfe3037f01549f64223",
+    "wrangler.toml": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+    "src/index.api-boundary.test.ts": "8dd867f1298f266eafbe8132aec05e456c19e86d3b58c79d8dbca7948eac92b0"
+  },
+  "baseline_evidence": {
+    "path": "docs/remediation/evidence/W01.08/preflight-review.json",
+    "sha256": "4813d9464c988dee634376c677915fa445d02e554bfa94f5f6be30b2f51d7dd7"
+  },
+  "implementation": [
+    "Only explicit demo profile permits demo discovery; customer or invalid configuration cannot downgrade via AUTH_MODE. Enforce all entry types before effects.",
+    "Customer exact route/method/upgrade policy preserves underlying tenant/shopper/operator authority. Unknown routes/methods/upgrades deny; HEAD and OPTIONS handled deliberately. Preserve owned connections, deny shared connections/health.",
+    "Customer Worker-first exact SDK/console asset allowlist, no SPA fallback. Reject demo/backup/unknown/encoded escape/API-shadow paths before ASSETS effects.",
+    "Customer manifests omit OpalAgent, MERIDIAN_REFLEX, BROWSER and unused STATE_MANAGER bindings. Preserve exports, migrations and existing objects/data.",
+    "Enforced/customer scene jobs retry before destination/model work; preserve ledger dispositions and valid scheduled work. Invalid customer configuration fails closed.",
+    "Customer Coach audience reads must not seed bundled demo audiences. Retained CORS supports PATCH and If-Match/Idempotency-Key; no role/schema redesign."
+  ],
+  "checks": [
+    {
+      "id": "W01.08-K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "workload": "Existing boundary fixture extended for strict customer routes/methods/upgrades, actual local static dispatch, two-tenant and owned-shopper controls, zero-effect diagnostics/scene refusal, customer Coach audience behavior and CORS; one execution covers both criteria."
+    },
+    {
+      "id": "W01.08-K2",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.ts src/customerBoundary.ts src/types/env.ts src/routes/operator.ts src/index.api-boundary.test.ts && git diff --check -- src/index.ts src/customerBoundary.ts src/types/env.ts src/routes/operator.ts wrangler.toml src/index.api-boundary.test.ts",
+      "workload": "Changed source/configuration and installed compiler; inherited warnings distinguished. New-file whitespace inspected too."
+    },
+    {
+      "id": "W01.08-K4",
+      "command": "Independent frozen-artifact and complete original W01 requirement review",
+      "workload": "Actual source and primary evidence with every original obligation retained"
+    },
+    {
+      "id": "W01.08-K5",
+      "command": "Inspect owner-authorized selected-customer route/asset/binding/resource attestation for the identified artifact",
+      "workload": "Actual selected customer deployment and resource ownership"
+    }
+  ],
+  "independent_preflight": "Distinct /root/w01_reviewer Astra/xhigh accepted this local profile amendment and verified STATE_MANAGER is outside current product monitor/queue/cron paths; worker and reviewer both confirm. Earlier nine-probe baseline retained.",
+  "rollback": "Exact inverse of worker-owned deltas only; preserve pre-existing worktree, class exports, migrations and data.",
+  "limits": "Local checks cannot supply deployed/resource-owner attestation, customer acceptance or release approval. K5 and full W01 remain open without that evidence.",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T20:50:09.046Z",
+    "scope": "Six listed product/test/config files and own evidence; GO after existing board validation."
+  }
+}

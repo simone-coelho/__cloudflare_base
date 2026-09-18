@@ -1,0 +1,114 @@
+{
+  "at": "2026-09-13T20:46:40Z",
+  "task_id": "W20.04",
+  "journal": 1576,
+  "contract_digest": "6993984fd93f2165924df7214600c95ca6aa99c762dcbfb32bb9e221959b2c5c",
+  "plan": {
+    "path": "docs/remediation/design/W20.04/plan-v3.md",
+    "sha256": "4c666a24a0718ee563a175b39d6b02545a5a82bc7bf47eeaff746069024ea5b5"
+  },
+  "priorPreflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W20.04/plan-v2.md",
+      "sha256": "b609404ad507d6fb3e02ae648a26f5f080eed85ff709a44206f7ad60bc968449"
+    },
+    "contract_digest": "329af062d565a52906566289e4f79404bb984e965edb2102609267d3eb4cae6a",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-13T20:30:41Z",
+      "plan_sha256": "b609404ad507d6fb3e02ae648a26f5f080eed85ff709a44206f7ad60bc968449",
+      "rationale": "Confirmed pre-runtime import dependency only: same15 outputs, two existing W38.05 groups added to fixed27 and original oracle preserved. No new suite or customer scope."
+    }
+  },
+  "prior_admission": {
+    "path": "docs/remediation/evidence/W20.04/admission-v2.json",
+    "sha256": "c3a6f7de972e850cd772d162bb978d79f15c317dd40ab6cc7f3b3a5ec01c14ed"
+  },
+  "source_pause": {
+    "root_capture": "7bd964",
+    "at": "2026-09-13T20:45:30.917Z",
+    "worker_confirmation": {
+      "at": "2026-09-13T20:45:34.812Z",
+      "capture": "a1a7fb"
+    },
+    "ownedPins": [
+      {
+        "path": "src/content/types.ts",
+        "sha256": "1d86a3ec4d09e7478892b644cef6dbecc7f86f7546a2ad1c22023d08eba3347d"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "2f606e546811ef9322cc523e96c8830dd22e42849dd2a2e93cb1c4d748db47d3"
+      },
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "sha256": "ea4f75a1a75178ee0ab6d931437b247cd58bc573ecbb62ade1d5fb411fb5cd7f"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "efba476d6c62cacd08ab45c0dfb49b7e1db93cdec997aeb24481b12a279fa26e"
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "6cf65684c6682823108eb5aceb43f1da6315b01936ce0d23bc028e832f45f977"
+      },
+      {
+        "path": "src/content/slotDiagnostics.ts",
+        "sha256": "832d402b6cc563fd5386bd2b9c32110a850cd97ed5f5d56d70603dbeb1a3d838"
+      },
+      {
+        "path": "src/content/slotConstraints.ts",
+        "sha256": "a48b52bfb2ee6f5167ffd52a537de372a4d62d010d7c0aa84e2f0c7005db74c6"
+      },
+      {
+        "path": "public/console/views-config.js",
+        "sha256": "20461e8ba2b1580ce24c04548f401597bf4f9320060a67c096fd760837ce3d9a"
+      },
+      {
+        "path": "src/reflex/contentCompose.test.ts",
+        "sha256": "874f1a765a41f0538ca7ae72d9fe67f825a579cd83f9bd3f6cb5e2acec27caa2"
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "sha256": "1ce4b6ac2fad5bd011b8a602d0acd7ac0e11e412d851d097cbc7ce303395ab20"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "2f7cbfc20b881633d9005689198fc84affdd595b334ef26fce180cbb570db628"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "10fc071ad240fce814a1302b8cadd3b289626378f2f6f59ff29329aab7c4293f"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "01062e822bf2ddbe6c197171ed25e89851927385c9a8487d318beab4fb234e56"
+      },
+      {
+        "path": "docs/kit/03-payload-schemas.md",
+        "sha256": "caea87fd69ac4f4f20a74d88493ce52e57a033f243c652a3a632810198f46b79"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "6481481eba99a25434505988743c4806e8876660bf854df7b15cee2155dcf185"
+      }
+    ]
+  },
+  "failed_runtime": {
+    "session_id": 55095,
+    "captures": [
+      "8c82e8",
+      "b9de78",
+      "d176c7",
+      "f20aba"
+    ],
+    "passed": 24,
+    "failed": 3,
+    "unselected": 97,
+    "exit_code": 1,
+    "drained": true,
+    "qualification": "Status from worker; full primary captures retained in forthcoming worker.json. No source edits occurred during either check."
+  },
+  "qualification": "Static1 passed on first candidate; not final-byte proof after pending rework. Original baseline, v1/v2 admissions and W38 supplemental input remain unchanged."
+}

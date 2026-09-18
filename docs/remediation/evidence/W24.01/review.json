@@ -1,0 +1,188 @@
+{
+  "task_id": "W24.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T11:55:22.560Z",
+  "verdict": "pass",
+  "artifact_digest": "8cde0b46d01b882eeef426a2923cdee3e8de0979c250331516f544e06d04c6ee",
+  "contract_digest": "e53bfc54ae838c033c1a148e4f15d76dbeb126c2a94320c3cc67645dd255e33b",
+  "summary": "Pass for forward stored-configuration compatibility and request-scoped live snapshot eligibility; not clean-history, generation or full W24 acceptance.",
+  "criteria": [
+    {
+      "id": "W24.01-C1",
+      "verdict": "pass",
+      "evidence": [
+        "Actual LearnStats requires explicit valid configuration and compares reward/objective(default unit)/tau against the stored anchor before cloning, counter mutation, put or alarm. Incompatible calls return409/applied:false; estimator-only changes preserve both item and slot maps. Interleaved and restarted fixture calls confirm no tuple oscillation or implicit reset.",
+        "Actual outcome route supplies click/unit plus the same resolved document's global stats through fanOutcome. Ring uses an own override or that explicit default, strictly validates each resolved configuration while preparing all plans, and uses it for both weight and write body before any downstream send. No stored/another-slot inference or malformed override fallback.",
+        "Independent final-byte fixtures exercise the real service→outcomeToLearning→fan→ring→LearnStats path for default and nondefault global tau, accepted item/slot credits, missing/malformed overrides with no sends, and changed-tau409/incomplete accounting without counter changes. Existing all-reward ingestion semantics remain."
+      ]
+    },
+    {
+      "id": "W24.01-C2",
+      "verdict": "pass",
+      "evidence": [
+        "Snapshots emit optional-type tauLearnMs metadata. Actual live readLift checks owner, reward, absent-only objective default, horizon and n0/nMin/clamps on fresh reads and every cache hit against this request's configuration. It caches raw values, not one request's compatibility result.",
+        "Actual service fixtures positively observe learned ranking/receipt, then omit mismatched fresh/cached evidence and restore compatible use without another lift read. Explicit null objective and missing legacy tau are refused for live evidence; gamma0 and pure legacy liftFor remain usable.",
+        "Pure decide/replay/liftFor implementations are unchanged. Snapshot omission does not disable explicitly configured operator-frozen lift; that accepted scope caveat is documented, not presented as all learned multipliers being disabled."
+      ]
+    },
+    {
+      "id": "W24.01-C3",
+      "verdict": "pass",
+      "evidence": [
+        "Reviewer supplied required current-byte fixed9 exactly once after the approved fixture addendum:9 passed/30 intentionally unselected, exit0/drained. All120 artifact pins,110 source pins/101 protected and nine exact bidirectional deltas verify before/after; actual current contract and artifact match.",
+        "All nine actual source/fixture/kit deltas and full worker captures inspected. Final static84555/26ae9c passed compiler, eight-file lint0errors/three inherited warnings, and nine-file whitespace; supplemental existing3 on final bytes53110/7eb970 passed. Both reused, not rerun.",
+        "Worker runtime-3 nine-pass remains a superseded candidate after the two unselected normal-caller fixture config additions. The addendum explicitly requires this independent final-byte nine-pass; no stale worker pass is relabeled. Lead disposition remains separate."
+      ]
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W24.01/plan-r2.md",
+      "sha256": "06bf76243e0f2e4e59b5f683bd0fd5e507de450823e9efcb3088a6551b916631"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W24.01/artifact.json",
+      "sha256": "49292119911be92bafa2bc6d2a63f70b739a2c8cc403a42e8637fa52b9e99ad7"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W24.01/worker.json",
+      "sha256": "366d505acb333b0a196e9280377562a0646c149784f6e7a6fd0dcbd14a5bb52e"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/content/consent.test.ts -t 'W24.01|W23.01|W10.01|W09.04 reports acknowledged|the statistics object counts|W09.04 current callers' --maxWorkers=1 --minWorkers=1",
+    "session_id": 55678,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 9,
+      "failed": 0,
+      "intentionally_unselected": 30,
+      "total": 39,
+      "test_files_passed": 2,
+      "new_groups": 2,
+      "final_bytes": true,
+      "runtime": "Installed Node/Vitest; actual modules with synthetic storage/publication, not native/deployed proof."
+    },
+    "captures": [
+      {
+        "chunk_id": "c598de",
+        "wall_time_seconds": 1.002667244,
+        "session_id": 55678,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b1dcd5",
+        "wall_time_seconds": 1.841795285,
+        "exit_code": 0,
+        "original_token_count": 141,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (22 tests | 15 skipped) 356ms\n ✓ src/content/consent.test.ts  (17 tests | 15 skipped) 161ms\n\n Test Files  2 passed (2)\n      Tests  9 passed | 30 skipped (39)\n   Start at  07:53:19\n   Duration  28.64s (transform 5.47s, setup 0ms, collect 11.23s, tests 517ms, environment 0ms, prepare 12.88s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "before": {
+      "at": "2026-09-12T11:52:46.290Z",
+      "captures": [
+        "03e96a",
+        "4844e2"
+      ],
+      "session_id": 34708,
+      "exit_status": 0,
+      "drained": true,
+      "pins": 120,
+      "mismatches": [],
+      "protected_count": 101,
+      "protected_mismatches": [],
+      "bidirectional_deltas": 9,
+      "all_exact": true
+    },
+    "after": {
+      "at": "2026-09-12T11:54:03.109Z",
+      "captures": [
+        "a2c449",
+        "d01637"
+      ],
+      "session_id": 75734,
+      "exit_status": 0,
+      "drained": true,
+      "pins": 120,
+      "mismatches": [],
+      "protected_count": 101,
+      "protected_mismatches": [],
+      "bidirectional_deltas": 9,
+      "all_exact": true
+    },
+    "contract_before": {
+      "capture": "cccca2",
+      "at": "2026-09-12T11:52:11.443Z",
+      "task": "W24.01",
+      "state": "verification",
+      "contract_digest": "e53bfc54ae838c033c1a148e4f15d76dbeb126c2a94320c3cc67645dd255e33b",
+      "artifact_digest": "8cde0b46d01b882eeef426a2923cdee3e8de0979c250331516f544e06d04c6ee"
+    },
+    "contract_after": {
+      "captures": [
+        "06f663",
+        "40bc30"
+      ],
+      "at": "2026-09-12T11:54:02.581Z",
+      "task": "W24.01",
+      "state": "verification",
+      "contract_digest": "e53bfc54ae838c033c1a148e4f15d76dbeb126c2a94320c3cc67645dd255e33b",
+      "artifact_digest": "8cde0b46d01b882eeef426a2923cdee3e8de0979c250331516f544e06d04c6ee"
+    },
+    "source_inspection": {
+      "plan_and_original_production": [
+        "d03503",
+        "b48ce4"
+      ],
+      "default_propagation_addendum_worker_metadata": "80ae94",
+      "both_fixtures_and_kit": "0adbf8",
+      "full_worker_commands_criteria_freeze": "d14547",
+      "source_stopped_at": "2026-09-12T11:49:39.273Z",
+      "baseline": "docs/remediation/design/W24.01/baseline-r2.json"
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Six-file original admission paused before source/runtime; R2 adds route/fan/ring explicit default propagation for a concrete normal-slot dependency. Original admission retained; no inferred stored fallback.",
+    "Worker runtime-1 failed one case (8passed) because a synthetic click/revenue document was correctly rejected by the existing public validator; corrected to purchase/revenue, without weakening validation. runtime-2 passed9, then static-1 failed three fixture visit_bucket typing diagnostics; compiler exit2 and lint/whitespace not reached.",
+    "Runtime-3/static-2 and initial STOP remain superseded after the approved two normal-caller fixture config additions. Current-byte supplemental3/static passed; this independent fixed9 provides the addendum's missing final-byte required runtime.",
+    "Worker's rejected patch-context attempt applied no changes. All original command failures and superseding captures remain in the pinned worker record.",
+    "Reviewer first integrity invocation selected original six-file baseline.json, causing a missing-owned-entry TypeError; it was not a source failure or pass. Corrected to admitted baseline-r2.json and passed all pins/deltas before runtime. Failed tool capture is retained below.",
+    "Existing Vite CJS deprecation warning is retained verbatim in independent runtime output."
+  ],
+  "reviewer_tooling_failure": {
+    "description": "Initial integrity command used superseded baseline.json instead of baseline-r2.json; corrected before runtime, no source changes.",
+    "captures": [
+      {
+        "chunk_id": "0faafb",
+        "wall_time_seconds": 1.001447895,
+        "session_id": 98572,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "faa453",
+        "wall_time_seconds": 0.000002735,
+        "exit_code": 1,
+        "original_token_count": 474,
+        "output": "[stdin]:3\nconst deltaResults=d.deltas.map(x=>{const original=b.owned.find(p=>p.path===x.path);const old=original.absent?'':zlib.gunzipSync(Buffer.from(original.content_gzip_base64,'base64')).toString();const current=fs.readFileSync(x.path,'utf8');return{path:x.path,before:original.absent?x.original_absent===true&&x.before_sha256===null:h(old)===x.before_sha256,after:h(current)===x.after_sha256,forward:patch(old,x.forward)===current,reverse:patch(current,x.reverse)===old};});const digest=h(JSON.stringify({contract_digest:a.contract_digest,configuration:a.configuration,files:a.files.map(({path,sha256,role})=>({path,sha256,role})).sort((x,y)=>x.path.localeCompare(y.path))}));console.log(JSON.stringify({at:new Date().toISOString(),artifact_digest:digest,manifest_sha256:h(fs.readFileSync(base+'artifact.json')),pins:a.files.length,bad,protected_count:protectedPins.length,protected_bad:protectedBad,deltas:deltaResults,basis:['docs/remediation/design/W24.01/plan-r2.md',base+'artifact.json',base+'worker.json'].map(path=>({path,sha256:h(fs.readFileSync(path))}))},null,2));if(bad.length||protectedBad.length||deltaResults.some(x=>!x.before||!x.after||!x.forward||!x.reverse)||digest!=='8cde0b46d01b882eeef426a2923cdee3e8de0979c250331516f544e06d04c6ee')process.exit(1);\n                                                                                                       ^\n\nTypeError: Cannot read properties of undefined (reading 'absent')\n    at [stdin]:3:104\n    at Array.map (<anonymous>)\n    at [stdin]:3:29\n    at runScriptInThisContext (node:internal/vm:209:10)\n    at node:internal/process/execution:449:12\n    at [stdin]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:447:60)\n    at evalFunction (node:internal/process/execution:87:30)\n    at evalScript (node:internal/process/execution:99:3)\n    at node:internal/main/eval_stdin:53:5\n\nNode.js v22.15.0\n"
+      }
+    ]
+  },
+  "limitations": [
+    "Existing stored config is a forward anchor only, not proof that legacy item or slot history was accumulated cleanly. No reset, generation transition, migration, historical reconstruction/refold or promote.",
+    "Per-request snapshot matching is not atomic configuration rollout. Old binaries, cached learn-document propagation, historical snapshots/reports and policy/denominator transitions remain outside this slice.",
+    "Reward filtering, currencies/refunds, margin fallback, prior-unit semantics, historical delivery/reconciliation and W22/W24/W30 recovery remain unchanged. Missing legacy tau omits live evidence, not archived pure replay.",
+    "Explicit operator-frozen lifts remain active as configured. No complete snapshot/business-record validation or broader learned-term disablement is claimed.",
+    "Existing capacity, arithmetic, consent and erasure paths are retained; local synthetic fixed9 plus reused supplemental3/static is not native capacity, full W24/F19/F08/N17, scientific/customer/SLO or release acceptance.",
+    "Only review.json written by reviewer; no source/governance changes, additional tests/static/board replay, external operations or subdelegation. Root owns acceptance."
+  ]
+}

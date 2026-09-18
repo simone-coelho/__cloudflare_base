@@ -1,0 +1,115 @@
+{
+  "task_id": "W09.09",
+  "at": "2026-09-17T21:34:46.014Z",
+  "contract_digest": "ea9b09b82fe2a51aff057120bac7c3cc0b2067f54eed3356af0ba137cfd6a70b",
+  "scope": "Same full original W09/C1–C9; two-file correction for residual DecisionRing alarm-entry physical-expiry ordering. Earlier R1–R4 fixes and all prior remedies preserved. No W10 admission.",
+  "previous_tracker_sha256": "b3c591d62e7ff1d437e278a02ad98ee93d019433f79db765a0f6aef08e09050b",
+  "previous_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/evidence/W09.09/admission-review-rework.json",
+      "sha256": "f69f53ef2e8c9d211775a234d46c612c743c0d440c04b366bc13a1e837d508f2"
+    },
+    "contract_digest": "ea9b09b82fe2a51aff057120bac7c3cc0b2067f54eed3356af0ba137cfd6a70b",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-17T21:11:01.644Z",
+      "plan_sha256": "f69f53ef2e8c9d211775a234d46c612c743c0d440c04b366bc13a1e837d508f2",
+      "rationale": "Approve coherent R1–R4 local rework within15exclusiveoutputs. Product/check GO held for valid board checkpoint."
+    }
+  },
+  "baseline": {
+    "kind": "Distinct consolidated corrected-source review plus root confirmation: alarm current() waits on R2 before stripping expired raw attribution plans or valid stamped ring/index rows. Earlier rejection-on-error tests do not cover a held read.",
+    "review": {
+      "path": "docs/remediation/evidence/W09.09/review-r1.json",
+      "sha256": "dd44b345f5a318c2f661c2414b2dcaf39300f89cba55407f4c0f2965f01b7cc7",
+      "bytes": 12619
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W09.09/worker-r1.json",
+      "sha256": "44d2523511e5b593b946edec49dea5c23408ee0b512062b1ddc94cbced526d81",
+      "bytes": 841956
+    },
+    "freeze": {
+      "path": "docs/remediation/evidence/W09.09/source-freeze-r1.json",
+      "sha256": "3b855d410f3a08f61e6d254e324b738755238d228e9fd6f1221e288b5a6f352f",
+      "bytes": 6583
+    },
+    "rejected_artifact": {
+      "encoding": "gzip+base64",
+      "sha256": "5a8a5fbd91509db7d8ca0ef53b4f260402c8087d6867e6e0752b5b73c0899f4f",
+      "bytes": 13575,
+      "gzip_base64": "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"
+    },
+    "rework_files": [
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "ecebf9ce91cbbf82214d3051cf1e574da9bfce35c486a3d8f94bd1ecdc9ad21c",
+        "bytes": 31425
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "0fe9ab2f8463e1c5424373151e73b54ead498e30e499cddbed7ab25fd197d8c7",
+        "bytes": 129764
+      }
+    ],
+    "protected_pin_count": 100,
+    "board": "Corrected freeze board VALID check/status both0, append-onlytrue against4bb4d02f6d148be8b6e1043893f056ca10759234b81526086a6a6d64b5c5d1af;63335drained/1c0a0d,journal2201. K8 held for known source rejection."
+  },
+  "acceptance": [
+    "At actual DecisionRing.alarm entry, remove all independently proved expired raw credit-plan batches and tagged ring/index rows before the first R2 or child wait. Local raw plan expiry must not depend on current() remote progress. Preserve exact minimal child-cleanup debts, terminal/retired meaning, original deadlines and generation/reset authority; no reminted attribution or lifetime.",
+    "Preserve live and unstamped/invalid-unproved historical rows; missing proof never authorizes deletion. Keep remote downstream waits outside the recent-ring lock. Existing erasure/copy/retention/idempotency/count semantics and original W09 full scope remain.",
+    "One grouped real-class alarm test holds the FIRST R2 read and inspects persisted expired plans AND expired tagged ring/index removal BEFORE release; verify retained live/legacy rows/debt and eventual cleanup/retry after failure/restart. Run red before fix, preserve failed output.",
+    "After correction run only affected exact K2/K3/K4 and narrowed static check. Reuse K1/K5 and unchanged lint/JS components from immutable worker-r1 through explicit source qualification; no claim all old commands reran on new bytes. STOP then distinct full C1–C9 review and still-required exact K8. C9/K9 full/live OPEN."
+  ],
+  "checks": {
+    "red": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W09[.]09 rework ring alarm' --maxWorkers=1 --minWorkers=1",
+    "affected_runtime": [
+      {
+        "id": "W09.09-K2",
+        "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts -t 'W09|W24[.]01|W23[.]01 keeps weighted|W22[.](04|08|09)|W26[.]03|W06[.]12 expires|W06[.]06 rejects an append|W10[.](01|02)' --maxWorkers=1 --minWorkers=1"
+      },
+      {
+        "id": "W09.09-K3",
+        "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts -t 'W09|W24[.]01|drains unawaited private I/O|W06[.]12 propagates|W22[.]07 gates|uses stored switches for both hosts' --maxWorkers=1 --minWorkers=1"
+      },
+      {
+        "id": "W09.09-K4",
+        "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W09|W06[.]12 native owner/R2|W07[.]01 preserves successful ledger' --maxWorkers=1 --minWorkers=1"
+      }
+    ],
+    "affected_static": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/learn.test.ts && git diff --check -- src/durable-objects/DecisionRing.ts src/learn/learn.test.ts",
+    "reuse": "K1 ledger/erasure and K5 injected-provider workflow selected inputs unchanged; prior package tool proof remains qualified, not current Worker proof. K6 compiled current Worker plus2-file lint/whitespace combined with unchanged30TS/JS/scoped whitespace evidence. Compare only applicable warnings with prior exact diagnostic lines.",
+    "reason": "Two changed files share actual learning/caller/native/erasure paths; no ledger/workflow, package, SDK or broad suite rerun justified.",
+    "independent": "Whole original W09/C1–C9 plus exact K8 on new frozen artifact; reviewer review-r2.json only after GO; C9/K9 final live batch not run."
+  },
+  "ownership": {
+    "worker_actor": "w0909-worker",
+    "worker_run": "/root/w0705_recover",
+    "exclusive_product_files": [
+      "src/durable-objects/DecisionRing.ts",
+      "src/learn/learn.test.ts"
+    ],
+    "evidence_file": "docs/remediation/evidence/W09.09/worker-r2.json",
+    "reviewer_actor": "w0909-reviewer",
+    "reviewer_run": "/root/w0705_review_r2",
+    "reviewer": "Read-only during correction; review-r2.json/exactK8 only after corrected source/evidenceSTOP and valid boardGO.",
+    "immutable_evidence": [
+      "docs/remediation/evidence/W09.09/worker.json",
+      "docs/remediation/evidence/W09.09/review.json",
+      "docs/remediation/evidence/W09.09/source-freeze.json",
+      "docs/remediation/evidence/W09.09/worker-r1.json",
+      "docs/remediation/evidence/W09.09/review-r1.json",
+      "docs/remediation/evidence/W09.09/source-freeze-r1.json"
+    ],
+    "lead": "Existing records only, no product edits/checks."
+  },
+  "dependencies": "No new owner decision/authority; use existing explicit per-category fail-closed retention and ordered local continuation/final-live-batch mandate.",
+  "rollback": "Retain exact two dirty baselines and reversible deltas in worker-r2.json; preserve100otherpins and all frozen evidence. No automatic restore or unrelated edits.",
+  "authority": "Local2-file correction after valid boardGO only; no further delegation, external operation, policy value invention, broadCI, newframework, SDK/package rebuild or commit/merge/push/deploy.",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-17T21:34:46.014Z",
+    "decision": "Approve bounded actual-ring alarm correction; product/checkGO held for valid board."
+  }
+}

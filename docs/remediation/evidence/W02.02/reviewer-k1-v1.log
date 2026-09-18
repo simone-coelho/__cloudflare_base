@@ -1,0 +1,35 @@
+Command: node node_modules/vitest/vitest.mjs run src/auth/signing-config.boundary.test.ts src/middleware/auth.refresh-boundary.test.ts src/routes/auth.test.ts src/auth/accounts.test.ts src/middleware/edgeAccess.test.ts src/routes/content.test.ts src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1
+Started: 2026-09-07T01:59:23.802Z
+Observed complete: 2026-09-07T02:00:40.576Z
+Exit code: 0
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base
+
+ ✓ src/routes/identity.test.ts  (20 tests) 52ms
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"open","state":"fresh","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"open","state":"revoked","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"enforced","state":"fresh","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"enforced","state":"revoked","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+ ✓ src/middleware/auth.refresh-boundary.test.ts  (30 tests) 372ms
+ ✓ src/routes/auth.test.ts  (6 tests) 370ms
+ ✓ src/auth/signing-config.boundary.test.ts  (33 tests) 182ms
+ ✓ src/middleware/edgeAccess.test.ts  (9 tests) 24ms
+ ✓ src/routes/content.test.ts  (5 tests) 21ms
+ ✓ src/auth/accounts.test.ts  (5 tests) 112ms
+
+ Test Files  7 passed (7)
+      Tests  108 passed (108)
+   Start at  21:59:27
+   Duration  32.20s (transform 1.47s, setup 0ms, collect 10.15s, tests 1.13s, environment 1ms, prepare 15.37s)
+
+

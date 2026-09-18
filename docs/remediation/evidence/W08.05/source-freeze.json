@@ -1,0 +1,81 @@
+{
+  "task_id": "W08.05",
+  "at": "2026-09-17T18:15:30.000Z",
+  "source_state": "SOURCE/EVIDENCE STOP; all worker/native sessions drained. Reviewer owns review.json only; no product/worker evidence edits.",
+  "worker": {
+    "path": "docs/remediation/evidence/W08.05/worker.json",
+    "sha256": "85b80a3ddc53409a5e125096d8162e78eae5927f72e47c09c0ab41e1ccb8b745",
+    "bytes": 467167
+  },
+  "admission": {
+    "path": "docs/remediation/evidence/W08.05/admission.json",
+    "sha256": "2ef18f5d5aee4a47500d11a50140a4eb33732b1fec5f6b64c99eb39d618ba7f8"
+  },
+  "artifact": {
+    "digest": "0f8926d6124a40e9d0d61cb0b7e779cad51cb6b7a467b44f920229c215ab0a02",
+    "contract_digest": "19a5a684f4cdf78a065a9d255bdba6be73edceb1ffcbe246205233f0e41a67d2",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W08.05",
+    "files": 969
+  },
+  "identity": {
+    "outputs": 12,
+    "final_test_pins": 62,
+    "protected_pins": 50,
+    "actual_package_inputs": 936,
+    "virtual_inputs": [
+      {
+        "bytes": 47,
+        "imports": [],
+        "path": "stamp-node-builtins:path",
+        "sha256": "9e8c63df72b81375da040cd4628fe8e4fd6ba2aedfc0dccebd3ee186399c47c1"
+      },
+      {
+        "bytes": 46,
+        "imports": [
+          "node_modules/unenv/dist/runtime/node/tty.mjs"
+        ],
+        "path": "stamp-node-builtins:tty",
+        "sha256": "8ccf40d3eced5ded6bc9f5f761458e551eba55f39afec528141dec426204d7d0"
+      },
+      {
+        "bytes": 47,
+        "imports": [],
+        "path": "stamp-node-builtins:util",
+        "sha256": "2f5211bd848caa1237a03428030c5746e30bf4c7c9959566f1070abf2a73f89c"
+      },
+      {
+        "bytes": 211,
+        "imports": [
+          "node_modules/@cloudflare/unenv-preset/dist/runtime/node/process.mjs",
+          "node_modules/@cloudflare/unenv-preset/dist/runtime/node/console.mjs",
+          "node_modules/@cloudflare/unenv-preset/dist/runtime/polyfill/performance.mjs"
+        ],
+        "path": "stamp-virtual:globals",
+        "sha256": "0059f5636d12fa080fd58551cc1e5a3df4ef9843b67212bcb8caf0c67d167880"
+      }
+    ],
+    "package_digest": "46bc0796f8800618d2e186c8c7cbb19cbc1c1538b77c0a2221f54eee95e38c12",
+    "safe_manifest_sha256": "a99241a7d68eec42c2b40d623b3bc21607082d825e6c3f31f701d896001bd23e",
+    "safe_manifest_bytes": 341995,
+    "package_primary_sha256": "d8917667af03305e15f4f41cfd8fe0ebee63c02b7fd15a8ae718b83d0f402a7d",
+    "qualification": "Independently verified12originals/forward-reverse patches,62current pins,50protected pins,5primary integrities,final lifecycle/static pins,exact product migration copies,936package inputs with4declared virtual modules and one-line reversehash qualification."
+  },
+  "results": {
+    "K1": "Qualified component assurance, NOT a final full-command pass: K1.2 retained 16 non-package passes; K1.package.1 passes actual package/native initialization; K1.lifecycle.1 supersedes the affected lifecycle group after one-line receipt correction. The two original failures remain retained.",
+    "K2": "PASS final four JS syntax/three shell parse/twelve-output whitespace checks on all 62 final pins",
+    "K3": "Pending distinct whole-original-W08 frozen artifact review",
+    "K4": "Pending distinct reviewer new W08.05 groups; may reuse exact package/native proof",
+    "K5": "NOT RUN: separately authorized live provider/customer/security/privacy/maintenance/release acceptance"
+  },
+  "limits": [
+    "All provider tests inject only the HTTP boundary; no real account/resource/credential/customer operation occurred.",
+    "Caller approval/evidence digests do not constitute agent verification of live maintenance, queue drain, access, retention or ownership.",
+    "Analytics binding intent is not verified existence; explicit secret upload acknowledgement is not value readback; asset upload acknowledgement is not live served-byte acceptance.",
+    "Restore requires actual current-version/material proof, <=1h owner maintenance covering all writers/in-flight work, drained queue/no producers and protected current six-table snapshot; provider config cannot prove quiescence.",
+    "Unknown DO tags/schema and unsupported historical/demo restore refuse. Oversized recovery transaction refuses before time travel; no blind repost/deletion compensation.",
+    "Retained historical artifacts must have identical effective security/privacy dependency identity; no rollback of current credential, account/session/membership/service/recovery/consent/erasure barriers.",
+    "Product migrations retain exact original 0010/0011/0012 filenames and bytes; demo chain and setup retirement unchanged.",
+    "No commit, merge, push, deploy, external message, broad CI or engine/unowned edit."
+  ]
+}

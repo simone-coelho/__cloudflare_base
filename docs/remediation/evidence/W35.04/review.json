@@ -1,0 +1,109 @@
+{
+  "task_id": "W35.04",
+  "actor_id": "w3503-reviewer",
+  "run_id": "/root/w3503_stale_session_investigation",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T01:28:03.878Z",
+  "verdict": "PASS",
+  "artifact_digest": "1c32e38d5dad3d7d08738ca552b5b99ca1badc2b26aee7149fc21702e0be8c5b",
+  "contract_digest": "09fc0aac8c64c1863b9c8490520136e8ae68f08c09fdd113f32296699512391d",
+  "plan_sha256": "0051434f1ed35d953f2610ad5337b930e07cbd64ec9a8fd02179313db8bf05f9",
+  "baseline_sha256": "5a601b74ea777d41d03b2d9d3c2c29c8e054740845951b0ea2afc7b691a966ec",
+  "source_freeze_sha256": "8849754aac1082e0d9f65f4636db85f93362d955a8a399a0b0bcceac607bebea",
+  "worker_sha256": "3eb232a3684785cc5bea23dcf4d4a2da3c737e36db58c9b24ca766c10ec3fdc1",
+  "pin_checks": {
+    "before": {
+      "capture": "8d1e40",
+      "at": "2026-09-16T01:24:31.930Z",
+      "count": 25,
+      "mismatches": [],
+      "exit_code": 0
+    },
+    "after": {
+      "capture": "17e650",
+      "at": "2026-09-16T01:28:03.878Z",
+      "count": 25,
+      "mismatches": [],
+      "exit_code": 0
+    },
+    "digest_recomputation": {
+      "artifact_matches": true,
+      "contract_matches": true,
+      "before_and_after": true
+    },
+    "retention": {
+      "before_bytes": 7,
+      "task_patch_hashes": 7,
+      "final_source_hashes": 7,
+      "result": "Decoded retained before bytes match admission; decoded task patches match their recorded hashes; seven final source hashes match worker/freeze. No restoration or source edit."
+    }
+  },
+  "checks": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]04|W35[.]03|W05[.]01 withdrawal continuity|contains unbound/corrupt/forwarded/refused alarms' --maxWorkers=1 --minWorkers=1",
+      "runs_on_this_artifact": 1,
+      "captures": [
+        "6b8d88",
+        "5807d8"
+      ],
+      "session_id": 88414,
+      "exit_code": 0,
+      "drained": true,
+      "result": "10 passed, 99 skipped; 1 file passed and identity.test.ts wholly skipped by the exact admitted selector; duration 16.23s.",
+      "captured_summary": " ✓ src/routes/realtime.sdkContract.test.ts  (66 tests | 56 skipped) 1285ms\n ↓ src/routes/identity.test.ts  (43 tests | 43 skipped)\n\n Test Files  1 passed | 1 skipped (2)\n      Tests  10 passed | 99 skipped (109)\n   Start at  21:24:48\n   Duration  16.23s (transform 4.77s, setup 0ms, collect 9.17s, tests 1.28s, environment 0ms, prepare 4.52s)\n\n",
+      "capture_limitation": "Tool output was truncated in its middle; the retained capture contains the final complete test/result summary. No rerun or claim of a complete raw log.",
+      "diagnostics": "Expected synthetic transaction/write/corruption injections, queue_unavailable and learning_incomplete. These do not establish live delivery/learning completeness."
+    },
+    "K2": {
+      "disposition": "Reused final worker attempt 3 after independent exact-byte and retained-output checks",
+      "worker_captures": [
+        "f5315a",
+        "c297e9",
+        "33bee7"
+      ],
+      "worker_session_id": 10892,
+      "exit_code": 0,
+      "drained": true,
+      "pins_match": true,
+      "retained_output_sha256": "c71957a90c1f46ae19b85e0d6a71986bd179b3865df52c31fd280e2b27d63272",
+      "result": "Compiler, seven-path ESLint and scoped whitespace passed; 0 errors, 113 admitted warnings. Independently parsed retained final lint output matches the worker path/rule/message/count signatures. No static rerun."
+    }
+  },
+  "criteria": {
+    "W35.04-C1": {
+      "verdict": "PASS",
+      "basis": "Distinct grant IDs separate same-profile/same-second devices. Serialized detach removes only the presented active grant and closes its sockets, while keeping peer authority and exact shared behavioral state. Durable prepared/complete receipt binds original grant, epoch and operation; persisted replacement timestamps are not renewed. Completed recovery requires durable source authority and existing-only replacement activation. Current/refined refusal is intersected again and persisted on source/replacement. Actual grouped case passes ambiguous commit/restart recovery, peer reads/manual effects, source refusal tightening and refusal to resurrect a reset replacement."
+    },
+    "W35.04-C2": {
+      "verdict": "PASS",
+      "basis": "Target transfer puts profile, receipt, authoritative membership, consent and recognized grant together. Retry validates the receipt-bound active grant; routes sign its original descriptor instead of reminting. Reset/internal erase/retention list/delete prior keys, replace the epoch and delete the alarm inside one transaction, with no deleteAll-to-barrier window. Warm mirrors invalidate and sockets close on success or ambiguity. Completed reset recovery rejects missing/corrupt source authority; cold adoption rejects transition/receipt/barrier state and never creates a missing grant within an existing authority. Actual cases cover interrupted and committed-but-unacknowledged cleanup, restart, old recognized/source replay rejection and fresh bootstrap."
+    },
+    "W35.04-C3": {
+      "verdict": "PASS",
+      "basis": "Signed HTTP ingest/read/manual/consent/export/absorb/forward/health/reset doors either invoke assertOwned/assertGrant inside serialization or take the explicit exact transition-recovery path. Buffered authorization precedes rate accounting. Socket upgrade, action, heartbeat and synchronous pushes use current stored authority; deferred ODP receipt push re-enters serialization. Hibernated attachments are rechecked rather than trusted by signature alone. Actual grouped case orders an in-flight mutation before detach and proves revoked socket/action/buffered/read denial with a functioning peer. Legacy bearer session-host positive and DO negative pass. Both-host withdrawal/SDK continuity and W35.03 transfer/refusal cases pass. Explicit issueSessionCapability clock is retained; persisted-descriptor signing validates against current time without renewal."
+    }
+  },
+  "transaction_api_review": {
+    "source": "src/durable-objects/ShopperReflex.ts:1397",
+    "installed_contract": "node_modules/@cloudflare/workers-types/index.d.ts:547",
+    "documentation": "https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/#transaction",
+    "basis": "Installed transaction interface exposes list, delete, put and deleteAlarm. Cloudflare documents the awaited transaction as all-or-nothing and supports the asynchronous KV API on SQLite-backed objects; Wrangler declares ShopperReflex SQLite-backed. The callback contains only transaction storage operations and captures its replacement barrier before invocation. This supports code/API review, not native runtime validation."
+  },
+  "findings": [],
+  "limitations": [
+    "Local Node/Vitest actual-module fake bindings, not native workerd, browser/customer, throughput/latency/SLO, deployment or release proof. Transaction rollback/ambiguity is modeled by the existing fixture.",
+    "Active grants share one stored map, parsed/read on authority checks. Large-account capacity, per-key limits, expired-record cleanup and performance remain unqualified.",
+    "No strong revocation for the current KV/session host or its separate PersonalizationWebSocket relay; no host cutover, production legacy-token migration or existing-data migration.",
+    "Prepared/in-flight cross-object erasure races, complete subject discovery, historical KV completeness and mixed-version rollback remain excluded. Trusted internal import/absorb/admin operations are not per-browser grant actions; this is not a global ingestion kill switch.",
+    "Ordinary signed profile/socket effects are fenced. Work accepted before revocation and already dispatched external effects are not retroactively canceled; broad cross-system erasure is not established.",
+    "Prior W35.03 exact acceptance remains revalidation_required after the five overlapping pins changed; passing the selected W35.03 cases here does not re-close that artifact. W35.02/full W35/F14/customer/release acceptance also remains separate.",
+    "No new account-wide logout or privacy/retention policy decision is made. Security authority/barrier/rotation metadata is non-behavioral, not asserted to be legally anonymous."
+  ],
+  "handoff": {
+    "source_changed": false,
+    "review_only": true,
+    "running_commands": [],
+    "next_action": "Lead verifies this exact review/evidence and decides bounded W35.04 acceptance. Reviewer does not modify tracker, RESUME, source or package/finding state."
+  }
+}

@@ -1,0 +1,5 @@
+# Unvalidated candidate correction
+
+The seq55 validation against trusted seq51 failed with four role-binding errors because the lead omitted the historical assignment snapshot from the new seq52 verification event. This was a tracker recording error, not a source or test failure. The exact rejected candidate is retained in tracker-verification-invalid-v1.json and the actual failed checker output in verification-validation-v1.json. Neither is passing evidence.
+
+Before acceptance, the lead supplied the exact already-admitted worker/reviewer/lead actor/run assignments from seq51 to the unvalidated seq52 event and annotated its reason. No trusted seq1–51 history, original evidence body/provenance, source, test, artifact, result or accepted snapshot changed. This correction requires a new successful current/prior validation against tracker-admitted.json; the failed result must remain visible, not overwritten or relabelled. Later closure-validation-v1.json is the intended superseding check, only if it actually passes.

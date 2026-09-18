@@ -1,0 +1,136 @@
+{
+  "task_id": "W09.06",
+  "verdict": "pass",
+  "artifact_digest": "ce2ee15e0c2078762b7c98867e3f159ed13c05bf33ce7762462ccee682b0dc52",
+  "contract_digest": "2d1760eebb1b6e8dfbd75d53cb65b63c3d374cb4e93e81d086efd6d8c84ffa95",
+  "actor": {
+    "actor_id": "w0906-reviewer",
+    "run_id": "/root/w0906_review",
+    "role": "independent_reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "at": "2026-09-14T17:39:49Z",
+  "artifact_verification": {
+    "before_capture": {
+      "chunk_id": "164866",
+      "wall_time_seconds": 0.872795429,
+      "exit_code": 0,
+      "original_token_count": 136,
+      "output": "{\"artifact_digest\":\"ce2ee15e0c2078762b7c98867e3f159ed13c05bf33ce7762462ccee682b0dc52\",\"contract_digest\":\"2d1760eebb1b6e8dfbd75d53cb65b63c3d374cb4e93e81d086efd6d8c84ffa95\",\"pins\":34,\"mismatches\":[],\"protected_pins\":25,\"protectedMismatches\":[],\"deltas\":[{\"path\":\"wrangler.toml\",\"before_valid\":true,\"after_valid\":true,\"forward_exact\":true},{\"path\":\"src/index.api-boundary.test.ts\",\"before_valid\":true,\"after_valid\":true,\"forward_exact\":true},{\"path\":\"docs/deployment/01-deploy.md\",\"before_valid\":true,\"after_valid\":true,\"forward_exact\":true}]}\n"
+    },
+    "after_capture": {
+      "chunk_id": "e93e91",
+      "wall_time_seconds": 0.495756437,
+      "exit_code": 0,
+      "original_token_count": 56,
+      "output": "{\"artifact_digest\":\"ce2ee15e0c2078762b7c98867e3f159ed13c05bf33ce7762462ccee682b0dc52\",\"pins\":34,\"mismatches\":[],\"protected_pins\":25,\"protectedMismatches\":[],\"fixture_added_lines\":106,\"fixture_added_whitespace_errors\":[]}\n"
+    },
+    "pins": 34,
+    "mismatches": [],
+    "protected_pins": 25,
+    "protected_mismatches": [],
+    "baseline_forward_deltas": "All three retained gzip baseline payload hashes, current hashes and source-deltas forward patches independently verified. Exact artifact and task-contract digests recomputed. All three complete baseline-relative deltas inspected; fetch behavior and runtime production TypeScript unchanged.",
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W09.06/source-freeze.json",
+      "sha256": "9b795816c84184bfcc951b7d38118e092ff9b87687109586b28952b79e1b4e90"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W09.06/source-deltas.json",
+      "sha256": "8951721fa4e152e13bd6995a4ea846f3905c0b965e91efd65b57e291d8787bef"
+    }
+  },
+  "criteria": [
+    {
+      "id": "W09.06-C1",
+      "verdict": "pass",
+      "evidence": "Installed Wrangler raw parser reads explicit local wrangler.toml with redirects disabled. Exact producer/consumer arrays in default, staging and production retain batch100/timeout3/concurrency6/retries2 and assert events, events-staging and events-production map respectively to their distinct -dead-letter destinations; all six names differ. Production delta consists only of those three declarations. No DLQ binding/consumer/redrive or retired-provisioner/deploy-script mutation."
+    },
+    {
+      "id": "W09.06-C2",
+      "verdict": "pass",
+      "evidence": "Reviewed native wrapper delegates untouched MessageBatch/ack/retry to actual worker.queue and records observations afterward. Independent native run sees the complete version2 poison body at attempts1/2/3, then exactly once at the configured test-only DLQ collector; collector records before ACK. Healthy sibling appears only on attempt1, never in DLQ, and its full record equals the sole native R2 object row. Exact sanitized source logs contain no private fixture markers; both workers deny outbound and observed zero attempts. Installed broker forwarding is exercised; consumerless retention and restart durability are explicitly unproved."
+    },
+    {
+      "id": "W09.06-C3",
+      "verdict": "pass",
+      "evidence": "First and only independent fixed3 passed:3 selected,52 intentionally unselected. Same-byte worker compiler1536MiB and scoped lint0 errors/0 warnings reused after complete output review. Admitted whitespace command covers tracked manifest/doc; inherited untracked fixture coverage is qualified below and its actual106 added lines separately inspected/asserted, with EOF unchanged by exact forward delta. Deployment note retains historical/non-operative and retired-script status and leaves queue creation/ownership, access, retention, erasure, alerts and recovery decisions pending."
+    }
+  ],
+  "runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W09\\.06|W09\\.03 maps mixed ledger|W07\\.01 preserves successful ledger' --maxWorkers=1 --minWorkers=1",
+    "started_at": "2026-09-14 17:38:40 UTC",
+    "initial": {
+      "chunk_id": "54e840",
+      "wall_time_seconds": 1.000155913,
+      "session_id": 51813,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "df1c1f",
+        "wall_time_seconds": 5.000804624,
+        "session_id": 51813,
+        "original_token_count": 60,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+      },
+      {
+        "chunk_id": "a06dde",
+        "wall_time_seconds": 2.531864113,
+        "exit_code": 0,
+        "original_token_count": 159,
+        "output": "stdout | src/index.api-boundary.test.ts > W09.06 forwards exhausted native retries to the isolated DLQ while a healthy sibling persists once\nW09.06_NATIVE {\"bundleSha256\":\"4856deaab1f70f612e55fe00e75960d68ff9dc06bd1241ed316711ccc7d4ffb3\",\"sourceAttempts\":[1,2,3],\"healthyAttempts\":[1],\"forwardedBodies\":1,\"persistedRecords\":1,\"outbound\":{\"source\":0,\"collector\":0}}\n\n ✓ src/index.api-boundary.test.ts  (55 tests | 52 skipped) 21621ms\n\n Test Files  1 passed (1)\n      Tests  3 passed | 52 skipped (55)\n   Start at  13:38:42\n   Duration  30.74s (transform 7.00s, setup 0ms, collect 6.45s, tests 21.62s, environment 0ms, prepare 1.67s)\n\n"
+      }
+    ],
+    "result": "pass",
+    "exit_code": 0,
+    "drained": true,
+    "passed": 3,
+    "unselected": 52,
+    "files": 1,
+    "vitest_duration_seconds": 30.74,
+    "test_execution_seconds": 21.621,
+    "bundle_sha256": "4856deaab1f70f612e55fe00e75960d68ff9dc06bd1241ed316711ccc7d4ffb3",
+    "classification": "One installed Miniflare/workerd native queue topology and native R2 with synthetic in-memory data; two existing actual-handler controls with synthetic bindings. No deployed, consumerless-retention, restart-durability or concurrency proof.",
+    "output_note": "Complete capture retains the inherited Vite CJS deprecation warning. Native summary matches the worker bundle and actual full-body/attempt/R2/outbound assertions."
+  },
+  "reused_static": {
+    "evidence": {
+      "path": "docs/remediation/evidence/W09.06/worker.json",
+      "sha256": "d312228ac9ac3f9ff4f170612fa31eb9632fe292293764e10ae11de651ffa4a3",
+      "attempt": "static_candidate1"
+    },
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.api-boundary.test.ts && git diff --check -- wrangler.toml src/index.api-boundary.test.ts docs/deployment/01-deploy.md",
+    "result": "pass",
+    "exit_code": 0,
+    "drained": true,
+    "final_capture": "138200",
+    "compiler": "Full noEmit/incremental false/composite false,1536MiB.",
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace_coverage": "The existing fixture is inherited untracked, so the admitted git diff --check does not cover it. Its exit0 is retained as compiler/lint/tracked manifest-and-doc whitespace success, not three-file whitespace proof.",
+    "fixture_whitespace_supplement": {
+      "reason": "Lead identified concrete untracked-file coverage gap; no runtime selection expansion.",
+      "command": "git diff --no-index --check /dev/null src/index.api-boundary.test.ts",
+      "capture": {
+        "chunk_id": "a9204a",
+        "wall_time_seconds": 0.000003443,
+        "exit_code": 1,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "interpretation": "Actual exit1 and empty output retained; no whitespace diagnostics. Not relabeled as a passing exit0 check.",
+      "source_confirmed": "All106 actual added fixture lines were independently inspected and the read-only assertion in e93e91 found no trailing space/tab or space-before-tab errors. Exact forward delta confirms no EOF change."
+    }
+  },
+  "failures_and_rework": [],
+  "limitations": "Isolated local DLQ declarations and installed native broker forwarding only. A test-only consumer records the forwarded body; installed Miniflare discards consumerless messages and has an in-memory backlog, so this is not consumerless retention, restart durability, actual deployment, native concurrency, operational recovery or release acceptance. Real queue existence/activation and access/retention/erasure/alert/recovery ownership need separate authority. Producer rejection, intentionally acknowledged non-ledger/handled scene failures, manual reconciliation/replay, partial/legacy duplication, full W09/W22/F16/N10 and customer/privacy decisions remain open. No provisioning, deployment, cloud mutation, credentials, customer-data operation, extra runtime checks or production source edits were performed by the reviewer.",
+  "disposition": {
+    "lead_acceptance": "pending",
+    "next": "Root inspect and disposition bounded task; reviewer source/evidence STOP.",
+    "running_commands": [],
+    "source_edits": 0,
+    "owned_evidence_path": "docs/remediation/evidence/W09.06/review.json"
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "task_id": "W09.09",
+  "actor_id": "w0909-reviewer",
+  "agent": "/root/w0705_review_r2",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "at": "2026-09-17T21:04:36Z",
+  "status": "REWORK_REQUIRED",
+  "scope": "Independent whole-original-W09/F16/N07/N08/N10 review against all W09.09 C1-C9, actual 37 dirty-baseline outputs and connected dependencies. This is not acceptance of a passing test subset.",
+  "contract_digest": "ea9b09b82fe2a51aff057120bac7c3cc0b2067f54eed3356af0ba137cfd6a70b",
+  "artifact": {
+    "digest": "79dbb66a0f8bd580561adcb75c95a62b6633b9449117b9c80d61dd74304950fa",
+    "manifest": "docs/remediation/tracker.json#tasks[W09.09].artifact",
+    "files": 102,
+    "freeze": {
+      "path": "docs/remediation/evidence/W09.09/source-freeze.json",
+      "sha256": "ef2becfaf999bc953b3aff52c5a113a8fff23cce597504f5023026e06cff837d",
+      "bytes": 5243
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W09.09/worker.json",
+      "sha256": "17cf54c621f9d8db79cf161386bfc057d65b877b78683bf561b539a281c97670",
+      "bytes": 1916708
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W09.09/admission.json",
+      "sha256": "769017f79781bee96e0acc0a63dea8ff60e40ab375c39e97ec57c068cea29986",
+      "bytes": 36491
+    },
+    "worker_pin_array_digest": "354812b7daa5f7d820108cbb48d49530d8f50e3760270b044e62e4ad1eb0583f",
+    "identity_note": "The worker pin-array digest has a different shape from the canonical artifact digest; neither is substituted for the other. Complete original bytes, reversible patches, final/protected pins and primary chunks remain in the immutable worker record above."
+  },
+  "authority": {
+    "frozen_go": "2026-09-17T20:58:38Z",
+    "board": "Lead reported check/status VALID, both exit 0, append-only true/no errors against a0ac572b1b3bc720a7dc65ad397d0d6da0e0b04689c7d0bf9a3d217ab8c8cc6b; journal 2199, session 3271 drained/fb60e7.",
+    "writes": ["docs/remediation/evidence/W09.09/review.json"],
+    "K8": "NOT_RUN: concrete whole-source C6 blocker was reported concurrently with frozen GO; lead explicitly held K8 before it started and requested consolidated whole-item rejection. A passing existing subset would not discriminate these missing schedules.",
+    "no_product_worker_or_governance_edits": true,
+    "no_subdelegation_or_external_operations": true
+  },
+  "independent_integrity": {
+    "originals": "All 37 original entries decoded where present and checked against admission existence/hash/length. Three new files were absent at baseline.",
+    "deltas": "All 37 delta records checked: 35 changed forward and reverse patches were independently decoded/hash-length verified and applied in memory against exact dirty-original/current bytes; two unchanged fixtures are byte-identical. No filesystem patch application occurred.",
+    "pins": "All 102 current final pins match; all 65 protected dependency pins remain unchanged. Read-only inspections did not mutate source.",
+    "primary_integrity": "All 26 complete gzip/base64 primary objects independently decoded and matched their SHA256/byte length. The separately retained incomplete first lint export is not assurance and is not promoted to a pass.",
+    "qualified_commands": "All six reused final K1-K6 primary command strings equal the exact admitted commands. K3.5/K4.5/K6.8 have zero drift across their 102 pins; the K1.3/K2.3/K5.1 drift lists were independently reproduced and source-qualified below.",
+    "diagnostics": "All 174 final warning source-line pins match current source. Recorded baseline166 plus 8 new test-only empty-function warnings, zero resolved and zero lint errors; no claim that warning count is implementation progress.",
+    "reading": "Read actual product and fixture deltas, new recovery/quarantine/operator implementations, owner/authority/retention/erasure/learning and workflow call paths. Reused earlier independent source and full-failure-primary diagnoses; final six outputs inspected, with repeated K3/K6 log lines rendered as an exact line dictionary with occurrence counts while immutable primary retains complete original order."
+  },
+  "findings": [
+    {
+      "id": "W09.09-R1",
+      "severity": "local_blocker",
+      "criteria": ["C6", "C7"],
+      "title": "Actual shopper alarm can leave expired recovery bodies behind unrelated or earlier remote maintenance",
+      "source": [
+        "src/durable-objects/ShopperReflex.ts:1403",
+        "src/durable-objects/ShopperReflex.ts:1411",
+        "src/durable-objects/ShopperReflex.ts:1415",
+        "src/durable-objects/ShopperReflex.ts:3218",
+        "src/ledger/recovery.ts:219"
+      ],
+      "evidence": "disposeOwnerRecovery now correctly deletes one operation's local chunks and retains its debt before R2/child I/O. The real alarm nevertheless calls pruneExternalCopies first; its session projection path awaits raw SESSIONS reads/publication and can throw before reaching recovery operations. It also fully awaits each operation's remote cleanup before stripping the next operation's expired raw chunks.",
+      "minimal_cases": [
+        "Live tracking consent, an external session projection whose provider-copy deadline has expired, and an expired admitted recovery operation. Fail the projection KV read/publication: alarm exits before recoveryBody deletion.",
+        "Two expired admitted recovery operations. Hold the first operation's R2 or child cleanup await: the second operation's expired raw body remains present although its local expiry is already independently known."
+      ],
+      "required_correction": "Run a bounded local strip-all phase for all expired/retired recovery payloads before unrelated external maintenance or any recovery child's remote await. Preserve exact cleanup references and truthful terminal reasons until acknowledged continuation; an unavailable remote service must not block independently authorized local raw expiry.",
+      "verification": "Source-confirmed through actual alarm entry. No new runtime reproduction run by reviewer. Existing single-operation helper fixture does not cover either schedule."
+    },
+    {
+      "id": "W09.09-R2",
+      "severity": "local_blocker",
+      "criteria": ["C3", "C6", "C7"],
+      "title": "Frozen credit attribution loses the selected decision's original online lifetime",
+      "source": [
+        "src/durable-objects/DecisionRing.ts:342",
+        "src/durable-objects/DecisionRing.ts:404",
+        "src/durable-objects/DecisionRing.ts:411",
+        "src/durable-objects/DecisionRing.ts:442",
+        "src/learn/policy.ts:117",
+        "src/retention.ts:102"
+      ],
+      "evidence": "outcome maps retained decisions through ringEntryOf/attribute into credit batches containing copied decision ID/item/cell but no selected-decision retention stamp. managedPlan then uses only outcome.retention.online for SavedPlan.retention and every credit effect. checkPlan, cleanupPlans and LearnStats therefore know only the later outcome deadline. The unchanged same-policy copy contract requires the earliest source birth via mergeRetention.",
+      "minimal_cases": [
+        "Decision online expiry T+100; later outcome online expiry T+200 under the same policy. Prepare immutable multi-destination attribution at T+50, let one destination fail, recreate/retry at T+150. The saved plan still retains copied decision attribution and the missing credit remains eligible until T+200.",
+        "An await during preparation or credit delivery crosses the selected decision's earlier deadline while the outcome/consent remain live; current final guards cannot detect the dropped dependency."
+      ],
+      "required_correction": "Preserve and enforce the selected decisions' immutable online retention dependencies in frozen attribution, credit effects and physical plan cleanup, combining compatible copied cohorts at their earliest lifetime and refusing incompatible/expired proof. Keep original-time arithmetic, stable effect IDs, partial-credit idempotency and reset fences; do not recalculate attribution or renew its lifetime.",
+      "verification": "Source-confirmed through selected ring records, persisted plan and actual statistics guards. Existing partial-credit test uses equal/live lifetimes and does not discriminate this case."
+    },
+    {
+      "id": "W09.09-R3",
+      "severity": "local_blocker",
+      "criteria": ["C4", "C8"],
+      "title": "Policy-unset desired state still activates a DLQ consumer known to refuse every unknown case",
+      "source": [
+        "scripts/stamp-workflow.mjs:50",
+        "scripts/stamp-workflow.mjs:97",
+        "scripts/stamp-workflow.mjs:765",
+        "wrangler.toml:37",
+        "wrangler.toml:154",
+        "src/index.ts:316",
+        "src/ledger/quarantine.ts:149",
+        "node_modules/miniflare/dist/src/workers/queues/broker.worker.js:261"
+      ],
+      "evidence": "recoveryWired tests only configuration presence. validateDesired accepts producer false with unknown-owner policy absent; configureRuntime still creates/updates an active DLQ consumer. All three manifest defaults declare that same absent-policy state with max_retries=2 and no further DLQ. The actual DLQ handler retries failed quarantine; installed native broker source drops messages after those three failed attempts. This is an accepted local activation transition with a known missing intake prerequisite, not merely a missing live attestation or normal finite-retention caveat.",
+      "minimal_cases": [
+        "Promote desired state with LEDGER_RECOVERY_ENABLED='false' and valid source/DLQ configuration but no unknown policy. An unrecognized source poison message reaches the newly attached DLQ consumer, cannot be quarantined, and exhausts the consumer without a retained case or authorized terminal disposition."
+      ],
+      "required_correction": "Hold or refuse activation of an intake consumer lacking its explicit capture/disposal prerequisites, independently of producer opt-in. Preserve required environment declarations and already-managed readers/erasers, do not invent policy values, and retain W08 protected receipt/current-state/both-queue maintenance safety. Operational finite-retention limits must remain explicit.",
+      "native_dependency": {
+        "path": "node_modules/miniflare/dist/src/workers/queues/broker.worker.js",
+        "sha256": "a0d61b530deef23668cfe72f74e8ecfc0211fe56b6c2e1b4850c9f85417b62e9"
+      },
+      "verification": "Source-backed transition and installed native-provider behavior; no live or new runtime execution claimed. Existing intake test checks one retry and existing native retry test uses a collector DLQ, so neither tests repeated policy-unset quarantine intake."
+    },
+    {
+      "id": "W09.09-R4",
+      "severity": "local_blocker",
+      "criteria": ["C6", "C7"],
+      "title": "One unrelated unreadable quarantine case prevents valid later expiry and erasure",
+      "source": [
+        "src/ledger/quarantine.ts:267",
+        "src/ledger/quarantine.ts:291",
+        "src/index.ts:243"
+      ],
+      "evidence": "Both bounded scans abort their entire page on the first loadQuarantine/provenance failure. The scheduled expiry cursor is advanced only after successful function return; subject erasure likewise cannot reach later independent cases. A consistently bad first case therefore re-blocks the same later valid cases on every attempt.",
+      "minimal_cases": [
+        "First listed case has an invalid HMAC or a persistent per-key read failure; a later correctly authenticated case is expired. Scheduled cleanup repeatedly fails before deleting the valid expired payload.",
+        "The first bad case is unrelated to a subject being erased; a later authenticated case contains that subject. Current subject erasure stops before processing the valid case."
+      ],
+      "required_correction": "Isolate per-case failures within the existing bounded scan/checkpoint mechanism so independently authenticated cases can be processed while bad proof remains held and unresolved. Do not report complete erasure, discard uncertainty, lose retry discovery or authorize deletion of the invalid case merely to advance the scan.",
+      "verification": "Source-confirmed actual scheduled and erasure paths. Existing tampered-provenance fixture proves refusal of one case, not isolation of later valid cases."
+    }
+  ],
+  "criterion_disposition": [
+    { "id": "C1", "status": "REVIEWED_NO_ADDITIONAL_BLOCKER", "coverage": "Preserved byte/count envelopes, immutable full/shared inputs, stable logical and delivery IDs, legacy expansion/readers, whole-call refusal, exact positional receipts, v2 claims/CAS/cohort isolation and fixed diagnostics. Earlier no-retry/no-DLQ exclusions are superseded only by this task's admitted managed recovery, not rewritten historical passes. K1 component proof qualified; independent K8 not run." },
+    { "id": "C2", "status": "REVIEWED_NO_ADDITIONAL_BLOCKER", "coverage": "Actual both-host outcome/content paths share synchronous owner-held registration, transactional immutable admission and exact messages before sinks. Original principal descriptor is not a bearer. Logical duplicate reuses first payload/config/deadline; separate enabled-mode test advances time and recreates owner. Missing/ambiguous admission remains failure. Capacity remains explicit/fail-closed, not evicted protection." },
+    { "id": "C3", "status": "REWORK_REQUIRED", "coverage": "Atomic marker/counter transactions, conflict checks, original ts=0 and weight=0, retained flag-independent whole/item generation fences and immutable missing-credit retry are present. Downstream credit/generation waits remain outside recent-ring lock. R2 violates copied-attribution lifetime; existing controls do not cover it." },
+    { "id": "C4", "status": "REWORK_REQUIRED", "coverage": "Actual DLQ handler requires durable case before ACK; exact serialized wire/body/provenance commitments, current-owner proof, stable managed redrive and unsafe legacy distinction are present. Authenticated survivors retain original ordinals/claims, never remint producer IDs. R3 leaves a known unconfigured intake activation/loss path." },
+    { "id": "C5", "status": "REVIEWED_NO_ADDITIONAL_BLOCKER", "coverage": "Dedicated mandatory access-session human gate, current tenant-admin versus unassigned stamp-owner authority, repeated JWT/session expiry, strict selector rejection, opaque ID/digest/revision, admitted/result D1 audit, bounded response and honest unknown/terminal states. Existing outer gate exemption is restricted to exact dedicated routes. No arbitrary R2 key, replacement body or tenant ownership override." },
+    { "id": "C6", "status": "REWORK_REQUIRED", "coverage": "Original grant/epoch/consent/retention gates, marker cleanup, raw local single-operation stripping, retired-versus-erased debt, authenticated mixed-owner privacy survivors and fail-closed unknown policy are present. R1, R2 and R4 prevent whole-item physical expiry/erasure assurance. No raw retention policy, historical cleanup or live authority is inferred." },
+    { "id": "C7", "status": "REWORK_REQUIRED", "coverage": "Source records/operations, queue acceptance, canonical R2 effects, ring and statistics units remain separate; response loss and partial sink counts are visible and tested against actual stores. Existing selected faults/compatibility proof are credited, but missing R1/R2/R4 schedules must be discriminated before complete local verification. No W22/W30 reconciliation or history closure inferred." },
+    { "id": "C8", "status": "REWORK_REQUIRED", "coverage": "Literal-true production opt-in, three environment consumer declarations, new enforcement closure roots, current-human API boundary and W08 both-queue pause/readback/prior-state/fresh-resume continuation are present. R3 requires corrected consumer activation gating. Existing build-once packaging mechanism is reused, not old Worker bytes as new-source proof. No SQL/dependency/SDK changes." },
+    { "id": "C9", "status": "OPEN_NOT_RUN", "coverage": "Actual policy/disposal values and authorization, deployed resource ownership/consumer activation, real queue rejection/recovery and reconciled sink counts, provider/runtime/customer/browser/SLO/history/retention acceptance remain for the separately authorized final live batch. Local synthetic/native evidence is not full acceptance." }
+  ],
+  "reused_checks": [
+    { "id": "K1.3", "status": "PASS_COMPONENT_SOURCE_QUALIFIED", "passed": 19, "unselected": 34, "primary_sha256": "5a98e095f2c214aff430eb89fa075864ee0155a280e07602393120f5563253f5", "primary_bytes": 17984, "started_at": "2026-09-17T20:44:25.155Z", "finished_at": "2026-09-17T20:45:00.697Z", "exit_code": 0, "qualification": "100/102 pins unchanged. Only later realtime ingress auth/schema/timestamp and its unrelated fixture differ; exact ledger/erasure dependencies and selected fixtures are unchanged. Covered source does not discriminate the newly identified gaps." },
+    { "id": "K2.3", "status": "PASS_COMPONENT_SOURCE_QUALIFIED", "passed": 21, "unselected": 23, "primary_sha256": "5a9fd65ef6757dc541fe86be225de6f049c9d5aede5eb7c0905a55c51d1af799", "primary_bytes": 16369, "started_at": "2026-09-17T20:42:06.598Z", "finished_at": "2026-09-17T20:42:17.888Z", "exit_code": 0, "qualification": "98/102 pins unchanged. Differences are realtime ingress and three other-suite fixtures, not learning/ring/recovery/owner modules or these selected fixtures. R2 is an uncovered schedule, not a failing assertion in this primary." },
+    { "id": "K3.5", "status": "PASS_EXACT_FROZEN_SOURCE_COMPONENT", "passed": 10, "unselected": 134, "primary_sha256": "58fee4aafea0e9e22a471b0f2c637d729797cf432a1f82dd5e6530a61b7f931e", "primary_bytes": 106843, "started_at": "2026-09-17T20:49:25.917Z", "finished_at": "2026-09-17T20:49:44.679Z", "exit_code": 0, "qualification": "All 102 pins exact. Both actual owner callers and original-deadline/restart proof observed; frozen-clock equality only belongs to disabled-mode old identity fixture. R1 is not covered by this caller test." },
+    { "id": "K4.5", "status": "PASS_EXACT_FROZEN_SOURCE_COMPONENT", "passed": 5, "unselected": 62, "primary_sha256": "1c6c42f598e618baf4b9763a04ce0fab1e06936fcfd896b7277f7fdfd9e07c5d", "primary_bytes": 16043, "started_at": "2026-09-17T20:49:27.302Z", "finished_at": "2026-09-17T20:50:06.574Z", "exit_code": 0, "qualification": "All 102 pins exact. Native bundle 3854bb982ef79cfbf7b5dc13bd645c11869d89ebd8bfca432d6ca32b35488a77; source retries1/2/3, healthy once, one persisted row, outbound0. Collector DLQ proof is not repeated policy-unset quarantine-intake proof." },
+    { "id": "K5.1", "status": "PASS_COMPONENT_SOURCE_QUALIFIED", "passed": 6, "primary_sha256": "a8d9d0e4c84790f3897bfb8038d1508a65778c726b810b0af6bfa504983b560f", "primary_bytes": 17938, "started_at": "2026-09-17T20:19:53.385Z", "finished_at": "2026-09-17T20:19:57.530Z", "exit_code": 0, "qualification": "85/102 pins unchanged. Exact workflow/fixture/Wrangler/migration/tooling inputs are unchanged; 17 later TS/fixture/docs differences are not executed by the selected injected-provider groups. R3 is an uncovered accepted-intent transition. No package rebuild or old W08 Worker relabelled." },
+    { "id": "K6.8", "status": "PASS_EXACT_FROZEN_SOURCE_COMPONENT", "primary_sha256": "4826bcaf5a2e20c4a9218a38fd0fb09c06fe1355013548f50b1d636b5e6bb2ca", "primary_bytes": 42440, "started_at": "2026-09-17T20:49:28.700Z", "finished_at": "2026-09-17T20:50:06.243Z", "exit_code": 0, "qualification": "All 102 pins exact. Compiler, selected lint, two JS syntax checks and owned whitespace passed; 0 errors/174 warnings. Static pass does not refute the source schedules." }
+  ],
+  "retained_diagnoses": [
+    "K2.1 four old learning positives lacked existing online policy/stamps or retained coach stamps after tenant changes. Five narrow setup changes preserve the original nonce/legacy, six brand combinations, event-time/recreation and full205-to200 ring/cascade assertions; no authority bypass was accepted.",
+    "K3.1 old ODP-positive fixture installed destination policy only after profile birth. Moving unchanged destinations setup before birth and clearing warm-up outbound preserves all positive/negative assertions and original immutable external cohort behavior; no production retention retagging.",
+    "K1.2 new survivor test misread prepareDeliveryClaims.ready as a scalar; unchanged API is positional boolean[]. The single correction to [true] preserves remaining proof/privacy assertions.",
+    "K3.2 disabled-mode exact payload equality differed by admission-time retention stamps, a pre-existing ingress behavior. Fixed fixture clock preserves that old identity assertion; independent enabled actual-owner test genuinely advances time/restarts and verifies first expiry/payload digest unchanged.",
+    "K4.2 separate native healthy-sibling worker omitted already-required registry/retention/real owner namespace and KV bindings. Minimal explicit synthetic configuration plus actual ShopperReflex preserves healthy-once, poison-only retry/DLQ and outbound-zero assertions.",
+    "Real K3 product failures remain visible: asynchronous admission registration could escape owner drain; malformed logical action acquired owner before schema; initial moved schema then parsed before authorization. Final source synchronously registers recovery and uses existing non-forwarding shopper authorization before bounded/schema validation and actual owner forwarding. Missing/invalid-token malformed JSON keeps401; valid-token well-formed schema-invalid input returns400, both with no owner effects; explicit timestamp0 is preserved. These were not all fixture-only failures."
+  ],
+  "check_disposition": {
+    "K7": "COMPLETE_SOURCE_REVIEW_REWORK_REQUIRED",
+    "K8": "NOT_RUN_LEAD_HELD_AFTER_CONCRETE_SOURCE_BLOCKER",
+    "K9": "OPEN_SEPARATELY_AUTHORIZED_LIVE_BATCH",
+    "history": "All worker failures, incomplete baseline and superseding successful components remain in the exact immutable worker record. No failed command is relabelled, and no component pass is whole-W acceptance."
+  },
+  "handoff": {
+    "next": "Lead to admit one coherent bounded rework for R1-R4 with discriminating existing-fixture faults, then source/evidence STOP, new freeze and distinct whole-original-W09 review plus exact K8. Do not proceed to W10 local implementation on this rejected artifact.",
+    "reviewer_tests_started": 0,
+    "reviewer_running_sessions": 0,
+    "state": "SOURCE/REVIEW EVIDENCE STOP after final read-only identity verification; reviewer owns no product changes.",
+    "full_acceptance": "OPEN"
+  }
+}

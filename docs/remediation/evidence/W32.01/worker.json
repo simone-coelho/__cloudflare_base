@@ -1,0 +1,197 @@
+{
+  "task_id": "W32.01",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T20:22:17.695Z",
+  "source_go_at": "2026-09-12T20:18:28.743Z",
+  "contract_digest": "4643c75175caf8f491f831b95ff1b76913bf9f45eff78dab09b8bbc67ebffebd",
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W32.01/plan.md",
+      "sha256": "733b3864c438e1717498d574d9b49c0523a5913d9b6aff16edf7dc4dfb02d4c1"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W32.01/baseline.json",
+      "sha256": "66268d6dd4714b7a2d3c50b902971cc028a8b0e9646119d248e4324db2786b8d"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W32.01/admission.json",
+      "sha256": "bb76bf585fc3ff9874facea6724d026d1598b17a147c2f9e6009044222bccfc1"
+    }
+  },
+  "implementation_summary": [
+    "Build one first-wins Map of actual decision records before the report policy loop; replace only each credited-outcome Array.find with Map.get. Preserve original global first-match duplicate-ID arm attribution and personalized fallback, without deduplication.",
+    "One grouped existing fixture exercises default/personalized duplicates in both insertion orders, cross-visitor/slot collisions, direct/any first/last, repeated outcomes, deterministic results and unchanged input bytes. Existing learning-grid, W21 repeated-credit and both W33 custom-write isolation controls remain selected."
+  ],
+  "criterion_verdicts": {
+    "W32.01-C1": {
+      "worker_result": "pass",
+      "basis": "Production index retains first-match semantics; four duplicate-order/cross-slot combinations check exact policy counts and distinct arm/success behavior with no input mutation."
+    },
+    "W32.01-C2": {
+      "worker_result": "selected_controls_pass_root_measurement_pending",
+      "basis": "Fixed5 passes. Root owns the separate paired retained-pre-GO/current actual-module measurement after this STOP; no timing or full baseline-output equality claimed by this worker record."
+    },
+    "W32.01-C3": {
+      "worker_result": "worker_checks_pass_measurement_and_independent_review_pending",
+      "basis": "Two owned sources/one new group, fixed5, full compiler, zero-warning scoped lint and whitespace pass; 29 protected pins exact. Root measurement, distinct frozen review and lead disposition remain pending."
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 5,
+      "unselected": 5,
+      "files": 1,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 44452,
+      "chunk_id": "58923d",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w3201_static1"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "command_capture": "w3201_static1"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w3201_static1"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 59684,
+      "chunk_id": "0e009d",
+      "component_semantics": "Exact admitted && chain completed with exit0; compiler, scoped lint and whitespace all ran and returned0."
+    }
+  },
+  "execution_history": [
+    {
+      "capture": "w3201_runtime1",
+      "disposition": "final_pass",
+      "passed": 5,
+      "unselected": 5
+    },
+    {
+      "capture": "w3201_static1",
+      "disposition": "final_pass"
+    },
+    {
+      "capture": "w3201_stop_capture",
+      "disposition": "source_stop_and_protected_pins_pass"
+    },
+    {
+      "runtime_static_failures": [],
+      "qualification": "No failed or superseded runtime/static attempts. Root paired measurement is separate and not run by this worker."
+    }
+  ],
+  "command_captures": {
+    "w3201_runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts -t 'W32.01|W33.01|W21 retains repeated credits|the learning grid, the reporting overlays' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T20:20:19.884Z",
+      "captures": [
+        {
+          "chunk_id": "99cad7",
+          "wall_time_seconds": 1.001708554,
+          "session_id": 44452,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "58923d",
+          "wall_time_seconds": 0.00000216,
+          "exit_code": 0,
+          "original_token_count": 124,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/report.test.ts  (10 tests | 5 skipped) 75ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 5 skipped (10)\n   Start at  16:20:22\n   Duration  8.22s (transform 2.60s, setup 0ms, collect 4.78s, tests 75ms, environment 0ms, prepare 2.42s)\n\n"
+        }
+      ],
+      "session_id": 44452,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T20:20:33.290Z"
+    },
+    "w3201_static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/report.test.ts --max-warnings 0 && git diff --check -- src/learn/report.ts src/learn/report.test.ts",
+      "started_at": "2026-09-12T20:20:40.019Z",
+      "captures": [
+        {
+          "chunk_id": "3857ae",
+          "wall_time_seconds": 1.001570461,
+          "session_id": 59684,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "35fed8",
+          "wall_time_seconds": 5.000828792,
+          "session_id": 59684,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "0e009d",
+          "wall_time_seconds": 4.625704191,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 59684,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T20:21:19.946Z"
+    },
+    "w3201_stop_capture": {
+      "command": "node -e 'const fs=require(\"node:fs\"),crypto=require(\"node:crypto\"); const hash=p=>crypto.createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\"); const baseline=JSON.parse(fs.readFileSync(\"docs/remediation/design/W32.01/baseline.json\",\"utf8\")); const owned=baseline.owned.map(x=>x.path), protectedPins=baseline.pins.filter(x=>!owned.includes(x.path)); const mismatches=protectedPins.filter(x=>hash(x.path)!==x.sha256); const result={final_source_stop:{at:new Date().toISOString(),files:owned.map(path=>({path,sha256:hash(path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},references:Object.fromEntries([\"plan\",\"baseline\",\"admission\"].map(name=>{const path=name===\"admission\"?\"docs/remediation/evidence/W32.01/admission.json\":`docs/remediation/design/W32.01/${name}${name===\"plan\"?\".md\":\".json\"}`;return[name,{path,sha256:hash(path)}]}))};console.log(JSON.stringify(result,null,2));if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T20:21:34.130Z",
+      "captures": [
+        {
+          "chunk_id": "708d7b",
+          "wall_time_seconds": 0.000008122,
+          "exit_code": 0,
+          "original_token_count": 251,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T20:21:34.328Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/report.ts\",\n        \"sha256\": \"62318a298a46c055a861cf0e3a636dfa746bf4a0f9ebcad5741a0e60919a4091\"\n      },\n      {\n        \"path\": \"src/learn/report.test.ts\",\n        \"sha256\": \"c5dd0444eee89a18bd807e5b5294e07d556c13e3886cb9891fae2c235599084d\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 29,\n    \"matched\": 29,\n    \"mismatches\": []\n  },\n  \"references\": {\n    \"plan\": {\n      \"path\": \"docs/remediation/design/W32.01/plan.md\",\n      \"sha256\": \"733b3864c438e1717498d574d9b49c0523a5913d9b6aff16edf7dc4dfb02d4c1\"\n    },\n    \"baseline\": {\n      \"path\": \"docs/remediation/design/W32.01/baseline.json\",\n      \"sha256\": \"66268d6dd4714b7a2d3c50b902971cc028a8b0e9646119d248e4324db2786b8d\"\n    },\n    \"admission\": {\n      \"path\": \"docs/remediation/evidence/W32.01/admission.json\",\n      \"sha256\": \"bb76bf585fc3ff9874facea6724d026d1598b17a147c2f9e6009044222bccfc1\"\n    }\n  }\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T20:21:34.379Z"
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-12T20:21:34.328Z",
+    "files": [
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "62318a298a46c055a861cf0e3a636dfa746bf4a0f9ebcad5741a0e60919a4091"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "c5dd0444eee89a18bd807e5b5294e07d556c13e3886cb9891fae2c235599084d"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 29,
+    "matched": 29,
+    "mismatches": []
+  },
+  "limitations": [
+    "First-match lookup containment only, with O(distinct decisions) additional references. Duplicate IDs and their existing potentially surprising cross-visitor/slot first-arm attribution are preserved, not repaired or deduplicated.",
+    "Visitor-ring construction/filtering/sorting, repeated exposure/slot scans, grid/payload/window bounds, zero-base/reference/objective/model validation and full W32/F34/F32/N20/N21/N24 remain open. No leave-one-out or estimator/attribution/identity/schema change.",
+    "W33 strict-null custom isolation and W30 conservative coverage remain unchanged; historical canonical provenance/repair, W30 reconstruction and old-writer behavior remain qualified.",
+    "Selected installed Node/Vitest builders and synthetic authenticated route storage only. Root retained-source paired timing is descriptive local evidence, not Worker CPU/capacity, latency SLO, customer or release acceptance.",
+    "No external/cloud/customer-data/deployment/commit/governance changes or additional suite. Source frozen at recorded STOP; root measurement and independent acceptance pending."
+  ]
+}

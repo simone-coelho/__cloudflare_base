@@ -1,0 +1,15 @@
+# W01.06 bounded acceptance
+
+Implemented: eight diagnostic GETs (including HEAD) now require a tenant-authorized operator token in exact enforced mode: lift/rows, brands, learn/slots, learn/exploring, lift, lift/history, learn/report/window and learn/report. A storefront site key or shopper capability is not sufficient. Brand discovery now returns only explicitly granted brands, preserving manifest order and original default flags.
+
+The existing operator gate and unchanged grant predicate are reused. Shopper trend/snapshot handlers, ranking, learning/report algorithms, SDK/UI and storage schemas are unchanged. Open/unset retains its prior policy. The kit's two obsolete site-key labels and brand-discovery explanation are corrected.
+
+Accepted artifact: 4d44684a26971f0579c4ede411a4232cfd10a410d3bf1bbecf3087d7b5f359a5 (338 pins), contract cf5626b9c1326fb75b816e27f8ee5b6ff9631d91f0cdeff846fbb8cbd6031ff1. Source STOP2026-09-10T00:54:57.386Z; root freeze00:55:21Z with329 unowned inputs unchanged. Four exact reversible deltas are retained in source-deltas.json. Worker/reviewer hashes and lead disposition are linked in the tracker.
+
+Primary final and independent first/only K1 each passed48/48. Compiler, baseline/final scoped lint and whitespace exited0; zero lint errors/warnings. Exactly3 grouped additions to the existing fixture test denied access, populated tenant-specific reads, preserved diagnostic sanitization, grants and open/unset compatibility. Root inspected actual deltas and all6 complete primary outputs; separate Astra/xhigh review inspected frozen source/proof and independently ran K1. Local test durations are not latency SLO evidence.
+
+Retained failure: first primary47/48 used an invalid synthetic anonymous shopper ID, causing transport500 before app dispatch. Corrected to a canonical vis UUID after draining; production code unchanged. The final check requires transport200 before app401, so that setup failure cannot masquerade as authorization. Full failed output remains in worker.json. Reviewer retried a truncated read-only evidence display using bounded output; no source mutation or extra runtime run.
+
+This closes only the bounded diagnostic access/discovery task, not complete W01/W03/F25, report correctness, deployed isolation or customer/release/North Star acceptance. Role/session revocation, geo/cohort/health shared resources, all-store privacy and generic customer AI/enrichment remain open. Legacy site-key-only diagnostic scripts refuse enforced and were not repaired/invoked. W01.05's overlapping proof was qualified, not its remedy removed. Preserve v4 recovery/exact v1-v3 and all pending human decisions. No deployment, cloud, credential, customer-data, staging/commit/push or destructive operations.
+
+Next: Inspect and admit the remaining shared /geo/cohort and /health resource-access slice under local G0 authority, preserving basic edge geography and liveness/readiness. Address actual shared-data/probe exposure with existing checks; do not re-audit unchanged report algorithms or expand into deployment/customer decisions.

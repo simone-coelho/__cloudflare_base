@@ -1,0 +1,165 @@
+{
+  "at": "2026-09-12T20:31:47.733Z",
+  "task_id": "W32.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "fc6e2e81124d048a10610cd0c23c4dfdb4450c13e340405bcc505674d9bb6ab3",
+  "contract_digest": "4643c75175caf8f491f831b95ff1b76913bf9f45eff78dab09b8bbc67ebffebd",
+  "verdict": "PASS",
+  "summary": "Metadata-only revalidation: measurement ownership is corrected from worker output to lead configuration/evidence. Reuse the original source review and checks on identical bytes; no fresh runtime, static or benchmark execution.",
+  "criteria": [
+    {
+      "id": "W32.01-C1",
+      "verdict": "PASS",
+      "evidence": "Original first-match/index source and fixed5 evidence reused unchanged. All38 artifact path/hash pairs, both implementation files and original source-deltas remain byte-identical; no change to duplicate behavior, input/output or original source verdict."
+    },
+    {
+      "id": "W32.01-C2",
+      "verdict": "PASS",
+      "evidence": "Original independent fixed5 and lead-owned paired measurement remain exact and are reused at their actual execution times. All92 recorded measurement dependency hashes still match; no timing, parity or capacity claim added."
+    },
+    {
+      "id": "W32.01-C3",
+      "verdict": "PASS",
+      "evidence": "The sole semantic manifest delta is measurement.json role output→configuration; digest changes accordingly. This corrects ownership without expanding worker write_paths. Contract/criteria/check commands and all source/evidence bytes are unchanged. Original compiler/lint/whitespace and independent review remain reusable. The original manifest-role failure remains preserved, not recast as a runtime failure or erased."
+    }
+  ],
+  "prior_review": {
+    "path": "docs/remediation/evidence/W32.01/review.json",
+    "sha256": "a4a28f440ba0f4b90c23be2beb397ae53b4b4549a15d0657345f4fd193a5420f",
+    "at": "2026-09-12T20:25:29.443Z",
+    "artifact_digest": "aa778b38f1979fdeb85e546ec05ef73664bb2535e38ee841875f9d720591b224"
+  },
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W32.01/plan.md",
+      "sha256": "733b3864c438e1717498d574d9b49c0523a5913d9b6aff16edf7dc4dfb02d4c1"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W32.01/artifact-r2.json",
+      "sha256": "2276557f3ae51d88358dd63a4cda36cfc7b7c497e21bdacb6c06338f4ec46590"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.01/worker.json",
+      "sha256": "8dae9a27a2d1dd6ddca55613872adf44e159a6433f11496902353a3d6e63f36f"
+    },
+    "metadata_reconciliation": {
+      "path": "docs/remediation/evidence/W32.01/metadata-reconciliation.json",
+      "sha256": "f57c8fe33a14ca422dff290f6b52c2105c5e3716880e16fe34d788192a9ba97b"
+    }
+  },
+  "metadata_findings": {
+    "verification_at": "2026-09-12T20:30:44.006Z",
+    "captures": [
+      "1d8387",
+      "dd6461"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "exact_manifest_except_role_and_digest": true,
+    "path_hash_pairs_unchanged": 38,
+    "pin_mismatches": [],
+    "measurement_dependencies_unchanged": 92,
+    "dependency_mismatches": [],
+    "role_changes": [
+      {
+        "path": "docs/remediation/evidence/W32.01/measurement.json",
+        "before": "output",
+        "after": "configuration"
+      }
+    ],
+    "contract_unchanged": true,
+    "original_review_and_evidence_preserved": true
+  },
+  "evidence_reuse": {
+    "independent_runtime": {
+      "prior_review": {
+        "path": "docs/remediation/evidence/W32.01/review.json",
+        "sha256": "a4a28f440ba0f4b90c23be2beb397ae53b4b4549a15d0657345f4fd193a5420f"
+      },
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts -t 'W32.01|W33.01|W21 retains repeated credits|the learning grid, the reporting overlays' --maxWorkers=1 --minWorkers=1",
+      "session_id": 80423,
+      "captures": [
+        "fad5ab",
+        "942943"
+      ],
+      "original_output_start_time": "16:23:38",
+      "original_verification_window": [
+        "2026-09-12T20:23:34.184Z",
+        "2026-09-12T20:24:26.166Z"
+      ],
+      "exit_status": 0,
+      "drained": true,
+      "result": {
+        "passed": 5,
+        "unselected": 5
+      },
+      "reruns": 0,
+      "qualification": "The unchanged original review contains the full actual command outputs; these are not newly executed or newly timestamped results."
+    },
+    "worker_runtime": {
+      "worker_record": {
+        "path": "docs/remediation/evidence/W32.01/worker.json",
+        "sha256": "8dae9a27a2d1dd6ddca55613872adf44e159a6433f11496902353a3d6e63f36f"
+      },
+      "session_id": 44452,
+      "captures": [
+        "99cad7",
+        "58923d"
+      ],
+      "started_at": "2026-09-12T20:20:19.884Z",
+      "finished_at": "2026-09-12T20:20:33.290Z",
+      "exit_status": 0,
+      "drained": true,
+      "reruns": 0
+    },
+    "static": {
+      "worker_record": {
+        "path": "docs/remediation/evidence/W32.01/worker.json",
+        "sha256": "8dae9a27a2d1dd6ddca55613872adf44e159a6433f11496902353a3d6e63f36f"
+      },
+      "command_capture": "w3201_static1",
+      "started_at": "2026-09-12T20:20:40.019Z",
+      "finished_at": "2026-09-12T20:21:19.946Z",
+      "session_id": 59684,
+      "captures": [
+        "3857ae",
+        "35fed8",
+        "0e009d"
+      ],
+      "exit_status": 0,
+      "drained": true,
+      "reruns": 0
+    },
+    "measurement": {
+      "record": {
+        "path": "docs/remediation/evidence/W32.01/measurement.json",
+        "sha256": "7a67c02ba0a5ac1707b95f3d294444e9eb192ff3e92c5d358bd609a578fdc3d9"
+      },
+      "actor_id": "w01-lead",
+      "at": "2026-09-12T20:22:05.807Z",
+      "session_id": 13315,
+      "captures": [
+        "d66f6b",
+        "cdabf6"
+      ],
+      "exit_status": 0,
+      "drained": true,
+      "reruns": 0
+    },
+    "source_stop": "2026-09-12T20:21:34.328Z"
+  },
+  "retained_failure": {
+    "path": "docs/remediation/evidence/W32.01/board-failed-role.json",
+    "exit_code": 1,
+    "session_id": 11004,
+    "terminal": "38c0d1",
+    "qualification": "Root-owned manifest role error discovered after original acceptance. Original acceptance/review/artifact are preserved; this addendum binds reusable exact-byte evidence to the corrected manifest, not a fresh implementation."
+  },
+  "limitations": [
+    "All original review limitations remain unchanged, including local-only low-cardinality timings, remaining report construction/payload/model work and no full W32/finding/customer/release acceptance.",
+    "No source, original evidence, runtime, benchmark or static changes were made. Lead disposition and final governance check remain separate."
+  ]
+}

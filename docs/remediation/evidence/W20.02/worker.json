@@ -1,0 +1,260 @@
+{
+  "task_id": "W20.02",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T18:54:33.205Z",
+  "contract_digest": "bae4db1ab1ddb252733b81ba6a46262c2ac5338d1d265ab660f57e0dafdfec92",
+  "references": [
+    {
+      "path": "docs/remediation/design/W20.02/plan.md",
+      "sha256": "4079d666f5e9b7d13268a9380d91ecb1c241d422d7a89ad048f34041a28d30d1"
+    },
+    {
+      "path": "docs/remediation/design/W20.02/baseline.json",
+      "sha256": "cb4e2642da2f258e65307672b81dbc5571bd92ffbcc3a2acd9d7e14660e0aaac"
+    },
+    {
+      "path": "docs/remediation/evidence/W20.02/admission.json",
+      "sha256": "a1ee903c1f7fc00eb638af316912fff65db52e771867c337ab64ceb434b99eb4"
+    }
+  ],
+  "baseline": {
+    "kind": "source_confirmed_design_case",
+    "entry": "Root 3614/090583/858c2b/cd7fa9/7a3bc0 check/status VALID1527, exit0/drained; GO030c27 journal1536 verified34 before pins plus new helper and7owned. Complete admitted plan/task/baseline/admission read; no baseline runtime executed.",
+    "root_failed_baselines": [
+      {
+        "session_id": 75246,
+        "captures": [
+          "a447a2",
+          "7a80f1",
+          "8d3ea3",
+          "24f974"
+        ],
+        "exit_code": 1,
+        "drained": true,
+        "result": "Plain browser lint:8existing no-undef errors and2unused-binding warnings."
+      },
+      {
+        "session_id": 20383,
+        "captures": [
+          "65b7f2",
+          "cf138d"
+        ],
+        "exit_code": 1,
+        "drained": true,
+        "result": "Plain History browser lint:6existing no-undef errors."
+      }
+    ],
+    "corrected": "Root85186/3d2d0e/c9bc06 exit0/drained: TypeScript lint then browser-scoped lint --env browser --global OperatorSession --max-warnings2. Exact commands/full failed and corrected outputs remain in referenced baseline.json; no source/config change to conceal baseline errors.",
+    "qualification": "Root prospectively qualified W19.03 overlapping route/fixture/API exact-byte proof; its diagnostics/history remain and selected control passes. W19.02/W08.04 accepted61pins unchanged; W20.01/W18.01 implemented remedies and prior qualification retained."
+  },
+  "summary": "Existing slot HTTP current/preview/PUT/rollback responses now report bounded advisory pin-reference checks using authorized strict current catalog reads. Rules and History visibly preserve original save/rollback feedback, while pending/draft/scope changes cannot reuse stale diagnostic assurances. Runtime reservation, eligibility/refusal, structural validators and historical replay are unchanged.",
+  "criteria": [
+    {
+      "id": "W20.02-C1",
+      "verdict": "local_runtime_pass",
+      "evidence": "Mounted route group checks missing piece, wrong slot type, draft/future/expired-window/out-of-stock observations, exact current/candidate slot and catalog revisions, checkedAt and unchanged document.60 warning occurrences yield50 numeric-coordinate samples/10 omitted with no raw pin IDs/names. Explicit zero-pin candidate is not_required/no R2 read. Both auth modes enforce canonical authority for optional reads; mismatched/duplicate selectors, untyped/ungranted credentials and unbound default scope produce existing refusal or unavailable with no new catalog read. Legacy slot fallback is unavailable, retained revision read unchanged."
+    },
+    {
+      "id": "W20.02-C2",
+      "verdict": "local_runtime_pass",
+      "evidence": "Actual PUT and rollback retain success/revision/document and historical bytes while reporting their exact slot result. Current catalog stock change updates feedback and real decideContent refuses the pin without arbitrary fill in default and personalized arms. Structurally invalid slot write performs no added catalog read; catalog outage preserves successful slot PUT; missing/corrupt publication head gives unavailable/null counts/list on preview. No diagnostics enter stored KV revision bytes. Existing W20.01 composer/route/replay and W19.03 catalog diagnostics control pass."
+    },
+    {
+      "id": "W20.02-C3",
+      "verdict": "worker_checks_pass_independent_review_pending",
+      "evidence": "Real Rules/History JSDOM case checks current/missing feedback, overlapping preview generations, immediate stale clearing/discard, advisory save, original save response surviving failed current GET, malformed available feedback refusal, explicit no-pins state, tenant-load race, original rollback summary during held History refresh, Rules link, stale rollback completion and old-button no-write during a scope/rail transition. Two W18 controls and existing History/auth/dead-screen controls pass. Three new grouped cases plus9existing=12; final compiler/lint/whitespace pass. Independent frozen review remains separate."
+    }
+  ],
+  "rework": [],
+  "authoring_review": "Before any runtime: replaced per-pin catalog scan with one ID Map; strengthened malformed UI report validation; retained response feedback before unrelated early returns; added History pre-write tenant/request guards; corrected inherited immediate-delivery flash, API paragraph placement and required affinity fixture field. These are source-review authoring corrections, not failed executed checks.",
+  "final_results": {
+    "runtime": {
+      "passed": 12,
+      "failed": 0,
+      "skipped": 80,
+      "unselected": 80,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 76.63
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 2,
+      "new_warnings": 0,
+      "final_bytes": true,
+      "signatures": [
+        {
+          "path": "public/console/views-config.js",
+          "line": 19,
+          "column": 29,
+          "message": "'when' is assigned a value but never used",
+          "rule": "@typescript-eslint/no-unused-vars"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "line": 19,
+          "column": 35,
+          "message": "'plural' is assigned a value but never used",
+          "rule": "@typescript-eslint/no-unused-vars"
+        }
+      ],
+      "baseline_capture": "c9bc06",
+      "final_capture": "0471b6"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "new_helper_inspection": "7be173: complete sed -n '1,90l' display, no trailing whitespace and terminal newline present."
+    }
+  },
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts src/console/console.render.test.ts src/reflex/contentCompose.test.ts src/learn/phase3.test.ts -t 'W20.02|W20.01|W18.01|W19.03 reports bounded|history shows every document|W03.03 carries named auth context|never leaves a screen' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "f323ac",
+          "wall_time_seconds": 1.00063807,
+          "session_id": 38187,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "44a6aa",
+          "wall_time_seconds": 5.000920258,
+          "session_id": 38187,
+          "original_token_count": 175,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority\n[config] read failed, serving fallback\n\nstderr | src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n[config] stored document is invalid and was ignored\n\n ✓ src/routes/content.test.ts  (32 tests | 28 skipped) 93ms\n"
+        },
+        {
+          "chunk_id": "78eef0",
+          "wall_time_seconds": 5.000102177,
+          "session_id": 38187,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2c10fc",
+          "wall_time_seconds": 5.001227103,
+          "session_id": 38187,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f093f3",
+          "wall_time_seconds": 5.001853702,
+          "session_id": 38187,
+          "original_token_count": 19,
+          "output": " ✓ src/console/console.render.test.ts  (38 tests | 32 skipped) 24255ms\n"
+        },
+        {
+          "chunk_id": "e15284",
+          "wall_time_seconds": 0.000002063,
+          "exit_code": 0,
+          "original_token_count": 82,
+          "output": " ✓ src/learn/phase3.test.ts  (16 tests | 15 skipped) 28ms\n ✓ src/reflex/contentCompose.test.ts  (6 tests | 5 skipped) 6ms\n\n Test Files  4 passed (4)\n      Tests  12 passed | 80 skipped (92)\n   Start at  15:03:55\n   Duration  76.63s (transform 3.13s, setup 0ms, collect 40.99s, tests 24.38s, environment 0ms, prepare 8.38s)\n\n"
+        }
+      ],
+      "chunk_id": "e15284",
+      "wall_time_seconds": 0.000002063,
+      "session_id": 38187,
+      "original_token_count": 82,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority\n[config] read failed, serving fallback\n\nstderr | src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n[config] stored document is invalid and was ignored\n\n ✓ src/routes/content.test.ts  (32 tests | 28 skipped) 93ms\n ✓ src/console/console.render.test.ts  (38 tests | 32 skipped) 24255ms\n ✓ src/learn/phase3.test.ts  (16 tests | 15 skipped) 28ms\n ✓ src/reflex/contentCompose.test.ts  (6 tests | 5 skipped) 6ms\n\n Test Files  4 passed (4)\n      Tests  12 passed | 80 skipped (92)\n   Start at  15:03:55\n   Duration  76.63s (transform 3.13s, setup 0ms, collect 40.99s, tests 24.38s, environment 0ms, prepare 8.38s)\n\n",
+      "drained": true,
+      "exit_code": 0
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/slotDiagnostics.ts src/routes/content.ts src/routes/content.test.ts src/console/console.render.test.ts && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js public/console/views-config.js public/console/views-measure.js --env browser --global OperatorSession --max-warnings 2 && git diff --check -- src/content/slotDiagnostics.ts src/routes/content.ts src/routes/content.test.ts public/console/views-config.js public/console/views-measure.js src/console/console.render.test.ts docs/kit/02-api-reference.md",
+      "captures": [
+        {
+          "chunk_id": "48fded",
+          "wall_time_seconds": 1.00075829,
+          "session_id": 29931,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d8ea62",
+          "wall_time_seconds": 5.001034484,
+          "session_id": 29931,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "404905",
+          "wall_time_seconds": 5.000806466,
+          "session_id": 29931,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "0471b6",
+          "wall_time_seconds": 0.000002142,
+          "exit_code": 0,
+          "original_token_count": 84,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views-config.js\n  19:29  warning  'when' is assigned a value but never used    @typescript-eslint/no-unused-vars\n  19:35  warning  'plural' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n✖ 2 problems (0 errors, 2 warnings)\n\n"
+        }
+      ],
+      "chunk_id": "0471b6",
+      "wall_time_seconds": 0.000002142,
+      "session_id": 29931,
+      "original_token_count": 84,
+      "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/public/console/views-config.js\n  19:29  warning  'when' is assigned a value but never used    @typescript-eslint/no-unused-vars\n  19:35  warning  'plural' is assigned a value but never used  @typescript-eslint/no-unused-vars\n\n✖ 2 problems (0 errors, 2 warnings)\n\n",
+      "drained": true,
+      "exit_code": 0
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T19:06:40.202Z",
+    "files": [
+      {
+        "path": "src/content/slotDiagnostics.ts",
+        "sha256": "d03715b2e48b432517c7c3791fe42d1c03a1a8d155825343275e35d172b576b1"
+      },
+      {
+        "path": "src/routes/content.ts",
+        "sha256": "06c2ea4f18954bf919314afef75c18ec4b5a51c2ed0f8b8023ea0567d72d90fc"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "024a50a2ca3f8c4634ff58eba33e2976cbdb6665d19bf90d63055e89e2d70598"
+      },
+      {
+        "path": "public/console/views-config.js",
+        "sha256": "0a6106a0a8899038a0bb64d149a4e0df0c1fae93ec087bf0214cf82148420d53"
+      },
+      {
+        "path": "public/console/views-measure.js",
+        "sha256": "e69b1cbde91aa894f44fe480316340b7317a8aee88c81a52629627e09ad464b3"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "c37d9d6d4fa893b8fd61baf5d873a090eaa4d11474cd5e2eebd5a5b1a5c0e823"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "be666d2d38173005017c97f7952cbc7fd9cf562b9b9a0c38cb10d943e23d858c"
+      }
+    ],
+    "capture": "ade287"
+  },
+  "limitations": [
+    "Advisory HTTP current/preview/PUT/rollback checks only, not hard reference rejection or cross-document atomic activation. Catalog and KV slot revisions can independently change; feedback names the observed catalog/time, not a serving-cache snapshot or persisted receipt.",
+    "Scheduled, draft, missing and temporarily out-of-stock pins remain authorable under existing structural validation. Runtime eligibility/reservation/refusal/no arbitrary fill and historical replay remain unchanged; no exclusions/off-limits, priority, multi-position or customer fallback policy is invented.",
+    "Generic library/seed writers and later catalog publications gain no added guard. Legacy slot scope/credential behavior remains; lack of canonical catalog authority produces unavailable without optional catalog I/O, not canonical-scope substitution.",
+    "Existing browser assets must load together in their established order; no mixed-version/deployed browser rollout is proved. UI HTTP persistence/gates and route KV/conditional R2 are synthetic; no native/distributed/concurrency/SLO/customer acceptance.",
+    "Exactly12selected runtime cases passed;80unselected are not claimed passing. Expected corrupt/invalid-document refusal logs and inherited Vite CJS warning retained. Full compiler and declared scoped lint passed with only the two explicit inherited browser warnings.",
+    "Full W20/F28/F26 and related W19/customer/native/release obligations remain open. No source beyond7owned paths, governance edits, new framework/broad suite, external/cloud/customer-data/build/install/seed/commit actions or subdelegation. Independent review and lead disposition are not worker authority."
+  ]
+}

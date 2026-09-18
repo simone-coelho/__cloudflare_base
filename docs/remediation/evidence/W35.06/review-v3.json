@@ -1,0 +1,79 @@
+{
+  "task_id": "W35.06",
+  "actor_id": "w3506-reviewer",
+  "run_id": "/root/w3505_source_scout",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T04:02:34.258Z",
+  "verdict": "PASS",
+  "artifact_digest": "e40dd5443b0029ac08b191382e527a4279facc492cd33b11df9fb0ab2b3b4643",
+  "contract_digest": "79603b833b2804ed29cff7af70dea475db6cae07f8f601ca4a2d842c5c4fbf45",
+  "independence": "Distinct from implementer /root/w3506_residual_scout. Inspected actual source and task patches, independently verified frozen identity and ran K3 once. No source/test/governance edits, repairs, delegation or broader suite.",
+  "artifact_verification": {
+    "before": "2026-09-16T04:01:32.651Z",
+    "after": "2026-09-16T04:02:34.258Z",
+    "manifest_pin_count": 28,
+    "mismatches_before": [],
+    "mismatches_after": [],
+    "worker": { "path": "docs/remediation/evidence/W35.06/worker.json", "sha256": "cbd146df62ecd1f8fc17b95dbfbc1f9b8429fb7dc14b3419ce4af56c01d20583" },
+    "source_freeze": { "path": "docs/remediation/evidence/W35.06/source-freeze-v3.json", "sha256": "e43564a2a5145a4735d870fdf739bfc120ebea9dae9fdf93bc0e6990f9c53aee" },
+    "prior_reviews": [
+      { "path": "docs/remediation/evidence/W35.06/review.json", "sha256": "5a1409be82e4633e6952b2bd6025eedfeeaf281db4379c10862487c0e45ae594" },
+      { "path": "docs/remediation/evidence/W35.06/review-v2.json", "sha256": "edc7c8ac979bc2240b4ca9cf7ff42873978b307799522d666d4cf5d79165aa2c" }
+    ],
+    "owned_files": {
+      "src/durable-objects/ShopperReflex.ts": "5ea9b3a0b4d32577f7eba602ec67f8c662e4091f476d2acb1071b71b519aeaf3",
+      "src/identity/erase.ts": "caeee8658ba74903c0915c267b373081d0068cbe24c5bf6a2e372736e6fe7f3e",
+      "src/routes/realtime.sdkContract.test.ts": "eeb1ef6b7cd6e853ee4e714e3eaa63af00fc49a15c38b81b628786d164424c0c",
+      "src/routes/identity.test.ts": "fe7ca153df7e39f174b7c1cdedbbcc9acad0796e73daaa9976917433d1cebec4"
+    },
+    "reconstruction": "Recomputed artifact/contract digests and all 28 pins. Verified all four retained admitted-before, cumulative-patch and current-final hashes; applied each unified patch in memory with every context/removal line checked, obtaining byte-identical current outputs. Also verified the retained second rejected-worker hash (capture53c723). Post-K3 pin recheck found zero drift (5550aa).",
+    "delta": "R2-only change: +17/-8 production lines across ShopperReflex/erase and +37/-1 lines inside the existing grouped fixture. Cumulative task delta remains separate from unrelated dirty-tree work."
+  },
+  "checks": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[3456]|W06[.]0[89]' --maxWorkers=1 --minWorkers=1",
+      "attempts": 1,
+      "exit_code": 0,
+      "session_id": 53621,
+      "session_drained": true,
+      "captures": ["3da9b6", "7d0e24"],
+      "result": "2 files passed; 15 passed, 96 skipped, 111 total. Duration22.73s; tests6.23s (realtime3672ms, identity2556ms).",
+      "diagnostics": "Tool output truncated repetitive synthetic queue_unavailable/learning_incomplete diagnostics; complete final counts/timing and exit0 were retained. Not live delivery or measurement acceptance."
+    },
+    "K2": {
+      "disposition": "Reused exact-byte final worker attempt6 after all frozen pin checks; not rerun.",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts",
+      "result": "Worker session93690 drained, exit0; compiler/lint/whitespace pass, zero errors, 112 warnings; captures5edf6b/a4e226/198cc2.",
+      "warning_basis": "Independent comparison of current and hash-verified retained rejected-worker path/rule/message/count signatures was identical. Admitted-before-byte comparison remains retained in worker history. No independent lint rerun claimed; rejected and failed earlier attempts remain historical."
+    }
+  },
+  "prior_finding_disposition": {
+    "W35.06-R1": "RESOLVED. Digest-keyed per-registration source completions coexist with the generic same-erasure object guard. The repeated-source fixture retires E1, registers E2 before high-water, resumes a legacy exact E1 receipt, preserves E2 until its own cleanup, loses/retries E2 acknowledgement, acknowledges both target entries and completes. Old exact/generic retries after reset leave fresh state unchanged. Both key classes are retained and shape/witness-validated by reset/retention.",
+    "W35.06-R2": "RESOLVED for generic DO cleanup and its adjacent v5 extra-plan steps. Inside source serialization, unreceipted canonical identityIntent/identityTransfer keys or any identityRetired: key refuse before erasure; presence checks also refuse malformed values. A valid same-job receipt stays a no-op; marker-free historical objects retain the prior fallback. All four extraSteps calculation/validation/reporting/execution call sites select object-first ordering only for v5. The rest of the step order and v1-v4 behavior remain unchanged."
+  },
+  "criteria": {
+    "W35.06-C1": {
+      "verdict": "PASS",
+      "basis": "Immutable generation-bound source intent precedes admission; ambiguity recovers the first target epoch/order rather than rebinding. Target transfer requires its exact registration before merge/receipt/grant/KV effects. Intent-bearing writers remain fenced. Monotonic high-water and exclusive <=32 pages enumerate the 52-source fixture beyond the compatibility-member cap."
+    },
+    "W35.06-C2": {
+      "verdict": "PASS",
+      "basis": "Root checkpoint precedes the atomic idempotent target barrier/high-water. Frozen source pages, exact cleanup/ack and progress handle selected barrier/source/ack/page/root ambiguity. Repeated-source receipt cardinality is fixed. H+1 test pauses after the cutoff checkpoint, exposes a later visitor link and session/pointer point reads while shopper reads return null and session LIST lags, and actually reaches extra_cleanup with a captured session and plan.next=0. Generic refusal leaves fresh source bytes, session/pointer/link/cache bytes and the absent J receipt unchanged. Reset leaves a retired marker and successor behavior; retry still refuses unchanged. This is the DO/extra-plan boundary, not a new cutoff for the separate preceding session scan."
+    },
+    "W35.06-C3": {
+      "verdict": "PASS",
+      "basis": "Exact source tenant/visitor/session/intent/authority and transfer-registration checks remain; unresolved/corrupt witnesses refuse. Cleanup removes old source behavior/payload/forwarding behind a rotated deny epoch, retains exact completion and retired witnesses, and is safe on duplicate lost replies or tested fresh generations. W35.03-.05 recovery/consent/grant and W06.08-.09 controls pass, with exact-byte scoped static assurance."
+    }
+  },
+  "adversarial_findings": [],
+  "bounded_operations": "No target-to-source call is made while target serialization is held. The source-to-target transfer lock direction is unchanged. R2 adds at most three one-entry local marker lookups to unreceipted generic cleanup, with no new network/decision-path work. Actual fixtures retain <=32 page entries and logical cleanup attempts per invocation; the 52-source case uses two target pages and52 acknowledgements. These are local operation counts, not native storage/latency/capacity measurements.",
+  "limitations": [
+    "Prospective admitted-source cleanup only. Historical unregistered sources and intents without committed target admission remain outside complete target discovery.",
+    "The separate preceding session-discovery/cleanup phase has no new generation cutoff. The H+1 fixture deliberately keeps that LIST stale while direct session/pointer reads are visible; this PASS does not close session-wide cutoff or session-host authority.",
+    "V5 extra-plan numeric ordering changed from rejected artifacts. Persisted rejected-v5 cursors require migration/compatibility review before use; no deployed/resumed-data compatibility is established. v1-v4 ordering is unchanged.",
+    "No external/physical erasure, registry/idempotency retention or capacity qualification, migration/cutover/deployment/customer-data operation, native/browser/customer/SLO/release acceptance or full W35/F06/F14 closure.",
+    "Rollback requires reviewed handling of intents, registrations, both receipt classes and v5 cursors; retained inverse bytes do not authorize running an older protocol against new records."
+  ],
+  "handoff": { "source": "UNCHANGED_STOP", "commands_running": [], "next_action": "Lead inspects this bounded frozen-artifact PASS and performs disposition/tracker/handoff updates. Reviewer does not accept task/package/finding or approve migration/deployment/release." }
+}

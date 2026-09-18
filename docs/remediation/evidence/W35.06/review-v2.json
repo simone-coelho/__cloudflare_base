@@ -1,0 +1,80 @@
+{
+  "task_id": "W35.06",
+  "actor_id": "w3506-reviewer",
+  "run_id": "/root/w3505_source_scout",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T03:43:00.080Z",
+  "verdict": "REWORK",
+  "artifact_digest": "5f29f882340045c09d2201c1b95127215e981e947aed2022b2b8838f45cad250",
+  "contract_digest": "79603b833b2804ed29cff7af70dea475db6cae07f8f601ca4a2d842c5c4fbf45",
+  "independence": "Distinct from implementer /root/w3506_residual_scout. Inspected actual source, cumulative patches and exact rework delta; ran K3 once. No implementation/governance edits, delegation or extra suite.",
+  "artifact_verification": {
+    "before": "2026-09-16T03:41:16.638Z",
+    "after": "2026-09-16T03:43:00.080Z",
+    "manifest_pin_count": 27,
+    "mismatches_before": [],
+    "mismatches_after": [],
+    "worker": { "path": "docs/remediation/evidence/W35.06/worker.json", "sha256": "fc0aafcae2834dfcf7c7fc8d66204a13b1d03d2ab7d9f830e5c1acb474642ab9" },
+    "source_freeze": { "path": "docs/remediation/evidence/W35.06/source-freeze-v2.json", "sha256": "1afac993be340e85e7deaf3fb2309298650daf0363d8dd6dae6119721bc548f1" },
+    "prior_review": { "path": "docs/remediation/evidence/W35.06/review.json", "sha256": "5a1409be82e4633e6952b2bd6025eedfeeaf281db4379c10862487c0e45ae594" },
+    "owned_files": {
+      "src/durable-objects/ShopperReflex.ts": "595bd0a39291fdb638080e02a37d85f1a54d2c5eae2a5b81384ff5eaee13c511",
+      "src/identity/erase.ts": "929ad53569a24ce59c1efd0e64710557adde898c398065548254191f0bd2a909",
+      "src/routes/realtime.sdkContract.test.ts": "4d3236ff3ec68e149e199901781d8e9b7c2837d1670306bef862c312b0e79915",
+      "src/routes/identity.test.ts": "fe7ca153df7e39f174b7c1cdedbbcc9acad0796e73daaa9976917433d1cebec4"
+    },
+    "reconstruction": "Independently recomputed artifact and contract digests, all 27 pins, all four retained before/patch/final hashes, and the retained rejected-worker hash. Applied all four cumulative unified patches in memory while validating each context/removal line; outputs exactly match current bytes (capture cd2cb9). Rechecked all pins after K3 with zero drift (d45bad). Rework changes only ShopperReflex and the existing grouped fixture: +18/-5 production, +35/-4 test lines."
+  },
+  "checks": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[3456]|W06[.]0[89]' --maxWorkers=1 --minWorkers=1",
+      "attempts": 1,
+      "exit_code": 0,
+      "session_id": 27859,
+      "session_drained": true,
+      "captures": ["9088e2", "bb5a80"],
+      "result": "2 files passed; 15 passed, 96 skipped, 111 total. Duration20.86s; tests6.04s (realtime3507ms, identity2534ms).",
+      "diagnostics": "Repetitive synthetic queue_unavailable/learning_incomplete diagnostics were tool-truncated; the complete final result summary and exit0 were retained. Not delivery/measurement evidence."
+    },
+    "K2": {
+      "disposition": "Reused exact-byte worker final K2 attempt5 after all pin checks; not rerun.",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts && git diff --check -- src/durable-objects/ShopperReflex.ts src/identity/erase.ts src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts",
+      "result": "Worker session64298 drained, exit0; zero errors, 112 unchanged warnings; captures5d99bf/64e7f3.",
+      "warning_basis": "Independently compared current and hash-verified retained rejected-worker path/rule/message/count multisets: identical. Retained rejected evidence records the admitted-before-byte comparison. No independent lint rerun claimed. Failed/superseded worker attempts remain historical."
+    }
+  },
+  "criteria": {
+    "W35.06-C1": { "verdict": "PASS_WITHIN_REVIEWED_SCOPE", "basis": "Immutable intent, first-registration epoch/order recovery, exact transfer admission and >50-source bounded enumeration remain unchanged and selected controls pass." },
+    "W35.06-C2": { "verdict": "REWORK", "basis": "R1 is resolved, but the legacy KV extra-cleanup path can bypass the prospective registration cutoff and erase a later registered source; see R2. Initial checkpoint, atomic target barrier, <=32 pages and v1-v4/session branches remain intact." },
+    "W35.06-C3": { "verdict": "PASS_EXACT_SOURCE_PATH_ONLY", "basis": "Digest-keyed exact source receipts resolve repeated registered generations, retain lost-reply idempotency and preserve tested later behavior. Legacy generic source receipts accept only their exact witness. Reset/retention validate and retain both key classes. This does not approve the separate generic fallback identified in R2." }
+  },
+  "prior_finding_disposition": {
+    "W35.06-R1": "RESOLVED on these frozen bytes. One source E1 is retired, E2 registers before high-water, the fixture simulates a legacy E1 generic receipt, E2 cleanup commits with a lost reply, both target registrations acknowledge, and the actual job completes. After reset/new behavior, old E1/E2 cleanup and generic same-erasure cleanup leave the fresh source unchanged. Exact per-registration receipts and the generic object guard have separate roles; no witness is rebound or overwritten to acknowledge another generation."
+  },
+  "adversarial_findings": [
+    {
+      "id": "W35.06-R2",
+      "severity": "blocking_task_acceptance",
+      "confidence": "source_confirmed design schedule; no additional runtime reproduction run",
+      "title": "Legacy extra-object cleanup bypasses the registered-source high-water",
+      "source": [
+        "src/identity/erase.ts:590 establishes the target barrier before the later KV visitor scan",
+        "src/identity/erase.ts:368-395 captures matching visitor links without a registration-sequence or epoch condition",
+        "src/identity/erase.ts:255-269 accepts the captured shopper projection or null; separate visitor reads can expose a newer link",
+        "src/identity/erase.ts:282 and :710 send only erasureId to generic object cleanup",
+        "src/durable-objects/ShopperReflex.ts:1686-1689 erases any object without that job's prior receipt, without checking its intent/registration against the cutoff"
+      ],
+      "design_case": "Job J checkpoints and establishes target high-water H. A new source S then registers as H+1 and publishes its visitor link. During the later KV scan and compatibility checks, shopper reads retain the captured projection (or null, which is accepted) while S's visitor link is visible. The scan captures S in an extra plan. Registered-source cleanup correctly excludes H+1, so S has no J receipt. Extra-object cleanup nevertheless calls /identity/erase/object with only J; the absent-receipt branch rotates S and deletes its fresh behavior/intent/transfer/forwarding state. The target cutoff therefore does not protect this fresh registered source. Ordered publication is not an atomic cross-key read snapshot, and no authoritative cutoff check exists at the destructive fallback.",
+      "required_rework": "Make v5 generic object cleanup generation-safe: a newly registered or otherwise unresolved generation must be refused or explicitly excluded before destructive cleanup, using authoritative evidence rather than KV projection coherence. Preserve exact source receipts, the target cutoff and v1-v4 behavior; do not weaken compatibility checks or silently claim historical discovery completion.",
+      "smallest_regression": "Extend the existing grouped controller fixture with one schedule: pause after target begin/high-water, admit/link a new source, expose its visitor link while serving the captured shopper projection, then resume the job through extra cleanup. Assert the post-cutoff source remains byte-identical and is not marked erased; truthful pending/conflict is acceptable. No broader suite is required."
+    }
+  ],
+  "other_inspection": "Rechecked target/source identity and tenant binding, retained-key validation, ambiguous checkpoint handling, v1-v4 branches and bounded page/attempt counts. Rework adds one local receipt lookup per source cleanup, no new network call or target-to-source callback while target serialization is held. Existing barrier/recovery/consent/grant controls passed. Review stopped at R2; these positives are not a complete defect-free claim.",
+  "limitations": [
+    "Prospective admitted-source cleanup only; historical unregistered/unadmitted discovery remains open.",
+    "No external/physical erasure, session-host completion, registry/idempotency retention or capacity qualification, migration/cutover/deployment/customer/native/SLO/release acceptance or full W35/F06/F14 closure.",
+    "Rollback requires compatibility review for intents, registrations, both receipt classes and v5 jobs. Exact retained inverse bytes do not authorize older binaries against new durable records."
+  ],
+  "handoff": { "source": "UNCHANGED_STOP", "commands_running": [], "next_action": "Lead records R1 resolved and R2 REWORK, assigns the bounded cutoff-safe fallback correction, and freezes superseding bytes for independent review. No task/package/finding acceptance by reviewer." }
+}

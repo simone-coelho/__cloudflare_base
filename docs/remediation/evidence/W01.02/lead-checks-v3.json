@@ -1,0 +1,38 @@
+{
+  "at": "2026-09-07T02:27:45.173Z",
+  "actor_id": "w01-lead",
+  "run_id": "/root",
+  "checks": [
+    {
+      "command": "node docs/remediation/evidence/W01.02/lead-artifact-v3.mjs --verify",
+      "started_at": "2026-09-07T02:27:28.292Z",
+      "chunk_id": "897912",
+      "wall_time_seconds": 0.000002512,
+      "original_token_count": 40,
+      "output": "{\"at\":\"2026-09-07T02:27:35.681Z\",\"result\":\"pass\",\"digest\":\"10948c901f55f7257f99f0e6e5326b0f70005548e8b92e17df900e190a5f62a8\",\"files\":900,\"runtimeInputs\":872}\n",
+      "exit_code": 0,
+      "collected_at": "2026-09-07T02:27:45.170Z"
+    },
+    {
+      "command": "node docs/remediation/evidence/W02.02/lead-artifact-v1.mjs --verify",
+      "started_at": "2026-09-07T02:27:28.292Z",
+      "chunk_id": "08850f",
+      "wall_time_seconds": 0.000001353,
+      "original_token_count": 68,
+      "output": "{\"at\":\"2026-09-07T02:27:32.003Z\",\"result\":\"pass\",\"digest\":\"e96e57fa6b2fa46bbe92e7caac450c70e6d5340b500fbd8d91eb4f9b5960202b\",\"files\":348,\"localInputs\":43,\"nodeTokenInputs\":85,\"runtimeInputs\":[{\"phase\":\"before-inputs\",\"count\":196},{\"phase\":\"current-inputs\",\"count\":197}]}\n",
+      "exit_code": 0,
+      "collected_at": "2026-09-07T02:27:45.171Z"
+    },
+    {
+      "command": "git diff --check",
+      "started_at": "2026-09-07T02:27:28.292Z",
+      "chunk_id": "5d576e",
+      "wall_time_seconds": 0.000001087,
+      "original_token_count": 0,
+      "output": "",
+      "exit_code": 0,
+      "collected_at": "2026-09-07T02:27:45.173Z"
+    }
+  ],
+  "limitations": "Read-only current full-entrypoint graph and accepted signing-artifact identity plus diff checks; not additional deployed/customer acceptance."
+}

@@ -1,0 +1,49 @@
+{
+  "at": "2026-09-13T01:31:28.494Z",
+  "source_go_at": "2026-09-13T01:31:28.494Z",
+  "actor_id": "w01-lead",
+  "task_id": "W31.01",
+  "worker": "w1405-worker",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "c3c5e454b333b71f5eeedfcef2a7cd53e20bd9f7c57520c0d818746c8f5c4b48",
+  "plan": {
+    "path": "docs/remediation/design/W31.01/plan.md",
+    "sha256": "064da2c8dfa88bfe0e9cef4716619e5d42d3b7b12c176b76a75d10f97d79fd02"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "4aee3f",
+        "wall_time_seconds": 1.002020592,
+        "session_id": 71704,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f77b0d",
+        "wall_time_seconds": 0.000002354,
+        "exit_code": 0,
+        "original_token_count": 541,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=28, unscoped=13\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=94, closed=2; evidence records=279\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W32.05 — Implement W31's policy-compatibility reporting correction: inspect actual raw/aggregate learning-policy identity, canonical summaries and window/UI pooling against full W31/F25/F07/F34, then prevent silently combining incompatible attribution policies and explicitly mark unknown legacy identity. Reuse accepted bounds, lightweight summaries, paging and diagnostic/coverage containment. No new scientific target, inference, customer-policy choice, historical rebuild or deployment is authorized; full long-window/maturity/model/native/customer acceptance stays separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19668\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=28, unscoped=13\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=94, closed=2; evidence records=279\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W32.05 — Implement W31's policy-compatibility reporting correction: inspect actual raw/aggregate learning-policy identity, canonical summaries and window/UI pooling against full W31/F25/F07/F34, then prevent silently combining incompatible attribution policies and explicitly mark unknown legacy identity. Reuse accepted bounds, lightweight summaries, paging and diagnostic/coverage containment. No new scientific target, inference, customer-policy choice, historical rebuild or deployment is authorized; full long-window/maturity/model/native/customer acceptance stays separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19668\n"
+      }
+    ],
+    "session_id": 71704,
+    "exit_code": 0,
+    "drained": true
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1363,
+    "pins": 52,
+    "protected": 43,
+    "authority": true,
+    "actual_package_matches": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true,
+    "remaining_closed_no_planned_overlap": true
+  },
+  "limitations": "Recorded computation-basis compatibility containment only, not full W31/F25/F07/F34, experimental compatibility, causal lift or customer/release acceptance. Served control/allocation/enrollment and tenant metric/target versions remain unverified; credited outcomes are unweighted counts per item decision, not Bernoulli success or monetary reward. Existing coverage/maturity, 92-day and storage/cell limits remain. No historical restamping/rebuild or deployment; old strict summary readers may reject additive metadata, so reader-first rollout requires separate qualification. Existing canonical publication acknowledgement/concurrency and hourly ring/history limits remain. No serving hot-path or science/model changes, new framework, cloud/deploy/install/build/provision/seed/credential/customer-data/commit/push/destructive/external or customer-policy authority."
+}

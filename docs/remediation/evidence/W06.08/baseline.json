@@ -1,0 +1,21 @@
+{
+  "at": "2026-09-08T21:04:34.354Z",
+  "kind": "source_confirmed",
+  "entry": "Root board check/status VALID393/exit0, frozen read memoization, no checker edits.",
+  "files": [
+    {
+      "path": "src/identity/erase.ts",
+      "sha256": "0cb39bd64454dd0bcf17e55dcf0092233a5870717d98da2302583209bc1efa43"
+    },
+    {
+      "path": "src/routes/identity.test.ts",
+      "sha256": "8f09f1c653e9919dc98fdd52a97bc29d31a5b758a44ebd0fc4ee98e4a4826f2b"
+    },
+    {
+      "path": "src/identity/store.ts",
+      "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+    }
+  ],
+  "observation": "store.ts caps shopper.visitors at50 while current identity:visitor links remain; erase.ts discovers only capped inverse list/selector and current/remembered sessions. Existing pending v1/v2 numeric steps are frozen and must not be reinterpreted. No baseline tests run.",
+  "protected": "Existing dirty worktree preserved. Only two implementation files are released."
+}

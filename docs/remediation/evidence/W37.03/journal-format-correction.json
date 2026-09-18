@@ -1,0 +1,82 @@
+{
+  "at": "2026-09-09T05:03:30.920Z",
+  "before": {
+    "seq": 525,
+    "kind": "validation_rework",
+    "task_id": "W37.03",
+    "reason": "Independent reviewer caught dispatch-before-guard bypass despite green selected checks; root validated source, approved narrow same-contract rework. Original source freeze and passing runs preserved as superseded.",
+    "record": {
+      "path": "docs/remediation/evidence/W37.03/rework-1.json",
+      "sha256": "74ff279e8aba557944502d37a33ac1105b8f943e48030cc91461096ece13494f"
+    },
+    "actor_id": "w01-lead",
+    "at": "2026-09-09T05:02:26.886Z"
+  },
+  "after": [
+    {
+      "seq": 525,
+      "kind": "task_transition",
+      "task_id": "W37.03",
+      "from": "in_progress",
+      "to": "verification",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w3703-worker",
+          "run_id": "/root/w3703_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w3703-reviewer",
+          "run_id": "/root/w3703_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Record-format reconciliation at actual time: review of first frozen source completed; independent K1 passed but source review found unsigned dispatch bypass. Original malformed rework journal entry preserved in journal-format-correction.json; no acceptance granted.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-09T05:03:30.920Z"
+    },
+    {
+      "seq": 526,
+      "kind": "task_transition",
+      "task_id": "W37.03",
+      "from": "verification",
+      "to": "in_progress",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w3703-worker",
+          "run_id": "/root/w3703_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w3703-reviewer",
+          "run_id": "/root/w3703_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "plan_sha256": "8b2282c8759b9807b306536b381281e01cbc78e0f2c911df32fd8700acb2a6a8",
+      "plan_approved_at": "2026-09-09T04:49:37.318Z",
+      "plan_snapshot": {
+        "status": "approved",
+        "plan": {
+          "path": "docs/remediation/design/W37.03/plan-v1.md",
+          "sha256": "8b2282c8759b9807b306536b381281e01cbc78e0f2c911df32fd8700acb2a6a8"
+        },
+        "contract_digest": "f6fed634cd704096eebb3870d8c05e358db8fa2fccc046d37b545e5f07e437d2",
+        "approval": {
+          "actor_id": "w01-lead",
+          "at": "2026-09-09T04:49:37.318Z",
+          "plan_sha256": "8b2282c8759b9807b306536b381281e01cbc78e0f2c911df32fd8700acb2a6a8",
+          "rationale": "Standing local G0 mandate, primary canonical/customer/source design case and independent Astra/xhigh preflight."
+        }
+      },
+      "reason": "Same-contract C2 rework approved in retained rework-1.json: unsigned forwarding dispatch guard and exact regression; existing default loop crossing coverage. Superseded proof retained, no broad new suite.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-09T05:03:30.920Z"
+    }
+  ],
+  "reason": "Root attempted unsupported validation_rework journal kind. Corrected unaccepted tracker record into supported review/rework transitions at current actual timestamp; original entry and rework proof retained. No checker run passed against malformed interim tracker."
+}

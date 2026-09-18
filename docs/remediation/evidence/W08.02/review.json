@@ -1,0 +1,130 @@
+{
+  "task_id": "W08.02",
+  "reviewer": "/root/w0802_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "verdict": "pass",
+  "at": "2026-09-10T16:37:18Z",
+  "artifact": {
+    "digest": "fe86b8fb96209b0b00934fa33db4a53064072a86661be1d39a6b6bf8b790456d",
+    "manifest_path": "docs/remediation/evidence/W08.02/artifact.json",
+    "manifest_sha256": "9aad96cc76aa291ffae10c956162f74b4c34a182fadf31bebf5d234a63e3b38d",
+    "files_verified": 33,
+    "source_stop_at": "2026-09-10T16:30:24.224Z",
+    "root_freeze_at": "2026-09-10T16:31:50Z"
+  },
+  "basis": {
+    "contract_digest": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+    "plan_sha256": "4c2a8174d6e2c7187ee6cce488643fe8dac744bfb9212703fe7b39a8da2cb18d",
+    "worker_sha256": "cf92867b905e9cb5d9a6062442b53f5e81f0ec219f51bc80cf67c91753aa81e4",
+    "fixture_sha256": "5e963036f6918bf3ceea551ba2fb46df6fddd54644d10f8d083cc25ac6782b95",
+    "source_freeze_sha256": "f80bd87ee6732ee3d10ebcd166a9d7c6e723060d4bbc622b7c9e5fee98dd7aa3",
+    "source_deltas_sha256": "9f89994ac81f12cb87e2fca3fdc9bdec144e28788e50d5de798b6e5e646dc75d",
+    "baseline_sha256": "e2b4f4fcdd08260a1ea95de0994483beee65f28e5e2618b6ae2cf74e2d7c1512",
+    "instructions": "Read AGENTS, remediation README, complete doc36/RESUME, full canonical W08 and linked canonical findings, full raw F09, doc30, admitted plan/task/baseline, actual script/schema/accounts/callers and installed Wrangler target/result/log code. Root owns entry/admission/final board checks; none duplicated.",
+    "identity_verification": "Independently recomputed artifact/contract/manifest digests; all 33 frozen files matched before and after the one runtime check. All 22 protected source pins also matched the admitted baseline. Verified exact three forward and reverse patches against retained original bytes and final source; read complete final script, 247-line fixture and exact doc31 delta.",
+    "dependency_assurance": "Unchanged W02.07 onboarding/lifecycle/removal-barrier assurance reused within the contract; auth/schema/config not modified or rerun."
+  },
+  "criteria": [
+    {
+      "id": "W08.02-C1",
+      "verdict": "pass",
+      "evidence": "Strict flags reject ambiguity before config/input/crypto/child; bad target/config rejects before input/crypto/child. Exact configured binding/name and UUID, explicit environment, remote account and public compliance are checked. Local preview redirects refused. Installed CLI inspection confirms explicit config bypasses redirects, configured account precedes environment, local uses preview UUID when present, JSON success requires log level log, disk logging needs WRITE_LOGS=false, and --no-temporary prevents temporary activation. Fixture checks anchored direct Node CLI, explicit modes/env/config/account/API, captured bounded child and logging controls."
+    },
+    {
+      "id": "W08.02-C2",
+      "verdict": "pass",
+      "evidence": "Actual schema in memory proves initial identity/roles/permissions/timestamps/must-change and NFKC-compatible PBKDF2 hash. Canonical ASCII case and edge-whitespace reruns preserve complete accounts/sessions/audit snapshots, including disabled/password/removal state; SQL explicitly names email conflict and returns only id. Non-email uniqueness failures remain failures. Sole expected ID is created; empty result is unchanged, without claiming supplied password installation. Input bounds/TTY/invalid UTF8/control/multiline/timeout/errors and child/JSON/ambiguous/lost-result failures emit fixed confidential messages. Retry after a committed write with lost result preserves the account."
+    },
+    {
+      "id": "W08.02-C3",
+      "verdict": "pass",
+      "evidence": "Exactly one independent fixed three-group command passed on the frozen artifact; final worker syntax/whitespace reused. Final new fixture directly inspected for trailing/indent whitespace and final newline. Doc31 only replaces obsolete operator setup advice; historical load results and load command remain. No source writes, target CLI, additional suite, build/install or external operation by reviewer."
+    }
+  ],
+  "checks": [
+    {
+      "id": "independent_primary",
+      "command": "node --test scripts/operator-seed.test.mjs",
+      "launch_requested_at": "2026-09-10 16:34:37 UTC",
+      "completion_observed_at": "2026-09-10 16:34:48 UTC",
+      "chunks": [
+        {
+          "chunk_id": "c702eb",
+          "wall_time_seconds": 0.438503241,
+          "exit_code": 0,
+          "original_token_count": 283,
+          "returned_characters": 1130,
+          "returned_bytes": 1130,
+          "sha256": "c3c31b433bb098421421acea5423be352154a9908dcc679cc470234bb9db1c85"
+        }
+      ],
+      "tool_session_id": null,
+      "session_drained": true,
+      "exit_status": 0,
+      "capture_method": "Direct exec_command; full combined stdout/stderr exactly as returned. Compression/hash metadata computed afterward from that captured output; no second runtime execution.",
+      "combined_output": {
+        "bytes": 1130,
+        "sha256": "c3c31b433bb098421421acea5423be352154a9908dcc679cc470234bb9db1c85",
+        "gzip_base64": "H4sIAAAAAAAAA8WTsW7bMBCGdz3FD3hIA0RqbFmx40wdumVo4BYdmwt5lghTpMA7xfXbF5QN1IOBbul2OpH6/vtIff/yDe+cxMWAeV3M8ClEy5tlU9+vb/H198DJ9RyU/E9KwYV2g+3Ls1OGE1AAX6zAjknHxKBg0bu2U5iOQssgBYUj1PWcET+E8Zo5KEtNZLg8nD4uqKrqFRohXTzg0HFiaMc4v8eBBCYxKdvbYobt+KYsuoFockahlFrWiS9sUi5t72Sabkhs2LKAdzs2Kk9wQZS8ZwvTOW8vd/vYtplHiTG4ENgWcY85yo8gAWVZFoAdE6mL4VcvG6zq6nE5b9aLAtDjwBvc5NFvCmRnly4Sk4eYjns6u5pAhkIMzpBH4jQGyTGF0zvnRZaDOvJyBxq1i8np8Q7C0zwybafROn1CR9JBlI4CE/uB1L15zm4WKP8H+bqrVbVaL+8XzT9dbV+eYaL37i9uOqHPiWX0ih05PyYW7JkHxFGHUWFi2Llz7lNCsw/x4Nm2jDEYTkou5JS9U8lyapQfgrpqY/GwrOrHVd3U13XMqyr/+LklyJWMTllwX8wwkJx6Od3UMRQMT1c5P8neDcO51mjjVFzQ0TQPVbN6XKyLP2SFdS9qBAAA"
+      },
+      "groups": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "fixture_duration_ms": 556.57928,
+      "group_durations_ms": [
+        73.941582,
+        77.784025,
+        264.397353
+      ]
+    },
+    {
+      "id": "reused_final_static",
+      "commands": [
+        "node --check scripts/operator-seed.mjs",
+        "git diff --check -- scripts/operator-seed.mjs scripts/operator-seed.test.mjs docs/architecture/31-load-test-2026-09-05.md"
+      ],
+      "worker_capture_ids": [
+        "syntax_rework",
+        "whitespace_rework"
+      ],
+      "chunk_ids": [
+        "01c758",
+        "648c9a"
+      ],
+      "exit_statuses": [
+        0,
+        0
+      ],
+      "session_drained": true,
+      "output": "Both exact final captures decoded and SHA/byte counts verified; both empty, with zero diagnostics. Not rerun by reviewer."
+    },
+    {
+      "id": "frozen_artifact_and_fixture_inspection",
+      "diagnostic_chunks": [
+        "4a6a2e",
+        "fd708c",
+        "b47170"
+      ],
+      "result": "All 33 artifact pins and 22 baseline protected source pins match; artifact/manifest/contract digests verified. All three exact forward/reverse deltas reproduce final/original bytes. Final 247-line fixture has no trailing whitespace or space-before-tab indentation and ends with newline. No material outside owned deltas."
+    }
+  ],
+  "findings": [],
+  "rework_review": [
+    "Inspected and hash-verified all seven complete worker captures. Initial primary passed on earlier bytes; root then returned SQLite default trim's missing ASCII TAB/LF/VT/FF/CR handling. Final SQL char(9,10,11,12,13,32) and existing uppercase retained-email fixture with TAB/CR correct that bounded defect. Final primary167f6b passed three groups; final syntax/whitespace cover final bytes. Earlier PASS/STOP/hashes remain historical, not final evidence.",
+    "Worker measurement prose says one run and earlier rework prose says no change after the sole pass, but its explicit attempts=2, source_stop_history and final rework record establish two primary attempts. Credit final 560.252445ms only; do not pool it with earlier 579.42722ms. Independent 556.57928ms is a separate fixture run.",
+    "Historical no-index fixture whitespace returned exit1 with empty output and is not presented as final-byte exit0. Reviewer inspected final fixture directly.",
+    "Admission metadata failures 99296/46237/13206 and corrections before valid13134/GO are retained by root. Reviewer did not broaden into governance framework testing. Oversized or missing-path read-only displays were uncredited diagnostics and were replaced by bounded reads; no runtime test failed."
+  ],
+  "limitations": [
+    "Acceptance is bounded source/local Node and in-memory SQLite evidence. No actual bootstrap/Wrangler CLI, remote account/database, deployed D1, workerd, browser, customer or release validation occurred.",
+    "Overlapping JavaScript fixture calls serialize statements on one SQLite connection; this does not attest independent-process or deployed D1 concurrency. Preserving a completed statement is proved; external failure/unknown commit outcomes still require authorized handling.",
+    "ASCII bootstrap email syntax and ASCII canonical case/edge-whitespace preservation only; no Unicode identity reconciliation. Existing account credentials/authority are preserved without proving they are usable. Privileged bootstrap may deliberately create a fresh identity after removal while retaining removal history.",
+    "Hash-bearing SQL remains in privileged child argv. Trusted host/process environment, proxies, query retention, caller-side protected stdin source and external credential handoff remain operational responsibilities. Disabled Wrangler output/log paths do not establish zero credential exposure everywhere.",
+    "Installed smol-toml/Wrangler pins are not a clean-clone install or entire transitive dependency attestation; the CLI was inspected and intercepted, not executed. Explicit IDs prove intent/config consistency, not resource ownership.",
+    "Full W08/F09 desired-state creation/reconcile/add-brand/rotation, migration/release linkage, product/demo separation, alerts/config/tenant authority, second-brand/rollback/restore, historical recovery and D01/D07/D08 remain open. No package/finding/gate/customer/SLO/release acceptance follows from this review."
+  ],
+  "next_action": "Root inspect this separate evidence and accept or return bounded W08.02; maintain tracker/journal/RESUME and full-scope limitations. Reviewer STOP, no active tool/runtime sessions and no source ownership."
+}

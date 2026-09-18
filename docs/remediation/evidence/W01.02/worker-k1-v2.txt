@@ -1,0 +1,21 @@
+W01.02 episode2 worker K1 actual retained output (ANSI color codes removed only)
+Actor: w0102-v2-worker; run /root/w0102_reval_worker; gpt-6-astra/xhigh
+Admitted tracker sequence35: 2026-09-07T01:05:55Z
+Command invocation UTC: 2026-09-07 01:06:31 UTC
+Completion observed UTC: 2026-09-07T01:06:55Z
+Exact command: node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1
+Exit code: 0
+Vitest Start at uses local America/New_York (2026-09-06 21:06:33 = 2026-09-07 01:06:33 UTC).
+
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+ RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base
+
+ ✓ src/index.api-boundary.test.ts  (20 tests) 5207ms
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  21:06:33
+   Duration  13.48s (transform 1.17s, setup 1ms, collect 5.67s, tests 5.21s, environment 0ms, prepare 1.78s)
+
+

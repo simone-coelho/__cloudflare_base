@@ -1,0 +1,31 @@
+{
+  "task_id": "W35.05",
+  "at": "2026-09-16T01:48:16.289Z",
+  "plan": {
+    "path": "docs/remediation/design/W35.05/plan.md",
+    "sha256": "c3c17bd244007de35506ae8ce3ee9579204e32309697c3a2e131d84a56aee944"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W35.05/baseline.json",
+    "sha256": "202e33a8a56247de987380ad7967fe01a2237f1cf38d95fd0088430916782f72"
+  },
+  "contract_digest": "238bbbe0349bfa4f86a2e7fec304661ed6e9e3076f71ac375f2764e6cacc4a6b",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T01:48:16.289Z",
+    "plan_sha256": "c3c17bd244007de35506ae8ce3ee9579204e32309697c3a2e131d84a56aee944",
+    "rationale": "Complete W35/F04/F05/F06/F13/F14/F29/F32 and actual source review; two independent Astra/xhigh scouts source-confirmed prepared-transfer resurrection after target epoch rotation. Reuse D03 and accepted W35.03/W35.04 protocol; no cutover or discovery claim."
+  },
+  "independent_preflight": {
+    "actor_id": "w3505-reviewer",
+    "run_id": "/root/w3505_source_scout",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "record": {
+      "path": "docs/remediation/evidence/W35.05/preflight.json",
+      "sha256": "0faa5b1376034398eaf9efede32be2e89cec4c1cb91ae29bd9f9bd3a78e226d4"
+    },
+    "result": "PASS after exact cold/pre-authority initialization and source-confirmed/no-runtime-reproduction corrections."
+  },
+  "limitations": "Target prepared-transfer resurrection only. No exhaustive source/subject discovery or erasure, session-host revocation, cutover, migration, deployment, customer data, native/browser/customer/SLO/release acceptance or full W35/F14/F06 closure."
+}

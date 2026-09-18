@@ -1,0 +1,167 @@
+{
+  "at": "2026-09-13 20:00:34 UTC",
+  "task_id": "W20.03",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "927ba24ca50173c18e482fdfea0f2f357824dde2e558e888bdc0701dc894d81d",
+  "contract_digest": "9796c68692e0aeaec9c0d2f0a6a51fca0632e99d28bd91d92724679f3517b43c",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W20.03-C1",
+      "verdict": "PASS",
+      "evidence": "Actual schema and composer deltas plus selected mounted-route/composer/service cases establish version-absent historical stripping, strict version-1 controls, current-write stamping and refusal of malformed controls/active pin contradictions without writes. Exact opaque IDs retain whitespace and punctuation within 1000-entry/1024-UTF16-unit bounds. Off-limits and excluded pins reserve nothing; exclusions precede candidate hooks and diversity, including relaxed diversity. Personalized, default and no_learning service cases emit only allowed decisions; no arbitrary forbidden fill."
+    },
+    {
+      "id": "W20.03-C2",
+      "verdict": "PASS",
+      "evidence": "Actual decide/replay/service deltas preserve independent governance, pins, exploration and contentTypes markers. Selected replay cases preserve legacy evaluation and historical zero-version compiled slots, refuse unknown explicit governance/forged dormant dependencies, and do not load off-limits archives. Current missing, unreadable, malformed or unsupported slot configurations yield empty selections rather than compiled slots. Off-limits page order remains in zero-lift/prior manifests; unused slot lift/fatigue/external work is excluded. Cached accepted values remain intentionally usable within the existing cache contract."
+    },
+    {
+      "id": "W20.03-C3",
+      "verdict": "PASS",
+      "evidence": "Actual Rules/History DOM workflow with real validation preserves exact JSON IDs and sibling settings, blocks malformed input across the whole draft, saves/readbacks and rolls controls forward through rollback. The reviewed per-strategy Map correction fixes slot-search raw-text leakage, retains aggregate errors and blocks stale strategy/scope/draft handlers; load/discard reset transient state. Mounted validate/PUT/history/rollback use actual response shapes and subsequent GET confirms restored documents. Bounded pin feedback remains advisory. Independent fixed20 and reused final compiler/static passed on the frozen artifact."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W20.03/plan.md",
+      "sha256": "8ae0997d80968092cd9056d4a32ac598ef2e99a27cc10ac6eaac5e2c271bf0af"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W20.03/artifact.json",
+      "sha256": "1cc2e1acb6f7be78a17530fd73f07803c3a8082ad5fd0a2f51311686b2e7094e"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W20.03/worker.json",
+      "sha256": "833faafb5d7d06f3f23a041c8c913fdb98267684ef2cde4f7ef673e27ed85d7f"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts -t 'W20.03|W20.01|W20.02|W18.01|W19.02|W27.02|history shows every document|W03.03 carries named auth context|w_ext × score joins the base score' --maxWorkers=1 --minWorkers=1",
+    "session_id": 61671,
+    "invocations": 1,
+    "launched_at": "2026-09-13 19:57:31 UTC",
+    "drained_at": "2026-09-13 19:58:56 UTC",
+    "captures": [
+      {
+        "chunk_id": "ec6ea3",
+        "wall_time_seconds": 1.001846126,
+        "session_id": 61671,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "56137d",
+        "wall_time_seconds": 5.001614055,
+        "session_id": 61671,
+        "original_token_count": 125,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority\n[config] read failed, serving fallback\n\n ✓ src/routes/content.test.ts  (33 tests | 29 skipped) 82ms\n"
+      },
+      {
+        "chunk_id": "965f10",
+        "wall_time_seconds": 5.001145331,
+        "session_id": 61671,
+        "original_token_count": 19,
+        "output": " ✓ src/console/console.render.test.ts  (39 tests | 33 skipped) 32372ms\n"
+      },
+      {
+        "chunk_id": "c3c01d",
+        "wall_time_seconds": 0.000002062,
+        "exit_code": 0,
+        "original_token_count": 2203,
+        "output": "stderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W19.02 serves and replays projected content formats with independent historical policy\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (23 tests | 20 skipped) 98ms\n ✓ src/learn/phase3.test.ts  (17 tests | 12 skipped) 49ms\n ✓ src/reflex/contentCompose.test.ts  (7 tests | 5 skipped) 5ms\n\n Test Files  5 passed (5)\n      Tests  20 passed | 99 skipped (119)\n   Start at  15:57:33\n   Duration  72.21s (transform 4.75s, setup 0ms, collect 27.66s, tests 32.61s, environment 1ms, prepare 8.79s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 20,
+      "failed": 0,
+      "unselected": 99,
+      "total": 119,
+      "files_passed": 5,
+      "duration_seconds": 72.21
+    }
+  },
+  "source_review": {
+    "basis": "Personally read admitted complete plan/task, applicable instructions and full parent W20/F28/F26/customer scope; reused valid personal dependency reads and lead entry-board assurance. Read all15 actual baseline-to-current source/API/fixture deltas, then reconciled frozen hashes including the final typed composer views.",
+    "inspection_captures": [
+      "2536a9",
+      "883870",
+      "f140c8",
+      "48ed09",
+      "7a5e3b",
+      "4c8520",
+      "79d688",
+      "cb8a14",
+      "bbd6e1",
+      "58ed0a",
+      "ff3e9b",
+      "5835e0"
+    ],
+    "frozen_at": "2026-09-13T19:56:19Z",
+    "source_stopped_at": "2026-09-13T19:54:27.434Z",
+    "artifact_files": 48,
+    "source_pins": 42,
+    "owned_deltas": 15,
+    "protected_unchanged": 27,
+    "pre_run": {
+      "at": "2026-09-13T19:57:30.870Z",
+      "pins_capture": "69023a",
+      "contract_capture": "e27d4f",
+      "exit_status": 0
+    },
+    "post_run": {
+      "at": "2026-09-13T19:59:18.463Z",
+      "pins_capture": "dd181e",
+      "contract_capture": "a3f156",
+      "exit_status": 0
+    },
+    "method": "Every manifest path SHA256 matched before/after. Decompressed retained before bytes and applied all15 forward and reverse unified deltas with exact context/count checks, matching current and original bytes. Recomputed canonical artifact and current task contract digests; task remained verification. Final139230 also confirms42 source-freeze pins,15 worker STOP pins and every retained runtime/static command against the actual task.",
+    "record_consistency_capture": {
+      "chunk_id": "139230",
+      "wall_time_seconds": 0.032150103,
+      "exit_code": 0,
+      "original_token_count": 43,
+      "output": "{\"at\":\"2026-09-13T19:59:19.109Z\",\"freeze_pins_match\":true,\"worker_stop_match\":true,\"runtime_commands_exact\":true,\"static_commands_exact\":true,\"source_stop_agrees\":true}\n"
+    },
+    "qualification": "W19.02/W20.02 overlapping prior byte assurance was prospectively qualified by the lead; implementation/history retained and affected selected controls repeated. W08.04 remains unchanged. No reviewer source/governance edits, extra suite, static rerun or delegation."
+  },
+  "static_reuse": {
+    "worker_entry": "command_captures.static2",
+    "session_id": 86666,
+    "capture_ids": [
+      "e3ed42",
+      "92b8f5",
+      "23d41b",
+      "e65af7"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "reruns": 0,
+    "inspection_captures": [
+      "7ec3c5",
+      "56dcca",
+      "4c1ddc"
+    ],
+    "result": "Final full compiler, scoped TypeScript/browser lint and owned git whitespace compound passed. Five inherited unused-binding warnings only: decide _share/_s, replay _c, browser when/plural; zero errors/new warnings. Compared actual final warning signatures with admitted baseline55303 captures7abce5/f61e3a. Source-freeze direct all15-file whitespace proof reports zero new trailing whitespace and covers inherited untracked diagnostics."
+  },
+  "retained_history": [
+    "Source-review corrections before executed checks include sparse-array refusal and the independently identified cross-slot editor-text leak, corrected with per-strategy state and aggregate blocking in the same DOM group. No moving runtime or reviewer file write occurred.",
+    "Worker runtime1 session80788 ended1,19pass/1fail/99unselected: fixture incorrectly expected document in the actual rollback response. Response-only assertion corrected; subsequent GET and retained legacy-byte proof remained. Actual failure output retained in worker.json, personally read56dcca.",
+    "Worker runtime2 session36629 passed20/99 but is superseded. Static1 session16028 ended2 with four TS2345 composer-fixture inference diagnostics; later lint/whitespace were not reached. Explicit AffinityViewLike[] and type import fixed typing only; final actual annotation readff3e9b.",
+    "Worker final runtime3 session22865 passed20/99,85.18s; final static2 session86666 passed. They overlapped on unchanged final bytes after runtime3 had started before the root's static-first follow-up; no cancellation/relabeling or source edit. Complete command metadata and all raw outputs personally read7ec3c5/56dcca/4c1ddc.",
+    "Initial oversized metadata displays883870/4a9be4 were truncated, not validation failures; actual deltas and required metadata/raw captures were subsequently read separately. No failed independent runtime or integrity check."
+  ],
+  "limitations": [
+    "Bounded off-limits and exact internal-ID exclusion enforcement only. Tag/category expressions, customer lists/default assets, priority/multi-position policy, full W20/F28/F26 and real customer walkthrough remain open.",
+    "Current service empty selections are a no-engine-output handoff, not proof of customer fallback rendering. No SDK/bundle/deployed/native/SLO/cloud/release acceptance; hook counts are not a latency benchmark.",
+    "Existing30-second accepted cache and non-atomic slot writes remain. A successful save does not prove immediate enforcement at every worker. Compatible readers/workers/UI must precede controlled publication; old binaries may ignore controls and binary rollback requires explicit operator withdrawal first.",
+    "Unversioned retained documents ignore formerly unknown controls; no history/profile/record migration. New document and receipt markers are independent. API authoring defaults are not serving authority; pin diagnostics remain current advisory feedback, not atomic activation or persisted receipt metadata.",
+    "Only20 selected cases passed;99 unselected are not claimed passing. Synthetic KV/R2/JSDOM and local Node, not delivery durability. Expected invalid-read logs, inherited Vite warning and learning_incomplete diagnostics from active synthetic fanout are retained; empty cases prove no fanout, not successful ingestion of active controls.",
+    "Review is independent bounded acceptance evidence; only the lead may accept the task. No package/finding/customer/release closure."
+  ]
+}

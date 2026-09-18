@@ -1,0 +1,197 @@
+{
+  "task_id": "W09.06",
+  "contract_digest": "2d1760eebb1b6e8dfbd75d53cb65b63c3d374cb4e93e81d086efd6d8c84ffa95",
+  "at": "2026-09-14T17:35:12.188Z",
+  "actor": {
+    "id": "w0906-worker",
+    "run_id": "/root/w0906_worker",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "authority": {
+    "plan": {
+      "path": "docs/remediation/design/W09.06/plan.md",
+      "sha256": "d27fc2343bf2229478081f37bbd96608da9dca7540df0e37f883b262bede3394"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W09.06/baseline.json",
+      "sha256": "6180e0c2769047d7f7a4096ce666be956f216217f371613250154cd81fd4a24e"
+    },
+    "admission": "docs/remediation/evidence/W09.06/admission.json",
+    "lead_approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T17:30:47.467Z",
+      "plan_sha256": "d27fc2343bf2229478081f37bbd96608da9dca7540df0e37f883b262bede3394",
+      "rationale": "Root requirements/source/design-case reads and distinct Astra/xhigh exact-plan PASS. Three configuration lines with one existing-fixture native forwarding case and two controls; no resource creation, automatic recovery or customer retention policy."
+    }
+  },
+  "implemented": [
+    "Added exactly three environment-isolated dead_letter_queue declarations, preserving existing queue names and all delivery knobs.",
+    "Extended only the existing native index fixture: one grouped parsed-manifest/native broker case reuses its in-memory bundle, delegates actual worker.queue and observes the full exhausted body before test-only DLQ acknowledgement.",
+    "Added a concise pending-activation paragraph preserving the deployment document's historical/non-operative status and retired provisioning scripts."
+  ],
+  "attempts": [
+    {
+      "id": "fixed3_candidate1",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W09\\.06|W09\\.03 maps mixed ledger|W07\\.01 preserves successful ledger' --maxWorkers=1 --minWorkers=1",
+      "initial": {
+        "chunk_id": "2449e9",
+        "wall_time_seconds": 1.001087803,
+        "session_id": 30499,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "ac8b97",
+          "wall_time_seconds": 5.001477979,
+          "session_id": 30499,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "a15920",
+          "wall_time_seconds": 5.000695786,
+          "session_id": 30499,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fabc6a",
+          "wall_time_seconds": 5.001965154,
+          "session_id": 30499,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "07411e",
+          "wall_time_seconds": 0.000002216,
+          "exit_code": 0,
+          "original_token_count": 159,
+          "output": "stdout | src/index.api-boundary.test.ts > W09.06 forwards exhausted native retries to the isolated DLQ while a healthy sibling persists once\nW09.06_NATIVE {\"bundleSha256\":\"4856deaab1f70f612e55fe00e75960d68ff9dc06bd1241ed316711ccc7d4ffb3\",\"sourceAttempts\":[1,2,3],\"healthyAttempts\":[1],\"forwardedBodies\":1,\"persistedRecords\":1,\"outbound\":{\"source\":0,\"collector\":0}}\n\n ✓ src/index.api-boundary.test.ts  (55 tests | 52 skipped) 29601ms\n\n Test Files  1 passed (1)\n      Tests  3 passed | 52 skipped (55)\n   Start at  13:33:09\n   Duration  42.95s (transform 7.66s, setup 0ms, collect 9.12s, tests 29.60s, environment 0ms, prepare 2.77s)\n\n"
+        }
+      ],
+      "result": "pass",
+      "drained": true,
+      "initial_capture_recorded_at": "2026-09-14T17:33:07.413Z"
+    },
+    {
+      "id": "static_candidate1",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.api-boundary.test.ts && git diff --check -- wrangler.toml src/index.api-boundary.test.ts docs/deployment/01-deploy.md",
+      "started_at": "2026-09-14T17:34:10.742Z",
+      "initial": {
+        "chunk_id": "1247cb",
+        "wall_time_seconds": 1.001512587,
+        "session_id": 25367,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "da51ad",
+          "wall_time_seconds": 5.001405633,
+          "session_id": 25367,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c1f6f8",
+          "wall_time_seconds": 5.001610448,
+          "session_id": 25367,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "138200",
+          "wall_time_seconds": 3.224465678,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "result": "pass",
+      "drained": true
+    }
+  ],
+  "measurement": {
+    "final_tests": 3,
+    "unselected": 52,
+    "selection": "One new grouped W09.06 case and two existing W09.03/W07.01 queue controls; unselected tests intentionally outside fixed contract.",
+    "native": {
+      "manifest_environments": 3,
+      "broker_topologies": 1,
+      "source_attempts": [
+        1,
+        2,
+        3
+      ],
+      "healthy_attempts": [
+        1
+      ],
+      "forwarded_full_bodies": 1,
+      "persisted_records": 1,
+      "outbound": {
+        "source": 0,
+        "collector": 0
+      },
+      "source_batch_size": 100,
+      "source_batch_timeout_seconds": 3,
+      "max_retries": 2,
+      "collector_batch_timeout_seconds": 0,
+      "poll_deadline_seconds": 18,
+      "test_timeout_seconds": 30,
+      "assertions": "Exact body/attempt sequences, expected isolated DLQ, one R2 object/row exactly equal to the healthy input record, exact sanitized app logs and zero external outbound attempts from both workers.",
+      "claim": "Installed in-memory native broker forwarding only; no consumerless retention, restart durability, native concurrency or deployed recovery proof."
+    },
+    "runtime_versions": {
+      "wrangler": "4.105.0",
+      "miniflare": "4.20260625.0",
+      "workerd": "1.20260625.1",
+      "esbuild": "0.28.1",
+      "vitest": "1.6.1"
+    },
+    "bundle_sha256": "4856deaab1f70f612e55fe00e75960d68ff9dc06bd1241ed316711ccc7d4ffb3",
+    "bundle_identity": "Emitted to test output during the single admitted in-memory bundle run; no disk bundle or additional build."
+  },
+  "lint": {
+    "final_errors": 0,
+    "final_warnings": 0,
+    "baseline_errors": 0,
+    "baseline_warnings": 0
+  },
+  "static": {
+    "compiler": "pass, full noEmit/incremental false/composite false,1536MiB",
+    "scoped_lint": "pass,512MiB,one existing TS fixture",
+    "whitespace": "pass,three owned source files",
+    "exit_code": 0
+  },
+  "failures_and_rework": [],
+  "final_source": [
+    {
+      "path": "wrangler.toml",
+      "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+      "before_sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "sha256": "67e9511393c4aa6f6d45bbb575631b6b00d5a23df3812912915c278666af2ae5",
+      "before_sha256": "fcba26ca105753a649f9fdaab42c993d9dcbd7d27c423bd580a115932c9afe6b"
+    },
+    {
+      "path": "docs/deployment/01-deploy.md",
+      "sha256": "32931eef08babb3a4ea2a6bcc08e602e307e6db4c76e2e1679292df4b85e937b",
+      "before_sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee"
+    }
+  ],
+  "protected": {
+    "checked": 25,
+    "changed": []
+  },
+  "limitations": "Isolated local DLQ declarations and installed native broker retry-exhaustion forwarding only. Test-only collector proves full-body forwarding, not consumerless retention, restart durability, deployed retry semantics, native concurrency or operational recovery. Queue existence/activation, access/retention/erasure/alerts/recovery ownership and customer/privacy decisions need separate authority. Producer rejection, intentionally acknowledged non-ledger/handled scene failures, replay/reconciliation, partial/legacy duplication, full W09/W22/F16/N10 and release remain open. Retired scripts remain retired. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations.",
+  "disposition": {
+    "worker": "SOURCE_AND_EVIDENCE_STOPPED_PENDING_INDEPENDENT_REVIEW",
+    "running_commands": [],
+    "next_action": "Root freezes exact source/evidence; distinct reviewer inspects actual deltas and repeats fixed3 once. Root owns task acceptance, tracker and handoff.",
+    "rollback": "Reverse only admitted task deltas against retained owned_before baseline; preserve pre-existing changes, records and retired scripts."
+  }
+}

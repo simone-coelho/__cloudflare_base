@@ -1,0 +1,476 @@
+{
+  "task_id": "W02.07",
+  "actor": {
+    "id": "w0207-worker",
+    "run_id": "/root/w0207_worker",
+    "model": "gpt-6-astra",
+    "effort": "xhigh"
+  },
+  "status": "implemented_pending_independent_review_and_lead_acceptance",
+  "contract_digest": "581a672fdbac24887160ad042afbcd6593e12cb89046a248126cb58bd1e9e5e4",
+  "approved_plan": {
+    "path": "docs/remediation/design/W02.07/plan.md",
+    "sha256": "d6b3c08945d07918d5ee925c49bb59b15c8dd2e4754ed281aa0a7a1d2298ed61"
+  },
+  "baseline": {
+    "claim": "source_confirmed",
+    "record": "docs/remediation/design/W02.07/baseline.json",
+    "observations": [
+      "Login used generic create after reading an absent D1 account and legacy KV credentials; failed/eventually-consistent cleanup left credentials available for later import.",
+      "Removal deleted the account/sessions and wrote account_removed only afterward, so a retained KV record or pending legacy lookup could recreate the deleted identity."
+    ],
+    "qualification": "No fresh pre-change exploit execution claimed. Governing instructions, canonical W02/F02/F09/N02/N14, doc30, full admitted plan/task and applicable source read. Root entry68068/status35981 VALID779 and admission64576 VALID787 exit0/drained governed explicit GO. Reused accepted W02.06 zero-warning baseline as admitted; no duplicate board/baseline-lint runs."
+  },
+  "scoped_paths": [
+    "src/auth/store.ts",
+    "src/routes/auth.ts",
+    "src/routes/auth.test.ts",
+    "src/middleware/auth.claims-boundary.test.ts",
+    "docs/kit/02-api-reference.md"
+  ],
+  "edited_paths": [
+    "src/auth/store.ts",
+    "src/routes/auth.ts",
+    "src/routes/auth.test.ts",
+    "src/middleware/auth.claims-boundary.test.ts",
+    "docs/kit/02-api-reference.md"
+  ],
+  "source_stopped_at": "2026-09-10T15:09:05.135Z",
+  "source_identity": [
+    {
+      "path": "src/auth/store.ts",
+      "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6"
+    },
+    {
+      "path": "src/routes/auth.ts",
+      "sha256": "50822373d16974d80b0ad1440d039d5cb7a3812c3ce07ec418a309012d48ed36"
+    },
+    {
+      "path": "src/routes/auth.test.ts",
+      "sha256": "b0101100183ccc39a486fb2150db4102c8eef3260e073f6e47b1880125598b18"
+    },
+    {
+      "path": "src/middleware/auth.claims-boundary.test.ts",
+      "sha256": "3a1f61d37f057e8a93ad1173e1410243657a0fda039024ad14ec428715f778f8"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "a1c6abdd96eebaddeec22a9fdcc8f6f473a374858376e41c8eb4c15dce828068"
+    },
+    {
+      "path": "migrations/0010_operator_accounts.sql",
+      "sha256": "7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55"
+    },
+    {
+      "path": "docs/remediation/design/W02.07/plan.md",
+      "sha256": "d6b3c08945d07918d5ee925c49bb59b15c8dd2e4754ed281aa0a7a1d2298ed61"
+    }
+  ],
+  "artifact_identity": "All five owned source/docs files changed. No source edits after primary launch or SOURCE STOP. Root owns exact baseline/deltas, protected-input inspection and frozen artifact; this record does not self-accept work.",
+  "implementation": [
+    "Separate importLegacy uses INSERT SELECT WHERE NOT EXISTS retained account_removed for exact account ID or normalized email; ID/email conflicts remain create-only. hasRemoval supports explicit recovery, never substitutes for the INSERT guard.",
+    "Conditional removeAccount records target identity from the matching account, supplied actor/time, session revocation and physical account deletion in one D1 batch. The route no longer adds a second postcommit removal audit.",
+    "Memory store mirrors import/deletion decisions with synchronous state changes before promise resolution.",
+    "Admin creation ignores only legacy records covered by a retained removal barrier, generates a new identity/temporary password through existing newUser and preserves the barrier and restricted onboarding.",
+    "Only the kit operator lifecycle paragraph was corrected; existing schema, accounts helper, login budgets, enforced global-admin withdrawal and shopper/core/learning paths were not edited."
+  ],
+  "verification": {
+    "primary": {
+      "files": 2,
+      "tests": 86,
+      "passed": 86,
+      "failed": 0,
+      "vitest_duration_seconds": 59.58,
+      "qualification": "First and only primary run, all final source bytes. Native lifecycle remains one existing grouped test; one new route test added."
+    },
+    "regression_designs": {
+      "count": 2,
+      "route": {
+        "firstMigration": 200,
+        "stale": 409,
+        "retained": 409,
+        "cleanupFailures": 2,
+        "removalMarkers": 1,
+        "recreated": 201,
+        "onboarding": true,
+        "recoveredRefresh": 200
+      },
+      "native_d1": {
+        "checks": [
+          "create",
+          "create-admin",
+          "route-login",
+          "create-conflicts",
+          "create-conflicts-zero-effect",
+          "legacy-id-conflict-zero-effect",
+          "independent-logins",
+          "login-preserves-security-revision",
+          "same-revision-refusal-disabled",
+          "same-revision-zero-effect-disabled",
+          "same-revision-refusal-roles",
+          "same-revision-zero-effect-roles",
+          "same-revision-refusal-permissions",
+          "same-revision-zero-effect-permissions",
+          "same-revision-refusal-password_hash",
+          "same-revision-zero-effect-password_hash",
+          "missing-source",
+          "wrong-account",
+          "expired-source-zero-effect",
+          "source-fixture-restored",
+          "rollback-login",
+          "rollback-password-1",
+          "rollback-password-2",
+          "rollback-password-3",
+          "rollback-patch",
+          "rollback-reset",
+          "rollback-delete",
+          "rollback-logout",
+          "route-rollback/login",
+          "route-rollback/password",
+          "retry-after-rollback",
+          "duplicate-jti-zero-effect",
+          "route-password",
+          "one-replacement",
+          "post-password-independent-login",
+          "password-loser",
+          "stale-duplicate-jti-zero-effect",
+          "old-access-refused",
+          "winner-renewable",
+          "winner-password-relogin",
+          "route-reset",
+          "restricted-onboarding",
+          "onboarding-admin-refused",
+          "onboarding-recovery",
+          "demotion-revokes",
+          "demotion-relogin",
+          "route-logout",
+          "logout-stale-zero-effect",
+          "logout-monotonic-revision",
+          "route-delete",
+          "deleted-account-not-recreated",
+          "retired-id-or-email-blocked",
+          "retired-id-or-email-blocked",
+          "retired-id-or-email-blocked",
+          "retired-imports-zero-effect",
+          "one-atomic-actor-removal",
+          "retained-historical-removal-blocks",
+          "unmigrated-admin-conflict",
+          "non-removal-history-allows-import",
+          "first-legacy-import-with-failed-cleanup",
+          "legacy-current-revision",
+          "stale-delete-no-false-barrier",
+          "removal-rollback-stage-0",
+          "removal-rollback-stage-1",
+          "removal-rollback-stage-2",
+          "removal-rollback-stage-3",
+          "removal-retry-commits",
+          "repeated-delete-no-extra-barrier",
+          "native-retained-kv-zero-effect",
+          "retired-session-refused",
+          "explicit-new-identity-preserves-barrier",
+          "old-legacy-password-refused",
+          "recreated-restricted-onboarding",
+          "recreated-password-refresh-recovery",
+          "recreated-removal-keeps-original-barrier"
+        ],
+        "rollbackCases": 8,
+        "accountCount": 1,
+        "elapsedMs": 2030,
+        "legacyBarrier": {
+          "checks": [
+            "retired-id-or-email-blocked",
+            "retired-id-or-email-blocked",
+            "retired-id-or-email-blocked",
+            "retired-imports-zero-effect",
+            "one-atomic-actor-removal",
+            "retained-historical-removal-blocks",
+            "unmigrated-admin-conflict",
+            "non-removal-history-allows-import",
+            "first-legacy-import-with-failed-cleanup",
+            "legacy-current-revision",
+            "stale-delete-no-false-barrier",
+            "removal-rollback-stage-0",
+            "removal-rollback-stage-1",
+            "removal-rollback-stage-2",
+            "removal-rollback-stage-3",
+            "removal-retry-commits",
+            "repeated-delete-no-extra-barrier",
+            "native-retained-kv-zero-effect",
+            "retired-session-refused",
+            "explicit-new-identity-preserves-barrier",
+            "old-legacy-password-refused",
+            "recreated-restricted-onboarding",
+            "recreated-password-refresh-recovery",
+            "recreated-removal-keeps-original-barrier"
+          ],
+          "rollbackCases": 4,
+          "elapsedMs": 645
+        }
+      }
+    },
+    "runtime_inputs": {
+      "record": "Complete primary combined output line beginning W02.03 runtime-inputs",
+      "unique_entries": 287,
+      "current_nonvirtual_entries": 284,
+      "phases": [
+        {
+          "phase": "node-current",
+          "inputs": 204
+        },
+        {
+          "phase": "node-before",
+          "inputs": 204
+        },
+        {
+          "phase": "workerd-current",
+          "inputs": 201
+        },
+        {
+          "phase": "workerd-d1-schema",
+          "inputs": 1
+        },
+        {
+          "phase": "workerd-before",
+          "inputs": 201
+        }
+      ],
+      "outbound": 0,
+      "disposed": 2,
+      "schema": "Unchanged migration0010 applied only to the existing ephemeral Miniflare D1 fixture; no target migration/seed/provision operation."
+    },
+    "static": {
+      "baseline_lint": {
+        "errors": 0,
+        "warnings": 0,
+        "reused_from": "Accepted W02.06 unchanged-owned-TS baseline per admitted plan"
+      },
+      "final_compiler": {
+        "exit_status": 0
+      },
+      "final_lint": {
+        "errors": 0,
+        "warnings": 0
+      },
+      "final_whitespace": {
+        "exit_status": 0
+      }
+    },
+    "source_scope": "Worker changed only the five admitted source/docs paths and this worker record. Root independently verifies protected pins; no whole-worktree acceptance claim."
+  },
+  "rework": [
+    {
+      "kind": "pre-run-review-refinement",
+      "description": "Before first primary run, root requested boolean/count checks to prevent sensitive fixture state/body assertion dumps and inclusion of KV/no-extra-cleanup checks; applied within the same route group."
+    },
+    {
+      "kind": "pre-run-review-refinement",
+      "description": "Before first primary run, root requested a non-removal historical event for the same legacy identity; added before the existing native first-import positive to verify action filtering."
+    }
+  ],
+  "failures": [],
+  "expected_failure_diagnostics": "Primary retains intentional native D1 NOT NULL fault/rollback stderr and existing RateLimiter fault logs. These are asserted negative controls, not failed tests; no output was discarded.",
+  "captures": [
+    {
+      "id": "primary",
+      "tool_session_id": 10055,
+      "session_drained": true,
+      "capture_method": "Direct exec_command and write_stdin; complete combined stdout/stderr text exactly as returned by the tool, preserved in chunk order. Separate stream identity and OS signal are not exposed. No capture-wrapper status substituted for child status.",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/auth.test.ts src/middleware/auth.claims-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "launch_requested_at": "2026-09-10T15:05:33.552Z",
+      "completion_observed_at": "2026-09-10T15:06:45.712Z",
+      "exit_status": 0,
+      "combined_output": {
+        "bytes": 65362,
+        "sha256": "e60cb0a7823e379af5c38a8b71eaa2544eaa8b67194100b25aa266088cf7a1a3",
+        "gzip_base64": "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"
+      },
+      "chunks": [
+        {
+          "chunk_id": "717afb",
+          "session_id": 10055,
+          "exit_code": null,
+          "wall_time_seconds": 1.000639687,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "b5548d",
+          "session_id": 10055,
+          "exit_code": null,
+          "wall_time_seconds": 5.001097162,
+          "original_token_count": 60,
+          "returned_characters": 238,
+          "returned_bytes": 238,
+          "sha256": "73db9ef36c5d3ccdb15993ca5115f919b41454f1bedbb874cb0dcbd9eac2e908"
+        },
+        {
+          "chunk_id": "8150c3",
+          "session_id": 10055,
+          "exit_code": null,
+          "wall_time_seconds": 5.001006575,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "c62835",
+          "session_id": 10055,
+          "exit_code": null,
+          "wall_time_seconds": 5.001187383,
+          "original_token_count": 16222,
+          "returned_characters": 64884,
+          "returned_bytes": 64886,
+          "sha256": "4831811e22abe9ae0f4acaa10ee991967a958375b170f83b8195ab112a77f464"
+        },
+        {
+          "chunk_id": "a78af0",
+          "session_id": null,
+          "exit_code": 0,
+          "wall_time_seconds": 0.000002374,
+          "original_token_count": 60,
+          "returned_characters": 236,
+          "returned_bytes": 238,
+          "sha256": "a60b71d408fb4295480ffa145a2aaa22c90a65d5c06a84338cac160d423b8333"
+        }
+      ]
+    },
+    {
+      "id": "final_compiler",
+      "tool_session_id": 21134,
+      "session_drained": true,
+      "capture_method": "Direct exec_command and write_stdin; complete combined stdout/stderr text exactly as returned by the tool, preserved in chunk order. Separate stream identity and OS signal are not exposed. No capture-wrapper status substituted for child status.",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "launch_requested_at": "2026-09-10T15:06:54.328Z",
+      "completion_observed_at": "2026-09-10T15:07:48.203Z",
+      "exit_status": 0,
+      "combined_output": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "chunks": [
+        {
+          "chunk_id": "d6cd8d",
+          "session_id": 21134,
+          "exit_code": null,
+          "wall_time_seconds": 1.000810468,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "fb38f5",
+          "session_id": 21134,
+          "exit_code": null,
+          "wall_time_seconds": 5.000620717,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "492f94",
+          "session_id": null,
+          "exit_code": 0,
+          "wall_time_seconds": 0.000001275,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    {
+      "id": "final_lint",
+      "tool_session_id": 50844,
+      "session_drained": true,
+      "capture_method": "Direct exec_command and write_stdin; complete combined stdout/stderr text exactly as returned by the tool, preserved in chunk order. Separate stream identity and OS signal are not exposed. No capture-wrapper status substituted for child status.",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/auth/store.ts src/routes/auth.ts src/routes/auth.test.ts src/middleware/auth.claims-boundary.test.ts --format json",
+      "launch_requested_at": "2026-09-10T15:07:55.852Z",
+      "completion_observed_at": "2026-09-10T15:08:56.195Z",
+      "exit_status": 0,
+      "combined_output": {
+        "bytes": 1475,
+        "sha256": "1bb91ae5512b5b010c77073bb067afc3320325b63c3b3d9ec9829c1426a08649",
+        "gzip_base64": "H4sIAAAAAAAAA+2Ru04DQQxFez5j6t0M9ZY8CgokREMRRSvvzE0y0rxke0hClH9HCRQk1FCl9NW5snU835tliHghXZvB2JTVOtsELDbS2vriWkJWsePo8Y5Y6nG0pWpI4QNxZ8fRxdL8MhJjnEhghZ2lpmsrWhgzFdOZBBFaQcwwX3RGWq0MEfjnsxzMhe9Ly2qG284sSSk+nmcb4hzy6gcUtjRFXGDf6dsl3QT+AZXhSOFfWzyt3htuEU/eDCaXHltl6gUpmM4waiQHf7c7nnjoztEUtvC9VHKQnrLvlSb53Tr1/sRzCt5HbIhxUj5zkUKSfiote+LdTCF6/cBffoBLU8iX/avtf7V9Fb04LG4+AUH5OKHDBQAA"
+      },
+      "chunks": [
+        {
+          "chunk_id": "9cbb1d",
+          "session_id": 50844,
+          "exit_code": null,
+          "wall_time_seconds": 1.001350946,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "4a4d36",
+          "session_id": 50844,
+          "exit_code": null,
+          "wall_time_seconds": 5.001640034,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "a7abb7",
+          "session_id": null,
+          "exit_code": 0,
+          "wall_time_seconds": 3.78930876,
+          "original_token_count": 369,
+          "returned_characters": 1475,
+          "returned_bytes": 1475,
+          "sha256": "1bb91ae5512b5b010c77073bb067afc3320325b63c3b3d9ec9829c1426a08649"
+        }
+      ]
+    },
+    {
+      "id": "final_whitespace",
+      "tool_session_id": null,
+      "session_drained": true,
+      "capture_method": "Direct exec_command and write_stdin; complete combined stdout/stderr text exactly as returned by the tool, preserved in chunk order. Separate stream identity and OS signal are not exposed. No capture-wrapper status substituted for child status.",
+      "command": "git diff --check -- src/auth/store.ts src/routes/auth.ts src/routes/auth.test.ts src/middleware/auth.claims-boundary.test.ts docs/kit/02-api-reference.md",
+      "launch_requested_at": "2026-09-10T15:09:04.856Z",
+      "completion_observed_at": "2026-09-10T15:09:05.134Z",
+      "exit_status": 0,
+      "combined_output": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "chunks": [
+        {
+          "chunk_id": "1b514f",
+          "session_id": null,
+          "exit_code": 0,
+          "wall_time_seconds": 0.099463908,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Local synthetic Node/workerd/native D1 only; fixture duration and assertion counts do not establish deployed latency, audit-volume capacity, SLO, customer or release acceptance.",
+    "Barrier depends on authentic retained removal audit and normal application writes. Missing historical removal records, external/manual deletes/writes and restore/retention that loses audit markers remain outside this repair.",
+    "The ID-or-email audit lookup has no dedicated target-ID index; retained-volume scaling is unmeasured. No schema/index/service was introduced.",
+    "Already-authorized in-flight privileged actors, response loss, migration account surviving a later session failure, other postcommit audit failure, machine credential lifecycle and deployed rotation remain.",
+    "Admin recovery retains existing availability and restrictions; no new enforced admin path, tenant-account/SSO/cookie/customer identity decision or customer data operation.",
+    "Full W02, findings, gates and release remain open. Prior security/shopper/tenant/consent/erasure controls are preserved; no external operations, new framework or broader suite."
+  ],
+  "handoff": {
+    "to": "/root and /root/w0207_review",
+    "next_action": "Root freezes the exact scoped artifact, inspects deltas/full captures/protected pins, then the separate reviewer runs the admitted frozen routes+claims command and verifies all bounded criteria. No source edits without lead rework.",
+    "pending_sessions": [],
+    "self_acceptance": false
+  }
+}

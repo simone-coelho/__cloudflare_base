@@ -1,0 +1,46 @@
+{
+  "before": {
+    "mode": "framework_only",
+    "local_engine_changes": false,
+    "local_authorization": null,
+    "deployment": false,
+    "model": "gpt-6-astra",
+    "efforts": [
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "max_active_tasks": 1
+  },
+  "after": {
+    "mode": "framework_only",
+    "local_engine_changes": false,
+    "local_authorization": null,
+    "deployment": false,
+    "model": "gpt-6-astra",
+    "efforts": [
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "max_active_tasks": 1,
+    "design_authorization": {
+      "actor_id": "w01-user",
+      "at": "2026-09-06T21:29:15Z",
+      "scope_task_ids": [
+        "W01.01"
+      ],
+      "allowed_actions": [
+        "source_inspection",
+        "task_documentation_and_tracking",
+        "independent_source_review",
+        "local_read_only_checks"
+      ],
+      "record": {
+        "path": "docs/remediation/evidence/W01.01/authorization.md",
+        "sha256": "99ba9e72bf83297e940eb23cce1a80f52dd6e00c4a8c88a410b649115bac7bf7"
+      },
+      "description": "User's go accepted the bounded source-only W01.01 offer. Legacy framework_only mode retains no-engine-write permission; this record is specific design authority, not a customer decision or local implementation mandate."
+    }
+  }
+}

@@ -1,0 +1,239 @@
+{
+  "task_id": "W10.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T02:28:46.484Z",
+  "verdict": "pass",
+  "artifact_digest": "47bc50b1039fcc9d5ca29bf4163868487c7a31eb22a55c7a417f472d2779549e",
+  "contract_digest": "89c9062f1a9854183ec03805881c94226d826178e12f2adfec5e94afbbd2a5a1",
+  "summary": "Pass for the admitted local application-budget containment, not full W10/F08 or provider-capacity acceptance.",
+  "criteria": [
+    {
+      "id": "W10.01-C1",
+      "verdict": "pass",
+      "evidence": [
+        "Actual LearnStats source bounds the received UTF-8 stream, row count, eligible scalar/key/reward/config inputs, stored ownership and complete detached candidate. It validates before storage, publishes the cached candidate only after acknowledged save, and refuses a whole over-cap batch without partial counters or alarm writes.",
+        "Independent fixed runtime passed the two new grouped cases and five existing selections: byte/item/total-counter limits, malformed/prototype input, owner mismatch, unchanged acknowledged state, retained skipped arithmetic, existing-cell use after refusal and actual deliverStats incomplete accounting without retries."
+      ]
+    },
+    {
+      "id": "W10.01-C2",
+      "verdict": "pass",
+      "evidence": [
+        "Actual load validates existing state before cloning; malformed/oversized state holds with recovery-required. Failed or ambiguous save/reset-item/reset invalidates cache. Synthetic cloned storage exercises both committed and uncommitted ambiguous resets with same-instance and restarted reads.",
+        "Actual prior document/key and combined item/ancestor bounds precede indexing/building; serialized snapshot cap precedes response/publication. stats.ts changes only explicit tenant/brand/slot projection, excluding raw Stored statistics/config.",
+        "Reset-item publication failure after acknowledged deletion is converted to generic 503, never applied:false; the final fixture verifies the committed deletion remains. Prior guard intentionally matches the builder's existing lastIndexOf phantom-item interpretation; no estimator repair, pruning, coarsening or automatic reset is claimed."
+      ]
+    },
+    {
+      "id": "W10.01-C3",
+      "verdict": "pass",
+      "evidence": [
+        "Exact K3 executed once on frozen bytes: seven passed, ten intentionally unselected, final exit 0 and drained. Four exact bidirectional deltas and all 109 artifact pins (103 source pins, 99 protected unchanged) verified before and after; contract and artifact digest match.",
+        "Full worker captures inspected: final sequential compiler/scoped lint/whitespace session 92294, final capture 92fb29, exit 0/drained. Three inherited fixture unused-parameter warnings remain versus four baseline warnings; the owned rewrite removed the unused StatsConfig import. No independent static replay.",
+        "Final production reconciliation proves the only post-preliminary LearnStats change is explicit ignoreBOM:false, preserving default decoding behavior; stats.ts hash is unchanged. Both final fixture groups and kit delta were read in full. Root retains acceptance authority."
+      ]
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W10.01/plan.md",
+      "sha256": "d1f9beb705564a4a8cedb787c521a44b280ac22886b5e370e4fe3802968dbf8b"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W10.01/artifact.json",
+      "sha256": "157e2824eb597a2fd4a0a5be39dbcc7cdf2dbd342af5b95eff77eab09c2c1948"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W10.01/worker.json",
+      "sha256": "6b1ab15604b23945c619b238dc671a799fabbc846d8100f56848d339badf038d"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'cells materialize|the worked example|decays on the long horizon|the statistics object counts|W09.04|W10.01' --maxWorkers=1 --minWorkers=1",
+    "session_id": 49951,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 7,
+      "failed": 0,
+      "intentionally_unselected": 10,
+      "test_files_passed": 1,
+      "new_groups": 2,
+      "runtime": "Installed Node/Vitest; actual LearnStats/stats/fan with synthetic storage, not native provider proof."
+    },
+    "captures": [
+      {
+        "chunk_id": "dfae7a",
+        "wall_time_seconds": 1.000712117,
+        "session_id": 49951,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "54a145",
+        "wall_time_seconds": 1.033400722,
+        "exit_code": 0,
+        "original_token_count": 124,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (17 tests | 10 skipped) 256ms\n\n Test Files  1 passed (1)\n      Tests  7 passed | 10 skipped (17)\n   Start at  22:27:10\n   Duration  9.01s (transform 1.54s, setup 0ms, collect 2.90s, tests 256ms, environment 0ms, prepare 4.06s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "before": {
+      "capture": "54e125",
+      "at": "2026-09-12T02:26:50.507Z",
+      "artifact_digest": "47bc50b1039fcc9d5ca29bf4163868487c7a31eb22a55c7a417f472d2779549e",
+      "manifest_sha256": "157e2824eb597a2fd4a0a5be39dbcc7cdf2dbd342af5b95eff77eab09c2c1948",
+      "pins": 109,
+      "bad": [],
+      "protected_count": 99,
+      "protected_bad": [],
+      "deltas": [
+        {
+          "path": "src/durable-objects/LearnStats.ts",
+          "before": true,
+          "after": true,
+          "forward": true,
+          "reverse": true
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "before": true,
+          "after": true,
+          "forward": true,
+          "reverse": true
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "before": true,
+          "after": true,
+          "forward": true,
+          "reverse": true
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "before": true,
+          "after": true,
+          "forward": true,
+          "reverse": true
+        }
+      ],
+      "basis": [
+        {
+          "path": "docs/remediation/design/W10.01/plan.md",
+          "sha256": "d1f9beb705564a4a8cedb787c521a44b280ac22886b5e370e4fe3802968dbf8b"
+        },
+        {
+          "path": "docs/remediation/evidence/W10.01/artifact.json",
+          "sha256": "157e2824eb597a2fd4a0a5be39dbcc7cdf2dbd342af5b95eff77eab09c2c1948"
+        },
+        {
+          "path": "docs/remediation/evidence/W10.01/worker.json",
+          "sha256": "6b1ab15604b23945c619b238dc671a799fabbc846d8100f56848d339badf038d"
+        }
+      ]
+    },
+    "after": {
+      "capture": "77da6c",
+      "at": "2026-09-12T02:27:50.087Z",
+      "artifact_digest": "47bc50b1039fcc9d5ca29bf4163868487c7a31eb22a55c7a417f472d2779549e",
+      "manifest_sha256": "157e2824eb597a2fd4a0a5be39dbcc7cdf2dbd342af5b95eff77eab09c2c1948",
+      "pins": 109,
+      "bad": [],
+      "protected_count": 99,
+      "protected_bad": [],
+      "deltas": [
+        {
+          "path": "src/durable-objects/LearnStats.ts",
+          "before": true,
+          "after": true,
+          "forward": true,
+          "reverse": true
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "before": true,
+          "after": true,
+          "forward": true,
+          "reverse": true
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "before": true,
+          "after": true,
+          "forward": true,
+          "reverse": true
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "before": true,
+          "after": true,
+          "forward": true,
+          "reverse": true
+        }
+      ],
+      "basis": [
+        {
+          "path": "docs/remediation/design/W10.01/plan.md",
+          "sha256": "d1f9beb705564a4a8cedb787c521a44b280ac22886b5e370e4fe3802968dbf8b"
+        },
+        {
+          "path": "docs/remediation/evidence/W10.01/artifact.json",
+          "sha256": "157e2824eb597a2fd4a0a5be39dbcc7cdf2dbd342af5b95eff77eab09c2c1948"
+        },
+        {
+          "path": "docs/remediation/evidence/W10.01/worker.json",
+          "sha256": "6b1ab15604b23945c619b238dc671a799fabbc846d8100f56848d339badf038d"
+        }
+      ]
+    },
+    "contract_before": {
+      "capture": "4ea5de",
+      "at": "2026-09-12T02:26:50.217Z",
+      "task": "W10.01",
+      "state": "verification",
+      "contract_digest": "89c9062f1a9854183ec03805881c94226d826178e12f2adfec5e94afbbd2a5a1",
+      "artifact_digest": "47bc50b1039fcc9d5ca29bf4163868487c7a31eb22a55c7a417f472d2779549e"
+    },
+    "contract_after": {
+      "capture": "5f574c",
+      "at": "2026-09-12T02:27:49.426Z",
+      "task": "W10.01",
+      "state": "verification",
+      "contract_digest": "89c9062f1a9854183ec03805881c94226d826178e12f2adfec5e94afbbd2a5a1",
+      "artifact_digest": "47bc50b1039fcc9d5ca29bf4163868487c7a31eb22a55c7a417f472d2779549e"
+    },
+    "source_inspection": {
+      "production": [
+        "965c2f",
+        "f04ac2",
+        "ef12fd"
+      ],
+      "final_fixture_kit": "37a1d0",
+      "worker_full_captures": "fe05d5",
+      "freeze_and_reconciliation": "498742",
+      "source_stopped_at": "2026-09-12T02:25:10.844Z",
+      "learnstats_sha256": "608ac7c96d2517e2bcad42bd868a2da27e61a5e244bf09a89d3e62201e15733b",
+      "learnstats_without_explicit_ignoreBOM_sha256": "27eb077a1084294f4f7eb061dee784c0e227f3a63b71d98f8d4663d0f69422e8",
+      "matches_preliminary_read": true
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Worker runtime_candidate1 session 55648/capture 713298 failed two existing cases after new fixture prior cache leakage (five passed). afterEach invalidateCache isolates the fixture; no production fallback bypass. Failure remains in worker.json.",
+    "Worker static_candidate1 session 79780/capture 9b33bd exited 2 for the required TextDecoder ignoreBOM option; lint/whitespace were not reached. The explicit false option supersedes candidate2's seven-pass bytes. Final candidate3 session 47691/capture 10d9cb passed seven, and final static passed.",
+    "Vite's existing CJS Node API deprecation warning is retained in actual runtime captures; it is not an application failure."
+  ],
+  "limitations": [
+    "Application budgets only: no native provider storage-limit, sustained capacity, customer/deployed/release acceptance, full W10 or F08 closure. Ten existing cases intentionally unselected; no broader suite or native run.",
+    "Whole-batch refusal can omit learning; existing fan marks non-success unknown/incomplete and does not retry. No sink idempotency, durable refusal history, outbox or recovery added.",
+    "Previously oversized/malformed state is preserved and held, not reconstructed or automatically reset. Raw prior KV decoding/validation/import allocation occurs before this gate and remains outside its bound.",
+    "Existing multi-component-prior lastIndexOf parsing can create phantom items; its semantics remain unchanged. Vocabulary/remapping, estimator/generation policy, DecisionRing indexes and scientific acceptance remain open.",
+    "Last good KV snapshots and freshness/completeness remain separate obligations. Existing KV/R2 publication is best effort; a processed receipt or scheduled alarm does not prove publication or complete learning.",
+    "Only this review record was written by the reviewer. No source/governance edits, static replay, external operations or further delegation; lead disposition remains separate."
+  ]
+}

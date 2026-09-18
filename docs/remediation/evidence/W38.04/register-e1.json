@@ -1,0 +1,217 @@
+{
+  "before": null,
+  "after": {
+    "id": "W38.04-E1",
+    "task_id": "W38.04",
+    "check_id": "W38.04-K1",
+    "criterion_ids": [
+      "W38.04-C1",
+      "W38.04-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W38.04/review.json",
+      "sha256": "20096015f7e9ce9ac901a2f0c878e64e2c39ed95fa1a4979567fa0df4ceaaa2e"
+    },
+    "at": "2026-09-13T12:43:03.523Z",
+    "limitations": "HTTP/import admission only: 2 MiB actual bytes per input, 10,000 selected raw records/direct catalog pieces or prior rows, CSV 256 fields per row and 100,000 scanned fields. These are application safety budgets, not supported customer catalog capacity, full heap/CPU/latency or full W38/F32/F08/N07 acceptance. JSON count checks follow bounded parsing; no tokenizer claim. Historical/internal validators, merged corpus growth, arbitrary validation/normalization expansion, upstream chunk allocation, concurrent requests, remote fetch timeout/URL policy, revision retention and KV transactional authority remain separate. Preserve customer-neutral deterministic ranking/candidates, history and existing enrichment limits. No deploy/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external operations or customer policy changes. W38.03 overlapping exact-byte proof qualified prospectively; its implemented remedy and history retained.",
+    "command": "node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/routes/content.test.ts -t 'W38.04|reads tags from an object|accepts the demo catalog shape|finds the records in a JSON export|parses quoted fields|a csv export becomes|replace drops what is not|the publish window gates|the http source pulls|requires explicit initialization|authenticated validation runs|history lists revisions|imports JSON \\(replace\\)|pulls from a URL|binds both modes to typed tenant authority|preserves stored reads, merged validation|W38.03 returns typed' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest actual input/import and mounted authenticated handlers with synthetic KV/R2/fetch streams.",
+    "workload": "Fixed19:16 source-counted existing import/route controls plus3 new groups, two existing test files. No native/network/broad suite.",
+    "result": "pass",
+    "artifact_digest": "c7663a4fd16b5f4f61ec6463da487525279f9f1f206cd5a84c22cdc797034f46",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "7caca3e31f35c13a6c6470f363594732da084720e0ab9f05168f885ff40e1991",
+      "configuration": "HTTP/import admission only: 2 MiB actual bytes per input, 10,000 selected raw records/direct catalog pieces or prior rows, CSV 256 fields per row and 100,000 scanned fields. These are application safety budgets, not supported customer catalog capacity, full heap/CPU/latency or full W38/F32/F08/N07 acceptance. JSON count checks follow bounded parsing; no tokenizer claim. Historical/internal validators, merged corpus growth, arbitrary validation/normalization expansion, upstream chunk allocation, concurrent requests, remote fetch timeout/URL policy, revision retention and KV transactional authority remain separate. Preserve customer-neutral deterministic ranking/candidates, history and existing enrichment limits. No deploy/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external operations or customer policy changes. W38.03 overlapping exact-byte proof qualified prospectively; its implemented remedy and history retained.",
+      "files": [
+        {
+          "path": "src/routes/config.ts",
+          "role": "output",
+          "sha256": "c68b26d85e6ab2b5434f65436f30497f4b9191ea297df49c3a3a9f35adce1355"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "output",
+          "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+        },
+        {
+          "path": "src/content/import.ts",
+          "role": "output",
+          "sha256": "d2e2b5143824c930afabea2e9e012be8f3d639ae253f260e9b5d13d409adb69f"
+        },
+        {
+          "path": "src/content/import.test.ts",
+          "role": "output",
+          "sha256": "161da825624daab353a40f30aaab743f3e4040f52105c17154fd54d1f86f7880"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "aaf30fbb81f7ae88ed055ed3c10ff59a63fde10060f9f46289a5977763dd9412"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/learn/priors.ts",
+          "role": "source",
+          "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+        },
+        {
+          "path": "src/content/enrichment.ts",
+          "role": "source",
+          "sha256": "a3ab80fadee98504369bda570531679044f913b1c956a4d07a6a1bac10670b5f"
+        },
+        {
+          "path": "src/content/enrichmentPublication.ts",
+          "role": "source",
+          "sha256": "8956b007c0a9a766d794d7f33f07ca268607dfbd7f4921f4bb23e9a8edbcb21d"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/33-adversarial-audit-brief.md",
+          "role": "source",
+          "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.03/acceptance.md",
+          "role": "source",
+          "sha256": "62f0729d303f96ebcf40c8d6b1c63710bd0313dc2908ca6c148ecfd7d860a177"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.03/worker.json",
+          "role": "source",
+          "sha256": "5bb54a75b05bc8f88b2206339ec12f28cfcbf30f6c1a2a3abd3df7ecdf5ebb7b"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "src/config/input.ts",
+          "role": "output",
+          "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.04/worker.json",
+          "role": "output",
+          "sha256": "beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757"
+        },
+        {
+          "path": "docs/remediation/design/W38.04/plan.md",
+          "role": "configuration",
+          "sha256": "2e8719753464ca73df2897e28b2b7e09a978a1c1fcb5eb160b78d574cf63b7a1"
+        },
+        {
+          "path": "docs/remediation/design/W38.04/baseline.json",
+          "role": "configuration",
+          "sha256": "aa69d13869a718047976060d88db9f798027b9e946361d1a890129661a47975a"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.04/admission.json",
+          "role": "configuration",
+          "sha256": "1b3b28ec33a6aa302bea0c7eedb8fa28ffe281aa29cec040a550ff62c83066cb"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.04/source-freeze.json",
+          "sha256": "a63ba6684137e624ecbe0d062159f10f3db4bd1d1afac89539f3a88e3ee7f2c4",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.04/source-deltas.json",
+          "sha256": "3a1206312629690f68b7f7842274ff86e1170d9ba662f8231e6ce1e16945119c",
+          "role": "configuration"
+        }
+      ],
+      "digest": "c7663a4fd16b5f4f61ec6463da487525279f9f1f206cd5a84c22cdc797034f46"
+    }
+  }
+}

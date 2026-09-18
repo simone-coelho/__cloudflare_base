@@ -1,0 +1,288 @@
+{
+  "task_id": "W01.07",
+  "actor": {
+    "id": "w0107-worker",
+    "run_id": "/root/w0107_worker",
+    "role": "implementer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "provenance": "Lead assignment and delegated run configuration; no subdelegation."
+  },
+  "claim": "local_runtime",
+  "verdict": "pass_pending_independent_review_and_lead_acceptance",
+  "canonical": {
+    "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+    "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+  },
+  "plan": {
+    "path": "docs/remediation/design/W01.07/plan.md",
+    "sha256": "fc04ab12c80709ad6324cacc3c34ad59f9d65f6ff32b0a1df42ec7faee7a691a",
+    "contract_digest": "4cbfa26f8c07f551b6fcb5466fc66cb867674aec7bc8db449fe35eb523946be8"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W01.07/baseline.json",
+    "sha256": "cb2d3bf841d6760c7a903870f02b1bc595b0f35decb58b3a4b9fcec1bf57e235",
+    "case": "Source-confirmed design case admitted by lead; no newly executed pre-fix exploit. Shared Coach cohort SQL ignores tenant context; bare health accesses global resources and writes Analytics. Baseline retains exact five owned bytes and 335 protected pins. Root retains reversible frozen deltas and unchanged-dependency attestation."
+  },
+  "base_commit": "e49aef83c9a9843dd21479f1b08d53e7709fac41",
+  "source_stop_at": "2026-09-10T01:49:49.977Z",
+  "captured_at": "2026-09-10T01:50:26.145Z",
+  "files": [
+    {
+      "path": "src/index.ts",
+      "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "sha256": "8c3f75a1693fc56e19b43baa991984d86d437750d7a87fcc1ef176f93849ec07"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "3b83cc06b8e6b9a60a73abbc396314e922eafa323be921cc8e9e4117164f8ec5"
+    },
+    {
+      "path": "docs/kit/04-staging-connection.md",
+      "sha256": "ff60fc62714a89b5dc8999d349898e8f7a9d9fc682b1932b7c55fef9e8fddf5c"
+    },
+    {
+      "path": "scripts/verify-origin.sh",
+      "sha256": "f6db5070d73c55dad8598b97b54048b02518b64f5e9475a1288341d3148fd9e0"
+    }
+  ],
+  "runtime": {
+    "vitest": "1.6.1",
+    "miniflare": "4.20260625.0",
+    "esbuild": "0.28.1",
+    "hono": "4.12.27",
+    "typescript": "5.9.2",
+    "eslint": "8.57.1",
+    "configuration": "Actual Worker export, installed Hono/Agents, local workerd with compatibilityDate 2025-06-01 and nodejs_compat; memory-only synthetic bindings, outboundService throws and afterAll asserts zero outbound attempts. Existing native shopper socket controls retained. No project build or Wrangler configuration loaded."
+  },
+  "changes": [
+    "Existing exact AUTH_MODE=enforced entry guard gains two decoded nonempty-segment predicates: geo/cohort family and health root with absent child. Existing raw API guard and withdrawn demo/connector/legacy families remain.",
+    "API info uses /health/ready in exact enforced mode and retains /health in open/unset/nonexact modes. /geo, /health/live and /health/ready underlying route code is unchanged.",
+    "Three grouped tests extend the existing fixture. Opt-in sharedDiagnostics supplies minimal populated count/top-line D1 results and converts the health stub's string URL to a real Request before the actual StateManager fetch. Optional requestCf demonstrates caller edge metadata.",
+    "Kit health paragraph and staging table describe liveness and signing-configuration readiness accurately; verify-origin health URL/label now uses /health/ready. No other script behavior changed or executed."
+  ],
+  "criteria": {
+    "W01.07-C1": "Both selected routes are denied for acme/globex with absent, forged, site-key-only, granted operator, real issued shopper capability, and combined credentials. Bare and query-override cohort paths, GET/HEAD, seven other method/upgrade/preflight combinations, encoded-letter/repeated-slash/dot-segment/descendant aliases, invalid registry/conflicting selector and malformed body controls use existing assertDenied: exact 404/no-store, empty HEAD, only AUTH_MODE environment read, no body read, destination call/state change, logs, deferred work, CORS, cookies, rate-limit header or disclosed synthetic marker.",
+    "W01.07-C2": "Populated open/unset/misspelled cohort calls from two nondefault tenant hosts reach Coach purchase/profile/census SQL and return the same shared top-line marker (40 shoppers, line shoppers20, share0.5) through the actual service. Open health executes exact CACHE.get/R2.head/StateManager id,get,fetch,storage.get and Analytics write, with no queue submission/state mutation. All four modes retain populated synthetic request.cf at /geo, no-store signing-ready and liveness without resource calls. Siblings and encoded-slash nonaliases retain ordinary routing; API info/kit/caller health references agree. All 48 prior fixture tests retained.",
+    "W01.07-C3": "Six retained executed check records provide full stdout/stderr bytes+hash+gzip, actual child times/status and drained sessions. Frozen five-file identity supplied to root; independent review and lead disposition remain required, not self-accepted."
+  },
+  "checks": [
+    {
+      "name": "baseline_lint",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.ts src/index.api-boundary.test.ts --format json",
+      "started_at": "2026-09-10T01:45:35.429Z",
+      "ended_at": "2026-09-10T01:46:09.176Z",
+      "exit_code": 0,
+      "signal": null,
+      "error": null,
+      "stdout": {
+        "bytes": 17595,
+        "sha256": "4448c720bb98c679bf758a125bad0416f21bf7ba1d0b1b06fc60aa4ed46fe1de",
+        "gzip_base64": "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"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "counts": [
+        {
+          "file": "src/index.api-boundary.test.ts",
+          "errors": 0,
+          "warnings": 0
+        },
+        {
+          "file": "src/index.ts",
+          "errors": 0,
+          "warnings": 7
+        }
+      ],
+      "session_id": 66956,
+      "session_drained": true,
+      "output_complete": true,
+      "capture": "spawnSync actual child stdout/stderr captured as byte buffers; gzip/base64 preserves complete output; exit_code is actual child status, and outer capture exits with it."
+    },
+    {
+      "name": "runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-10T01:48:45.917Z",
+      "ended_at": "2026-09-10T01:49:14.683Z",
+      "exit_code": 0,
+      "signal": null,
+      "error": null,
+      "stdout": {
+        "bytes": 329,
+        "sha256": "5f18443c0a24215a543a4ee930352c694769d05242b15fa7f466c437f8490808",
+        "gzip_base64": "H4sIAAAAAAAAA0WPv07DMBjEdz/Fja0U7Dg4bemMGBn4M0cm+SosObbl70tFeQ1Wno4nQaEDt939brhTeHp9BM5W77SFmZOY0SxMlU3072bK4zJTEjbDMNGZYi6rNblImMMnxYsZhjHmZTpFX2l480xK4ef7C1xHE9JEH9qXcPOWlzT5etFCLFoY2PQWq+EtrHNtO7NSeCEWPIRIDFgUz0wTNnar8KcVM9D/o/7KnsVXgRegs0d3OLrDmt4v1UvICeh6vesYG6k+8SnXGVbfOm7AJEtBO3ODMcdIo2Cv+zturttgnXYtN6B0DjWn9fy1XSoVXwmd3u15q9Qvzxo67UkBAAA="
+      },
+      "stderr": {
+        "bytes": 153,
+        "sha256": "6a013b71d94eadb16a930c32d667b41cd78de87ee97381f3cb81ed13fbe986e3",
+        "gzip_base64": "H4sIAAAAAAAAA0XMoQ7CMBAGYM8rzFyCQHUVU+AICgQhGcFMbbt/9Ei7W9rbnp+g8F++qmua9Aygy62lYZXIpBO9xHAodFcGnR9XkkKMJWPsDVxTC1AwW8rJ+00MNWPz71UY3rKuQ0QJqibzuw6W4v5n3PgpblaG6xdx/40mzZQ0gxjWSyx11TXHtPsCKiJbmpkAAAA="
+      },
+      "counts": null,
+      "session_id": 39317,
+      "session_drained": true,
+      "output_complete": true,
+      "capture": "spawnSync actual child stdout/stderr captured as byte buffers; gzip/base64 preserves complete output; exit_code is actual child status, and outer capture exits with it."
+    },
+    {
+      "name": "final_lint",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.ts src/index.api-boundary.test.ts --format json",
+      "started_at": "2026-09-10T01:48:45.943Z",
+      "ended_at": "2026-09-10T01:49:05.628Z",
+      "exit_code": 0,
+      "signal": null,
+      "error": null,
+      "stdout": {
+        "bytes": 17752,
+        "sha256": "758138cc9ff742757ee961128c74385415be06c50f35fa6df2dd44f2577c0bef",
+        "gzip_base64": "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"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "counts": [
+        {
+          "file": "src/index.api-boundary.test.ts",
+          "errors": 0,
+          "warnings": 0
+        },
+        {
+          "file": "src/index.ts",
+          "errors": 0,
+          "warnings": 7
+        }
+      ],
+      "session_id": 16313,
+      "session_drained": true,
+      "output_complete": true,
+      "capture": "spawnSync actual child stdout/stderr captured as byte buffers; gzip/base64 preserves complete output; exit_code is actual child status, and outer capture exits with it."
+    },
+    {
+      "name": "compiler",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "started_at": "2026-09-10T01:48:45.971Z",
+      "ended_at": "2026-09-10T01:49:05.731Z",
+      "exit_code": 0,
+      "signal": null,
+      "error": null,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "counts": null,
+      "session_id": 39216,
+      "session_drained": true,
+      "output_complete": true,
+      "capture": "spawnSync actual child stdout/stderr captured as byte buffers; gzip/base64 preserves complete output; exit_code is actual child status, and outer capture exits with it."
+    },
+    {
+      "name": "whitespace",
+      "command": "git diff --check -- src/index.ts src/index.api-boundary.test.ts docs/kit/02-api-reference.md docs/kit/04-staging-connection.md scripts/verify-origin.sh",
+      "started_at": "2026-09-10T01:49:05.378Z",
+      "ended_at": "2026-09-10T01:49:05.621Z",
+      "exit_code": 0,
+      "signal": null,
+      "error": null,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "session_id": null,
+      "session_drained": true,
+      "output_complete": true,
+      "capture": "spawnSync actual child stdout/stderr captured as byte buffers; gzip/base64 preserves complete output; exit_code is actual child status, and outer capture exits with it."
+    },
+    {
+      "name": "shell_syntax",
+      "command": "bash -n scripts/verify-origin.sh",
+      "started_at": "2026-09-10T01:49:05.695Z",
+      "ended_at": "2026-09-10T01:49:05.702Z",
+      "exit_code": 0,
+      "signal": null,
+      "error": null,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      },
+      "session_id": null,
+      "session_drained": true,
+      "output_complete": true,
+      "capture": "spawnSync actual child stdout/stderr captured as byte buffers; gzip/base64 preserves complete output; exit_code is actual child status, and outer capture exits with it."
+    }
+  ],
+  "failures_and_rework": [
+    {
+      "name": "fast_check_result_capture",
+      "commands": [
+        "git diff --check -- src/index.ts src/index.api-boundary.test.ts docs/kit/02-api-reference.md docs/kit/04-staging-connection.md scripts/verify-origin.sh",
+        "bash -n scripts/verify-origin.sh"
+      ],
+      "result": "Initial fast commands returned to the orchestrator, but storing their absent session_id via store(undefined) raised 'failed to serialize JavaScript value: expected value at line 1 column 1'. Their outputs/status were not retained or claimed as proof.",
+      "correction": "Guard session storage on session_id !== undefined. Repeat only these two read-only static checks to obtain complete actual evidence; both retained child exits are 0. No source change, product failure, runtime retry or additional suite."
+    }
+  ],
+  "verification_summary": {
+    "runtime": {
+      "passed": 51,
+      "total": 51,
+      "exit_code": 0,
+      "vitest_total_seconds": 25.62,
+      "vitest_tests_seconds": 14.4,
+      "first_and_only_run": true
+    },
+    "compiler_exit_code": 0,
+    "baseline_lint": {
+      "errors": 0,
+      "warnings": 7
+    },
+    "final_lint": {
+      "errors": 0,
+      "warnings": 7
+    },
+    "lint_same_rule_message_severity_per_file": true,
+    "whitespace_exit_code": 0,
+    "shell_syntax_exit_code": 0,
+    "all_sessions_drained": true
+  },
+  "warnings": "Runtime stderr retains the Vite CJS Node API deprecation warning. Scoped lint retains exactly seven existing src/index.ts warnings with identical per-file rule/message/severity: five unused e, one unused ctx, one explicit any. Fixture lint remains zero errors/warnings.",
+  "limitations": [
+    "Bounded local entry containment, not full W01/W03/W12/finding closure, operational/schema/queue readiness, customer acceptance, release approval or deployed-resource attestation.",
+    "Populated D1 is a controlled synthetic statement spy, not SQLite execution or customer warehouse qualification. Same shared marker demonstrates actual service serialization/query flow. Historical/shared customer data or stamp separation remain unresolved.",
+    "Open/unset/nonexact modes intentionally retain global cohort and health behavior. Open health considers a missing StateManager key healthy; this fixture preserves effects, not readiness. Generic first-party cohort delivery, AI Search/enrichment and customer contextual-page behavior remain open.",
+    "Retained request.cf is explicitly synthetic, not edge-populated deployed geography. Existing signing configuration assurance is reused; no new signing matrix, no browser or deployed acceptance.",
+    "verify-origin.sh received health URL/label correction and bash syntax verification only; its broader shopper/bootstrap assumptions and actual customer-origin workflow remain unaccepted. Legacy console-preview/deploy health hints and dated inventory remain residuals.",
+    "No ranking/learning/report arithmetic, SDK/core, underlying geo/health service, auth/grant model, consent/erasure/session semantics, v4 recovery or customer data changed. W36 does not close F14; gamma zero is not ingestion disable.",
+    "Any change to reviewed owned files, relevant guard/router/dependencies/fixture or operating configuration requires scoped revalidation."
+  ],
+  "handoff": {
+    "next_action": "Root freezes exact five source deltas/dependencies; separate reviewer inspects actual artifact/full outputs and runs the exact declared K1 once; lead records bounded disposition.",
+    "pending_sessions": [],
+    "source_writer_stopped": true,
+    "rollback": "Exact five owned inverse deltas against retained admitted baseline under lead review; preserve pre-existing dirty worktree."
+  }
+}

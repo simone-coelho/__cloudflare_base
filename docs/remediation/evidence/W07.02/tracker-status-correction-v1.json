@@ -1,0 +1,47 @@
+{
+  "at": "2026-09-07T12:52:04.826Z",
+  "reason": "Lead orchestration stored the separately serialized task object instead of assigning its completed state/signoff/handoff into after.tasks. Journal146 and immutable lead record already recorded actual approval; preserve failed final checks and materialize that recorded acceptance. No journal rewrite, new engine change, changed artifact or waived required evidence.",
+  "before": {
+    "state": "verification",
+    "lead_signoff": {
+      "status": "pending",
+      "actor_id": null,
+      "artifact_digest": null,
+      "review_sha256": null,
+      "record": null,
+      "at": null,
+      "limitations": null
+    },
+    "handoff": {
+      "status": "pending",
+      "resume_path": "docs/remediation/RESUME.md",
+      "next_action": "Independent exact K1/K2 reruns and actual frozen artifact/assertion/proof review; lead then records evidence and closes only bounded W07.02 if all required results pass.",
+      "record": null
+    }
+  },
+  "after": {
+    "state": "closed",
+    "lead_signoff": {
+      "status": "accepted",
+      "actor_id": "w01-lead",
+      "artifact_digest": "49d634e9c23fd2dc9f337009814528445686790ab375ff31ed1fd498854db5c2",
+      "review_sha256": "a880ba1f36f05abf74b45058e576a0c7314a50742a47f2cb6b772268a39e3e8f",
+      "record": {
+        "path": "docs/remediation/evidence/W07.02/acceptance-and-handoff-v1.md",
+        "sha256": "9296d2f61dbb19a7a5961bf19ba280c49109f5a03bbe28ea7d720080b3c46d2c"
+      },
+      "at": "2026-09-07T12:45:05.515Z",
+      "limitations": "Separate lead acceptance of actual four-source containment after independent47/5 reruns, worker TS/diff inspection and181-pin identity. Initial fixture failures/baseline socket qualification retained. No old full-contract, full W07/privacy/history/dataset/customer/SLO/deployed/gate/release approval."
+    },
+    "handoff": {
+      "status": "complete",
+      "resume_path": "docs/remediation/RESUME.md",
+      "next_action": "Admit one coherent next W07 production batch for remaining CDP/ODP/session and request-error log payloads, starting with actual body/error-bearing writers and their caller paths. Reuse focused existing checks and a compact regression where needed; no per-callsite tasks, new framework or broad retrospective matrix. Preserve customer-neutral deterministic core and measurement. Historical data, D06 consent/retention, datasets and full privacy/customer acceptance remain separate.",
+      "record": {
+        "path": "docs/remediation/evidence/W07.02/acceptance-and-handoff-v1.md",
+        "sha256": "9296d2f61dbb19a7a5961bf19ba280c49109f5a03bbe28ea7d720080b3c46d2c"
+      }
+    }
+  },
+  "journalSeq": 146
+}

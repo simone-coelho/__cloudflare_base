@@ -1,0 +1,313 @@
+{
+  "task": "W10.01",
+  "actor": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "source_stopped_pending_independent_review",
+  "authority": {
+    "plan": "docs/remediation/design/W10.01/plan.md",
+    "admission": "docs/remediation/evidence/W10.01/admission.json",
+    "contract_digest": "89c9062f1a9854183ec03805881c94226d826178e12f2adfec5e94afbbd2a5a1",
+    "source_go_at": "2026-09-12T02:10:23.482Z",
+    "entry_board": "Root51922 VALID1075; admitted journal1084",
+    "records": {
+      "baseline": {
+        "path": "docs/remediation/design/W10.01/baseline.json",
+        "sha256": "5efe8d2a52a8863c8eb2861d8b0f2aef0ad8b17792f6531cbfb6457b5e1017a7"
+      },
+      "plan": {
+        "path": "docs/remediation/design/W10.01/plan.md",
+        "sha256": "d1f9beb705564a4a8cedb787c521a44b280ac22886b5e370e4fe3802968dbf8b"
+      },
+      "admission": {
+        "path": "docs/remediation/evidence/W10.01/admission.json",
+        "sha256": "37a99813ea8b0e575c55fca27850d9dc8fa7295074ec05b7e7acac66c549ee70"
+      }
+    }
+  },
+  "implemented": [
+    "LearnStats counts the actual UTF8 request stream and validates eligible inputs before serialized mutation. A bounded, validated existing state is cloned into a detached candidate; no over-cap candidate is saved/cached and no accepted row is silently dropped for capacity.",
+    "Application budgets bound 256KiB/1000-row requests, 256-code-unit components/2048-byte keys, and 512KiB/256-item/4096-total-counter state. Whole-batch precommit capacity refusal is413/applied:false; successful v1 receipts and old ineligible-row skips remain.",
+    "Strict stored owner/shape/number/map checks distinguish absent from malformed or oversized state. Ambiguous save/reset-item/reset effects invalidate the cache; no automatic erase/reset/eviction/retry. Postcommit reset-item publication refusal returns503 without applied:false.",
+    "Snapshot identity is explicitly projected in stats.ts. Prior row/byte/key and actual builder item/ancestor union gates run before indexing/build; output is capped before response/KV/R2 publication. No arithmetic, prior interpretation, fan or Env change.",
+    "Two grouped additions in the existing learn fixture use actual Stats/fan with structured-clone, synthetic byte-limited storage; scoped kit contract documents application-only limits and residuals."
+  ],
+  "failures_and_superseding_validation": [
+    {
+      "command": "runtime_candidate1",
+      "session_id": 55648,
+      "exit_code": 1,
+      "drained": true,
+      "passed": 5,
+      "failed": 2,
+      "cause": "New prior fixture left global readRevision cache populated; two later existing statistics cases consumed that synthetic over-cap prior.",
+      "correction": "New describe has afterEach invalidateCache; no production fallback workaround."
+    },
+    {
+      "command": "runtime_candidate2",
+      "session_id": 35775,
+      "exit_code": 0,
+      "drained": true,
+      "passed": 7,
+      "failed": 0,
+      "status": "Superseded final bytes by explicit TextDecoder option."
+    },
+    {
+      "command": "static_candidate1",
+      "session_id": 79780,
+      "exit_code": 2,
+      "drained": true,
+      "cause": "Current Workers TextDecoderConstructorOptions requires explicit ignoreBOM.",
+      "correction": "Added ignoreBOM:false, preserving default BOM behavior; lint/whitespace were not reached."
+    },
+    {
+      "command": "runtime_candidate3",
+      "session_id": 47691,
+      "exit_code": 0,
+      "drained": true,
+      "passed": 7,
+      "failed": 0,
+      "supersedes": [
+        "runtime_candidate1",
+        "runtime_candidate2"
+      ]
+    }
+  ],
+  "limitations": [
+    "Bounded local application-budget containment only; no native/provider storage-limit measurement, sustained traffic capacity, customer/deployed/release acceptance, or full W10/F08 closure.",
+    "Whole-batch refusal can omit learning. Existing fan conservatively reports non2xx as unknown/incomplete and does not retry; the task adds no idempotency/recovery/outbox or independently durable refusal history.",
+    "Already malformed/oversized stored objects are preserved and refused, not reconstructed or automatically reset. Old KV snapshots, freshness/completeness, retention and recovery remain separate obligations.",
+    "Prior budgets follow the existing readRevision KV decoding/validation; raw import/config allocation remains unbounded here. Guards model buildSnapshot's existing lastIndexOf('|') split, including phantom items from multi-component prior keys; estimator/prior semantics are not repaired.",
+    "Only healthy acknowledged/reloaded state can be snapshotted. Publication/archive acknowledgements remain existing best effort; no claim that an alarm executed or a snapshot reached both destinations.",
+    "DecisionRing index bounds, channel vocabulary/remapping, estimator/generation policy, sink logical idempotency and scientific acceptance remain open.",
+    "Only fixed7 selected checks ran;10 existing cases intentionally unselected. No native harness, broad suites, Env flags, new persistent marker state, generated bundles, external/cloud/customer operations or commits."
+  ],
+  "capture_notes": [
+    "All actual fixed runtime/static captures, failures and superseding validations retained below. Silent compiler/whitespace success is established only by completion of the exact sequential && compound, not separately invoked passes."
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T02:25:10.844Z",
+    "files": [
+      {
+        "path": "src/durable-objects/LearnStats.ts",
+        "sha256": "608ac7c96d2517e2bcad42bd868a2da27e61a5e244bf09a89d3e62201e15733b"
+      },
+      {
+        "path": "src/learn/stats.ts",
+        "sha256": "6b42200d8a09a04b9af80bce289cee3e6e2a6d705434d37644784ec784a071ed"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "ae49848dcfa62ee4e39c8e905331f930adb6b5c7f2be090186ae4005f8507fcb"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "7b49fccbcf891b68c4a37c201f89848741e3b7c6a844c2bfbe3f5fa9c6c981ef"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "command": "source_stop",
+    "checked": 99,
+    "mismatches": [],
+    "exit_code": 0,
+    "drained": true,
+    "last_chunk": "1f065f"
+  },
+  "final_results": {
+    "runtime": {
+      "command": "runtime_candidate3",
+      "session_id": 47691,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "10d9cb",
+      "passed": 7,
+      "failed": 0,
+      "intentionally_skipped": 10,
+      "new_groups": 2,
+      "fixture": "src/learn/learn.test.ts"
+    },
+    "compiler": {
+      "command": "static_candidate2",
+      "session_id": 92294,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "92fb29",
+      "basis": "First component of exact completed sequential && compound; no separate invocation claimed."
+    },
+    "lint": {
+      "command": "static_candidate2",
+      "session_id": 92294,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "92fb29",
+      "errors": 0,
+      "warnings": 3,
+      "baseline_warnings": 4,
+      "new_warnings": 0,
+      "comparison": "Three inherited fixture unused-parameter warnings remain. The unused StatsConfig import was removed with the owned LearnStats rewrite; no general warning cleanup."
+    },
+    "whitespace": {
+      "command": "static_candidate2",
+      "session_id": 92294,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "92fb29",
+      "basis": "Last component of exact completed sequential && compound."
+    },
+    "protected_sources": {
+      "command": "source_stop",
+      "checked": 99,
+      "mismatches": [],
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "1f065f"
+    }
+  },
+  "command_captures": [
+    {
+      "label": "runtime_candidate1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'cells materialize|the worked example|decays on the long horizon|the statistics object counts|W09.04|W10.01' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T02:20:09.221Z",
+      "captures": [
+        {
+          "chunk_id": "fbead8",
+          "wall_time_seconds": 1.000702937,
+          "session_id": 55648,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "713298",
+          "wall_time_seconds": 0.000002345,
+          "exit_code": 1,
+          "original_token_count": 632,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/learn/learn.test.ts  (17 tests | 2 failed | 10 skipped) 158ms\n   ❯ src/learn/learn.test.ts > the objects > the statistics object counts, arms one alarm, and publishes a versioned snapshot to KV\n     → statistics capacity exceeded\n   ❯ src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n     → Cannot read properties of undefined (reading 'items')\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/learn/learn.test.ts > the objects > the statistics object counts, arms one alarm, and publishes a versioned snapshot to KV\nError: statistics capacity exceeded\n ❯ capacity src/durable-objects/LearnStats.ts:25:24\n     23|   constructor(readonly status: 400 | 413 | 503, message: string) { sup…\n     24| }\n     25| const capacity = () => new Refusal(413, 'statistics capacity exceeded'…\n       |                        ^\n     26| const invalid = () => new Refusal(400, 'invalid statistics input');\n     27| const recovery = () => new Refusal(503, 'statistics recovery required'…\n ❯ LearnStats.snapshot src/durable-objects/LearnStats.ts:220:49\n ❯ LearnStats.publish src/durable-objects/LearnStats.ts:235:18\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\nSerialized Error: { status: 413 }\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\nTypeError: Cannot read properties of undefined (reading 'items')\n ❯ src/learn/learn.test.ts:460:44\n    458|       for (const obj of [object, new LearnStats(state, {} as Env)]) {\n    459|         const snap = (await snapshot(obj)).snapshot;\n    460|         expect(kind === 'exposures' ? snap.items.A!['*']!.n : snap.ite…\n       |                                            ^\n    461|       }\n    462|       put.mockRestore();\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  1 failed (1)\n      Tests  2 failed | 5 passed | 10 skipped (17)\n   Start at  22:20:12\n   Duration  4.48s (transform 511ms, setup 0ms, collect 1.08s, tests 158ms, environment 0ms, prepare 2.29s)\n\n"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "finished_at": "2026-09-12T02:20:43.091Z",
+      "session_id": 55648
+    },
+    {
+      "label": "runtime_candidate2",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'cells materialize|the worked example|decays on the long horizon|the statistics object counts|W09.04|W10.01' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T02:20:58.384Z",
+      "captures": [
+        {
+          "chunk_id": "6907ed",
+          "wall_time_seconds": 1.001148039,
+          "session_id": 35775,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "8184e6",
+          "wall_time_seconds": 0.000002341,
+          "exit_code": 0,
+          "original_token_count": 124,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (17 tests | 10 skipped) 171ms\n\n Test Files  1 passed (1)\n      Tests  7 passed | 10 skipped (17)\n   Start at  22:21:01\n   Duration  5.95s (transform 617ms, setup 1ms, collect 1.34s, tests 171ms, environment 0ms, prepare 2.92s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T02:21:41.292Z",
+      "session_id": 35775
+    },
+    {
+      "label": "static_candidate1",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/LearnStats.ts src/learn/stats.ts src/learn/learn.test.ts --max-warnings 4 && git diff --check -- src/durable-objects/LearnStats.ts src/learn/stats.ts src/learn/learn.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T02:21:52.198Z",
+      "captures": [
+        {
+          "chunk_id": "e1de76",
+          "wall_time_seconds": 1.000868932,
+          "session_id": 79780,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9b33bd",
+          "wall_time_seconds": 0.00000234,
+          "exit_code": 2,
+          "original_token_count": 70,
+          "output": "src/durable-objects/LearnStats.ts(86,79): error TS2345: Argument of type '{ fatal: true; }' is not assignable to parameter of type 'TextDecoderConstructorOptions'.\n  Property 'ignoreBOM' is missing in type '{ fatal: true; }' but required in type 'TextDecoderConstructorOptions'.\n"
+        }
+      ],
+      "exit_code": 2,
+      "drained": true,
+      "finished_at": "2026-09-12T02:22:45.632Z",
+      "session_id": 79780
+    },
+    {
+      "label": "runtime_candidate3",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'cells materialize|the worked example|decays on the long horizon|the statistics object counts|W09.04|W10.01' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T02:22:57.552Z",
+      "captures": [
+        {
+          "chunk_id": "4c646e",
+          "wall_time_seconds": 1.000814135,
+          "session_id": 47691,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "10d9cb",
+          "wall_time_seconds": 0.000002581,
+          "exit_code": 0,
+          "original_token_count": 124,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (17 tests | 10 skipped) 189ms\n\n Test Files  1 passed (1)\n      Tests  7 passed | 10 skipped (17)\n   Start at  22:23:02\n   Duration  7.57s (transform 785ms, setup 0ms, collect 1.83s, tests 189ms, environment 0ms, prepare 3.45s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T02:23:29.635Z",
+      "session_id": 47691
+    },
+    {
+      "label": "static_candidate2",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/LearnStats.ts src/learn/stats.ts src/learn/learn.test.ts --max-warnings 4 && git diff --check -- src/durable-objects/LearnStats.ts src/learn/stats.ts src/learn/learn.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T02:23:29.635Z",
+      "captures": [
+        {
+          "chunk_id": "b8ccbb",
+          "wall_time_seconds": 1.001503675,
+          "session_id": 92294,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "92fb29",
+          "wall_time_seconds": 0.000002295,
+          "exit_code": 0,
+          "original_token_count": 100,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  259:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  260:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  260:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T02:24:49.392Z",
+      "session_id": 92294
+    },
+    {
+      "label": "source_stop",
+      "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';import crypto from 'node:crypto';import assert from 'node:assert/strict';\nconst sha=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');\nconst b=JSON.parse(fs.readFileSync('docs/remediation/design/W10.01/baseline.json','utf8'));\nconst owned=new Set(b.owned.map(x=>x.path)), protectedPins=b.pins.filter(x=>!owned.has(x.path));\nconst mismatches=protectedPins.filter(x=>sha(x.path)!==x.sha256).map(x=>x.path);assert.deepEqual(mismatches,[]);\nconsole.log(JSON.stringify({final_source_stop:{at:new Date().toISOString(),files:b.owned.map(x=>({path:x.path,sha256:sha(x.path)}))},protected_source_comparison:{checked:protectedPins.length,mismatches},records:{baseline:{path:'docs/remediation/design/W10.01/baseline.json',sha256:sha('docs/remediation/design/W10.01/baseline.json')},plan:{path:'docs/remediation/design/W10.01/plan.md',sha256:sha('docs/remediation/design/W10.01/plan.md')},admission:{path:'docs/remediation/evidence/W10.01/admission.json',sha256:sha('docs/remediation/evidence/W10.01/admission.json')}}}));\nNODE",
+      "started_at": "2026-09-12T02:25:10.405Z",
+      "captures": [
+        {
+          "chunk_id": "1f065f",
+          "wall_time_seconds": 0.241285786,
+          "exit_code": 0,
+          "original_token_count": 254,
+          "output": "{\"final_source_stop\":{\"at\":\"2026-09-12T02:25:10.844Z\",\"files\":[{\"path\":\"src/durable-objects/LearnStats.ts\",\"sha256\":\"608ac7c96d2517e2bcad42bd868a2da27e61a5e244bf09a89d3e62201e15733b\"},{\"path\":\"src/learn/stats.ts\",\"sha256\":\"6b42200d8a09a04b9af80bce289cee3e6e2a6d705434d37644784ec784a071ed\"},{\"path\":\"src/learn/learn.test.ts\",\"sha256\":\"ae49848dcfa62ee4e39c8e905331f930adb6b5c7f2be090186ae4005f8507fcb\"},{\"path\":\"docs/kit/02-api-reference.md\",\"sha256\":\"7b49fccbcf891b68c4a37c201f89848741e3b7c6a844c2bfbe3f5fa9c6c981ef\"}]},\"protected_source_comparison\":{\"checked\":99,\"mismatches\":[]},\"records\":{\"baseline\":{\"path\":\"docs/remediation/design/W10.01/baseline.json\",\"sha256\":\"5efe8d2a52a8863c8eb2861d8b0f2aef0ad8b17792f6531cbfb6457b5e1017a7\"},\"plan\":{\"path\":\"docs/remediation/design/W10.01/plan.md\",\"sha256\":\"d1f9beb705564a4a8cedb787c521a44b280ac22886b5e370e4fe3802968dbf8b\"},\"admission\":{\"path\":\"docs/remediation/evidence/W10.01/admission.json\",\"sha256\":\"37a99813ea8b0e575c55fca27850d9dc8fa7295074ec05b7e7acac66c549ee70\"}}}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T02:25:10.892Z",
+      "session_id": null
+    }
+  ]
+}

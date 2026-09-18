@@ -1,0 +1,431 @@
+{
+  "task_id": "W09.04",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T00:50:30.097Z",
+  "verdict": "pass",
+  "artifact_digest": "301969dacd8e2a18ecbf4d87555d649b6e7d3fa2a4a9521d99256d6dddc65a69",
+  "contract_digest": "504fa293e91fcae2a9c16f003374086884451a872997b5aec435073c1d4dd651",
+  "summary": "Independent frozen-source and fixed-runtime review passes the admitted local downstream handler acknowledgement containment. Lead disposition remains separate.",
+  "criteria": [
+    {
+      "id": "W09.04-C1",
+      "verdict": "pass",
+      "evidence": [
+        "Inspected all five production deltas and actual receipt fixtures: HTTP/application acknowledgement, version/kind and safe expected-count conservation are checked at fan and the ring-to-stats cascade. Missing, old, malformed or failed replies remain unknown/not attempted, without retries. Outer exception handling cannot return complete.",
+        "Ring accepted/cutoff/retained/indexed counts and attributed/eligible/weight-skipped credit counts remain distinct from acknowledged accumulator processing. LearnStats acknowledges processed/skipped only after save; mutation/save rejection invalidates cached state, including ambiguous committed-save cases. Alarm scheduling acknowledgement is separate from saved processing and publication.",
+        "Independent fixed runtime passed all 15 learn and 7 holdout cases, including actual ring/stats cascade, failure-after-commit reload, alarm rejection, receipt failures and bounded ring retention. Existing arithmetic and fallback semantics are unchanged."
+      ]
+    },
+    {
+      "id": "W09.04-C2",
+      "verdict": "pass",
+      "evidence": [
+        "Actual content afterResponse and outcomeToLearning consume incomplete receipts through fixed numeric nonthrowing diagnostics. Reviewed current caller group verifies held downstream work does not hold the shopper response, consent suppresses fan-out, valid receipts avoid diagnostics, and logger failure does not propagate.",
+        "Credit plans are prepared with the existing fresh barrier under ring serialization, then downstream replies are awaited outside that lock; the actual held-cascade case permits /recent while credit acknowledgement is pending. Existing selected W06.05 background barrier case passes.",
+        "Final consent setup uses actual initializePublication with synthetic conditional acknowledgement and preserves non-tombstone catalog reads/capabilities. Real readRevision KV failure still logs its fixed fallback and proceeds with defaults; a separately identified one-shot dependency rejection exercises propagated preparation failure. No stricter configuration-read guarantee is claimed."
+      ]
+    },
+    {
+      "id": "W09.04-C3",
+      "verdict": "pass",
+      "evidence": [
+        "All nine independently inspected source hashes exactly match STOP, current source, artifact and delta records. Before and after runtime: all 88 artifact pins and 73 protected pins match; nine forward and reverse patches reconstruct exact baseline/final bytes; current contract and artifact digests match.",
+        "Exact admitted compound invoked once independently: 24 selected passed, zero failures; 13 other consent cases intentionally unselected and not credited. Full captures below end with exit 0 and are drained.",
+        "Reused inspected final worker static compound 80768/7fa458: compiler, scoped lint and whitespace pass on frozen bytes. Lint has zero errors and the same eight baseline warnings, including exact locations/rules/messages; no independent static rerun.",
+        "All four failed worker candidates remain in worker.json. Final corrected source/runtime/static evidence supersedes, rather than erases, those failures. This verdict is bounded handler acknowledgement evidence, not full W09/W22 or release acceptance."
+      ]
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W09.04/plan.md",
+      "sha256": "59cad39c43a05eb1712a762faf291ec5f05a180f7fb000d3a435da504a00c811"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W09.04/artifact.json",
+      "sha256": "f8430d7dd8dad19af7bdf9aabd8a9ca8b6c5a0b4a358f5f7e350c99b3480a5a4"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W09.04/worker.json",
+      "sha256": "216fd61035a907dcc3c385eec4485be800c5a3c5070bf74b4f1ed8dfb85e4918"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/consent.test.ts -t 'W06.05 checks erasure in the background|W09.04' --maxWorkers=1 --minWorkers=1",
+    "session_id": 53218,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 24,
+      "failed": 0,
+      "unselected": 13,
+      "components": [
+        {
+          "fixture": "src/learn/learn.test.ts",
+          "passed": 15
+        },
+        {
+          "fixture": "src/learn/holdoutArms.test.ts",
+          "passed": 7
+        },
+        {
+          "fixture": "src/content/consent.test.ts",
+          "passed": 2,
+          "unselected": 13
+        }
+      ]
+    },
+    "captures": [
+      {
+        "chunk_id": "600c11",
+        "wall_time_seconds": 1.001545484,
+        "session_id": 53218,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "786e33",
+        "wall_time_seconds": 5.001232205,
+        "session_id": 53218,
+        "original_token_count": 71,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (15 tests) 55ms\n"
+      },
+      {
+        "chunk_id": "4ce29b",
+        "wall_time_seconds": 0.000001972,
+        "exit_code": 0,
+        "original_token_count": 664,
+        "output": " ✓ src/learn/holdoutArms.test.ts  (7 tests) 42ms\n\n Test Files  2 passed (2)\n      Tests  22 passed (22)\n   Start at  20:48:40\n   Duration  12.72s (transform 1.45s, setup 0ms, collect 3.63s, tests 97ms, environment 0ms, prepare 6.25s)\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 2,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 2,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (15 tests | 13 skipped) 50ms\n\n Test Files  1 passed (1)\n      Tests  2 passed | 13 skipped (15)\n   Start at  20:48:56\n   Duration  9.62s (transform 3.05s, setup 0ms, collect 4.73s, tests 50ms, environment 0ms, prepare 3.54s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "before": {
+      "capture": "1b1bfa",
+      "result": {
+        "at": "2026-09-12T00:47:54.398Z",
+        "artifact_digest": "301969dacd8e2a18ecbf4d87555d649b6e7d3fa2a4a9521d99256d6dddc65a69",
+        "manifest_sha256": "f8430d7dd8dad19af7bdf9aabd8a9ca8b6c5a0b4a358f5f7e350c99b3480a5a4",
+        "pins": 88,
+        "bad": [],
+        "protected_count": 73,
+        "protected_bad": [],
+        "deltas": [
+          {
+            "path": "src/learn/fan.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/durable-objects/DecisionRing.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/durable-objects/LearnStats.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/service.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/learn/route.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/learn/learn.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/learn/holdoutArms.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          }
+        ],
+        "basis": [
+          {
+            "path": "docs/remediation/design/W09.04/plan.md",
+            "sha256": "59cad39c43a05eb1712a762faf291ec5f05a180f7fb000d3a435da504a00c811"
+          },
+          {
+            "path": "docs/remediation/evidence/W09.04/artifact.json",
+            "sha256": "f8430d7dd8dad19af7bdf9aabd8a9ca8b6c5a0b4a358f5f7e350c99b3480a5a4"
+          },
+          {
+            "path": "docs/remediation/evidence/W09.04/worker.json",
+            "sha256": "216fd61035a907dcc3c385eec4485be800c5a3c5070bf74b4f1ed8dfb85e4918"
+          }
+        ]
+      },
+      "exit_status": 0
+    },
+    "after": {
+      "session_id": 83734,
+      "captures": [
+        "37f6ff",
+        "b2f5fe"
+      ],
+      "result": {
+        "at": "2026-09-12T00:49:23.212Z",
+        "artifact_digest": "301969dacd8e2a18ecbf4d87555d649b6e7d3fa2a4a9521d99256d6dddc65a69",
+        "manifest_sha256": "f8430d7dd8dad19af7bdf9aabd8a9ca8b6c5a0b4a358f5f7e350c99b3480a5a4",
+        "pins": 88,
+        "bad": [],
+        "protected_count": 73,
+        "protected_bad": [],
+        "deltas": [
+          {
+            "path": "src/learn/fan.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/durable-objects/DecisionRing.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/durable-objects/LearnStats.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/service.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/learn/route.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/learn/learn.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/learn/holdoutArms.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          }
+        ],
+        "basis": [
+          {
+            "path": "docs/remediation/design/W09.04/plan.md",
+            "sha256": "59cad39c43a05eb1712a762faf291ec5f05a180f7fb000d3a435da504a00c811"
+          },
+          {
+            "path": "docs/remediation/evidence/W09.04/artifact.json",
+            "sha256": "f8430d7dd8dad19af7bdf9aabd8a9ca8b6c5a0b4a358f5f7e350c99b3480a5a4"
+          },
+          {
+            "path": "docs/remediation/evidence/W09.04/worker.json",
+            "sha256": "216fd61035a907dcc3c385eec4485be800c5a3c5070bf74b4f1ed8dfb85e4918"
+          }
+        ]
+      },
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_before": {
+      "capture": "aa0311",
+      "result": {
+        "at": "2026-09-12T00:47:54.781Z",
+        "task": "W09.04",
+        "state": "verification",
+        "contract_digest": "504fa293e91fcae2a9c16f003374086884451a872997b5aec435073c1d4dd651",
+        "artifact_digest": "301969dacd8e2a18ecbf4d87555d649b6e7d3fa2a4a9521d99256d6dddc65a69"
+      },
+      "exit_status": 0
+    },
+    "contract_after": {
+      "capture": "b0b846",
+      "result": {
+        "at": "2026-09-12T00:49:23.444Z",
+        "task": "W09.04",
+        "state": "verification",
+        "contract_digest": "504fa293e91fcae2a9c16f003374086884451a872997b5aec435073c1d4dd651",
+        "artifact_digest": "301969dacd8e2a18ecbf4d87555d649b6e7d3fa2a4a9521d99256d6dddc65a69"
+      },
+      "exit_status": 0
+    },
+    "reviewed_source_reconciliation": {
+      "capture": "5da1d8",
+      "result": {
+        "at": "2026-09-12T00:48:35.905Z",
+        "source_stopped_at": "2026-09-12T00:44:23.288Z",
+        "freeze_contract": "504fa293e91fcae2a9c16f003374086884451a872997b5aec435073c1d4dd651",
+        "freeze_pins": 82,
+        "rows": [
+          {
+            "path": "src/learn/fan.ts",
+            "sha256": "75525fd6f79949563ff77144a8a8bb5c64eaa2514f26480b22fb8b8e3d915671",
+            "current": true,
+            "artifact": true,
+            "stop": true,
+            "delta": true
+          },
+          {
+            "path": "src/durable-objects/DecisionRing.ts",
+            "sha256": "491539a2f48cce07ae89dc8055988252e5c9f98a693c977c5615471535b9c7a9",
+            "current": true,
+            "artifact": true,
+            "stop": true,
+            "delta": true
+          },
+          {
+            "path": "src/durable-objects/LearnStats.ts",
+            "sha256": "c1a785ed0cede827145266dc999e55bb8f10791ad97bf2dc6cee58851c11af70",
+            "current": true,
+            "artifact": true,
+            "stop": true,
+            "delta": true
+          },
+          {
+            "path": "src/content/service.ts",
+            "sha256": "6690ba33d7f79552be967ab35e894179729a4c10009dc62cbd7b0ea7b51d5193",
+            "current": true,
+            "artifact": true,
+            "stop": true,
+            "delta": true
+          },
+          {
+            "path": "src/learn/route.ts",
+            "sha256": "3f39e74a1ac391a8e3b5a905a6d7f0cc69b717ebda044bf28de02c6491d23b41",
+            "current": true,
+            "artifact": true,
+            "stop": true,
+            "delta": true
+          },
+          {
+            "path": "src/learn/learn.test.ts",
+            "sha256": "e05e4491ed6837636118643880eb59855063efc37b11e17ec92d4de8370f2fa0",
+            "current": true,
+            "artifact": true,
+            "stop": true,
+            "delta": true
+          },
+          {
+            "path": "src/learn/holdoutArms.test.ts",
+            "sha256": "3e2ff5bd121e4bdad5a3c21351a7bbae272ea7597b6ef0e60c213414b8a0d947",
+            "current": true,
+            "artifact": true,
+            "stop": true,
+            "delta": true
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "f3bbd96edde29758d4a65327ef77ec633646c92cfbda13cc19adcd730f8cd1ca",
+            "current": true,
+            "artifact": true,
+            "stop": true,
+            "delta": true
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "sha256": "c7241e9f4b74b0006ec8a0af676b8d73390505417e377ac37b086630ae5b4e9d",
+            "current": true,
+            "artifact": true,
+            "stop": true,
+            "delta": true
+          }
+        ]
+      },
+      "exit_status": 0
+    },
+    "inspection": {
+      "source_captures": [
+        "858e2a",
+        "7fbd7c",
+        "196c3a",
+        "dc71e9",
+        "ed489d"
+      ],
+      "worker_candidate_captures": "7c22d9",
+      "worker_final_and_baseline_lint_capture": "2d27d1",
+      "qualification": "Reused complete pre-freeze actual-source reviews only after exact nine-hash reconciliation. Initial inventory display a538ed truncated repeated protected pin listings; full worker command captures and baseline lint were separately read in 7c22d9 and 2d27d1. All pin bytes were independently checked, not inferred from the display."
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "runtime-candidate-1 (34148/9629a5): 22 learning passes; both selected consent cases failed at pre-existing catalog publication preconditions before target assertions. Final fixture uses the actual accepted initialization path.",
+    "static-candidate-1 (8760/e4f820): compiler passed; lint failed at ten warnings, including two new empty logger callbacks; whitespace was not reached. Only added callbacks were corrected.",
+    "runtime-candidate-2 (37953/994fd1): 22 learning passes; selected consent failures exposed an incomplete storage override and an incorrect strict-config-failure expectation. Both were corrected without production policy changes.",
+    "static-candidate-2 (82387/30ff52): compiler failed on two missing lifecycle fixture fields; lint/whitespace were not reached. Synthetic catalog pieces now explicitly use live lifecycle.",
+    "Final worker runtime 28858/95e0b7 and static 80768/7fa458 supersede those candidates; independent frozen runtime 53218/4ce29b also passes. Expected fixed learning_incomplete diagnostics and existing Vite deprecation warning are retained in raw output."
+  ],
+  "limitations": [
+    "Local Node/Vitest with synthetic bindings, not deployed provider performance, customer acceptance or release approval. Thirteen unselected consent cases and broader suites were not run.",
+    "Processed denotes existing handler accumulator calls followed by acknowledged save, not unique logical events, model-unit correctness, displayed exposures, durable logical reconciliation or published lift. Alarm scheduling acknowledgement does not prove execution/publication.",
+    "Unknown HTTP/body/save acknowledgement may follow effects; no automatic retry of non-idempotent exposures/credits, raw outbox, DLQ/quarantine, new recovery resources or aggregate repair was introduced.",
+    "Fresh barrier checks are not an atomic late-erasure fence. Existing retention, duplicate-event, attribution/fold-horizon, full W09/F16/N10 and W22 obligations remain open.",
+    "Existing configuration fallback on KV read failure is preserved. Propagated preparation-exception coverage uses a clearly scoped dependency mock, not a new strict read guarantee.",
+    "Only the assigned review record was written by this reviewer. Root owns task acceptance and governance handoff."
+  ]
+}

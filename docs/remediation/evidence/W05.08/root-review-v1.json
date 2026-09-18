@@ -1,0 +1,123 @@
+{
+  "task_id": "W05.08",
+  "actor_id": "w01-lead",
+  "run_id": "/root",
+  "source_review": "Root inspected actual four-file implementation, then complete final five-file before/current diff (including fixture), against exact retained originals. Full scoped diff and original/final pins are retained in worker-checks.json; no root production edits.",
+  "observations": [
+    "Preference-only owned write and direct two-cookie mirror avoid behavioral/pointer/counter/FX path. Strict resolved owned reads and restrictive-cookie persistence precede personalized reads; manual assignment now denies refusal. Headerless internal/live snapshot projection is preserved; historical analytics remains unchanged.",
+    "Root caught an existing await-to-personalized-operation expiry window in getPersonalizationConfig and owned DO buildUpdate; requested existing principal assertions before those effects, within admitted C1/C2, no new suite.",
+    "DO never-set cold anonymous all-consenting preference request deliberately normalizes to404 per admitted C2; before implementation it acknowledged200. Existing cold refusal consent record still permits deliberate enable. This is bounded local behavior change, not an assertion of unchanged DO cold behavior or customer acceptance."
+  ],
+  "expiry_resolution": "Existing principal assertions now follow catalog/config await and precede FX/feature-variable/cookie work; owned DO buildUpdate takes optional principal. One both-host expiry hook remains within the same existing suite.",
+  "fixture_changes": "Three grouped tests; old general-owned-snapshot exposure assertion corrected to neutral; old preference I/O assertion corrected from3 reads/2 writes to1/1. Full actual diff inspected.",
+  "worker_proof_review": {
+    "path": "docs/remediation/evidence/W05.08/worker-checks.json",
+    "all_metadata_commands_exit_statuses_and_outputs_inspected": true,
+    "output_method": "Complete raw outputs retained. Root inspected actual diff and all unique test-output lines, deduplicating repetitive identical log lines only; no rerun. Orchestration display truncation affected an unrelated previous-task example, not the retained worker output or its reviewed output.",
+    "checks": [
+      {
+        "id": "K1-attempt1",
+        "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1",
+        "started": "2026-09-08 02:07:12 UTC",
+        "finished": "2026-09-08 02:09:31 UTC",
+        "exit_code": 1,
+        "output_chars": 69986,
+        "assessment": "22/24 passed. Two new-fixture setup/expectation defects: warmed DO's idempotent seeded set correctly avoids reseeding; recognized test grant used an anonymous-format subject and was rejected before request. Corrected fixture to retain actual qualification/decision positives and issue valid recognized-format synthetic subject. Also finalized root-requested expiry guards before affinity projection after catalog/config awaits before superseding validation. Full output retained."
+      },
+      {
+        "id": "K1-attempt2",
+        "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1",
+        "started": "2026-09-08 02:10:18 UTC",
+        "finished": "2026-09-08 02:11:35 UTC",
+        "exit_code": 0,
+        "output_chars": 69195,
+        "assessment": "PASS 24/24, full output retained; includes all existing boundary regressions plus three grouped W05.08 tests."
+      },
+      {
+        "id": "app-noEmit",
+        "command": "node node_modules/typescript/bin/tsc --noEmit",
+        "started": "2026-09-08 02:11:53 UTC",
+        "finished": "2026-09-08 02:12:52 UTC",
+        "exit_code": 0,
+        "output_chars": 0,
+        "assessment": "PASS exit0; empty stdout/stderr. App compiler only; no SDK compiler/build or extra suite."
+      },
+      {
+        "id": "scoped-diff",
+        "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport crypto from 'node:crypto';\nimport { spawnSync } from 'node:child_process';\nconst rows = JSON.parse(fs.readFileSync('docs/remediation/evidence/W05.08/before-sources-v1.json', 'utf8'));\nconst expected = ['src/routes/realtime.ts', 'src/services/RealtimeSegmentEngine.ts', 'src/services/SessionManager.ts', 'src/durable-objects/ShopperReflex.ts', 'src/routes/realtime.sdkContract.test.ts'];\nif (JSON.stringify(rows.map(r => r.path).sort()) !== JSON.stringify([...expected].sort())) throw new Error('Unexpected baseline scope');\nconst sha = v => crypto.createHash('sha256').update(v).digest('hex');\nconst pins = [];\nfor (const r of rows) {\n  if (sha(r.contents) !== r.sha256) throw new Error('Baseline identity mismatch: ' + r.path);\n  const now = fs.readFileSync(r.path, 'utf8');\n  pins.push({ path: r.path, before: r.sha256, after: sha(now), beforeBytes: Buffer.byteLength(r.contents), afterBytes: Buffer.byteLength(now) });\n  const diff = spawnSync('diff', ['-u', '--label', r.path + ' (before W05.08)', '--label', r.path + ' (candidate)', '-', r.path], { input: r.contents, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });\n  process.stdout.write(diff.stdout); process.stderr.write(diff.stderr);\n  if (diff.error || diff.status > 1 || diff.status === null) throw diff.error ?? new Error('Scoped diff failed');\n}\nconst whitespace = spawnSync('git', ['diff', '--check', '--', ...expected], { encoding: 'utf8' });\nprocess.stdout.write(whitespace.stdout); process.stderr.write(whitespace.stderr);\nif (whitespace.status !== 0) throw new Error('Scoped whitespace check failed');\nconsole.log('SCOPED_PINS ' + JSON.stringify(pins));\nconsole.log('SCOPED_DIFF_PASS: five declared source/fixture files; retained pre-task originals verified; git diff --check passed. Unrelated dirty files are not attributed to this task.');\nNODE",
+        "started": "2026-09-08 02:12:37 UTC",
+        "finished": "2026-09-08 02:12:38 UTC",
+        "exit_code": 0,
+        "output_chars": 46726,
+        "assessment": "PASS exit0; complete unified diff against exact retained before-sources-v1.json, all five baseline hashes verified, five candidate pins printed, scoped git diff --check passed."
+      }
+    ],
+    "rework": [
+      "First exact K1 failed22/24: new positive fixture expected warmed DO to reseed although its existing seeded set correctly skips redundant work; corrected assertion retains actual qualification/decision and session seeding/enhanced-variable positives.",
+      "Same run's recognized-missing setup was rejected by the real issuer because it used anonymous subject syntax with recognized kind; corrected to a valid synthetic recognized subject before retest.",
+      "Root early source review requested principal expiry rechecks after catalog/config awaits, before decisions/enhanced variables/profile cookies. Completed including before affinity projection, with one grouped both-host expiry hook; no scope/suite expansion."
+    ],
+    "captured_record_output_chars": 200885
+  },
+  "artifact_digest": "fc4c7f0be3ceed7455bcce7e5562a6390b4ba70f19c2960956dac90728a36377",
+  "worker_final_source_pins_match_frozen_artifact": true,
+  "graph": "Single exact K1 local packages-external import graph, write:false;99 local inputs/112 total artifact pins. No SDK rebuild or extra matrix.",
+  "worktree": {
+    "command": "git status --short",
+    "entry": " D data/optimizely-cache.db-shm\n D data/optimizely-cache.db-wal\n M docs/api/01-rest-endpoints.md\n M docs/architecture/20-scope-truth-ledger.md\n M docs/architecture/25-identity-stitching.md\n M docs/architecture/35-audit-verification-and-source-of-truth.md\n M docs/kit/02-api-reference.md\n M examples/usage-examples.js\n M public/meridian/engine.bundle.js\n M public/meridian/meridian.js\n M public/sdk/edge-personalization.esm.js\n M public/sdk/edge-personalization.js\n M public/storefront.js\n M scripts/acceptance-run.mjs\n M scripts/console-operator.mjs\n M scripts/console-preview.sh\n M scripts/dev-token.mjs\n M scripts/holdout-proof.mjs\n M scripts/identity-proof.mjs\n M scripts/import-content.mjs\n M scripts/rehearse-storefront.sh\n M scripts/seed-coach-content.mjs\n M src/config/versionedStore.ts\n M src/connectors/DecisionProvider.ts\n M src/content/consent.test.ts\n M src/content/consent.ts\n M src/content/service.ts\n M src/demos/brighthour/composer.ts\n M src/demos/brighthour/offerDesk.ts\n M src/demos/meridian/MeridianReflex.ts\n M src/durable-objects/PersonalizationWebSocket.ts\n M src/durable-objects/RateLimiter.ts\n M src/durable-objects/ShopperReflex.ts\n M src/durable-objects/StateManager.ts\n M src/identity/assertion.ts\n M src/identity/erase.ts\n M src/identity/identity.test.ts\n M src/identity/link.ts\n M src/index.ts\n M src/middleware/auth.ts\n M src/middleware/edgeAccess.test.ts\n M src/middleware/error.ts\n M src/ops/monitor.ts\n M src/reflex/shopperReflex.consent.test.ts\n M src/reflex/shopperReflex.identity.test.ts\n M src/routes/ai.ts\n M src/routes/aiScene.ts\n D src/routes/api.ts\n M src/routes/auth.test.ts\n M src/routes/auth.ts\n M src/routes/cdp.ts\n M src/routes/config.ts\n M src/routes/content.test.ts\n M src/routes/content.ts\n M src/routes/decisions.ts\n M src/routes/funnel.ts\n M src/routes/health.ts\n M src/routes/identity.test.ts\n M src/routes/identity.ts\n M src/routes/live.ts\n M src/routes/liveOps.ts\n M src/routes/operator.ts\n M src/routes/optimizely.ts\n M src/routes/pixel.ts\n M src/routes/realtime.sdkContract.test.ts\n M src/routes/realtime.ts\n M src/routes/sort.test.ts\n M src/routes/sort.ts\n M src/routes/tracking.ts\n M src/routes/webhook.ts\n M src/sdk/README.md\n M src/sdk/core.test.ts\n M src/sdk/core.ts\n M src/sdk/emit.test.ts\n M src/sdk/emit.ts\n M src/sdk/host.ts\n M src/sdk/identify.test.ts\n M src/sdk/identify.ts\n M src/sdk/identity.ts\n M src/sdk/listen.test.ts\n M src/sdk/listen.ts\n M src/sdk/session.test.ts\n M src/sdk/testHost.ts\n M src/sdk/types.ts\n M src/services/CDPService.ts\n M src/services/EventDispatcher.ts\n M src/services/FeatureVariableManager.ts\n M src/services/OptimizelyService.ts\n M src/services/RealtimeSegmentEngine.ts\n M src/services/SessionManager.identity.test.ts\n M src/services/SessionManager.ts\n M src/services/odpLoop.ts\n M src/services/sceneGen.ts\n M src/services/sessionDefer.test.ts\n M src/tenancy/middleware.ts\n M src/types/env.ts\n M tsconfig.json\n?? AGENTS.md\n?? docs/Affinity-Outcome-Learning-Design.html\n?? docs/architecture/34-independent-adversarial-audit.md\n?? docs/architecture/35-reconciliation-evidence/\n?? docs/architecture/36-remediation-governance-and-execution.md\n?? docs/remediation/\n?? scripts/lib/\n?? scripts/remediation/\n?? src/auth/signing-config.boundary.test.ts\n?? src/auth/signingConfig.mjs\n?? src/identity/consentContinuity.ts\n?? src/identity/sessionCapability.ts\n?? src/index.api-boundary.test.ts\n?? src/middleware/auth.claims-boundary.test.ts\n?? src/middleware/auth.refresh-boundary.test.ts\n?? src/services/telemetry.boundary.test.ts\n?? src/telemetry.boundary.test.ts\n",
+    "final": " D data/optimizely-cache.db-shm\n D data/optimizely-cache.db-wal\n M docs/api/01-rest-endpoints.md\n M docs/architecture/20-scope-truth-ledger.md\n M docs/architecture/25-identity-stitching.md\n M docs/architecture/35-audit-verification-and-source-of-truth.md\n M docs/kit/02-api-reference.md\n M examples/usage-examples.js\n M public/meridian/engine.bundle.js\n M public/meridian/meridian.js\n M public/sdk/edge-personalization.esm.js\n M public/sdk/edge-personalization.js\n M public/storefront.js\n M scripts/acceptance-run.mjs\n M scripts/console-operator.mjs\n M scripts/console-preview.sh\n M scripts/dev-token.mjs\n M scripts/holdout-proof.mjs\n M scripts/identity-proof.mjs\n M scripts/import-content.mjs\n M scripts/rehearse-storefront.sh\n M scripts/seed-coach-content.mjs\n M src/config/versionedStore.ts\n M src/connectors/DecisionProvider.ts\n M src/content/consent.test.ts\n M src/content/consent.ts\n M src/content/service.ts\n M src/demos/brighthour/composer.ts\n M src/demos/brighthour/offerDesk.ts\n M src/demos/meridian/MeridianReflex.ts\n M src/durable-objects/PersonalizationWebSocket.ts\n M src/durable-objects/RateLimiter.ts\n M src/durable-objects/ShopperReflex.ts\n M src/durable-objects/StateManager.ts\n M src/identity/assertion.ts\n M src/identity/erase.ts\n M src/identity/identity.test.ts\n M src/identity/link.ts\n M src/index.ts\n M src/middleware/auth.ts\n M src/middleware/edgeAccess.test.ts\n M src/middleware/error.ts\n M src/ops/monitor.ts\n M src/reflex/shopperReflex.consent.test.ts\n M src/reflex/shopperReflex.identity.test.ts\n M src/routes/ai.ts\n M src/routes/aiScene.ts\n D src/routes/api.ts\n M src/routes/auth.test.ts\n M src/routes/auth.ts\n M src/routes/cdp.ts\n M src/routes/config.ts\n M src/routes/content.test.ts\n M src/routes/content.ts\n M src/routes/decisions.ts\n M src/routes/funnel.ts\n M src/routes/health.ts\n M src/routes/identity.test.ts\n M src/routes/identity.ts\n M src/routes/live.ts\n M src/routes/liveOps.ts\n M src/routes/operator.ts\n M src/routes/optimizely.ts\n M src/routes/pixel.ts\n M src/routes/realtime.sdkContract.test.ts\n M src/routes/realtime.ts\n M src/routes/sort.test.ts\n M src/routes/sort.ts\n M src/routes/tracking.ts\n M src/routes/webhook.ts\n M src/sdk/README.md\n M src/sdk/core.test.ts\n M src/sdk/core.ts\n M src/sdk/emit.test.ts\n M src/sdk/emit.ts\n M src/sdk/host.ts\n M src/sdk/identify.test.ts\n M src/sdk/identify.ts\n M src/sdk/identity.ts\n M src/sdk/listen.test.ts\n M src/sdk/listen.ts\n M src/sdk/session.test.ts\n M src/sdk/testHost.ts\n M src/sdk/types.ts\n M src/services/CDPService.ts\n M src/services/EventDispatcher.ts\n M src/services/FeatureVariableManager.ts\n M src/services/OptimizelyService.ts\n M src/services/RealtimeSegmentEngine.ts\n M src/services/SessionManager.identity.test.ts\n M src/services/SessionManager.ts\n M src/services/odpLoop.ts\n M src/services/sceneGen.ts\n M src/services/sessionDefer.test.ts\n M src/tenancy/middleware.ts\n M src/types/env.ts\n M tsconfig.json\n?? AGENTS.md\n?? docs/Affinity-Outcome-Learning-Design.html\n?? docs/architecture/34-independent-adversarial-audit.md\n?? docs/architecture/35-reconciliation-evidence/\n?? docs/architecture/36-remediation-governance-and-execution.md\n?? docs/remediation/\n?? scripts/lib/\n?? scripts/remediation/\n?? src/auth/signing-config.boundary.test.ts\n?? src/auth/signingConfig.mjs\n?? src/identity/consentContinuity.ts\n?? src/identity/sessionCapability.ts\n?? src/index.api-boundary.test.ts\n?? src/middleware/auth.claims-boundary.test.ts\n?? src/middleware/auth.refresh-boundary.test.ts\n?? src/services/telemetry.boundary.test.ts\n?? src/telemetry.boundary.test.ts\n",
+    "same_status_membership": true,
+    "limitations": "Status membership preserves pre-existing dirt/deletions; not a claim that every unrelated dirty byte was independently audited."
+  },
+  "independent_review": {
+    "record": {
+      "path": "docs/remediation/evidence/W05.08/review-v1.md",
+      "sha256": "21b1ac212d2feb2238ef421c5e13a14a09d85d4b299083a6cd9b2db985b9a6f3"
+    },
+    "proof": {
+      "path": "docs/remediation/evidence/W05.08/review-checks-v1.json",
+      "sha256": "e18044b04bf2bc9915c9491f1c5a88ecf208e489e7c3003ad4d674fc8bd5311c"
+    },
+    "completed": "2026-09-08T02:26:35Z",
+    "criteria": [
+      {
+        "id": "W05.08-C1",
+        "verdict": "pass",
+        "claim": "local_synthetic",
+        "basis": "Strict owned session snapshot/cookie intersection and necessary refusal persistence precede creation/seed/qualification/FX/enhanced variables/private projection. Either false produces empty personalization/segments or null affinity/stage; manual assignment403 on both hosts. Target/expiry guards after owned/config/catalog/decision awaits, strict read/null/write/forward/recognized-missing failures and consented cold/returning positives examined. No atomic concurrent revocation claim."
+      },
+      {
+        "id": "W05.08-C2",
+        "verdict": "pass",
+        "claim": "local_synthetic",
+        "basis": "Owned session preferences perform one strict get and one preference-only put; existing counters/timestamps/profile and pointer unchanged. Direct two-switch consent cookies only. Cookie false restricts omitted switches, explicit current body true can enable; cold refusal necessary-only skeleton; cold all-true404; write failures unacknowledged. DO consent state/method and effective response inspected."
+      },
+      {
+        "id": "W05.08-C3",
+        "verdict": "pass",
+        "claim": "source_confirmed",
+        "basis": "Actual five-file before/final diffs and current dependency/helper/provider/caller sources inspected; all112 physical pins and99 recorded local inputs match. Worker failed and superseding runs, empty successful app noEmit and full scoped diff reviewed; exact independent K1 once24/24. Historical qualification records preserve W05.07 proof/artifact bytes. No additional suite/compiler/build/browser smoke."
+      }
+    ],
+    "exact_K1_once": "24/24; exit0; full69433-character capture reviewed by root via every distinct output line, all raw chunks retained.",
+    "physical_identity": "Independent112 pins/99 local inputs, artifact/contract digests, five originals and exact worker scoped diff all match; root checked actual file hashes of both final reviewer records.",
+    "limits": [
+      "Local synthetic Hono/capability/session/DO stores and provider seams only. Actual MockSegmentProvider/MockDecisionProvider/FeatureVariableManager implementations observed; not live vendor FX/audience acceptance. Existing W05.07 actual service/cache/dispatcher positive with synthetic SDK creation remains in passing K1.",
+      "Never-set all-true DO preference404 is explicitly admitted normalization of prior200; existing cold refusal can enable. Historical owned analytics and headerless internal/live snapshot/identity behavior preserved.",
+      "Recorded packages-external local runtime graph and actual imports inspected, not independently rebuilt/emitted. Type-only/application-wide dependency closure is not claimed by99 runtime inputs. Worker app compiler used ordinary project configuration; no temporary-cache isolation claim or cache cleanup.",
+      "Neutral server responses do not establish UI clearing. No native/workerd/deployed/customer/SLO/release, global absent-state/necessary-record retention policy, atomic copied-grant revocation or complete W05/finding closure.",
+      "Reviewer changed only the two assigned review records; lead alone accepts and handles tracker/consistency checks."
+    ]
+  },
+  "lead_disposition": {
+    "status": "accepted",
+    "at": "2026-09-08T02:28:34Z",
+    "criteria": [
+      "W05.08-C1",
+      "W05.08-C2",
+      "W05.08-C3"
+    ],
+    "scope": "Bounded local task only; required final tracker consistency checks pending separately."
+  },
+  "limits": "Bounded local owned preference/read/manual-segment consent only, both hosts. Actual local Hono/capability/session/DO and provider implementations with synthetic stores/destinations; no live vendor, native UI clearing, workerd/deployed latency/SLO/customer or release acceptance. Never-set all-consenting DO preference404 is an admitted normalization; existing cold refusal can enable. Headerless internal/live/identity and historical analytics remain unchanged. Full W05/finding/gate, provider webhook trust/preview/datafile, global absent-state/necessary-record retention/historic destinations, D01/D03/D06 and atomic copied-grant revocation remain open. SDK/source/bundles unchanged; historical whole-task evidence remains qualified, not reaccepted."
+}

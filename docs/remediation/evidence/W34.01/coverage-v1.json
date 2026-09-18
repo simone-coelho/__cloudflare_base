@@ -1,0 +1,90 @@
+{
+  "before": {
+    "id": "W34",
+    "canonical": {
+      "gate_scope": "G0 egress / G2 promise / G3 enablement",
+      "full_scope": "Deployment-enforced external-model policy with off making zero calls. A service name does not waive no-runtime-inference. Restrict authorized destinations/data/candidates/budgets where any external seam is accepted, and deliver controlled immutable offline-table publication if promised. Verify fallback, cancellation where supported, replay and privacy.",
+      "finding_refs": "F30",
+      "sizing_owner": "S disable → M approved table/seam delivery; OL/D + S/P/C"
+    },
+    "title": "External-model policy and offline tables",
+    "gates": [
+      "G0",
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F30"
+    ],
+    "proposed_owner": "OL/D + S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W34",
+    "canonical": {
+      "gate_scope": "G0 egress / G2 promise / G3 enablement",
+      "full_scope": "Deployment-enforced external-model policy with off making zero calls. A service name does not waive no-runtime-inference. Restrict authorized destinations/data/candidates/budgets where any external seam is accepted, and deliver controlled immutable offline-table publication if promised. Verify fallback, cancellation where supported, replay and privacy.",
+      "finding_refs": "F30",
+      "sizing_owner": "S disable → M approved table/seam delivery; OL/D + S/P/C"
+    },
+    "title": "External-model policy and offline tables",
+    "gates": [
+      "G0",
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F30"
+    ],
+    "proposed_owner": "OL/D + S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W34-F30-OFF",
+          "description": "Bounded deployment-code OFF containment of the live external-scoring callsite only. Authorized seams, controlled immutable table publication, related customer wording/privacy/cancellation/replay completeness and deployed/full F30 acceptance remain uncovered."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W34-F30-OFF",
+          "task_id": "W34.01",
+          "task_criterion_id": "W34.01-C1"
+        },
+        {
+          "criterion_id": "W34-F30-OFF",
+          "task_id": "W34.01",
+          "task_criterion_id": "W34.01-C2"
+        }
+      ],
+      "task_ids": [
+        "W34.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

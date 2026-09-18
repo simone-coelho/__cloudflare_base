@@ -1,0 +1,58 @@
+{
+  "task_id": "W07.05",
+  "at": "2026-09-17T16:40:46.828Z",
+  "before": "945b920064ee63ff8557bd7d8fbdaa012823cc3cbd5962bad2631ae1690aaf5c",
+  "after": "d6b0a2d4a31c5055c4f318a01962ab21bb911aed22abdc2bbb1dfea9fe8e4969",
+  "contract_digest": "d6b0a2d4a31c5055c4f318a01962ab21bb911aed22abdc2bbb1dfea9fe8e4969",
+  "previous_tracker_sha256": "90f97efde7654aa10e321f0175ed320f3111f5225b28308cdf7eedbeed0cfd4f",
+  "scope": "Role/evidence-recovery-only admission for unchanged original W07 C1-C7,33 outputs,243 pins,210 protected dependencies and existing focused checks. Product SOURCE STOP; no implementation or scope change.",
+  "change": {
+    "previous_assignments": {
+      "implementer": "w0705-worker",
+      "independent_reviewer": "w0705-reviewer",
+      "lead": "w01-lead"
+    },
+    "current_assignments": {
+      "implementer": "w0705-worker-r2",
+      "independent_reviewer": "w0705-reviewer-r2",
+      "lead": "w01-lead"
+    },
+    "actors": [
+      {
+        "id": "w0705-worker-r2",
+        "kind": "agent",
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "run_id": "/root/w0705_recover",
+        "description": "Replacement W07 evidence-recovery worker after system restart; no product edits or repeated checks under this episode."
+      },
+      {
+        "id": "w0705-reviewer-r2",
+        "kind": "agent",
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "run_id": "/root/w0705_review_r2",
+        "description": "Distinct replacement whole-original-W07 reviewer; read-only preparation, review.json and exact K6 only after frozen GO."
+      }
+    ],
+    "reason": "System restart removed all prior agents and pending board session97152. Worker finalization was interrupted; surviving worker.json is not complete. Preserve original actors, attempts and timestamps."
+  },
+  "baseline": {
+    "worker": {
+      "path": "docs/remediation/evidence/W07.05/worker.json",
+      "sha256": "abdd4bce019fc7c6dd9b195ec6b6b93a51058a8b9a844646b6dc832ad13d3879",
+      "bytes": 1524789
+    },
+    "case": "19 attempts and33 dirty baselines survived. Root verified saved final primary integrity; K4.3/queueAffected.1/bundleRepeat.1 each match current243pins;210 protected dependencies unchanged. Existing tracker exactly matches pre-restart90f97e prior. No test/process survived or is credited merely from memory."
+  },
+  "acceptance": "Finish exact source-qualified worker handoff without product edits or rerunning valid checks. Then distinct frozen whole-original-W07 review and exact K6 new groups only. C7/K7/full/live/history/customer/provider/release acceptance remains open.",
+  "checks": "Retain K1.3 67pass/K3.3 89pass subject to exact later-delta qualification. K2.2 remains failed43pass1fail; corrected queueAffected.1 supplies1pass, qualified component reuse only. K4.3 passed static0errors216warnings; bundleRepeat.1 exact generated-byte equality. Recover warning multiset/deltas from surviving bytes, never invent lost finalization or relabel original runs.",
+  "dependencies": "All existing W01/W04/W05/W06/D06 dependencies, original preflight and fixture amendment remain unchanged. No new user/privacy decision.",
+  "ownership": {
+    "worker": "Only docs/remediation/evidence/W07.05/worker.json after board GO: preserve all existing originals/attempts/metadata and append explicitly attributed recovery/deltas/pins/warning comparison/current STOP. No product/test/config edits or tests/build/lint.",
+    "reviewer": "Read-only preparation now. Only docs/remediation/evidence/W07.05/review.json and exact existing K6 after root frozen GO; no product writes or subdelegation.",
+    "lead": "Existing tracker/journal/admission/freeze/disposition/RESUME only."
+  },
+  "rollback": "Admission changes roles/records only; all product bytes remain stopped. Any concrete defect requires bounded sole-worker rework admission. Preserve old evidence and pre-existing dirty work.",
+  "authority": "Existing ordered local implementation/review mandate. No deployment/cloud/resource/credential/customer-data/provider/external operations, commit/merge/push, broad CI or new tracker/framework."
+}

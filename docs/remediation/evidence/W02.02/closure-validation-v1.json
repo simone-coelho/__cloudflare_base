@@ -1,0 +1,282 @@
+{
+  "at": "2026-09-07T02:11:24.962Z",
+  "journal_seq": 57,
+  "previous": {
+    "path": "docs/remediation/evidence/W02.02/tracker-admitted.json",
+    "sha256": "636e3820472f7871d2f302d00cac0a4369558a51bb9d2735953b1510e5d1c1b9",
+    "journal_seq": 51
+  },
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "code": "stale_proof",
+      "message": "W01.01 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02 artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01 artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01 artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01 artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E1 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E1 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E1 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W01.01-E1 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E2 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E2 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E2 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W01.01-E2 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E1 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E1 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E2 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E2 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01-E1 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W02.01-E1 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W02.01-E2 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W02.01-E2 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E3 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E3 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E3 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E3 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W01.02-E3 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E4 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E4 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E4 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.02-E4 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W01.02-E4 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "limits",
+      "message": "Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker."
+    }
+  ],
+  "status": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=2, unscoped=39\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=3, closed=1; evidence records=12\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W02.02 — After actual corrected closure validation passes, admit evidence-only W02.01 plan-v2 then W01.02 plan-v3 current-source revalidation; no engine edits or inventory restart.\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02 artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W02.01 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W02.01 artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01 artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01 artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE revalidation_required: W01.01-E1 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE revalidation_required: W01.01-E2 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W02.01-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E1 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE revalidation_required: W02.01-E1 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE stale_proof: W02.01-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E2 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE revalidation_required: W02.01-E2 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE revalidation_required: W01.02-E3 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE revalidation_required: W01.02-E4 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE limits: Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker.\nNo task, finding, package or gate was changed by this command."
+}

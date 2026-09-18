@@ -1,0 +1,191 @@
+{
+  "task": "W23.01",
+  "actor": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "source_stopped_pending_independent_review",
+  "authority": {
+    "source_go_at": "2026-09-12T04:09:57.060Z",
+    "resumed_source_go_at": "2026-09-12T04:12:25.998Z",
+    "journal_seq": 1116,
+    "contract_digest": "e6cc73fc693932020d5e81e74563a38a03c5eb4349fcef5c99e6aaef09fa10b7",
+    "plan": {
+      "path": "docs/remediation/design/W23.01/plan-r2.md",
+      "sha256": "8a00c0ad8fd77f7efe37eb9c3894c15395ac968949a03d913de8cde34480c477"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W23.01/baseline.json",
+      "sha256": "eaf65ad11ae9a16e7a0daddf7309f2d625a5f0ec32b56459360744d1151bea18"
+    },
+    "admission": "docs/remediation/evidence/W23.01/admission-r2.json",
+    "original_admission": "docs/remediation/evidence/W23.01/admission.json"
+  },
+  "implemented": [
+    "Monotonic per-counter reference time with late incoming weight decayed to that reference. Shared exposure and per-reward success helper updates item and slot counters without retroactively re-aging acknowledged mass.",
+    "Remove snapshot numeric rounding from counts, memoized slot-rate hierarchy, baseline/prior strength, estimate and lift; JSON numeric values flow unchanged into existing evidence gates and raw decision explanations.",
+    "Exactly two grouped additions: six arrival orders, weighted closed-form item/slot mass, split/hourly merge, duplicate-add behavior, actual DO acknowledged restart/publication; rare and concentrated rates, near-nMin refusal, zero-reference prior and actual decision/raw explanation/gamma0/legacy snapshot behavior.",
+    "Preserve existing formulas, clamps, prior interpretation, schema, gamma0 and byte limits; document forward-only arithmetic and presentation/history/size limitations."
+  ],
+  "failures_and_superseding_validation": [
+    {
+      "kind": "selector_correction_before_runtime",
+      "original_plan": "docs/remediation/design/W23.01/plan.md",
+      "correction": "The original unqualified W09.04 selector also matched a second holdout-file case (14 instead of intended13). Worker paused after stats.ts-only patch, with no tests yet; root retained original admission and issued plan-r2/admission-r2 narrowing the selector to W09.04 reports acknowledged. No runtime executed under the old selector.",
+      "resumed_source_go_at": "2026-09-12T04:12:25.998Z"
+    }
+  ],
+  "limitations": [
+    "Forward accumulation and estimation precision only, within JavaScript floating-point tolerance, not bitwise event-order identity.",
+    "No repair/reset of damaged persisted counters or old rounded snapshots/reports/archives. Supplied legacy snapshot values remain consumed as supplied.",
+    "No timestamp/lateness policy: existing valid future timestamps and ingestion-integrity gaps remain residual. No accumulation generation transition, historical rebuild/refold, reward/currency policy or W22/W24/W30 reconstruction assurance.",
+    "Repeated inputs continue adding evidence; no idempotency, automatic retry/replay or reconciliation claim.",
+    "Existing byte budgets remain; longer full-precision numeric JSON can reach them earlier. Human receipt sentences and other existing presentation formatting may round.",
+    "Local synthetic fixture evidence only; no native/deployed performance, scientific/customer acceptance or complete W23/F18 closure. No external/customer/cloud/deploy/commit actions."
+  ],
+  "capture_notes": "Started_at is command invocation time; finished_at is observed terminal-drain time. Full tool captures retain exact output, session/chunk IDs and exits. Lead entry/baseline/direct admission reused, not rerun by worker. Source inspections and patches are not represented as acceptance test executions.",
+  "final_results": {
+    "runtime": {
+      "passed": 13,
+      "skipped": 41,
+      "total": 54,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 53140,
+      "chunk_id": "174e16",
+      "check": "W23.01-K1"
+    },
+    "compiler": {
+      "passed": true,
+      "exit_code": 0,
+      "drained": true,
+      "command_component": 1,
+      "session_id": 37901
+    },
+    "lint": {
+      "passed": true,
+      "errors": 0,
+      "warnings": 3,
+      "baseline_warnings": 3,
+      "new_warnings": 0,
+      "exit_code": 0,
+      "drained": true,
+      "command_component": 2,
+      "session_id": 37901
+    },
+    "whitespace": {
+      "passed": true,
+      "exit_code": 0,
+      "drained": true,
+      "command_component": 3,
+      "session_id": 37901
+    },
+    "static_aggregate": {
+      "passed": true,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 37901,
+      "chunk_id": "0a0187",
+      "check": "W23.01-K2"
+    },
+    "protected": {
+      "passed": true,
+      "expected": 105,
+      "matched": 105
+    },
+    "independent_review": {
+      "status": "not_performed_by_implementer"
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-12T04:17:54.596Z",
+    "files": [
+      {
+        "path": "src/learn/stats.ts",
+        "sha256": "3c833a226f8bf12bfc08a04ea8cdf436f30d7764ea8ef0fe1ce25b1f59b77c06"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "4cc839100708f1f57d5958a8b6a48e602b22f6aec7a3e26b9d6b7c3c8beb5a4b"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "662da01df40744564ad8c0fdeb58183ffb2844ac9a5fb211384900aacfd26c7f"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 105,
+    "matched": 105,
+    "mismatches": []
+  },
+  "command_captures": [
+    {
+      "label": "runtime_candidate_1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/hourly.test.ts src/learn/phase3.test.ts src/learn/holdoutArms.test.ts -t 'W23.01|the worked example|decays on the long horizon|W10.01|W10.02|W09.04 reports acknowledged|the statistics object counts|two accumulators merge|a prior in force|is personalized, at γ 0' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T04:15:41.315Z",
+      "captures": [
+        {
+          "chunk_id": "68b540",
+          "wall_time_seconds": 1.001210699,
+          "session_id": 53140,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "174e16",
+          "wall_time_seconds": 0.000001993,
+          "exit_code": 0,
+          "original_token_count": 170,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (21 tests | 11 skipped) 299ms\n ✓ src/learn/hourly.test.ts  (16 tests | 15 skipped) 3ms\n ✓ src/learn/holdoutArms.test.ts  (7 tests | 6 skipped) 9ms\n ✓ src/learn/phase3.test.ts  (10 tests | 9 skipped) 4ms\n\n Test Files  4 passed (4)\n      Tests  13 passed | 41 skipped (54)\n   Start at  00:15:44\n   Duration  14.62s (transform 1.17s, setup 0ms, collect 3.67s, tests 315ms, environment 0ms, prepare 7.89s)\n\n"
+        }
+      ],
+      "session_id": 53140,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T04:16:18.080Z"
+    },
+    {
+      "label": "static_candidate_1",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/stats.ts src/learn/learn.test.ts --max-warnings 3 && git diff --check -- src/learn/stats.ts src/learn/learn.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T04:16:23.473Z",
+      "captures": [
+        {
+          "chunk_id": "483437",
+          "wall_time_seconds": 1.001021492,
+          "session_id": 37901,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "0a0187",
+          "wall_time_seconds": 0.000002631,
+          "exit_code": 0,
+          "original_token_count": 100,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  391:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  392:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  392:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 37901,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T04:17:47.073Z"
+    },
+    {
+      "label": "final_source_stop_and_protected_pins",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=path=>createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\");const baseline=\"docs/remediation/design/W23.01/baseline.json\",b=JSON.parse(fs.readFileSync(baseline,\"utf8\")),owned=new Set(b.owned.map(v=>v.path)),protectedPins=b.pins.filter(v=>!owned.has(v.path)),mismatches=protectedPins.filter(v=>hash(v.path)!==v.sha256);const result={final_source_stop:{at:new Date().toISOString(),files:b.owned.map(v=>({path:v.path,sha256:hash(v.path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},baseline:{path:baseline,sha256:hash(baseline)}};console.log(JSON.stringify(result,null,2));if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T04:17:54.318Z",
+      "captures": [
+        {
+          "chunk_id": "e1f301",
+          "wall_time_seconds": 0.074774168,
+          "exit_code": 0,
+          "original_token_count": 198,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T04:17:54.596Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/stats.ts\",\n        \"sha256\": \"3c833a226f8bf12bfc08a04ea8cdf436f30d7764ea8ef0fe1ce25b1f59b77c06\"\n      },\n      {\n        \"path\": \"src/learn/learn.test.ts\",\n        \"sha256\": \"4cc839100708f1f57d5958a8b6a48e602b22f6aec7a3e26b9d6b7c3c8beb5a4b\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"662da01df40744564ad8c0fdeb58183ffb2844ac9a5fb211384900aacfd26c7f\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 105,\n    \"matched\": 105,\n    \"mismatches\": []\n  },\n  \"baseline\": {\n    \"path\": \"docs/remediation/design/W23.01/baseline.json\",\n    \"sha256\": \"eaf65ad11ae9a16e7a0daddf7309f2d625a5f0ec32b56459360744d1151bea18\"\n  }\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T04:17:54.613Z"
+    }
+  ]
+}

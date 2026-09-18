@@ -1,0 +1,49 @@
+{
+  "at": "2026-09-13T11:48:00.341Z",
+  "source_go_at": "2026-09-13T11:48:00.341Z",
+  "actor_id": "w01-lead",
+  "task_id": "W38.03",
+  "worker": "w1405-worker",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "c2ffe07329d6c7c401b56c8ae12e615582549601efd631399910dcba3d090603",
+  "plan": {
+    "path": "docs/remediation/design/W38.03/plan.md",
+    "sha256": "3a0d5b09e5c041f3d1d9ca68297eec2562044e6bbad8db0a0a642979f76a31df"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "76f1a2",
+        "wall_time_seconds": 1.001399937,
+        "session_id": 60557,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "638756",
+        "wall_time_seconds": 0.000001945,
+        "exit_code": 0,
+        "original_token_count": 593,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=30, unscoped=11\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=98, closed=2; evidence records=291\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W38.02 — Inspect and admit the remaining W38 legacy document read/write size guards. The cache now bounds retained data, but KV JSON parsing/validation and duplicated serialized writes still lack an input envelope. Reuse the actual legacy callers/validators and compatibility requirements; preserve old readers and return explicit truthful failure/fallback without truncating valid data. Select the smallest source-confirmed guard under a stated application limit, not a customer-capacity claim. Immutable-history cleanup, realistic whole-path/native workload qualification, final-score optimization, W35 transactional authority and human/customer/release decisions remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19949\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=30, unscoped=11\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=98, closed=2; evidence records=291\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W38.02 — Inspect and admit the remaining W38 legacy document read/write size guards. The cache now bounds retained data, but KV JSON parsing/validation and duplicated serialized writes still lack an input envelope. Reuse the actual legacy callers/validators and compatibility requirements; preserve old readers and return explicit truthful failure/fallback without truncating valid data. Select the smallest source-confirmed guard under a stated application limit, not a customer-capacity claim. Immutable-history cleanup, realistic whole-path/native workload qualification, final-score optimization, W35 transactional authority and human/customer/release decisions remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19949\n"
+      }
+    ],
+    "session_id": 60557,
+    "drained": true,
+    "exit_code": 0
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1419,
+    "pins": 33,
+    "protected": 23,
+    "authority": true,
+    "actual_package_matches": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true,
+    "remaining_closed_no_planned_overlap": true
+  },
+  "limitations": "Legacy serialized KV documents only under a 2MiB application per-value cap, not customer/platform capacity or total heap. HTTP input parsing, arbitrary validator expansion, concurrent miss allocations, history retention, KV transaction/CAS/remote consistency, whole-path native workload and full W38/F32/F08/N07 remain open. Keep compatibility value/config fields, existing keys/index50/history bodies, deterministic ranking/candidates/model and serving fallbacks. No customer decisions, deployments/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external operations. W38.02 overlapping byte proof prospectively qualified, actual cache remedy/history retained."
+}

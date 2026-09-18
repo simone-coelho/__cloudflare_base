@@ -1,0 +1,104 @@
+{
+  "schema": "W01.01-closure-validation-v1",
+  "record_owner": "w01-lead /root",
+  "candidate_validation": {
+    "at": "2026-09-06T22:17:49.578Z",
+    "candidate_sha256": "f758af6b7822d19537bf74899b94be9865941acff5c6f8c172d6c08fff4bee5c",
+    "candidate_seq": 9,
+    "prior_seq": 7,
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "limits",
+        "message": "Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker."
+      }
+    ]
+  },
+  "started_at": "2026-09-06T22:20:47.712Z",
+  "completed_at": "2026-09-06T22:21:18.277Z",
+  "node": "v22.15.0",
+  "claim": "Local recorded consistency, exact artifact/evidence identity and protected-source preservation only; no engine/runtime/deployed/customer acceptance.",
+  "commands": [
+    {
+      "command": "node scripts/remediation/board.mjs check",
+      "exit_code": 0,
+      "stdout": "Tracker VALID | mode=framework_only\nPackages: 41; scope open=41\nDecomposition: unscoped=41\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: closed=1; evidence records=2\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W01.01 — W01.01 source-only inventory/design accepted. OBS-FW01 fixture repair is the recommended next bounded mandate; then decompose/admit unused raw-API removal. All41 W scopes and human decisions remain open/pending; no engine/deployment authority.\nNOTE limits: Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker.\nNo task, finding, package or gate was changed by this command.\n",
+      "stderr": "",
+      "at": "2026-09-06T22:20:53.480Z"
+    },
+    {
+      "command": "node scripts/remediation/board.mjs status",
+      "exit_code": 0,
+      "stdout": "Tracker VALID | mode=framework_only\nPackages: 41; scope open=41\nDecomposition: unscoped=41\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: closed=1; evidence records=2\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W01.01 — W01.01 source-only inventory/design accepted. OBS-FW01 fixture repair is the recommended next bounded mandate; then decompose/admit unused raw-API removal. All41 W scopes and human decisions remain open/pending; no engine/deployment authority.\nNOTE limits: Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker.\nNo task, finding, package or gate was changed by this command.\n",
+      "stderr": "",
+      "at": "2026-09-06T22:21:00.147Z"
+    }
+  ],
+  "comparisons": [
+    {
+      "procedure": "validateTracker(current, { rootDir: process.cwd(), previousTracker: retainedPrior })",
+      "prior_path": "docs/remediation/evidence/W01.01/tracker-before-closure.json",
+      "prior_sha256": "aeb9af33d600a24c9d963404ae0c8f86cbf4216995a70199b5279679629c0a8e",
+      "prior_seq": 7,
+      "current_seq": 9,
+      "at": "2026-09-06T22:21:07.081Z",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        {
+          "code": "limits",
+          "message": "Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker."
+        }
+      ]
+    },
+    {
+      "procedure": "validateTracker(current, { rootDir: process.cwd(), previousTracker: retainedPrior })",
+      "prior_path": "docs/remediation/evidence/W01.01/tracker-before-admission.json",
+      "prior_sha256": "3bab9f0407f98c0d7047c7dabd69f068e36852c3ac98755ff41a860105beb91a",
+      "prior_seq": 1,
+      "current_seq": 9,
+      "at": "2026-09-06T22:21:15.419Z",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        {
+          "code": "limits",
+          "message": "Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker."
+        }
+      ]
+    }
+  ],
+  "tracker": {
+    "path": "docs/remediation/tracker.json",
+    "sha256": "f758af6b7822d19537bf74899b94be9865941acff5c6f8c172d6c08fff4bee5c",
+    "journal_seq": 9,
+    "state": "closed",
+    "unchanged_during_validation": true,
+    "exact_candidate_bytes": true
+  },
+  "artifact_digest": "4b908ea19ae17877a8f71380e0f683ac2972aac02380322930e9adead08c0e5e",
+  "protected_baseline": {
+    "checked": 330,
+    "changed_or_missing": []
+  },
+  "worktree": {
+    "command": "git status --short",
+    "exit_code": 0,
+    "stdout": " D data/optimizely-cache.db-shm\n D data/optimizely-cache.db-wal\n M docs/architecture/20-scope-truth-ledger.md\n M docs/architecture/35-audit-verification-and-source-of-truth.md\n M public/meridian/engine.bundle.js\n?? AGENTS.md\n?? docs/Affinity-Outcome-Learning-Design.html\n?? docs/architecture/34-independent-adversarial-audit.md\n?? docs/architecture/35-reconciliation-evidence/\n?? docs/architecture/36-remediation-governance-and-execution.md\n?? docs/remediation/\n?? scripts/remediation/\n"
+  },
+  "checker_sha256": "bca77e89af7d9f627e3b6ea8fc9e8a5e3fc781ec973873c8c753a9aeb6e98377",
+  "test_source_sha256": "db6d3d0e61895c0ad2b02760a141c29ee88ce08e6014117abf9734ef54f8b3cc",
+  "open_observations": [
+    "OBS-FW01"
+  ],
+  "ordinary_framework_suite": "Not rerun or repaired; prior sequence-5 run failed62/23 as retained in OBS-FW01. Controlled85-pass diagnostic is not a green shipped-suite run.",
+  "not_run": [
+    "Application handlers, Worker/browser/socket/network/cloud probes",
+    "All26 proposed runtime negative tests",
+    "Engine build/typecheck/runtime/integration/SLO/lift/customer acceptance",
+    "Deployment, credentials, customer data, staging/commit/push"
+  ],
+  "ok": true,
+  "limitations": "Checker and source-file validation support only this bounded local source/design task. They do not authenticate agents/humans, attest deployment, satisfy the unexecuted proposed runtime tests, close a W package/finding/gate, or authorize next implementation. OBS-FW01 remains open; accepted reports and change history remain immutable."
+}

@@ -1,0 +1,2511 @@
+{
+  "version": 1,
+  "source": {
+    "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+    "sha256": "34b5c7d286650d879223062be352d244b176c9def6d2ebfb543a2dd7e985aedf",
+    "sections": {
+      "packages": 5,
+      "findings": [
+        2,
+        3
+      ],
+      "requirements": 4,
+      "decisions": 7
+    }
+  },
+  "authority": {
+    "mode": "framework_only",
+    "local_engine_changes": false,
+    "local_authorization": null,
+    "deployment": false,
+    "model": "gpt-6-astra",
+    "efforts": [
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "max_active_tasks": 1
+  },
+  "release": {
+    "state": "not_authorized",
+    "human_authority": null
+  },
+  "packages": [
+    {
+      "id": "W01",
+      "canonical": {
+        "gate_scope": "G0",
+        "full_scope": "Enforce route/binding policy before dispatch; remove the unused generic API exposure and prohibited demo/agent/activation surfaces from customer reach. Authorize retained shopper/operator routes, scoped reads/history/validation, report GETs and webhooks. Negative tests enumerate the actual mounted methods/upgrades and inspect destination state.",
+        "finding_refs": "F01/F03/F25/F33; N01/N03/N04",
+        "sizing_owner": "S containment → M/L boundary/separation; D + S/P"
+      },
+      "title": "Customer route and binding boundary",
+      "gates": [
+        "G0"
+      ],
+      "source_findings": [
+        "F01",
+        "F03",
+        "F25",
+        "F33",
+        "N01",
+        "N03",
+        "N04"
+      ],
+      "proposed_owner": "D + S/P",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [
+          "W01.01"
+        ],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W02",
+      "canonical": {
+        "gate_scope": "G0",
+        "full_scope": "Reject refresh-as-access, migrate access/service claims and tool tokens, enforce temporary-password/account/session revocation policy, and reject unsafe/missing configured signing material at readiness. Add abuse budgets and bounded account lockout/audit growth for N14. Prove logout/disable/delete/demotion/password/rotation transitions and recovery without locking legitimate operators out.",
+        "finding_refs": "F02/F09; N02/N14",
+        "sizing_owner": "S narrow guard → M full auth/abuse contract; D/OL + S/P"
+      },
+      "title": "Operator credentials and session policy",
+      "gates": [
+        "G0"
+      ],
+      "source_findings": [
+        "F02",
+        "F09",
+        "N02",
+        "N14"
+      ],
+      "proposed_owner": "D/OL + S/P",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W03",
+      "canonical": {
+        "gate_scope": "G0/G4",
+        "full_scope": "Bind canonical customer/brand to credentials and every route/store; scoped operator membership/roles/audit context; conflicting path/header/host/scope rejected. SDK/CORS/socket propagation must match. Test non-default versus non-default brands across reads/writes/exports/erasure, connectors and jobs, including platform-admin exceptions.",
+        "finding_refs": "F03/F31/F33; N01/N03/N13/N29",
+        "sizing_owner": "S ingress subset → M/L end-to-end authority; D + S/P"
+      },
+      "title": "Tenant authority across ingress and storage",
+      "gates": [
+        "G0",
+        "G4"
+      ],
+      "source_findings": [
+        "F03",
+        "F31",
+        "F33",
+        "N01",
+        "N03",
+        "N13",
+        "N29"
+      ],
+      "proposed_owner": "D + S/P",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W04",
+      "canonical": {
+        "gate_scope": "G0",
+        "full_scope": "Require backend account proof, safe provisioning and ownership on all session endpoints; rotate/revoke SDK sessions and forwarding pointers across logout/account change. Regenerate assertions for signed 409 retry. Prove old cookies, stale tabs, in-flight requests and both hosts cannot recover another account.",
+        "finding_refs": "F04/F06; N05",
+        "sizing_owner": "M/L; D + S/P"
+      },
+      "title": "Account proof and session ownership",
+      "gates": [
+        "G0"
+      ],
+      "source_findings": [
+        "F04",
+        "F06",
+        "N05"
+      ],
+      "proposed_owner": "D + S/P",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W05",
+      "canonical": {
+        "gate_scope": "G0",
+        "full_scope": "One explicit consent policy across SDK/server calls, hosts, state creation, capture, sort, learning, telemetry/logs and configured ODP/regional egress. Preserve withdrawal through logout and failures. Test all switch combinations and unknown/error states before writes; define necessary consent records separately.",
+        "finding_refs": "F05/F10; N06/N11/N12",
+        "sizing_owner": "S withdrawal/route containment → M/L complete enforcement; D/OL + S/P/C"
+      },
+      "title": "Consent enforcement across paths",
+      "gates": [
+        "G0"
+      ],
+      "source_findings": [
+        "F05",
+        "F10",
+        "N06",
+        "N11",
+        "N12"
+      ],
+      "proposed_owner": "D/OL + S/P/C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W06",
+      "canonical": {
+        "gate_scope": "G0",
+        "full_scope": "Durable erasure job with preserved discovery, per-object checkpoints and honest destination status; both hosts, orphans, caches/rings/seen, D1, telemetry/logs and external reconciliation. Server-enforced deletion epoch/replay barrier prevents stale-cookie and delayed/concurrent ingestion resurrection. Retention and physical progress must be tested; operator Set-Cookie alone is not a subject-browser remedy.",
+        "finding_refs": "F04/F06/F18; N05/N12/N13",
+        "sizing_owner": "M/L; OL/D + S/P"
+      },
+      "title": "Durable erasure and replay barrier",
+      "gates": [
+        "G0"
+      ],
+      "source_findings": [
+        "F04",
+        "F06",
+        "F18",
+        "N05",
+        "N12",
+        "N13"
+      ],
+      "proposed_owner": "OL/D + S/P",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W07",
+      "canonical": {
+        "gate_scope": "G0",
+        "full_scope": "Inventory and minimize all eight subject-bearing AE route writers and every request/body log path; define permitted aggregate schema, access and retention. Explicitly provision/attest environment datasets. Resolve historic data disposition and correct receipts. Do not substitute a notice for applicable processing/deletion obligations or assume future minimization erases history.",
+        "finding_refs": "F05/F06; N06/N11/N28",
+        "sizing_owner": "S future-write containment → M/L inventory/historic controls; D/OL + S/P/C"
+      },
+      "title": "Telemetry, logs and historic privacy",
+      "gates": [
+        "G0"
+      ],
+      "source_findings": [
+        "F05",
+        "F06",
+        "N06",
+        "N11",
+        "N28"
+      ],
+      "proposed_owner": "D/OL + S/P/C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W08",
+      "canonical": {
+        "gate_scope": "G0/G4",
+        "full_scope": "Distinguish creation/reconcile/add-brand/rotation using secure desired state; validate account/resources, preserve existing secrets, seed idempotently and fail visibly. Link schema migrations and artifact promotion; separate product/demo schema; provision required alert/config/identity material. Test rerun, partial failure, second brand and tested forward-compatible rollback/restore without exposing secret values.",
+        "finding_refs": "F09/F10/F33/F35; N02/N18/N19/N27/N28/N29",
+        "sizing_owner": "S dangerous-script containment → M/L proven release/stamp workflow; D/OL + S/P"
+      },
+      "title": "Safe provisioning and release workflow",
+      "gates": [
+        "G0",
+        "G4"
+      ],
+      "source_findings": [
+        "F09",
+        "F10",
+        "F33",
+        "F35",
+        "N02",
+        "N18",
+        "N19",
+        "N27",
+        "N28",
+        "N29"
+      ],
+      "proposed_owner": "D/OL + S/P",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W09",
+      "canonical": {
+        "gate_scope": "G1",
+        "full_scope": "Version/chunk queue envelopes by serialized byte and batch budgets, including shared inputs without breaking readers. Define durable recovery for producer rejection, invalid/quarantined records and partial writes; DLQ in each environment; validate fan-out responses and reconcile counts to sinks. Fault tests cover oversize, outage, malformed records, retry/regroup, duplicate sends and recovery. Logging/DLQ alone is not closure.",
+        "finding_refs": "F16; N07/N08/N10",
+        "sizing_owner": "S envelope/visibility containment → M/L delivery guarantees; OL"
+      },
+      "title": "Bounded ledger delivery and recovery",
+      "gates": [
+        "G1"
+      ],
+      "source_findings": [
+        "F16",
+        "N07",
+        "N08",
+        "N10"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W10",
+      "canonical": {
+        "gate_scope": "G1",
+        "full_scope": "Bound total item/key/byte state, fine-level cardinality, channel vocabulary, snapshots and ring indexes. Define degraded/fallback statistics and recover already oversized/inconsistent objects without publishing uncommitted counts. Prove with runtime limits, restart and sustained high-cardinality traffic. Remove raw-state snapshot spread separately. Gamma zero is not containment.",
+        "finding_refs": "F08",
+        "sizing_owner": "S genuine ingestion disable/guard → M/L bounded recoverable storage; OL"
+      },
+      "title": "Bounded recoverable learning storage",
+      "gates": [
+        "G1"
+      ],
+      "source_findings": [
+        "F08"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W11",
+      "canonical": {
+        "gate_scope": "G1",
+        "full_scope": "Fail closed on read/write errors; use transactional/serialized revision and compare-and-update authority, immutable versions, recoverable publication and explicit propagation bound. Test same-isolate, cross-isolate, concurrent and stale writes, partial puts, rollback and readers across versions. An index read plus key-existence check remains insufficient.",
+        "finding_refs": "F15/F24",
+        "sizing_owner": "S error containment → M/L atomic publication; OL/D"
+      },
+      "title": "Atomic configuration publication",
+      "gates": [
+        "G1"
+      ],
+      "source_findings": [
+        "F15",
+        "F24"
+      ],
+      "proposed_owner": "OL/D",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W12",
+      "canonical": {
+        "gate_scope": "G0/G1",
+        "full_scope": "Consent-safe, non-polluting monitor with zero-decision detection, delivery/schema/tenant continuity, justified thresholds and visible alert result. Isolate synthetic receipts/state from customer measurement. Verify disabled/failed/empty queues, destination failure, both hosts and each configured tenant. An alert URL merely being present is not on-call acceptance.",
+        "finding_refs": "F10; N19",
+        "sizing_owner": "S isolated checks → M operational proof; OL/D"
+      },
+      "title": "Consent-safe monitoring and alerts",
+      "gates": [
+        "G0",
+        "G1"
+      ],
+      "source_findings": [
+        "F10",
+        "N19"
+      ],
+      "proposed_owner": "OL/D",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W13",
+      "canonical": {
+        "gate_scope": "G0",
+        "full_scope": "Correct lint config and actual errors with justified warning policy; include gate in CI. Tie source, SDK/assets, migrations and deployment to an attested build, retaining recovery evidence. Do not disable a useful sanitizer merely to silence a lint error. A green lint command alone does not close release readiness.",
+        "finding_refs": "F10/F35; N18",
+        "sizing_owner": "S lint → M release integration with W08; D/OL"
+      },
+      "title": "Lint and attested release checks",
+      "gates": [
+        "G0"
+      ],
+      "source_findings": [
+        "F10",
+        "F35",
+        "N18"
+      ],
+      "proposed_owner": "D/OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W14",
+      "canonical": {
+        "gate_scope": "G0/G2",
+        "full_scope": "Register and deliver every applicable source clause: generic enrichment/review/publication (§1.3), product-sort persistence (§1.6), entitlement evidence (§1.9), generic AI Search (§1.10), external/SFCC acceptance (§1.11), typed attributes/audiences and scheduled warehouse destination/readback/deletion (§1.12). Track §2.3's optional, no-additional-cost widget/template handoff as availability is triggered, not a January widget build; retain tag-plan deliverables and approved mechanism substitutions. The internal register portion is updated here; implementation, customer documents, evidence and authorized amendments remain open.",
+        "finding_refs": "F07/F11/F29/F31; N16/N17",
+        "sizing_owner": "S register/claim containment → L/externally dependent capability packages, re-estimate separately; D/OL + C"
+      },
+      "title": "Source-clause capability delivery",
+      "gates": [
+        "G0",
+        "G2"
+      ],
+      "source_findings": [
+        "F07",
+        "F11",
+        "F29",
+        "F31",
+        "N16",
+        "N17"
+      ],
+      "proposed_owner": "D/OL + C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W15",
+      "canonical": {
+        "gate_scope": "G2",
+        "full_scope": "Supported refresh or genuine push through the exact kit; coalescing/stale-response guards, correct absence/default handoff and server-snapshot/no-flash contract. Distinguish read-only polls from actual correlated exposures. Deliver customer browser/operator acceptance, tag-plan/debug artifacts and feed failure cases. Correct objective/symbol/default/acceptance claims; reconcile SSO with customer authority, not unilateral deletion.",
+        "finding_refs": "F12/F21/F29/F30; N17/N25",
+        "sizing_owner": "S documentation/absence containment → M/L SDK + customer acceptance; D/OL + C"
+      },
+      "title": "Supported SDK refresh and customer acceptance",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F12",
+        "F21",
+        "F29",
+        "F30",
+        "N17",
+        "N25"
+      ],
+      "proposed_owner": "D/OL + C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W16",
+      "canonical": {
+        "gate_scope": "G2",
+        "full_scope": "Carry validated visit/channel through both hosts, read-time visit boundaries and SDK; no invented direct source. Then implement/accept seeded behavior at gamma zero, journey/new-visit/post-purchase reset, days/weeks memory and contextual cold-start behavior. Tests use actual customer taxonomy/events and unknown cases, not just fields present in a record.",
+        "finding_refs": "F13/F14; N15/N20",
+        "sizing_owner": "S wiring subset → M/L behavioral contract; D + C"
+      },
+      "title": "Context, journeys and return memory",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F13",
+        "F14",
+        "N15",
+        "N20"
+      ],
+      "proposed_owner": "D + C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W17",
+      "canonical": {
+        "gate_scope": "G2",
+        "full_scope": "Real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers. Test detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser. Do not close on the proposed bind-once WeakMap guard.",
+        "finding_refs": "F12/F34",
+        "sizing_owner": "S localized containment → M lifecycle proof; D"
+      },
+      "title": "SDK lifecycle ownership and teardown",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F12",
+        "F34"
+      ],
+      "proposed_owner": "D",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W18",
+      "canonical": {
+        "gate_scope": "G2",
+        "full_scope": "Valid stage defaults/ranges/empty-value semantics and real validator in console tests. Numeric per-slot dimension editor/readback with version/rollback feedback; customer weight-change walkthrough without reload. Test safe off values and interactions with later score terms.",
+        "finding_refs": "F26/F29; N30 assurance",
+        "sizing_owner": "S stage fix → M full control/acceptance; D"
+      },
+      "title": "Merchandiser dimension and stage controls",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F26",
+        "F29",
+        "N30"
+      ],
+      "proposed_owner": "D",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W19",
+      "canonical": {
+        "gate_scope": "G2",
+        "full_scope": "One lossless, versioned import/direct-PUT/merge contract for merchandising, lifecycle/windows, stage aliases, registry tags and locale/slot vocabulary. Canonical content type drives accumulated signals and ranking, including existing film/video mismatch. Decide product-attribute inheritance, warn/reject unusable taxonomy and prove idempotent round trips.",
+        "finding_refs": "F27; N15",
+        "sizing_owner": "S field repair → M/L full schema/feed contract; OL/D + C"
+      },
+      "title": "Lossless catalog and feed contract",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F27",
+        "N15"
+      ],
+      "proposed_owner": "OL/D + C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W20",
+      "canonical": {
+        "gate_scope": "G2",
+        "full_scope": "Reserve pins, reject document-local contradictions and check catalog references at activation/runtime. Define slotTypes/take/eligibility/priority, duplicate prevention, dead-pin diagnostics, exclusions/off-limits and default fallback without arbitrary forbidden fill. Test both arms and actual operator workflows.",
+        "finding_refs": "F28/F26",
+        "sizing_owner": "S reservation → M promised governance; D/OL + C"
+      },
+      "title": "Pins, exclusions and merchandising governance",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F28",
+        "F26"
+      ],
+      "proposed_owner": "D/OL + C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W21",
+      "canonical": {
+        "gate_scope": "G0 claims / G1 enrollment / G3 inference",
+        "full_scope": "Contain invalid incrementality/confidence/target claims. Separately deliver persistent enrollment/salt/identity policy, consent eligibility, actual production control, all eligible visitor business outcomes and experiment provenance. Pre-register CVR/RPV/returns units, allocation, windows, maturity, stopping and cluster-aware analysis. Renaming or clamping an attribution ratio is not causal acceptance.",
+        "finding_refs": "F07/F25; N09",
+        "sizing_owner": "S representation containment → L science/data/control integration; OL + DS/C"
+      },
+      "title": "Enrollment and scientific measurement design",
+      "gates": [
+        "G0",
+        "G1",
+        "G3"
+      ],
+      "source_findings": [
+        "F07",
+        "F25",
+        "N09"
+      ],
+      "proposed_owner": "OL + DS/C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W22",
+      "canonical": {
+        "gate_scope": "G1",
+        "full_scope": "Shared logical event identity/dedup before caps; durable online/R2/fold/export reconciliation and explicit completeness. Define one attribution contract with versioned histories/horizons, not blindly identical caps. Wire persisted product-sort evidence via W14. Fault tests include ID collision/retry, late arrivals, partial writes and sink mismatch.",
+        "finding_refs": "F16/F17/F19/F22; N10/N23",
+        "sizing_owner": "S read-dedup containment → M/L complete pipeline; OL"
+      },
+      "title": "Event identity and sink reconciliation",
+      "gates": [
+        "G1"
+      ],
+      "source_findings": [
+        "F16",
+        "F17",
+        "F19",
+        "F22",
+        "N10",
+        "N23"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W23",
+      "canonical": {
+        "gate_scope": "G1 accumulation / G3 serving",
+        "full_scope": "Order-invariant counters, exact internal rates and bounded validated event time. Rebuild or explicitly reset damaged item and slot state under W22/W24/W30. Test chronological/permuted/replayed sequences, rare concentrated cells, zero rates and timestamp abuse. A local merge patch alone cannot repair historical evidence.",
+        "finding_refs": "F18",
+        "sizing_owner": "S arithmetic containment → M recovery/proof; OL"
+      },
+      "title": "Order-invariant counters and event time",
+      "gates": [
+        "G1",
+        "G3"
+      ],
+      "source_findings": [
+        "F18"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W24",
+      "canonical": {
+        "gate_scope": "G1 collection / G3 serving",
+        "full_scope": "Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment.",
+        "finding_refs": "F19/F08; N17",
+        "sizing_owner": "S safe incompatibility rejection/reset → M/L rebuild/units contract; OL + DS/C"
+      },
+      "title": "Versioned learning and money semantics",
+      "gates": [
+        "G1",
+        "G3"
+      ],
+      "source_findings": [
+        "F19",
+        "F08",
+        "N17"
+      ],
+      "proposed_owner": "OL + DS/C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W25",
+      "canonical": {
+        "gate_scope": "G3, earlier if priors are promised",
+        "full_scope": "Structured per-item priors and canonical/versioned cell grammar; every supported level, no-event publication, zero reference, unit compatibility, prior provenance and no phantom rows. Distinguish effective prior strength from observed exposure. Test the actual import-to-receipt-to-ranking pipeline, not just a key helper.",
+        "finding_refs": "F20; N20/N22",
+        "sizing_owner": "S indexing subset → M complete cold-prior contract; OL + DS"
+      },
+      "title": "Cold-slot priors and provenance",
+      "gates": [
+        "G3"
+      ],
+      "source_findings": [
+        "F20",
+        "N20",
+        "N22"
+      ],
+      "proposed_owner": "OL + DS",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W26",
+      "canonical": {
+        "gate_scope": "G1 exposure / G2 SDK / G3 attribution",
+        "full_scope": "Correlated decision/outcome identity and defined served/rendered/viewable unit; page/brand/slot/position identity and named-placement credit. Agree and test global-item versus placement-specific fatigue, unknown legacy outcomes and position effects; prove repeated item/product across slots/pages, replay and SDK refresh produce correct counts.",
+        "finding_refs": "F21/F16/F34",
+        "sizing_owner": "S named-slot containment → M/L end-to-end exposure; OL/D + DS"
+      },
+      "title": "Correlated placement and exposure identity",
+      "gates": [
+        "G1",
+        "G2",
+        "G3"
+      ],
+      "source_findings": [
+        "F21",
+        "F16",
+        "F34"
+      ],
+      "proposed_owner": "OL/D + DS",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W27",
+      "canonical": {
+        "gate_scope": "G3, earlier for promised replay",
+        "full_scope": "Archive dependencies before visibility; immutable page-wide snapshot manifest, choice metadata and dependency-aware pins. Prove replay parity under coupled slots, exploration, gamma zero, archive/write failure, rollout and retention. Missing dependencies fail explicitly rather than silently guessing.",
+        "finding_refs": "F22",
+        "sizing_owner": "S manifest/archive subset → M full replay contract; OL"
+      },
+      "title": "Immutable page-wide replay dependencies",
+      "gates": [
+        "G3"
+      ],
+      "source_findings": [
+        "F22"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W28",
+      "canonical": {
+        "gate_scope": "G2 surface / G3 enablement",
+        "full_scope": "Withdraw unsupported Thompson offers across validator/UI/kit, or repair share/context/prior/reward/control/cooldown/propensity semantics and validate policy quality. Share zero means no exploration-induced reorder. Unit rewards with repeated successes require valid modeling too. Document true defaults.",
+        "finding_refs": "F23; N25",
+        "sizing_owner": "S withdrawal → M/L evaluated exploration; OL + DS/C"
+      },
+      "title": "Exploration contract and policy quality",
+      "gates": [
+        "G2",
+        "G3"
+      ],
+      "source_findings": [
+        "F23",
+        "N25"
+      ],
+      "proposed_owner": "OL + DS/C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W29",
+      "canonical": {
+        "gate_scope": "G0 privilege / G3 enablement",
+        "full_scope": "Scoped role checks and page identity; current policy/age/pin/step/evidence gates applied transactionally with expected revision. Idempotent proposal/write/receipt recovery and no false “applied” state. Validate noisy/high-cardinality selection and harmful action controls; a current-value read is not CAS.",
+        "finding_refs": "F24/F15",
+        "sizing_owner": "S disable/guard → M/L full autonomy; OL + DS/S/P"
+      },
+      "title": "Scoped transactional autonomy",
+      "gates": [
+        "G0",
+        "G3"
+      ],
+      "source_findings": [
+        "F24",
+        "F15"
+      ],
+      "proposed_owner": "OL + DS/S/P",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W30",
+      "canonical": {
+        "gate_scope": "G1 capacity / G3 reconstruction",
+        "full_scope": "Correct late/mutable hours with event-time checkpoints/manifests and retained history; handle higher-cap repairs, date-scoped visitors and maturity explicitly. Propagate all missing/truncated/unfolded/horizon flags. Prove the real queue-to-object rate, multi-hour catch-up and seven-day policy at a signed-off workload. Timeout tuning/count comparisons alone are not closure.",
+        "finding_refs": "F17/F18/F25; N08/N23",
+        "sizing_owner": "S visible incompleteness/batch containment → L reliable bounded reconstruction; OL"
+      },
+      "title": "Complete event-time reconstruction",
+      "gates": [
+        "G1",
+        "G3"
+      ],
+      "source_findings": [
+        "F17",
+        "F18",
+        "F25",
+        "N08",
+        "N23"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W31",
+      "canonical": {
+        "gate_scope": "G2 report contract / G3 claims",
+        "full_scope": "Refuse or explicitly mark incomplete/oversized windows and incompatible policies; no favorable standing on incomplete evidence. Full monthly/quarterly/biannual coverage, per-tenant metric/target versions and correct zero/sparse/unequal-arm/cluster/revenue analysis under W21. Separate lightweight report summaries from full payloads.",
+        "finding_refs": "F25/F07/F34",
+        "sizing_owner": "S coverage/claim containment → M/L valid long-window measurement; OL + DS/C"
+      },
+      "title": "Complete and valid long-window reports",
+      "gates": [
+        "G2",
+        "G3"
+      ],
+      "source_findings": [
+        "F25",
+        "F07",
+        "F34"
+      ],
+      "proposed_owner": "OL + DS/C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W32",
+      "canonical": {
+        "gate_scope": "G2 report envelope / G3 model validation",
+        "full_scope": "Remove quadratic ID lookup and bound remaining attribution construction, scans/sorts, payloads and summaries. Separately evaluate zero-base influence/receipt honesty and serving-mixture references against an agreed objective. Do **not** mandate leave-one-out as a proved fix; compare alternatives under clamps, shrinkage, context and single-item cases.",
+        "finding_refs": "F34/F32; N20/N21/N24",
+        "sizing_owner": "S lookup containment → M/L report/model validation; OL + DS"
+      },
+      "title": "Bounded reports and model validation",
+      "gates": [
+        "G2",
+        "G3"
+      ],
+      "source_findings": [
+        "F34",
+        "F32",
+        "N20",
+        "N21",
+        "N24"
+      ],
+      "proposed_owner": "OL + DS",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W33",
+      "canonical": {
+        "gate_scope": "G1",
+        "full_scope": "Custom overlays never overwrite canonical day reports. Use separate policy/version identity or non-persistent results, verify subsequent canonical GET/window unchanged, and define safe repair/provenance for any historical canonical results affected. Protect against concurrent overlay/canonical writes.",
+        "finding_refs": "N09; F17/F25",
+        "sizing_owner": "S forward fix → M if historical repair required; OL"
+      },
+      "title": "Canonical report overlay isolation",
+      "gates": [
+        "G1"
+      ],
+      "source_findings": [
+        "N09",
+        "F17",
+        "F25"
+      ],
+      "proposed_owner": "OL",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W34",
+      "canonical": {
+        "gate_scope": "G0 egress / G2 promise / G3 enablement",
+        "full_scope": "Deployment-enforced external-model policy with off making zero calls. A service name does not waive no-runtime-inference. Restrict authorized destinations/data/candidates/budgets where any external seam is accepted, and deliver controlled immutable offline-table publication if promised. Verify fallback, cancellation where supported, replay and privacy.",
+        "finding_refs": "F30",
+        "sizing_owner": "S disable → M approved table/seam delivery; OL/D + S/P/C"
+      },
+      "title": "External-model policy and offline tables",
+      "gates": [
+        "G0",
+        "G2",
+        "G3"
+      ],
+      "source_findings": [
+        "F30"
+      ],
+      "proposed_owner": "OL/D + S/P/C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W35",
+      "canonical": {
+        "gate_scope": "**G1 before real-data pilot**, G2 performance",
+        "full_scope": "Choose and prove transactional shopper authority. If using ShopperReflex, first carry session/identity/visit/channel/consent and complete link/erase/SDK/sort/fatigue parity. Test concurrent writes, stale pointers, delayed creates, restart, ownership and rollback. Then qualify exact browser/server/runtime tails on the selected release and customer workload. Neither a host toggle nor January deferral closes this.",
+        "finding_refs": "F14/F13/F05/F29/F32",
+        "sizing_owner": "L; D + OL/S/P/C"
+      },
+      "title": "Transactional shopper authority",
+      "gates": [
+        "G1",
+        "G2"
+      ],
+      "source_findings": [
+        "F14",
+        "F13",
+        "F05",
+        "F29",
+        "F32"
+      ],
+      "proposed_owner": "D + OL/S/P/C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W36",
+      "canonical": {
+        "gate_scope": "G1 containment",
+        "full_scope": "Thread client session through event routes, use successful create/update results without stale rereads, make sort a real read-only path and reuse catalog work. Test delayed writes and fresh/returning SDK flows. Explicitly retain the unresolved KV race and profile-authority finding until W35 passes.",
+        "finding_refs": "F14/F10",
+        "sizing_owner": "S subset; **does not close F14**; D"
+      },
+      "title": "Session and sort containment",
+      "gates": [
+        "G1"
+      ],
+      "source_findings": [
+        "F14",
+        "F10"
+      ],
+      "proposed_owner": "D",
+      "closure_kind": "containment_only",
+      "cannot_close_findings": [
+        "F14"
+      ],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W37",
+      "canonical": {
+        "gate_scope": "G0 scope / G4 portability",
+        "full_scope": "One tenant/customer registry for live engine, connector audiences/seeding, regional trend, history/link, sort, ODP and all crons. Managed runtime discovery and per-customer stamp manifest with environment/resource ownership. Prove two non-default brands, add-brand without rebinding another, shared-load isolation and complete export/erasure.",
+        "finding_refs": "F31/F33/F03; N29",
+        "sizing_owner": "S thread-through subset → L portable platform contract; D/OL + S/P"
+      },
+      "title": "Portable customer and brand registry",
+      "gates": [
+        "G0",
+        "G4"
+      ],
+      "source_findings": [
+        "F31",
+        "F33",
+        "F03",
+        "N29"
+      ],
+      "proposed_owner": "D/OL + S/P",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W38",
+      "canonical": {
+        "gate_scope": "G1 bounds / G4 larger corpus",
+        "full_scope": "Byte/count guards and bounded cache; verify old readers before removing duplicated envelope field, retain needed immutable revisions and purge by policy. Measure whole read/validate/compose path on realistic shapes and concurrency. Use final-score/candidate-preserving optimization with full parity; retrieval/sharding only if required by the accepted workload.",
+        "finding_refs": "F32/F08; N07",
+        "sizing_owner": "S bounds → M/L qualified scale; OL/D"
+      },
+      "title": "Qualified catalog and cache envelope",
+      "gates": [
+        "G1",
+        "G4"
+      ],
+      "source_findings": [
+        "F32",
+        "F08",
+        "N07"
+      ],
+      "proposed_owner": "OL/D",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W39",
+      "canonical": {
+        "gate_scope": "G0 unsafe runbook / G4 handoff",
+        "full_scope": "Quarantine/fix unsafe setup and unscoped seed commands; separate demo/customer assets/schema, review published backups, repair fresh-clone instructions and index. Test the actual seed order and repeat runs, scoped recovery and provenance. Untrack/remove user-owned or historical artifacts only under a reviewed authorized cleanup; this reconciliation deletes none.",
+        "finding_refs": "F35/F09; N27",
+        "sizing_owner": "S dangerous subset → M reproducible handoff; D"
+      },
+      "title": "Safe setup, seeds and handoff",
+      "gates": [
+        "G0",
+        "G4"
+      ],
+      "source_findings": [
+        "F35",
+        "F09",
+        "N27"
+      ],
+      "proposed_owner": "D",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W40",
+      "canonical": {
+        "gate_scope": "G2 promised artifact",
+        "full_scope": "Deliver versioned npm/package/types/exports and supported build/browser consumption if promised, or obtain authorized format amendment. Preserve reproducible JS bundles, SDK size/caching/compatibility evidence and kit acceptance. ESM can be consumable without npm; do not claim capability absence beyond the missing artifact.",
+        "finding_refs": "F29/F34; N26",
+        "sizing_owner": "S packaging subset → M distribution/integration proof; D/OL + C"
+      },
+      "title": "Versioned SDK distribution artifact",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F29",
+        "F34",
+        "N26"
+      ],
+      "proposed_owner": "D/OL + C",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "W41",
+      "canonical": {
+        "gate_scope": "G2 if ODP recovery is promised",
+        "full_scope": "Implement scoped, consent/erasure-safe interest-vector restoration with provenance, mapping and decay semantics; prove cold/missing-state and returning recognized flows against the actual ODP contract. Audience-label restore alone is not vector recovery. A scope amendment requires customer authority; do not silently move the promise to the next customer.",
+        "finding_refs": "F13/F31; N16",
+        "sizing_owner": "M/L plus external acceptance; D + C/S/P"
+      },
+      "title": "ODP interest-vector restoration",
+      "gates": [
+        "G2"
+      ],
+      "source_findings": [
+        "F13",
+        "F31",
+        "N16"
+      ],
+      "proposed_owner": "D + C/S/P",
+      "closure_kind": "full_scope",
+      "cannot_close_findings": [],
+      "scope_status": "open",
+      "decomposition": {
+        "status": "unscoped",
+        "criteria": [],
+        "coverage": [],
+        "task_ids": [],
+        "approval": null
+      },
+      "independent_review": {
+        "status": "not_requested"
+      },
+      "lead_signoff": {
+        "status": "pending"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Public/demo surfaces inside the customer boundary",
+        "disposition": "**Blocks launch.** Actual mounted-route probes extend the original exposure to legacy tracking/CDP/webhooks, operator reads, live operations, and generic agent upgrades despite enforced mode. The agent SQL guard is not a least-privilege boundary; verifier-local probes reached protected D1 account tables. N01 and N03 add separate ingress paths. Precise anchors: [index.ts](../../src/index.ts), lines 85–86 and 185; [F01 evidence](35-verification-reports/F01.md).\n\nAn enforced-mode deny-by-default route/binding policy can be a small containment. It must cover middleware order, all methods, document validation/readback, and WebSocket upgrades. Keeping a broad route prefix is not authorization for every operation beneath it. Separate or omit demo surfaces and storage from customer stamps; test actual mounted routes. **W01, W03, W08, W37.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F02",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Refresh tokens accepted as access tokens",
+        "disposition": "**Blocks launch.** Revoked refresh credentials still authorize protected APIs; temporary-password state is not enforced across privileged routes. Verification adds configuration writes after logout and incomplete disable/delete/role/password revocation. A refresh-type rejection addresses one bypass, not full session policy. Existing script-issued tokens must be migrated deliberately; immediately requiring a claim they do not emit breaks tooling. Algorithm pinning is defense in depth, not a demonstrated jose “alg:none” bypass. [F02 evidence](35-verification-reports/F02.md); [auth middleware](../../src/middleware/auth.ts), line 49.\n\nClosure includes typed access/service credentials, required identity/authority claims, account/session revocation semantics, restricted onboarding, and tenant-scoped privileges. N02 and N14 add configuration and abuse-control work. **W02, W03, W08.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F03",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Tenant selection not bound to caller authority",
+        "disposition": "**Blocks launch.** A brand-A site key and brand-B context can reach the wrong brand through the actual generic route. Operator authentication does not establish tenant membership. Path, header, host, document scope, SDK context, connectors, and storage can disagree. Namespace helpers passing tests do not close ingress authorization. [F03 evidence](35-verification-reports/F03.md); [edgeAccess.ts](../../src/middleware/edgeAccess.ts), lines 119–122.\n\nAuthorize the single resolved tenant before side effects; reject conflicting identities and unsafe wildcard keys. Include SDK/CORS/WebSocket changes, scoped operator roles, connector/background paths, and two non-default-brand tests that inspect the destination namespace. Repository absence of TENANTS is not attestation that no other brand is configured live. **W03, W08, W37; N01, N03, N29.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F04",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Optional account proof and stale-session identity restoration",
+        "disposition": "**Blocks launch.** Missing identity-verification material permits site-assured linkage. Logout can retain the SDK session or browser-to-person pointer and resolve the previous shopper; fixing only one pointer leaves another path. Direct session analytics/preferences endpoints also require ownership checks. The signed 409 retry needs a fresh visitor-bound assertion. [F04 evidence](35-verification-reports/F04.md); [assertion.ts](../../src/identity/assertion.ts), line 98; [SessionManager.ts](../../src/services/SessionManager.ts), lines 324 and 434.\n\nThe verifier's 24-bit observation concerns the SDK-generated session component, not UUID-based server IDs. Forwarding retention is renewed by activity, not literally unconditionally eternal. Require account proof, server-enforced ownership/generation changes, SDK rotation, and stale-tab/in-flight/multi-account tests. Cross-tab visibility during authorized sign-in alone is not the demonstrated logout violation. **W04, W06, W35.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F05",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Consent enforcement differs by route and host",
+        "disposition": "**Blocks launch.** Explicit state-read failures return CONSENTING; object-host cookie refusal, sort, demo capture, some configured ODP/regional work, tracking, telemetry, and logs do not share one decision. Existing stored refusal can be honored on some paths; “no cookie always overrides refusal” is too broad. [F05 evidence](35-verification-reports/F05.md); [content service](../../src/content/service.ts), lines 107–121; [realtime routes](../../src/routes/realtime.ts), lines 112 and 778.\n\nResolve authorization for behavioral capture, storage, personalization, learning, and egress before those operations. Define unknown/error states and necessary consent-state storage with the customer's privacy owner. Test both hosts, SDK and server calls, withdrawals, logout, blocked cookies, failures, and configured destinations. **W05, W07, W12, W35; N06, N11, N12.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F06",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Incomplete erasure and replay resurrection",
+        "disposition": "**Blocks launch.** Existing gaps include both-host coverage, orphaned/capped identity discovery, caches, rings/seen indexes, failed-stage retries, recent-record reads, and retirement of the active tombstone before old deliveries cease. Verification adds stale-cookie reconstruction, D1 capture, telemetry/log inventory, and missing durable access accountability. [F06 evidence](35-verification-reports/F06.md); [erase.ts](../../src/identity/erase.ts); [ledger erasure](../../src/ledger/erasure.ts), lines 175–217.\n\nRetain a protected deletion barrier across the actual replay/backfill horizon, preserve discovery before deleting links, checkpoint per object, and reconcile every destination. Test concurrent ingestion and erasure, not just sequential redelivery. An operator response cannot clear another person's browser cookies; prevent stale cookie/session authority server-side. The asserted 259-night/statutory conclusion is not established; 90 days is an application scan horizon, not proof of physical retention. Ledger AE writers omit explicit visitor/session IDs; other writers do not. **W04, W06, W07, W08; N05, N06, N11–N13.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F07",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Attribution comparison is not customer incrementality",
+        "disposition": "**Blocks launch of a lift claim and any scientific-acceptance pilot.** Visitor hashing changes across identity transitions; consent-ineligible defaults mix with randomized controls; catalog-order defaults are not the customer's existing production segment rules. Pins are merchandising authority within arms, not a third experimental population. Multiple legitimate outcomes per item exposure can produce s greater than n; Bernoulli clamping does not repair that estimand. [F07 evidence](35-verification-reports/F07.md); [report.ts](../../src/learn/report.ts), lines 106–136.\n\nRenaming an attribution diagnostic contains misrepresentation; it does not deliver permanent enrollment, production control, visitor-level CVR/RPV/returns, allocation-aware inference, or six-month acceptance. Establish enrollment, eligibility, production control, outcome capture, provenance and the analysis protocol **before collecting experiment evidence**; mature-window acceptance follows collection. A later gamma switch cannot reconstruct missing enrollment or outcomes. Preserve repeat-event counts where they are a deliberately labeled intensity metric; remove invalid confidence/target claims rather than conceal them with a clamp. **W14, W21, W22, W30, W31, W33.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F08",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Learning storage exceeds a real runtime limit",
+        "disposition": "**Blocks launch when affected statistics ingestion remains enabled.** The actual workerd storage failure stands. Personalized tracked decisions continue accumulating at gamma zero; raising nMin or turning exploration off is not an ingestion kill switch. Complete raw object state is also spread into snapshots. [F08 evidence](35-verification-reports/F08.md); [fan.ts](../../src/learn/fan.ts), line 77; [LearnStats.ts](../../src/durable-objects/LearnStats.ts), lines 56 and 110; [stats.ts](../../src/learn/stats.ts), line 164.\n\nThe original 2,618,613-byte workerd fixture and a verifier's 2,468,636-byte fixture are not interchangeable capacity measurements. Synthetic 1,203-cell/0.75% estimates do not establish ordinary traffic capacity, and assume visit cardinality not currently reached by the service. The verifier itself reports successful publication after a failed save: poisoned in-memory counts can be published uncommitted; “permanently dead publication” overstates it. Bound total items, keys and serialized bytes, snapshot contents, and ring indexes; prove recovery and coherent fallback under runtime limits, and characterize its estimation/selection bias. **W10, W24, W38.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F09",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Re-provisioning replaces identity/authentication/site-key material",
+        "disposition": "**Blocks launch.** A rerun replaces the key map and identity salt; a subsequent duplicate operator-seed failure can terminate the script before key handoff. Broadly swallowed create failures compound recovery risk. [F09 evidence](35-verification-reports/F09.md); [provision-stamp.sh](../../scripts/provision-stamp.sh), lines 23–60.\n\nSeparate initial creation, reconciliation, add-brand and explicit rotation. Secret listing cannot recover existing values, but an authoritative secure desired-state manifest can preserve/merge them. Skipping names alone does not verify correct material; unconditional printing is not secure handoff. Validate account/resource targets, partial failures, repeated seeds, and identity continuity. Rotation/history cleanup or credential actions require separate authorization. **W08, W39.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F10",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Release gates and monitoring do not establish readiness",
+        "disposition": "**Blocks launch.** The original lint configuration fails before analysis. A corrected scratch configuration exposes five errors and 324 warnings, independently rerun during reconciliation. The monitor can generate real statistics, mutate KV, accept empty decisions, and discard alert delivery failures; object-host consent handling changes its behavior. [F10 evidence](35-verification-reports/F10.md).\n\nSynthetic exposure/day and KV-growth figures are projections from schedules, not observed daily telemetry. Repository CI excludes lint; a health SELECT 1 is not schema/queue/tenant continuity evidence. Verifier evidence finds SDK bundles reproducible, but the committed Meridian bundle stale; the user's dirty bundle is not an approved fix. Closure includes accurate consent-safe monitoring, deployed artifact provenance, migrations, rollback/restore, required alert delivery, and both-host/runtime tests—not just correcting lint. **W08, W09, W12, W13, W35; N18, N19.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F11",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "The capability register omits committed work",
+        "disposition": "**Blocks launch of the full-capability representation; blocks the affected pilot deliverables.** The v8 scope's twelve clauses are not document 20's thirteen assurance/working rows. §1.9 entitlement and §1.10 AI Search lack proper rows; §1.3 enrichment/approval and §1.12 typed historical attributes/audiences plus scheduled warehouse landing are not delivered by catalog import and an R2 export seam. [F11 evidence](35-verification-reports/F11.md); [S5a](35-verification-reports/S5a.md).\n\nThese rows were omitted, not shown to have been deleted. Product entitlement is commercial/provisioning evidence, not necessarily a missing product-engine build. Correcting the register is small; implementing/accepting the missing workflows is not. Section 4 and W14 explicitly retain that work, including product-sort persistence and ancillary kit deliverables. Scope amendments require the authorized parties. **W14, W15, W19, W22, W37, W40, W41.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F12",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "The published SDK integration lacks the live-update contract",
+        "disposition": "**Blocks the pilot.** The server does not send the documented content_decisions frame; the published integration does not refresh content after meaningful events. The SDK can repaint with another hydrate call, as the original audit already allowed; that is not a refutation. Verification adds private demo refresh orchestration, out-of-order response overwrite and exposure/impression duplication. [F12 evidence](35-verification-reports/F12.md); [SDK listener](../../src/sdk/listen.ts), lines 57 and 93; [service.ts](../../src/content/service.ts), line 242.\n\nDeliver supported coalesced refresh or actual push, stale-response protection across identity/page/tenant changes, and exact-kit browser tests. A preview/poll must not manufacture an exposure, but a refreshed decision actually displayed needs its own defined, correlated and deduplicated exposure. “Refresh never writes an exposure” is not safe universal closure. **W15, W17, W21, W26.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F13",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Context, journey and return-memory behavior fall short",
+        "disposition": "**Blocks the pilot.** Optional request channel exists; stored visit/channel metadata is not consistently carried into content decisions. Hydrate-first can preserve an incorrect direct entry channel, the read path misses visit rollover, and the object host lacks equivalent context. Current context fields alone do not guarantee seeded influence at gamma zero. Journey counters/thresholds and short decay do not establish the customer's sparse-interaction and days/weeks-memory behavior. [F13 evidence](35-verification-reports/F13.md); [SessionManager.ts](../../src/services/SessionManager.ts), lines 212–218.\n\nCarry and validate the context, then test the behavior: first-page channel, returning visits, sparse signals, cross-category taste, post-purchase/new-visit reset, and production memory calibration. Activity can renew state retention, so “latched for exactly a month” is not an exact bound. **W16, W19, W35, W37, W41.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F14",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Eventually consistent shopper state is not a safe authority",
+        "disposition": "**Raised to blocks launch/real-data pilot.** Verifier-local actual-module races lose concurrent updates, orphan profiles after a pointer miss, allow a deferred empty create to overwrite later state, and return failure on read-after-write lag. Identity merge shares the hazard. The eight-event result is a controlled concurrent-burst probe, not measured live page loss. [F14 evidence](35-verification-reports/F14.md); [SessionManager.ts](../../src/services/SessionManager.ts), lines 200–324; [RealtimeSegmentEngine.ts](../../src/services/RealtimeSegmentEngine.ts), lines 419 and 535–606.\n\nThreading the client session, using a successful write's result, making sort read-only, and memoizing catalog work are useful containment. They do **not** make KV read-modify-write atomic. Select and prove a transactional/serialized authority before a real-data pilot; a Durable Object transition is one candidate, not an already accepted toggle. SameSite restrictions concern cross-site deployments, not every possible first-party customer domain. **W35, W36**, with W03–W06/W16. This work cannot be placed after January while the finding remains launch-blocking."
+      },
+      "status": "open"
+    },
+    {
+      "id": "F15",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Configuration publication is neither atomic nor conflict-safe",
+        "disposition": "**Raised to blocks launch.** Concurrency and the write path's stale isolate cache can reuse revisions and discard edits. A read failure can be treated as absence and cause a patch to publish compiled defaults with an apparently valid history. [F15 evidence](35-verification-reports/F15.md); [versionedStore.ts](../../src/config/versionedStore.ts).\n\nFailing closed on read/write errors and bypassing write-side caches are containment. Reading an index, choosing N+1, and checking that a key is absent is still a race, not compare-and-swap. Require transactional revision/precondition authority, immutable versions, recoverable publication, and a measured propagation/rollback contract. “Effective immediately” is actually promised in document 20 and the Implementation Plan; the verifier's contrary source claim is rejected. **W11, W29, W38.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F16",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Delivery and identity semantics diverge across evidence sinks",
+        "disposition": "**Launch-blocking loss paths; pilot-blocking duplicate/measurement paths.** Queue producer failures are swallowed; partial invalid records can disappear without accurate accounting; retries can leave duplicate R2 rows; online fan-out does not establish durable success. Existing IDs survive redelivery, but same-type/same-visitor/same-millisecond outcomes can collide and retries with new timestamps can get new IDs. [F16 evidence](35-verification-reports/F16.md); [enqueue.ts](../../src/ledger/enqueue.ts), line 19; [records.ts](../../src/ledger/records.ts), line 134.\n\nA duplicate ring append alone does not double per-slot credit, but can inflate fatigue. Read-time deduplication does not fix live counters, producer rejection, or divergent fan-out; duplicates can exhaust caps before filtering. A dead-letter queue only helps accepted, retried messages—not messages never enqueued or explicitly discarded. Define logical event IDs, durable delivery/reconciliation, sink idempotency and completeness across online, R2, reports, exports and replay. **W09, W22, W26, W30; N07, N10.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F17",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Folding, repair, horizons and coverage disagree",
+        "disposition": "**Blocks the pilot's reporting/attribution; collection capacity also gates real data.** Late and out-of-order arrivals, finite rings, repair of truncated hours and cross-date visitor accounting can lose evidence. Some day-report missing/truncated flags already exist; not every loss is wholly silent. Window/UI propagation and unfolded/late-data cases remain deficient. The online, aggregate and records-report paths use different available histories and bounds. [F17 evidence](35-verification-reports/F17.md); [hourly.ts](../../src/learn/hourly.ts), lines 35, 231 and 350.\n\nA 200-record ring holds roughly 22–28 complete 7–9-record pages, or 6–10 complete 20–30-record pages; the original “about 7–10” referred to the latter hypothetical. A candidate pool is not a rendered-position count. Object-count growth checks miss same-count changes; a folded-hours set cannot recover evicted history. Require event-time correction/checkpoints, stable IDs, maturity/retention policy, aligned attribution contracts and visible incompleteness. **W22, W30, W31; N08, N23.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F18",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Order-dependent decay, early rounding and unbounded timestamps",
+        "disposition": "**Pilot-blocking arithmetic; launch-blocking ingestion-integrity path where enabled.** Controlled sequences reproduce order-dependent counters and rounded-away rare rates; client-supplied backdated timestamps add an input-manipulation path. Jitter and 82% loss figures are fixture results, not observed production error rates. A zero-rounded root reference does not force every concentrated child to zero. [F18 evidence](35-verification-reports/F18.md); [stats.ts](../../src/learn/stats.ts); [hourly merge](../../src/learn/hourly.ts), line 143.\n\nUse order-invariant accumulation and exact internal rates, validate event time against a defined lateness policy, then rebuild or explicitly reset invalid state. An existing merge helper is not an operational refold pipeline; trustworthy reconstruction depends on ledger/history repair. **W06, W23, W24, W30.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F19",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Objective/policy changes relabel incompatible accumulated history",
+        "disposition": "**Blocks the pilot's affected learning features.** Reward/objective/horizon changes can serve incompatible counts under new labels; money units, margin fallback, mixed currencies and refunds need explicit semantics. Purchases banked while clicks are selected are latent incompatible purchase history, not necessarily contamination of the current click numerator. [F19 evidence](35-verification-reports/F19.md).\n\nGeneration resets are containment, not historical recomputation. Separate accumulation semantics from estimator settings such as nMin/n0/clamps, which need not discard raw counts. Prevent stale callers from oscillating generations or serving cached old lifts under new settings; cover slot denominators as well as item counters. A one-day reporting recomputation does not establish a whole-history online rebuild/promote pipeline or an M upper bound. **W24, W22, W30.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F20",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Prior materialization and provenance are wrong",
+        "disposition": "**Blocks the pilot where imported priors are promised, as current scope closure claims do.** Ambiguously concatenated prior keys are split incorrectly, creating phantom item entries; fine-level prior-only materialization fails; live evidence may still materialize a key that prior lookup can use. New slots without events can fail to publish, and grammar/version/objective mismatches undermine cold-start behavior. [F20 evidence](35-verification-reports/F20.md).\n\nThe verifier's assertion that the original example used n_equiv=20 is unsupported. Fix structured indexing and canonical/versioned grammar, then prove no-event publication, every supported level, money compatibility, zero-reference behavior and honest receipt provenance. Prior strength contributing to a gate is an intentional model choice; it must not be presented as observed exposures. Six lines fixing an index do not close all these cases. **W25, W24, W32; N22.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F21",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Attribution and exposure lack correct placement identity",
+        "disposition": "**Blocks the pilot.** When the same item or matching product appears in multiple slots, a direct outcome naming one slot can credit another. Repeated slot names across pages share statistics identity. Fatigue counts appearances across the visitor's ring within the evaluating slot's window, consistent with document 22 §6.4; global-item fatigue is not by itself a demonstrated bug. Served, rendered and viewable exposures are not equivalent, and position effects are not causal item lift. [F21 evidence](35-verification-reports/F21.md); [fan.ts](../../src/learn/fan.ts); [DecisionRing.ts](../../src/durable-objects/DecisionRing.ts).\n\nA named-slot guard can contain a direct-credit defect, but requiring a new policy axis is not inherently necessary. Define legacy unknown placement, page/brand/position identity, correlated decision/outcome IDs and viewability semantics end to end. Agree and test global-item versus placement-specific fatigue separately from named-slot attribution. The current SDK outcome lacks a decision ID; adding one is wire/SDK work. **W15, W17, W26, W21.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F22",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Replay omits coupled page dependencies and has an archive gap",
+        "disposition": "**Blocks the pilot's replay/DS promise.** Cross-slot deduplication and earlier-slot exploration require all relevant slot snapshots, not only the recorded item's snapshot. Gamma zero does not disable exploration. Publication can expose a snapshot before its durable archive; a pinned receipt can be rejected for a dependency it never used. [F22 evidence](35-verification-reports/F22.md).\n\nArchive immutable dependencies before publishing, record the page-wide version manifest and required choice metadata, and identify missing dependencies explicitly. Test coupled pages, pins, exploration, gamma zero, archive failures, retained versions and exact output parity. A timestamp alone is not a proven collision-safe immutable version. **W27, W11, W22, W24.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F23",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Thompson violates its offered contract",
+        "disposition": "**Blocks the pilot if exposed/enabled; withdrawal is containment.** Share zero can reorder, contextual/prior/control behavior diverges, propensity/exploration metadata is incomplete, and the reward model is unsuitable for money. It is also not automatically valid for “unit” rewards: several legitimate clicks per exposure can make s greater than n, contradicting the raw verifier's clean assertion. [F23 evidence](35-verification-reports/F23.md).\n\nMoving a share gate or returning only the first position does not close reward-model, context, prior, freeze/reject and propensity defects. Withdraw schema/UI/document offers until those contracts and tests are met, or implement an agreed valid exploration design. Fixture percentages are not general operating rates. **W28, W21, W24, W26.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F24",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Stale, unscoped and weakly justified autonomy proposals",
+        "disposition": "**Blocks the pilot if proposal application is offered.** Current policy/age/pin/step checks can be bypassed; proposals lack page identity; failed writes can leave “applied” receipts. Read-time equality with an expected weight is not atomic CAS and does not disambiguate pages sharing a starting value. [F24 evidence](35-verification-reports/F24.md); [autonomy.ts](../../src/learn/autonomy.ts), lines 62–68.\n\nThe evidence statistic is the range of exposure-weighted tag-group mean lifts, not simply a count of tag values; high-cardinality/noisy partitions can still win the verifier's synthetic comparison. Require scoped role gates, current policy and transactional revision preconditions, idempotent write/receipt recovery, adequate evidence and validated harm controls. **W29, W11, W21, W32.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F25",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Window reports misstate coverage, inference and readiness",
+        "disposition": "**Blocks the pilot's measurement promise and any business-lift claim.** Requests beyond 92 days can return a shorter series under the requested label. Monthly/quarterly reports can also have missing/immature/incompatible days. Relative intervals, allocation/confidence/sample planning and hard-coded customer targets require repair. Stored day reports can support long windows without retaining all raw events; the erasure scan horizon is not their storage lifetime. [F25 evidence](35-verification-reports/F25.md).\n\nCoverage flags and an undecided state are small containment. A log/Katz interval is not an automatic fix for clustered, repeated-event, sparse or revenue outcomes. First establish the metric and analysis unit through F07; validate zero cases, unequal arms, target versions, maturity and six-month reporting. Authenticate both report GETs. **W01, W21, W30, W31, W33.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F26",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "The merchandiser cannot perform the promised tuning workflow",
+        "disposition": "**Blocks the pilot.** The stage form submits an invalid default; empty fields can choose maximum effects, and tests stub the real validator. Numeric per-slot dimension weights are missing from the promised editor/readback workflow. Stage outOfStage zero reduces a score term; it does not necessarily remove eligibility because other terms may add score. [F26 evidence](35-verification-reports/F26.md).\n\nFix arithmetic/defaults and use real validation in UI tests; separately implement the dimension-weight editor and customer walkthrough. A four-line form correction is not full closure. Exclusions/off-limits are another promised capability, retained under F28, not dismissed because they lack a form. **W18, W20, W15.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F27",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Import and direct-write contracts lose or distort metadata",
+        "disposition": "**Blocks the pilot.** Import drops merchandising, fails the customer's stage vocabulary, and merge replacement can reactivate expired items when fields are omitted. Direct PUT, unlike the import adapter, permits duplicate-tag inflation. Empty taxonomy can silently reduce ranking to order. [F27 evidence](35-verification-reports/F27.md); [import.ts](../../src/content/import.ts), lines 69–145; [kinds.ts](../../src/content/kinds.ts).\n\nThe original remedy called for a lossless canonical normalizer, not routing good data through today's lossy one. Preserve merge/lifecycle/window semantics and supported fields; validate registry/locale/slot aliases and round trips. Decide and test product-attribute inheritance separately from product linkage for attribution. Locale is also promised in the customer solution document. N15 requires one canonical content-type vocabulary, not only filling a missing tag. **W19, W14, W37.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F28",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Pin precedence, uniqueness and broader governance are incomplete",
+        "disposition": "**Blocks the pilot.** Later pins can duplicate already selected content; two pins can contradict inside one slot document; pins can bypass slotTypes, ignore take, or fail silently. Lifecycle/window/stock eligibility checks exist, so slotTypes is not the engine's only eligibility control. [F28 evidence](35-verification-reports/F28.md).\n\nReserve valid pins and reject document-local contradictions at write time; validate catalog-dependent references at activation and runtime. Define take, precedence, dead-pin diagnostics, customer fallback and the promised exclusions/off-limits contract. A local reservation patch does not deliver all governance. The absence of triggering seeds is not a defense for accepted operator configurations. **W20, W19, W26.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F29",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Engineering proofs are not exact customer acceptance",
+        "disposition": "**Blocks the pilot; false full-acceptance representations must stop before handoff.** The acceptance script is not the customer's browser/feed/operator walkthrough. A rehearsal and recorded builder walkthrough exist and should be reused, but neither establishes actual customer acceptance. notifyAbsence misses slot subscribers; no-flash behavior needs a tested default/server-snapshot contract. [F29 evidence](35-verification-reports/F29.md); [kit staging guide](../kit/04-staging-connection.md), line 86.\n\nThe Implementation Plan really does state an SSO baseline; reconcile that with document 30 and the customer's account choice rather than silently deleting a commitment. Deliver exact-kit three-interaction rendering, real dimension tuning, tag-plan/debug artifacts, customer feed/SFCC proof, host parity and failure/no-flash tests. Coach-first remains settled. **W14, W15, W18, W35, W40.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F30",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "No-runtime-model North Star is not enforced",
+        "disposition": "**Blocks the pilot when the prohibited surface can be enabled.** Configuration can send shopper context and an unfiltered catalog to a runtime URL/model, with a budget up to five seconds. Ordinary failure omits the term, but that does not remove latency, egress, resource or availability risk. Controlled offline-table publication is absent. [F30 evidence](35-verification-reports/F30.md); [service.ts](../../src/content/service.ts), line 201; [external.ts](../../src/learn/external.ts), lines 73–85.\n\nA deployment-enforced off switch, tested to make zero calls, is containment. Restricting a name to “service” does not prove no runtime inference; a service may itself call a model. Preserve the agreed deterministic decision-path invariant, allow only explicitly authorized dependencies, and deliver versioned offline-table publication if that seam is promised. **W34, W01, W05, W15.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F31",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Customer context splits across registries, connectors and jobs",
+        "disposition": "**Before next customer at minimum; blocks current multi-brand acceptance claims.** The live session engine, not only the alternate host, uses inconsistent registries and default-scoped connectors/audiences/regional/history paths. Operator-authored non-default audiences can be ignored. [F31 evidence](35-verification-reports/F31.md); [RealtimeSegmentEngine.ts](../../src/services/RealtimeSegmentEngine.ts), lines 375, 408 and 469; [connectors](../../src/connectors/index.ts), line 27.\n\nReopen document 20's hard-isolation claim now. Thread a canonical customer/brand registry into every production path and cron; four call-site edits are useful but not complete arbitrary-customer support. Prove two non-default brands across event, decision, identity, sort, egress and erasure. **W03, W14, W16, W37; N29.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F32",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Whole-catalog documents, caches and full sorts lack a qualified envelope",
+        "disposition": "**Before next customer/larger corpus; bounds and claimed pilot envelope must be established before pilot.** Duplicated value/config documents, unbounded isolate cache/revision bodies, whole-catalog parsing/validation and per-slot ranking create size/CPU/memory limits. The bounded product-sort route is a separate candidate-list contract, not a full 300,000-product retrieval engine. [F32 evidence](35-verification-reports/F32.md); [S3](35-verification-reports/S3.md).\n\nThe original thin synthetic envelope and verifier's Coach-shaped roughly 24,700-piece wall describe different fixtures; neither is a universal supported limit. Verify old deployed readers before removing compatibility fields. Enforce byte/count/cache/retention budgets and measure realistic misses/hits. Exact top-k over final adjusted scores may be possible; the verifier's base-score-only prototype does not prove parity under adjustments, diversity, exploration and cross-slot coupling. No automatic need for ANN/vector infrastructure follows. **W38, W32, W35.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F33",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Customer stamp boundary is not proven",
+        "disposition": "**Raised to pilot-blocking for the promised isolated deployment; F03 safety remains launch-blocking.** Per-environment resources and scoped primitives do not prove per-customer isolation, tenant-authorized operators or complete jobs. The key/header exploit corroborates F03, not a second independent root cause. [F33 evidence](35-verification-reports/F33.md).\n\nThe ten-brand/300,000-product/five-region scenario is explicitly in brief 33 §7; it is not unsourced, nor proof of a residency contract or live five-region deployment. Define customer/brand/environment/region boundaries, resource ownership, provisioning and isolation evidence. A separate cloud account was not established as the only remedy. **W01, W03, W08, W37.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F34",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "SDK lifecycle duplicates events; reporting scales before browser paging",
+        "disposition": "**Raised to blocks the pilot.** Real-DOM verification reproduces duplicate click/commerce capture after correct attach/detach/remount. Fake listener maps concealed it. DataLayer/observer cleanup can also retain or lose capture; full server report construction and payloads precede browser-cardinality limits. [F34 evidence](35-verification-reports/F34.md).\n\nThe proposed module-global WeakMap bind-once guard is **not safe closure**: it retains old listeners/client/content after detach. Independent execution of that guard still emitted old-client/old-piece after detach and remount. Require actual ownership-aware unbind, changed attributes, new-client tests, either-order wrapper teardown and zero events after detach. Separately bound report construction/payloads, implement lightweight summaries and useful paging. **W17, W26, W32; N24.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "F35",
+      "type": "original_finding",
+      "alias_of": null,
+      "canonical": {
+        "title": "Unsafe setup/seed instructions and residual repository debt",
+        "disposition": "**Raised to before next customer; applicable unsafe provisioning commands must be quarantined before real-data use.** Scratch SQLite verification of the published seed order reduced New York crosswalk rows from 14 to 1 and the demo cohort from 640 to 44 while replacing census provenance with a proxy. The seed hazard occurs on the first documented run; “first-time only” alone is not a remedy. Old setup commands can target resources/secrets, and a backup under public is a served artifact. [F35 evidence](35-verification-reports/F35.md).\n\nThis does not show the Tapestry content scorer reads those demo tables. Correct scoped/idempotent seeds, add a fresh-run/re-run regression and reviewed recovery, and separate product/demo migrations. Preserve user work during cleanup. A non-secret npm backup is clutter, not evidence of credential leakage; ignoring tracked files does not untrack them. Full clean-clone handoff is broader than the small seed patch. **W08, W13, W39.**"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N01",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "JWT-only generic API exposes raw CACHE/STORAGE read/write/delete, queue submission and StateManager. It does not directly expose the separate SESSIONS namespace, D1 or every DO. No production caller was identified.",
+        "relationship": "Launch; additional F01/F03 exposure. Removing the mount can close this specific path, not the whole perimeter.",
+        "evidence_work": "Security S1; W01/W03"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N02",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Enforced default manifest contains a published JWT placeholder. Unsafe if actually used; live secret state unverified. Absent/zero-length key forgery is refuted by the verifier's workerd test, which fails closed.",
+        "relationship": "Launch configuration/readiness gate; F02/F09 extension.",
+        "evidence_work": "Security S2; S8 §3.4; W02/W08"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N03",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Anonymous caller-selected scope reads disclose catalog/config/dials/history. Config validation can also return merged private state; gating GET alone leaves it open.",
+        "relationship": "Launch; F01/F03 extension.",
+        "evidence_work": "Security S3; content.ts:42–73, config.ts:45–117; W01/W03"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N04",
+      "type": "duplicate_alias",
+      "alias_of": "N01",
+      "canonical": {
+        "disposition": "Generic storage route seen from the customer API lens.",
+        "relationship": "**Alias of N01**, not a second finding.",
+        "evidence_work": "Customer P02; W01"
+      },
+      "status": "alias"
+    },
+    {
+      "id": "N05",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Returning stale profile cookies can restore erased profile fields, including segments and engagement score, on the session-host path. This does not demonstrate multidimensional affinity-vector restoration and requires the affected old cookie jar.",
+        "relationship": "Launch; F06 extension, related F04.",
+        "evidence_work": "Privacy P1; W04/W06"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N06",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Eight subject-bearing AE route writers are outside the reviewed ledger schema; subject deletion is not implemented for their historical rows. Explicit per-environment dataset naming/attestation is absent.",
+        "relationship": "Launch privacy gate for retained/enabled paths; F05/F06 extension. Deployed sharing is unverified.",
+        "evidence_work": "Security S4 + Privacy P2; W05/W07"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N07",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "A whole decision set repeats large inputs per record and can exceed the queue message limit; producer failure is swallowed. The 30-rendered-position fixture is not proof that a 30-candidate pilot page emits 30 records.",
+        "relationship": "Launch evidence-integrity gate; F16 expansion. See §6 measured envelope.",
+        "evidence_work": "Operations OD-1; W09/W38"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N08",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Fold reads at most 600 objects/hour; timeout/batch/stream fan-out can exceed that long before advertised scale. There is no universal 600-pages/hour break-even.",
+        "relationship": "Launch integrity/capacity gate when collecting affected evidence; F17 extension.",
+        "evidence_work": "Operations OD-2; W09/W30"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N09",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Custom report overlays can overwrite the canonical stored day result subsequently pooled by the window report.",
+        "relationship": "Launch report-integrity gate where available; related F17/F25.",
+        "evidence_work": "Learning L1; hourly.ts:486–499, report.ts:221; W33"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N10",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Producer rejection, partial filtering, whole-message discard/ack, and exhausted consumer retries are not comprehensively reconciled; no DLQ is declared in the three consumer configurations.",
+        "relationship": "**Launch**, restoring the operations verifier's classification. This is F16's loss half, not merely a later reporting fix.",
+        "evidence_work": "Operations OD-3; W09/W22"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N11",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Request URL/query and non-ledger queue bodies can put identifiers into logs, including refused-tracking flows. Not every request necessarily contains identifiers.",
+        "relationship": "Pilot-blocking refusal/lifecycle promise; constrain before real data. F05/F06 extension.",
+        "evidence_work": "Privacy P3; index.ts:64,275; W05/W07"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N12",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Enabled demo capture writes subject-level D1 demo_events not covered by erasure. Named non-production environments default capture on; actual populated customer data unverified.",
+        "relationship": "Pilot/privacy gate; disable or cover before real data. F05/F06 extension.",
+        "evidence_work": "Privacy P4; realtime.ts:778–831; W05/W06/W08"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N13",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "No comprehensive durable audit of privileged subject reads, exports and erasure. An initial erase actor exists, but retirement loses it; “no record anywhere” overstates the gap.",
+        "relationship": "Pilot/accountability gate; F02/F03/F06 adjacency.",
+        "evidence_work": "Privacy P5; W03/W06"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N14",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Account-keyed failed-login windows enable externally induced lockout and audit growth. Sustained interference needs continuing traffic; one burst is not an indefinite lock.",
+        "relationship": "Pilot availability/abuse gate. Previously missing from the work list, now explicit in W02.",
+        "evidence_work": "Security S5; auth.ts:66–76, auth/store.ts:88–94; W02"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N15",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Signals accumulate on piece type while scoring uses tags.contentType. Existing film/video disagreement defeats mirror-if-missing normalization.",
+        "relationship": "Pilot relevance/contract gate; related F13/F27.",
+        "evidence_work": "Customer P01; W16/W19"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N16",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "ODP restore supplies audience labels rather than the promised interest-vector recovery.",
+        "relationship": "Pilot gate if that documented dependency/recovery promise applies; not silently deferred to “next customer.”",
+        "evidence_work": "Customer P03; W14/W41"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N17",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Published learn schema omits objective; money meanings of s, p and lift are incompletely documented.",
+        "relationship": "Pilot kit/measurement gate; related F19/F23.",
+        "evidence_work": "Customer P04; W15/W24"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N18",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Release and schema changes are not linked by a verified migration step. A health SELECT 1 cannot establish required tables.",
+        "relationship": "Pilot/release gate; before real-data promotion. F09/F10 extension.",
+        "evidence_work": "Operations OD-5; W08/W13"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N19",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Provisioning does not establish required alert destination/delivery; failures can be discarded. A manually configured live webhook was not inspected.",
+        "relationship": "Pilot/on-call gate; before real-data promotion. F10 extension.",
+        "evidence_work": "Operations OD-6; W08/W12"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N20",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "A multiplicative learned term cannot change an exactly zero final pre-lift base; cold-start receipts can imply influence absent from ranking. Other additive terms or exploration can change this condition.",
+        "relationship": "Conditional product/model behavior requiring acceptance, not proof that learning never affects any first interaction.",
+        "evidence_work": "Learning L2; related F13/F20; W16/W25/W32"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N21",
+      "type": "model_validation_question",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Self-inclusive slot reference makes reported lift depend on serving mixture. Lift approaching one alone does not prove winner-ranking collapse.",
+        "relationship": "**Model-validation question**, not a proved defect with mandatory leave-one-out repair.",
+        "evidence_work": "Learning L3; related F24 and architectural decisions; W32"
+      },
+      "status": "unresolved"
+    },
+    {
+      "id": "N22",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Cold-slot prior publication/materialization, zero-reference handling and receipt provenance have distinct failures. Prior-only information must not be described as observed exposures.",
+        "relationship": "F20 expansion; not another independent prior system.",
+        "evidence_work": "Learning L4; W25/W32"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N23",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Online, hourly and direct-record recomputation use different histories/caps; the direct-record path is still bounded by the attribution policy's time window.",
+        "relationship": "F17 expansion with F19/F22 links. One cap everywhere alone is not seven-day reconstruction.",
+        "evidence_work": "Learning L5; W22/W30"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N24",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Report builder includes a quadratic lookup pattern and unbounded intermediate work relative to useful output.",
+        "relationship": "Performance issue adjacent to F34; gate before the enabled reporting envelope is claimed. Node timing is not a reproduced Worker CPU-limit failure.",
+        "evidence_work": "Learning L6; report.ts:113; W32"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N25",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Documentation describes exploration on by default; shipped documents configure it off.",
+        "relationship": "Correct before kit handoff; enabling a defective mode is not the correction.",
+        "evidence_work": "Customer P05; W15/W28"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N26",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Promised npm/type-distribution artifact is absent; two JS bundles exist. Unminified ESM alone does not prove inability to tree-shake or pin a frontend dependency.",
+        "relationship": "Gate before the promised SDK artifact is handed off, or obtain an authorized delivery-format amendment.",
+        "evidence_work": "Customer P06; W40"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N27",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Product/customer provisioning applies demo schema and seeds.",
+        "relationship": "F33/F35 boundary extension; separate before customer data. No inference that all such tables already hold live customer records.",
+        "evidence_work": "Operations OD-4; W08/W39"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N28",
+      "type": "duplicate_alias",
+      "alias_of": "N06",
+      "canonical": {
+        "disposition": "Unnamed AE binding in each environment.",
+        "relationship": "**Alias of N06's isolation subpart**. Wrangler's displayed default name is not deployed binding attestation.",
+        "evidence_work": "Operations OD-7; W07/W08"
+      },
+      "status": "alias"
+    },
+    {
+      "id": "N29",
+      "type": "issue_extension",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Runtime tenant/registry/job discovery and provisioning do not form one managed authority. TENANTS is not provisioned in-repo.",
+        "relationship": "F31/F33 extension; before non-default-brand acceptance. An environment setting can change without changing application source; “every onboarding requires code” is too absolute.",
+        "evidence_work": "Operations OD-8; W03/W08/W37"
+      },
+      "status": "open"
+    },
+    {
+      "id": "N30",
+      "type": "assurance",
+      "alias_of": null,
+      "canonical": {
+        "disposition": "Remaining form-default checks were clean in the checked fixture; the stage exception belongs to F26.",
+        "relationship": "**Assurance only, not a new defect.**",
+        "evidence_work": "Customer clean-check section; retain regression coverage in W18"
+      },
+      "status": "assurance_only"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D01",
+      "canonical": {
+        "title": "Demo versus customer surface",
+        "boundary": "Leadership/security/delivery: choose separate deployables or rigorously omitted/disabled surfaces and resources. Either choice must prove G0; leaving demo ingress public with real data is not an option created by disclosure."
+      },
+      "state": "pending",
+      "record": null
+    },
+    {
+      "id": "D02",
+      "canonical": {
+        "title": "January scope, milestones and staffing",
+        "boundary": "Delivery leadership plus authorized customer owners: reconcile kickoff, end-October access, November freeze and later milestones with measured dependencies/estimates. A one-page or shadow proposal still needs G0/G1 and an approved capability mapping. No date is certified here."
+      },
+      "state": "pending",
+      "record": null
+    },
+    {
+      "id": "D03",
+      "canonical": {
+        "title": "Production shopper/configuration authority",
+        "boundary": "Architecture/delivery/security: choose a transactional design and prove state, identity, consent, recovery and performance parity. W35/W11 cannot be deferred merely because they are larger."
+      },
+      "state": "pending",
+      "record": null
+    },
+    {
+      "id": "D04",
+      "canonical": {
+        "title": "Experiment representation and control",
+        "boundary": "Customer DS/business owner with OL: attribution diagnostic versus actual production-control experiment; fixed enrollment, units, business metrics, allocation, windows and stopping rules. Diagnostic relabeling is not acceptance of incremental lift."
+      },
+      "state": "pending",
+      "record": null
+    },
+    {
+      "id": "D05",
+      "canonical": {
+        "title": "Learning/exploration/autonomy/external-model product surface",
+        "boundary": "Product/architecture/DS with customer scope owner: withdraw until proven or implement the offered contract. Preserve no-runtime-model intent; “service” alone does not authorize inference."
+      },
+      "state": "pending",
+      "record": null
+    },
+    {
+      "id": "D06",
+      "canonical": {
+        "title": "Consent, retention, erasure and historic destinations",
+        "boundary": "Customer privacy/security owners: define permitted states, necessary records, store/destination inventory, progress/retention requirements and historic-data handling. An internal notice or contract wording change does not automatically waive applicable duties."
+      },
+      "state": "pending",
+      "record": null
+    },
+    {
+      "id": "D07",
+      "canonical": {
+        "title": "Identity onboarding and SSO",
+        "boundary": "Customer identity owner with delivery: reconcile Implementation Plan baseline and document 30's password/invitation/SSO choices; require account proof and ownership in all cases."
+      },
+      "state": "pending",
+      "record": null
+    },
+    {
+      "id": "D08",
+      "canonical": {
+        "title": "Customer/brand/environment/region topology",
+        "boundary": "Architecture and authorized customer owners: retain per-customer stamp intent, identify actual deployed resources/keys/jobs and regional obligations. The five-region scale question is not a residency agreement."
+      },
+      "state": "pending",
+      "record": null
+    },
+    {
+      "id": "D09",
+      "canonical": {
+        "title": "Money/cold-start/reference semantics",
+        "boundary": "Customer business/DS with OL: revenue versus margin/profit, currencies/refunds/returns; exact-zero base influence, prior reference and interpretable lift. Validate alternatives; no mandated leave-one-out patch."
+      },
+      "state": "pending",
+      "record": null
+    },
+    {
+      "id": "D10",
+      "canonical": {
+        "title": "Missing signature workflows and architectural substitutions",
+        "boundary": "Authorized commercial/customer/delivery owners: establish entitlement/feed evidence, deliver missing workflows, and explicitly approve any change to enrichment/search/warehouse/ODP/package or embedding/anonymous-linkage commitments. No internal relabeling closes them."
+      },
+      "state": "pending",
+      "record": null
+    }
+  ],
+  "gates": [
+    {
+      "id": "G0",
+      "canonical": {
+        "title": "Safe boundary and truthful delivery",
+        "outcome": "Real customer accounts/data may enter only an authorized, consent-correct, scoped, auditable and recoverable stamp. Includes safe provisioning, telemetry/log treatment, erasure, and accurate claims."
+      },
+      "state": "not_assessed",
+      "acceptance": null
+    },
+    {
+      "id": "G1",
+      "canonical": {
+        "title": "Correct authoritative state and evidence",
+        "outcome": "Real-data pilot operation requires safe shopper/configuration authority and durable, identifiable, complete evidence for every enabled collection/reporting path. **G0 and G1 both precede real-data operation.**"
+      },
+      "state": "not_assessed",
+      "acceptance": null
+    },
+    {
+      "id": "G2",
+      "canonical": {
+        "title": "Actual customer integration and promised capability",
+        "outcome": "Engineering pilot sign-off requires the exact customer browser, feeds, control/merchandiser tasks, supported corpus and performance evidence. Contractual milestone acceptance remains the separate observable Content/Experience state defined in v8 §3.2, not a performance or revenue outcome."
+      },
+      "state": "not_assessed",
+      "acceptance": null
+    },
+    {
+      "id": "G3",
+      "canonical": {
+        "title": "Learning and scientific claims",
+        "outcome": "Enable learned influence/exploration/autonomy only after their mechanics, recovery and replay gates; claim incremental business impact only after valid experiment design/data/analysis. Collection prerequisites already belong to G1, even in shadow mode."
+      },
+      "state": "not_assessed",
+      "acceptance": null
+    },
+    {
+      "id": "G4",
+      "canonical": {
+        "title": "Repeatable customer/brand and scale expansion",
+        "outcome": "Prove portable registries, stamps, jobs, provisioning and supported scale before adding customers/brands or expanding the envelope. Current Tapestry-wide promises bring the relevant checks forward; G4 is not a waiver."
+      },
+      "state": "not_assessed",
+      "acceptance": null
+    }
+  ],
+  "tasks": [
+    {
+      "id": "W01.01",
+      "package_id": "W01",
+      "title": "Inventory mounted routes and propose the boundary matrix",
+      "kind": "design",
+      "state": "draft",
+      "scope": "Read-only inventory of mounted routes, every method and WebSocket upgrade, middleware order, bindings and destination side effects. Produce a proposed deny/allow boundary and negative-test matrix with unresolved decisions called out. This task does not implement or remove routes and cannot close W01, F01, F03, F25, F33 or G0.",
+      "read_paths": [
+        "src/index.ts",
+        "src/routes",
+        "src/middleware",
+        "src/tenancy",
+        "wrangler.toml",
+        "docs/architecture/35-audit-verification-and-source-of-truth.md"
+      ],
+      "write_paths": [
+        "docs/remediation/design/W01.01/inventory.md",
+        "docs/remediation/design/W01.01/boundary-matrix.md",
+        "docs/remediation/evidence/W01.01"
+      ],
+      "non_goals": [
+        "No engine, route, binding, credential, cloud or deployment changes.",
+        "No customer topology choice or customer-scope amendment.",
+        "No production, customer-browser, finding, package or gate acceptance claim."
+      ],
+      "criteria": [
+        {
+          "id": "W01.01-C1",
+          "description": "Source-linked inventory enumerates mounted paths, methods, upgrades, middleware order, auth/tenant resolution, bindings and possible destination side effects; unresolved source uncertainty is explicit.",
+          "required_evidence_kinds": [
+            "source_inventory"
+          ],
+          "minimum_claim": "source_confirmed"
+        },
+        {
+          "id": "W01.01-C2",
+          "description": "Proposed boundary and negative-test matrix covers retained shopper/operator routes, generic raw stores, demo/agent/activation surfaces, document/history/validation reads, reports and webhooks; acceptance-dependent topology choices remain marked pending.",
+          "required_evidence_kinds": [
+            "design_review"
+          ],
+          "minimum_claim": "source_confirmed"
+        },
+        {
+          "id": "W01.01-C3",
+          "description": "Handoff records source and design artifact hashes, independent review, exclusions and the proposed next implementation decomposition without asserting route removal or full W01/G0 closure.",
+          "required_evidence_kinds": [
+            "design_review"
+          ],
+          "minimum_claim": "source_confirmed"
+        }
+      ],
+      "checks": [
+        {
+          "id": "W01.01-K1",
+          "required": true,
+          "criterion_ids": [
+            "W01.01-C1"
+          ],
+          "command": "Read-only source inspection: enumerate actual mounts, methods, middleware, upgrade dispatch, binding references and destination side effects; record exact rg/read commands when executed.",
+          "runtime": "Repository source inspection; exact Node/shell versions to be recorded when run.",
+          "workload": "All mounted paths and configured host variants in the inspected local artifact; no deployed probes.",
+          "result": "not_run",
+          "evidence_ids": []
+        },
+        {
+          "id": "W01.01-K2",
+          "required": true,
+          "criterion_ids": [
+            "W01.01-C2",
+            "W01.01-C3"
+          ],
+          "command": "Independent source/design review of inventory, boundary matrix, exclusions and handoff against doc35 W01; record actual inspection commands when executed.",
+          "runtime": "Repository/document review; no deployed runtime qualification.",
+          "workload": "Entire proposed W01.01 inventory and matrix, including every documented negative-test case.",
+          "result": "not_run",
+          "evidence_ids": []
+        }
+      ],
+      "dependencies": [
+        {
+          "target_type": "decision",
+          "target_id": "D01",
+          "kind": "informs",
+          "origin": "proposed",
+          "consumed_output": "Future authorized demo/customer boundary choice; inventory records alternatives while pending.",
+          "rationale": "Inventory can proceed before the demo/customer topology choice; proposals must expose alternatives and mark deployment-dependent acceptance unresolved."
+        },
+        {
+          "target_type": "decision",
+          "target_id": "D08",
+          "kind": "informs",
+          "origin": "proposed",
+          "consumed_output": "Future customer/brand/environment/region topology; does not block listing local mounts.",
+          "rationale": "Customer/brand/environment/region topology informs future boundary implementation, but is not a prerequisite for read-only inventory."
+        }
+      ],
+      "preflight": {
+        "status": "pending",
+        "plan": null,
+        "approval": null
+      },
+      "assignments": {
+        "implementer": null,
+        "independent_reviewer": null,
+        "lead": null
+      },
+      "proposed_assignments": {
+        "implementer": "Delivery/platform agent",
+        "independent_reviewer": "Independent security/privacy route reviewer",
+        "lead": "Delivery lead; separate final signoff"
+      },
+      "artifact": {
+        "status": "not_recorded",
+        "files": [],
+        "configuration": null,
+        "digest": null
+      },
+      "independent_review": {
+        "status": "not_requested",
+        "actor_id": null,
+        "artifact_digest": null,
+        "evidence_ids": [],
+        "record": null,
+        "at": null,
+        "limitations": null
+      },
+      "lead_signoff": {
+        "status": "pending",
+        "actor_id": null,
+        "artifact_digest": null,
+        "review_sha256": null,
+        "record": null,
+        "at": null,
+        "limitations": null
+      },
+      "acceptance_history": [],
+      "blocked": null,
+      "handoff": {
+        "status": "pending",
+        "next_action": "Assign distinct permitted agent runs, expand and approve the read-only inventory plan, then move W01.01 through the task lifecycle.",
+        "resume_path": "docs/remediation/RESUME.md"
+      }
+    }
+  ],
+  "actors": [
+    {
+      "id": "framework-seed",
+      "kind": "system",
+      "description": "Initial tracker record creation only; not a task implementer, reviewer, plan approval or acceptance actor."
+    }
+  ],
+  "evidence": [],
+  "journal": [
+    {
+      "seq": 1,
+      "at": "2026-09-06T20:47:41.058Z",
+      "task_id": "W01.01",
+      "from": null,
+      "to": "draft",
+      "actor_id": "framework-seed",
+      "reason": "Seed read-only inventory/design task; no plan approval, execution or acceptance is represented."
+    }
+  ],
+  "resume": {
+    "task_id": "W01.01",
+    "path": "docs/remediation/RESUME.md",
+    "journal_seq": 1,
+    "next_action": "Keep W01.01 in draft until a read-only inventory plan and three distinct permitted agent runs are assigned and approved."
+  }
+}

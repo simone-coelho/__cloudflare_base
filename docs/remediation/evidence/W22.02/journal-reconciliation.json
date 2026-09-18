@@ -1,0 +1,632 @@
+{
+  "task_id": "W22.02",
+  "recorded_at": "2026-09-14T13:20:11.135Z",
+  "actor_id": "w01-lead",
+  "trusted_valid_prefix": 1677,
+  "trusted_prefix_sha256": "0f89ba4dea27a548311406dd11eb305ff31f44c00955beebfd1c320b71db00a1",
+  "failed_board": [
+    {
+      "chunk_id": "01347b",
+      "wall_time_seconds": 1.001268796,
+      "session_id": 72862,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "31b114",
+      "wall_time_seconds": 5.001520392,
+      "session_id": 72862,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "8af440",
+      "wall_time_seconds": 0.000002437,
+      "exit_code": 1,
+      "original_token_count": 366,
+      "output": "Tracker INVALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=116, closed=2; evidence records=345\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.02 — Continue next bounded W22/W09 ledger lookup/replay reconciliation: current src/ledger/writer.ts candidateKeys/findById returns the first matching logical ID, skips missing/malformed candidate inputs and accepts incomplete pagination. Read complete parent scope, actual route/replay/erasure/product-sort callers and accepted identity dependencies before admission; reconcile relevant candidates without mistaking legacy ambiguity for an exact retry. Preserve authentication and validated product-sort behavior. Broader producer/online/export guarantees, late-arrival manifests, existing partial aggregates/shards, retention and customer/exposure policies remain open; no historical data or external/deployment operation is authorized.\nERROR journal: Journal 1678: record-change digest chain is broken\nERROR transition: Journal 1684: invalid draft -> ready\nERROR journal_mismatch: Journal 1678: latest authority/local digest differs from current record\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 1; NOTE count 24536\n"
+    }
+  ],
+  "reason": "Correct only newly authored, rejected W22.02 journal representation; retain rejected suffix and original partial authority snapshot unchanged. Existing validated1677-entry history, actual authority, source, plan, worker/reviewer evidence and checks remain unchanged. No new/backdated execution. Omitted null-to-draft records task creation already established in actual admission artifact; all actual event times and actors retained.",
+  "original_suffix": [
+    {
+      "seq": 1678,
+      "kind": "record_change",
+      "subject_type": "authority",
+      "subject_id": "local",
+      "before_sha256": "a93ca6a71ecbe9927ba86953d153bd0ea02badbbbbbf4b9ce96df16366d33bb8",
+      "after_sha256": "32b25cdfe96464cbc97d7e1c932b5efa037219dd831f765ccc21b94902935b79",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/authority-extension.json",
+        "sha256": "f9a19a2cc68f7f707ee9d06d3a57986eb8b31818bb6a795b89907668f37e0d3b"
+      },
+      "reason": "Reuse bounded local continuation authority for next W22 implementation.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1679,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.01-E2",
+      "before_sha256": "ee1df55f26ea0337577f3c534d5a7a1cd8de36c71a2a5184628e81ad1baf9edd",
+      "after_sha256": "b9866e0a6556ab4753d710ba6267014739c3881495a80e8594f3839fd9b1bb49",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/qualify-W22.01-E2.json",
+        "sha256": "22c33416e4c2432f12e1e575344ce1a61b6f92b1634abe175b2ef361e352b890"
+      },
+      "reason": "W22.02 changes the same report-source artifact. Retain W22.01 implementation and accepted history; no stale whole-artifact acceptance.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1680,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.01-E1",
+      "before_sha256": "b610aeb0d61317612d13b2e8dc4f8f81b9ac8667b4c5b1bc704c8badfbfe45f1",
+      "after_sha256": "5f205bf73d14775ef4205a66c19d1ee421da63d37b25f314960abe1efac4301e",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/qualify-W22.01-E1.json",
+        "sha256": "14cb33ae27367145f3a3dd6d1f00ad823591655f17f9b9f7e86e242046b6056c"
+      },
+      "reason": "W22.02 changes the same report-source artifact. Retain W22.01 implementation and accepted history; no stale whole-artifact acceptance.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1681,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.01-E3",
+      "before_sha256": "bf8a328f40ebffd77297a8e6e8b07d5af07dcce3c289250380da507cad8c0e4f",
+      "after_sha256": "7e94ae207435fab221db15daad583c8ab7cdbf7dde937f6f36e863c1f24f7f4e",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/qualify-W22.01-E3.json",
+        "sha256": "f9718988b7f47984438e4a322838211cb513aefbc1a5347e5232cc6cbb426078"
+      },
+      "reason": "W22.02 changes the same report-source artifact. Retain W22.01 implementation and accepted history; no stale whole-artifact acceptance.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1682,
+      "kind": "task_transition",
+      "task_id": "W22.01",
+      "from": "closed",
+      "to": "reopened",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2201-worker",
+          "run_id": "/root/w2201_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2201-reviewer",
+          "run_id": "/root/w2201_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Qualify overlapping five-file report artifact before W22.02 remedy; preserve prior accepted behavior/history and scoped dependency assurance.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1683,
+      "kind": "record_change",
+      "subject_type": "package",
+      "subject_id": "W22",
+      "before_sha256": "77f5912ed50f50198db2409afdaebd77b5d9e25cd51e00bd7cde398a4222e7c6",
+      "after_sha256": "721c05150ff0c35bfb01161d08f16700c8841332c297788df720d87d4d9ec6b4",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/package-coverage.json",
+        "sha256": "cb341f0f3d822ecdf22c4659b315fd344fdadd5c6ef8cebb13e79f9703b71978"
+      },
+      "reason": "Add bounded listed-input completeness coverage, not full durable reconciliation or package closure.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1684,
+      "kind": "task_transition",
+      "task_id": "W22.02",
+      "from": "draft",
+      "to": "ready",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2202-worker",
+          "run_id": "/root/w2202_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2202-reviewer",
+          "run_id": "/root/w2202_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Bounded continuation, root scope/entry/pins and distinct exact-plan preflight accepted.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1685,
+      "kind": "task_transition",
+      "task_id": "W22.02",
+      "from": "ready",
+      "to": "in_progress",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2202-worker",
+          "run_id": "/root/w2202_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2202-reviewer",
+          "run_id": "/root/w2202_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "GO for sole five-file listed-input refusal fix and fixed10/static, then frozen independent review.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z",
+      "plan_sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435",
+      "plan_approved_at": "2026-09-14T13:07:29.741Z",
+      "plan_snapshot": {
+        "status": "approved",
+        "plan": {
+          "path": "docs/remediation/design/W22.02/plan.md",
+          "sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435"
+        },
+        "contract_digest": "8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2",
+        "approval": {
+          "actor_id": "w01-lead",
+          "at": "2026-09-14T13:07:29.741Z",
+          "plan_sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435",
+          "rationale": "Root actual-source design case; distinct Astra/xhigh exact-plan PASS89fd28c; fixed10 sufficient, later-progress limit explicit. All prior artifact pins identical and lint0/0 reused."
+        }
+      }
+    },
+    {
+      "seq": 1686,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.02-E2",
+      "before_sha256": null,
+      "after_sha256": "bcadda9e90014d9d3f73d988132fc31683ba57d9fb3f076ecb3905789748d545",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/register-e2.json",
+        "sha256": "6f1ace0307593dcaaf756c0113ecdf7b840ca67ecff5a81bdbdc6a75820d56d7"
+      },
+      "reason": "Root inspected final exact command/captures and0/0 static results on frozen source; independent acceptance pending.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:13:47.672Z"
+    },
+    {
+      "seq": 1687,
+      "kind": "task_transition",
+      "task_id": "W22.02",
+      "from": "in_progress",
+      "to": "verification",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2202-worker",
+          "run_id": "/root/w2202_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2202-reviewer",
+          "run_id": "/root/w2202_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Five-file listed-input refusal implemented, root actual deltas and first-pass exact10/static inspected; immutable artifact for independent review.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:13:47.672Z"
+    },
+    {
+      "seq": 1688,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.02-E1",
+      "before_sha256": null,
+      "after_sha256": "c24c68431486a6644463c74ee320e1e4030c23e83a091e82bb70de983aa340bd",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/register-e1.json",
+        "sha256": "3b8a95b9d329d2067988d60556f1b2d6f4e39b9d921d7683ad4d3669f3776716"
+      },
+      "reason": "Root inspected independent exact frozen-source/criteria review and fixed10 PASS with38 intentionally unselected; scoped acceptance only.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:17:09.430Z"
+    },
+    {
+      "seq": 1689,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.02-E3",
+      "before_sha256": null,
+      "after_sha256": "9bf8faf742e521d5d9085aed8d974a9ac70825eca0ce4c9ea911e53e3a8bf12e",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/register-e3.json",
+        "sha256": "668009e1dcff7a982f52ae4e9436f17a3a3e3b0e86060a960c475afc5981e433"
+      },
+      "reason": "Root inspected independent exact frozen-source/criteria review and fixed10 PASS with38 intentionally unselected; scoped acceptance only.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:17:09.430Z"
+    },
+    {
+      "seq": 1690,
+      "kind": "task_transition",
+      "task_id": "W22.02",
+      "from": "verification",
+      "to": "closed",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2202-worker",
+          "run_id": "/root/w2202_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2202-reviewer",
+          "run_id": "/root/w2202_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Lead accepts bounded listed-input refusal/retry after distinct frozen source and fixed10 review. Full W22/W09/W30, historical recovery and release remain open.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:17:09.430Z"
+    }
+  ],
+  "reconciled_suffix": [
+    {
+      "seq": 1678,
+      "kind": "record_change",
+      "subject_type": "authority",
+      "subject_id": "local",
+      "before_sha256": "f7b2a1d4c392dc462d5bda0ae74a351233369f97f50a48f30b45784ee661a3bf",
+      "after_sha256": "a551bc2e871e38faa66facdd25ae93cf65a432a220305bd66962d7ad2fe71b93",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/authority-reconciled.json",
+        "sha256": "ef34c0db76b88fa301008e7c045a05ca08386b8109679ac966ea2adc650ac08c"
+      },
+      "reason": "Reuse bounded local continuation authority for next W22 implementation.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1679,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.01-E2",
+      "before_sha256": "ee1df55f26ea0337577f3c534d5a7a1cd8de36c71a2a5184628e81ad1baf9edd",
+      "after_sha256": "b9866e0a6556ab4753d710ba6267014739c3881495a80e8594f3839fd9b1bb49",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/qualify-W22.01-E2.json",
+        "sha256": "22c33416e4c2432f12e1e575344ce1a61b6f92b1634abe175b2ef361e352b890"
+      },
+      "reason": "W22.02 changes the same report-source artifact. Retain W22.01 implementation and accepted history; no stale whole-artifact acceptance.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1680,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.01-E1",
+      "before_sha256": "b610aeb0d61317612d13b2e8dc4f8f81b9ac8667b4c5b1bc704c8badfbfe45f1",
+      "after_sha256": "5f205bf73d14775ef4205a66c19d1ee421da63d37b25f314960abe1efac4301e",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/qualify-W22.01-E1.json",
+        "sha256": "14cb33ae27367145f3a3dd6d1f00ad823591655f17f9b9f7e86e242046b6056c"
+      },
+      "reason": "W22.02 changes the same report-source artifact. Retain W22.01 implementation and accepted history; no stale whole-artifact acceptance.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1681,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.01-E3",
+      "before_sha256": "bf8a328f40ebffd77297a8e6e8b07d5af07dcce3c289250380da507cad8c0e4f",
+      "after_sha256": "7e94ae207435fab221db15daad583c8ab7cdbf7dde937f6f36e863c1f24f7f4e",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/qualify-W22.01-E3.json",
+        "sha256": "f9718988b7f47984438e4a322838211cb513aefbc1a5347e5232cc6cbb426078"
+      },
+      "reason": "W22.02 changes the same report-source artifact. Retain W22.01 implementation and accepted history; no stale whole-artifact acceptance.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1682,
+      "kind": "task_transition",
+      "task_id": "W22.01",
+      "from": "closed",
+      "to": "reopened",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2201-worker",
+          "run_id": "/root/w2201_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2201-reviewer",
+          "run_id": "/root/w2201_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Qualify overlapping five-file report artifact before W22.02 remedy; preserve prior accepted behavior/history and scoped dependency assurance.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1683,
+      "kind": "record_change",
+      "subject_type": "package",
+      "subject_id": "W22",
+      "before_sha256": "77f5912ed50f50198db2409afdaebd77b5d9e25cd51e00bd7cde398a4222e7c6",
+      "after_sha256": "721c05150ff0c35bfb01161d08f16700c8841332c297788df720d87d4d9ec6b4",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/package-coverage.json",
+        "sha256": "cb341f0f3d822ecdf22c4659b315fd344fdadd5c6ef8cebb13e79f9703b71978"
+      },
+      "reason": "Add bounded listed-input completeness coverage, not full durable reconciliation or package closure.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1684,
+      "kind": "task_transition",
+      "task_id": "W22.02",
+      "from": null,
+      "to": "draft",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2202-worker",
+          "run_id": "/root/w2202_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2202-reviewer",
+          "run_id": "/root/w2202_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Omitted registration reconstructed during explicit journal reconciliation: task was created as draft in actual admission artifact at this timestamp; no new or backdated implementation/check execution. See docs/remediation/evidence/W22.02/journal-reconciliation.json.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1685,
+      "kind": "task_transition",
+      "task_id": "W22.02",
+      "from": "draft",
+      "to": "ready",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2202-worker",
+          "run_id": "/root/w2202_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2202-reviewer",
+          "run_id": "/root/w2202_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Bounded continuation, root scope/entry/pins and distinct exact-plan preflight accepted.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z"
+    },
+    {
+      "seq": 1686,
+      "kind": "task_transition",
+      "task_id": "W22.02",
+      "from": "ready",
+      "to": "in_progress",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2202-worker",
+          "run_id": "/root/w2202_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2202-reviewer",
+          "run_id": "/root/w2202_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "GO for sole five-file listed-input refusal fix and fixed10/static, then frozen independent review.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:07:29.741Z",
+      "plan_sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435",
+      "plan_approved_at": "2026-09-14T13:07:29.741Z",
+      "plan_snapshot": {
+        "status": "approved",
+        "plan": {
+          "path": "docs/remediation/design/W22.02/plan.md",
+          "sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435"
+        },
+        "contract_digest": "8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2",
+        "approval": {
+          "actor_id": "w01-lead",
+          "at": "2026-09-14T13:07:29.741Z",
+          "plan_sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435",
+          "rationale": "Root actual-source design case; distinct Astra/xhigh exact-plan PASS89fd28c; fixed10 sufficient, later-progress limit explicit. All prior artifact pins identical and lint0/0 reused."
+        }
+      }
+    },
+    {
+      "seq": 1687,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.02-E2",
+      "before_sha256": null,
+      "after_sha256": "bcadda9e90014d9d3f73d988132fc31683ba57d9fb3f076ecb3905789748d545",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/register-e2.json",
+        "sha256": "6f1ace0307593dcaaf756c0113ecdf7b840ca67ecff5a81bdbdc6a75820d56d7"
+      },
+      "reason": "Root inspected final exact command/captures and0/0 static results on frozen source; independent acceptance pending.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:13:47.672Z"
+    },
+    {
+      "seq": 1688,
+      "kind": "task_transition",
+      "task_id": "W22.02",
+      "from": "in_progress",
+      "to": "verification",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2202-worker",
+          "run_id": "/root/w2202_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2202-reviewer",
+          "run_id": "/root/w2202_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Five-file listed-input refusal implemented, root actual deltas and first-pass exact10/static inspected; immutable artifact for independent review.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:13:47.672Z"
+    },
+    {
+      "seq": 1689,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.02-E1",
+      "before_sha256": null,
+      "after_sha256": "c24c68431486a6644463c74ee320e1e4030c23e83a091e82bb70de983aa340bd",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/register-e1.json",
+        "sha256": "3b8a95b9d329d2067988d60556f1b2d6f4e39b9d921d7683ad4d3669f3776716"
+      },
+      "reason": "Root inspected independent exact frozen-source/criteria review and fixed10 PASS with38 intentionally unselected; scoped acceptance only.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:17:09.430Z"
+    },
+    {
+      "seq": 1690,
+      "kind": "record_change",
+      "subject_type": "evidence",
+      "subject_id": "W22.02-E3",
+      "before_sha256": null,
+      "after_sha256": "9bf8faf742e521d5d9085aed8d974a9ac70825eca0ce4c9ea911e53e3a8bf12e",
+      "record": {
+        "path": "docs/remediation/evidence/W22.02/register-e3.json",
+        "sha256": "668009e1dcff7a982f52ae4e9436f17a3a3e3b0e86060a960c475afc5981e433"
+      },
+      "reason": "Root inspected independent exact frozen-source/criteria review and fixed10 PASS with38 intentionally unselected; scoped acceptance only.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:17:09.430Z"
+    },
+    {
+      "seq": 1691,
+      "kind": "task_transition",
+      "task_id": "W22.02",
+      "from": "verification",
+      "to": "closed",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w2202-worker",
+          "run_id": "/root/w2202_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w2202-reviewer",
+          "run_id": "/root/w2202_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Lead accepts bounded listed-input refusal/retry after distinct frozen source and fixed10 review. Full W22/W09/W30, historical recovery and release remain open.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T13:17:09.430Z"
+    }
+  ],
+  "sequence_mapping": [
+    {
+      "original": 1678,
+      "reconciled": 1678
+    },
+    {
+      "original": 1679,
+      "reconciled": 1679
+    },
+    {
+      "original": 1680,
+      "reconciled": 1680
+    },
+    {
+      "original": 1681,
+      "reconciled": 1681
+    },
+    {
+      "original": 1682,
+      "reconciled": 1682
+    },
+    {
+      "original": 1683,
+      "reconciled": 1683
+    },
+    {
+      "original": 1684,
+      "reconciled": 1685
+    },
+    {
+      "original": 1685,
+      "reconciled": 1686
+    },
+    {
+      "original": 1686,
+      "reconciled": 1687
+    },
+    {
+      "original": 1687,
+      "reconciled": 1688
+    },
+    {
+      "original": 1688,
+      "reconciled": 1689
+    },
+    {
+      "original": 1689,
+      "reconciled": 1690
+    },
+    {
+      "original": 1690,
+      "reconciled": 1691
+    }
+  ],
+  "frozen_evidence_note": "Original source-go journal1685 in immutable worker/admission evidence refers to pre-correction event now1686. This mapping qualifies journal references without rewriting frozen evidence.",
+  "artifact_digest": "0aafbe28b3ad1be7ea2811b7433f920c4ac0ea162ed499ff91a0aff274238cb6",
+  "review": {
+    "path": "docs/remediation/evidence/W22.02/review.json",
+    "sha256": "9546635e29abdbb67e0250ada96ba2e4b4356c6657af70cd90295d310b2827dc"
+  },
+  "next_action": "Independent root-assigned reviewer inspects correction, then rerun existing board check/status. No source/runtime rework."
+}

@@ -1,0 +1,135 @@
+{
+  "id": "W02.01",
+  "package_id": "W02",
+  "title": "Reject refresh credentials at the shared access-token verifier",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Contain F02 refresh-as-access by rejecting signed refresh payloads after verification and before protected dispatch, preserving current access/tool/SDK compatibility. Only the narrow W02 guard and its focused proof, not full identity/session/readiness/abuse policy.",
+  "read_paths": [
+    "src",
+    "scripts",
+    "public/operator-session.js",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/middleware/auth.ts",
+    "src/middleware/auth.refresh-boundary.test.ts",
+    "docs/remediation/evidence/W02.01"
+  ],
+  "non_goals": [
+    "No token issuer/service migration, mandatory claim/session/tenant policy, SSO/onboarding/abuse/readiness or customer decision.",
+    "No deployment, external egress, real credentials/data, install/seed/cloud/git mutation or unrelated code/config/bundle edits.",
+    "No full W02/finding/gate/customer/SLO/release closure; preserve and separately revalidate affected W01.02 proof."
+  ],
+  "criteria": [
+    {
+      "id": "W02.01-C1",
+      "description": "Real login-issued fresh and revoked refresh bearers are refused before protected auth/config effects; concrete before-state read/mutation and body/revision/index baseline distinguishes fix from fixture failure.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W02.01-C2",
+      "description": "Real access and untyped tool credentials plus existing access/service token shapes retain successful reads/writes; renewal/logout and normal invalid/optional/role/permission behavior hold. Real SDK/operator middleware denies refresh delegation with independent SDK-key controls.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W02.01-C3",
+      "description": "Independent frozen source/test/evidence review, targeted regressions/typechecks, scope limits and actual lead handoff establish narrow remedy without hiding remaining W02 obligations or stale W01.02 evidence.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W02.01-K1",
+      "required": true,
+      "criterion_ids": [
+        "W02.01-C1",
+        "W02.01-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/middleware/auth.refresh-boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Node v22.15.0/Vitest with real Hono, jose, auth/config/accounts/edge-access modules and synthetic successful in-memory stores only; no real credentials/data/network.",
+      "workload": "Fresh and logout-revoked real-issued refresh read/mutation attempts, exact protected state/revision/index effects, successful access/tool/typed-token controls, JSON renewal and role/optional/cryptographic/SDK/operator cases; baseline and exact counts retained.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W02.01-K2",
+      "required": true,
+      "criterion_ids": [
+        "W02.01-C3"
+      ],
+      "command": "Independent frozen W02.01 code/test/baseline review and K1 rerun with adversarial challenges; inspect actual targeted regression/typecheck evidence and residual/handoff; retain exact commands and verdict in review-v1.md.",
+      "runtime": "Independent local source and focused Node integration checks with synthetic stores; no deployed/customer/credential operations.",
+      "workload": "All W02.01 C1-C3 obligations, exact guard, actual config effects and legitimate controls; prior W01 proof preserved and its revalidation explicitly scheduled.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [],
+  "preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W02.01/plan-v1.md",
+      "sha256": "41407896da9ebbf2ac9bea4091162266d304640c26667555edf65510a37a3074"
+    },
+    "contract_digest": "5e1783439aecaa644f802b0e9c3cdaaa5555ca2f93be7968209a0dd91279063b",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-07T00:34:12.085Z",
+      "plan_sha256": "41407896da9ebbf2ac9bea4091162266d304640c26667555edf65510a37a3074",
+      "rationale": "Standing approved local G0 mandate and explicit continuation. Lead inspected actual shared JWT, issuer/refresh/config and canonical scope; separate Astra worker/reviewer preflights agreed on narrow deny with real mutation/compatibility controls and no human-policy dependency."
+    }
+  },
+  "assignments": {
+    "implementer": "w0201-worker",
+    "independent_reviewer": "w0201-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "independent_review": {
+    "status": "not_requested",
+    "actor_id": null,
+    "artifact_digest": null,
+    "evidence_ids": [],
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "lead_signoff": {
+    "status": "pending",
+    "actor_id": null,
+    "artifact_digest": null,
+    "review_sha256": null,
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "acceptance_history": [],
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Reproduce actual refresh read/config mutation, immediately apply narrow guard, independently verify; then revalidate unchanged W01.02 raw boundary against changed shared auth."
+  }
+}

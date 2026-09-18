@@ -1,0 +1,44 @@
+{
+  "task_id": "W35.07",
+  "at": "2026-09-16T05:16:41.170Z",
+  "contract_digest": "9a474db5475a06e8f567e8a8554405304a93571da93e16a4415d892061a6db02",
+  "rejected_artifact": "d7e3e508cc78b318260a4d140aa24496e98037553094abe914240b71e8b3ba4c",
+  "rework_review": {
+    "path": "docs/remediation/evidence/W35.07/review.json",
+    "sha256": "6c5949eccb5f41acbb59a6dccdf6a767635b23c238bc71a7d9edc8a806ad97d7"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W35.07/worker.json",
+    "sha256": "c88a06671b8cfba559c546e555b77c45690cfc2efae81e1acef3292a50fb64db"
+  },
+  "source_files": [
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "sha256": "31828b04839833d9e3a4326b1994a338a5e7b602098509d37672bab9d3748ffe",
+      "role": "output"
+    },
+    {
+      "path": "src/identity/erase.ts",
+      "sha256": "cfb9ed4630a2a03a34ca2a59e11e59209c11a6338d0bf7049217d917dbe58e6c",
+      "role": "output"
+    },
+    {
+      "path": "src/services/SessionManager.ts",
+      "sha256": "dbfc41128bf1fca16d31053cd6ccc935d5a7472736c862d3b8ba6cdde52041fd",
+      "role": "output"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "sha256": "dda42c2be57a1e7c085eff1685dc6962a64b9d48be19ccbc72126944ee343269",
+      "role": "output"
+    },
+    {
+      "path": "src/routes/identity.test.ts",
+      "sha256": "7647571649d72ffb48f21c3fd256f2bb3e303a940dffe479cbcadee764412c6c",
+      "role": "output"
+    }
+  ],
+  "lead_inspection": "Actual barrier transactions retain continuationEpoch; remaining v6 shared-key effects check current owner generation and at most two captured pointer/own sessions, including canonical userId dependencies. Same-/different-SID successors are refused across base, extra and compacted scan continuation. Existing32-step limit retained; completed effects are not replayed and final compaction alone needs no historical sweep. Root independently reconstructed all3 R1 inverse deltas against rejected hashes (capture133284).",
+  "checks": "Final K1 session62207 exit0:20 passed/94 skipped. K2 session59404 exit0:compiler/lint/whitespace pass,113 unchanged warnings. Failed/superseded attempts retained. Source STOP05:16:14UTC; distinct review pending.",
+  "limitations": "Local prospective DO-authorized containment only; KV read/delete remains nontransactional with legacy writers. No full legacy session-host or socket authority, unseen SID reuse, grantless/legacy cleanup parity, historical discovery, migration, deployment, external/physical erasure, retention/capacity, customer/native/browser/SLO/release acceptance or full W35/F06/F14 closure."
+}

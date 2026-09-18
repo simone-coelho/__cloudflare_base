@@ -1,0 +1,32 @@
+{
+  "task_id": "W06.12",
+  "at": "2026-09-17T14:48:53.633Z",
+  "actor_id": "w01-lead",
+  "verdict": "LOCAL_W06_IMPLEMENTED_AND_INDEPENDENTLY_VERIFIED; full acceptance withheld",
+  "artifact_digest": "f162d1d0ca2cee97d0f43ad7766f086d357f9eb8033cef594c598b4812fd148d",
+  "contract_digest": "9d7e4deaeef1436c553db773852c976db6e629a379d2a16184e2afeeccc846a4",
+  "review": {
+    "path": "docs/remediation/evidence/W06.12/review.json",
+    "sha256": "98ad89c567f442219f674d66552f5a0caf20a52365f8d835c260f03f31b4e034"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W06.12/worker.json",
+    "sha256": "32b918ab519f392120b96aea1c4837b3c68d11bfc941c69834f138f373e5aff8"
+  },
+  "source_freeze": {
+    "path": "docs/remediation/evidence/W06.12/source-freeze.json",
+    "sha256": "e7623bea2e1f53807061ff1b6ecd8ccfc1e9760d881bcfac461b7f22f6985d52"
+  },
+  "results": {
+    "K1": "Exact K1.3 exit0:59pass/64unselected; only unrelated K2 fixture changed afterward.",
+    "K2": "Qualified component assurance, NOT full final-command pass: K2.2 exit1/82pass1fail210unselected; sole exact two-block fixture delta reversed to held original, corrected finalAffected3 exit0/1pass110unselected. Original W05 consent/owned-refusal controls preserved; other product/configuration/fixture inputs unchanged.",
+    "K3": "Exact K3.2 exit0: both compilers,45TS lint,47output whitespace.253warnings=217inherited+36new,3resolved from220baseline; zero errors.",
+    "K4": "Distinct whole-original-W06 C1-C7 source/delta/dependency/primary review PASS_LOCAL; no blocking finding.47admitted dirty-baseline deltas/128pins independently verified.",
+    "K5": "Exact independent11-fixture command exit0:30pass/386unselected,87.45s.30orderedchunks/10161bytes SHAfc74594f04f57818514054d229d42496403fef1dae3cdca01ed63ca27c37058f;128before/after/currentpins identical.",
+    "K6": "NOT_RUN: separately authorized live/historical/provider/customer/real subject-browser acceptance."
+  },
+  "lead_checks": "Read complete final review and original criteria; rechecked review/worker/freeze hashes and128sourcepins. Previously verified47reversible deltas/admitted originals, full worker primaries, exact K2 fixture delta and lint multiset; independently decoded/hash-verified finalK5. Root did no product edits/tests.",
+  "history": "Failed/superseded/truncated attempts retained; lost pre-recovery streams receive no exact-final credit. Original worker execution predates reviewer-only admission and is not redated. First lead admission-patch export exceeded output limit; parse failed before any file edit; rerun uses origin compression.",
+  "limits": "C8/K6/fullW06/findings/historical/customer/privacy/provider/browser/release remains open. No actual retention values, historical operations or external authority. All sessions drained, SOURCE/EVIDENCE STOP.",
+  "next_action": "OriginalW07 local implementation under existing ordered mandate. Prospectively qualify29overlapping W06 source pins, preserving immutable local PASS and untouched component assurance; batch separately authorized live checks at end."
+}

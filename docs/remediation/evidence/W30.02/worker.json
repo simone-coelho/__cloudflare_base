@@ -1,0 +1,324 @@
+{
+  "task_id": "W30.02",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T18:36:17.572Z",
+  "source_go_at": "2026-09-12T18:21:21.598Z",
+  "contract_digest": "6cd0933c2623458aa4bb626f58ba47baffef5e70c33a8d91611069346485c5d3",
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W30.02/plan.md",
+      "sha256": "434972b0c90d25f95b96747c438b80cd5dfe8cdd82f43c5a7686871bad06611c"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W30.02/baseline.json",
+      "sha256": "29768357626aa4a5f17cfd8c9352cce3371fee08a296fc14f2a775dfcb137ddf"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W30.02/admission.json",
+      "sha256": "fc55c300779432915d979f575f97ed7a03034de62f88dd323eeb5f5bd2261862"
+    }
+  },
+  "implementation_summary": [
+    "Added versioned conservative source coverage to fresh hour/day reports and normalized stored day/window reads without new I/O, writeback or changes to folding/counts/legacy hours.",
+    "Retains missing/truncated/unadvanced hours and visitor uncertainty, per-hour finite nonnegative horizons, null for unknowns and minimum only for fully known contributors. Legacy last-hour horizons never become minimum evidence.",
+    "Both actual operator views show coverage before empty/no-grid exits, guard malformed new-field entries and derive minima from coherent detail rather than trusting supplied scalar minima. Maturity remains unknown; no complete/settled or favorable inference.",
+    "Four grouped additions in existing fixtures; kit report contract removes any-size/settled promises and explicitly excludes CSV."
+  ],
+  "criterion_verdicts": {
+    "W30.02-C1": {
+      "worker_result": "pass",
+      "basis": "Actual hour/capped rebuild to saved day/window, zero and mixed horizons, unknown per-hour metadata, legacy visitor uncertainty and retained W30.01 three cases."
+    },
+    "W30.02-C2": {
+      "worker_result": "pass",
+      "basis": "Actual day GET/window normalization, absent-hours and malformed/legacy idempotency, unchanged stored bytes/read counts/raw counts, two rendered UI groups with empty/malformed/forged-minimum cases and retained W21 controls."
+    },
+    "W30.02-C3": {
+      "worker_result": "worker_checks_pass_independent_review_pending",
+      "basis": "Ten owned files, four grouped additions, fixed12, full compiler/zero-warning lint/JS syntax/whitespace and all28 protected pins. Independent frozen review and lead disposition pending."
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 12,
+      "unselected": 59,
+      "files": 4,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 7454,
+      "chunk_id": "03765f",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w3002_static1"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "command_capture": "w3002_static1"
+    },
+    "javascript_syntax": {
+      "exit_code": 0,
+      "drained": true,
+      "files": [
+        "public/learning.js",
+        "public/console/views-measure.js"
+      ],
+      "command_capture": "w3002_static1"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w3002_static1"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 54368,
+      "chunk_id": "ee3afa",
+      "component_semantics": "The exact admitted && chain completed with exit0; every component ran and returned0."
+    }
+  },
+  "execution_history": [
+    {
+      "capture": "w3002_runtime1",
+      "disposition": "superseded_candidate_pass",
+      "passed": 12,
+      "unselected": 59,
+      "reason": "Root source review identified new UI malformed-entry/forged-minimum compatibility and normalization without hours; correction was made only after initial runtime drained. Initial12PASS retained, not claimed for final bytes."
+    },
+    {
+      "correction": "Existing UI groups extended for null/malformed per-hour/per-day entries, missing contributors and forged scalar minima; complete finite zero case distinguished from missing-hours unknown. Existing route group extended for legacy absent-hours and raw-ledger source idempotency. Four groups and fixed12 unchanged."
+    },
+    {
+      "capture": "w3002_runtime2",
+      "disposition": "final_pass",
+      "passed": 12,
+      "unselected": 59
+    },
+    {
+      "capture": "w3002_static1",
+      "disposition": "final_pass"
+    },
+    {
+      "capture": "w3002_stop_capture",
+      "disposition": "source_stop_and_protected_pins_pass"
+    },
+    {
+      "failures": [],
+      "qualification": "No failed runtime or static attempt. Source-confirmed compatibility corrections superseded the first successful candidate, without erasing it."
+    }
+  ],
+  "command_captures": {
+    "w3002_runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts -t 'W30.02|W30.01|W21 hourly reports|W21 retains repeated credits|W21 rejects invalid|W21 legacy report|measurement shows raw attribution' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T18:28:04.719Z",
+      "captures": [
+        {
+          "chunk_id": "012982",
+          "wall_time_seconds": 1.000786092,
+          "session_id": 35512,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3765d8",
+          "wall_time_seconds": 5.001041799,
+          "session_id": 35512,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "be20d4",
+          "wall_time_seconds": 0.261480224,
+          "exit_code": 0,
+          "original_token_count": 116,
+          "output": " ✓ src/console/console.render.test.ts  (33 tests | 31 skipped) 2147ms\n ✓ src/learn/hourly.test.ts  (21 tests | 16 skipped) 84ms\n ✓ src/console/learning.render.test.ts  (10 tests | 8 skipped) 396ms\n ✓ src/learn/report.test.ts  (7 tests | 4 skipped) 14ms\n\n Test Files  4 passed (4)\n      Tests  12 passed | 59 skipped (71)\n   Start at  14:28:07\n   Duration  54.34s (transform 2.10s, setup 0ms, collect 42.35s, tests 2.64s, environment 0ms, prepare 6.73s)\n\n"
+        }
+      ],
+      "session_id": 35512,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T18:29:01.379Z"
+    },
+    "w3002_runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts -t 'W30.02|W30.01|W21 hourly reports|W21 retains repeated credits|W21 rejects invalid|W21 legacy report|measurement shows raw attribution' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T18:31:54.163Z",
+      "captures": [
+        {
+          "chunk_id": "db74f8",
+          "wall_time_seconds": 1.000883261,
+          "session_id": 7454,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "dcbee5",
+          "wall_time_seconds": 5.002990794,
+          "session_id": 7454,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "b16baa",
+          "wall_time_seconds": 5.003431953,
+          "session_id": 7454,
+          "original_token_count": 18,
+          "output": " ✓ src/console/console.render.test.ts  (33 tests | 31 skipped) 3525ms\n"
+        },
+        {
+          "chunk_id": "77bd9c",
+          "wall_time_seconds": 5.000866676,
+          "session_id": 7454,
+          "original_token_count": 16,
+          "output": " ✓ src/learn/hourly.test.ts  (21 tests | 16 skipped) 119ms\n"
+        },
+        {
+          "chunk_id": "50bf54",
+          "wall_time_seconds": 5.001327566,
+          "session_id": 7454,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "bb3e4d",
+          "wall_time_seconds": 5.001675521,
+          "session_id": 7454,
+          "original_token_count": 18,
+          "output": " ✓ src/console/learning.render.test.ts  (10 tests | 8 skipped) 785ms\n"
+        },
+        {
+          "chunk_id": "03765f",
+          "wall_time_seconds": 1.013476663,
+          "exit_code": 0,
+          "original_token_count": 66,
+          "output": " ✓ src/learn/report.test.ts  (7 tests | 4 skipped) 17ms\n\n Test Files  4 passed (4)\n      Tests  12 passed | 59 skipped (71)\n   Start at  14:31:55\n   Duration  106.34s (transform 4.33s, setup 0ms, collect 79.34s, tests 4.45s, environment 0ms, prepare 17.63s)\n\n"
+        }
+      ],
+      "session_id": 7454,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T18:33:42.051Z"
+    },
+    "w3002_static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/hourly.ts src/learn/report.ts src/measure/window.ts src/learn/hourly.test.ts src/learn/report.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts --max-warnings 0 && node --check public/learning.js && node --check public/console/views-measure.js && git diff --check -- src/learn/hourly.ts src/learn/report.ts src/measure/window.ts public/learning.js public/console/views-measure.js src/learn/hourly.test.ts src/learn/report.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T18:33:51.986Z",
+      "captures": [
+        {
+          "chunk_id": "d86fcd",
+          "wall_time_seconds": 1.001534893,
+          "session_id": 54368,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c00573",
+          "wall_time_seconds": 5.000945002,
+          "session_id": 54368,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "a87f37",
+          "wall_time_seconds": 5.001329871,
+          "session_id": 54368,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ee3afa",
+          "wall_time_seconds": 0.000002183,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 54368,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T18:35:02.019Z"
+    },
+    "w3002_stop_capture": {
+      "command": "node -e 'const fs=require(\"fs\"),crypto=require(\"crypto\");const hash=p=>crypto.createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\");const base=JSON.parse(fs.readFileSync(\"docs/remediation/design/W30.02/baseline.json\",\"utf8\"));const owned=new Set(base.owned.map(f=>f.path));const protectedPins=base.pins.filter(f=>!owned.has(f.path));const mismatches=protectedPins.filter(f=>hash(f.path)!==f.sha256).map(f=>({path:f.path,expected:f.sha256,actual:hash(f.path)}));console.log(JSON.stringify({final_source_stop:{at:new Date().toISOString(),files:base.owned.map(f=>({path:f.path,sha256:hash(f.path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},references:Object.fromEntries([\"plan\",\"baseline\",\"admission\"].map(k=>{const p=k===\"admission\"?\"docs/remediation/evidence/W30.02/admission.json\":\"docs/remediation/design/W30.02/\"+k+(k===\"plan\"?\".md\":\".json\");return[k,{path:p,sha256:hash(p)}]}))},null,2));if(mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12T18:35:21.807Z",
+      "captures": [
+        {
+          "chunk_id": "17962e",
+          "wall_time_seconds": 0.010644674,
+          "exit_code": 0,
+          "original_token_count": 548,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T18:35:21.988Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/hourly.ts\",\n        \"sha256\": \"0f7cb03abfca3202fb02b49588049163c18d007c7bfd47e9598ca9237b4638da\"\n      },\n      {\n        \"path\": \"src/learn/report.ts\",\n        \"sha256\": \"d015e70f0c319252e0f207eeb83581ab098878f0c10ffdb0078ac30fe445c2eb\"\n      },\n      {\n        \"path\": \"src/measure/window.ts\",\n        \"sha256\": \"53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822\"\n      },\n      {\n        \"path\": \"public/learning.js\",\n        \"sha256\": \"6dbb1b51969b9fbd4a78347ac7ab95657bbe17f7f728b872d6c66cf5fcc189f7\"\n      },\n      {\n        \"path\": \"public/console/views-measure.js\",\n        \"sha256\": \"060a3b660d63b0153a54870c32febccb70660d7385331724be177a5718d9f80f\"\n      },\n      {\n        \"path\": \"src/learn/hourly.test.ts\",\n        \"sha256\": \"a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7\"\n      },\n      {\n        \"path\": \"src/learn/report.test.ts\",\n        \"sha256\": \"444982a16266fb3730b8b3e4c3938221139868c6f5f87ab79507e49c83beee59\"\n      },\n      {\n        \"path\": \"src/console/learning.render.test.ts\",\n        \"sha256\": \"263870bad5e492eb385b66da6873aaddde6aa459b27e578c63ede948084156c3\"\n      },\n      {\n        \"path\": \"src/console/console.render.test.ts\",\n        \"sha256\": \"0d73029c63e1db90d4edb569e09f15baf82b6a04af3c5c27936a2cfc9d9912ce\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"4d54d4f34e1c3633cdd087c8cf277137a68f3b0088378e032778f19f413a74af\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 28,\n    \"matched\": 28,\n    \"mismatches\": []\n  },\n  \"references\": {\n    \"plan\": {\n      \"path\": \"docs/remediation/design/W30.02/plan.md\",\n      \"sha256\": \"434972b0c90d25f95b96747c438b80cd5dfe8cdd82f43c5a7686871bad06611c\"\n    },\n    \"baseline\": {\n      \"path\": \"docs/remediation/design/W30.02/baseline.json\",\n      \"sha256\": \"29768357626aa4a5f17cfd8c9352cce3371fee08a296fc14f2a775dfcb137ddf\"\n    },\n    \"admission\": {\n      \"path\": \"docs/remediation/evidence/W30.02/admission.json\",\n      \"sha256\": \"fc55c300779432915d979f575f97ed7a03034de62f88dd323eeb5f5bd2261862\"\n    }\n  }\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T18:35:22.052Z"
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-12T18:35:21.988Z",
+    "files": [
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "0f7cb03abfca3202fb02b49588049163c18d007c7bfd47e9598ca9237b4638da"
+      },
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "d015e70f0c319252e0f207eeb83581ab098878f0c10ffdb0078ac30fe445c2eb"
+      },
+      {
+        "path": "src/measure/window.ts",
+        "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+      },
+      {
+        "path": "public/learning.js",
+        "sha256": "6dbb1b51969b9fbd4a78347ac7ab95657bbe17f7f728b872d6c66cf5fcc189f7"
+      },
+      {
+        "path": "public/console/views-measure.js",
+        "sha256": "060a3b660d63b0153a54870c32febccb70660d7385331724be177a5718d9f80f"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "444982a16266fb3730b8b3e4c3938221139868c6f5f87ab79507e49c83beee59"
+      },
+      {
+        "path": "src/console/learning.render.test.ts",
+        "sha256": "263870bad5e492eb385b66da6873aaddde6aa459b27e578c63ede948084156c3"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "0d73029c63e1db90d4edb569e09f15baf82b6a04af3c5c27936a2cfc9d9912ce"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "4d54d4f34e1c3633cdd087c8cf277137a68f3b0088378e032778f19f413a74af"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 28,
+    "matched": 28,
+    "mismatches": []
+  },
+  "limitations": [
+    "Local synthetic R2/Hono and JSDOM evidence, not native/deployed capacity, customer acceptance or full W30/F17/F18/F25/N08/N23 reconstruction.",
+    "Missing/late mutable records, checkpoint/manifests, carry-in lost to caps/horizons, higher-cap dependent-hour repair, delivery reconciliation, policy compatibility and maturity remain unresolved. No age-based or complete/settled certification.",
+    "ringsFolded=false is reported as unadvanced persisted ring progress, not proof every displayed credit is incorrect. W30.01 attribution algorithm and existing legacy hours/counts remain unchanged.",
+    "Stored reports are not repaired or rewritten; current GET preserves as-at-build facts and cannot discover later missing arrivals. Scalar legacy hours.horizonMs is not reinterpreted as a minimum.",
+    "CSV/external exports and report identity/full payload validation remain outside this bounded JSON/view change. Existing report read failures/missing behavior, overlay write/provenance and persistence acknowledgement limitations are unchanged.",
+    "Adjacent dormant Thompson display in legacy renderExploring was explicitly left unchanged for root's W28 residual. No serving, policy, configuration, cloud/customer-data, deployment, commit or governance changes."
+  ]
+}

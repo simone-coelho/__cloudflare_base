@@ -1,0 +1,36 @@
+{
+  "id": "W06.10",
+  "at": "2026-09-08T22:44:12.070Z",
+  "entry_board": "check/status VALID412 exit0; no drift",
+  "files": [
+    {
+      "path": "src/routes/realtime.ts",
+      "sha256": "7305f94a0ea33b309e91dfde780658c62d34357da8ab3bc11be4b7ad11c25194"
+    },
+    {
+      "path": "src/routes/funnel.ts",
+      "sha256": "1e4bc6aac216b93ebad77e9c73cb30ac5e2df8030abc8fbd7c62d1f110167892"
+    },
+    {
+      "path": "src/services/demoEventCapture.ts",
+      "sha256": null
+    },
+    {
+      "path": "src/routes/demoEventCapture.test.ts",
+      "sha256": "c3e9a934fb3915a4cfbc3a2278e2e880131d1658404b603ead2ef289bd022ad9"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "sha256": "c84a01d20d19401508670d16d9af5ce664740cefc1b707a2acf5fe37e8cf0f02"
+    },
+    {
+      "path": "src/types/env.ts",
+      "sha256": "7e461a0548ee684370d6fbe49a5556e635932ddaceb7b0caf8c4e914fffac71f"
+    }
+  ],
+  "observation": "Both realtime/action and funnel/event insert vuid/session into demo_events without tenant. realtime defaults capture outside production and true overrides production; funnel has no gate. Consent guards realtime only. Direct source design baseline, not runtime measurement. Worker must retain exact admission bytes and diffs before editing.",
+  "schema": {
+    "path": "migrations/0002_demo_events.sql",
+    "sha256": "b0bce9a9fca4a627a4caee051fe2609fc56f7e455b91bd2471c625efb5689195"
+  }
+}

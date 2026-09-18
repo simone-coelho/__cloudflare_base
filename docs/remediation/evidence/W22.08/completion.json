@@ -1,0 +1,92 @@
+{
+  "task_id": "W22.08",
+  "at": "2026-09-15T19:27:19.495Z",
+  "journal_seq": 1872,
+  "artifact_digest": "fbd80002f82071ecd1f9a37d3c1b0a95dd146617b5579c3434e85ebb3a91e7d5",
+  "contract_digest": "b4a902e866e064c72950a9b2309659ecaf6a3eb5b93ac5c0cba11d7335736007",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W22.08/acceptance.md",
+    "sha256": "73b64af12d60cde40eea0d39b48d3073ed3579ff178f507ba03cdd9c6d0d5f2c"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W22.08/review.json",
+    "sha256": "8cbca7c723bd00e6ba450d37d055c62812ed1cefb99d95050b5978fbb1452954"
+  },
+  "root_review_capture": [
+    "d9aa69",
+    "0cd22e",
+    "9420e3"
+  ],
+  "board": {
+    "initial": {
+      "chunk_id": "d366cb",
+      "wall_time_seconds": 1.001240175,
+      "session_id": 21180,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "64b3db",
+        "wall_time_seconds": 5.001773648,
+        "session_id": 21180,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "206b2e",
+        "wall_time_seconds": 5.000788847,
+        "session_id": 21180,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "037c74",
+        "wall_time_seconds": 5.000865234,
+        "session_id": 21180,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "28df4e",
+        "wall_time_seconds": 5.001668962,
+        "session_id": 21180,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "4db427",
+        "wall_time_seconds": 5.000783409,
+        "session_id": 21180,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "2b7e4d",
+        "wall_time_seconds": 5.00043556,
+        "session_id": 21180,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f96fcb",
+        "wall_time_seconds": 5.001319714,
+        "session_id": 21180,
+        "original_token_count": 307,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=128, closed=2; evidence records=383\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.08 — Continue W22 attribution reconciliation: inspect DecisionRing.outcome's uncorrelated branch, which currently filters personalized arm but not record brand, against shared attribute semantics and hourly's explicit same-brand filter. Verify whether a same-tenant mixed-brand ring can credit another brand's decision into the outcome brand's statistics; if confirmed, admit one bounded brand-fencing remedy with correlated ambiguity behavior preserved. This is a source-identified next candidate, not runtime-confirmed or repaired by W22.08. Preserve W22.07 and W22.08; historical reconstruction and D04/D06/W24 decisions remain separate. No extra retention, blanket age cutoff, deployment or customer-data operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 26685\n"
+      },
+      {
+        "chunk_id": "f64a68",
+        "wall_time_seconds": 0.000001928,
+        "exit_code": 0,
+        "original_token_count": 307,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=128, closed=2; evidence records=383\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.08 — Continue W22 attribution reconciliation: inspect DecisionRing.outcome's uncorrelated branch, which currently filters personalized arm but not record brand, against shared attribute semantics and hourly's explicit same-brand filter. Verify whether a same-tenant mixed-brand ring can credit another brand's decision into the outcome brand's statistics; if confirmed, admit one bounded brand-fencing remedy with correlated ambiguity behavior preserved. This is a source-identified next candidate, not runtime-confirmed or repaired by W22.08. Preserve W22.07 and W22.08; historical reconstruction and D04/D06/W24 decisions remain separate. No extra retention, blanket age cutoff, deployment or customer-data operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 26685\n"
+      }
+    ],
+    "result": "VALID",
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;32 artifact pins and W22.07 all51 artifact pins/review unchanged. No worker/reviewer commands running. Tracker consistency is not engine/customer/SLO/release acceptance.",
+  "next_action": "Continue W22 attribution reconciliation: inspect DecisionRing.outcome's uncorrelated branch, which currently filters personalized arm but not record brand, against shared attribute semantics and hourly's explicit same-brand filter. Verify whether a same-tenant mixed-brand ring can credit another brand's decision into the outcome brand's statistics; if confirmed, admit one bounded brand-fencing remedy with correlated ambiguity behavior preserved. This is a source-identified next candidate, not runtime-confirmed or repaired by W22.08. Preserve W22.07 and W22.08; historical reconstruction and D04/D06/W24 decisions remain separate. No extra retention, blanket age cutoff, deployment or customer-data operations.",
+  "limitations": "Forward DecisionRing retention ordering only. Stable equal-time arrival order preserved, permutation parity for distinct times only. No new age/lifecycle/policy/retention, evicted-history reconstruction, index migration, receipt change, cross-call statistics idempotence or full W22/W23/W30/customer/SLO/release claim. W22.07 artifact and review unchanged. No install/emitted build/commit/stage/push/deploy/cloud/credentials/customer-data/destructive/external operations. Worker and independent reviewer each passed fixed5 local synthetic checks. Same-byte compiler1536/two-file lint0errors3unchanged warnings/no new signatures/whitespace passed. Not native/cloud failure, customer or SLO evidence."
+}

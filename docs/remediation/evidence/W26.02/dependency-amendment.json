@@ -1,0 +1,66 @@
+{
+  "at": "2026-09-14T01:04:51.386Z",
+  "reason": "Concrete pre-filter ambiguity can hide duplicate IDs across arms/brands; admit one existing DO dependency, same five grouped cases/fixed28, original source/check history retained.",
+  "prior_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W26.02/plan.md",
+      "sha256": "7c7512e93f01f45c13b946164171fb465575192ad1bd1a42cb28db0ad699f4c6"
+    },
+    "contract_digest": "b24b6a05b4d4a84a504882be56f6ab6bf6e187c7a5fc6bc1265a81c54e37cf6c",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T00:56:12.841Z",
+      "plan_sha256": "7c7512e93f01f45c13b946164171fb465575192ad1bd1a42cb28db0ad699f4c6",
+      "rationale": "Main primary-source inspection and independent Astra/xhigh complete-plan challenge9d5328 support optional narrowing correlation with explicit captured ID, pre-host validation, owner/ambiguity guards and versioned computation; no DS policy invented."
+    }
+  },
+  "current_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W26.02/plan-v2.md",
+      "sha256": "0d58a9f5cb5d885dc9b874c827266df6f0bc0dc69db2fe0d121a40903a1d675f"
+    },
+    "contract_digest": "516775caaad675a5f46637a944cfcdd299d3b0cee5dd12b22fabaa8e5198f801",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-14T01:04:51.386Z",
+      "plan_sha256": "0d58a9f5cb5d885dc9b874c827266df6f0bc0dc69db2fe0d121a40903a1d675f",
+      "rationale": "Concrete pre-filter ambiguity can hide duplicate IDs across arms/brands; admit one existing DO dependency, same five grouped cases/fixed28, original source/check history retained. Independent Astra/xhigh complete-v2 challenge PASS26f0d2; root read source and approved before added-file edits."
+    }
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W26.02/baseline-v2.json",
+    "sha256": "a7d18926b7e85aa39e0d817aa5b300c064ba706302e4185081babc00fc5d8acc"
+  },
+  "owned": [
+    "src/content/types.ts",
+    "src/content/service.ts",
+    "src/content/consent.test.ts",
+    "src/sdk/types.ts",
+    "src/sdk/listen.ts",
+    "src/sdk/emit.ts",
+    "src/sdk/emit.test.ts",
+    "src/sdk/README.md",
+    "src/ledger/records.ts",
+    "src/routes/realtime.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/learn/policy.ts",
+    "src/learn/fan.ts",
+    "src/learn/report.ts",
+    "src/learn/hourly.ts",
+    "src/learn/learn.test.ts",
+    "src/learn/hourly.test.ts",
+    "src/learn/report.test.ts",
+    "public/sdk/edge-personalization.js",
+    "public/sdk/edge-personalization.esm.js",
+    "docs/kit/01-integration-guide.md",
+    "src/durable-objects/DecisionRing.ts"
+  ],
+  "unchanged_added_file": {
+    "path": "src/durable-objects/DecisionRing.ts",
+    "sha256": "292ca971dc99e718b24b3a3d51050fbd955e0eccd6bf6d135091bfa0b2daea91"
+  },
+  "fixed_checks": "Same five new groups/fixed28; existing K2 extends to this DO only,107 inherited warnings unchanged.",
+  "source_go": "Added-file pins verified in this amendment, explicit GO follows application."
+}

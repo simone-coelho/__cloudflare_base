@@ -1,0 +1,167 @@
+{
+  "at": "2026-09-17T22:59:39.678Z",
+  "before": {
+    "id": "W11",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Fail closed on read/write errors; use transactional/serialized revision and compare-and-update authority, immutable versions, recoverable publication and explicit propagation bound. Test same-isolate, cross-isolate, concurrent and stale writes, partial puts, rollback and readers across versions. An index read plus key-existence check remains insufficient.",
+      "finding_refs": "F15/F24",
+      "sizing_owner": "S error containment → M/L atomic publication; OL/D"
+    },
+    "title": "Atomic configuration publication",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F15",
+      "F24"
+    ],
+    "proposed_owner": "OL/D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W11-CATALOG-PUBLICATION",
+          "description": "Content-only recoverable conditional publication, not all config/multi-document/autonomy/deployed acceptance."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W11-CATALOG-PUBLICATION",
+          "task_id": "W11.01",
+          "task_criterion_id": "W11.01-C1"
+        },
+        {
+          "criterion_id": "W11-CATALOG-PUBLICATION",
+          "task_id": "W11.01",
+          "task_criterion_id": "W11.01-C2"
+        },
+        {
+          "criterion_id": "W11-CATALOG-PUBLICATION",
+          "task_id": "W11.01",
+          "task_criterion_id": "W11.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W11.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W11",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Fail closed on read/write errors; use transactional/serialized revision and compare-and-update authority, immutable versions, recoverable publication and explicit propagation bound. Test same-isolate, cross-isolate, concurrent and stale writes, partial puts, rollback and readers across versions. An index read plus key-existence check remains insufficient.",
+      "finding_refs": "F15/F24",
+      "sizing_owner": "S error containment → M/L atomic publication; OL/D"
+    },
+    "title": "Atomic configuration publication",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F15",
+      "F24"
+    ],
+    "proposed_owner": "OL/D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W11-CATALOG-PUBLICATION",
+          "description": "Content-only recoverable conditional publication, not all config/multi-document/autonomy/deployed acceptance."
+        },
+        {
+          "id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "description": "Complete remaining originalW11 local all-kind atomic/coherent/failclosed/recoverable publication under approved existing-R2 direction; preserve old remedies/history and full live/customer/cutover scope."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W11-CATALOG-PUBLICATION",
+          "task_id": "W11.01",
+          "task_criterion_id": "W11.01-C1"
+        },
+        {
+          "criterion_id": "W11-CATALOG-PUBLICATION",
+          "task_id": "W11.01",
+          "task_criterion_id": "W11.01-C2"
+        },
+        {
+          "criterion_id": "W11-CATALOG-PUBLICATION",
+          "task_id": "W11.01",
+          "task_criterion_id": "W11.01-C3"
+        },
+        {
+          "criterion_id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "task_id": "W11.02",
+          "task_criterion_id": "W11.02-C1"
+        },
+        {
+          "criterion_id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "task_id": "W11.02",
+          "task_criterion_id": "W11.02-C2"
+        },
+        {
+          "criterion_id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "task_id": "W11.02",
+          "task_criterion_id": "W11.02-C3"
+        },
+        {
+          "criterion_id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "task_id": "W11.02",
+          "task_criterion_id": "W11.02-C4"
+        },
+        {
+          "criterion_id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "task_id": "W11.02",
+          "task_criterion_id": "W11.02-C5"
+        },
+        {
+          "criterion_id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "task_id": "W11.02",
+          "task_criterion_id": "W11.02-C6"
+        },
+        {
+          "criterion_id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "task_id": "W11.02",
+          "task_criterion_id": "W11.02-C7"
+        },
+        {
+          "criterion_id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "task_id": "W11.02",
+          "task_criterion_id": "W11.02-C8"
+        },
+        {
+          "criterion_id": "W11-COMPLETE-LOCAL-PUBLICATION",
+          "task_id": "W11.02",
+          "task_criterion_id": "W11.02-C9"
+        }
+      ],
+      "task_ids": [
+        "W11.01",
+        "W11.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

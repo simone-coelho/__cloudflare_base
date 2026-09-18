@@ -1,0 +1,138 @@
+{
+  "task": "W07.02",
+  "actor": "w0202-worker",
+  "contract": "cad91b6161d2a439e9b870a7edc78f7122887ac8c26626e2481e2d26caa195bf",
+  "freeze": {
+    "at": "2026-09-07T12:36:20.531Z",
+    "owned": [
+      {
+        "path": "src/services/OptimizelyService.ts",
+        "sha256": "97b7e40f98e2775e3e2b6d7caed0f32e5d0fe1c30a96d4ac5041a62dd4f01951"
+      },
+      {
+        "path": "src/services/EventDispatcher.ts",
+        "sha256": "8205adb855e120afe83bb33944114483428a3289401efe8ac89bebb7c8094b1a"
+      },
+      {
+        "path": "src/services/sceneGen.ts",
+        "sha256": "81f64caf0e818e557c9ce4a80b90d0d7fdeb09e2d1882f467f492c5447f5428f"
+      },
+      {
+        "path": "src/durable-objects/PersonalizationWebSocket.ts",
+        "sha256": "d1a3e1626c80ab53a7be52d5afb181049dd789439f67344e1c63f01133313431"
+      },
+      {
+        "path": "src/services/telemetry.boundary.test.ts",
+        "sha256": "3f720bbc151059f943b10f2d9d96ff9670d940decf05e4ec887b40515eb20751"
+      }
+    ],
+    "unchangedRegressionFixtures": [
+      {
+        "path": "src/telemetry.boundary.test.ts",
+        "sha256": "c09e6f2c6c92b0cedfbbe41a7f02224253e125c772da24fc5d5cfe7a39308d75"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "83bd9de816cb610913a80e45df44ca32742f566a8281ad0961e991a073f37b09"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "eee0323718111974f29b861903d50a7f998e4dc5563e6c07934e144625e950fd"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "K1-initial",
+      "command": "node node_modules/vitest/vitest.mjs run src/services/telemetry.boundary.test.ts src/telemetry.boundary.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/services/telemetry.boundary.test.ts  (9 tests) 20ms\n ✓ src/telemetry.boundary.test.ts  (28 tests) 37ms\n ✓ src/content/consent.test.ts  (10 tests) 16ms\n\n Test Files  3 passed (3)\n      Tests  47 passed (47)\n   Start at  08:33:48\n   Duration  13.63s (transform 2.42s, setup 0ms, collect 6.01s, tests 73ms, environment 1ms, prepare 5.45s)\n\n",
+      "status": "pass47; superseded after two fixture input/type corrections",
+      "startedNoEarlierThan": {
+        "current_time": "2026-09-07 12:33:46 UTC"
+      }
+    },
+    {
+      "id": "K2-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t W07.01",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (24 tests | 19 skipped) 4649ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 19 skipped (24)\n   Start at  08:33:48\n   Duration  11.86s (transform 1.07s, setup 0ms, collect 5.12s, tests 4.65s, environment 0ms, prepare 1.28s)\n\n",
+      "status": "pass5 selected;19 unrelated historical tests explicitly outside exact selector",
+      "startedNoEarlierThan": {
+        "current_time": "2026-09-07 12:33:46 UTC"
+      },
+      "freshness": "All production and index-fixture inputs unchanged since execution; subsequent edits only affected new Node service fixture"
+    },
+    {
+      "id": "application-noEmit-initial",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w0702-typecheck.I6OKzS/application.tsbuildinfo",
+      "exitCode": 2,
+      "output": "src/services/telemetry.boundary.test.ts(139,19): error TS2352: Conversion of type '{ eventType: \"track\"; user: { userId: string; }; properties: { private: string; }; }' to type '{ eventId: string; timestamp: number; source: string; version: string; eventType: \"track\"; event: string; user: { anonymousId: string; userId?: string | undefined; email?: string | undefined; traits?: Record<...> | undefined; segments?: string[] | undefined; }; properties?: Record<...> | undefined; page?: { ...; } |...' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.\n  Type '{ eventType: \"track\"; user: { userId: string; }; properties: { private: string; }; }' is missing the following properties from type '{ eventId: string; timestamp: number; source: string; version: string; eventType: \"track\"; event: string; user: { anonymousId: string; userId?: string | undefined; email?: string | undefined; traits?: Record<...> | undefined; segments?: string[] | undefined; }; properties?: Record<...> | undefined; page?: { ...; } |...': eventId, timestamp, source, version, event\nsrc/services/telemetry.boundary.test.ts(202,48): error TS2322: Type 'undefined' is not assignable to type 'string'.\n",
+      "status": "failed; superseded",
+      "startedNoEarlierThan": {
+        "current_time": "2026-09-07 12:34:24 UTC"
+      },
+      "cause": "New fixture: incomplete Event assertion (TS2352), and undefined GEMINI_API_KEY incompatible with Env string (TS2322). Corrected to full valid Event fields and a blank-string unconfigured-model control; same fallback assertion, no production edit."
+    },
+    {
+      "id": "K1-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/services/telemetry.boundary.test.ts src/telemetry.boundary.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/services/telemetry.boundary.test.ts  (9 tests) 20ms\n ✓ src/telemetry.boundary.test.ts  (28 tests) 34ms\n ✓ src/content/consent.test.ts  (10 tests) 16ms\n\n Test Files  3 passed (3)\n      Tests  47 passed (47)\n   Start at  08:35:34\n   Duration  16.24s (transform 2.33s, setup 0ms, collect 6.78s, tests 70ms, environment 0ms, prepare 7.05s)\n\n",
+      "status": "pass47",
+      "startedNoEarlierThan": {
+        "current_time": "2026-09-07 12:35:32 UTC"
+      },
+      "collectedAt": {
+        "current_time": "2026-09-07 12:36:20 UTC"
+      }
+    },
+    {
+      "id": "application-noEmit-final",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w0702-typecheck.I6OKzS/application.tsbuildinfo",
+      "exitCode": 0,
+      "output": "",
+      "status": "pass",
+      "startedNoEarlierThan": {
+        "current_time": "2026-09-07 12:35:32 UTC"
+      },
+      "collectedAt": {
+        "current_time": "2026-09-07 12:36:20 UTC"
+      }
+    },
+    {
+      "id": "owned-diff-final",
+      "command": "git diff --check -- src/services/OptimizelyService.ts src/services/EventDispatcher.ts src/services/sceneGen.ts src/durable-objects/PersonalizationWebSocket.ts src/services/telemetry.boundary.test.ts",
+      "exitCode": 0,
+      "output": "",
+      "status": "pass"
+    }
+  ],
+  "entryChecks": [
+    {
+      "command": "node scripts/remediation/board.mjs check",
+      "exitCode": 0,
+      "result": "Tracker VALID;400 qualified historical/limits notes; full output collected without truncation; no rerun or framework test suite"
+    },
+    {
+      "command": "node scripts/remediation/board.mjs status",
+      "exitCode": 0,
+      "result": "Tracker VALID;400 qualified historical/limits notes; full output collected without truncation; no rerun or framework test suite"
+    }
+  ],
+  "executionNotes": [
+    "Read exact plan/task before edits; asserted all four production files byte-identical to baseline before applying owned patches.",
+    "Four production edits first, then one new direct-service test file. Previous regression fixtures remain byte-identical; hashes retained above.",
+    "All tests passed first run; only initial application TypeScript failed. Initial failure and superseding output retained, no required check waived.",
+    "All subprocesses completed. No real fetch or socket transport, operational scripts, credentials/customer-data action or governance/manifest mutation by worker."
+  ],
+  "limits": [
+    "SDK factory/client functions are mocked; actual OptimizelyService methods, callback configuration and event dispatch are exercised. This is not actual external SDK/business delivery.",
+    "WebSocket upgrade registration uses synthetic pair/Response101 shim; callbacks/maps/sends/storage are actual class behavior, not native transport or socket authorization proof.",
+    "Scene success uses intercepted three-byte model output; failed body is not read. No actual external model call or model authorization change.",
+    "Baseline socket case reproduces lifecycle/type IDs; raw socket error branches are source-confirmed before and exercised with fixed labels after, not misrepresented as an additional pre-edit runtime reproduction.",
+    "Existing route and deployment-off regression fixtures ran unchanged, as did five actual workerd entry controls. These bounded current regressions do not reclose historical full W07.01/W34.01 contracts.",
+    "Other logs/public error bodies, domain writes, consent, historic deletion/retention/disposition, dataset attestation, full W07/findings/gates/customer/performance/deployed/release obligations remain open.",
+    "Lead owns relevant source/config/lock graph/artifact and independent acceptance; no complete dependency, installed-runner, native transport or TS-program attestation is claimed."
+  ]
+}

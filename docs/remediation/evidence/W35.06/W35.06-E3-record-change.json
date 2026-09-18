@@ -1,0 +1,178 @@
+{
+  "before": null,
+  "after": {
+    "id": "W35.06-E3",
+    "task_id": "W35.06",
+    "check_id": "W35.06-K3",
+    "criterion_ids": [
+      "W35.06-C1",
+      "W35.06-C2",
+      "W35.06-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w3506-reviewer",
+    "run_id": "/root/w3505_source_scout",
+    "file": {
+      "path": "docs/remediation/evidence/W35.06/review-v3.json",
+      "sha256": "0400ec61e686532b6160bbdda536b4b71c3a28afb3b6e61177874fa5e5481e6b"
+    },
+    "at": "2026-09-16T04:02:34.258Z",
+    "limitations": "Prospective admitted-source cleanup only. Historical unregistered sources and intents without committed target admission remain outside complete discovery. The separate preceding session-discovery/cleanup phase has no new generation cutoff or session-host authority. Persisted rejected-v5 numeric cursors require compatibility/migration review; v1-v4 ordering is unchanged. No external/physical erasure, registry/idempotency retention or capacity qualification, migration/cutover/deployment/customer-data operation, native/browser/customer/SLO/release acceptance or full W35/F06/F14 closure. Rollback requires reviewed handling of new durable records.",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[3456]|W06[.]0[89]' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct Astra/xhigh frozen-artifact review on actual object/erasure modules and exact focused fixtures; exact-byte static may be reused.",
+    "workload": "Same focused selection once with admission/barrier/ambiguity/paging/changed-generation inspection; no broad suite or native/browser/customer/SLO claim.",
+    "result": "pass",
+    "artifact_digest": "e40dd5443b0029ac08b191382e527a4279facc492cd33b11df9fb0ab2b3b4643",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "79603b833b2804ed29cff7af70dea475db6cae07f8f601ca4a2d842c5c4fbf45",
+      "configuration": "Local W35.06 prospective registered-source erasure with per-generation receipts and cutoff-safe v5 generic fallback under D03. Historical unregistered and unadmitted intents, external/physical erasure, preceding session-scan cutoff, session-host completion, persisted rejected-v5 cursor compatibility, cutover/migration, deployment, native/customer/SLO/release and full W35/F06/F14 remain open. Registry/idempotency retention/capacity unqualified. Final worker K1/K2 green after R1/R2; distinct K3 pending.",
+      "files": [
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "5ea9b3a0b4d32577f7eba602ec67f8c662e4091f476d2acb1071b71b519aeaf3",
+          "role": "output"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "sha256": "caeee8658ba74903c0915c267b373081d0068cbe24c5bf6a2e372736e6fe7f3e",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "eeb1ef6b7cd6e853ee4e714e3eaa63af00fc49a15c38b81b628786d164424c0c",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/identity.test.ts",
+          "sha256": "fe7ca153df7e39f174b7c1cdedbbcc9acad0796e73daaa9976917433d1cebec4",
+          "role": "output"
+        },
+        {
+          "path": "src/identity/link.ts",
+          "sha256": "4ad3941d62d5c7b4fa9ec5f0cae790bc128ba6b6dae0b9ae59b2c7a6d9315938",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "sha256": "53126644d359f4e19da37bafa419b4e6eef4a919a3d9ae23cf98cfbf8c65c25a",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/store.ts",
+          "sha256": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/identity.ts",
+          "sha256": "53b95daf2e07f01e62b65bae59e56610cd1c0b412038bc738c4c6b19c2a2a940",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+          "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W35.03/plan.md",
+          "sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W35.04/plan.md",
+          "sha256": "0051434f1ed35d953f2610ad5337b930e07cbd64ec9a8fd02179313db8bf05f9",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W35.05/plan.md",
+          "sha256": "c3c17bd244007de35506ae8ce3ee9579204e32309697c3a2e131d84a56aee944",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W06.01/plan-v1.md",
+          "sha256": "24ce8fa6c610bd1ea216d7a76302f64b97eec3bb9501862633b8003c4925432d",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W35.06/plan.md",
+          "sha256": "b743d53fdc077d1c2d273c95af3c516e52495857ea3dd97c624cbe7d914cf79e",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W35.06/baseline.json",
+          "sha256": "5414f20b9d5c71888dfd97c03b7d313860300ce7beb16b7aeb50195222812bbe",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.06/admission.json",
+          "sha256": "68e0dd52fd3ce954a1dcea270704cac74baa632e0bd8bb2bbbf799c23cd11bc3",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.06/package-coverage.json",
+          "sha256": "28cd4d398a2d2464b3d11928fcf5ebdf171415e6c938a789a3289881bdfa4c18",
+          "role": "configuration"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "configuration"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "configuration"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "configuration"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "configuration"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "configuration"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.06/worker.json",
+          "sha256": "cbd146df62ecd1f8fc17b95dbfbc1f9b8429fb7dc14b3419ce4af56c01d20583",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.06/review.json",
+          "sha256": "5a1409be82e4633e6952b2bd6025eedfeeaf281db4379c10862487c0e45ae594",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.06/review-v2.json",
+          "sha256": "edc7c8ac979bc2240b4ca9cf7ff42873978b307799522d666d4cf5d79165aa2c",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.06/source-freeze-v3.json",
+          "sha256": "e43564a2a5145a4735d870fdf739bfc120ebea9dae9fdf93bc0e6990f9c53aee",
+          "role": "configuration"
+        }
+      ],
+      "digest": "e40dd5443b0029ac08b191382e527a4279facc492cd33b11df9fb0ab2b3b4643"
+    }
+  }
+}

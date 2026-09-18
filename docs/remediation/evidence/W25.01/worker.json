@@ -1,0 +1,246 @@
+{
+  "task_id": "W25.01",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T12:28:10.688Z",
+  "source_go_at": "2026-09-12T12:18:21.784Z",
+  "contract_digest": "f904cc790a7342753c00bf6cf6d03985d6e16faefb0c6daafd40b23136fcf7b9",
+  "references": [
+    {
+      "path": "docs/remediation/design/W25.01/baseline.json",
+      "sha256": "e873ca357cbc4ef972c4359e8e5d9eec7426cedce5f737bc448d7ea306dbbdcf"
+    },
+    {
+      "path": "docs/remediation/design/W25.01/plan.md",
+      "sha256": "2eeb5359083a1ac1346c5076fe7af5e75dcd117ca0a8d13453f2901a616cef0a"
+    },
+    {
+      "path": "docs/remediation/evidence/W25.01/admission.json",
+      "sha256": "e2f50296e5945c647a693d2d1dfd67f4177039b58102ed90d40daa37a9d36997"
+    }
+  ],
+  "implementation_summary": [
+    "Tuple duplicate detection and nested item/cell maps remove ambiguous prior identity. Lookup, materialization and pre-expansion capacity counting share the exact structured identities.",
+    "All six current levels and finer overrides materialize real cold items; raw observed n/s remain separate from prior strength/revision. Persisted document and snapshot formats, arithmetic, W24 compatibility and existing budgets remain unchanged.",
+    "Exactly two grouped additions: structured identities/levels/collisions and actual validated CSV/JSON document write through LearnStats publication and fresh live service ranking/raw receipt. Both imports change the winner from a to cold b with positive reference/base and observed n/s0.",
+    "Existing phase3 shape and W10 phantom examples now assert real identities and genuine255/256-distinct-item union refusals. Additional affected inline W23 map and old rounded phase3 expectation were adapted without changing production arithmetic."
+  ],
+  "criterion_verdicts": {
+    "W25.01-C1": {
+      "worker_result": "local runtime passed",
+      "evidence": "runtime-2: all levels, finer override, true duplicate rejection/delimiter separation, real-item guard and retained capacity/reset assertions"
+    },
+    "W25.01-C2": {
+      "worker_result": "local runtime passed",
+      "evidence": "runtime-2: validated CSV and JSON document-write lane, actual DO publication, fresh live service winner change and raw prior/observed provenance"
+    },
+    "W25.01-C3": {
+      "worker_result": "worker fixed11/static/protected checks passed; independent review pending",
+      "evidence": "runtime-2; static-1; final-source-stop-and-protected-pins"
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 11,
+      "unselected": 40,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 62456,
+      "chunk_id": "9723fd",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static-1"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 3,
+      "inherited_warnings": 3,
+      "command_capture": "static-1"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static-1"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 9233,
+      "chunk_id": "4eba07",
+      "final_bytes": true
+    }
+  },
+  "execution_history": [
+    {
+      "event": "runtime-1 failed",
+      "session_id": 4312,
+      "chunk_id": "f86339",
+      "passed": 8,
+      "failed": 3,
+      "unselected": 40,
+      "detail": "Selected W23 fixture manually supplied old flat Map; old phase3 assertion expected rounded n2 instead of1+exp(-1/tau); new pipeline fake append acknowledgement lacked required top-level ring. Production ranking/raw provenance assertions had reached the final warning assertion in the pipeline case."
+    },
+    {
+      "event": "fixture-only corrections",
+      "detail": "Inline prior map converted to nested map retaining exact zero-reference/strength assertions; phase3 checks exact decayed count within12 decimal places; new synthetic append reply adds ring1. Root approved affected compatibility corrections; no production expansion or new cases."
+    },
+    {
+      "event": "final validation",
+      "detail": "Same fixed11 passed on final bytes, followed by exact sequential compiler/scopedlint/whitespace. No further runtime suites/probes or source edits after final STOP."
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T12:27:18.358Z",
+    "files": [
+      {
+        "path": "src/learn/priors.ts",
+        "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+      },
+      {
+        "path": "src/learn/stats.ts",
+        "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+      },
+      {
+        "path": "src/durable-objects/LearnStats.ts",
+        "sha256": "9821cafe197835558aaeacce2981e8bfc8e21aba6bf3d1b3c5a73aa9d6a7431d"
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "sha256": "ab92ff93eff8949bab17ffcd92af20127885d9f454ac2a9135534b27bfbd1e36"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "77f36fa63411f2fcaddb80eff5a95481d62f126fd1ae8ee090c1a08168d6c781"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "edb231f68e04d32b3d2f7d9e8695f1572cc000662dcde0b42e351d0c33cd105a"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "a089481981ed2f0868a5aec04361d1813716a379b25472a487a233fb1f99eb0f"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 106,
+    "matched": 106,
+    "mismatches": []
+  },
+  "command_captures": [
+    {
+      "label": "runtime-1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/phase3.test.ts src/content/consent.test.ts -t 'W25.01|W24.01|W23.01|W10.01|validates rows, rejects what is not a prior|an item with a prior and no live events|a prior in force for the served item' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T12:23:14.877Z",
+      "captures": [
+        {
+          "chunk_id": "8e8e01",
+          "wall_time_seconds": 1.001537004,
+          "session_id": 4312,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f86339",
+          "wall_time_seconds": 0.000002625,
+          "exit_code": 1,
+          "original_token_count": 1670,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/learn/learn.test.ts  (22 tests | 1 failed | 17 skipped) 183ms\n   ❯ src/learn/learn.test.ts > W23.01 forward arithmetic and precision > W23.01 preserves rare rates and exact evidence gates through snapshots and raw decision explanations\n     → priors?.index.get(...)?.keys is not a function\n ❯ src/content/consent.test.ts  (18 tests | 1 failed | 16 skipped) 93ms\n   ❯ src/content/consent.test.ts > CW31 consent on the content service > W25.01 publishes validated CSV and JSON fine priors for a cold item and changes the actual live winner with raw provenance\n     → expected \"warn\" to not be called at all, but actually been called 2 times\n\nReceived: \n\n  1st warn call:\n\n    Array [\n      \"learning_incomplete\",\n      Object {\n        \"alarmsUnknown\": 0,\n        \"attributed\": 0,\n        \"code\": 4,\n        \"creditNotAttempted\": 0,\n        \"creditPlanKnown\": 0,\n        \"creditProcessed\": 0,\n        \"creditSkipped\": 0,\n        \"creditUnknown\": 0,\n        \"cutoffSkipped\": 0,\n        \"eligible\": 0,\n        \"exposureNotAttempted\": 0,\n        \"exposureProcessed\": 1,\n        \"exposureSkipped\": 0,\n        \"exposureUnknown\": 0,\n        \"kind\": 0,\n        \"received\": 1,\n        \"ringAcknowledged\": 0,\n        \"ringNotAttempted\": 0,\n        \"ringUnknown\": 1,\n        \"version\": 1,\n        \"weightSkipped\": 0,\n      },\n    ]\n\n  2nd warn call:\n\n    Array [\n      \"learning_incomplete\",\n      Object {\n        \"alarmsUnknown\": 0,\n        \"attributed\": 0,\n        \"code\": 4,\n        \"creditNotAttempted\": 0,\n        \"creditPlanKnown\": 0,\n        \"creditProcessed\": 0,\n        \"creditSkipped\": 0,\n        \"creditUnknown\": 0,\n        \"cutoffSkipped\": 0,\n        \"eligible\": 0,\n        \"exposureNotAttempted\": 0,\n        \"exposureProcessed\": 1,\n        \"exposureSkipped\": 0,\n        \"exposureUnknown\": 0,\n        \"kind\": 0,\n        \"received\": 1,\n        \"ringAcknowledged\": 0,\n        \"ringNotAttempted\": 0,\n        \"ringUnknown\": 1,\n        \"version\": 1,\n        \"weightSkipped\": 0,\n      },\n    ]\n\n\nNumber of calls: 2\n\n ❯ src/learn/phase3.test.ts  (11 tests | 1 failed | 7 skipped) 26ms\n   ❯ src/learn/phase3.test.ts > imported priors (doc 22 §8) > an item with a prior and no live events has an estimate, is eligible, and its lift is p̂ over the slot rate\n     → expected 1.9999999994488538 to be 2 // Object.is equality\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/content/consent.test.ts > CW31 consent on the content service > W25.01 publishes validated CSV and JSON fine priors for a cold item and changes the actual live winner with raw provenance\nAssertionError: expected \"warn\" to not be called at all, but actually been called 2 times\n\nReceived: \n\n  1st warn call:\n\n    Array [\n      \"learning_incomplete\",\n      Object {\n        \"alarmsUnknown\": 0,\n        \"attributed\": 0,\n        \"code\": 4,\n        \"creditNotAttempted\": 0,\n        \"creditPlanKnown\": 0,\n        \"creditProcessed\": 0,\n        \"creditSkipped\": 0,\n        \"creditUnknown\": 0,\n        \"cutoffSkipped\": 0,\n        \"eligible\": 0,\n        \"exposureNotAttempted\": 0,\n        \"exposureProcessed\": 1,\n        \"exposureSkipped\": 0,\n        \"exposureUnknown\": 0,\n        \"kind\": 0,\n        \"received\": 1,\n        \"ringAcknowledged\": 0,\n        \"ringNotAttempted\": 0,\n        \"ringUnknown\": 1,\n        \"version\": 1,\n        \"weightSkipped\": 0,\n      },\n    ]\n\n  2nd warn call:\n\n    Array [\n      \"learning_incomplete\",\n      Object {\n        \"alarmsUnknown\": 0,\n        \"attributed\": 0,\n        \"code\": 4,\n        \"creditNotAttempted\": 0,\n        \"creditPlanKnown\": 0,\n        \"creditProcessed\": 0,\n        \"creditSkipped\": 0,\n        \"creditUnknown\": 0,\n        \"cutoffSkipped\": 0,\n        \"eligible\": 0,\n        \"exposureNotAttempted\": 0,\n        \"exposureProcessed\": 1,\n        \"exposureSkipped\": 0,\n        \"exposureUnknown\": 0,\n        \"kind\": 0,\n        \"received\": 1,\n        \"ringAcknowledged\": 0,\n        \"ringNotAttempted\": 0,\n        \"ringUnknown\": 1,\n        \"version\": 1,\n        \"weightSkipped\": 0,\n      },\n    ]\n\n\nNumber of calls: 2\n\n ❯ src/content/consent.test.ts:149:26\n    147|         expect(record.explain.lift).toMatchObject({ level: 5, n: 0, s:…\n    148|         expect(record.versions).toMatchObject({ prior: imported.revisi…\n    149|         expect(warn).not.toHaveBeenCalled();\n       |                          ^\n    150|       }\n    151|     } finally { warn.mockRestore(); invalidateCache(); invalidateLiftC…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯\n\n FAIL  src/learn/learn.test.ts > W23.01 forward arithmetic and precision > W23.01 preserves rare rates and exact evidence gates through snapshots and raw decision explanations\nTypeError: priors?.index.get(...)?.keys is not a function\n ❯ Module.buildSnapshot src/learn/stats.ts:147:79\n    145|   for (const item of new Set([...Object.keys(st.items), ...(priors?.in…\n    146|     const byKey = st.items[item] ?? {};\n    147|     const keys = new Set([...Object.keys(byKey), ...(priors?.index.get…\n       |                                                                               ^\n    148|     const out: Record<string, LevelStat> = {};\n    149|     for (const key of [...keys].sort((a, b) => depth(a) - depth(b))) {\n ❯ src/learn/learn.test.ts:276:18\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯\n\n FAIL  src/learn/phase3.test.ts > imported priors (doc 22 §8) > an item with a prior and no live events has an estimate, is eligible, and its lift is p̂ over the slot rate\nAssertionError: expected 1.9999999994488538 to be 2 // Object.is equality\n\n- Expected\n+ Received\n\n- 2\n+ 1.9999999994488538\n\n ❯ src/learn/phase3.test.ts:91:48\n     89|     for (let i = 0; i < 2; i++) recordExposure(st, 'a', cell, NOW - i,…\n     90|     const fine = liftFor(buildSnapshot(st, { tenant: 'coach', brand: '…\n     91|     expect(fine.level).toBe(5); expect(fine.n).toBe(2); expect(fine.n0…\n       |                                                ^\n     92|     expect(fine.p_hat).toBeCloseTo(20 / 202, 3);\n     93|     // b has no prior: n₀ is the slot's, as before\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯\n\n Test Files  3 failed (3)\n      Tests  3 failed | 8 passed | 40 skipped (51)\n   Start at  08:23:17\n   Duration  14.93s (transform 2.48s, setup 1ms, collect 5.36s, tests 302ms, environment 0ms, prepare 6.97s)\n\n"
+        }
+      ],
+      "session_id": 4312,
+      "drained": true,
+      "exit_code": 1,
+      "finished_at": "2026-09-12T12:24:13.010Z"
+    },
+    {
+      "label": "runtime-2",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/phase3.test.ts src/content/consent.test.ts -t 'W25.01|W24.01|W23.01|W10.01|validates rows, rejects what is not a prior|an item with a prior and no live events|a prior in force for the served item' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12T12:25:29.035Z",
+      "captures": [
+        {
+          "chunk_id": "e30595",
+          "wall_time_seconds": 1.001480299,
+          "session_id": 62456,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9723fd",
+          "wall_time_seconds": 0.000002422,
+          "exit_code": 0,
+          "original_token_count": 156,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (22 tests | 17 skipped) 188ms\n ✓ src/content/consent.test.ts  (18 tests | 16 skipped) 105ms\n ✓ src/learn/phase3.test.ts  (11 tests | 7 skipped) 12ms\n\n Test Files  3 passed (3)\n      Tests  11 passed | 40 skipped (51)\n   Start at  08:25:33\n   Duration  21.54s (transform 3.14s, setup 0ms, collect 7.54s, tests 305ms, environment 0ms, prepare 10.58s)\n\n"
+        }
+      ],
+      "session_id": 62456,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T12:25:57.305Z"
+    },
+    {
+      "label": "static-1",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/priors.ts src/learn/stats.ts src/durable-objects/LearnStats.ts src/learn/phase3.test.ts src/learn/learn.test.ts src/content/consent.test.ts --max-warnings 3 && git diff --check -- src/learn/priors.ts src/learn/stats.ts src/durable-objects/LearnStats.ts src/learn/phase3.test.ts src/learn/learn.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12T12:26:08.836Z",
+      "captures": [
+        {
+          "chunk_id": "fefe3e",
+          "wall_time_seconds": 1.001102463,
+          "session_id": 9233,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "18963a",
+          "wall_time_seconds": 5.000951054,
+          "session_id": 9233,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4eba07",
+          "wall_time_seconds": 7.01986523,
+          "exit_code": 0,
+          "original_token_count": 100,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  440:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  441:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  441:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "session_id": 9233,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-12T12:27:02.329Z"
+    },
+    {
+      "label": "final-source-stop-and-protected-pins",
+      "command": "node - <<'NODE'\nconst fs=require('fs'),crypto=require('crypto');const sha=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');\nconst path='docs/remediation/design/W25.01/baseline.json',b=JSON.parse(fs.readFileSync(path));\nconst owned=new Set(b.owned.map(x=>x.path)),protectedPins=b.pins.filter(x=>!owned.has(x.path));\nconst mismatches=protectedPins.filter(x=>sha(x.path)!==x.sha256).map(x=>x.path);\nconsole.log(JSON.stringify({final_source_stop:{at:new Date().toISOString(),files:[...owned].map(path=>({path,sha256:sha(path)}))},protected_source_comparison:{expected:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},references:[path,'docs/remediation/design/W25.01/plan.md','docs/remediation/evidence/W25.01/admission.json'].map(path=>({path,sha256:sha(path)}))},null,2));if(mismatches.length)process.exitCode=1;\nNODE",
+      "started_at": "2026-09-12T12:27:16.447Z",
+      "captures": [
+        {
+          "chunk_id": "36d254",
+          "wall_time_seconds": 1.849006861,
+          "exit_code": 0,
+          "original_token_count": 428,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T12:27:18.358Z\",\n    \"files\": [\n      {\n        \"path\": \"src/learn/priors.ts\",\n        \"sha256\": \"da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad\"\n      },\n      {\n        \"path\": \"src/learn/stats.ts\",\n        \"sha256\": \"c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c\"\n      },\n      {\n        \"path\": \"src/durable-objects/LearnStats.ts\",\n        \"sha256\": \"9821cafe197835558aaeacce2981e8bfc8e21aba6bf3d1b3c5a73aa9d6a7431d\"\n      },\n      {\n        \"path\": \"src/learn/phase3.test.ts\",\n        \"sha256\": \"ab92ff93eff8949bab17ffcd92af20127885d9f454ac2a9135534b27bfbd1e36\"\n      },\n      {\n        \"path\": \"src/learn/learn.test.ts\",\n        \"sha256\": \"77f36fa63411f2fcaddb80eff5a95481d62f126fd1ae8ee090c1a08168d6c781\"\n      },\n      {\n        \"path\": \"src/content/consent.test.ts\",\n        \"sha256\": \"edb231f68e04d32b3d2f7d9e8695f1572cc000662dcde0b42e351d0c33cd105a\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"a089481981ed2f0868a5aec04361d1813716a379b25472a487a233fb1f99eb0f\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 106,\n    \"matched\": 106,\n    \"mismatches\": []\n  },\n  \"references\": [\n    {\n      \"path\": \"docs/remediation/design/W25.01/baseline.json\",\n      \"sha256\": \"e873ca357cbc4ef972c4359e8e5d9eec7426cedce5f737bc448d7ea306dbbdcf\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W25.01/plan.md\",\n      \"sha256\": \"2eeb5359083a1ac1346c5076fe7af5e75dcd117ca0a8d13453f2901a616cef0a\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W25.01/admission.json\",\n      \"sha256\": \"e2f50296e5945c647a693d2d1dfd67f4177039b58102ed90d40daa37a9d36997\"\n    }\n  ]\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12T12:27:18.533Z"
+    }
+  ],
+  "limitations": [
+    "Structured indexing/materialization subset only; full W25/F20/N20/N22 remain open.",
+    "No event-free-slot publication, canonical/versioned grammar migration, zero-reference/base model change, money/unit/currency/refund policy, human-readable receipt correction or historical repair.",
+    "Prior strength remains pseudo-evidence rather than observed exposure or causal lift. Pipeline proof uses an eventful slot and positive base/reference, with fresh lift-cache reads.",
+    "Actual local CSV/JSON document-write functions, DO publication and live service are exercised with synthetic storage; no HTTP/authentication, native/deployed/runtime capacity, customer or release acceptance claim.",
+    "Persisted formats unchanged, but old readers can reject newly accepted delimiter-collision pairs; no rolling-version compatibility claim.",
+    "No extra network hop, reset/generation/replay, external/cloud/customer-data/deployment/commit action or subdelegation. Separate frozen source/runtime review and lead acceptance pending."
+  ]
+}

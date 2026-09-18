@@ -1,0 +1,107 @@
+{
+  "task_id": "W12.01",
+  "actor": {
+    "id": "w1201-reviewer",
+    "run_id": "/root/w1201_review",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "recorded_at": "2026-09-09T00:31:37.715Z",
+  "verdict": "pass",
+  "disposition": "Recommend separate lead acceptance of bounded C1-C3; no implementation blocker found.",
+  "artifact": {
+    "path": "docs/remediation/evidence/W12.01/artifact.json",
+    "digest": "2a0fecf59571430e2c6994058518434a40c563539ad051d4e52bcd0762998abb",
+    "contract_digest": "ddb50ebfd3f10734e1fc2a7890c3509f0bac21d036bc1a7025954371bbc1af38",
+    "manifest_sha256": "ac295d1bf9fa21a107cce4effd136725917f82dbf5f49980b3709a64c6a94fe9",
+    "worker_sha256": "2ac92d3275f80c2128413a01f5aeaed29fa167f1b501272f918f3c50045a0f4d",
+    "verified_pins": 94,
+    "runtime_basis_pins": 88
+  },
+  "scope_review": "Read AGENTS, remediation README/document36/RESUME, complete canonical W12/F10/N19 and applicable customer/North Star definitions, raw F10/OD-6 qualifications, admitted full plan/contract, W07.04 monitor minimization contract/review and actual existing regression. Independently inspected actual monitor/service/fan and direct route/cron consumers, both admission originals, final source/fixture and complete worker proof. Existing callers expose returned/stored results; cron continues to interpret ok as check health. Canonical W12 remains partial/open.",
+  "criteria": [
+    {
+      "id": "W12.01-C1",
+      "verdict": "pass",
+      "evidence": "Actual runChecks unconditionally rejects zero records after preserving the write guard. Actual nonempty default decisions remain healthy. Every run initializes separate alert kind/status; failed/nonconfigured recovery survives previous healthy results and retries until HTTP success, then becomes not-needed. Legacy previous ok:false remains readable. Existing problem cooldown, per-tenant key and recovery bypass remain unchanged. Single final monitor:last save follows settled delivery; successful stored bytes equal returned result. Best-effort failures do not imply persistence succeeded."
+    },
+    {
+      "id": "W12.01-C2",
+      "verdict": "pass",
+      "evidence": "Independent exact K1 passed 10 selected cases: nine monitor cases plus the exact existing W07.04 monitor regression; 22 unrelated telemetry cases deliberately excluded. Actual service is not mocked. Two nondefault examples on do/session cover empty catalog, healthy nonempty and configured no-slot zero output. Recorded binding calls show no shopper/ring/receipt/event-queue/learning writes, only monitor-probe session reads and tenant-scoped learning snapshot GETs; no lift reads or external requests on default probes. Non-2xx and thrown failures, missing webhook, sent/cooling-down/not-needed, tenant cooldown isolation, legacy failed/missing recovery retry and final-clear all pass. Delivery/save order is recorded inside the synthetic callback and asserted afterward, so alert catch cannot swallow the assertion. KV read/save and buffered AE failure case preserves returned delivery status. Existing regression verifies detailed returned/KV/alert diagnostics, cooldown, exact four AE blobs/four doubles/index and numeric console output."
+    },
+    {
+      "id": "W12.01-C3",
+      "verdict": "pass",
+      "evidence": "Independently verified artifact/contract digests, all 94 physical pins before and after K1, all 88 runtime-basis entries covered, and both exact admission patches reconstruct final source. Reviewed actual fixture imports and direct consumers against pinned source; packages-external graph metadata is identity support, not runtime proof. Exact alert function and minimized AE/console expressions match admission bytes. Inspected complete worker K1 output, compiler and whitespace results without rerunning compiler/whitespace. No source/test correction or failing required check occurred during this review."
+    }
+  ],
+  "checks": [
+    {
+      "id": "independent-identity",
+      "command": "node --input-type=module -e '\nimport fs from \"node:fs\";\nimport crypto from \"node:crypto\";\nimport assert from \"node:assert/strict\";\nimport { createRequire } from \"node:module\";\nimport { artifactDigest, taskContractDigest } from \"./scripts/remediation/board.mjs\";\nconst require = createRequire(import.meta.url);\nconst { applyPatch } = require(\"diff\");\nconst read = p => JSON.parse(fs.readFileSync(p, \"utf8\"));\nconst sha = v => crypto.createHash(\"sha256\").update(v).digest(\"hex\");\nconst dir = \"docs/remediation/evidence/W12.01/\";\nconst a=read(dir+\"artifact.json\"), w=read(dir+\"worker.json\"), b=read(dir+\"baseline.json\"), r=read(dir+\"runtime-basis.json\");\nconst c=read(\"docs/remediation/design/W12.01/task-contract-v1.json\");\nassert.equal(artifactDigest(a),a.digest);\nassert.equal(taskContractDigest(c),a.contract_digest);\nfor(const f of a.files) assert.equal(sha(fs.readFileSync(f.path)),f.sha256,f.path);\nfor(const f of r.files) assert.ok(a.files.some(p=>p.path===f.path&&p.sha256===f.sha256),f.path);\nconst patches=[];\nfor(const p of w.implementation) {\n const old=b.files.find(f=>f.path===p.path);\n const current=fs.readFileSync(p.path,\"utf8\");\n assert.equal(sha(old.content),old.sha256);\n assert.equal(old.sha256,p.before_sha256);\n assert.equal(sha(current),p.final_sha256);\n assert.equal(sha(p.admission_patch),p.patch_sha256);\n assert.equal(applyPatch(old.content,p.admission_patch),current,p.path);\n patches.push(p.path);\n}\nconst oldMonitor=b.files.find(f=>f.path===\"src/ops/monitor.ts\").content;\nconst monitor=fs.readFileSync(\"src/ops/monitor.ts\",\"utf8\");\nassert.equal(monitor.slice(monitor.indexOf(\"export async function alert(\")),oldMonitor.slice(oldMonitor.indexOf(\"export async function alert(\")));\nfor(const phrase of [\"try { env.ANALYTICS?.writeDataPoint\", \"console.log\"]) {\n const line=s=>s.split(\"\\n\").find(l=>l.trimStart().startsWith(phrase));\n assert.equal(line(monitor),line(oldMonitor),phrase);\n}\nassert.equal(w.checks[0].command,c.checks[0].command);\nassert.ok(w.checks.every(v=>v.exit_code===0&&v.attempt===1));\nconsole.log(JSON.stringify({checked_at:new Date().toISOString(),artifact_digest:a.digest,contract_digest:a.contract_digest,pins:a.files.length,runtime_pins:r.files.length,patches,unchanged:\"alert implementation and exact minimized AE/console expressions\",worker_checks:w.checks.map(v=>({id:v.id,exit_code:v.exit_code})),artifact_file_sha256:sha(fs.readFileSync(dir+\"artifact.json\")),worker_sha256:sha(fs.readFileSync(dir+\"worker.json\"))},null,2));\n'",
+      "started_at": "2026-09-09T00:29:59.187Z",
+      "completion_observed_at": "2026-09-09T00:30:00.363Z",
+      "exit_code": 0,
+      "output": "{\n  \"checked_at\": \"2026-09-09T00:30:00.006Z\",\n  \"artifact_digest\": \"2a0fecf59571430e2c6994058518434a40c563539ad051d4e52bcd0762998abb\",\n  \"contract_digest\": \"ddb50ebfd3f10734e1fc2a7890c3509f0bac21d036bc1a7025954371bbc1af38\",\n  \"pins\": 94,\n  \"runtime_pins\": 88,\n  \"patches\": [\n    \"src/ops/monitor.ts\",\n    \"src/ops/monitor.test.ts\"\n  ],\n  \"unchanged\": \"alert implementation and exact minimized AE/console expressions\",\n  \"worker_checks\": [\n    {\n      \"id\": \"W12.01-K1\",\n      \"exit_code\": 0\n    },\n    {\n      \"id\": \"app-typescript\",\n      \"exit_code\": 0\n    },\n    {\n      \"id\": \"scoped-whitespace\",\n      \"exit_code\": 0\n    }\n  ],\n  \"artifact_file_sha256\": \"ac295d1bf9fa21a107cce4effd136725917f82dbf5f49980b3709a64c6a94fe9\",\n  \"worker_sha256\": \"2ac92d3275f80c2128413a01f5aeaed29fa167f1b501272f918f3c50045a0f4d\"\n}\n",
+      "result": "pass",
+      "attempt": 1
+    },
+    {
+      "id": "W12.01-K1",
+      "command": "node node_modules/vitest/vitest.mjs run src/ops/monitor.test.ts src/services/telemetry.boundary.test.ts --maxWorkers=1 --minWorkers=1 -t 'the monitor|W12.01|keeps monitor returned/stored/alert diagnostics'",
+      "started_at": "2026-09-09T00:29:59.186Z",
+      "completion_observed_at": "2026-09-09T00:30:25.246Z",
+      "exit_code": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/services/telemetry.boundary.test.ts  (23 tests | 22 skipped) 7ms\nstdout | src/ops/monitor.test.ts > W12.01 actual monitor results > rejects empty decisions and serves nonempty refused defaults on do for w12-pine without customer I/O\nmonitor result; ok/decisionMs/problems 1 0 0\n\nstdout | src/ops/monitor.test.ts > W12.01 actual monitor results > rejects empty decisions and serves nonempty refused defaults on session for w12-cedar without customer I/O\nmonitor result; ok/decisionMs/problems 1 0 0\n\nstdout | src/ops/monitor.test.ts > W12.01 actual monitor results > retains problem failures, missing destinations, success and tenant-isolated cooldown in final results\nmonitor result; ok/decisionMs/problems 0 0 1\nmonitor result; ok/decisionMs/problems 0 1 1\nmonitor result; ok/decisionMs/problems 0 0 1\nmonitor result; ok/decisionMs/problems 0 0 1\nmonitor result; ok/decisionMs/problems 0 0 1\nmonitor result; ok/decisionMs/problems 0 0 1\n\nstdout | src/ops/monitor.test.ts > W12.01 actual monitor results > retries a failed recovery from a legacy failure until sent, then clears it\nmonitor result; ok/decisionMs/problems 1 0 0\nmonitor result; ok/decisionMs/problems 1 0 0\nmonitor result; ok/decisionMs/problems 1 0 0\nmonitor result; ok/decisionMs/problems 1 0 0\n\nstdout | src/ops/monitor.test.ts > W12.01 actual monitor results > retries a no-webhook recovery from a legacy failure until sent, then clears it\nmonitor result; ok/decisionMs/problems 1 0 0\nmonitor result; ok/decisionMs/problems 1 0 0\nmonitor result; ok/decisionMs/problems 1 0 0\nmonitor result; ok/decisionMs/problems 1 0 0\n\nstdout | src/ops/monitor.test.ts > W12.01 actual monitor results > returns delivery status despite best-effort monitor KV and aggregate telemetry failures\nmonitor result; ok/decisionMs/problems 0 0 1\n\n ✓ src/ops/monitor.test.ts  (9 tests) 23ms\n\n Test Files  2 passed (2)\n      Tests  10 passed | 22 skipped (32)\n   Start at  20:30:01\n   Duration  9.70s (transform 2.10s, setup 0ms, collect 4.86s, tests 30ms, environment 0ms, prepare 3.52s)\n\n",
+      "result": "pass",
+      "attempt": 1
+    },
+    {
+      "id": "post-check-identity",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\"; import crypto from \"node:crypto\"; import assert from \"node:assert/strict\"; const a=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W12.01/artifact.json\",\"utf8\")); for(const f of a.files) assert.equal(crypto.createHash(\"sha256\").update(fs.readFileSync(f.path)).digest(\"hex\"),f.sha256,f.path); console.log(JSON.stringify({at:new Date().toISOString(),post_check_pins:a.files.length,drift:[]}));'",
+      "started_at": "2026-09-09T00:30:43.391Z",
+      "completion_observed_at": "2026-09-09T00:30:43.613Z",
+      "exit_code": 0,
+      "output": "{\"at\":\"2026-09-09T00:30:43.602Z\",\"post_check_pins\":94,\"drift\":[]}\n",
+      "result": "pass",
+      "attempt": 1
+    }
+  ],
+  "inspected_worker_checks": [
+    {
+      "id": "app-typescript",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "started_at": "2026-09-09T00:26:09.471Z",
+      "completion_observed_at": "2026-09-09T00:26:38.589Z",
+      "exit_code": 0,
+      "output": "",
+      "rerun": false
+    },
+    {
+      "id": "scoped-whitespace",
+      "command": "git diff --check -- src/ops/monitor.ts src/ops/monitor.test.ts",
+      "started_at": "2026-09-09T00:26:09.471Z",
+      "completion_observed_at": "2026-09-09T00:26:09.667Z",
+      "exit_code": 0,
+      "output": "",
+      "rerun": false
+    }
+  ],
+  "limitations": [
+    "Local synthetic Node/Vitest and source identity only. Two host selectors prove this unsigned refusal probe avoids host state; they do not establish real host parity or all configured tenant acceptance.",
+    "ok reports check health. sent means HTTP success, not confirmed paging, recipient receipt or on-call acceptance. Webhook failure remains separate from health telemetry.",
+    "Final KV save and AE emission now occur after bounded webhook delivery. Existing five-second webhook timeout can delay their visibility; no latency/SLO improvement is claimed.",
+    "KV errors, expiry, eventual consistency and concurrent runs can lose or duplicate recovery. No durable outbox, CAS, delivery persistence guarantee or simulated distributed concurrency proof.",
+    "Current refused default path bypasses shopper and customer measurement in inspected service; this is not complete W12 synthetic isolation, personalized-path, queue/delivery/schema continuity or operational tenant monitoring.",
+    "Retained diagnostics/webhook contents, historic telemetry, permitted schemas/access/retention and deployed destination/configuration require their existing privacy and operational work.",
+    "Full W12/F10/N19, justified thresholds, current 1500ms versus North Star/SLO qualification, customer relevance/lift, gates and release remain open. No historical task reclosure is inferred.",
+    "Root owns journal447 and the retained earlier package-placement correction. This review does not replace governance acceptance or board checks."
+  ],
+  "handoff": {
+    "owned_write": "docs/remediation/evidence/W12.01/review.json only",
+    "pending_processes": [],
+    "next_action": "Lead inspects this review and primary evidence, records bounded acceptance and durable checkpoint; preserve full W12 residuals and historical dependency qualification.",
+    "prohibited_effects": "No source/governance edits, subdelegation, cloud/network/customer-data/credential operations, deployment, commit/push or cleanup."
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "at": "2026-09-12T18:42:35.097Z",
+  "task_id": "W30.02",
+  "artifact_digest": "5103323d945bedef5506a3dc21d8893e7df6b6eaeee5439783191f657e57efd1",
+  "journal_seq": 1252,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "f7a38c",
+        "wall_time_seconds": 1.000233475,
+        "session_id": 87176,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "3bf3f9",
+        "wall_time_seconds": 5.001310772,
+        "session_id": 87176,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "632d9f",
+        "wall_time_seconds": 5.001204857,
+        "session_id": 87176,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "73e53d",
+        "wall_time_seconds": 0.000002244,
+        "exit_code": 0,
+        "original_token_count": 556,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=26, unscoped=15\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=88, closed=2; evidence records=258\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.02 — Next admit the W33 forward report-integrity fix: custom reporting overlays must never overwrite canonical saved day reports consumed by window reporting. Read full W33/N09/F17/F25 and actual runReport/runDayReport/POST paths, choose a bounded no-write/custom-output correction, focused actual route checks and independent review; no historical/customer-data repair authority. Preserve W30.01 temporal and W30.02 coverage changes. Full W30 manifests/checkpoints/late-mutable reconstruction/capacity/seven-day/maturity and the recorded W28 legacy dormant-mode display residual remain open, not waived.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19274\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=26, unscoped=15\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=88, closed=2; evidence records=258\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.02 — Next admit the W33 forward report-integrity fix: custom reporting overlays must never overwrite canonical saved day reports consumed by window reporting. Read full W33/N09/F17/F25 and actual runReport/runDayReport/POST paths, choose a bounded no-write/custom-output correction, focused actual route checks and independent review; no historical/customer-data repair authority. Preserve W30.01 temporal and W30.02 coverage changes. Full W30 manifests/checkpoints/late-mutable reconstruction/capacity/seven-day/maturity and the recorded W28 legacy dormant-mode display residual remain open, not waived.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19274\n"
+      }
+    ],
+    "session_id": 87176,
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      19274,
+      19274
+    ]
+  },
+  "root_frozen_check": {
+    "captures": [
+      {
+        "chunk_id": "e865df",
+        "wall_time_seconds": 0.354400418,
+        "exit_code": 0,
+        "original_token_count": 234,
+        "output": "{\"at\":\"2026-09-12T18:41:28.337Z\",\"task\":\"W30.02\",\"state\":\"closed\",\"journal\":1252,\"artifact\":\"5103323d945bedef5506a3dc21d8893e7df6b6eaeee5439783191f657e57efd1\",\"contract\":\"6cd0933c2623458aa4bb626f58ba47baffef5e70c33a8d91611069346485c5d3\",\"files\":44,\"review\":\"1cfed096755e55c6dfbd569bb89665dd5378de10d7154055496ea58f6f08b1ec\",\"next\":\"Next admit the W33 forward report-integrity fix: custom reporting overlays must never overwrite canonical saved day reports consumed by window reporting. Read full W33/N09/F17/F25 and actual runReport/runDayReport/POST paths, choose a bounded no-write/custom-output correction, focused actual route checks and independent review; no historical/customer-data repair authority. Preserve W30.01 temporal and W30.02 coverage changes. Full W30 manifests/checkpoints/late-mutable reconstruction/capacity/seven-day/maturity and the recorded W28 legacy dormant-mode display residual remain open, not waived.\"}\n"
+      }
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "source_inspection": {
+      "capture": "f9b34b",
+      "pins": [
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "0f7cb03abfca3202fb02b49588049163c18d007c7bfd47e9598ca9237b4638da"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "d015e70f0c319252e0f207eeb83581ab098878f0c10ffdb0078ac30fe445c2eb"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+        },
+        {
+          "path": "public/learning.js",
+          "sha256": "6dbb1b51969b9fbd4a78347ac7ab95657bbe17f7f728b872d6c66cf5fcc189f7"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "sha256": "060a3b660d63b0153a54870c32febccb70660d7385331724be177a5718d9f80f"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "444982a16266fb3730b8b3e4c3938221139868c6f5f87ab79507e49c83beee59"
+        },
+        {
+          "path": "src/console/learning.render.test.ts",
+          "sha256": "263870bad5e492eb385b66da6873aaddde6aa459b27e578c63ede948084156c3"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "sha256": "0d73029c63e1db90d4edb569e09f15baf82b6a04af3c5c27936a2cfc9d9912ce"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "4d54d4f34e1c3633cdd087c8cf277137a68f3b0088378e032778f19f413a74af"
+        }
+      ],
+      "worker_read": "aa92c5",
+      "review_read": "9170d1"
+    }
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_json_operator_coverage_propagation",
+    "package_W30": "open",
+    "finding_F17": "open",
+    "finding_F18": "open",
+    "finding_F25": "open",
+    "finding_N08": "open",
+    "finding_N23": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Next admit the W33 forward report-integrity fix: custom reporting overlays must never overwrite canonical saved day reports consumed by window reporting. Read full W33/N09/F17/F25 and actual runReport/runDayReport/POST paths, choose a bounded no-write/custom-output correction, focused actual route checks and independent review; no historical/customer-data repair authority. Preserve W30.01 temporal and W30.02 coverage changes. Full W30 manifests/checkpoints/late-mutable reconstruction/capacity/seven-day/maturity and the recorded W28 legacy dormant-mode display residual remain open, not waived."
+  },
+  "limitations": "Bounded JSON report and two operator-view coverage propagation, not full W30/F17/F18/F25/N08/N23 reconstruction, delivery completeness, actual capacity, seven-day history, historical repair or customer/release acceptance. Missing metadata and maturity remain unknown; unadvanced rings do not prove every credit wrong. No new maturity/business/privacy policy, favorable inference or alteration of counts. Legacy hours.horizonMs remains a historical compatibility value, not a minimum guarantee; direct ledger/history and CSV/external downstream exports remain qualified. W30.01 temporal attribution and prior W06/W21/W23/W26/W28 fixes remain implemented/history retained; overlapping current proof is explicitly qualified. No serving-path I/O, new module/infrastructure/schema, deployment/cloud/resource/credential/customer-data repair, external messages, contract amendment, destructive/commit/push authority."
+}

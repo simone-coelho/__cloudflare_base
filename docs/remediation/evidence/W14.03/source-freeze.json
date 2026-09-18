@@ -1,0 +1,126 @@
+{
+  "at": "2026-09-11T02:07:15Z",
+  "task_id": "W14.03",
+  "contract_digest": "9575a53d78e06106ea8b0f1de62476fa63a26e72de2c459f4817f50400eef050",
+  "source": "Worker explicit source STOP after fixed checks; root freeze.",
+  "source_stopped_at": "2026-09-11T02:04:24.307Z",
+  "owned": [
+    "src/content/enrichment.ts",
+    "src/routes/content.ts",
+    "src/routes/content.test.ts",
+    "docs/kit/03-payload-schemas.md"
+  ],
+  "pins": [
+    {
+      "path": "src/routes/content.ts",
+      "role": "output",
+      "sha256": "2ee792955390ec262faeedaef52d835278f92b5de836cd4e622d94635c1ea1bb"
+    },
+    {
+      "path": "src/routes/content.test.ts",
+      "role": "output",
+      "sha256": "b0e5581cd0da47a729c78639e4a71345578b3b958c941a182997c4c95eb50e3d"
+    },
+    {
+      "path": "docs/kit/03-payload-schemas.md",
+      "role": "output",
+      "sha256": "0d0951b940de1629acdfb7e9d6268a9528d6709bca4aaf465f0f967fa16e749e"
+    },
+    {
+      "path": "src/content/import.ts",
+      "role": "source",
+      "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "source",
+      "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+    },
+    {
+      "path": "src/content/lifecycle.ts",
+      "role": "source",
+      "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "source",
+      "sha256": "c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3"
+    },
+    {
+      "path": "src/middleware/auth.ts",
+      "role": "source",
+      "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+    },
+    {
+      "path": "src/middleware/operatorAuth.ts",
+      "role": "source",
+      "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+    },
+    {
+      "path": "src/auth/accounts.ts",
+      "role": "source",
+      "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+    },
+    {
+      "path": "src/auth/store.ts",
+      "role": "source",
+      "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6"
+    },
+    {
+      "path": "src/auth/signingConfig.mjs",
+      "role": "source",
+      "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "role": "source",
+      "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+    },
+    {
+      "path": "src/tenancy/middleware.ts",
+      "role": "source",
+      "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+    },
+    {
+      "path": "src/types/env.ts",
+      "role": "source",
+      "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+    },
+    {
+      "path": "src/index.ts",
+      "role": "source",
+      "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+    },
+    {
+      "path": "src/identity/erase.ts",
+      "role": "source",
+      "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": "src/content/enrichment.ts",
+      "role": "output",
+      "sha256": "a3ab80fadee98504369bda570531679044f913b1c956a4d07a6a1bac10670b5f"
+    }
+  ],
+  "unowned_unchanged": 18
+}

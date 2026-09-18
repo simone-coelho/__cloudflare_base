@@ -1,0 +1,346 @@
+{
+  "task": "W09.03",
+  "actor": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "STOP",
+  "authority": {
+    "journal": 1042,
+    "admission_check": "0491c4",
+    "contract_sha256": "ad654fb9be1c7cc87d44475863bac22cb8f581f238131b1bf49cfc05685047b6",
+    "plan": "docs/remediation/design/W09.03/plan.md",
+    "plan_sha256": "b7cf4ee1964c95ffa41f191be0b8376c2742ca65456594526ba89e820579e90b",
+    "baseline": "docs/remediation/design/W09.03/baseline.json",
+    "baseline_sha256": "19bd1c8543e6387163c5dc0471ed0d1ea88d05cdc9601afdb3c3690f61eacda0"
+  },
+  "implemented": [
+    "Complete legacy and managed envelope validation before grouped persistence; no partial valid-subset writes. Unversioned and exact version:1 no-ID legacy remain accepted; unsupported own versions, invalid own delivery IDs, empty/malformed/sparse sets and reserved provenance refuse.",
+    "Malformed inputs are isolated before the valid cohort's unchanged grouped sink; returned ordered dispositions acknowledge only a successful admitted cohort, including erasure suppression. Storage/capture/barrier uncertainty retries that cohort without inventing per-envelope completion from aggregate counts.",
+    "Actual Worker queue applies exact ledger-subset positions; missing or unrecognized disposition retries. Aggregate ok is false for any retry, skipped counts rejected envelopes, and diagnostics contain only fixed labels/counts. Existing non-ledger behavior retained."
+  ],
+  "final_results": {
+    "runtime": {
+      "command": "fixed25-runtime-final",
+      "session_id": 52309,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "3ae160",
+      "passed": 25,
+      "failed": 0,
+      "intentionally_skipped": 50,
+      "new_groups": 2,
+      "components": [
+        {
+          "fixture": "src/ledger/ledger.test.ts",
+          "passed": 21,
+          "new_groups": 1
+        },
+        {
+          "fixture": "src/index.api-boundary.test.ts",
+          "passed": 4,
+          "new_groups": 1,
+          "intentionally_skipped": 50
+        }
+      ]
+    },
+    "compiler": {
+      "command": "static-final",
+      "session_id": 59222,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "d69023",
+      "basis": "First component of the exact successful sequential && compound; no separate invocation claimed."
+    },
+    "lint": {
+      "command": "static-final",
+      "session_id": 59222,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "d69023",
+      "errors": 0,
+      "warnings": 7,
+      "baseline_warnings": 7,
+      "new_warnings": 0,
+      "comparison": "Same seven index rule/message warnings; five unused e, one unused ctx, one explicit any. Only final any location shifts 280:39 to 283:39."
+    },
+    "whitespace": {
+      "command": "static-final",
+      "session_id": 59222,
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "d69023",
+      "basis": "Final component of exact successful && compound."
+    },
+    "protected_sources": {
+      "command": "source-stop",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "ddc419",
+      "checked": 69,
+      "mismatches": []
+    }
+  },
+  "failures_and_superseding_validation": [
+    "Initial fixed25 compound56280 exited1: ledger21 passed, mounted3 passed/1 failed/50 unselected. New fixture counted a pre-existing acme storage object; root also identified its intended valid partial-set row needed padded timestamp. Corrected only the mounted fixture's before/after object selection and carrier timestamp; final exact25 passes.",
+    "Before runtime, root source review identified sparse holes skipped by map/every. Array.from materializes them for complete rejection; sparse/null controls stay within the one admitted ledger group.",
+    "Initial read-only metadata reader guessed evidence/W09.03/baseline.json and exited1 MODULE_NOT_FOUND after reading the plan/task; corrected to design/W09.03/baseline.json before edits. A later overly broad metadata display included compressed source and was truncated/uncredited; bounded metadata/75-pin read confirmed all pre-edit hashes. These are diagnostics, not product checks."
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T00:05:05.393Z",
+    "files": [
+      {
+        "path": "src/ledger/writer.ts",
+        "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+      },
+      {
+        "path": "src/ledger/consume.ts",
+        "sha256": "03ce5c01ac378e0aa7bb99720a669421c93cdc788872844584a5041e4260713b"
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b"
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "04aabcc1473a66d6ba8ebdd6c0f72a71954040c41a2ac5d685558f79c29b38bb"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "fcba26ca105753a649f9fdaab42c993d9dcbd7d27c423bd580a115932c9afe6b"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "348a73547cc5ae8aceb34a0954ed05e4ed3dd2b243033c7b7669251e90a87096"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "checked": 69,
+    "mismatches": []
+  },
+  "limitations": [
+    "Malformed-envelope and positional acknowledgement containment only, not full W09/F16/N10, durable quarantine/DLQ, deployed retry-exhaustion recovery, customer/release/SLO acceptance.",
+    "Shared barrier/storage/capture or persisted delivery-identity conflict retries the admitted cohort. Structurally malformed managed input is isolated; a later storage identity conflict is not mislabeled parse rejection. Legacy partial writes may duplicate, and managed aggregate capture counts are not per-envelope success.",
+    "Removing a managed delivery_id entirely is indistinguishable from legitimate version:1 legacy. Existing producer flag remains default-off; no producer/sink algorithm/erasure/fan/DO/statistics replay changes.",
+    "No raw outbox, extra cloud resources, deployment, customer data, credentials, package installation, emitted build, commit/push or cleanup. Existing local in-memory runtime only; full erasure fencing, logical-event reconciliation and late-fold/capacity remain open."
+  ],
+  "capture_notes": [
+    "Exact two original read-only baseline commands and complete initial/wait results embedded below; observed baseline timing is limited to retained tool wall-time/session/chunk metadata, not invented execution timestamps.",
+    "All required candidate/final commands retain full combined output chunks, session identities, final exits and drained state. Initial source-changing correction waited for the first compound to drain.",
+    "Root explicitly approved running the unchanged final candidate's K2 compound concurrently with final runtime. Compiler/lint/whitespace remain sequential within K2; no source changed while either ran.",
+    "No required check was truncated; runtime CJS deprecation warnings retained. Fifty intentionally unselected mounted cases are not passing evidence. No further source edits after final_source_stop."
+  ],
+  "command_captures": [
+    {
+      "id": "baseline-actual-loss",
+      "kind": "read_only_actual_module_baseline",
+      "command": "node --input-type=module <<'NODE'\nimport { build } from 'esbuild';\nimport { createRequire } from 'node:module';\nconst built = await build({ stdin: { contents: \"export { consumeLedger } from './src/ledger/consume'; export { outcomeFromAction } from './src/ledger/records';\", resolveDir: process.cwd(), loader: 'ts' }, bundle: true, write: false, platform: 'node', format: 'cjs', packages: 'external', logLevel: 'silent' });\nconst mod = { exports: {} };\nnew Function('require', 'module', 'exports', built.outputFiles[0].text)(createRequire(import.meta.url), mod, mod.exports);\nconst { consumeLedger, outcomeFromAction } = mod.exports;\nconst ts = Date.UTC(2026, 8, 11, 12);\nconst decision = i => ({ decision_id: `acme:${(ts + i).toString(36)}:v-probe:home:hero:${i}`, tenant: 'acme', brand: 'acme', visitor_id: 'v-probe', session_id: 's-probe', identity_anchor: 'visitor', ts: ts + i, page: 'home', slot: 'hero', position: i, item_id: `item-${i}`, customer_item_id: `cms-${i}`, candidates: [], cell: { channel: 'direct', visit_bucket: '1', region: 'US-NY', affinity: '*' }, arm: 'personalized', explored: false, authority: 'engine', versions: { config: 1, lift: 0, prior: 0, policy: 1 }, config_label: 'synthetic', explain: { drivers: [], score_base: 0, lift: null, score_final: 0 } });\nconst run = async (name, bodies) => {\n  const objects = new Map();\n  const r2 = { get: async () => null, list: async () => ({ objects: [], truncated: false }), put: async (key, body) => { objects.set(key, body); return { etag: 'synthetic-etag' }; } };\n  const result = await consumeLedger({ STORAGE: r2 }, bodies, ts);\n  const storedRows = [...objects.values()].reduce((n, body) => n + body.split('\\n').filter(Boolean).length, 0);\n  console.log(JSON.stringify({ name, inputEnvelopes: bodies.length, result, storedObjects: objects.size, storedRows }));\n};\nawait run('partial-invalid-legacy-set', [{ kind: 'ledger', type: 'decisions', records: [decision(0), { ...decision(1), decision_id: 'invalid' }, decision(2), { ...decision(3), visitor_id: 'different' }] }]);\nawait run('invalid-managed-sibling', [{ kind: 'ledger', type: 'decision', record: decision(0) }, { kind: 'ledger', version: 1, delivery_id: 'malformed', type: 'outcome', record: outcomeFromAction({ type: 'purchase', userId: 'v-probe', timestamp: ts }, 'acme') }]);\nNODE",
+      "captures": [
+        {
+          "chunk_id": "a7b4db",
+          "wall_time_seconds": 1.000956204,
+          "session_id": 16069,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "8ca37a",
+          "wall_time_seconds": 0.000002265,
+          "exit_code": 0,
+          "original_token_count": 91,
+          "output": "{\"name\":\"partial-invalid-legacy-set\",\"inputEnvelopes\":1,\"result\":{\"written\":2,\"objects\":1,\"skipped\":0,\"suppressed\":0,\"ok\":true},\"storedObjects\":1,\"storedRows\":2}\n{\"name\":\"invalid-managed-sibling\",\"inputEnvelopes\":2,\"result\":{\"written\":0,\"objects\":0,\"skipped\":0,\"suppressed\":0,\"ok\":false,\"error\":\"Managed ledger delivery invalid\"},\"storedObjects\":0,\"storedRows\":0}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "id": "baseline-version1-compatibility",
+      "kind": "read_only_actual_module_baseline",
+      "command": "node --input-type=module <<'NODE'\nimport { build } from 'esbuild';\nimport { createRequire } from 'node:module';\nconst built = await build({ stdin: { contents: \"export { consumeLedger } from './src/ledger/consume'; export { outcomeFromAction } from './src/ledger/records';\", resolveDir: process.cwd(), loader: 'ts' }, bundle: true, write: false, platform: 'node', format: 'cjs', packages: 'external', logLevel: 'silent' });\nconst mod = { exports: {} };\nnew Function('require', 'module', 'exports', built.outputFiles[0].text)(createRequire(import.meta.url), mod, mod.exports);\nconst { consumeLedger, outcomeFromAction } = mod.exports;\nconst ts = Date.UTC(2026, 8, 11, 12);\nconst decision = i => ({ decision_id: `acme:${(ts + i).toString(36)}:v-probe:home:hero:${i}`, tenant: 'acme', brand: 'acme', visitor_id: 'v-probe', session_id: 's-probe', identity_anchor: 'visitor', ts: ts + i, page: 'home', slot: 'hero', position: i, item_id: `item-${i}`, customer_item_id: `cms-${i}`, candidates: [], cell: { channel: 'direct', visit_bucket: '1', region: 'US-NY', affinity: '*' }, arm: 'personalized', explored: false, authority: 'engine', versions: { config: 1, lift: 0, prior: 0, policy: 1 }, config_label: 'synthetic', explain: { drivers: [], score_base: 0, lift: null, score_final: 0 } });\nconst run = async (name, bodies) => {\n  const objects = new Map();\n  const r2 = { get: async () => null, list: async () => ({ objects: [], truncated: false }), put: async (key, body) => { objects.set(key, body); return { etag: 'synthetic-etag' }; } };\n  const result = await consumeLedger({ STORAGE: r2 }, bodies, ts);\n  const storedRows = [...objects.values()].reduce((n, body) => n + body.split('\\n').filter(Boolean).length, 0);\n  console.log(JSON.stringify({ name, inputEnvelopes: bodies.length, result, storedObjects: objects.size, storedRows }));\n};\nawait run('version-1-without-delivery-id', [{ kind: 'ledger', version: 1, type: 'decisions', records: [decision(0), decision(1)] }, { kind: 'ledger', version: 1, type: 'outcome', record: outcomeFromAction({ type: 'purchase', userId: 'v-probe', timestamp: ts }, 'acme') }]);\nNODE",
+      "captures": [
+        {
+          "chunk_id": "3cb918",
+          "wall_time_seconds": 1.001290824,
+          "session_id": 92511,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f633a2",
+          "wall_time_seconds": 0.000002291,
+          "exit_code": 0,
+          "original_token_count": 42,
+          "output": "{\"name\":\"version-1-without-delivery-id\",\"inputEnvelopes\":2,\"result\":{\"written\":3,\"objects\":2,\"skipped\":0,\"suppressed\":0,\"ok\":true},\"storedObjects\":2,\"storedRows\":3}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "id": "fixed25-runtime-1",
+      "kind": "fixed_runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W07.01 keeps default queue|W07.01 keeps cached-scene|W07.01 preserves successful ledger|W09.03' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12 00:00:19 UTC",
+      "captures": [
+        {
+          "chunk_id": "297292",
+          "wall_time_seconds": 1.001333884,
+          "session_id": 56280,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "874e9a",
+          "wall_time_seconds": 5.001111073,
+          "session_id": 56280,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "4c82a4",
+          "wall_time_seconds": 5.001964478,
+          "session_id": 56280,
+          "original_token_count": 120,
+          "output": " ✓ src/ledger/ledger.test.ts  (21 tests) 10419ms\n\n Test Files  1 passed (1)\n      Tests  21 passed (21)\n   Start at  20:00:26\n   Duration  36.64s (transform 6.84s, setup 1ms, collect 19.05s, tests 10.42s, environment 0ms, prepare 4.84s)\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "8eba0e",
+          "wall_time_seconds": 5.000865217,
+          "session_id": 56280,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "af55ea",
+          "wall_time_seconds": 0.000002824,
+          "exit_code": 1,
+          "original_token_count": 348,
+          "output": " ❯ src/index.api-boundary.test.ts  (54 tests | 1 failed | 50 skipped) 14882ms\n   ❯ src/index.api-boundary.test.ts > W09.03 maps mixed ledger dispositions to exact queue positions without partial acknowledgement or raw diagnostics\n     → expected [ [ …(2) ], [ …(2) ] ] to have a length of 1 but got 2\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/index.api-boundary.test.ts > W09.03 maps mixed ledger dispositions to exact queue positions without partial acknowledgement or raw diagnostics\nAssertionError: expected [ [ …(2) ], [ …(2) ] ] to have a length of 1 but got 2\n\n- Expected\n+ Received\n\n- 1\n+ 2\n\n ❯ src/index.api-boundary.test.ts:1172:18\n    1170|   expect(result.calls.filter(call => call[0] === 'STORAGE.put')).toHav…\n    1171|   const stored = (result.after as { storage: [string, string][] }).sto…\n    1172|   expect(stored).toHaveLength(1);\n       |                  ^\n    1173|   expect(stored[0]![1].trim().split('\\n').map(line => JSON.parse(line)…\n    1174|   expect(result.logs).toEqual(['ledger envelopes rejected for retry 3'…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed (1)\n      Tests  1 failed | 3 passed | 50 skipped (54)\n   Start at  20:01:07\n   Duration  35.09s (transform 3.25s, setup 0ms, collect 16.05s, tests 14.88s, environment 0ms, prepare 3.21s)\n\n"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "finished_at": "2026-09-12 00:01:46 UTC",
+      "superseded": true,
+      "correction": "Mounted fixture used all acme storage including its seeded object, and its intended valid row needed the padded carrier timestamp. Corrected only that fixture; ledger21 passed."
+    },
+    {
+      "id": "fixed25-runtime-final",
+      "kind": "fixed_runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W07.01 keeps default queue|W07.01 keeps cached-scene|W07.01 preserves successful ledger|W09.03' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12 00:02:03 UTC",
+      "captures": [
+        {
+          "chunk_id": "5dd791",
+          "wall_time_seconds": 1.001199186,
+          "session_id": 52309,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5a4f97",
+          "wall_time_seconds": 5.000547205,
+          "session_id": 52309,
+          "original_token_count": 179,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (21 tests) 9905ms\n\n Test Files  1 passed (1)\n      Tests  21 passed (21)\n   Start at  20:02:11\n   Duration  32.37s (transform 6.59s, setup 0ms, collect 16.84s, tests 9.90s, environment 0ms, prepare 3.63s)\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "30d24b",
+          "wall_time_seconds": 5.000911823,
+          "session_id": 52309,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "0d1f33",
+          "wall_time_seconds": 5.000493146,
+          "session_id": 52309,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3ae160",
+          "wall_time_seconds": 0.000002586,
+          "exit_code": 0,
+          "original_token_count": 68,
+          "output": " ✓ src/index.api-boundary.test.ts  (54 tests | 50 skipped) 20871ms\n\n Test Files  1 passed (1)\n      Tests  4 passed | 50 skipped (54)\n   Start at  20:02:49\n   Duration  57.35s (transform 2.91s, setup 0ms, collect 24.15s, tests 20.87s, environment 0ms, prepare 8.40s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12 00:04:00 UTC"
+    },
+    {
+      "id": "static-final",
+      "kind": "compiler_lint_whitespace",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/writer.ts src/ledger/consume.ts src/index.ts src/ledger/ledger.test.ts src/index.api-boundary.test.ts --max-warnings 7 && git diff --check -- src/ledger/writer.ts src/ledger/consume.ts src/index.ts src/ledger/ledger.test.ts src/index.api-boundary.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-12 00:02:40 UTC",
+      "captures": [
+        {
+          "chunk_id": "4fde17",
+          "wall_time_seconds": 1.001047125,
+          "session_id": 59222,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e2b1e4",
+          "wall_time_seconds": 5.001624777,
+          "session_id": 59222,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "854ba4",
+          "wall_time_seconds": 5.001182078,
+          "session_id": 59222,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5e59ab",
+          "wall_time_seconds": 5.002248524,
+          "session_id": 59222,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "aa1427",
+          "wall_time_seconds": 5.00117637,
+          "session_id": 59222,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d69023",
+          "wall_time_seconds": 3.0820420139999998,
+          "exit_code": 0,
+          "original_token_count": 198,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts\n  219:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  230:23  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  242:23  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  248:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  258:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  265:48  warning  'ctx' is defined but never used           @typescript-eslint/no-unused-vars\n  283:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n✖ 7 problems (0 errors, 7 warnings)\n\n"
+        }
+      ],
+      "concurrency": "Root explicitly approved running the unchanged-source K2 compound concurrently with the final runtime.",
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-12 00:04:33 UTC"
+    },
+    {
+      "id": "source-stop",
+      "kind": "source_identity",
+      "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport { createHash } from 'node:crypto';\nconst hash = path => createHash('sha256').update(fs.readFileSync(path)).digest('hex');\nconst baselinePath = 'docs/remediation/design/W09.03/baseline.json';\nconst baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));\nconst owned = new Set(baseline.owned.map(file => file.path));\nconst protectedPins = baseline.pins.filter(file => !owned.has(file.path));\nconst mismatches = protectedPins.filter(file => hash(file.path) !== file.sha256).map(file => file.path);\nconst result = { final_source_stop: { at: new Date().toISOString(), files: baseline.owned.map(file => ({ path: file.path, sha256: hash(file.path) })) }, protected_source_comparison: { checked: protectedPins.length, mismatches }, baseline_sha256: hash(baselinePath), plan_sha256: hash('docs/remediation/design/W09.03/plan.md') };\nconsole.log(JSON.stringify(result, null, 2));\nif (mismatches.length) process.exitCode = 1;\nNODE",
+      "captures": [
+        {
+          "chunk_id": "ddc419",
+          "wall_time_seconds": 0.349771461,
+          "exit_code": 0,
+          "original_token_count": 304,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T00:05:05.393Z\",\n    \"files\": [\n      {\n        \"path\": \"src/ledger/writer.ts\",\n        \"sha256\": \"463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143\"\n      },\n      {\n        \"path\": \"src/ledger/consume.ts\",\n        \"sha256\": \"03ce5c01ac378e0aa7bb99720a669421c93cdc788872844584a5041e4260713b\"\n      },\n      {\n        \"path\": \"src/index.ts\",\n        \"sha256\": \"c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b\"\n      },\n      {\n        \"path\": \"src/ledger/ledger.test.ts\",\n        \"sha256\": \"04aabcc1473a66d6ba8ebdd6c0f72a71954040c41a2ac5d685558f79c29b38bb\"\n      },\n      {\n        \"path\": \"src/index.api-boundary.test.ts\",\n        \"sha256\": \"fcba26ca105753a649f9fdaab42c993d9dcbd7d27c423bd580a115932c9afe6b\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"348a73547cc5ae8aceb34a0954ed05e4ed3dd2b243033c7b7669251e90a87096\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"checked\": 69,\n    \"mismatches\": []\n  },\n  \"baseline_sha256\": \"19bd1c8543e6387163c5dc0471ed0d1ea88d05cdc9601afdb3c3690f61eacda0\",\n  \"plan_sha256\": \"b7cf4ee1964c95ffa41f191be0b8376c2742ca65456594526ba89e820579e90b\"\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    }
+  ]
+}

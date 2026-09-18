@@ -1,0 +1,34 @@
+{
+  "task_id": "W14.07",
+  "at": "2026-09-18T07:20:08.232Z",
+  "before": "a301f835caed7e40cbff4e75c1331f00107e676e3f5fc01b34f1e9dc923b6500",
+  "after": "189d91fdc71863cb4d229e9bb8f744e513dd607432e0a0550d9ca65fa9c7570b",
+  "original_admission": {
+    "path": "docs/remediation/evidence/W14.07/admission.json",
+    "sha256": "b5b8bc62f964c58a976a3c165f1960892e4d14eafa6b39d88483f0aba677d69a"
+  },
+  "scope": "Whole original W14/C1–C12 unchanged. Add one already-read protected fixture; no production or acceptance-scope reduction.",
+  "baseline": {
+    "check": "W14.07-K3.1",
+    "sha256": "0b57f60e95f2da10565c4b7c21b20922fb4eeb6c946950cfea5bdc5d3ac2a099",
+    "bytes": 6426,
+    "result": "FAIL suite transform plus missing storage.transaction;371 before=after. Full primary root decoded/read and all streams integrity checked.",
+    "added_output": {
+      "path": "src/telemetry.boundary.test.ts",
+      "exists": true,
+      "sha256": "e0943575d5bde4604692d31538e3dac53abc6ecdc1eb0748898ac59a69422b7c",
+      "bytes": 25081
+    }
+  },
+  "design": "Implement map+alarm rollback transaction in existing storage fake only. Production recovery atomicity unchanged; preserve exact original webhook stamp, logical retry/collision, expiry-only minimal digest, grant/consent equality, restart refusal and no AE/queue assertions.",
+  "independent_preflight": {
+    "agent": "/root/w1202_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "Source-confirmed exact missing fake transaction at75–81/production recovery244; single-path amendment supported; not whole W14 acceptance."
+  },
+  "ownership": "Same sole worker original62+this one fixture+worker.json;63outputs/308protected, unchanged371basis. Save original bytes before editing; root records only/reviewer read-only until freeze.",
+  "checks": "Exact K3 unchanged; K7 whitespace adds only this path. No added broad checks/build; final whole-W review required.",
+  "rollback": "Preserve original dirty bytes; only exact admitted fixture hunk reversible. No cleanup/deployment.",
+  "authority": "Existing ordered local mandate reused. Original62-path work continues; new fixture awaits valid amendment boardGO. No external/customer/credential/cloud/provider authority."
+}

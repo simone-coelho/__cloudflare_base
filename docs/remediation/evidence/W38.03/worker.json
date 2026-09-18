@@ -1,0 +1,707 @@
+{
+  "task_id": "W38.03",
+  "actor_id": "w1405-worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T11:48:00.341Z",
+  "contract_digest": "c2ffe07329d6c7c401b56c8ae12e615582549601efd631399910dcba3d090603",
+  "references": [
+    {
+      "path": "docs/remediation/design/W38.03/baseline.json",
+      "sha256": "3edd93104ddf7061d4e9b9f220af475db1f31fd4f93019904f245db58b52039f"
+    },
+    {
+      "path": "docs/remediation/design/W38.03/plan.md",
+      "sha256": "3a0d5b09e5c041f3d1d9ca68297eec2562044e6bbad8db0a0a642979f76a31df"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.03/admission.json",
+      "sha256": "02c6b0074935c3117d066547d18b34931349e8b342a616c0fa5689e7c001315e"
+    }
+  ],
+  "baseline": {
+    "kind": "source-confirmed design case; no duplicate runtime/board baseline",
+    "entry_board": "Root60557/638756 VALID1410,exit0/drained",
+    "assurance": "Root66a74a verified47 accepted pins. Scoped baseline61308/9bf32d had0errors/5 inherited warnings; added Reflex production source baselinef32b9b clean. W38.02 overlapping byte proof prospectively qualified; unchanged remedies/history retained.",
+    "failure": "Legacy current/history/index parsed provider JSON without size admission; duplicated writes had no byte cap; read failure could become absence and index was read after puts. Non-demo Reflex patch merged cached serving state."
+  },
+  "implementation_summary": "2MiB actual stream admission for legacy current/history/index before fatal UTF8 decode/JSON.parse, geometric capped buffer with cancellation/release. Existing public read/fallback semantics preserved. Strict uncached mutation bases/rollback targets/index distinguish absence from unavailable data, check safe counters and obvious indexed regression; prepare both exact duplicated revision and next index body before any put. Typed413 output-size/503 unavailable errors mapped in both actual operator handlers. Non-demo Reflex PATCH uses strict fresh base, preserves absent-customer refusal. W38.02 cache/fences and content publication unchanged.",
+  "criterion_verdicts": {
+    "C1": "PASS local actual stream reads: exact2MiB accepted; next byte cancels before later pulls/parse/validation for current/history/index, tiny/empty chunks supported, malformed UTF8/JSON/stream and null distinctions preserve serving fallback. Selected old fields/history/cache/publication controls pass.",
+    "C2": "PASS local no-put/full-byte preservation: corrupt/oversized/unsafe current/index/target, retained index without current and indexed regression; full/patch/rollback/output metadata/version size refusal. Exact2MiB duplicated output succeeds. Actual authenticated handlers return sanitized no-store413/503; tenant PATCH preserves a fresh unpatched field despite older serving cache, absent non-demo still refuses. Post-put lost-ack error remains partial/unknown, not applied:false.",
+    "C3": "Final literal23 PASS, full compiler/ten-file lint0errors/4inherited warnings/no new/scoped whitespace PASS.10owned and23protected exact. Separate frozen review pending; no broader task/package/native/customer acceptance."
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 23,
+      "unselected": 135,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 34.19,
+      "command_capture": "runtime3"
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "command_capture": "static2"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 4,
+      "inherited_warnings": 4,
+      "new_warnings": 0,
+      "command_capture": "static2",
+      "qualification": "Baseline5 admitted; _type is now consumed by the required stream adapter, leaving scope and3 existing learn fixture argument warnings."
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static2"
+    },
+    "qualification": "Final && composite reached and passed all3 stages. Candidate2 runtime pass superseded by one-line explicit decoder-default option; final runtime3 proves final bytes."
+  },
+  "measurements": {
+    "source": "runtime3/aea044",
+    "application_limit_bytes": 2097152,
+    "exact_read_bytes": 2097152,
+    "exact_duplicated_write_bytes": 2097152,
+    "oversize_paths": 3,
+    "overflow_pulls_per_path": 2,
+    "oversize_parse_calls": 0,
+    "qualification": "Actual module with synthetic streaming KV; assertions prove cancellation/no extra pull/no parse and exact output size, not provider/native capacity, elapsed-time/SLO, total heap or customer corpus acceptance. W38.01/.02 retained numeric cache outputs are preserved in full captures."
+  },
+  "fixture_adaptations": [
+    "Six existing KV helpers honor get(key,'stream'); deferred spies forward type, ordinary json consumers remain unchanged. No production object-return bypass.",
+    "W38.02 isolated-fault seed clears only its synthetic index when resetting current revision1, so new consistency refusal does not obscure intended storage fault. Existing output-size/cache validator-expansion cases preserved.",
+    "Mounted group's initial invented tenant:atelier-a key was corrected to actual reflexScopeForTenant('atelier-a'), preserving expected503/no-put/fresh PATCH assertions.",
+    "Installed TextDecoder options require explicit ignoreBOM:false, identical to the omitted default; only one production line changed after compiler failure."
+  ],
+  "execution_history": [
+    {
+      "candidate": 1,
+      "at": "2026-09-13T11:56:01.075Z",
+      "files": [
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "17ca7cae0dacffe0bd7c4e3112f7a0ac691e923cb0a8b14d075f5cb39126c304"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+        },
+        {
+          "path": "src/reflex/configStore.test.ts",
+          "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "sha256": "8a365db27abe1bcf48058983b2d067a823165a20a460ca9326cc67c9cc3d35b0"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+        },
+        {
+          "path": "src/learn/phase2.test.ts",
+          "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+        }
+      ],
+      "source_capture": "81a089",
+      "root_review": "311be3",
+      "runtime": "runtime1",
+      "verdict": "22PASS/1fixtureFAIL; no static run"
+    },
+    {
+      "candidate": 2,
+      "at": "2026-09-13T11:58:17.957Z",
+      "files": [
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "17ca7cae0dacffe0bd7c4e3112f7a0ac691e923cb0a8b14d075f5cb39126c304"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+        },
+        {
+          "path": "src/reflex/configStore.test.ts",
+          "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "sha256": "fde18711caddbd4019a93e9391438b8c0c592f33ad4558b863620a3dcf2ed97e"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+        },
+        {
+          "path": "src/learn/phase2.test.ts",
+          "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+        }
+      ],
+      "source_capture": "510a3d",
+      "root_review": "7b5629",
+      "runtime": "runtime2",
+      "static": "static1",
+      "verdict": "23PASS then TS2345; both superseded"
+    },
+    {
+      "candidate": 3,
+      "at": "2026-09-13T12:00:35.595Z",
+      "files": [
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+        },
+        {
+          "path": "src/reflex/configStore.test.ts",
+          "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "sha256": "fde18711caddbd4019a93e9391438b8c0c592f33ad4558b863620a3dcf2ed97e"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+        },
+        {
+          "path": "src/learn/phase2.test.ts",
+          "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+        }
+      ],
+      "source_capture": "bc0acd",
+      "root_review": "823554",
+      "runtime": "runtime3",
+      "static": "static2",
+      "verdict": "Final23/compiler/lint/whitespace PASS"
+    }
+  ],
+  "failures": [
+    {
+      "command_capture": "runtime1",
+      "exit_code": 1,
+      "passed": 22,
+      "failed": 1,
+      "unselected": 135,
+      "diagnostic": "routes/content.test.ts285 expected503 got200: wrong synthetic tenant-prefixed current key left actual atelier-a scope absent.",
+      "correction": "candidate2 helper-derived current/index keys only; production selectors unchanged."
+    },
+    {
+      "command_capture": "static1",
+      "exit_code": 2,
+      "stage": "compiler",
+      "diagnostic": "TS2345 versionedStore.ts82: TextDecoderConstructorOptions requires ignoreBOM.",
+      "downstream_stages": "lint and whitespace unrun",
+      "correction": "candidate3 explicit ignoreBOM:false default; same23/K2 rerun."
+    }
+  ],
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase2.test.ts -t 'W38.03|W38.02|W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots|versions, attributes|rolls forward on rollback|serves the fallback|merges nested objects instead|accepts the legacy|writes both field names|keeps every revision body|serves repeat reads from the isolate cache|re-reads once the TTL|a consenting shopper is personalized|the statistics object counts|real authenticated routes refuse all mutations' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 11:56:57 UTC",
+      "source": {
+        "at": "2026-09-13T11:56:01.075Z",
+        "files": [
+          {
+            "path": "src/config/versionedStore.ts",
+            "sha256": "17ca7cae0dacffe0bd7c4e3112f7a0ac691e923cb0a8b14d075f5cb39126c304"
+          },
+          {
+            "path": "src/reflex/configStore.ts",
+            "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+          },
+          {
+            "path": "src/routes/config.ts",
+            "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+          },
+          {
+            "path": "src/routes/content.ts",
+            "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+          },
+          {
+            "path": "src/config/versionedStore.test.ts",
+            "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+          },
+          {
+            "path": "src/reflex/configStore.test.ts",
+            "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+          },
+          {
+            "path": "src/routes/content.test.ts",
+            "sha256": "8a365db27abe1bcf48058983b2d067a823165a20a460ca9326cc67c9cc3d35b0"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+          },
+          {
+            "path": "src/learn/learn.test.ts",
+            "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+          },
+          {
+            "path": "src/learn/phase2.test.ts",
+            "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+          }
+        ]
+      },
+      "captures": [
+        {
+          "chunk_id": "fe429c",
+          "wall_time_seconds": 1.001387386,
+          "session_id": 53772,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "265e44",
+          "wall_time_seconds": 5.001050742,
+          "session_id": 53772,
+          "original_token_count": 151,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (24 tests | 23 skipped) 18ms\n ❯ src/routes/content.test.ts  (23 tests | 1 failed | 22 skipped) 72ms\n   ❯ src/routes/content.test.ts > authenticated reflex administration > W38.03 returns typed no-store guard failures and patches actual tenant config from a fresh strict base\n     → expected 200 to be 503 // Object.is equality\n"
+        },
+        {
+          "chunk_id": "e697ee",
+          "wall_time_seconds": 5.001044689,
+          "session_id": 53772,
+          "original_token_count": 875,
+          "output": "stdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 bounds global charged residency with LRU expiry and binding-scope isolation\nW38.01 cache residency {\"entryLimit\":32,\"byteLimit\":8388608,\"countPressure\":{\"inserted\":33,\"retainedHits\":32,\"evictedMisses\":1},\"bytePressure\":{\"inserted\":5,\"retainedHits\":4,\"evictedMisses\":1,\"charges\":[1740886,1740886,1740886,1740886,1740886],\"insertedCharge\":8704430,\"retainedCharge\":6963544},\"measuredHeap\":false}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 fences delayed reads across local writes resets unknown acknowledgements and newer residents\nW38.01 cache fences {\"beforeWriteOrResetCases\":4,\"duringWriteCases\":1,\"newerResidentCases\":2,\"committedNoPutCases\":3,\"originalInflightRevisionPreserved\":true}\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 bounds streamed current history and index bytes before parsing and keeps read fallbacks\nW38.03 stream envelope {\"limit\":2097152,\"exact_bytes\":2097152,\"overflow_pulls\":2,\"cancelled_paths\":3,\"parsed_oversize\":false}\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 bounds legacy residency and isolates binding kind hooks and caller-owned values\nW38.02 charged residency {\"limit\":8388608,\"entries\":32,\"candidate_bytes\":[1740382,1740382,1740382,1740382,1740382],\"candidate_total\":8701910,\"retained_large_hits\":4}\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 bounds streamed current history and index bytes before parsing and keeps read fallbacks\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 admits both mutation bodies before puts and never rewrites unavailable or regressing history\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 fences both clocks resets partial writes and older delayed cache fills\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > serves the fallback rather than throwing when KV is down\n[config] read failed, serving fallback\n\n ✓ src/config/versionedStore.test.ts  (28 tests | 12 skipped) 2711ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > a consenting shopper is personalized, recorded, and fed to the ring\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (21 tests | 20 skipped) 24ms\n ✓ src/reflex/configStore.test.ts  (52 tests | 49 skipped) 18ms\n"
+        },
+        {
+          "chunk_id": "0772e2",
+          "wall_time_seconds": 0.000001992,
+          "exit_code": 1,
+          "original_token_count": 300,
+          "output": " ✓ src/learn/phase2.test.ts  (10 tests | 9 skipped) 26ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/routes/content.test.ts > authenticated reflex administration > W38.03 returns typed no-store guard failures and patches actual tenant config from a fresh strict base\nAssertionError: expected 200 to be 503 // Object.is equality\n\n- Expected\n+ Received\n\n- 503\n+ 200\n\n ❯ src/routes/content.test.ts:285:32\n    283|         kv.store.set(c.key, corrupt); const before = [...kv.store]; kv…\n    284|         const refused = await call(c.path, 'PUT', { [c.field]: c.value…\n    285|         expect(refused.status).toBe(503); expect(refused.headers.get('…\n       |                                ^\n    286|         expect(await refused.json()).toEqual({ ok: false, error: 'Stor…\n    287|         expect([...kv.store]).toEqual(before); expect(kv.calls.some(c …\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed | 5 passed (6)\n      Tests  1 failed | 22 passed | 135 skipped (158)\n   Start at  07:57:00\n   Duration  34.50s (transform 4.05s, setup 1ms, collect 15.63s, tests 2.87s, environment 1ms, prepare 12.04s)\n\n"
+        }
+      ],
+      "session_id": 53772,
+      "drained": true,
+      "exit_code": 1,
+      "finished_at": "2026-09-13 11:57:46 UTC"
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase2.test.ts -t 'W38.03|W38.02|W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots|versions, attributes|rolls forward on rollback|serves the fallback|merges nested objects instead|accepts the legacy|writes both field names|keeps every revision body|serves repeat reads from the isolate cache|re-reads once the TTL|a consenting shopper is personalized|the statistics object counts|real authenticated routes refuse all mutations' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 11:58:31 UTC",
+      "source": {
+        "at": "2026-09-13T11:58:17.957Z",
+        "files": [
+          {
+            "path": "src/config/versionedStore.ts",
+            "sha256": "17ca7cae0dacffe0bd7c4e3112f7a0ac691e923cb0a8b14d075f5cb39126c304"
+          },
+          {
+            "path": "src/reflex/configStore.ts",
+            "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+          },
+          {
+            "path": "src/routes/config.ts",
+            "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+          },
+          {
+            "path": "src/routes/content.ts",
+            "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+          },
+          {
+            "path": "src/config/versionedStore.test.ts",
+            "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+          },
+          {
+            "path": "src/reflex/configStore.test.ts",
+            "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+          },
+          {
+            "path": "src/routes/content.test.ts",
+            "sha256": "fde18711caddbd4019a93e9391438b8c0c592f33ad4558b863620a3dcf2ed97e"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+          },
+          {
+            "path": "src/learn/learn.test.ts",
+            "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+          },
+          {
+            "path": "src/learn/phase2.test.ts",
+            "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+          }
+        ]
+      },
+      "captures": [
+        {
+          "chunk_id": "fced3c",
+          "wall_time_seconds": 1.000575746,
+          "session_id": 25162,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4bbd15",
+          "wall_time_seconds": 0.000002309,
+          "exit_code": 0,
+          "original_token_count": 1031,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (24 tests | 23 skipped) 16ms\n ✓ src/routes/content.test.ts  (23 tests | 22 skipped) 79ms\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 bounds global charged residency with LRU expiry and binding-scope isolation\nW38.01 cache residency {\"entryLimit\":32,\"byteLimit\":8388608,\"countPressure\":{\"inserted\":33,\"retainedHits\":32,\"evictedMisses\":1},\"bytePressure\":{\"inserted\":5,\"retainedHits\":4,\"evictedMisses\":1,\"charges\":[1740886,1740886,1740886,1740886,1740886],\"insertedCharge\":8704430,\"retainedCharge\":6963544},\"measuredHeap\":false}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 fences delayed reads across local writes resets unknown acknowledgements and newer residents\nW38.01 cache fences {\"beforeWriteOrResetCases\":4,\"duringWriteCases\":1,\"newerResidentCases\":2,\"committedNoPutCases\":3,\"originalInflightRevisionPreserved\":true}\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 bounds streamed current history and index bytes before parsing and keeps read fallbacks\nW38.03 stream envelope {\"limit\":2097152,\"exact_bytes\":2097152,\"overflow_pulls\":2,\"cancelled_paths\":3,\"parsed_oversize\":false}\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 bounds legacy residency and isolates binding kind hooks and caller-owned values\nW38.02 charged residency {\"limit\":8388608,\"entries\":32,\"candidate_bytes\":[1740382,1740382,1740382,1740382,1740382],\"candidate_total\":8701910,\"retained_large_hits\":4}\n\n ✓ src/config/versionedStore.test.ts  (28 tests | 12 skipped) 2428ms\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 bounds streamed current history and index bytes before parsing and keeps read fallbacks\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 admits both mutation bodies before puts and never rewrites unavailable or regressing history\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 fences both clocks resets partial writes and older delayed cache fills\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > serves the fallback rather than throwing when KV is down\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > a consenting shopper is personalized, recorded, and fed to the ring\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (21 tests | 20 skipped) 26ms\n ✓ src/reflex/configStore.test.ts  (52 tests | 49 skipped) 15ms\n ✓ src/learn/phase2.test.ts  (10 tests | 9 skipped) 28ms\n\n Test Files  6 passed (6)\n      Tests  23 passed | 135 skipped (158)\n   Start at  07:58:33\n   Duration  31.09s (transform 4.33s, setup 0ms, collect 13.84s, tests 2.59s, environment 1ms, prepare 10.55s)\n\n"
+        }
+      ],
+      "session_id": 25162,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 11:59:10 UTC"
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/versionedStore.ts src/reflex/configStore.ts src/routes/config.ts src/routes/content.ts src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase2.test.ts --max-warnings 5 && git diff --check -- src/config/versionedStore.ts src/reflex/configStore.ts src/routes/config.ts src/routes/content.ts src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase2.test.ts",
+      "started_at": "2026-09-13 11:59:23 UTC",
+      "source": {
+        "at": "2026-09-13T11:58:17.957Z",
+        "files": [
+          {
+            "path": "src/config/versionedStore.ts",
+            "sha256": "17ca7cae0dacffe0bd7c4e3112f7a0ac691e923cb0a8b14d075f5cb39126c304"
+          },
+          {
+            "path": "src/reflex/configStore.ts",
+            "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+          },
+          {
+            "path": "src/routes/config.ts",
+            "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+          },
+          {
+            "path": "src/routes/content.ts",
+            "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+          },
+          {
+            "path": "src/config/versionedStore.test.ts",
+            "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+          },
+          {
+            "path": "src/reflex/configStore.test.ts",
+            "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+          },
+          {
+            "path": "src/routes/content.test.ts",
+            "sha256": "fde18711caddbd4019a93e9391438b8c0c592f33ad4558b863620a3dcf2ed97e"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+          },
+          {
+            "path": "src/learn/learn.test.ts",
+            "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+          },
+          {
+            "path": "src/learn/phase2.test.ts",
+            "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+          }
+        ]
+      },
+      "captures": [
+        {
+          "chunk_id": "8e8b8b",
+          "wall_time_seconds": 1.001086261,
+          "session_id": 20061,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "8ed309",
+          "wall_time_seconds": 5.000696152,
+          "session_id": 20061,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2182dd",
+          "wall_time_seconds": 0.000002248,
+          "exit_code": 2,
+          "original_token_count": 69,
+          "output": "src/config/versionedStore.ts(82,72): error TS2345: Argument of type '{ fatal: true; }' is not assignable to parameter of type 'TextDecoderConstructorOptions'.\n  Property 'ignoreBOM' is missing in type '{ fatal: true; }' but required in type 'TextDecoderConstructorOptions'.\n"
+        }
+      ],
+      "session_id": 20061,
+      "drained": true,
+      "exit_code": 2,
+      "finished_at": "2026-09-13 12:00:08 UTC"
+    },
+    "runtime3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase2.test.ts -t 'W38.03|W38.02|W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots|versions, attributes|rolls forward on rollback|serves the fallback|merges nested objects instead|accepts the legacy|writes both field names|keeps every revision body|serves repeat reads from the isolate cache|re-reads once the TTL|a consenting shopper is personalized|the statistics object counts|real authenticated routes refuse all mutations' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 12:00:53 UTC",
+      "source": {
+        "at": "2026-09-13T12:00:35.595Z",
+        "files": [
+          {
+            "path": "src/config/versionedStore.ts",
+            "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+          },
+          {
+            "path": "src/reflex/configStore.ts",
+            "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+          },
+          {
+            "path": "src/routes/config.ts",
+            "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+          },
+          {
+            "path": "src/routes/content.ts",
+            "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+          },
+          {
+            "path": "src/config/versionedStore.test.ts",
+            "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+          },
+          {
+            "path": "src/reflex/configStore.test.ts",
+            "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+          },
+          {
+            "path": "src/routes/content.test.ts",
+            "sha256": "fde18711caddbd4019a93e9391438b8c0c592f33ad4558b863620a3dcf2ed97e"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+          },
+          {
+            "path": "src/learn/learn.test.ts",
+            "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+          },
+          {
+            "path": "src/learn/phase2.test.ts",
+            "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+          }
+        ]
+      },
+      "captures": [
+        {
+          "chunk_id": "b6b0ae",
+          "wall_time_seconds": 1.00097389,
+          "session_id": 61524,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "aea044",
+          "wall_time_seconds": 0.000002125,
+          "exit_code": 0,
+          "original_token_count": 1031,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (24 tests | 23 skipped) 17ms\n ✓ src/routes/content.test.ts  (23 tests | 22 skipped) 66ms\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 bounds global charged residency with LRU expiry and binding-scope isolation\nW38.01 cache residency {\"entryLimit\":32,\"byteLimit\":8388608,\"countPressure\":{\"inserted\":33,\"retainedHits\":32,\"evictedMisses\":1},\"bytePressure\":{\"inserted\":5,\"retainedHits\":4,\"evictedMisses\":1,\"charges\":[1740886,1740886,1740886,1740886,1740886],\"insertedCharge\":8704430,\"retainedCharge\":6963544},\"measuredHeap\":false}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 fences delayed reads across local writes resets unknown acknowledgements and newer residents\nW38.01 cache fences {\"beforeWriteOrResetCases\":4,\"duringWriteCases\":1,\"newerResidentCases\":2,\"committedNoPutCases\":3,\"originalInflightRevisionPreserved\":true}\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 bounds streamed current history and index bytes before parsing and keeps read fallbacks\nW38.03 stream envelope {\"limit\":2097152,\"exact_bytes\":2097152,\"overflow_pulls\":2,\"cancelled_paths\":3,\"parsed_oversize\":false}\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 bounds legacy residency and isolates binding kind hooks and caller-owned values\nW38.02 charged residency {\"limit\":8388608,\"entries\":32,\"candidate_bytes\":[1740382,1740382,1740382,1740382,1740382],\"candidate_total\":8701910,\"retained_large_hits\":4}\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 bounds streamed current history and index bytes before parsing and keeps read fallbacks\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.03 admits both mutation bodies before puts and never rewrites unavailable or regressing history\n[config] stored document is invalid and was ignored\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 fences both clocks resets partial writes and older delayed cache fills\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > serves the fallback rather than throwing when KV is down\n[config] read failed, serving fallback\n\n ✓ src/config/versionedStore.test.ts  (28 tests | 12 skipped) 2879ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > a consenting shopper is personalized, recorded, and fed to the ring\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (21 tests | 20 skipped) 19ms\n ✓ src/reflex/configStore.test.ts  (52 tests | 49 skipped) 24ms\n ✓ src/learn/phase2.test.ts  (10 tests | 9 skipped) 30ms\n\n Test Files  6 passed (6)\n      Tests  23 passed | 135 skipped (158)\n   Start at  08:00:56\n   Duration  34.19s (transform 4.86s, setup 0ms, collect 14.13s, tests 3.04s, environment 1ms, prepare 13.18s)\n\n"
+        }
+      ],
+      "session_id": 61524,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 12:01:33 UTC"
+    },
+    "static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/versionedStore.ts src/reflex/configStore.ts src/routes/config.ts src/routes/content.ts src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase2.test.ts --max-warnings 5 && git diff --check -- src/config/versionedStore.ts src/reflex/configStore.ts src/routes/config.ts src/routes/content.ts src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/learn.test.ts src/learn/phase2.test.ts",
+      "started_at": "2026-09-13 12:01:41 UTC",
+      "source": {
+        "at": "2026-09-13T12:00:35.595Z",
+        "files": [
+          {
+            "path": "src/config/versionedStore.ts",
+            "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+          },
+          {
+            "path": "src/reflex/configStore.ts",
+            "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+          },
+          {
+            "path": "src/routes/config.ts",
+            "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+          },
+          {
+            "path": "src/routes/content.ts",
+            "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+          },
+          {
+            "path": "src/config/versionedStore.test.ts",
+            "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+          },
+          {
+            "path": "src/reflex/configStore.test.ts",
+            "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+          },
+          {
+            "path": "src/routes/content.test.ts",
+            "sha256": "fde18711caddbd4019a93e9391438b8c0c592f33ad4558b863620a3dcf2ed97e"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+          },
+          {
+            "path": "src/learn/learn.test.ts",
+            "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+          },
+          {
+            "path": "src/learn/phase2.test.ts",
+            "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+          }
+        ]
+      },
+      "captures": [
+        {
+          "chunk_id": "bc08af",
+          "wall_time_seconds": 1.001607516,
+          "session_id": 46012,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "25d025",
+          "wall_time_seconds": 5.001270397,
+          "session_id": 46012,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "511886",
+          "wall_time_seconds": 0.000002744,
+          "exit_code": 0,
+          "original_token_count": 147,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/versionedStore.ts\n  359:57  warning  'scope' is defined but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  605:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  606:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  606:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 4 problems (0 errors, 4 warnings)\n\n"
+        }
+      ],
+      "session_id": 46012,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 12:02:36 UTC"
+    },
+    "source_stop": {
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=path=>createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\"),baseline=JSON.parse(fs.readFileSync(\"docs/remediation/design/W38.03/baseline.json\",\"utf8\"));const files=baseline.owned.map(({path})=>({path,sha256:hash(path)})),protectedPins=baseline.pins.filter(p=>p.role!==\"output\").map(p=>({...p,actual_sha256:hash(p.path)})),references=[\"docs/remediation/design/W38.03/baseline.json\",\"docs/remediation/design/W38.03/plan.md\",\"docs/remediation/evidence/W38.03/admission.json\"].map(path=>({path,sha256:hash(path)}));console.log(JSON.stringify({at:new Date().toISOString(),files,protectedPins,references,unchanged:protectedPins.every(p=>p.sha256===p.actual_sha256)},null,2));'",
+      "captures": [
+        {
+          "chunk_id": "ca49df",
+          "wall_time_seconds": 0.000005714,
+          "exit_code": 0,
+          "original_token_count": 1968,
+          "output": "{\n  \"at\": \"2026-09-13T12:02:49.000Z\",\n  \"files\": [\n    {\n      \"path\": \"src/config/versionedStore.ts\",\n      \"sha256\": \"79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f\"\n    },\n    {\n      \"path\": \"src/reflex/configStore.ts\",\n      \"sha256\": \"8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145\"\n    },\n    {\n      \"path\": \"src/routes/config.ts\",\n      \"sha256\": \"91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60\"\n    },\n    {\n      \"path\": \"src/routes/content.ts\",\n      \"sha256\": \"9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096\"\n    },\n    {\n      \"path\": \"src/config/versionedStore.test.ts\",\n      \"sha256\": \"68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057\"\n    },\n    {\n      \"path\": \"src/reflex/configStore.test.ts\",\n      \"sha256\": \"03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f\"\n    },\n    {\n      \"path\": \"src/routes/content.test.ts\",\n      \"sha256\": \"fde18711caddbd4019a93e9391438b8c0c592f33ad4558b863620a3dcf2ed97e\"\n    },\n    {\n      \"path\": \"src/content/consent.test.ts\",\n      \"sha256\": \"bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da\"\n    },\n    {\n      \"path\": \"src/learn/learn.test.ts\",\n      \"sha256\": \"9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1\"\n    },\n    {\n      \"path\": \"src/learn/phase2.test.ts\",\n      \"sha256\": \"fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2\"\n    }\n  ],\n  \"protectedPins\": [\n    {\n      \"path\": \"src/config/publication.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956\",\n      \"actual_sha256\": \"b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956\"\n    },\n    {\n      \"path\": \"src/content/kinds.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8\",\n      \"actual_sha256\": \"7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8\"\n    },\n    {\n      \"path\": \"src/content/types.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df\",\n      \"actual_sha256\": \"26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df\"\n    },\n    {\n      \"path\": \"src/content/service.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f\",\n      \"actual_sha256\": \"918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f\"\n    },\n    {\n      \"path\": \"src/content/decide.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b\",\n      \"actual_sha256\": \"a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b\"\n    },\n    {\n      \"path\": \"src/reflex/contentCompose.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe\",\n      \"actual_sha256\": \"0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe\"\n    },\n    {\n      \"path\": \"src/learn/cycle.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c\",\n      \"actual_sha256\": \"ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c\"\n    },\n    {\n      \"path\": \"src/learn/priors.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad\",\n      \"actual_sha256\": \"da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad\"\n    },\n    {\n      \"path\": \"src/learn/route.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad\",\n      \"actual_sha256\": \"3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad\"\n    },\n    {\n      \"path\": \"src/learn/replay.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a\",\n      \"actual_sha256\": \"659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a\"\n    },\n    {\n      \"path\": \"src/routes/decisions.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da\",\n      \"actual_sha256\": \"39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da\"\n    },\n    {\n      \"path\": \"src/types/env.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab\",\n      \"actual_sha256\": \"222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab\"\n    },\n    {\n      \"path\": \"docs/architecture/35-audit-verification-and-source-of-truth.md\",\n      \"role\": \"source\",\n      \"sha256\": \"5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4\",\n      \"actual_sha256\": \"5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4\"\n    },\n    {\n      \"path\": \"docs/architecture/33-adversarial-audit-brief.md\",\n      \"role\": \"source\",\n      \"sha256\": \"21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028\",\n      \"actual_sha256\": \"21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.01/acceptance.md\",\n      \"role\": \"source\",\n      \"sha256\": \"1c0076af128b09e23a1ebc556d2fa8abc32ccc18a8c6bdda9f58f62c45dbd7e9\",\n      \"actual_sha256\": \"1c0076af128b09e23a1ebc556d2fa8abc32ccc18a8c6bdda9f58f62c45dbd7e9\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.01/worker.json\",\n      \"role\": \"source\",\n      \"sha256\": \"127d3c6303ed1b37b9b193867d329174029569be403b88d40165787afa298ee8\",\n      \"actual_sha256\": \"127d3c6303ed1b37b9b193867d329174029569be403b88d40165787afa298ee8\"\n    },\n    {\n      \"path\": \"package.json\",\n      \"role\": \"source\",\n      \"sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\",\n      \"actual_sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\"\n    },\n    {\n      \"path\": \"package-lock.json\",\n      \"role\": \"source\",\n      \"sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\",\n      \"actual_sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\"\n    },\n    {\n      \"path\": \"tsconfig.json\",\n      \"role\": \"source\",\n      \"sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\",\n      \"actual_sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\"\n    },\n    {\n      \"path\": \"vitest.config.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\",\n      \"actual_sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\"\n    },\n    {\n      \"path\": \".eslintrc.json\",\n      \"role\": \"source\",\n      \"sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\",\n      \"actual_sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.02/acceptance.md\",\n      \"role\": \"source\",\n      \"sha256\": \"baf3ae1375d444a1b92b817a9310e7ad61dbb8092fa7c2b8e758ce22d9c80a2e\",\n      \"actual_sha256\": \"baf3ae1375d444a1b92b817a9310e7ad61dbb8092fa7c2b8e758ce22d9c80a2e\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.02/worker.json\",\n      \"role\": \"source\",\n      \"sha256\": \"9fba0b389282a44f5bb613ca7ff5e1b837d3f04bc9ff7a57a32d799e097934dc\",\n      \"actual_sha256\": \"9fba0b389282a44f5bb613ca7ff5e1b837d3f04bc9ff7a57a32d799e097934dc\"\n    }\n  ],\n  \"references\": [\n    {\n      \"path\": \"docs/remediation/design/W38.03/baseline.json\",\n      \"sha256\": \"3edd93104ddf7061d4e9b9f220af475db1f31fd4f93019904f245db58b52039f\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W38.03/plan.md\",\n      \"sha256\": \"3a0d5b09e5c041f3d1d9ca68297eec2562044e6bbad8db0a0a642979f76a31df\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.03/admission.json\",\n      \"sha256\": \"02c6b0074935c3117d066547d18b34931349e8b342a616c0fa5689e7c001315e\"\n    }\n  ],\n  \"unchanged\": true\n}\n"
+        }
+      ],
+      "session_id": null,
+      "exit_code": 0,
+      "drained": true
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T12:02:49.000Z",
+    "files": [
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+      },
+      {
+        "path": "src/reflex/configStore.ts",
+        "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+      },
+      {
+        "path": "src/routes/config.ts",
+        "sha256": "91001fee621299ab47225bba994fb7b6184435e673ec3585de809c70e7574f60"
+      },
+      {
+        "path": "src/routes/content.ts",
+        "sha256": "9369fc63e8d0451b3a717a2ab12bb4c6da950f06d2e2d0bab452cc7927978096"
+      },
+      {
+        "path": "src/config/versionedStore.test.ts",
+        "sha256": "68acac4c7409ba594b4cbef24c9be2b3d681ffca14cc6818ea722b53e05bf057"
+      },
+      {
+        "path": "src/reflex/configStore.test.ts",
+        "sha256": "03e396a32cc5316f47c11400dd8d91cd0dd9a1519e0d0c89a953ca305e69033f"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "fde18711caddbd4019a93e9391438b8c0c592f33ad4558b863620a3dcf2ed97e"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "bc2980fba69b5236617058cc5ef6a8d5f56fd56562fd015c5eba3dd18c84d3da"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "9a26e063a70b8becf204ed258f728bff9831d06746fbe37e45da1759abea2ce1"
+      },
+      {
+        "path": "src/learn/phase2.test.ts",
+        "sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2"
+      }
+    ]
+  },
+  "protected_comparison": {
+    "expected": 23,
+    "actual": 23,
+    "unchanged": true,
+    "baseline": "docs/remediation/design/W38.03/baseline.json",
+    "all_actual_and_expected_hashes": "command_captures.source_stop.captures[0].output"
+  },
+  "limitations": [
+    "2MiB is a per-value serialized application safety cap, not customer/platform capacity, total heap, request/CPU budget or full W38/F32/F08/N07 acceptance.",
+    "HTTP input parsing, serialization before output sizing, arbitrary validator/stamp expansion, provider chunk allocation and concurrent misses remain outside this bound. No new native or workload benchmark.",
+    "Existing public null/[]/compiled fallback remains on unavailable legacy reads; rejected data/history is not deleted or rewritten. Mutation paths alone require strict uncached trustworthy bases; history retention/recovery/cutover remains separate.",
+    "Counter/index checks prevent observed regression only. Unindexed immutable history, read/write races, remote KV consistency and three-put atomicity remain unresolved W35/authority work.",
+    "Existing50-entry browse index policy and both value/config fields/keys/history bodies retained. Post-put storage failures remain ambiguous; no transaction or retry guarantee.",
+    "Existing content publication, ranking/candidate/model/customer policy unchanged. No source expansion, delegation, governance/customer/external/cloud operations, install/emitted build or commit. Source immutable after STOP."
+  ],
+  "independent_review": "pending"
+}

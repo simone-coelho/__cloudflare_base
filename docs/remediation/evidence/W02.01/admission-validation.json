@@ -1,0 +1,59 @@
+{
+  "at": "2026-09-07T00:38:40.340Z",
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "code": "stale_proof",
+      "message": "W01.01 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01 artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E1 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E1 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W01.01-E1 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E2 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate"
+    },
+    {
+      "code": "stale_proof",
+      "message": "W01.01-E2 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W01.01-E2 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W01.02-E1 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "revalidation_required",
+      "message": "W01.02-E2 is retained historical proof awaiting a replacement; it cannot support acceptance"
+    },
+    {
+      "code": "limits",
+      "message": "Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker."
+    }
+  ]
+}

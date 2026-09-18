@@ -1,0 +1,20 @@
+{
+  "at": "2026-09-11T22:44:50Z",
+  "actor": "w01-lead",
+  "source_go": true,
+  "command": "node --input-type=module -e 'import fs from \"node:fs\";import assert from \"node:assert/strict\";import{sha256,taskContractDigest}from\"./scripts/remediation/board.mjs\";const d=JSON.parse(fs.readFileSync(\"docs/remediation/tracker.json\")),t=d.tasks.find(t=>t.id===\"W09.02\"),b=JSON.parse(fs.readFileSync(\"docs/remediation/design/W09.02/baseline.json\"));assert.equal(t.state,\"in_progress\");assert.equal(d.tasks.filter(t=>[\"in_progress\",\"verification\"].includes(t.state)).length,1);assert.equal(sha256(fs.readFileSync(t.preflight.plan.path)),t.preflight.plan.sha256);assert.equal(taskContractDigest(t),t.preflight.contract_digest);const s=d.journal.find(e=>e.task_id===t.id&&e.to===\"in_progress\");assert.equal(s.plan_sha256,t.preflight.plan.sha256);assert.deepEqual(s.plan_snapshot,t.preflight);const a=d.authority.local_authorization.scope_extensions.find(e=>e.scope_task_ids.includes(t.id));assert(a);assert.equal(sha256(fs.readFileSync(a.record.path)),a.record.sha256);assert(a.at<=s.at);for(const f of b.pins){if(f.absent)assert(!fs.existsSync(f.path));else assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);}for(const c of d.tasks.filter(t=>t.state===\"closed\"))for(const f of c.artifact.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256);console.log(JSON.stringify({task:t.id,journal:d.journal.length,plan:t.preflight.plan.sha256,contract:t.preflight.contract_digest,pins:b.pins.length,owned:b.owned.length,protected:b.pins.filter(p=>p.role!==\"output\").length,checks:\"PASS\",source_go:\"eligible\",external:false}));'",
+  "captures": [
+    {
+      "chunk_id": "59fd8a",
+      "wall_time_seconds": 0.30265446,
+      "exit_code": 0,
+      "original_token_count": 70,
+      "output": "{\"task\":\"W09.02\",\"journal\":1028,\"plan\":\"aea3b55308804c2f6123028dbdf862d97bff1d3389790802e07ac528d25ac846\",\"contract\":\"d6b695151d6933c0f60f0a11d5e5301c2b1257c3935ca7c1dbf0aeb0bdf6a8af\",\"pins\":75,\"owned\":10,\"protected\":65,\"checks\":\"PASS\",\"source_go\":\"eligible\",\"external\":false}\n"
+    }
+  ],
+  "exit_code": 0,
+  "drained": true,
+  "entry": "check/status96601 VALID1019 reused",
+  "pre_admission_correction": "Initial patch-builder syntax error287711 before writes; tracker1019 verified812fd2, syntax diagnosis920a72, corrected missing reproduction-object brace and admitted. No source or authority mutation from failed builder.",
+  "limitations": "No release/full W09 or W06/deployed authority."
+}

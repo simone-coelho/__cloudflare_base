@@ -1,0 +1,391 @@
+{
+  "before": {
+    "id": "W14",
+    "canonical": {
+      "gate_scope": "G0/G2",
+      "full_scope": "Register and deliver every applicable source clause: generic enrichment/review/publication (§1.3), product-sort persistence (§1.6), entitlement evidence (§1.9), generic AI Search (§1.10), external/SFCC acceptance (§1.11), typed attributes/audiences and scheduled warehouse destination/readback/deletion (§1.12). Track §2.3's optional, no-additional-cost widget/template handoff as availability is triggered, not a January widget build; retain tag-plan deliverables and approved mechanism substitutions. The internal register portion is updated here; implementation, customer documents, evidence and authorized amendments remain open.",
+      "finding_refs": "F07/F11/F29/F31; N16/N17",
+      "sizing_owner": "S register/claim containment → L/externally dependent capability packages, re-estimate separately; D/OL + C"
+    },
+    "title": "Source-clause capability delivery",
+    "gates": [
+      "G0",
+      "G2"
+    ],
+    "source_findings": [
+      "F07",
+      "F11",
+      "F29",
+      "F31",
+      "N16",
+      "N17"
+    ],
+    "proposed_owner": "D/OL + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "description": "Reusable deterministic structured-intent candidate-page filtering/live-affinity ranking only; full §1.10 NL/customer-catalog and every other W14 clause retained open."
+        },
+        {
+          "id": "W14-PRODUCT-SORT-RECEIPTS",
+          "description": "Best-effort versioned product-sort R2 explain records with explicit operator readback only; no every-decision/delivery/warehouse/customer completeness."
+        },
+        {
+          "id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "description": "Supplied generic content-label proposals, explicit human decisions and approved-only patch export; not AI generation/publication/full customer acceptance."
+        },
+        {
+          "id": "W14-ENRICHMENT-PUBLICATION",
+          "description": "Explicit current-human publication of reviewed tag additions through exact-current immutable catalog authority; not generation/taxonomy/customer/full enrichment acceptance."
+        },
+        {
+          "id": "W14-TYPED-HISTORICAL-SEGMENTATION",
+          "description": "Source-namespaced documented typed fields and precomputed audiences consumed by existing both-host segmentation/personalization, including replacement/replay/identity/consent. No numerical score projection or full §1.12 warehouse/customer acceptance."
+        },
+        {
+          "id": "W14-TYPED-CSV-ADAPTER",
+          "description": "Strict bounded typed historical CSV adaptation to the same consent-safe both-host segmentation/precomputed audience lane; not numerical scoring, S3/warehouse/scheduled or customer/full §1.12 acceptance."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C1"
+        },
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C2"
+        },
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C3"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C1"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C2"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C3"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "task_id": "W14.03",
+          "task_criterion_id": "W14.03-C1"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "task_id": "W14.03",
+          "task_criterion_id": "W14.03-C2"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "task_id": "W14.03",
+          "task_criterion_id": "W14.03-C3"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-PUBLICATION",
+          "task_id": "W14.04",
+          "task_criterion_id": "W14.04-C1"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-PUBLICATION",
+          "task_id": "W14.04",
+          "task_criterion_id": "W14.04-C2"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-PUBLICATION",
+          "task_id": "W14.04",
+          "task_criterion_id": "W14.04-C3"
+        },
+        {
+          "criterion_id": "W14-TYPED-HISTORICAL-SEGMENTATION",
+          "task_id": "W14.05",
+          "task_criterion_id": "W14.05-C1"
+        },
+        {
+          "criterion_id": "W14-TYPED-HISTORICAL-SEGMENTATION",
+          "task_id": "W14.05",
+          "task_criterion_id": "W14.05-C2"
+        },
+        {
+          "criterion_id": "W14-TYPED-HISTORICAL-SEGMENTATION",
+          "task_id": "W14.05",
+          "task_criterion_id": "W14.05-C3"
+        },
+        {
+          "criterion_id": "W14-TYPED-CSV-ADAPTER",
+          "task_id": "W14.06",
+          "task_criterion_id": "W14.06-C1"
+        },
+        {
+          "criterion_id": "W14-TYPED-CSV-ADAPTER",
+          "task_id": "W14.06",
+          "task_criterion_id": "W14.06-C2"
+        },
+        {
+          "criterion_id": "W14-TYPED-CSV-ADAPTER",
+          "task_id": "W14.06",
+          "task_criterion_id": "W14.06-C3"
+        }
+      ],
+      "task_ids": [
+        "W14.01",
+        "W14.02",
+        "W14.03",
+        "W14.04",
+        "W14.05",
+        "W14.06"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W14",
+    "canonical": {
+      "gate_scope": "G0/G2",
+      "full_scope": "Register and deliver every applicable source clause: generic enrichment/review/publication (§1.3), product-sort persistence (§1.6), entitlement evidence (§1.9), generic AI Search (§1.10), external/SFCC acceptance (§1.11), typed attributes/audiences and scheduled warehouse destination/readback/deletion (§1.12). Track §2.3's optional, no-additional-cost widget/template handoff as availability is triggered, not a January widget build; retain tag-plan deliverables and approved mechanism substitutions. The internal register portion is updated here; implementation, customer documents, evidence and authorized amendments remain open.",
+      "finding_refs": "F07/F11/F29/F31; N16/N17",
+      "sizing_owner": "S register/claim containment → L/externally dependent capability packages, re-estimate separately; D/OL + C"
+    },
+    "title": "Source-clause capability delivery",
+    "gates": [
+      "G0",
+      "G2"
+    ],
+    "source_findings": [
+      "F07",
+      "F11",
+      "F29",
+      "F31",
+      "N16",
+      "N17"
+    ],
+    "proposed_owner": "D/OL + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "description": "Reusable deterministic structured-intent candidate-page filtering/live-affinity ranking only; full §1.10 NL/customer-catalog and every other W14 clause retained open."
+        },
+        {
+          "id": "W14-PRODUCT-SORT-RECEIPTS",
+          "description": "Best-effort versioned product-sort R2 explain records with explicit operator readback only; no every-decision/delivery/warehouse/customer completeness."
+        },
+        {
+          "id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "description": "Supplied generic content-label proposals, explicit human decisions and approved-only patch export; not AI generation/publication/full customer acceptance."
+        },
+        {
+          "id": "W14-ENRICHMENT-PUBLICATION",
+          "description": "Explicit current-human publication of reviewed tag additions through exact-current immutable catalog authority; not generation/taxonomy/customer/full enrichment acceptance."
+        },
+        {
+          "id": "W14-TYPED-HISTORICAL-SEGMENTATION",
+          "description": "Source-namespaced documented typed fields and precomputed audiences consumed by existing both-host segmentation/personalization, including replacement/replay/identity/consent. No numerical score projection or full §1.12 warehouse/customer acceptance."
+        },
+        {
+          "id": "W14-TYPED-CSV-ADAPTER",
+          "description": "Strict bounded typed historical CSV adaptation to the same consent-safe both-host segmentation/precomputed audience lane; not numerical scoring, S3/warehouse/scheduled or customer/full §1.12 acceptance."
+        },
+        {
+          "id": "W14-FULL-LOCAL-AND-LIVE",
+          "description": "Register and deliver every applicable source clause: generic enrichment/review/publication (§1.3), product-sort persistence (§1.6), entitlement evidence (§1.9), generic AI Search (§1.10), external/SFCC acceptance (§1.11), typed attributes/audiences and scheduled warehouse destination/readback/deletion (§1.12). Track §2.3's optional, no-additional-cost widget/template handoff as availability is triggered, not a January widget build; retain tag-plan deliverables and approved mechanism substitutions. The internal register portion is updated here; implementation, customer documents, evidence and authorized amendments remain open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C1"
+        },
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C2"
+        },
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C3"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C1"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C2"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C3"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "task_id": "W14.03",
+          "task_criterion_id": "W14.03-C1"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "task_id": "W14.03",
+          "task_criterion_id": "W14.03-C2"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "task_id": "W14.03",
+          "task_criterion_id": "W14.03-C3"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-PUBLICATION",
+          "task_id": "W14.04",
+          "task_criterion_id": "W14.04-C1"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-PUBLICATION",
+          "task_id": "W14.04",
+          "task_criterion_id": "W14.04-C2"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-PUBLICATION",
+          "task_id": "W14.04",
+          "task_criterion_id": "W14.04-C3"
+        },
+        {
+          "criterion_id": "W14-TYPED-HISTORICAL-SEGMENTATION",
+          "task_id": "W14.05",
+          "task_criterion_id": "W14.05-C1"
+        },
+        {
+          "criterion_id": "W14-TYPED-HISTORICAL-SEGMENTATION",
+          "task_id": "W14.05",
+          "task_criterion_id": "W14.05-C2"
+        },
+        {
+          "criterion_id": "W14-TYPED-HISTORICAL-SEGMENTATION",
+          "task_id": "W14.05",
+          "task_criterion_id": "W14.05-C3"
+        },
+        {
+          "criterion_id": "W14-TYPED-CSV-ADAPTER",
+          "task_id": "W14.06",
+          "task_criterion_id": "W14.06-C1"
+        },
+        {
+          "criterion_id": "W14-TYPED-CSV-ADAPTER",
+          "task_id": "W14.06",
+          "task_criterion_id": "W14.06-C2"
+        },
+        {
+          "criterion_id": "W14-TYPED-CSV-ADAPTER",
+          "task_id": "W14.06",
+          "task_criterion_id": "W14.06-C3"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C1"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C2"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C3"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C4"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C5"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C6"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C7"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C8"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C9"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C10"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C11"
+        },
+        {
+          "criterion_id": "W14-FULL-LOCAL-AND-LIVE",
+          "task_id": "W14.07",
+          "task_criterion_id": "W14.07-C12"
+        }
+      ],
+      "task_ids": [
+        "W14.01",
+        "W14.02",
+        "W14.03",
+        "W14.04",
+        "W14.05",
+        "W14.06",
+        "W14.07"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

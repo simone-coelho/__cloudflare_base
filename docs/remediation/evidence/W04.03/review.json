@@ -1,0 +1,84 @@
+{
+  "task_id": "W04.03",
+  "actor": "w0403-reviewer",
+  "agent": "/root/w01_reviewer",
+  "model": "gpt-6-astra",
+  "reasoning": "xhigh",
+  "at": "2026-09-17T02:41:27.669Z",
+  "verdict": "REWORK",
+  "claim": "Independent local review only; no whole-W04, finding closure, deployed/customer/SLO/release acceptance.",
+  "artifact": {
+    "digest": "8a4c6ab00594b239ad56e4007808abcb99cf9bf3d6e475bf5d436c5153af42bd",
+    "contract": "dfbbecbf7135869e6b481ca27a0bab25f49d9056437739bac99d71540990c392",
+    "freeze": {
+      "path": "docs/remediation/evidence/W04.03/source-freeze.json",
+      "sha256": "15a22d840302342be512add38c30f0ba818da20fb392b03760f285754f52065c"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W04.03/worker.json",
+      "sha256": "a37ad70681a911ce579ecc12051bbfd87ea599425b36216dcfec6a8eebe49435"
+    }
+  },
+  "basis": [
+    "Read current AGENTS agreement/RESUME, complete original document35 W04 and linked F04/F06/N05, original admission and v2/v3 amendments, actual affected source and exact task-only deltas. Reused bounded candidate source inspection only after matching frozen bytes.",
+    "Verified all122 frozen pins,43 admitted dirty originals and all43 forward/inverse patch records (38 changed outputs,5 unchanged); verified all29 retained primary-output hashes. No source drift before/after K5 or final check.",
+    "Read actual final fixture corrections: native runtime selects the deployment host, both hosts register real durable grants, private push uses signed owner route, fresh409 starts from genuine recognized authority, strict raw erasure/warm-profile/no-effect oracles retained. Necessary refusal unit wrappers are not counted as native proof."
+  ],
+  "source_assessment": {
+    "C1": "Local source and focused proof preserve tenant/account/visitor-bound backend assertions, named material/salt validation, current/previous keys, readiness/monitor failure and fresh409 SDK retry. Cookie/profile/pointer inputs cannot confer recognized authority; explicit demo compatibility remains.",
+    "C2": "Existing ShopperReflex serializes actual session projections/routes/sinks and callback-free relay operations. Invocation-scoped exact request/principal/owner lifetime, post-await public expiry, underlying provider drain/cancellation and one-way owner lock ordering inspected. Actual decision/sort sink checks, FX/ODP caller checks and both native socket hosts pass. Trusted coarse platform CF propagation is sanitized and caller header/body replacement tested.",
+    "C3": "Source implementation includes recoverable source/target grants, per-grant detach versus owner reset, raw erasure witnesses, durable projection/import receipts, exact SID/epoch/cutoff/current-consent admission and owner-held history metadata publication. Pointer-only expiry preserves renewed profiles; raw positive consent cannot override durable refusal. Required history-metadata-versus-erasure race evidence is missing: see R1. Therefore C3 and whole local W04 are not accepted.",
+    "C4": "Real endpoint+tenant Web Locks, shared transition anchor and use-time checks protect SDK source/both shipped bundles. Unsupported coordination fails closed. Throw/null/write failure revokes only the exact retained grant without clearing newer shared bytes; stale HTTP/proof/cache/socket/callback continuations and same-document/cross-tab notification adapter inspected. These are synthetic/VM checks, not real-browser attestation.",
+    "C5": "Functional exact-base add-only nondeploying adapter preserves modules/settings/opaque bindings and never claims secret equality, upload CAS or pinned keep-assets. Immutable intent precedes POST; file and identity-checked parent-directory sync are awaited, sync failure refuses upload, interrupted/ambiguous retry is read-only. Four final synthetic tool tests pass. No hardware or actual credential/provisioning attestation.",
+    "C6": "Distinct frozen artifact/source/primary-evidence review performed, with one missing required runtime acceptance point retained rather than inferred from passing helpers.",
+    "C7": "OPEN_NOT_RUN: separately authorized real material/backend/deployment/browser/customer/both-host timing/SLO acceptance is outside the local mandate."
+  },
+  "findings": [
+    {
+      "id": "W04.03-R1",
+      "kind": "missing_required_local_evidence",
+      "criterion": "W04.03-C3",
+      "requirement": "Original admitted implementation and preflight amendment require actual applyHistory profile import plus identity:shopper history metadata publication to share owner ordering with erasure, with both race orderings and ambiguous-write/retry safety.",
+      "evidence": "K5 selected realtime.sdkContract.test.ts:278 exercises an anonymous direct import with history:false. Other new W04.03 import assertions also do not exercise recognized-person history metadata publication. Existing actual history cases in routes/identity.test.ts (W05.09) and realtime.sdkContract.test.ts (W14.05/W14.06) are outside fixed K1/K5; the43-output delta adds no promised W04.03 history/erasure race. Worker confirmed no retained selected case among29 attempts establishes it. No production regression is asserted.",
+      "smallest_correction": "Add one focused W04.03 group in an already-owned existing route fixture using actual applyHistory, an actually admitted recognized person and real ShopperReflex/erasure code with synthetic storage. No new fixture file/framework or unrelated matrix.",
+      "required_assertions": [
+        "Import-first: pause the actual identity:shopper compatibility publication after profile/receipt preparation or commit; start erasure and show it cannot finish past the held owner operation. Release publication and complete erasure; inspect actual profile/KV/history destinations and retained barriers, with foreign/successor state unchanged.",
+        "Erasure-first: pause the same actual history import after its owner-issued preparation but before execution/publication; complete erasure, then release it. The stale operation must refuse or report an honest non-applied outcome and must not recreate profile or identity:shopper metadata.",
+        "Inject a lost acknowledgement or failed pending metadata publication and exercise the captured same operation receipt, including restart where useful: recovery before erasure must not double-count history; recovery after erasure must not publish into the new epoch. Assert exact metadata counts/bytes and actual absence/no-effects rather than status alone. Cover session and DO hosts within that existing grouped case."
+      ],
+      "disposition": "REWORK pending lead-authorized bounded correction and superseding frozen validation. Preserve this rejected artifact and passing K5; no extra tests or product edits performed by reviewer."
+    }
+  ],
+  "checks": {
+    "K4": "REWORK: source/evidence review identified R1.",
+    "K5": {
+      "status": "PASS_CHECK_ONLY",
+      "path": "docs/remediation/evidence/W04.03/independent-K5.json",
+      "sha256": "865926836f718415ac97d98b9267c4063e0c0d770e1531bdd42245b1fa4978b2",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts src/index.api-boundary.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/identity/identity.test.ts src/ops/monitor.test.ts src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts -t 'W04[.]03' --maxWorkers=1 --minWorkers=1 && node --test scripts/identity-material.test.mjs",
+      "exit_code": 0,
+      "started_at": "2026-09-17T02:37:30.990Z",
+      "ended_at": "2026-09-17T02:38:35.256Z",
+      "elapsed_ms": 64157.564741999995,
+      "vitest": "15 passed /262 unselected;5 files passed /5 selector-empty",
+      "tool": "4 passed /0 failed",
+      "before_after": "All122 pins and freeze/worker hashes unchanged. Complete raw stdout/stderr/arrival-ordered combined output and selected names retained in primary record."
+    },
+    "reused": [
+      "K1.6 exit0:63 passed/175 unselected; retained actual native sockets, warm-profile/transfer/erasure and fresh409 checks.",
+      "K2.5 SDK39 pass; its earlier tool4 result is superseded by K2.tool-final4 on final tool bytes.",
+      "K3.8 both compilers/scoped lint0errors201warnings and syntax/whitespace pass; final2 tool files separately rechecked after directory-sync edit.",
+      "K1.supplement3: affected W35.02 case1 passed/77 unselected; K3.bundle-repro records byte-identical ESM/IIFE generation and new-file whitespace."
+    ],
+    "reuse_limit": "Exactly41 runtime/test/bundle outputs match broader final-run pins; only scripts/identity-material.mjs and its test changed afterward. Neither participates in the server/SDK graph. Their final4/syntax/whitespace checks are reused truthfully, not described as another full K2/K3 execution."
+  },
+  "qualifications": [
+    "All29 worker attempts and original failures remain in immutable worker evidence; K1.affected3/K3.3 missing final polling objects, K1.1 truncated initial display and diagnostic lint capture limitation are not retroactively repaired.",
+    "The reported session401/DO200 retry split was an unmeasured inference, explicitly corrected. Both-host valid same-receipt recovery and changed-account/revoked-grant negatives are retained; no production retry relaxation follows that premise.",
+    "Lint:201 warnings =182 exact inherited matches,18 new warnings and1 prior warning on a changed line; no claim that all warnings are inherited.",
+    "Reviewer read-only patch-validation attempt initially passed a string to diff.reversePatch and failed with TypeError; corrected use of parsePatch passed all43 roundtrips. No file changed and this was not a product/runtime failure.",
+    "Real classes with synthetic storage, SDK VM locks and cancellation-aware provider stubs are not native storage/browser/cloud timing guarantees. Native local socket coverage is specifically Miniflare/workerd on both selected hosts. Already transmitted remote effects cannot be recalled.",
+    "No source/tracker/RESUME/admission/worker changes, new suite, duplicate K1/K2/K3, deployment, credential/customer operation or subdelegation. Reviewer wrote only this record and independent-K5.json."
+  ],
+  "state": "REVIEW_STOP; primary K5 session31490 drained. Root owns rework admission/disposition; full W04 remains open."
+}

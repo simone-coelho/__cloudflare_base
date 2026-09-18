@@ -1,0 +1,268 @@
+{
+  "before": null,
+  "after": {
+    "id": "W20.01-E1",
+    "task_id": "W20.01",
+    "check_id": "W20.01-K1",
+    "criterion_ids": [
+      "W20.01-C1",
+      "W20.01-C2",
+      "W20.01-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W20.01/review.json",
+      "sha256": "09fb7bc1f1e5db0d7ecb235781475763acef917a130ba02e5689e403670431c3"
+    },
+    "at": "2026-09-13 14:43:40 UTC",
+    "limitations": "Bounded W20 pin reservation, publication contradictions, refusal diagnostics and replay compatibility only. Full W20/F28/F26 activation/reference warnings, exclusions/off-limits, customer fallback/priority/multi-position design, actual merchandiser walkthrough and customer acceptance remain open. Legacy invalid pins remain readable but are refused without arbitrary fill in new runtime; retained receipts use recorded legacy semantics. No cross-page dedupe, ranking/model or exploration-policy change; W38.05 explanation optimization retained. Local synthetic checks are not deployed/runtime/SLO or release acceptance. Existing slot KV transaction/propagation limitations and W35 authority remain separate. No deploy/cloud/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external operations or customer-policy amendments. Authenticated mounted validate/PUT/rollback are checked; patch is the existing direct store helper, not an HTTP PATCH endpoint. Four inherited synthetic learning_incomplete logs remain visible; no new ingestion assurance claimed.",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/content/decide.test.ts src/content/inventoryDiversity.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/content/consent.test.ts -t 'W20.01|W38.05 preserves|returns exactly the decisions|records the ranked candidates|honours the candidate limit|emits the delivery contract|the default arm serves the defaults|a piece marked out of stock|at most max per value|relaxes rather than leave|W27.02|W27.03|W28.01|authenticated validation runs|w_ext × score joins' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest actual composer, decide/replay and mounted operator routes with synthetic local stores.",
+    "workload": "Fixed21:18 existing affected composer/decision/replay/service/operator controls plus3 new pin groups. No new suite or benchmark.",
+    "result": "pass",
+    "artifact_digest": "a9a2e4bca7ca09e11b9dacad296b18ead1d5edfe3faad4600ba694be389c555d",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "f97f18fdacd9181bd32cfd54129f7e8310afce4fbbda92b6e39c23eeb5859d0c",
+      "configuration": "Bounded W20 pin reservation, publication contradictions, refusal diagnostics and replay compatibility only. Full W20/F28/F26 activation/reference warnings, exclusions/off-limits, customer fallback/priority/multi-position design, actual merchandiser walkthrough and customer acceptance remain open. Legacy invalid pins remain readable but are refused without arbitrary fill in new runtime; retained receipts use recorded legacy semantics. No cross-page dedupe, ranking/model or exploration-policy change; W38.05 explanation optimization retained. Local synthetic checks are not deployed/runtime/SLO or release acceptance. Existing slot KV transaction/propagation limitations and W35 authority remain separate. No deploy/cloud/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external operations or customer-policy amendments. Authenticated mounted validate/PUT/rollback are checked; patch is the existing direct store helper, not an HTTP PATCH endpoint. Four inherited synthetic learning_incomplete logs remain visible; no new ingestion assurance claimed.",
+      "files": [
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "output",
+          "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+        },
+        {
+          "path": "src/reflex/contentCompose.test.ts",
+          "role": "output",
+          "sha256": "f7b701a167c5d1e73a2c42cd1d195747a5aca06a300f5a28e4089207f4de10b5"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "output",
+          "sha256": "25cb30a37549a662cd60a5e5dbcdac81ddc26e0c455cbe53f86cf2361a5694ff"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "output",
+          "sha256": "d04666cef4f89021ec1332d398912012727f6367a897fe5dec5c41220af2fc40"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "output",
+          "sha256": "1d388ecebfacf8c977d4aefdc6e325736fcb06a708515149a8b76efa4c134564"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "output",
+          "sha256": "f344688f18cbecd678dfd6c40566f4f86d20492eea9334603c82c903c160af31"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "role": "output",
+          "sha256": "f810a3427d878ae906bdaab874c8c5742888fe9c7d2a4cae5d66abfa599ed301"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "5a056b6dd0d3c9a11333bff4f554b9b5a2b604fa91063ba5719eae316789c2fc"
+        },
+        {
+          "path": "src/content/decide.test.ts",
+          "role": "source",
+          "sha256": "56946e6ad16abec73520f0dfe79003ec280cc272a062d744b8c766489cb6af6f"
+        },
+        {
+          "path": "src/content/inventoryDiversity.test.ts",
+          "role": "source",
+          "sha256": "7fc426419ee9eed15b41f47ab0758e70eb420f4fc019dcdce1dc140431124c74"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/priors.ts",
+          "role": "source",
+          "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+        },
+        {
+          "path": "src/reflex/merchandising.ts",
+          "role": "source",
+          "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/33-adversarial-audit-brief.md",
+          "role": "source",
+          "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F28.md",
+          "role": "source",
+          "sha256": "121a07ed372126d8e1741d374865e8af6eef55357b76a955b4db18fba236da9f"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F26.md",
+          "role": "source",
+          "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+        },
+        {
+          "path": "docs/architecture/18-content-affinity-engine.md",
+          "role": "source",
+          "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "source",
+          "sha256": "b71665cb95a72b95b5f9cf438985561935e59601678b09b48852f11af2d1cc68"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.05/acceptance.md",
+          "role": "source",
+          "sha256": "3417c4e7dc0fb071632f12d9626507b671cdd51dc86d9ac6117c961b5a7be26e"
+        },
+        {
+          "path": "docs/remediation/design/W38.05/baseline.json",
+          "role": "source",
+          "sha256": "bcc7f9d575cdbb8167ddd6f52e186d0c67c7246b5dcb1f6f1dbb4c6b0a2bcbdd"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "role": "output",
+          "sha256": "c1975bde7315606863c15395dadf872c24f75bc9a9452c0b28ee2d4d0862545f"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.01/worker.json",
+          "role": "output",
+          "sha256": "ecbe4ea6cc6e07d4c0b4e2ea88dd4470e9d3fd9b71056a0cc6250f05800eb143"
+        },
+        {
+          "path": "docs/remediation/design/W20.01/plan-v2.md",
+          "role": "configuration",
+          "sha256": "ac679008361f2f9d29ec8bea25dc82f3b2b734b654b435d1258e887fef8cd6cb"
+        },
+        {
+          "path": "docs/remediation/design/W20.01/baseline.json",
+          "role": "configuration",
+          "sha256": "330f31bffeb057c08d8b01bcad4b5dc531fd81c1db813cb0f2abe17a79e2e7b8"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.01/admission.json",
+          "role": "configuration",
+          "sha256": "863e9f79cd7482350c3fb0ef1d9aafee10b1af59926971ae27cb0303e0b4b64b"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.01/admission-v2.json",
+          "role": "configuration",
+          "sha256": "594a4407601a1912c045764775984f98374f61134ca50a96b2222361b9e7117a"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.01/admission-v3.json",
+          "role": "configuration",
+          "sha256": "6706f1b36c2dee8999ab5a6a2bf3f89b9c205dd82938ab99e423ee0f0c974d59"
+        },
+        {
+          "path": "docs/remediation/design/W20.01/plan.md",
+          "role": "configuration",
+          "sha256": "ae3616d15e5341e91a128b39a1de8e5e72dd27c2d624f03f8c300ea5dc53b052"
+        },
+        {
+          "path": "docs/remediation/design/W20.01/baseline-supplement.json",
+          "role": "configuration",
+          "sha256": "d9c3020945a36cc32bddbbbf9615e2953865bfb31bc28ed820575c88d6d37fd9"
+        },
+        {
+          "path": "docs/remediation/design/W20.01/affected-receipt-contract.json",
+          "role": "configuration",
+          "sha256": "34302ff6fb66d0a25f302cafbbe516675fcdc36e3c0da63f10031d19d73686b7"
+        },
+        {
+          "path": "docs/remediation/design/W20.01/evidence-ceiling-correction.json",
+          "role": "configuration",
+          "sha256": "68df4ace1d456c6f0df403667ddf6d9cce40aeba2760179f55d48d5dc55672f3"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.01/source-freeze.json",
+          "sha256": "9af18e5a22008d32261f29eee2273a0a2958b2f99655bd68baa1b7647b8bc73a",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.01/source-deltas.json",
+          "sha256": "5804997fa5fa465e227f6dc295d9b5277fcdf01fa4b338ef188e56faf24ed749",
+          "role": "configuration"
+        }
+      ],
+      "digest": "a9a2e4bca7ca09e11b9dacad296b18ead1d5edfe3faad4600ba694be389c555d"
+    }
+  }
+}

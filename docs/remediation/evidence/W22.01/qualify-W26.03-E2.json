@@ -1,0 +1,418 @@
+{
+  "before": {
+    "id": "W26.03-E2",
+    "task_id": "W26.03",
+    "check_id": "W26.03-K2",
+    "criterion_ids": [
+      "W26.03-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1404-reviewer",
+    "run_id": "/root/w1404_review",
+    "file": {
+      "path": "docs/remediation/evidence/W26.03/worker.json",
+      "sha256": "59e6616fc8344d6b14911528be133e604aae4d9d6d5d308ad595abbe512d2f2f"
+    },
+    "at": "2026-09-14T02:28:56.476Z",
+    "limitations": "Forward retained DecisionRing append containment only. Not statistics exposure/outcome dedup, fan-out retry safety, exactly-once pipeline, historical repair, new retention/schema, served/rendered/viewable denominator or fatigue policy. Existing ambiguous/index-only collisions refuse; no dedup assurance after history expiry/reset. No SDK/ranking/report change, customer/native/SLO/release acceptance, external/cloud/customer-data/deployment/commit/destructive operations. Full W26/F16/F21 remain open; prior accepted overlapping exact-byte proof qualified, implementation/history retained.",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/fan.ts src/learn/learn.test.ts && git diff --check -- src/durable-objects/DecisionRing.ts src/learn/fan.ts src/learn/learn.test.ts docs/kit/02-api-reference.md",
+    "runtime": "Full compiler,3source-file ESLint,4file whitespace; no emitted output or build.",
+    "workload": "0lint errors/no new file-rule-message multiplicities over3inheritedwarnings; source-level scope only.",
+    "result": "pass",
+    "artifact_digest": "3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "41daf7a67d737b929b3a3b982c1f96120cc7ab40b75d374b8a0841ea04cdaa42",
+      "configuration": "Forward retained DecisionRing append containment only. Not statistics exposure/outcome dedup, fan-out retry safety, exactly-once pipeline, historical repair, new retention/schema, served/rendered/viewable denominator or fatigue policy. Existing ambiguous/index-only collisions refuse; no dedup assurance after history expiry/reset. No SDK/ranking/report change, customer/native/SLO/release acceptance, external/cloud/customer-data/deployment/commit/destructive operations. Full W26/F16/F21 remain open; prior accepted overlapping exact-byte proof qualified, implementation/history retained.",
+      "files": [
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "role": "output",
+          "sha256": "2fba160c596b9740527465d8c6abb37aa95979656d1475ed08b76403b4453db6"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "output",
+          "sha256": "0927a0dc9428e64d362d1210325ed7cca4c4e09324608faf7c6f07d73594494d"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "role": "output",
+          "sha256": "ef18be84c345d2c924b677210c5266e392fdcd8c055cf4063655d07fe0a03045"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "ac21c25b2e9dfb729911820d9237c2abd1102c8d7ec98001be7ca39bd0d0cce5"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/durable-objects/LearnStats.ts",
+          "role": "source",
+          "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F16.md",
+          "role": "source",
+          "sha256": "640186887aff1cbecd481260abdc135f9b53cbd4001e9e23eb28f8dac124eb36"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F21.md",
+          "role": "source",
+          "sha256": "7a6d5e53661669d232aa58c25f4371f832dd6fd25cbf9e1285d9f5a35aa2defb"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "role": "source",
+          "sha256": "4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "role": "source",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "source",
+          "sha256": "e1e4304f24721638aa0705e52146eee7382e3972ead532151a9741de6ca9ad4e"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "role": "source",
+          "sha256": "c71c6737403093f21b27270adbfd414c3d24ab648f0aa19e281a8550b190d27a"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.03/worker.json",
+          "role": "output",
+          "sha256": "59e6616fc8344d6b14911528be133e604aae4d9d6d5d308ad595abbe512d2f2f"
+        },
+        {
+          "path": "docs/remediation/design/W26.03/plan.md",
+          "role": "configuration",
+          "sha256": "3585359789eb65b49554cd66f3134389ab9dde0a1e72e753c013dec13f301e44"
+        },
+        {
+          "path": "docs/remediation/design/W26.03/baseline.json",
+          "role": "configuration",
+          "sha256": "f0714d9232180176b68e5ee80e55b9eb30f3e1bc2f0cfe876c5479be38d828dd"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.03/admission.json",
+          "role": "configuration",
+          "sha256": "08f3851d1f5635b6e88f664ae1c3de9da2d3dd6bf9951d1efa2494a2e80f5c20"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.03/source-freeze.json",
+          "sha256": "e9971517f445716a6bb7dc8c4d1a68fd8118013a6d610734cdfeb8df38ada598",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.03/source-deltas.json",
+          "sha256": "af487b42512159e07dd506a07cc22bbeb7560f7574bc49b310434a62caa6b976",
+          "role": "configuration"
+        }
+      ],
+      "digest": "3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af"
+    }
+  },
+  "after": {
+    "id": "W26.03-E2",
+    "task_id": "W26.03",
+    "check_id": "W26.03-K2",
+    "criterion_ids": [
+      "W26.03-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1404-reviewer",
+    "run_id": "/root/w1404_review",
+    "file": {
+      "path": "docs/remediation/evidence/W26.03/worker.json",
+      "sha256": "59e6616fc8344d6b14911528be133e604aae4d9d6d5d308ad595abbe512d2f2f"
+    },
+    "at": "2026-09-14T02:28:56.476Z",
+    "limitations": "Forward retained DecisionRing append containment only. Not statistics exposure/outcome dedup, fan-out retry safety, exactly-once pipeline, historical repair, new retention/schema, served/rendered/viewable denominator or fatigue policy. Existing ambiguous/index-only collisions refuse; no dedup assurance after history expiry/reset. No SDK/ranking/report change, customer/native/SLO/release acceptance, external/cloud/customer-data/deployment/commit/destructive operations. Full W26/F16/F21 remain open; prior accepted overlapping exact-byte proof qualified, implementation/history retained.",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/fan.ts src/learn/learn.test.ts && git diff --check -- src/durable-objects/DecisionRing.ts src/learn/fan.ts src/learn/learn.test.ts docs/kit/02-api-reference.md",
+    "runtime": "Full compiler,3source-file ESLint,4file whitespace; no emitted output or build.",
+    "workload": "0lint errors/no new file-rule-message multiplicities over3inheritedwarnings; source-level scope only.",
+    "result": "pass",
+    "artifact_digest": "3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "41daf7a67d737b929b3a3b982c1f96120cc7ab40b75d374b8a0841ea04cdaa42",
+      "configuration": "Forward retained DecisionRing append containment only. Not statistics exposure/outcome dedup, fan-out retry safety, exactly-once pipeline, historical repair, new retention/schema, served/rendered/viewable denominator or fatigue policy. Existing ambiguous/index-only collisions refuse; no dedup assurance after history expiry/reset. No SDK/ranking/report change, customer/native/SLO/release acceptance, external/cloud/customer-data/deployment/commit/destructive operations. Full W26/F16/F21 remain open; prior accepted overlapping exact-byte proof qualified, implementation/history retained.",
+      "files": [
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "role": "output",
+          "sha256": "2fba160c596b9740527465d8c6abb37aa95979656d1475ed08b76403b4453db6"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "output",
+          "sha256": "0927a0dc9428e64d362d1210325ed7cca4c4e09324608faf7c6f07d73594494d"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "role": "output",
+          "sha256": "ef18be84c345d2c924b677210c5266e392fdcd8c055cf4063655d07fe0a03045"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "ac21c25b2e9dfb729911820d9237c2abd1102c8d7ec98001be7ca39bd0d0cce5"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/durable-objects/LearnStats.ts",
+          "role": "source",
+          "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F16.md",
+          "role": "source",
+          "sha256": "640186887aff1cbecd481260abdc135f9b53cbd4001e9e23eb28f8dac124eb36"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F21.md",
+          "role": "source",
+          "sha256": "7a6d5e53661669d232aa58c25f4371f832dd6fd25cbf9e1285d9f5a35aa2defb"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "role": "source",
+          "sha256": "4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "role": "source",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "source",
+          "sha256": "e1e4304f24721638aa0705e52146eee7382e3972ead532151a9741de6ca9ad4e"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "role": "source",
+          "sha256": "c71c6737403093f21b27270adbfd414c3d24ab648f0aa19e281a8550b190d27a"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.03/worker.json",
+          "role": "output",
+          "sha256": "59e6616fc8344d6b14911528be133e604aae4d9d6d5d308ad595abbe512d2f2f"
+        },
+        {
+          "path": "docs/remediation/design/W26.03/plan.md",
+          "role": "configuration",
+          "sha256": "3585359789eb65b49554cd66f3134389ab9dde0a1e72e753c013dec13f301e44"
+        },
+        {
+          "path": "docs/remediation/design/W26.03/baseline.json",
+          "role": "configuration",
+          "sha256": "f0714d9232180176b68e5ee80e55b9eb30f3e1bc2f0cfe876c5479be38d828dd"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.03/admission.json",
+          "role": "configuration",
+          "sha256": "08f3851d1f5635b6e88f664ae1c3de9da2d3dd6bf9951d1efa2494a2e80f5c20"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.03/source-freeze.json",
+          "sha256": "e9971517f445716a6bb7dc8c4d1a68fd8118013a6d610734cdfeb8df38ada598",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W26.03/source-deltas.json",
+          "sha256": "af487b42512159e07dd506a07cc22bbeb7560f7574bc49b310434a62caa6b976",
+          "role": "configuration"
+        }
+      ],
+      "digest": "3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af"
+    }
+  }
+}

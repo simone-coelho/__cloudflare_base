@@ -1,0 +1,41 @@
+{
+  "task_id": "W06.12",
+  "at": "2026-09-17T14:21:54.956Z",
+  "before": "817668d1f46cab8dfab885e0bca56e7d9d57901a1bd9f162ad0606a367f6118b",
+  "after": "9d7e4deaeef1436c553db773852c976db6e629a379d2a16184e2afeeccc846a4",
+  "contract_digest": "9d7e4deaeef1436c553db773852c976db6e629a379d2a16184e2afeeccc846a4",
+  "previous_tracker_sha256": "096a55d991ce907baa9a4ef75580b043a021d51eb0ad82af6ca87f37546128f3",
+  "scope": "Reviewer-only reassignment for unchanged full original W06/C1–C8. All47 outputs,128 source pins, criteria, checks, dependencies, D06 choices and external limits unchanged.",
+  "change": {
+    "previous_actor": "w0612-reviewer",
+    "previous_run": "/root/w01_reviewer",
+    "reason": "Original reviewer run unavailable; its name remains reserved. Preserve historical actor/run/start snapshots.",
+    "current_actor": {
+      "id": "w0612-reviewer-r2",
+      "kind": "agent",
+      "model": "gpt-6-astra",
+      "effort": "xhigh",
+      "run_id": "/root/w0612_final_review",
+      "description": "Distinct whole-original-W06 frozen-artifact reviewer; explicitly configured replacement run after original reviewer became unavailable. No product edits or subdelegation."
+    }
+  },
+  "baseline": {
+    "worker": {
+      "path": "docs/remediation/evidence/W06.12/worker.json",
+      "sha256": "32b918ab519f392120b96aea1c4837b3c68d11bfc941c69834f138f373e5aff8"
+    },
+    "implementation_contract": "817668d1f46cab8dfab885e0bca56e7d9d57901a1bd9f162ad0606a367f6118b",
+    "source_stop": "2026-09-17T14:15:45.799Z",
+    "case": "No new implementation or reproduction; stopped product/configuration and existing technical evidence retained."
+  },
+  "acceptance": "Distinct K4 whole-original-W06/source/delta/evidence review plus exact K5 new groups only. C8/K6 live/full acceptance remains open; no product or acceptance authority inferred from role replacement.",
+  "checks": "Reuse exact K1.3, qualified K2.2 82 unchanged passes plus finalAffected3 and finalK3.2 after actual pin/delta review. Original test timestamps and old implementation contract remain explicit; no backdating or claim of a full final K2 command pass.",
+  "dependencies": "Reuse unchanged original and two technical amendments; W04/W05/D03/D06 choices and original dirty baselines preserved. No new owner/business/privacy choice.",
+  "ownership": {
+    "worker": "SOURCE/EVIDENCE STOP; owns previously assigned47 outputs, no new edits authorized",
+    "reviewer": "docs/remediation/evidence/W06.12/review.json only; read-only product review and admitted K5",
+    "lead": "Existing execution records/admission/freeze/disposition/RESUME only"
+  },
+  "rollback": "Reviewer role admission changes no product bytes. Any requested rework returns to sole worker with bounded ownership; preserve admitted original bytes and failed/superseded evidence.",
+  "authority": "Existing ordered local implementation/review mandate only. No deployment/resource/credential/customer-data/provider/external operation, commit/merge/push or broad CI."
+}

@@ -1,0 +1,46 @@
+{
+  "task_id": "W26.04",
+  "at": "2026-09-15T20:11:55.988Z",
+  "journal_seq": 1896,
+  "artifact_digest": "ffe030e167286f6bad6db2f0b261a396d06ef5143daf90323a107f7ba92bb728",
+  "contract_digest": "8dec7911792e2d0f16be670645e7e4f2a03931cc2c63cc15dd4f6fd0a9d407f3",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W26.04/acceptance.md",
+    "sha256": "979317a6bd5796be86a0ab38238f5b8f9b31f5d4f0ca18aad92822a3ef859832"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W26.04/review.json",
+    "sha256": "dbdce4a981376c89320b5bc62cee58d7a3f3715fda033795f2969123c03bbf22"
+  },
+  "root_review_capture": "f1c144",
+  "board": {
+    "initial": {
+      "chunk_id": "c7098a",
+      "wall_time_seconds": 1.001044394,
+      "session_id": 17223,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "dbf27b",
+        "wall_time_seconds": 5.000384093,
+        "session_id": 17223,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "4720c4",
+        "wall_time_seconds": 0.000002032,
+        "exit_code": 0,
+        "original_token_count": 740,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=129, closed=3; evidence records=389\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W26.04 — Return to launch-blocking shopper-state authority W35/F14, not another fatigue-policy change. Document35 W35 remains unscoped and D03 production authority remains pending (root source240c0f/8bc6fa/907883). Read complete W35/F14/F13/F05/F29/F32, current D03 record, both hosts and link/erase/session ownership paths. Start with ShopperReflex live ingest/alarm/import/attach persistence versus load and UNCOMMITTED_AUDIENCE_OWNER recovery (source907883/d06bc6 identifies the seam, not a verified defect), and SessionManager KV read-modify-write boundaries. Admit one coherent local correctness/parity remedy only after confirming its contract; present any actual production-authority/migration choice to the accountable owner rather than enabling REFLEX_HOST or inventing migration/retention semantics. Reuse the accepted buffered, ring ordering, online brand and live fatigue remedies. No extra framework, historical/customer-data operation, deploy or cloud authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 26708\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=129, closed=3; evidence records=389\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W26.04 — Return to launch-blocking shopper-state authority W35/F14, not another fatigue-policy change. Document35 W35 remains unscoped and D03 production authority remains pending (root source240c0f/8bc6fa/907883). Read complete W35/F14/F13/F05/F29/F32, current D03 record, both hosts and link/erase/session ownership paths. Start with ShopperReflex live ingest/alarm/import/attach persistence versus load and UNCOMMITTED_AUDIENCE_OWNER recovery (source907883/d06bc6 identifies the seam, not a verified defect), and SessionManager KV read-modify-write boundaries. Admit one coherent local correctness/parity remedy only after confirming its contract; present any actual production-authority/migration choice to the accountable owner rather than enabling REFLEX_HOST or inventing migration/retention semantics. Reuse the accepted buffered, ring ordering, online brand and live fatigue remedies. No extra framework, historical/customer-data operation, deploy or cloud authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 26708\n"
+      }
+    ],
+    "result": "VALID",
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;40 artifact pins and W22.07/W22.09 complete accepted artifacts/reviews unchanged. No worker/reviewer commands running. Tracker consistency is not engine/customer/SLO/release acceptance.",
+  "next_action": "Return to launch-blocking shopper-state authority W35/F14, not another fatigue-policy change. Document35 W35 remains unscoped and D03 production authority remains pending (root source240c0f/8bc6fa/907883). Read complete W35/F14/F13/F05/F29/F32, current D03 record, both hosts and link/erase/session ownership paths. Start with ShopperReflex live ingest/alarm/import/attach persistence versus load and UNCOMMITTED_AUDIENCE_OWNER recovery (source907883/d06bc6 identifies the seam, not a verified defect), and SessionManager KV read-modify-write boundaries. Admit one coherent local correctness/parity remedy only after confirming its contract; present any actual production-authority/migration choice to the accountable owner rather than enabling REFLEX_HOST or inventing migration/retention semantics. Reuse the accepted buffered, ring ordering, online brand and live fatigue remedies. No extra framework, historical/customer-data operation, deploy or cloud authority.",
+  "limitations": "Live brand-local fatigue eligibility only. Preserve same-brand cross-slot/page/arm counting, windows/default/timeout, shared optional-brand helper and historical recorded-input replay. No new policy/history/retention, historical ranking repair, full W26/finding/hard-isolation/customer/SLO/release acceptance or external operations. W22.07/W22.09 complete accepted artifacts/reviews preserved. Worker and independent reviewer each passed fixed4 local synthetic checks. Same-byte compiler1536/two-file lint0errors0warnings/whitespace passed. Not native/cloud failure, customer or SLO evidence."
+}

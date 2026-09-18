@@ -1,0 +1,60 @@
+{
+  "task_id": "W22.09",
+  "at": "2026-09-15T19:49:31.696Z",
+  "journal_seq": 1886,
+  "artifact_digest": "8f7f7273cf73f3b6a3435eccce070634f209d4fb7f11c860e7e539e5354baaf9",
+  "contract_digest": "dc5bfdcb459a45fc3b427946a80227ccdfcafae565a1091a28ea739393102609",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W22.09/acceptance.md",
+    "sha256": "55c6cbd335971c7d811b61559d0d8ed9972d4a2504a368dbb3a0ac4f5eea665d"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W22.09/review.json",
+    "sha256": "ee455d4dd1e263d6d83387b9039ca07ce4d52554e07d6b7998d302cc1dbf13f9"
+  },
+  "root_review_capture": "49469e",
+  "orchestration_exceptions": [
+    {
+      "capture": "a013e0",
+      "exit_code": 1,
+      "description": "Read-only acceptance-patch generator hit an unescaped prose apostrophe; no patch emitted/applied. Corrected generator783c97→59b0de succeeded. No product source rework or failed required acceptance check."
+    }
+  ],
+  "board": {
+    "initial": {
+      "chunk_id": "a73223",
+      "wall_time_seconds": 1.000858535,
+      "session_id": 39444,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "14c09d",
+        "wall_time_seconds": 5.001384639,
+        "session_id": 39444,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "5e66c7",
+        "wall_time_seconds": 5.001415054,
+        "session_id": 39444,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "63cea1",
+        "wall_time_seconds": 0.000001778,
+        "exit_code": 0,
+        "original_token_count": 727,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=129, closed=2; evidence records=386\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.09 — Continue W26/F21 brand-boundary remediation in live content fatigue: src/content/service.ts currently passes the whole tenant+visitor ring into servedCounts, which counts timestamp/item without brand. Root source9b5d83/15c3db and independent read-only review confirm potential foreign-brand same-item ranking/receipt influence. Read complete W26/F21 and relevant W15/customer §1.7/doc22 §6.4; admit one bounded owned-brand consumer filter with actual serveContentDecisions ranking/receipt evidence. Preserve intended same-brand cross-slot/page global-item fatigue, shared helper legacy behavior, timeout/default and recorded-input replay; no new slot/page/arm restriction or owner policy. This is source-confirmed, not runtime-reproduced or repaired by W22.09. Preserve W22.07/W22.08/W22.09 remedies. Historical reconstruction and D04/D06/W24 choices remain separate; no new retention, blanket cutoff, deployment or customer-data operation.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 26698\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=129, closed=2; evidence records=386\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.09 — Continue W26/F21 brand-boundary remediation in live content fatigue: src/content/service.ts currently passes the whole tenant+visitor ring into servedCounts, which counts timestamp/item without brand. Root source9b5d83/15c3db and independent read-only review confirm potential foreign-brand same-item ranking/receipt influence. Read complete W26/F21 and relevant W15/customer §1.7/doc22 §6.4; admit one bounded owned-brand consumer filter with actual serveContentDecisions ranking/receipt evidence. Preserve intended same-brand cross-slot/page global-item fatigue, shared helper legacy behavior, timeout/default and recorded-input replay; no new slot/page/arm restriction or owner policy. This is source-confirmed, not runtime-reproduced or repaired by W22.09. Preserve W22.07/W22.08/W22.09 remedies. Historical reconstruction and D04/D06/W24 choices remain separate; no new retention, blanket cutoff, deployment or customer-data operation.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 26698\n"
+      }
+    ],
+    "result": "VALID",
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;32 artifact pins and W22.07 all51 artifact pins/review and W22.08 unowned pins/review unchanged; overlapping W22.08 exact proof qualified. No worker/reviewer commands running. Tracker consistency is not engine/customer/SLO/release acceptance.",
+  "next_action": "Continue W26/F21 brand-boundary remediation in live content fatigue: src/content/service.ts currently passes the whole tenant+visitor ring into servedCounts, which counts timestamp/item without brand. Root source9b5d83/15c3db and independent read-only review confirm potential foreign-brand same-item ranking/receipt influence. Read complete W26/F21 and relevant W15/customer §1.7/doc22 §6.4; admit one bounded owned-brand consumer filter with actual serveContentDecisions ranking/receipt evidence. Preserve intended same-brand cross-slot/page global-item fatigue, shared helper legacy behavior, timeout/default and recorded-input replay; no new slot/page/arm restriction or owner policy. This is source-confirmed, not runtime-reproduced or repaired by W22.09. Preserve W22.07/W22.08/W22.09 remedies. Historical reconstruction and D04/D06/W24 choices remain separate; no new retention, blanket cutoff, deployment or customer-data operation.",
+  "limitations": "Forward same-brand online attribution only. Preserve correlated ambiguity, shared optional-brand policy, W22.08 sorting/retention and W22.07 buffered purpose. No historical statistics repair, new history/retention/lifecycle, cross-call idempotence, customer/SLO/full W22/W26/isolation/release claim or external operations. Worker and independent reviewer each passed fixed4 local synthetic checks. Same-byte compiler1536/two-file lint0errors3unchanged warnings/no new signatures/whitespace passed. Not native/cloud failure, customer or SLO evidence."
+}

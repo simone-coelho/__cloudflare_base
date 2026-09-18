@@ -1,0 +1,297 @@
+{
+  "task": "W09.01",
+  "actor": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "source_stopped_awaiting_independent_review",
+  "authority": {
+    "baseline": {
+      "path": "docs/remediation/design/W09.01/baseline.json",
+      "sha256": "78e44e075514e177c03e5eeede24137fb502fa487c2b16baf39f57548d45275f"
+    },
+    "plan": {
+      "path": "docs/remediation/design/W09.01/plan.md",
+      "sha256": "4f0b8f93752260a4b3a64b0c0cf7b2eca21bd9731b78718c0d1bc3402142959b"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W09.01/admission.json",
+      "sha256": "8b9111149ce5b371fab682c88ca58ccb2cec03dd7414cc1fa2d2a2e732f2bd2a"
+    },
+    "contract_sha256": "e1971a1e36ac5fc9b961e322005811312ea6d23024b1acbde2e75137724f055b",
+    "admission_journal": 1014,
+    "direct_admission": "f97a27 PASS exit 0/drained; 72 pins including 68 protected",
+    "entry_assurance": "Root entry 78038 VALID1005 reused, not rerun by worker",
+    "scope": "User-approved local W09.01 only; four source/doc files and this worker record."
+  },
+  "implemented": [
+    "Complete JSON-detached records, retaining IDs, candidates, inputs and explanations, in independently readable decisions envelopes with additive version:1; outcome retains its legacy shape with the additive marker. Existing consumer, writer, readers and callers are untouched.",
+    "Single-record serialization plus UTF-8 envelope framing; body <=120000 bytes, sequential batch <=240000 body bytes and <=100 messages, explicit JSON contentType/object bodies. All messages are prepared before queue awaits.",
+    "Whole-invocation preflight refusal for indivisible oversize or serialization failure. Preflight refusal reports prepared:false and zero finalized/planned messages, not an invented number of hypothetical chunks; total records remain known and all notAttempted.",
+    "Numeric queue-acceptance receipt conserves acknowledged/unknown/notAttempted records and planned messages. Rejected attempted groups are unknown, prior acknowledged groups retained and tail not attempted; no retry or fallback after rejection. Missing/throwing queue capability is all not attempted.",
+    "One fixed-code/numeric-only failure diagnostic is emitted by the helper, including when background callers ignore its receipt; logging failures do not reject producer promises. Analytics points remain independent.",
+    "Exactly two grouped additions in the existing ledger fixture, plus the affected existing producer assertion. Scoped kit/header wording distinguishes unawaited queue I/O from synchronous preprocessing and queue acceptance from durable recording."
+  ],
+  "final_results": {
+    "runtime": {
+      "command": "runtime-final",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "bade71",
+      "passed": 17,
+      "failed": 0,
+      "intentionally_skipped": 0,
+      "new_groups": 2,
+      "fixture": "src/ledger/ledger.test.ts"
+    },
+    "compiler": {
+      "command": "compiler-final",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "b0aa2c"
+    },
+    "lint": {
+      "command": "lint-final",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "967787",
+      "errors": 0,
+      "warnings": 0,
+      "baseline_warnings": 0,
+      "new_warnings": 0
+    },
+    "whitespace": {
+      "command": "whitespace",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "67b6a7"
+    },
+    "protected_sources": {
+      "command": "source-stop",
+      "exit_code": 0,
+      "drained": true,
+      "last_chunk": "490f08",
+      "checked": 68,
+      "mismatches": []
+    }
+  },
+  "failures_and_superseding_validation": [
+    {
+      "candidate": "Initial runtime/compiler passed (e7e5f3 / d4c6c0); initial lint process exited 0 (789065), but three new no-empty-function warnings violated the zero-new-warning criterion.",
+      "correction": "Changed only three diagnostic test mocks from empty bodies to explicit undefined returns. No production behavior change or scope expansion.",
+      "final_validation": "Same exact whole-ledger runtime, compiler and scoped lint rerun on corrected bytes; 17 PASS, compiler PASS, zero errors/zero warnings. Initial runtime/compiler passes are superseded, and the failed lint criterion/capture are retained."
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-11T21:56:24.380Z",
+    "files": [
+      {
+        "path": "src/ledger/enqueue.ts",
+        "sha256": "16dae83570fb26fca7e870b8eab11f73dd6887a7637f5d9ed1862cbd913b5700"
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "ddb04dfc3834e827e44f4f1ab79579f145803b4a5a4bbd14efd56252b58fd0ea"
+      },
+      {
+        "path": "src/ledger/ledger.test.ts",
+        "sha256": "9696391c5875a782992299485b6cd113c42a1d4740e6943babb8715b5cd3c895"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "14ef849b71d9fac0885a22e57db4040b256c6597ccd84f00df7ff52eb302b18c"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "baseline": {
+      "path": "docs/remediation/design/W09.01/baseline.json",
+      "sha256": "78e44e075514e177c03e5eeede24137fb502fa487c2b16baf39f57548d45275f"
+    },
+    "selection": "All baseline.pins entries with role source",
+    "checked": 68,
+    "mismatches": []
+  },
+  "limitations": [
+    "Local synthetic Node/Vitest evidence only, no live queue/workerd/deployed performance/customer/contractual/release acceptance. The existing Vite CJS deprecation diagnostic is retained in runtime output.",
+    "Preprocessing and Analytics scheduling begin synchronously before response release; callers still do not await queue I/O. No response-latency or off-response CPU claim.",
+    "Acknowledgement means queue acceptance only, not R2 persistence or downstream acknowledgement. Rejection may have accepted some or all attempted messages; no retry, rollback or durable recovery promise.",
+    "Standalone full-record chunks deliberately retain repeated replay inputs for rolling compatibility. Increased object/fold amplification, durable recovery/quarantine/DLQ, consumer partial writes/retry duplicates, dedup/IDs, reconciliation/fan-out verification/global ordering and full W09/F16/N07/N08/N10 closure remain open.",
+    "The tested batches satisfy both ceilings; the byte ceiling drives the tested partitions, with the 100-message guard additionally retained. No expanded matrix or SDK/mounted/lifecycle replay was run.",
+    "D06/D10 and privacy/retention/destination authority remain unchanged. No new storage/analytics schema, raw-ID/error failure log, infrastructure, credential/customer-data/cloud operation, deployment, install/build output or commit.",
+    "Implementer result only. Independent frozen-artifact review and lead disposition remain pending; no governance records were edited by this worker."
+  ],
+  "capture_notes": "Every required acceptance command and every yielded output chunk is retained below, including the zero-exit lint candidate that failed the warning criterion. Commands ran sequentially; no source edits occurred during commands or after final_source_stop. Read-only source inspection is not substituted for runtime evidence.",
+  "command_captures": [
+    {
+      "kind": "runtime",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "aedc8e",
+          "wall_time_seconds": 1.00056728,
+          "session_id": 98840,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "e7e5f3",
+          "wall_time_seconds": 0.000002121,
+          "exit_code": 0,
+          "original_token_count": 119,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (17 tests) 367ms\n\n Test Files  1 passed (1)\n      Tests  17 passed (17)\n   Start at  17:53:18\n   Duration  8.36s (transform 2.53s, setup 1ms, collect 4.62s, tests 367ms, environment 0ms, prepare 2.38s)\n\n"
+        }
+      ],
+      "id": "runtime",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "compiler",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "captures": [
+        {
+          "chunk_id": "2aec6f",
+          "wall_time_seconds": 1.001058102,
+          "session_id": 9592,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d4c6c0",
+          "wall_time_seconds": 0.000001399,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "id": "compiler",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "lint",
+      "command": "node --input-type=module -e 'import{spawnSync}from\"node:child_process\";const r=spawnSync(process.execPath,[\"--max-old-space-size=512\",\"node_modules/eslint/bin/eslint.js\",\"src/ledger/enqueue.ts\",\"src/ledger/records.ts\",\"src/ledger/ledger.test.ts\",\"--format\",\"json\"],{encoding:\"utf8\",maxBuffer:33554432});if(r.stderr)process.stderr.write(r.stderr);if(r.status===0)console.log(JSON.stringify(JSON.parse(r.stdout).map(({source,...rest})=>rest)));else process.stdout.write(r.stdout);process.exitCode=r.status??1;'",
+      "captures": [
+        {
+          "chunk_id": "b8addc",
+          "wall_time_seconds": 1.001065174,
+          "session_id": 31645,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "789065",
+          "wall_time_seconds": 2.407461898,
+          "exit_code": 0,
+          "original_token_count": 441,
+          "output": "[{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/enqueue.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/ledger.test.ts\",\"messages\":[{\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"line\":400,\"column\":76,\"nodeType\":\"ArrowFunctionExpression\",\"messageId\":\"unexpected\",\"endLine\":400,\"endColumn\":78},{\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"line\":472,\"column\":76,\"nodeType\":\"ArrowFunctionExpression\",\"messageId\":\"unexpected\",\"endLine\":472,\"endColumn\":78},{\"ruleId\":\"@typescript-eslint/no-empty-function\",\"severity\":1,\"message\":\"Unexpected empty arrow function.\",\"line\":490,\"column\":76,\"nodeType\":\"ArrowFunctionExpression\",\"messageId\":\"unexpected\",\"endLine\":490,\"endColumn\":78}],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":3,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/records.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]}]\n"
+        }
+      ],
+      "id": "lint",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "runtime-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "30a598",
+          "wall_time_seconds": 1.000405403,
+          "session_id": 42793,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "bade71",
+          "wall_time_seconds": 2.080477434,
+          "exit_code": 0,
+          "original_token_count": 119,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (17 tests) 307ms\n\n Test Files  1 passed (1)\n      Tests  17 passed (17)\n   Start at  17:55:00\n   Duration  9.03s (transform 3.07s, setup 0ms, collect 5.93s, tests 307ms, environment 0ms, prepare 1.92s)\n\n"
+        }
+      ],
+      "id": "runtime-final",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "compiler-final",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "captures": [
+        {
+          "chunk_id": "8a4c05",
+          "wall_time_seconds": 1.000555139,
+          "session_id": 71879,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b0aa2c",
+          "wall_time_seconds": 0.000001231,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "id": "compiler-final",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "lint-final",
+      "command": "node --input-type=module -e 'import{spawnSync}from\"node:child_process\";const r=spawnSync(process.execPath,[\"--max-old-space-size=512\",\"node_modules/eslint/bin/eslint.js\",\"src/ledger/enqueue.ts\",\"src/ledger/records.ts\",\"src/ledger/ledger.test.ts\",\"--format\",\"json\"],{encoding:\"utf8\",maxBuffer:33554432});if(r.stderr)process.stderr.write(r.stderr);if(r.status===0)console.log(JSON.stringify(JSON.parse(r.stdout).map(({source,...rest})=>rest)));else process.stdout.write(r.stdout);process.exitCode=r.status??1;'",
+      "captures": [
+        {
+          "chunk_id": "6e7fed",
+          "wall_time_seconds": 1.001326789,
+          "session_id": 28619,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "967787",
+          "wall_time_seconds": 3.422474215,
+          "exit_code": 0,
+          "original_token_count": 275,
+          "output": "[{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/enqueue.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/ledger.test.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/records.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]}]\n"
+        }
+      ],
+      "id": "lint-final",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "whitespace",
+      "command": "git diff --check -- src/ledger/enqueue.ts src/ledger/records.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+      "captures": [
+        {
+          "chunk_id": "67b6a7",
+          "wall_time_seconds": 0.000003594,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "id": "whitespace",
+      "exit_code": 0,
+      "drained": true
+    },
+    {
+      "kind": "source-stop",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=p=>createHash(\"sha256\").update(fs.readFileSync(p)).digest(\"hex\"),baseline=\"docs/remediation/design/W09.01/baseline.json\",plan=\"docs/remediation/design/W09.01/plan.md\",admission=\"docs/remediation/evidence/W09.01/admission.json\",b=JSON.parse(fs.readFileSync(baseline,\"utf8\")),protectedPins=b.pins.filter(p=>p.role===\"source\"),mismatches=protectedPins.filter(p=>hash(p.path)!==p.sha256).map(p=>p.path);if(protectedPins.length!==68||b.owned.length!==4||mismatches.length)throw Error(JSON.stringify({protected:protectedPins.length,owned:b.owned.length,mismatches}));console.log(JSON.stringify({at:new Date().toISOString(),files:b.owned.map(p=>({path:p.path,sha256:hash(p.path)})),protected_sources:{checked:protectedPins.length,mismatches},authority:{baseline:{path:baseline,sha256:hash(baseline)},plan:{path:plan,sha256:hash(plan)},admission:{path:admission,sha256:hash(admission)}}}));'",
+      "captures": [
+        {
+          "chunk_id": "490f08",
+          "wall_time_seconds": 0.016158773,
+          "exit_code": 0,
+          "original_token_count": 245,
+          "output": "{\"at\":\"2026-09-11T21:56:24.380Z\",\"files\":[{\"path\":\"src/ledger/enqueue.ts\",\"sha256\":\"16dae83570fb26fca7e870b8eab11f73dd6887a7637f5d9ed1862cbd913b5700\"},{\"path\":\"src/ledger/records.ts\",\"sha256\":\"ddb04dfc3834e827e44f4f1ab79579f145803b4a5a4bbd14efd56252b58fd0ea\"},{\"path\":\"src/ledger/ledger.test.ts\",\"sha256\":\"9696391c5875a782992299485b6cd113c42a1d4740e6943babb8715b5cd3c895\"},{\"path\":\"docs/kit/02-api-reference.md\",\"sha256\":\"14ef849b71d9fac0885a22e57db4040b256c6597ccd84f00df7ff52eb302b18c\"}],\"protected_sources\":{\"checked\":68,\"mismatches\":[]},\"authority\":{\"baseline\":{\"path\":\"docs/remediation/design/W09.01/baseline.json\",\"sha256\":\"78e44e075514e177c03e5eeede24137fb502fa487c2b16baf39f57548d45275f\"},\"plan\":{\"path\":\"docs/remediation/design/W09.01/plan.md\",\"sha256\":\"4f0b8f93752260a4b3a64b0c0cf7b2eca21bd9731b78718c0d1bc3402142959b\"},\"admission\":{\"path\":\"docs/remediation/evidence/W09.01/admission.json\",\"sha256\":\"8b9111149ce5b371fab682c88ca58ccb2cec03dd7414cc1fa2d2a2e732f2bd2a\"}}}\n"
+        }
+      ],
+      "id": "source-stop",
+      "exit_code": 0,
+      "drained": true
+    }
+  ]
+}

@@ -1,0 +1,274 @@
+{
+  "task_id": "W31.02",
+  "actor_id": "w1405-worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T02:16:53.464Z",
+  "contract_digest": "ea6f84834d9c456e6f633f6c28edf60c883e6ef4665b00826957672b508a4874",
+  "references": [
+    {
+      "path": "docs/remediation/design/W31.02/baseline.json",
+      "sha256": "1e7c2f25363e20c052a8ecbaac472fe1be67d9ab409bbb868f0fcacb0ad8691d"
+    },
+    {
+      "path": "docs/remediation/design/W31.02/plan.md",
+      "sha256": "7b4e08152482f96f68c9aee2902f3891ecc447585b26d6fe362ddbff5648e2d5"
+    },
+    {
+      "path": "docs/remediation/evidence/W31.02/admission.json",
+      "sha256": "902d99d781d8507abb5b01544a5f446f70ea41b7af65b2fc1a289939d8425d16"
+    }
+  ],
+  "baseline": {
+    "kind": "source-confirmed design case and accepted dependency reuse; no new runtime baseline",
+    "prior_artifact_sha256": "8b8b176398d7c11f8a21645224e2162698a81339331e21a30c161c679ff2f03b",
+    "entry_check": "98352/652749 VALID1368, root-owned and drained",
+    "description": "92-day cap rejected biannual requests before I/O. Existing bounded readers, coverage and computation-basis withholding retained."
+  },
+  "implementation_summary": "Raise only the inclusive UTC date cap to184, update console/API budget wording, and amend existing date/route/DOM/prefix fixtures; no new test groups.",
+  "criterion_verdicts": {
+    "C1": "PASS local: exact181/182/184 endpoints;185 and malformed/reversed requests reject before reads. Former93/181 ranges admitted. Actual184-day route reads all requested keys, preserves Dec30 missing and the Dec31 tail, pools183 decisions/549 credits.",
+    "C2": "PASS local: exact full-field prefix/reference parity for28/92/184; existing cumulative budget and mixed/unknown withholding controls pass. Actual DOM forwards July1–December31 unchanged and retains diagnostic/budget labels.",
+    "C3": "Worker checks PASS on final six hashes;46protected unchanged. Independent frozen review and lead disposition pending."
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 6,
+      "unselected": 54,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "command_capture": "runtime1",
+      "duration_seconds": 45.75
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "command_capture": "static1"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "command_capture": "static1"
+    },
+    "javascript_syntax": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static1"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static1"
+    },
+    "failures": 0,
+    "qualification": "The exact && static compound exited0, so all four stages completed; no failed or superseded execution."
+  },
+  "byte_measurement": {
+    "samples": [
+      {
+        "days": 28,
+        "requests": 28,
+        "full_canonical_bytes": 18226262,
+        "delivered_and_charged_prefix_bytes": 1835008,
+        "parity": "exact window vs independent legacy full-field projection without unused grids"
+      },
+      {
+        "days": 92,
+        "requests": 92,
+        "full_canonical_bytes": 59886296,
+        "delivered_and_charged_prefix_bytes": 6029312,
+        "parity": "exact window vs independent legacy full-field projection without unused grids"
+      },
+      {
+        "days": 184,
+        "requests": 184,
+        "full_canonical_bytes": 119772592,
+        "delivered_and_charged_prefix_bytes": 12058624,
+        "parity": "exact window vs independent legacy full-field projection without unused grids"
+      }
+    ],
+    "source": "runtime1/a25c72",
+    "basis": "Canonical bodies synthesized on demand; expected window derived independently from full fields with unused grids removed, not from embedded summary.",
+    "native_scope": "Retained one-day installed Miniflare R2 range-reader smoke only;184-day run uses synthetic storage, not native capacity/SLO proof."
+  },
+  "execution_history": [
+    {
+      "id": "candidate1",
+      "source_ready": "2026-09-13T02:23:03.655Z",
+      "files": [
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "3aae86085cb5a461a10c8925732e86e0a6507d9065af9c66e376349247282b70"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "sha256": "141186bd9d711522d2188f955000f150c26b297d1d02d06d4b4fc6512b6302b9"
+        },
+        {
+          "path": "src/measure/window.test.ts",
+          "sha256": "049e8c566f6178808852db2f247c2c6b91ae08e6972ed121e439a9b8d4550c0c"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "398c8a3939d73edcf923720a1216f3cdcaf21bb1d85c5de44ca8949faf966bd6"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "sha256": "4ae591a0a4fd52cacd44053e371bba56d0eb0eb8badc3c5e086f52bda06ac22a"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "558029ddee9299f1821c7dea6f658c47b622f17eff479f5b78f4c05d2834964a"
+        }
+      ],
+      "root_source_review": "d2af3b: no correction; explicit root GO before runtime",
+      "runtime": "runtime1",
+      "static": "static1",
+      "disposition": "final worker candidate; no post-check source edits"
+    }
+  ],
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/measure/window.test.ts src/learn/report.test.ts src/console/console.render.test.ts -t 'allows exactly 184 days|W32.04 reads|W32.03 bounds cumulative|W21 rejects invalid|measurement shows raw attribution diagnostics|W31.01 pools' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 02:24:01 UTC",
+      "captures": [
+        {
+          "chunk_id": "28a1a7",
+          "wall_time_seconds": 1.001937106,
+          "session_id": 96525,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "1890cd",
+          "wall_time_seconds": 5.001456238,
+          "session_id": 96525,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "80a808",
+          "wall_time_seconds": 5.000255017,
+          "session_id": 96525,
+          "original_token_count": 18,
+          "output": " ✓ src/console/console.render.test.ts  (35 tests | 34 skipped) 1101ms\n"
+        },
+        {
+          "chunk_id": "a25c72",
+          "wall_time_seconds": 5.001066589,
+          "session_id": 96525,
+          "original_token_count": 199,
+          "output": " ✓ src/learn/report.test.ts  (17 tests | 16 skipped) 51ms\nW31.01 counts {\"compatible\":{\"decisions\":2,\"credited\":6},\"mixed_unknown_or_unrepresented_pooled_rows\":0,\"reads_per_two_days\":2}\nW32.04 byte_measurement [{\"days\":28,\"requests\":28,\"full_canonical_bytes\":18226262,\"delivered_and_charged_prefix_bytes\":1835008,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":92,\"requests\":92,\"full_canonical_bytes\":59886296,\"delivered_and_charged_prefix_bytes\":6029312,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":184,\"requests\":184,\"full_canonical_bytes\":119772592,\"delivered_and_charged_prefix_bytes\":12058624,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"}]\n"
+        },
+        {
+          "chunk_id": "b11385",
+          "wall_time_seconds": 0.000002189,
+          "exit_code": 0,
+          "original_token_count": 66,
+          "output": " ✓ src/measure/window.test.ts  (8 tests | 4 skipped) 4012ms\n\n Test Files  3 passed (3)\n      Tests  6 passed | 54 skipped (60)\n   Start at  22:24:05\n   Duration  45.75s (transform 3.11s, setup 0ms, collect 31.75s, tests 5.16s, environment 0ms, prepare 6.23s)\n\n"
+        }
+      ],
+      "session_id": 96525,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-13 02:24:54 UTC",
+      "source_candidate": "candidate1"
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/measure/window.ts src/measure/window.test.ts src/learn/report.test.ts src/console/console.render.test.ts --max-warnings 0 && node --check public/console/views-measure.js && git diff --check -- src/measure/window.ts public/console/views-measure.js src/measure/window.test.ts src/learn/report.test.ts src/console/console.render.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-13 02:25:01 UTC",
+      "captures": [
+        {
+          "chunk_id": "15a235",
+          "wall_time_seconds": 1.00109215,
+          "session_id": 25618,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "1292ac",
+          "wall_time_seconds": 5.00151794,
+          "session_id": 25618,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c7f7b9",
+          "wall_time_seconds": 5.404668562,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 25618,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-13 02:25:37 UTC",
+      "source_candidate": "candidate1"
+    },
+    "source_stop": {
+      "command": "node -e 'const fs=require(\"fs\"),c=require(\"crypto\"),base=\"docs/remediation/design/W31.02/baseline.json\",b=JSON.parse(fs.readFileSync(base,\"utf8\")),owned=b.owned.map(x=>typeof x===\"string\"?x:x.path),sha=path=>c.createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\"),protectedPins=b.pins.filter(x=>!owned.includes(x.path)),comparison=protectedPins.map(x=>({path:x.path,expected_sha256:x.sha256,sha256:sha(x.path)}));const result={at:new Date().toISOString(),files:owned.map(path=>({path,sha256:sha(path)})),protected_comparison:{expected:46,actual:comparison.length,unchanged:comparison.every(x=>x.sha256===x.expected_sha256),files:comparison},references:[base,\"docs/remediation/design/W31.02/plan.md\",\"docs/remediation/evidence/W31.02/admission.json\"].map(path=>({path,sha256:sha(path)}))};console.log(JSON.stringify(result,null,2));if(comparison.length!==46||!result.protected_comparison.unchanged)process.exitCode=1;'",
+      "captures": [
+        {
+          "chunk_id": "1eaa95",
+          "wall_time_seconds": 0.004319905,
+          "exit_code": 0,
+          "original_token_count": 3188,
+          "output": "{\n  \"at\": \"2026-09-13T02:25:50.744Z\",\n  \"files\": [\n    {\n      \"path\": \"src/measure/window.ts\",\n      \"sha256\": \"3aae86085cb5a461a10c8925732e86e0a6507d9065af9c66e376349247282b70\"\n    },\n    {\n      \"path\": \"public/console/views-measure.js\",\n      \"sha256\": \"141186bd9d711522d2188f955000f150c26b297d1d02d06d4b4fc6512b6302b9\"\n    },\n    {\n      \"path\": \"src/measure/window.test.ts\",\n      \"sha256\": \"049e8c566f6178808852db2f247c2c6b91ae08e6972ed121e439a9b8d4550c0c\"\n    },\n    {\n      \"path\": \"src/learn/report.test.ts\",\n      \"sha256\": \"398c8a3939d73edcf923720a1216f3cdcaf21bb1d85c5de44ca8949faf966bd6\"\n    },\n    {\n      \"path\": \"src/console/console.render.test.ts\",\n      \"sha256\": \"4ae591a0a4fd52cacd44053e371bba56d0eb0eb8badc3c5e086f52bda06ac22a\"\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"sha256\": \"558029ddee9299f1821c7dea6f658c47b622f17eff479f5b78f4c05d2834964a\"\n    }\n  ],\n  \"protected_comparison\": {\n    \"expected\": 46,\n    \"actual\": 46,\n    \"unchanged\": true,\n    \"files\": [\n      {\n        \"path\": \"src/learn/report.ts\",\n        \"expected_sha256\": \"08a114118a56efa7103e4f7f3285286ca22ac6a1c5d84ea089871ca943bd3a4c\",\n        \"sha256\": \"08a114118a56efa7103e4f7f3285286ca22ac6a1c5d84ea089871ca943bd3a4c\"\n      },\n      {\n        \"path\": \"src/learn/hourly.ts\",\n        \"expected_sha256\": \"c84939e35174e8f67f21c0e21b9c80c4b45474447826d5c07345692f876567f5\",\n        \"sha256\": \"c84939e35174e8f67f21c0e21b9c80c4b45474447826d5c07345692f876567f5\"\n      },\n      {\n        \"path\": \"src/learn/hourly.test.ts\",\n        \"expected_sha256\": \"b5ee5645787a8868c81ece004d1681179a927a6764ba745c8c75defa4ced5b56\",\n        \"sha256\": \"b5ee5645787a8868c81ece004d1681179a927a6764ba745c8c75defa4ced5b56\"\n      },\n      {\n        \"path\": \"src/routes/decisions.ts\",\n        \"expected_sha256\": \"39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da\",\n        \"sha256\": \"39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da\"\n      },\n      {\n        \"path\": \"src/learn/policy.ts\",\n        \"expected_sha256\": \"b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5\",\n        \"sha256\": \"b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5\"\n      },\n      {\n        \"path\": \"src/learn/stats.ts\",\n        \"expected_sha256\": \"c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c\",\n        \"sha256\": \"c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c\"\n      },\n      {\n        \"path\": \"src/learn/route.ts\",\n        \"expected_sha256\": \"3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad\",\n        \"sha256\": \"3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad\"\n      },\n      {\n        \"path\": \"src/ledger/erasure.ts\",\n        \"expected_sha256\": \"0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f\",\n        \"sha256\": \"0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f\"\n      },\n      {\n        \"path\": \"src/ledger/records.ts\",\n        \"expected_sha256\": \"5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1\",\n        \"sha256\": \"5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1\"\n      },\n      {\n        \"path\": \"src/content/types.ts\",\n        \"expected_sha256\": \"26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df\",\n        \"sha256\": \"26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df\"\n      },\n      {\n        \"path\": \"src/config/versionedStore.ts\",\n        \"expected_sha256\": \"b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff\",\n        \"sha256\": \"b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff\"\n      },\n      {\n        \"path\": \"src/middleware/operatorAuth.ts\",\n        \"expected_sha256\": \"0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d\",\n        \"sha256\": \"0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d\"\n      },\n      {\n        \"path\": \"src/middleware/auth.ts\",\n        \"expected_sha256\": \"9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890\",\n        \"sha256\": \"9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890\"\n      },\n      {\n        \"path\": \"src/tenancy/tenant.ts\",\n        \"expected_sha256\": \"7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3\",\n        \"sha256\": \"7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3\"\n      },\n      {\n        \"path\": \"src/tenancy/middleware.ts\",\n        \"expected_sha256\": \"bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8\",\n        \"sha256\": \"bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8\"\n      },\n      {\n        \"path\": \"src/auth/signingConfig.mjs\",\n        \"expected_sha256\": \"82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084\",\n        \"sha256\": \"82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084\"\n      },\n      {\n        \"path\": \"src/index.ts\",\n        \"expected_sha256\": \"c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b\",\n        \"sha256\": \"c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b\"\n      },\n      {\n        \"path\": \"docs/architecture/35-audit-verification-and-source-of-truth.md\",\n        \"expected_sha256\": \"5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4\",\n        \"sha256\": \"5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4\"\n      },\n      {\n        \"path\": \"docs/architecture/35-verification-reports/sweep-learning-and-statistics.md\",\n        \"expected_sha256\": \"0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a\",\n        \"sha256\": \"0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a\"\n      },\n      {\n        \"path\": \"docs/architecture/35-verification-reports/F17.md\",\n        \"expected_sha256\": \"84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae\",\n        \"sha256\": \"84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae\"\n      },\n      {\n        \"path\": \"docs/architecture/35-verification-reports/F25.md\",\n        \"expected_sha256\": \"2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39\",\n        \"sha256\": \"2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39\"\n      },\n      {\n        \"path\": \"docs/architecture/22-outcome-learning-design.md\",\n        \"expected_sha256\": \"bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818\",\n        \"sha256\": \"bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818\"\n      },\n      {\n        \"path\": \"package.json\",\n        \"expected_sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\",\n        \"sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\"\n      },\n      {\n        \"path\": \"package-lock.json\",\n        \"expected_sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\",\n        \"sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\"\n      },\n      {\n        \"path\": \"tsconfig.json\",\n        \"expected_sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\",\n        \"sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\"\n      },\n      {\n        \"path\": \"vitest.config.ts\",\n        \"expected_sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\",\n        \"sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\"\n      },\n      {\n        \"path\": \".eslintrc.json\",\n        \"expected_sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\",\n        \"sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\"\n      },\n      {\n        \"path\": \"docs/architecture/35-verification-reports/F34.md\",\n        \"expected_sha256\": \"19fb69a80a5261cc36561ff880a940822191d677f768ce1890777b3265497f12\",\n        \"sha256\": \"19fb69a80a5261cc36561ff880a940822191d677f768ce1890777b3265497f12\"\n      },\n      {\n        \"path\": \"src/learn/fan.ts\",\n        \"expected_sha256\": \"47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a\",\n        \"sha256\": \"47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a\"\n      },\n      {\n        \"path\": \"src/ledger/writer.ts\",\n        \"expected_sha256\": \"463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143\",\n        \"sha256\": \"463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143\"\n      },\n      {\n        \"path\": \"src/ledger/delivery.ts\",\n        \"expected_sha256\": \"4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995\",\n        \"sha256\": \"4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995\"\n      },\n      {\n        \"path\": \"src/durable-objects/LearnStats.ts\",\n        \"expected_sha256\": \"07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974\",\n        \"sha256\": \"07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974\"\n      },\n      {\n        \"path\": \"node_modules/@cloudflare/workers-types/index.d.ts\",\n        \"expected_sha256\": \"5b2fafdb708c615a4d2b4a0c06d65d60987e328bccf232989080322f3d259c86\",\n        \"sha256\": \"5b2fafdb708c615a4d2b4a0c06d65d60987e328bccf232989080322f3d259c86\"\n      },\n      {\n        \"path\": \"node_modules/miniflare/package.json\",\n        \"expected_sha256\": \"fd99d43256bda835c65af700c80c3e6b1c3b3ed7af45e81d300fc8db0b9e858b\",\n        \"sha256\": \"fd99d43256bda835c65af700c80c3e6b1c3b3ed7af45e81d300fc8db0b9e858b\"\n      },\n      {\n        \"path\": \"node_modules/workerd/package.json\",\n        \"expected_sha256\": \"8084ed05eb21eeae0ed35b06435fcb971121a7f15e09d5b72ee80656e7984446\",\n        \"sha256\": \"8084ed05eb21eeae0ed35b06435fcb971121a7f15e09d5b72ee80656e7984446\"\n      },\n      {\n        \"path\": \"public/learning.js\",\n        \"expected_sha256\": \"30d0278b0755b3b78fb3dec9af9a04316c4b045449d297b677db719c6222e8a0\",\n        \"sha256\": \"30d0278b0755b3b78fb3dec9af9a04316c4b045449d297b677db719c6222e8a0\"\n      },\n      {\n        \"path\": \"src/console/learning.render.test.ts\",\n        \"expected_sha256\": \"2e31a0c3e767d480215bba310e208e9d7f77211563f4700dbc8e01c0e9e77ce6\",\n        \"sha256\": \"2e31a0c3e767d480215bba310e208e9d7f77211563f4700dbc8e01c0e9e77ce6\"\n      },\n      {\n        \"path\": \"src/learn/rows.ts\",\n        \"expected_sha256\": \"3446aea726098a9f9bffc86d447e84196ca2e16acd14fc2b99dfd8ed4919119c\",\n        \"sha256\": \"3446aea726098a9f9bffc86d447e84196ca2e16acd14fc2b99dfd8ed4919119c\"\n      },\n      {\n        \"path\": \"src/learn/rows.test.ts\",\n        \"expected_sha256\": \"4d77e27931c589b1a442140270f9a36a9dc9014d99ba390c3173504fe2e1cb80\",\n        \"sha256\": \"4d77e27931c589b1a442140270f9a36a9dc9014d99ba390c3173504fe2e1cb80\"\n      },\n      {\n        \"path\": \"public/console/shell.js\",\n        \"expected_sha256\": \"6ed7abd4a5d20226109d12910f003645fd22620d116d2caead344b9b85d7916e\",\n        \"sha256\": \"6ed7abd4a5d20226109d12910f003645fd22620d116d2caead344b9b85d7916e\"\n      },\n      {\n        \"path\": \"public/console/views.js\",\n        \"expected_sha256\": \"07c8117069971e7b491ca07fa1ec6cefd64b18aa9f16fb27402f60687ce9c70c\",\n        \"sha256\": \"07c8117069971e7b491ca07fa1ec6cefd64b18aa9f16fb27402f60687ce9c70c\"\n      },\n      {\n        \"path\": \"public/operator-session.js\",\n        \"expected_sha256\": \"b7a943cbc3611f1f7e2b5a96aed19142f8a73df36abece2dd814a2bda0754869\",\n        \"sha256\": \"b7a943cbc3611f1f7e2b5a96aed19142f8a73df36abece2dd814a2bda0754869\"\n      },\n      {\n        \"path\": \"public/legacy/learning.html\",\n        \"expected_sha256\": \"eeff0154dcab52b19ee19f836b6660fc4c858a121df6b160080b4d2784d49220\",\n        \"sha256\": \"eeff0154dcab52b19ee19f836b6660fc4c858a121df6b160080b4d2784d49220\"\n      },\n      {\n        \"path\": \"public/console/index.html\",\n        \"expected_sha256\": \"e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3\",\n        \"sha256\": \"e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3\"\n      },\n      {\n        \"path\": \"src/console/jsdom.d.ts\",\n        \"expected_sha256\": \"ed11ae4357dd935864c3c981ec17707a0644ca63bf620b3544a1466054e782d6\",\n        \"sha256\": \"ed11ae4357dd935864c3c981ec17707a0644ca63bf620b3544a1466054e782d6\"\n      },\n      {\n        \"path\": \"docs/architecture/35-verification-reports/F07.md\",\n        \"expected_sha256\": \"6bbbd5c45f51d2bf4fe073db42c58162d39dc174ad846ad985fbbd8015b16914\",\n        \"sha256\": \"6bbbd5c45f51d2bf4fe073db42c58162d39dc174ad846ad985fbbd8015b16914\"\n      }\n    ]\n  },\n  \"references\": [\n    {\n      \"path\": \"docs/remediation/design/W31.02/baseline.json\",\n      \"sha256\": \"1e7c2f25363e20c052a8ecbaac472fe1be67d9ab409bbb868f0fcacb0ad8691d\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W31.02/plan.md\",\n      \"sha256\": \"7b4e08152482f96f68c9aee2902f3891ecc447585b26d6fe362ddbff5648e2d5\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W31.02/admission.json\",\n      \"sha256\": \"902d99d781d8507abb5b01544a5f446f70ea41b7af65b2fc1a289939d8425d16\"\n    }\n  ]\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T02:25:50.744Z",
+    "files": [
+      {
+        "path": "src/measure/window.ts",
+        "sha256": "3aae86085cb5a461a10c8925732e86e0a6507d9065af9c66e376349247282b70"
+      },
+      {
+        "path": "public/console/views-measure.js",
+        "sha256": "141186bd9d711522d2188f955000f150c26b297d1d02d06d4b4fc6512b6302b9"
+      },
+      {
+        "path": "src/measure/window.test.ts",
+        "sha256": "049e8c566f6178808852db2f247c2c6b91ae08e6972ed121e439a9b8d4550c0c"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "398c8a3939d73edcf923720a1216f3cdcaf21bb1d85c5de44ca8949faf966bd6"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "4ae591a0a4fd52cacd44053e371bba56d0eb0eb8badc3c5e086f52bda06ac22a"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "558029ddee9299f1821c7dea6f658c47b622f17eff479f5b78f4c05d2834964a"
+      }
+    ]
+  },
+  "protected_comparison": {
+    "expected": 46,
+    "actual": 46,
+    "unchanged": true,
+    "baseline_reference": "docs/remediation/design/W31.02/baseline.json",
+    "complete_actual_and_expected_hashes": "command_captures.source_stop.captures[0].output"
+  },
+  "limitations": [
+    "184 covers the longest six consecutive full calendar months, not an arbitrary six-month interval with both anniversary endpoints or six-plus-month experimental follow-up.",
+    "16MiB input,16384 cells and8MiB output remain unchanged; legacy fallbacks/cardinality can refuse an otherwise valid date range. Missing, incompatible or unknown contributions do not become complete or favorable.",
+    "No history repair, retention change, enrollment/control attestation, causal inference, customer/business acceptance or full W31/F25/F07/F34 closure.",
+    "Route and DOM checks use synthetic storage/session fixtures; no deployed authentication, native184-day capacity or performance guarantee.",
+    "No delegation, cloud/customer operation, emitted build, install, commit or governance write. Root owns frozen review/integration/acceptance."
+  ],
+  "independent_review": "pending"
+}

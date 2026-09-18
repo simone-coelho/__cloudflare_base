@@ -1,0 +1,78 @@
+{
+  "task_id": "W35.07",
+  "actor_id": "w3507-reviewer",
+  "run_id": "/root/w3507_preflight",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-09-16T05:18:32.715Z",
+  "verdict": "PASS",
+  "artifact_digest": "9ce9250074e3bb8ea5be775bfbe8276c5765a9cdfc852cc7abcc6181d74fec00",
+  "contract_digest": "9a474db5475a06e8f567e8a8554405304a93571da93e16a4415d892061a6db02",
+  "independence": "Distinct from implementer /root/w3507_worker. Inspected corrected actual source, retained R1 deltas and extended assertions, then ran exact K3 once on the final frozen artifact. No source edits, subdelegation, broad suite or board rerun.",
+  "supersedes": {
+    "review": "docs/remediation/evidence/W35.07/review.json",
+    "sha256": "6c5949eccb5f41acbb59a6dccdf6a767635b23c238bc71a7d9edc8a806ad97d7",
+    "verdict": "REWORK",
+    "artifact_digest": "d7e3e508cc78b318260a4d140aa24496e98037553094abe914240b71e8b3ba4c",
+    "preserved_unchanged": true
+  },
+  "artifact_verification": {
+    "before": "2026-09-16T05:17:56.056Z",
+    "after": "2026-09-16T05:18:32.715Z",
+    "manifest_pin_count": 28,
+    "mismatches_before": [],
+    "mismatches_after": [],
+    "artifact_and_contract_recomputed": true,
+    "worker_sha256": "c88a06671b8cfba559c546e555b77c45690cfc2efae81e1acef3292a50fb64db",
+    "source_freeze_sha256": "5fd0ff099f21d9bab1aeaee9ecf60da2df9323868f8912b0796edabf10259103",
+    "reconstruction": "Independently validated every retained R1 reverse-edit deletion against final text, applied all three sequences in memory, and obtained the exact rejected ShopperReflex, erase and identity-test hashes. Final hashes match; the other two outputs are unchanged from the first review. No files were restored or rewritten."
+  },
+  "checks": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]0[34567]|W06[.]0[89]|resumes frozen v2 CACHE steps|retains a nonzero v1 cursor' --maxWorkers=1 --minWorkers=1",
+      "attempts": 1,
+      "session_id": 70837,
+      "session_drained": true,
+      "exit_code": 0,
+      "captures": ["c68c45", "994b72"],
+      "result": "2 files passed; 20 passed, 94 deliberately skipped, 114 total. Duration21.34s, tests6.81s (realtime3947ms, identity2859ms).",
+      "diagnostics": "Tool output truncated repetitive synthetic queue_unavailable/learning_incomplete diagnostics; complete final file/count/timing summary and exit0 retained. Not delivery or deployed-runtime acceptance."
+    },
+    "K2": {
+      "disposition": "Reused hash-verified final worker K2-R1-final after all frozen identity checks; not rerun.",
+      "session_id": 59404,
+      "exit_code": 0,
+      "result": "Compiler, five-file ESLint and scoped whitespace passed; zero errors and113 unchanged warnings. Worker records all13 path/rule/message/count signature multiplicities matching the composed baseline; reviewer independently summed the retained signatures to113. No independent lint execution claimed."
+    }
+  },
+  "criteria": {
+    "W35.07-C1": {
+      "verdict": "PASS",
+      "basis": "Actual cleanup transactions retain pre-barrier eligible SID/epoch witnesses; exact source completion also covers retired generations without erasing successor state. Retention preserves and validates witnesses. Session authorization requires the matching witness/receipt, rejects observable same-SID grant or pipeline reuse, and routes to captured userId. Generic or legacy receipts never synthesize missing session eligibility. The selected actual-object ambiguity/restart and H+1 controls pass."
+    },
+    "W35.07-C2": {
+      "verdict": "PASS",
+      "basis": "One validated KV read preserves original serialized bytes, including unknown fields, across scan, extra/canonical and base session branches. Fresh missing/malformed captured records refuse. Source cleanup and object/session guards precede deletion. R1 now rechecks the relevant owner-generation authority and bounded retained session witnesses before every remaining shared-key destructive effect, even after its session cursor was consumed or its scan capsule compacted. Extended actual-controller cases preserve same- and different-SID successor state, unchanged ownership projections, canonical-via-visitor pointers and cache bytes across restart; changed retained raw bytes also refuse. Lost old-delete acknowledgements remain idempotent."
+    },
+    "W35.07-C3": {
+      "verdict": "PASS",
+      "basis": "Fresh v6 remains explicit; untagged v5 compares unique stable completed-prefix identities and conditionally persists a page-local layout before further extra work. Ambiguous prefixes refuse unchanged, layout acknowledgement loss retries safely, and compacted work is not replayed. Selected W35.03-.06, W06.08-.09 and historical v1/v2 controls pass without production relabelling. Exact-byte scoped static assurance passes."
+    }
+  },
+  "resolved_findings": [
+    {
+      "id": "W35.07-R1",
+      "disposition": "RESOLVED",
+      "basis": "Only an actual eraseWithBarrier transaction records continuationEpoch. The serialized owner guard requires that exact current epoch, empty grants and absent live affinity/pipeline/intent/transfer/forward state. Retired or old receipts do not acquire continuation authority. Each remaining v6 pointer/cache/link/ring/tombstone effect checks the step owner and the actual userIds of its captured pointer/ownSession records, so a visitor step cannot bypass its canonical owner. Checks remain effective after prior session checkpoints and compaction; the extended same/different-SID cases pass.",
+      "completion_clarification": "The rejected review requested revalidation before final completion too broadly. Lead and reviewer clarified before rework that authority is required for every remaining destructive effect; after all those effects are durably checkpointed, final metadata compaction/completion need not sweep historical sessions. Legitimate new post-cutoff activity after completed effects is allowed. Completion describes the captured generation's work, not an empty live account. The rejected review is retained unchanged."
+    }
+  ],
+  "findings": [],
+  "bounded_work": "R1 adds at most three distinct owner checks plus two SID authorizations and exact snapshot reads per shared-key effect, determined by one target's pointer/ownSession references. Existing32-step/page limits remain. No all-completed-page scan, new continuation sweep or serving-path call was added. These are source operation bounds, not qualified native capacity/latency measurements.",
+  "limitations": [
+    "Prospective DO-local eligibility and guarded snapshots only. Cross-object/KV read-delete remains nontransactional with legacy writers; unseen SID reuse and full session-host/socket authority remain outside this claim.",
+    "Legacy/grantless records or old/retired receipts without necessary continuation authority may refuse; this is conservative incomplete-authority handling, not historical erasure parity or automatic migration.",
+    "Historical discovery, external/physical erasure, retention/capacity, migration/cutover/deployment, customer/native/browser/SLO/release acceptance and full W35/F06/F14 remain open. Rollback requires protocol-compatible handling of v6 witnesses/continuation receipts and tagged-v5 pages."
+  ],
+  "handoff": "Source unchanged and stopped; K3 drained, no running commands. Lead may inspect this bounded PASS and perform disposition. Reviewer does not accept task/package/finding or edit tracker."
+}

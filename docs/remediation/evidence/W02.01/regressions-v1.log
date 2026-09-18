@@ -1,0 +1,14 @@
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+ RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base
+
+ ✓ src/routes/identity.test.ts  (20 tests) 66ms
+ ✓ src/routes/auth.test.ts  (6 tests) 354ms
+ ✓ src/middleware/edgeAccess.test.ts  (9 tests) 21ms
+ ✓ src/routes/content.test.ts  (5 tests) 23ms
+ ✓ src/auth/accounts.test.ts  (5 tests) 108ms
+
+ Test Files  5 passed (5)
+      Tests  45 passed (45)
+   Start at  20:40:13
+   Duration  24.61s (transform 1.76s, setup 0ms, collect 8.53s, tests 572ms, environment 1ms, prepare 11.43s)

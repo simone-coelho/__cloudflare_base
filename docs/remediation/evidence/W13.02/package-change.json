@@ -1,0 +1,165 @@
+{
+  "at": "2026-09-18T03:09:52.466Z",
+  "before": {
+    "id": "W13",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Correct lint config and actual errors with justified warning policy; include gate in CI. Tie source, SDK/assets, migrations and deployment to an attested build, retaining recovery evidence. Do not disable a useful sanitizer merely to silence a lint error. A green lint command alone does not close release readiness.",
+      "finding_refs": "F10/F35; N18",
+      "sizing_owner": "S lint → M release integration with W08; D/OL"
+    },
+    "title": "Lint and attested release checks",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F10",
+      "F35",
+      "N18"
+    ],
+    "proposed_owner": "D/OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W13-LINT-GATE",
+          "description": "Restore actual lint execution, fix current errors without behavior changes, retain a justified warning ceiling and wire existing local/CI gates. Not source/assets/migrations/deployment attestation or release readiness."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W13-LINT-GATE",
+          "task_id": "W13.01",
+          "task_criterion_id": "W13.01-C1"
+        },
+        {
+          "criterion_id": "W13-LINT-GATE",
+          "task_id": "W13.01",
+          "task_criterion_id": "W13.01-C2"
+        },
+        {
+          "criterion_id": "W13-LINT-GATE",
+          "task_id": "W13.01",
+          "task_criterion_id": "W13.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W13.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W13",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Correct lint config and actual errors with justified warning policy; include gate in CI. Tie source, SDK/assets, migrations and deployment to an attested build, retaining recovery evidence. Do not disable a useful sanitizer merely to silence a lint error. A green lint command alone does not close release readiness.",
+      "finding_refs": "F10/F35; N18",
+      "sizing_owner": "S lint → M release integration with W08; D/OL"
+    },
+    "title": "Lint and attested release checks",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F10",
+      "F35",
+      "N18"
+    ],
+    "proposed_owner": "D/OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W13-LINT-GATE",
+          "description": "Restore actual lint execution, fix current errors without behavior changes, retain a justified warning ceiling and wire existing local/CI gates. Not source/assets/migrations/deployment attestation or release readiness."
+        },
+        {
+          "id": "W13-FULL-LOCAL-AND-LIVE",
+          "description": "Correct lint config and actual errors with justified warning policy; include gate in CI. Tie source, SDK/assets, migrations and deployment to an attested build, retaining recovery evidence. Do not disable a useful sanitizer merely to silence a lint error. A green lint command alone does not close release readiness."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W13-LINT-GATE",
+          "task_id": "W13.01",
+          "task_criterion_id": "W13.01-C1"
+        },
+        {
+          "criterion_id": "W13-LINT-GATE",
+          "task_id": "W13.01",
+          "task_criterion_id": "W13.01-C2"
+        },
+        {
+          "criterion_id": "W13-LINT-GATE",
+          "task_id": "W13.01",
+          "task_criterion_id": "W13.01-C3"
+        },
+        {
+          "criterion_id": "W13-FULL-LOCAL-AND-LIVE",
+          "task_id": "W13.02",
+          "task_criterion_id": "W13.02-C1"
+        },
+        {
+          "criterion_id": "W13-FULL-LOCAL-AND-LIVE",
+          "task_id": "W13.02",
+          "task_criterion_id": "W13.02-C2"
+        },
+        {
+          "criterion_id": "W13-FULL-LOCAL-AND-LIVE",
+          "task_id": "W13.02",
+          "task_criterion_id": "W13.02-C3"
+        },
+        {
+          "criterion_id": "W13-FULL-LOCAL-AND-LIVE",
+          "task_id": "W13.02",
+          "task_criterion_id": "W13.02-C4"
+        },
+        {
+          "criterion_id": "W13-FULL-LOCAL-AND-LIVE",
+          "task_id": "W13.02",
+          "task_criterion_id": "W13.02-C5"
+        },
+        {
+          "criterion_id": "W13-FULL-LOCAL-AND-LIVE",
+          "task_id": "W13.02",
+          "task_criterion_id": "W13.02-C6"
+        },
+        {
+          "criterion_id": "W13-FULL-LOCAL-AND-LIVE",
+          "task_id": "W13.02",
+          "task_criterion_id": "W13.02-C7"
+        },
+        {
+          "criterion_id": "W13-FULL-LOCAL-AND-LIVE",
+          "task_id": "W13.02",
+          "task_criterion_id": "W13.02-C8"
+        }
+      ],
+      "task_ids": [
+        "W13.01",
+        "W13.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "reason": "Required retained snapshots for W13 full-scope admission. Initial board43062 rejected missing record link; no product work authorized or performed. Exact package content/digests unchanged; supplied missing link before validated admission."
+}

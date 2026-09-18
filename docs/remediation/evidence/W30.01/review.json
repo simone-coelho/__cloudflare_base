@@ -1,0 +1,154 @@
+{
+  "at": "2026-09-12T17:51:38.701Z",
+  "task_id": "W30.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "933f82dc339e9edebe073fd5f1e88c229c6b8d2286c96bf42eb4b4392c5926dc",
+  "contract_digest": "ab5cba3191239452ec1b0da84d67c0481e066779bd9d5911d9c6b2a87cda49b6",
+  "verdict": "PASS",
+  "summary": "Frozen source and fixed12 pass for event-time attribution using loaded current-hour rows and surviving carry-in. This does not close original F17 P2 or full reconstruction.",
+  "criteria": [
+    {
+      "id": "W30.01-C1",
+      "verdict": "PASS",
+      "evidence": "Actual foldShard snapshots erasure-filtered pre-hour carry-in before persisted append/pruning, then advances loaded in-hour decisions through timestamp-sorted outcomes. Equal-time decisions precede outcomes with stable decision ties; the existing hour-start horizon and per-visitor cap apply before brand/policy filtering. Permuted inputs and the cap200 actual-hour fixture restore early credit while preserving final retention. The preceding-cap P2 counterexample explicitly remains zero."
+    },
+    {
+      "id": "W30.01-C2",
+      "verdict": "PASS",
+      "evidence": "Transient attribution runs on both forward and repeated hours; same-hour loaded evidence is reconstructed without duplicate persisted appends or through/seen rewind. Actual report/restart assertions retain200 entries and compare the stated credits/arms/counters with raw reports. Inclusive erasure, other-tenant storage, cross-brand cap, session and named-slot exclusions pass alongside five existing W06.07 cases and W26.01. The fixture explicitly demonstrates unrecoverable evicted carry-in on rebuild rather than claiming complete replay."
+    },
+    {
+      "id": "W30.01-C3",
+      "verdict": "PASS",
+      "evidence": "Both exact baseline-to-frozen deltas and all three grouped additions were reviewed; the same fixed12 ran once independently (8 unselected). Final worker compiler, zero-warning scoped lint and whitespace captures were read and reused. All30 artifact pins,22 protected pins and two forward/reverse deltas match before/after. No added storage I/O, schema, infrastructure or source changes by the reviewer; lead disposition is separate."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W30.01/plan.md",
+      "sha256": "5bd349259e87847392477b79a59b723fa35744128e6eabd698e932dced9bac30"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W30.01/artifact.json",
+      "sha256": "e9178ed514d1a2995b8ffb9de9740057273ef47c38853eb6d58efd4e0cdd9efd"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W30.01/worker.json",
+      "sha256": "b80d342e2aa813d152da1d0c83a964678afa2b72cd59c8eb6fd6c40f2cb79ef6"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts -t 'W30.01|W06.07|W26.01|the day from its hours|an hour built again|the rings forget' --maxWorkers=1 --minWorkers=1",
+    "session_id": 67473,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "212457",
+        "wall_time_seconds": 1.00108698,
+        "session_id": 67473,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ae768f",
+        "wall_time_seconds": 0.000002157,
+        "exit_code": 0,
+        "original_token_count": 124,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (20 tests | 8 skipped) 100ms\n\n Test Files  1 passed (1)\n      Tests  12 passed | 8 skipped (20)\n   Start at  13:50:04\n   Duration  5.95s (transform 854ms, setup 0ms, collect 1.84s, tests 100ms, environment 0ms, prepare 2.97s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 12,
+      "unselected": 8,
+      "total": 20,
+      "test_files": 1,
+      "new_grouped_cases": 3,
+      "retained_selected_cases": 9,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 30,
+    "source_and_output_pins": 24,
+    "protected_pins": 22,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 2,
+    "manifest_sha256": "e9178ed514d1a2995b8ffb9de9740057273ef47c38853eb6d58efd4e0cdd9efd",
+    "before": {
+      "at": "2026-09-12T17:49:47.949Z",
+      "captures": [
+        "7fa3c5"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T17:50:32.900Z",
+      "captures": [
+        "e84871"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "9e11d4",
+          "wall_time_seconds": 0.104523726,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T17:49:48.310Z\",\"task\":\"W30.01\",\"state\":\"verification\",\"contract_digest\":\"ab5cba3191239452ec1b0da84d67c0481e066779bd9d5911d9c6b2a87cda49b6\",\"artifact_digest\":\"933f82dc339e9edebe073fd5f1e88c229c6b8d2286c96bf42eb4b4392c5926dc\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "31c809",
+          "wall_time_seconds": 0.033393425,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T17:50:33.166Z\",\"task\":\"W30.01\",\"state\":\"verification\",\"contract_digest\":\"ab5cba3191239452ec1b0da84d67c0481e066779bd9d5911d9c6b2a87cda49b6\",\"artifact_digest\":\"933f82dc339e9edebe073fd5f1e88c229c6b8d2286c96bf42eb4b4392c5926dc\"}\n"
+        }
+      ]
+    },
+    "inspection": "Actual plan/task and complete two deltas:9cd8fa; full worker metadata/captures/freeze: bfdfe7 and2f6c30; current fold source and baseline:1e79fd. Personally read full W30/F17/N23 and W06.07 preflight boundaries were reused; applicable doc31§3/doc22§4 read at ee10ae/b1a0e5. Lead entry board reused; no duplicate board or broad checks."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W30.01/worker.json",
+      "sha256": "b80d342e2aa813d152da1d0c83a964678afa2b72cd59c8eb6fd6c40f2cb79ef6"
+    },
+    "command_capture": "w30_static1",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/hourly.ts src/learn/hourly.test.ts --max-warnings 0 && git diff --check -- src/learn/hourly.ts src/learn/hourly.test.ts",
+    "session_id": 71389,
+    "captures": [
+      "6143ca",
+      "38d974"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace": "pass",
+    "qualification": "The complete admitted chain exited0 without diagnostics before source STOP2026-09-12T17:46:59.713Z; frozen hashes match. No reviewer static rerun."
+  },
+  "retained_failures_and_qualifications": [
+    "Worker49845/11097e failed11/1 because the next-hour click was54m36s after its exposure, beyond the unchanged30-minute policy. The owned fixture alone moved205 later decisions to12:58+n*100ms. Full failed evidence remains; final93332/70b359 passed12, as did this independent run.",
+    "The source-confirmed baseline is not a pre-fix runtime reproduction. All8 unselected checks remain unselected; the existing Vite warning is retained verbatim.",
+    "The new privacy fixture intentionally reports3 credits initially and2 on an unerased repeat when pre-hour carry-in was evicted; this is a retained-history limitation, not hidden by the passing verdict."
+  ],
+  "limitations": [
+    "Only future-decision eviction of earlier outcomes is corrected. Decisions already preceding an outcome can still exhaust the cap (actual F17 P2); evicted/horizon-expired carry-in is not reconstructed.",
+    "No arbitrary late/mutable-hour correction, higher-cap dependent-hour repair, contiguous checkpoints, date-scoped historical rebuild, maturity/coverage propagation or seven-day/online-batch parity is established. Existing non-forward ringsFolded:false and newer-date refusal remain.",
+    "Ring/aggregate persistence is nontransactional and event identity/dedup remains separate. Sorting references to already-loaded rows and bounded transient visitor rings is not native workload capacity or SLO evidence.",
+    "Synthetic local R2/Node report checks are not customer/deployed acceptance, full W30/F17/F18/F25/N08/N23 closure or release approval. Existing W06/W23/W26/W28 remedies are preserved with their residuals.",
+    "Only review.json was written. No source/governance changes, additional suites, external/customer-data operations or lead acceptance were performed."
+  ]
+}

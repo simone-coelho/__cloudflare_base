@@ -1,0 +1,163 @@
+{
+  "before": null,
+  "after": {
+    "id": "W35.04-E3",
+    "task_id": "W35.04",
+    "check_id": "W35.04-K3",
+    "criterion_ids": [
+      "W35.04-C1",
+      "W35.04-C2",
+      "W35.04-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w3503-reviewer",
+    "run_id": "/root/w3503_stale_session_investigation",
+    "file": {
+      "path": "docs/remediation/evidence/W35.04/review.json",
+      "sha256": "94bbb959943ac79f09f6043e81afb86f5e212326a6c481e5000604fef5d82f4e"
+    },
+    "at": "2026-09-16T01:28:03.878Z",
+    "limitations": "Local DO grant authority only. Active grants share one unqualified stored map. No current session-host strong revocation, production legacy-token migration, account-wide logout, prepared-transfer erasure race/complete subject discovery, host cutover, migration, deployment, native/customer/browser/SLO/release acceptance or full W35/F14 closure. W35.03 and W35.02 exact artifacts remain revalidation_required.",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts -t 'W35[.]04|W35[.]03|W05[.]01 withdrawal continuity|contains unbound/corrupt/forwarded/refused alarms' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct Astra/xhigh frozen-artifact review on the same actual modules and fixed focused fixtures; exact-byte static may be reused.",
+    "workload": "Same fixed focused selection once; no broad suite, native/browser/customer or SLO claim.",
+    "result": "pass",
+    "artifact_digest": "1c32e38d5dad3d7d08738ca552b5b99ca1badc2b26aee7149fc21702e0be8c5b",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "09fc0aac8c64c1863b9c8490520136e8ae68f08c09fdd113f32296699512391d",
+      "configuration": "Local W35.04 DO-local grant identity/revocation only under approved D03; no current session-host strong revocation, host cutover/migration/deployment, prepared-transfer erasure closure, native/customer/SLO/release or full W35/F14 closure. Grant-map capacity unqualified. Worker K1/K2 green; distinct K3 pending.",
+      "files": [
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "sha256": "53126644d359f4e19da37bafa419b4e6eef4a919a3d9ae23cf98cfbf8c65c25a",
+          "role": "output"
+        },
+        {
+          "path": "src/identity/consentContinuity.ts",
+          "sha256": "eab155ccb2f012ba77452f55788272b70e87531c25b2a2f73a7f6b7fea15d946",
+          "role": "output"
+        },
+        {
+          "path": "src/identity/link.ts",
+          "sha256": "4ad3941d62d5c7b4fa9ec5f0cae790bc128ba6b6dae0b9ae59b2c7a6d9315938",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/identity.ts",
+          "sha256": "53b95daf2e07f01e62b65bae59e56610cd1c0b412038bc738c4c6b19c2a2a940",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "6057c647b83593d27fcc2f4bb44532d8a2c8cb374403dd42fca27fe27ef65697",
+          "role": "output"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "66d005f5a565c3fe6924ab02e944cdb02ac905957b17974111d448821cca0021",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "18cfcbf1c7063f33a4bac5727dcdf0c31a7b0bad30d204d8c0b698bc4b4fb68d",
+          "role": "output"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5",
+          "role": "source"
+        },
+        {
+          "path": "src/durable-objects/PersonalizationWebSocket.ts",
+          "sha256": "6e7ab3fc0c6a0204656f2dd718d2c40d40ae9fc45e4b8ccc876718af7f1108d4",
+          "role": "source"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "sha256": "19faab942934a61c7ef13db67e62fcb06228346be85abed9d3b71ac00d37d186",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/25-identity-stitching.md",
+          "sha256": "f31ba54426d095d291251f54b597a3003e95be3d0b1cad8232a5314bea3cd87b",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+          "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W35.04/plan.md",
+          "sha256": "0051434f1ed35d953f2610ad5337b930e07cbd64ec9a8fd02179313db8bf05f9",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W35.04/baseline.json",
+          "sha256": "5a601b74ea777d41d03b2d9d3c2c29c8e054740845951b0ea2afc7b691a966ec",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.04/admission.json",
+          "sha256": "1d1a838d9c370c391cd4beb03076c5b2fc3bf304b44b15d9d8487a7bc3edea40",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.04/package-coverage.json",
+          "sha256": "2e87b96f386b0811d0878b2801b4dfbf8caf9fced4729abeae9a91f423bc5c5e",
+          "role": "configuration"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "configuration"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "configuration"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "configuration"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "configuration"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "configuration"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.04/worker.json",
+          "sha256": "3eb232a3684785cc5bea23dcf4d4a2da3c737e36db58c9b24ca766c10ec3fdc1",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.04/source-freeze.json",
+          "sha256": "8849754aac1082e0d9f65f4636db85f93362d955a8a399a0b0bcceac607bebea",
+          "role": "configuration"
+        }
+      ],
+      "digest": "1c32e38d5dad3d7d08738ca552b5b99ca1badc2b26aee7149fc21702e0be8c5b"
+    }
+  }
+}

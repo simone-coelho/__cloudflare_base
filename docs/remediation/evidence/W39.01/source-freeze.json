@@ -1,0 +1,76 @@
+{
+  "at": "2026-09-10T11:42:32Z",
+  "task_id": "W39.01",
+  "contract_digest": "0d4c7e0b299ed39d45daf3efda0c4c19e7491f52dd19310d16df17771adbcc12",
+  "source": "Worker explicit source STOP after fixed checks; root freeze.",
+  "owned": [
+    "scripts/seed-d1.mjs",
+    "migrations/seed/seed_011_geo.sql",
+    "docs/architecture/10-d1-schema.md",
+    "wrangler.toml",
+    "scripts/seed-d1.test.mjs"
+  ],
+  "pins": [
+    {
+      "path": "scripts/seed-d1.mjs",
+      "role": "output",
+      "sha256": "6bf4d92126b432c0b5eef8fe6146c0db75e8a50a0540fabef903ef2a69e2a074"
+    },
+    {
+      "path": "migrations/seed/seed_011_geo.sql",
+      "role": "output",
+      "sha256": "d1195dcc499fab227873e1445996930f0cf971cb3c25729bafdb1e927c09dd98"
+    },
+    {
+      "path": "docs/architecture/10-d1-schema.md",
+      "role": "output",
+      "sha256": "73d19bfa9c50de9ca090dc5f690a8e6ee4274d74a72580e52013f8e76d69f8f2"
+    },
+    {
+      "path": "wrangler.toml",
+      "role": "output",
+      "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa"
+    },
+    {
+      "path": "migrations/0004_geo_census.sql",
+      "role": "source",
+      "sha256": "579117f14a6fb392b630fb7e383ab86ad7ce50e2589bc6c7f6b2248ebfb20c7b"
+    },
+    {
+      "path": "migrations/0008_meridian_geo_cohort.sql",
+      "role": "source",
+      "sha256": "6031d7d362ec7a8c9157740d875fa9651ad7a771f66ace51ae52833931059d86"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "role": "source",
+      "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34"
+    },
+    {
+      "path": "scripts/provision-stamp.sh",
+      "role": "source",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+    },
+    {
+      "path": "scripts/provision-staging.sh",
+      "role": "source",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+    },
+    {
+      "path": "scripts/deploy.sh",
+      "role": "source",
+      "sha256": "14ad032bf8e7f3a9398a7e703def34e62fd41689be085449a8a710e5deb633c2"
+    },
+    {
+      "path": "docs/deployment/01-deploy.md",
+      "role": "source",
+      "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee"
+    },
+    {
+      "path": "scripts/seed-d1.test.mjs",
+      "role": "output",
+      "sha256": "06cdd34819846bafdebffe82f13e2d1624f9ee9dbba8dff1d8133f086e1d2f1a"
+    }
+  ],
+  "unowned_unchanged": 7
+}

@@ -1,0 +1,153 @@
+{
+  "task_id": "W22.02",
+  "actor_id": "w2202-reviewer",
+  "role": "independent_verifier",
+  "run": "/root/w2202_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-14 13:16:41 UTC",
+  "verdict": "pass",
+  "claim": "local_runtime",
+  "artifact_digest": "0aafbe28b3ad1be7ea2811b7433f920c4ac0ea162ed499ff91a0aff274238cb6",
+  "contract_digest": "8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2",
+  "reviewed_basis": {
+    "instructions": "Read AGENTS.md, remediation README, full governance36 and current RESUME; read complete W22/W09 canonical scopes, linked F16/F17/F19/F22/N07/N08/N10/N23, F16 evidence and relevant doc22 ledger/attribution/replay/export/privacy requirements. Reused root's retained entry board VALID1677 check/status for tracker consistency only.",
+    "plan": {
+      "path": "docs/remediation/design/W22.02/plan.md",
+      "sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W22.02/baseline.json",
+      "sha256": "96cba01da8a25be555d8ea6e05f0ce26fa42087c0772d22ed276af391dac0d3c"
+    },
+    "freeze": {
+      "path": "docs/remediation/evidence/W22.02/source-freeze.json",
+      "sha256": "d538c98b3e5d15010b58af02ee6a31a7fca493fe08d35b99221c4c6530e486ec"
+    },
+    "deltas": {
+      "path": "docs/remediation/evidence/W22.02/source-deltas.json",
+      "sha256": "2811276da8da5a5af68e256caaadbabe52ac817611b96c4ea48b4f099c9b2507"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W22.02/worker.json",
+      "sha256": "76ad8847b588f6a788b06d5b4658662465b10a69a854c404fda01b9f8bec0506"
+    },
+    "pins": {
+      "count": 38,
+      "before_runtime_all_match": true,
+      "after_runtime_all_match": true,
+      "captures": [
+        {
+          "chunk_id": "229ea3",
+          "wall_time_seconds": 0.924138115,
+          "exit_code": 0,
+          "original_token_count": 64,
+          "output": "{\"pins\":38,\"all_match\":true,\"deltas\":5,\"baseline_gzip_and_exact_patches_match\":true,\"contract_digest\":\"8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2\",\"artifact_digest\":\"0aafbe28b3ad1be7ea2811b7433f920c4ac0ea162ed499ff91a0aff274238cb6\"}\n"
+        },
+        {
+          "chunk_id": "3e99f2",
+          "wall_time_seconds": 0.472254948,
+          "exit_code": 0,
+          "original_token_count": 54,
+          "output": "{\"after_runtime_pins\":38,\"all_match\":true,\"artifact_digest\":\"0aafbe28b3ad1be7ea2811b7433f920c4ac0ea162ed499ff91a0aff274238cb6\",\"contract_digest\":\"8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2\"}\n"
+        }
+      ],
+      "method": "Read/hash every artifact file and independently recompute artifactDigest/taskContractDigest with existing board exports. Decode all five original gzip payloads, match their before hashes, apply each retained diff in memory and compare byte-for-byte with current files; after hashes also match."
+    },
+    "actual_source": "Inspected all five complete baseline-relative deltas plus current loaders, buildHour/foldShard/catchUp ordering, existing/new fixture implementations and relevant API prose. Actual current-source capture6b228b; requirement capture849e84. Changes are limited to four TypeScript files and the API paragraph; no source or governance file was edited by this reviewer.",
+    "preflight": "Approved exact89fd28c plan before source GO; explicitly challenged later-hour progress recovery and required it remain a limitation."
+  },
+  "execution": {
+    "K3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.02|W22.01|loadDay reads|an hour built again|an hour past the object cap|the five-minute job|the run continues past an hour whose fold throws' --maxWorkers=1 --minWorkers=1",
+      "started_observed_utc": "2026-09-14 13:14:56 UTC",
+      "drained_observed_utc": "2026-09-14 13:15:20 UTC",
+      "captures": [
+        {
+          "chunk_id": "fb726a",
+          "wall_time_seconds": 1.000660106,
+          "session_id": 75556,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "04825b",
+          "wall_time_seconds": 0.000002214,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (29 tests | 22 skipped) 327ms\n ✓ src/learn/report.test.ts  (19 tests | 16 skipped) 36ms\n\n Test Files  2 passed (2)\n      Tests  10 passed | 38 skipped (48)\n   Start at  09:15:01\n   Duration  14.07s (transform 2.55s, setup 0ms, collect 5.14s, tests 363ms, environment 0ms, prepare 5.70s)\n\n"
+        }
+      ],
+      "session_id": 75556,
+      "exit_code": 0,
+      "drained": true,
+      "passed": 10,
+      "failed": 0,
+      "unselected": 38,
+      "total_discovered": 48,
+      "test_files_passed": 2,
+      "duration_seconds": 14.07,
+      "test_duration_ms": 363,
+      "selection": "Exactly eight existing controls and two grouped W22.02 cases. The runner's38 skipped tests are outside the admitted selection; no required check was bypassed.",
+      "runtime": "Installed Node/Vitest1.6.1; actual report/hourly modules with synthetic R2 state/faults. One independent run; no native/deployed/customer workload.",
+      "diagnostic": "Existing Vite CJS Node API deprecation notice; no failure."
+    },
+    "static_reuse": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts docs/kit/02-api-reference.md",
+      "evidence": "worker.json command_captures.static1",
+      "session_id": 25015,
+      "captures": [
+        "8b28a4",
+        "b7aee5",
+        "543189",
+        "6841fb",
+        "d866d6"
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "compiler": "Full no-emit passed",
+      "lint": {
+        "errors": 0,
+        "warnings": 0,
+        "baseline_errors": 0,
+        "baseline_warnings": 0
+      },
+      "whitespace": "Five owned paths passed",
+      "reuse_basis": "Read complete worker.json and all retained runtime/static captures, checked its frozen hash and matching final source pins. Static1 completed on this artifact with no later source changes or rework. Reused as admitted; no repeated compiler/lint run."
+    },
+    "before_change": {
+      "provenance": "source_confirmed",
+      "observation": "Retained originals skip listed get-null in both loaders and malformed hourly JSON; hourly listKeys accepts missing continuation or repeats cursors. Existing buildHour then can publish partial evidence and catchUp excludes aggregate-present hours. No independent failed baseline runtime claimed."
+    },
+    "not_run": "No broader suite, framework/board repetition, SDK build, provider/native runtime, deployed route, cloud or customer-data operation."
+  },
+  "criteria": [
+    {
+      "id": "W22.02-C1",
+      "verdict": "pass",
+      "evidence": "Independent fixed10, actual production/test source and before/after inspection.",
+      "findings": "Strict raw-day listed get-null throws ReportUnavailableError while non-strict missing/malformed skipping remains. Hourly selected get-null and malformed JSON throw before buildHour can mutate any shard or publish an aggregate. Grouped cases place valid records before the fault, check distinct expected error classes, and preserve complete stored maps including prior shard/hour/canonical bytes with zero puts. Provider/body failures continue to propagate; blank and genuinely empty input behavior remains."
+    },
+    {
+      "id": "W22.02-C2",
+      "verdict": "pass",
+      "evidence": "Independent fixed10 pagination/work/refusal/restoration and existing cap/retry controls.",
+      "findings": "Hourly raw and catchUp inventory listing refuse missing/repeated truncated cursors; page/key traversal hits the existing work bound at observed1,000,001. Synthetic third-page fallback cannot satisfy the expected ReportInputError assertion. Restored two-page inventory/raw input builds exactly one pending hour with2 decisions/1 outcome/1 credit and ringsFolded=true, updates canonical counts to3/1, and subsequent catchUp performs no writes. Existing physical-cap truncation, empty-hour cadence, repeat folding and failure-budget behavior pass. This proves recovery before later-hour progress only."
+    },
+    {
+      "id": "W22.02-C3",
+      "verdict": "pass",
+      "evidence": "38 before/after matching pins, exact five deltas, independent10 and approved final static1 reuse.",
+      "findings": "Small production change matches the approved contract and preserves identity/dedup, attribution/basis, tenant/erasure, cap/horizon and overlay semantics. The API paragraph explicitly limits retry to pending input restoration and states later hours and historic partial artifacts are not repaired. Canonical W22/W09/W30 obligations remain open; test counts or this review do not promote package/customer/release status."
+    }
+  ],
+  "limitations": [
+    "Forward listed-input refusal only. Upstream unavailable/corrupt objects are not repaired automatically; absent unlisted inputs and already published partial aggregates are not detected by this change.",
+    "Recovery is demonstrated for one pending hour before later progress. catchUp still continues after failure: later folds can advance/evict carry-in and publish without the refused hour; restoring earlier input does not rebuild those dependent hours. Existing ringsFolded/coverage and history limitations remain.",
+    "No durable producer/online/export/point-read reconciliation, event-time manifests, complete retention, late-arrival repair or partial-shard rollback. Broader W09/W22/W30 and finding obligations remain open.",
+    "Physical caps/truncation, served exposure units, erasure races and customer policies are unchanged. Ten synthetic local tests and runner timings do not establish native capacity, SLO, causal lift, customer acceptance or release authority."
+  ],
+  "disposition": "Independent bounded PASS for lead acceptance review. Root alone owns tracker/journal/RESUME and task acceptance.",
+  "revalidation": "Changes to frozen source/dependencies, the approved contract, storage/workload assumptions or accepted evidence require scoped revalidation with this result retained historically.",
+  "handoff": "Reviewer STOP. Session75556 drained exit0; only review.json written after checks. No implementation/governance/external writes or subdelegation."
+}

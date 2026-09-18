@@ -1,0 +1,491 @@
+{
+  "task_id": "W09.05",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T01:26:00.214Z",
+  "verdict": "pass",
+  "artifact_digest": "d8d9ae3f1170952b7b11737189c8322edef88b67d06dac404df2bdf234d2d02f",
+  "contract_digest": "177cd97bc99674ffc027bca9d0da7f42a87a072a65a2183fee9e827ad7ab9105",
+  "summary": "The admitted collision-resistant producer identity slice passes independent frozen-source and fixed-runtime review; no sink idempotency or full-package acceptance is inferred.",
+  "criteria": [
+    {
+      "id": "W09.05-C1",
+      "verdict": "pass",
+      "evidence": [
+        "Inspected actual SDK/schema/action/outcome deltas. SDK nonce mint requires current readiness and tracking; bounded opaque Host tokens plus a guarded monotonically increasing per-core sequence distinguish same-clock sends. Invalid sources are caught by existing nonthrowing send. Refused envelopes mint no logical nonce.",
+        "Route validates explicit nonce and representable integer timestamp before host processing, preserves nonce-bearing timestamp zero, and supplies request-local fallback only in tracking-approved outcome emission. One outcome object with event_id/source and unchanged tenant:time:visitor prefix feeds both queue and learning.",
+        "Independent selected SDK and both-host route groups pass: same-clock distinct identities, unchanged serialized envelope, invalid nonce/time refusal before recorded effects, identical provided-identity reposts, legacy fallback and consent suppression. Legacy helper IDs remain unchanged. No persistent seen state or retry was added."
+      ]
+    },
+    {
+      "id": "W09.05-C2",
+      "verdict": "pass",
+      "evidence": [
+        "Service supplies one tracking-approved request nonce; pure decideContent validates and persists it without clock/randomness or changes to ranking/exploration inputs. Appended :n1:<nonce> preserves existing partition/visitor prefix and old ID tail.",
+        "Replay reuses request_id and compares exact decision_id/request_id; malformed present nonce, missing nonce on a suffixed carrier and inconsistent IDs fail rather than downgrade. Historical generated IDs and legitimate page/slot text containing :n1: remain distinguishable by reconstruction.",
+        "Actual service same-clock requests have distinct IDs and equal decisions; new/legacy replay and three existing pure/replay cases pass. The corrected pure fixture explicitly produces one eligible record, avoiding vacuous equality. Existing background erasure and W09.04 caller checks also pass."
+      ]
+    },
+    {
+      "id": "W09.05-C3",
+      "verdict": "pass",
+      "evidence": [
+        "Read all sixteen exact deltas: ten production/type files, three fixtures, two generated SDK outputs and kit contract. Before and after runtime, all 108 artifact pins and 86 protected source pins match; sixteen forward/reverse patches reconstruct exact baseline/current bytes. Contract, artifact, worker STOP hashes and parity output hashes reconcile.",
+        "Exact admitted K3 compound invoked once: 15 selected pass, zero failures; 81 unselected cases not credited. Full real captures below end with exit 0 and are drained.",
+        "Reused fully inspected worker final static 3053/ec0531: compiler, scoped lint and whitespace pass; 114 inherited warnings match baseline rule/message sequence with line shifts only. Reused successful SDK builder/parity captures 20fe23/5fbe1e; all parity input paths are pinned, and both output hashes match current files. No reviewer build/static rerun.",
+        "Both failed runtime candidates remain in worker.json and are superseded by final worker and independent passes. Scope remains local logical identity, not sink durability, W09/W22/F16 closure or release."
+      ]
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W09.05/plan.md",
+      "sha256": "e6a9e1cd95e338db32e868b97a7fedb3db0989fca280dd9307c3eb0984315684"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W09.05/artifact.json",
+      "sha256": "c9fcc65c39bb93961edd6f22a4f244f3ee00a1563a53280afdc25910cde68a4f"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W09.05/worker.json",
+      "sha256": "99f37c74661fe3c8358f287a430b1b8df9e30f60b7a6b10b57ca57471de3701c"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts -t 'W05.06 retains acknowledged refusal|builds the envelope|POSTs to /realtime/action|a failed POST|uses authenticated keepalive|W09.05' --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts -t 'every SDK event type|the conversion event and the content interactions|W09.05' --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/consent.test.ts -t 'W06.05 checks erasure in the background|W09.04|W09.05' --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/decide.test.ts src/learn/phase3.test.ts -t 'replays: the same input|the same record decided again|a tampered receipt' --maxWorkers=1 --minWorkers=1",
+    "session_id": 72177,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 15,
+      "failed": 0,
+      "unselected": 81,
+      "components": [
+        {
+          "fixture": "src/sdk/core.test.ts",
+          "passed": 6,
+          "unselected": 7
+        },
+        {
+          "fixture": "src/routes/realtime.sdkContract.test.ts",
+          "passed": 3,
+          "unselected": 44
+        },
+        {
+          "fixture": "src/content/consent.test.ts",
+          "passed": 3,
+          "unselected": 13
+        },
+        {
+          "fixtures": [
+            "src/content/decide.test.ts",
+            "src/learn/phase3.test.ts"
+          ],
+          "passed": 3,
+          "unselected": 17
+        }
+      ]
+    },
+    "captures": [
+      {
+        "chunk_id": "ae1015",
+        "wall_time_seconds": 1.000719829,
+        "session_id": 72177,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0a934e",
+        "wall_time_seconds": 0.235771824,
+        "exit_code": 0,
+        "original_token_count": 4859,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/sdk/core.test.ts  (13 tests | 7 skipped) 10ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 7 skipped (13)\n   Start at  21:23:13\n   Duration  2.85s (transform 179ms, setup 0ms, collect 290ms, tests 10ms, environment 0ms, prepare 1.68s)\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\n\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nError processing action event\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstdout | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > SDK ↔ /realtime/action contract > W09.05 preserves provided logical identity through both hosts and destinations, with strict boundary and consent-gated legacy fallback\nlearning_incomplete {\n  version: 1,\n  kind: 1,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/routes/realtime.sdkContract.test.ts  (47 tests | 44 skipped) 223ms\n\n Test Files  1 passed (1)\n      Tests  3 passed | 44 skipped (47)\n   Start at  21:23:18\n   Duration  9.57s (transform 4.16s, setup 0ms, collect 6.70s, tests 223ms, environment 0ms, prepare 1.83s)\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W09.05 separates same-clock service requests without changing scoring and replays exact new and legacy identities\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 2,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 2,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 0,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (16 tests | 13 skipped) 47ms\n\n Test Files  1 passed (1)\n      Tests  3 passed | 13 skipped (16)\n   Start at  21:23:30\n   Duration  4.67s (transform 1.20s, setup 0ms, collect 2.05s, tests 47ms, environment 0ms, prepare 1.74s)\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/phase3.test.ts  (10 tests | 8 skipped) 4ms\n ✓ src/content/decide.test.ts  (10 tests | 9 skipped) 3ms\n\n Test Files  2 passed (2)\n      Tests  3 passed | 17 skipped (20)\n   Start at  21:23:37\n   Duration  6.42s (transform 551ms, setup 0ms, collect 1.31s, tests 7ms, environment 0ms, prepare 3.70s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "before": {
+      "capture": "1f40e2",
+      "exit_status": 0,
+      "result": {
+        "at": "2026-09-12T01:22:53.046Z",
+        "artifact_digest": "d8d9ae3f1170952b7b11737189c8322edef88b67d06dac404df2bdf234d2d02f",
+        "manifest_sha256": "c9fcc65c39bb93961edd6f22a4f244f3ee00a1563a53280afdc25910cde68a4f",
+        "pins": 108,
+        "bad": [],
+        "protected_count": 86,
+        "protected_bad": [],
+        "deltas": [
+          {
+            "path": "src/events/actionTypes.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/sdk/types.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/sdk/core.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/services/RealtimeSegmentEngine.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/routes/realtime.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/ledger/records.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/types.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/decide.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/service.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/learn/replay.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/sdk/core.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/routes/realtime.sdkContract.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "public/sdk/edge-personalization.esm.js",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "public/sdk/edge-personalization.js",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          }
+        ],
+        "basis": [
+          {
+            "path": "docs/remediation/design/W09.05/plan.md",
+            "sha256": "e6a9e1cd95e338db32e868b97a7fedb3db0989fca280dd9307c3eb0984315684"
+          },
+          {
+            "path": "docs/remediation/evidence/W09.05/artifact.json",
+            "sha256": "c9fcc65c39bb93961edd6f22a4f244f3ee00a1563a53280afdc25910cde68a4f"
+          },
+          {
+            "path": "docs/remediation/evidence/W09.05/worker.json",
+            "sha256": "99f37c74661fe3c8358f287a430b1b8df9e30f60b7a6b10b57ca57471de3701c"
+          }
+        ]
+      }
+    },
+    "after": {
+      "capture": "bf6005",
+      "exit_status": 0,
+      "result": {
+        "at": "2026-09-12T01:24:38.476Z",
+        "artifact_digest": "d8d9ae3f1170952b7b11737189c8322edef88b67d06dac404df2bdf234d2d02f",
+        "manifest_sha256": "c9fcc65c39bb93961edd6f22a4f244f3ee00a1563a53280afdc25910cde68a4f",
+        "pins": 108,
+        "bad": [],
+        "protected_count": 86,
+        "protected_bad": [],
+        "deltas": [
+          {
+            "path": "src/events/actionTypes.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/sdk/types.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/sdk/core.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/services/RealtimeSegmentEngine.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/routes/realtime.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/ledger/records.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/types.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/decide.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/service.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/learn/replay.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/sdk/core.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/routes/realtime.sdkContract.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "public/sdk/edge-personalization.esm.js",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "public/sdk/edge-personalization.js",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          },
+          {
+            "path": "docs/kit/02-api-reference.md",
+            "before": true,
+            "after": true,
+            "forward": true,
+            "reverse": true
+          }
+        ],
+        "basis": [
+          {
+            "path": "docs/remediation/design/W09.05/plan.md",
+            "sha256": "e6a9e1cd95e338db32e868b97a7fedb3db0989fca280dd9307c3eb0984315684"
+          },
+          {
+            "path": "docs/remediation/evidence/W09.05/artifact.json",
+            "sha256": "c9fcc65c39bb93961edd6f22a4f244f3ee00a1563a53280afdc25910cde68a4f"
+          },
+          {
+            "path": "docs/remediation/evidence/W09.05/worker.json",
+            "sha256": "99f37c74661fe3c8358f287a430b1b8df9e30f60b7a6b10b57ca57471de3701c"
+          }
+        ]
+      }
+    },
+    "contract_before": {
+      "capture": "693d04",
+      "exit_status": 0,
+      "result": {
+        "at": "2026-09-12T01:22:53.269Z",
+        "task": "W09.05",
+        "state": "verification",
+        "contract_digest": "177cd97bc99674ffc027bca9d0da7f42a87a072a65a2183fee9e827ad7ab9105",
+        "artifact_digest": "d8d9ae3f1170952b7b11737189c8322edef88b67d06dac404df2bdf234d2d02f"
+      }
+    },
+    "contract_after": {
+      "capture": "cb7993",
+      "exit_status": 0,
+      "result": {
+        "at": "2026-09-12T01:24:38.706Z",
+        "task": "W09.05",
+        "state": "verification",
+        "contract_digest": "177cd97bc99674ffc027bca9d0da7f42a87a072a65a2183fee9e827ad7ab9105",
+        "artifact_digest": "d8d9ae3f1170952b7b11737189c8322edef88b67d06dac404df2bdf234d2d02f"
+      }
+    },
+    "stop_and_parity": {
+      "capture": "15f452",
+      "exit_status": 0,
+      "result": {
+        "at": "2026-09-12T01:24:38.855Z",
+        "stop": "2026-09-12T01:20:46.563Z",
+        "stop_count": 16,
+        "stop_bad": [],
+        "parity_missing_inputs": [],
+        "parity_bad_outputs": [],
+        "parity_results": [
+          {
+            "path": "public/sdk/edge-personalization.esm.js",
+            "bytes": 49356,
+            "sha256": "0b4fb2d2d5106a51eb5c343139ce2a80b92266d553aef605cea9c5d84c240b07",
+            "inputs": [
+              "src/events/actionTypes.ts",
+              "src/sdk/core.ts",
+              "src/sdk/emit.ts",
+              "src/sdk/host.ts",
+              "src/sdk/identify.ts",
+              "src/sdk/identity.ts",
+              "src/sdk/index.ts",
+              "src/sdk/listen.ts",
+              "src/sdk/memoryHost.ts",
+              "src/sdk/version.ts",
+              "src/sdk/wire.ts"
+            ]
+          },
+          {
+            "path": "public/sdk/edge-personalization.js",
+            "bytes": 52083,
+            "sha256": "f33bcd8edff3f20c0d1987f83681bbf61f1e25f4db0b759d6066d65f8d2ad370",
+            "inputs": [
+              "src/events/actionTypes.ts",
+              "src/sdk/browser.ts",
+              "src/sdk/core.ts",
+              "src/sdk/emit.ts",
+              "src/sdk/host.ts",
+              "src/sdk/identify.ts",
+              "src/sdk/identity.ts",
+              "src/sdk/index.ts",
+              "src/sdk/listen.ts",
+              "src/sdk/memoryHost.ts",
+              "src/sdk/version.ts",
+              "src/sdk/wire.ts"
+            ]
+          }
+        ]
+      }
+    },
+    "inspection": {
+      "production_and_kit_capture": "bb87cb",
+      "fixtures_capture": "d69efd",
+      "generated_and_failures_capture": "d8af22",
+      "worker_runtime_and_parity_capture": "7b409d",
+      "worker_static_and_baseline_capture": "1038b1",
+      "metadata_and_actual_criteria_capture": "b899cc",
+      "qualification": "Preflight inspected actual producer/core/replay/readers and governing scope; final review read all sixteen current deltas and independently proved their forward/reverse reconstruction. Protected dependency assurance reused only with unchanged pins."
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Worker runtime_candidate1, 85513/08d37a, exit 1: five SDK passes and one failure exposed pre-ready nonce minting; later compound components did not run. Added isCurrent readiness gate resolves that source defect.",
+    "Worker runtime_candidate2, 55061/3d3e2f, exit 1: generic UUID spy also counted existing pre-ready browsing-session attribution. Corrected assertion distinguishes absent logical eventId and first ready sequence1; tracking-refused no-mint assertion remains. Pure slot fixture eligibility and explicit one-record assertion were corrected before final pass.",
+    "Worker final runtime_candidate3, 87615/084eda, and independent 72177/0a934e pass all fifteen selections. Source STOP is 2026-09-12T01:20:46.563Z; generated outputs and static evidence remain exact.",
+    "Expected learning_incomplete output reflects synthetic downstream bindings returning old/missing receipts; it proves propagation and truthful uncertainty, not sink persistence. Expected malformed-action diagnostics, mock Optimizely-client notice and existing Vite deprecation output remain in full captures.",
+    "Reviewer preflight initially recommended cryptographic SDK IDs; the admitted contract explicitly supports existing non-UUID Host fallbacks plus local sequence. Cryptographic/global uniqueness is not an acceptance prerequisite."
+  ],
+  "limitations": [
+    "Identity is the immutable nonce/timestamp/subject/scope tuple. New SDK send/service request means a new event/request; legacy request fallback cannot correlate repeated HTTP requests. Changed tuple/payload reuse is not globally detected.",
+    "SDK Host fallback entropy is not cryptographic or adversarial/global uniqueness; core sequence prevents local repeat until explicit exhaustion. The exhaustion guard is source-confirmed, not exercised with Number.MAX_SAFE_INTEGER sends.",
+    "Legacy helper/stored IDs retain their collision limitations. Legacy route absent/zero timestamp still selects server time; explicit invalid timestamp is refused. No lateness/skew policy was introduced.",
+    "No sink seen state, deduplication, aggregate generation/reset policy, retries, exactly-once counting, durable reconciliation, historical repair, DLQ/exhaustion recovery or full W09/W22/F16 closure.",
+    "Local Node/Vitest with synthetic bindings only. Reader prefix compatibility is source-confirmed; no new broad ledger/erasure suite, deployed SLO, mixed-version rollout or customer/release acceptance. An old route can strip a new SDK nonce; deployed propagation needs compatible server bytes.",
+    "Existing consent, tenant/subject authority, learning acknowledgements and erasure barriers remain; fresh barriers are not an atomic concurrent-erasure fence. Only the assigned review record was written; lead acceptance remains separate."
+  ]
+}

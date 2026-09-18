@@ -1,0 +1,28 @@
+{
+  "task_id": "W22.09",
+  "at": "2026-09-15T19:36:40.189Z",
+  "plan": {
+    "path": "docs/remediation/design/W22.09/plan.md",
+    "sha256": "784611309ae0c3d2abbbd512db7666167206d6322c7f1bfa457fdbd19703c0f0"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W22.09/baseline.json",
+    "sha256": "bba831f4d34804fda2b2a7602bba992763a8807645110d8fb23af000561f9f70"
+  },
+  "contract_digest": "dc5bfdcb459a45fc3b427946a80227ccdfcafae565a1091a28ea739393102609",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-15T19:36:40.189Z",
+    "plan_sha256": "784611309ae0c3d2abbbd512db7666167206d6322c7f1bfa457fdbd19703c0f0",
+    "rationale": "Root complete W22/W26/linked findings/current source review; independent exact-plan PASS. One predicate/two files/fixed4; no new policy or history."
+  },
+  "independent_preflight": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "plan_sha256": "784611309ae0c3d2abbbd512db7666167206d6322c7f1bfa457fdbd19703c0f0",
+    "result": "PASS exact plan; uncorrelated-only brand filter with full correlated ambiguity preserved, fixed4. No runtime/writes."
+  },
+  "limitations": "Forward same-brand online attribution only. Preserve correlated ambiguity, shared optional-brand policy, W22.08 sorting/retention and W22.07 buffered purpose. No historical statistics repair, new history/retention/lifecycle, cross-call idempotence, customer/SLO/full W22/W26/isolation/release claim or external operations."
+}

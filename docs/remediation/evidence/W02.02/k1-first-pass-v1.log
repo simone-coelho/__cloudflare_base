@@ -1,0 +1,32 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base
+
+ ✓ src/routes/identity.test.ts  (20 tests) 54ms
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > fresh real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"open","state":"fresh","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in open mode > revoked real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"open","state":"revoked","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > fresh real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"enforced","state":"fresh","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+stdout | src/middleware/auth.refresh-boundary.test.ts > refresh credential containment in enforced mode > revoked real-issued refresh cannot read an account or mutate configuration
+W02.01 protected-boundary observation {"mode":"enforced","state":"revoked","statuses":{"me":401,"patch":401},"accountReads":0,"kvWrites":0,"revision":[1,1],"K":[3,3],"history":[1,1]}
+
+ ✓ src/middleware/auth.refresh-boundary.test.ts  (30 tests) 364ms
+ ✓ src/routes/auth.test.ts  (6 tests) 404ms
+ ✓ src/auth/signing-config.boundary.test.ts  (33 tests) 179ms
+ ✓ src/middleware/edgeAccess.test.ts  (9 tests) 22ms
+ ✓ src/routes/content.test.ts  (5 tests) 21ms
+ ✓ src/auth/accounts.test.ts  (5 tests) 116ms
+
+ Test Files  7 passed (7)
+      Tests  108 passed (108)
+   Start at  21:44:26
+   Duration  31.69s (transform 1.45s, setup 0ms, collect 11.31s, tests 1.16s, environment 1ms, prepare 14.02s)
+
+
+exit_code=0
+

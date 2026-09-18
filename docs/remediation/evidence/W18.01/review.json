@@ -1,0 +1,135 @@
+{
+  "at": "2026-09-13 15:12:45 UTC",
+  "task_id": "W18.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "91208b6918ac8381c0d0d6c8e13bb942df88d40515e5996ca780d956cc38ef71",
+  "contract_digest": "b748849e2213a20e67b729720aa908aa237dcba36a58c8b9b949e2b04c452bbe",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W18.01-C1",
+      "verdict": "PASS",
+      "evidence": "Actual form delta, real validateSlotCatalog dry-run/PUT and decideContent assertions confirm default out0.5/in0.2, bounds0..1, neutral clears1/0, off deletion and invalid1.2/no PUT. Additive/non-exclusion copy matches actual arithmetic; out0 retains eligibility and later freshness0.2. Other rule defaults, sibling pin and weights are preserved; neutral and absent stage decisions agree."
+    },
+    {
+      "id": "W18.01-C2",
+      "verdict": "PASS",
+      "evidence": "Actual registry fetch uses named tenant/configScope and does not borrow Interests state. Local load/context guards clear stale drafts and refuse stale completion/save; numeric focus IDs handle quoted registry keys. Actual DOM checks cover current values, explicit0/clear0, invalid >1/no PUT, unknown read-only preservation, missing/empty/503 registry, sibling preservation, save revision5/readback, weight-driven decision change and History4→7/readback. Final repaint restores inputs after save without reload."
+    },
+    {
+      "id": "W18.01-C3",
+      "verdict": "PASS",
+      "evidence": "Exact admitted fixed8 independently passes once on frozen bytes: six retained controls and two new grouped cases. Full worker final static chain passes without warnings; both exact before/after deltas and all36 pins/28 protected are unchanged before and after runtime. Full W18 customer workflow and other residual obligations remain explicit."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W18.01/plan.md",
+      "sha256": "d51d39967213d70e7e9fdf9ffe3e42200a1dd08584cb68aee5f30f9cabaa804f"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W18.01/artifact.json",
+      "sha256": "6759a1331c6476e4f496f56d144753030c1ca83445e6b0d2a4745c4156eb2f53"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W18.01/worker.json",
+      "sha256": "cfdb10c0ee9b7ed1010e97c69bbde6bfb6b9d24d4a70a37c8a53a2607c7998f4"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W18.01|a slot rule switched on|history shows every document|the interests screen speaks|W03.03 carries named auth context|never leaves a screen|the dials arm the save bar' --maxWorkers=1 --minWorkers=1",
+    "session_id": 48514,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "75f5d5",
+        "wall_time_seconds": 1.001036323,
+        "session_id": 48514,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "1b6543",
+        "wall_time_seconds": 5.001332445,
+        "session_id": 48514,
+        "original_token_count": 60,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+      },
+      {
+        "chunk_id": "6cf3de",
+        "wall_time_seconds": 0.000001741,
+        "exit_code": 0,
+        "original_token_count": 69,
+        "output": " ✓ src/console/console.render.test.ts  (37 tests | 29 skipped) 21626ms\n\n Test Files  1 passed (1)\n      Tests  8 passed | 29 skipped (37)\n   Start at  11:10:54\n   Duration  42.71s (transform 308ms, setup 0ms, collect 18.47s, tests 21.63s, environment 0ms, prepare 1.80s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "finished_at": "2026-09-13 15:11:45 UTC",
+    "result": {
+      "passed": 8,
+      "unselected": 29,
+      "total": 37,
+      "files_passed": 1,
+      "duration_seconds": 42.71
+    }
+  },
+  "source_review": {
+    "basis": "Personally read applicable AGENTS/entry/full governance/current checkpoint, complete admitted plan/task, full canonical W18/F26/F29/N30 and raw F26/F29 with canonical corrections, linked tuning clauses and actual form/validator/scorer/auth/history source. Reviewed complete final production delta5a413b and fixture deltafcc7a7, frozen records d06f0b and complete worker metadata/commands dd2ecd/de9e60.",
+    "freeze_journal_sequence": 1479,
+    "source_stop_at": "2026-09-13T15:09:22.946Z",
+    "pins": 36,
+    "source_and_output_pins": 30,
+    "protected_pins": 28,
+    "owned_deltas": 2,
+    "pre": {
+      "at": "2026-09-13T15:10:51.583Z",
+      "pin_capture": "35d725",
+      "contract_capture": "88ef7b",
+      "exit_status": 0,
+      "all_pins_match": true,
+      "protected_unchanged": true,
+      "exact_forward_reverse_deltas": 2
+    },
+    "post": {
+      "at": "2026-09-13T15:11:45.742Z",
+      "pin_capture": "478239",
+      "contract_capture": "7a59ca",
+      "exit_status": 0,
+      "all_pins_match": true,
+      "protected_unchanged": true,
+      "exact_forward_reverse_deltas": 2
+    },
+    "reconstruction": "Both retained compressed baseline contents match before hashes; forward patches exactly reconstruct frozen files and reverse patches reconstruct retained before bytes. Artifact and current contract match before/after runtime. Accepted unchanged W20 backend/pin assurance reused without rerunning21 or expanding its claim; W08.04 unchanged."
+  },
+  "static_reuse": {
+    "source": "worker.json command_captures.static2",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/console/console.render.test.ts --max-warnings 0 && node --check public/console/views-config.js && git diff --check -- public/console/views-config.js src/console/console.render.test.ts",
+    "session_id": 81022,
+    "started_at": "2026-09-13 15:07:16 UTC",
+    "finished_at": "2026-09-13 15:08:05 UTC",
+    "capture_ids": [
+      "8e9466",
+      "f1d079",
+      "0dc1ec"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "reruns": 0,
+    "result": "Final full compiler, owned TS lint0, shipped JS syntax and two-file whitespace pass with no diagnostics. Frozen direct owned whitespace comparison also reports zero."
+  },
+  "retained_history": [
+    "Worker runtime1 session52311 failed6/2/29 unselected: new load reset did not repaint after save/readback. Captures and initial source hashes remain in worker.json. Added final C.render after guarded load; same runtime2 session28380 passed8/29, superseded by typing corrections.",
+    "Worker static1 session99127 failed compiler exit2 with four diagnostics at three fixture sites: optional SLOTS_KIND.stamp calls and inferred SLOTS_DOC type. Remaining chained static commands did not run. Explicit SlotCatalog and two non-null assertions corrected fixture typing only; final runtime3 session84280 and static2 session81022 passed on frozen hashes.",
+    "Original eight-check runtime failures, superseded passing candidate, compiler failure and Vite CJS warning remain visible. No new performance or native measurement was run."
+  ],
+  "limitations": [
+    "Bounded stage/numeric weight operator controls and local real-validator/DOM save/readback/History only, not full W18/F26/F29 customer assets, actual customer browser/no-reload walkthrough or acceptance. N30 remains assurance, not a newly closed defect.",
+    "HTTP document/revision persistence in the fixture is simulated; actual validator and decision modules execute. It does not prove backend CAS/W35 authority, deployed propagation, native runtime/SLO, customer or release acceptance.",
+    "Numeric readback is on Slot rules; the existing slots grid still lists names. Registry failures expose no editor; unknown stored weights remain visible/read-only and preserved. Server registry cross-validation and provisioning authority are separate.",
+    "Cross-page repeated slot-name selection, broader unsaved navigation loss and full W20 activation/pin UI/exclusions/fallback remain open. No scoring/model/default-arm/pin-policy change, new suite, external operation or source/governance edit by reviewer. Lead disposition remains separate."
+  ]
+}

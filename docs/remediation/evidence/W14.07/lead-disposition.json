@@ -1,0 +1,98 @@
+{
+  "task_id": "W14.07",
+  "at": "2026-09-18T15:53:26Z",
+  "verdict": "LOCAL_PASS",
+  "scope": "Register and deliver every applicable source clause: generic enrichment/review/publication (§1.3), product-sort persistence (§1.6), entitlement evidence (§1.9), generic AI Search (§1.10), external/SFCC acceptance (§1.11), typed attributes/audiences and scheduled warehouse destination/readback/deletion (§1.12). Track §2.3's optional, no-additional-cost widget/template handoff as availability is triggered, not a January widget build; retain tag-plan deliverables and approved mechanism substitutions. The internal register portion is updated here; implementation, customer documents, evidence and authorized amendments remain open.",
+  "artifact": {
+    "digest": "575da468a166af9e6aad08a2dca1fcf62ec83ee56942bdf81182cc8d00518552",
+    "contract_digest": "189d91fdc71863cb4d229e9bb8f744e513dd607432e0a0550d9ca65fa9c7570b"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W14.07/worker.json",
+    "sha256": "4dbaaf8219d7232a647121210de595a27ae4765f1a73cc4f3df8383ff799b089"
+  },
+  "source_freeze": {
+    "path": "docs/remediation/evidence/W14.07/source-freeze.json",
+    "sha256": "bbc8984505f203f8d82215947ed98defc51f91dd10bb6ed1896debe833d63da7"
+  },
+  "independent_review": {
+    "path": "docs/remediation/evidence/W14.07/review.json",
+    "sha256": "26669083e9306991926830a721d025ff88d9f40228101b3be4915d23c9872f82"
+  },
+  "verification": {
+    "whole_verdict": "INDEPENDENT_LOCAL_PASS",
+    "criteria": [
+      {
+        "id": "W14.07-C1",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C2",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C3",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C4",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C5",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C6",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C7",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C8",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C9",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C10",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C11",
+        "verdict": "LOCAL_PASS"
+      },
+      {
+        "id": "W14.07-C12",
+        "verdict": "OPEN"
+      }
+    ],
+    "primary_sha256": "2d41c4c9d55605e61b4b97e213cc63fca1aa8047db8fce53fe610d2479421bd5",
+    "primary_bytes": 39036,
+    "pins": 1206,
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts src/routes/sort.test.ts src/console/console.render.test.ts src/learn/hourly.test.ts src/learn/report.test.ts -t 'W14' --maxWorkers=1 --minWorkers=1",
+    "exit_code": 0,
+    "passed": 25,
+    "unselected": 136,
+    "source_identity": "Root verified all1206 current pins;63 originals/absences+56 bidirectional deltas+308 protected; all34 retained primary identities and six source-qualified inverses. Distinct whole-source/full-evidence review and K9 unchanged frozen source. Root decoded complete unique-line K9 with exact counts, package/compiler/rendered primaries and nested blobs; repeated lint warnings integrity/aggregate reviewed, not every warning interpreted."
+  },
+  "lead": "w01-lead",
+  "qualification": "Complete original W14 C1–C11 local capability and independent review, not full/live/customer/release acceptance. C12 OPEN. Exact final K3.9 PASS34/K6.4 PASS18/K7.1 PASS; explicitly qualified K1.6/K2.9/K4.1/K5.2 reuse. One actual local-v1 package; no secondbuild/fullCI claim.",
+  "limitations": [
+    "Historical cold Node Request.clone() 'unusable' remains causally unexplained. Superseding cold K3.9, native K5.2 and K9 pass; no claim that the unknown cause was fixed. Closed diagnostic wrapper in the sort fixture delegates unchanged clone behavior.",
+    "Native W12 results explicitly remain state:failed with latencyExceeded:true (decision217–255ms/event293–388ms), while all required delivery/learning stages pass. Cross-request late-promise warning retained; no SLO/P95/on-call acceptance inference.",
+    "K3 host fixture120s ceilings and split full1000-row host workloads concern test completion, not product latency acceptance. Exact final workloads/negative assertions remain; prior combined timeouts retained.",
+    "Optimizely local datafile/mock-fallback messages and intentional fault diagnostics are retained in full. Local tests do not establish live decision-provider connectivity or business results.",
+    "Snowflake fixtures execute actual receiver JavaScript against a local SQL/transaction model. They do not execute Snowflake DDL/SQL, prove hybrid-table availability/concurrency, install grants, or erase TimeTravel/Fail-safe/clones/backups.",
+    "Warehouse100-generation admission cap,4096 I/O slice allowance and original managed16MiB/receipt1MiB bounds are explicit local limits, not a whole-cron capacity or arbitrary-scale claim.",
+    "C6 receiver/current-row cleanup and run-owned kit erasure do not establish complete external/history deletion. The kit omits a destructive tenant-wide sweep and labels that limitation.",
+    "Lint retains582 existing warnings at unchanged582 cap; no warning-free claim. Package proof is local-v1/custody only, not full/trusted CI, remote attestation or release permission.",
+    "W15 refresh/render/SSR/browser/SSO and later measurement/journey requirements remain subsequent original work. W14 does not certify the future live SDK experience, business incrementality, N16 vector restoration or customer targets.",
+    "Only one actual Worker package build reused. This review ran only K9; no cloud/provider/customer operation, credential change, deployment, commit, merge or push."
+  ],
+  "next_action": "Continue original W15 locally under standing ordered mandate; batch live acceptance at end."
+}

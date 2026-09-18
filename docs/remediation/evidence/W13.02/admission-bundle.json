@@ -1,0 +1,47 @@
+{
+  "task_id": "W13.02",
+  "at": "2026-09-18T03:22:20.223Z",
+  "before": "db314c44beb150dbf381834bf80acf8157bc07e87503c8d135e4610903356fa7",
+  "after": "3aca5ed4c918f6807759d3b0f4c05ccb97dfe2e276437bd6897b5d1531b06762",
+  "prior_admission": {
+    "path": "docs/remediation/evidence/W13.02/admission-lint.json",
+    "sha256": "4659469f0bfdd41768f84e9f1851d9a876761955fa8dbb408e93b9cc35453cfc"
+  },
+  "original_admission": {
+    "path": "docs/remediation/evidence/W13.02/admission.json",
+    "sha256": "573bd5b8bc03dc4d81da05e0e1ed4928fbb91c1debfee8a48b7347805ec33ce4"
+  },
+  "scope": "Complete originalW13/C1–C8 unchanged; exactly one measured generated-output correction. No authored ranking source or SDK generated write admitted.",
+  "baseline": {
+    "path": "public/meridian/engine.bundle.js",
+    "exists": true,
+    "sha256": "9629201649f5feced00e022aa97d3409cfb2160db055e96283b39d8f8c6f4f78",
+    "bytes": 47459,
+    "nonwriting_failure": {
+      "sha256": "f249a4c667ec759f0d26e98b2dbed008068fb4f9116d3b91c5c975a4de309d05",
+      "bytes": 907
+    },
+    "full_diff": {
+      "sha256": "c43c0e904e08f4b41fb1767fd07f14da5e2094c19513a617aad65cb0fde81665",
+      "bytes": 12619
+    },
+    "root_checks": "Both complete primaries decoded/read/hash-length/exact354before-after checked; all5diff hunks applied strictly in memory to held current original and exact targetSHA/length verified. No root build or product edit."
+  },
+  "approved_target": {
+    "sha256": "e4edb78f7c6c1be2be14e76ab91398b3bb42b0a62648cf51e1ce97a9a69b33e0",
+    "bytes": 56473,
+    "source_of_truth": "Current protected src/demos/meridian/client-engine.ts import graph and exact shared original output-affecting build options.",
+    "scope": "Only existing contentCompose section changes; add current typeAffinity and slotConstraints. Core sanitizer, six other existing sections and exports byte-identical. Current authored pin/prefix/governance/reservation/ranking-scope/lazy-driver/diversity behavior is missing from old generated artifact."
+  },
+  "independent_preflight": {
+    "agent": "/root/w1202_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "mode": "Read-only complete diff/three authored modules/client-reexport chain/options; no build/test/write.",
+    "verdict": "Exact one-output regeneration supported. No unmatched generated-only user modification found requiring migration into source; not a historical assertion that nobody manually edited it. SDK exact matches need no writes."
+  },
+  "ownership": "Add ONLY engine.bundle.js to12outputs:13outputs+341protected=same354pin universe. Worker saves exact old dirty bytes before replacement. Prefer apply_patch from already retained5hunks and verify exact recorded target, avoiding another generation solely for writing. Current authored graph and both SDK outputs remain read-only.",
+  "checks": "Same exactK1–K8 from prior contract; K5 owned whitespace appends engine.bundle.js. K3 final shared nonwriting comparison/exact once-built package and existing native/rendered proof remain; no extra Worker build or broadCI.",
+  "rollback": "Preserve47459original bytes and exact reversible5hunks in worker evidence before editing. Restore only this admitted output to exact saved bytes after lead review; never git-restore old committed bundle or overwrite other user changes.",
+  "authority": "Existing full originalW13 local attested-source/assets mandate permits this source-confirmed generated drift correction after distinct review and valid boardGO. No deployment/customer/provider/data/credential/retention-policy authority; no release acceptance."
+}

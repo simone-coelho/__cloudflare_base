@@ -1,0 +1,43 @@
+{
+  "at": "2026-09-11T12:08:56Z",
+  "task_id": "W14.05",
+  "prior_artifact": "50cb4767e6728082fb395cf05ea1a39ba9b708e8f6e000eab807be8d06a6dcc5",
+  "prior_review_sha256": "37fccfc65818b8484d21dadf308b039735f62ac91ba1d8267543f954ac2e2e68",
+  "archive": [
+    {
+      "path": "docs/remediation/evidence/W14.05/rework-1/previous-worker.json",
+      "sha256": "803a068b4a060aebb023cbc7f761776057509595b3b299416fec3200242e5dc5",
+      "original_path": "docs/remediation/evidence/W14.05/worker.json"
+    },
+    {
+      "path": "docs/remediation/evidence/W14.05/rework-1/previous-artifact.json",
+      "sha256": "b06e6bb52379cd97423097b343cdf641fa2d1915853bdff8534a785e70cb448b",
+      "original_path": "docs/remediation/evidence/W14.05/artifact.json"
+    },
+    {
+      "path": "docs/remediation/evidence/W14.05/rework-1/previous-source-freeze.json",
+      "sha256": "9e8bb5182f106cb341229c619948dfca17b17039af17f8f54fd76f04e98abe42",
+      "original_path": "docs/remediation/evidence/W14.05/source-freeze.json"
+    },
+    {
+      "path": "docs/remediation/evidence/W14.05/rework-1/previous-source-deltas.json",
+      "sha256": "40f6d44cf1028c752810275dd0541f4e499fc6bb693b854ff5349574cc4fe54f",
+      "original_path": "docs/remediation/evidence/W14.05/source-deltas.json"
+    },
+    {
+      "path": "docs/remediation/evidence/W14.05/rework-1/previous-review.json",
+      "sha256": "37fccfc65818b8484d21dadf308b039735f62ac91ba1d8267543f954ac2e2e68",
+      "original_path": "docs/remediation/evidence/W14.05/review.json"
+    }
+  ],
+  "scope": "Only link.ts and existing SDK group3 source selection rework; worker record renewed. Strict preflight must use ownedSource or same own(cookie) ?? own(visitor pointer) selection as host, with existing strict error/forward/repoint guards. Cover missing and non-owned/person cookie conflicts before identity writes within existing group3.",
+  "baseline": "Source-confirmed exact frozen candidate; old52+4PASS and C2 source failure retained, not rewritten. All50pins exact before rework.",
+  "acceptance": "Same C1-C3 contract and original9file ownership; no new test group or suite. Rerun fixed literal compound/compiler/eight-TS lint/whitespace on final bytes, worker STOP, new freeze and separate review.",
+  "approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-11T12:08:56Z",
+    "reason": "Required deterministic conflict-preflight contract correction under existing W14 local mandate."
+  },
+  "rollback": "Exact two-file inverse rework delta from archived candidate; no rollback performed; full original admission deltas retained.",
+  "limits": "No other source/provider/cloud/customer/credentials/build/install/commit/deploy/cleanup or policy authority."
+}

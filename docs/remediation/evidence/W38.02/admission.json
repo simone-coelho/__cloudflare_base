@@ -1,0 +1,49 @@
+{
+  "at": "2026-09-13T04:17:31.800Z",
+  "source_go_at": "2026-09-13T04:17:31.800Z",
+  "actor_id": "w01-lead",
+  "task_id": "W38.02",
+  "worker": "w1405-worker",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "028d1e7b2371c445cbab8149ebd755611f5a6699ff8f9fe1118a9074363a71e7",
+  "plan": {
+    "path": "docs/remediation/design/W38.02/plan.md",
+    "sha256": "04a439782cb9360b92b18ba01730a7e1cc61eaf6c9e3e73d7a4615f0f96f5105"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "af30d8",
+        "wall_time_seconds": 1.000518905,
+        "session_id": 4688,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "5d1008",
+        "wall_time_seconds": 1.12491056,
+        "exit_code": 0,
+        "original_token_count": 575,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=30, unscoped=11\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=96, closed=3; evidence records=288\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W38.01 — Inspect and admit the remaining W38 legacy configuration-cache bounds: current versionedStore isolateCache is unbounded and keyed only by kind/scope. Read its real callers and validators, then bound retained entries/bytes and binding identity while preserving fallback, freshness, write invalidation and value semantics. Reuse existing fixtures and the accepted content-cache design where appropriate; do not create a new caching framework or reopen unrelated remedies. Catalog piece/input bounds, revision retention, whole-path workload qualification, W35 transactional authority, human/customer decisions and deployment remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19884\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=30, unscoped=11\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=96, closed=3; evidence records=288\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W38.01 — Inspect and admit the remaining W38 legacy configuration-cache bounds: current versionedStore isolateCache is unbounded and keyed only by kind/scope. Read its real callers and validators, then bound retained entries/bytes and binding identity while preserving fallback, freshness, write invalidation and value semantics. Reuse existing fixtures and the accepted content-cache design where appropriate; do not create a new caching framework or reopen unrelated remedies. Catalog piece/input bounds, revision retention, whole-path workload qualification, W35 transactional authority, human/customer decisions and deployment remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19884\n"
+      }
+    ],
+    "session_id": 4688,
+    "drained": true,
+    "exit_code": 0
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1405,
+    "pins": 26,
+    "protected": 24,
+    "authority": true,
+    "actual_package_matches": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true,
+    "remaining_closed_no_planned_overlap": true
+  },
+  "limitations": "Legacy configuration-cache residency and isolation only, not full W38/F32/F08/N07, legacy KV transactional authority, customer workload or release acceptance. Its independent 32-entry/8 MiB charged-serialization budget is not total JS heap or a platform capacity claim; the separate content cache retains its own budget. Mutable values use detached private snapshots and caller-owned clones; this adds bounded cloning work, not per-hit parsing/validation or I/O. Expiry is opportunistic. Provided nowMs semantics remain, with separate elapsed-read safeguards. Original in-flight calls may return original values but cannot refill after local invalidation. Concurrent miss allocation, oversized-document parsing/validation, immutable-history retention, compatibility cutover and whole read/validate/compose/native latency qualification remain separate. No ranking, candidate, model, schema, customer policy, cloud/deploy/install/emitted-build/provision/seed/credential/customer-data/commit/push/destructive/external operations. Prior W31.02/W38.01 byte-specific proof is retained with prospective revalidation qualification; their implemented remedies are preserved."
+}

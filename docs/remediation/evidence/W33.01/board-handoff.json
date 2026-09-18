@@ -1,0 +1,95 @@
+{
+  "at": "2026-09-12T19:35:14.811Z",
+  "task_id": "W33.01",
+  "artifact_digest": "bc19233788aa10e5070f564c8ea9996e2ad3225de5139667b914a630aaadd93a",
+  "journal_seq": 1266,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "ab27cd",
+        "wall_time_seconds": 1.00114497,
+        "session_id": 68484,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "3e0a36",
+        "wall_time_seconds": 5.001098558,
+        "session_id": 68484,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f87111",
+        "wall_time_seconds": 5.000897997,
+        "session_id": 68484,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "a24b71",
+        "wall_time_seconds": 0.000002104,
+        "exit_code": 0,
+        "original_token_count": 584,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=27, unscoped=14\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=89, closed=2; evidence records=261\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W33.01 — Next admit W32's bounded report-computation fix against full W32/F34 and learning sweep L6: remove repeated linear decision-ID lookup from credited-outcome loops while preserving first-match duplicate-ID and attribution semantics, then address other declared report bounds only within an approved coherent slice. Measure a small declared local workload and run focused parity checks, not a broad benchmark programme. Preserve W33.01 nonpersistent custom overlays and W30.02 coverage. Historical canonical provenance/repair, full W30 reconstruction, report/native capacity, model validation and customer/release acceptance remain separate open obligations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19292\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=27, unscoped=14\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=89, closed=2; evidence records=261\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W33.01 — Next admit W32's bounded report-computation fix against full W32/F34 and learning sweep L6: remove repeated linear decision-ID lookup from credited-outcome loops while preserving first-match duplicate-ID and attribution semantics, then address other declared report bounds only within an approved coherent slice. Measure a small declared local workload and run focused parity checks, not a broad benchmark programme. Preserve W33.01 nonpersistent custom overlays and W30.02 coverage. Historical canonical provenance/repair, full W30 reconstruction, report/native capacity, model validation and customer/release acceptance remain separate open obligations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19292\n"
+      }
+    ],
+    "session_id": 68484,
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      19292,
+      19292
+    ]
+  },
+  "root_frozen_check": {
+    "captures": [
+      {
+        "chunk_id": "1a17bd",
+        "wall_time_seconds": 0.335324174,
+        "exit_code": 0,
+        "original_token_count": 248,
+        "output": "{\"at\":\"2026-09-12T19:33:13.390Z\",\"task\":\"W33.01\",\"state\":\"closed\",\"journal\":1266,\"artifact\":\"bc19233788aa10e5070f564c8ea9996e2ad3225de5139667b914a630aaadd93a\",\"contract\":\"2bec65459bb26297566c5ec273fb9fca3910fc5771c9183c5e025bc9f37aeb2e\",\"files\":38,\"review\":\"6fcbf19defdfdfc3935d8423f0f2b39ae7311b69d547b80e2c7f9b860e519075\",\"next\":\"Next admit W32's bounded report-computation fix against full W32/F34 and learning sweep L6: remove repeated linear decision-ID lookup from credited-outcome loops while preserving first-match duplicate-ID and attribution semantics, then address other declared report bounds only within an approved coherent slice. Measure a small declared local workload and run focused parity checks, not a broad benchmark programme. Preserve W33.01 nonpersistent custom overlays and W30.02 coverage. Historical canonical provenance/repair, full W30 reconstruction, report/native capacity, model validation and customer/release acceptance remain separate open obligations.\"}\n"
+      }
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "source_inspection": {
+      "capture": "74a40b",
+      "pins": [
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "40c6a18bc0c65aa562ca9ee905bef07854adb6b97d4d4f97574add652b9bc7ca"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "0572e307386608bbfdbcfcd1c4595505dea181302fac7ebe5e970a8889eb2763"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "94f180647f94692d505b6520c4ae4ab71be6708130355845bae9596f476cf640"
+        }
+      ],
+      "worker_read": "2be241",
+      "review_read": "659562"
+    }
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_custom_overlay_canonical_isolation",
+    "package_W33": "open",
+    "finding_N09": "open",
+    "package_W30": "open",
+    "finding_F17": "open",
+    "finding_F18": "open",
+    "finding_F25": "open",
+    "finding_N08": "open",
+    "finding_N23": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Next admit W32's bounded report-computation fix against full W32/F34 and learning sweep L6: remove repeated linear decision-ID lookup from credited-outcome loops while preserving first-match duplicate-ID and attribution semantics, then address other declared report bounds only within an approved coherent slice. Measure a small declared local workload and run focused parity checks, not a broad benchmark programme. Preserve W33.01 nonpersistent custom overlays and W30.02 coverage. Historical canonical provenance/repair, full W30 reconstruction, report/native capacity, model validation and customer/release acceptance remain separate open obligations."
+  },
+  "limitations": "Forward isolation of explicit custom policy arrays, including empty and built-in-equivalent arrays, from canonical day report persistence in the upgraded writer. Not full W33/N09/F17/F25 closure: historical overwrite detection/provenance and safe authorized repair remain open; no existing report is scanned, deleted or reconstructed. Old binaries and canonical-vs-canonical races/write acknowledgements remain unproved. Existing malformed non-array POST coercion/request validation remains unchanged; this is not a write-authorization boundary. Canonical raw fallback retains its existing history/cap limits. W30.01 attribution and W30.02 coverage remain implemented; broad shared artifact proof is explicitly qualified with accepted history preserved, not silently renewed. Legacy UI custom results/CSV are response-only; reload GET reads canonical, while ordinary console/scheduler null requests retain publication. No serving/attribution policy, report schema, identity/key format, additional I/O, new infrastructure, external/cloud/credential/customer-data/deployment/destructive/commit/push or customer-policy authority."
+}

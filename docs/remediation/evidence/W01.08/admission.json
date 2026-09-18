@@ -1,0 +1,382 @@
+{
+  "before": {
+    "id": "W01",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Enforce route/binding policy before dispatch; remove the unused generic API exposure and prohibited demo/agent/activation surfaces from customer reach. Authorize retained shopper/operator routes, scoped reads/history/validation, report GETs and webhooks. Negative tests enumerate the actual mounted methods/upgrades and inspect destination state.",
+      "finding_refs": "F01/F03/F25/F33; N01/N03/N04",
+      "sizing_owner": "S containment → M/L boundary/separation; D + S/P"
+    },
+    "title": "Customer route and binding boundary",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F01",
+      "F03",
+      "F25",
+      "F33",
+      "N01",
+      "N03",
+      "N04"
+    ],
+    "proposed_owner": "D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W01-N01-RAW",
+          "description": "Partial W01: remove unused generic raw-API exposure before dispatch and prove destination isolation plus retained-route controls. Wider demo/Agent/activation/retained-route authorization and deployed scope remain uncovered."
+        },
+        {
+          "id": "W01-CONNECTOR-AGENT",
+          "description": "Partial enforced direct connector/generic agent/datafile-webhook ingress withdrawal; global-service consumers, other perimeter and customer separation remain open."
+        },
+        {
+          "id": "W01-LEGACY-DISPATCH",
+          "description": "Partial enforced whole tracking/webhook ingress withdrawal; tenant-aware replacements, pixel privacy and complete customer perimeter remain open."
+        },
+        {
+          "id": "W01-DEMO-ACTIVATION",
+          "description": "Partial enforced demo/AI/activation entry withdrawal; retained route policy, customer capabilities and deployable/resource separation remain open."
+        },
+        {
+          "id": "W01-REPORT-AUTH",
+          "description": "Enforced operator authority for retained diagnostic report/catalog-summary reads and explicit-grant registry discovery; full retained perimeter and reporting semantics remain open."
+        },
+        {
+          "id": "W01-GEO-HEALTH",
+          "description": "Withdraw shared Coach cohort and global health probes in enforced mode while preserving caller edge context and basic liveness/signing-readiness; full retained perimeter/resource isolation remains open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W01-N01-RAW",
+          "task_id": "W01.02",
+          "task_criterion_id": "W01.02-C1"
+        },
+        {
+          "criterion_id": "W01-N01-RAW",
+          "task_id": "W01.02",
+          "task_criterion_id": "W01.02-C2"
+        },
+        {
+          "criterion_id": "W01-N01-RAW",
+          "task_id": "W01.02",
+          "task_criterion_id": "W01.02-C3"
+        },
+        {
+          "criterion_id": "W01-CONNECTOR-AGENT",
+          "task_id": "W01.03",
+          "task_criterion_id": "W01.03-C1"
+        },
+        {
+          "criterion_id": "W01-CONNECTOR-AGENT",
+          "task_id": "W01.03",
+          "task_criterion_id": "W01.03-C2"
+        },
+        {
+          "criterion_id": "W01-CONNECTOR-AGENT",
+          "task_id": "W01.03",
+          "task_criterion_id": "W01.03-C3"
+        },
+        {
+          "criterion_id": "W01-LEGACY-DISPATCH",
+          "task_id": "W01.04",
+          "task_criterion_id": "W01.04-C1"
+        },
+        {
+          "criterion_id": "W01-LEGACY-DISPATCH",
+          "task_id": "W01.04",
+          "task_criterion_id": "W01.04-C2"
+        },
+        {
+          "criterion_id": "W01-LEGACY-DISPATCH",
+          "task_id": "W01.04",
+          "task_criterion_id": "W01.04-C3"
+        },
+        {
+          "criterion_id": "W01-DEMO-ACTIVATION",
+          "task_id": "W01.05",
+          "task_criterion_id": "W01.05-C1"
+        },
+        {
+          "criterion_id": "W01-DEMO-ACTIVATION",
+          "task_id": "W01.05",
+          "task_criterion_id": "W01.05-C2"
+        },
+        {
+          "criterion_id": "W01-DEMO-ACTIVATION",
+          "task_id": "W01.05",
+          "task_criterion_id": "W01.05-C3"
+        },
+        {
+          "criterion_id": "W01-REPORT-AUTH",
+          "task_id": "W01.06",
+          "task_criterion_id": "W01.06-C1"
+        },
+        {
+          "criterion_id": "W01-REPORT-AUTH",
+          "task_id": "W01.06",
+          "task_criterion_id": "W01.06-C2"
+        },
+        {
+          "criterion_id": "W01-REPORT-AUTH",
+          "task_id": "W01.06",
+          "task_criterion_id": "W01.06-C3"
+        },
+        {
+          "criterion_id": "W01-GEO-HEALTH",
+          "task_id": "W01.07",
+          "task_criterion_id": "W01.07-C1"
+        },
+        {
+          "criterion_id": "W01-GEO-HEALTH",
+          "task_id": "W01.07",
+          "task_criterion_id": "W01.07-C2"
+        },
+        {
+          "criterion_id": "W01-GEO-HEALTH",
+          "task_id": "W01.07",
+          "task_criterion_id": "W01.07-C3"
+        }
+      ],
+      "task_ids": [
+        "W01.01",
+        "W01.02",
+        "W01.03",
+        "W01.04",
+        "W01.05",
+        "W01.06",
+        "W01.07"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W01",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Enforce route/binding policy before dispatch; remove the unused generic API exposure and prohibited demo/agent/activation surfaces from customer reach. Authorize retained shopper/operator routes, scoped reads/history/validation, report GETs and webhooks. Negative tests enumerate the actual mounted methods/upgrades and inspect destination state.",
+      "finding_refs": "F01/F03/F25/F33; N01/N03/N04",
+      "sizing_owner": "S containment → M/L boundary/separation; D + S/P"
+    },
+    "title": "Customer route and binding boundary",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F01",
+      "F03",
+      "F25",
+      "F33",
+      "N01",
+      "N03",
+      "N04"
+    ],
+    "proposed_owner": "D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W01-N01-RAW",
+          "description": "Partial W01: remove unused generic raw-API exposure before dispatch and prove destination isolation plus retained-route controls. Wider demo/Agent/activation/retained-route authorization and deployed scope remain uncovered."
+        },
+        {
+          "id": "W01-CONNECTOR-AGENT",
+          "description": "Partial enforced direct connector/generic agent/datafile-webhook ingress withdrawal; global-service consumers, other perimeter and customer separation remain open."
+        },
+        {
+          "id": "W01-LEGACY-DISPATCH",
+          "description": "Partial enforced whole tracking/webhook ingress withdrawal; tenant-aware replacements, pixel privacy and complete customer perimeter remain open."
+        },
+        {
+          "id": "W01-DEMO-ACTIVATION",
+          "description": "Partial enforced demo/AI/activation entry withdrawal; retained route policy, customer capabilities and deployable/resource separation remain open."
+        },
+        {
+          "id": "W01-REPORT-AUTH",
+          "description": "Enforced operator authority for retained diagnostic report/catalog-summary reads and explicit-grant registry discovery; full retained perimeter and reporting semantics remain open."
+        },
+        {
+          "id": "W01-GEO-HEALTH",
+          "description": "Withdraw shared Coach cohort and global health probes in enforced mode while preserving caller edge context and basic liveness/signing-readiness; full retained perimeter/resource isolation remains open."
+        },
+        {
+          "id": "W01-REMAINING-BOUNDARY",
+          "description": "Remaining complete W01 route/static/binding boundary and actual selected-resource assurance; common fixes do not complete this requirement."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W01-N01-RAW",
+          "task_id": "W01.02",
+          "task_criterion_id": "W01.02-C1"
+        },
+        {
+          "criterion_id": "W01-N01-RAW",
+          "task_id": "W01.02",
+          "task_criterion_id": "W01.02-C2"
+        },
+        {
+          "criterion_id": "W01-N01-RAW",
+          "task_id": "W01.02",
+          "task_criterion_id": "W01.02-C3"
+        },
+        {
+          "criterion_id": "W01-CONNECTOR-AGENT",
+          "task_id": "W01.03",
+          "task_criterion_id": "W01.03-C1"
+        },
+        {
+          "criterion_id": "W01-CONNECTOR-AGENT",
+          "task_id": "W01.03",
+          "task_criterion_id": "W01.03-C2"
+        },
+        {
+          "criterion_id": "W01-CONNECTOR-AGENT",
+          "task_id": "W01.03",
+          "task_criterion_id": "W01.03-C3"
+        },
+        {
+          "criterion_id": "W01-LEGACY-DISPATCH",
+          "task_id": "W01.04",
+          "task_criterion_id": "W01.04-C1"
+        },
+        {
+          "criterion_id": "W01-LEGACY-DISPATCH",
+          "task_id": "W01.04",
+          "task_criterion_id": "W01.04-C2"
+        },
+        {
+          "criterion_id": "W01-LEGACY-DISPATCH",
+          "task_id": "W01.04",
+          "task_criterion_id": "W01.04-C3"
+        },
+        {
+          "criterion_id": "W01-DEMO-ACTIVATION",
+          "task_id": "W01.05",
+          "task_criterion_id": "W01.05-C1"
+        },
+        {
+          "criterion_id": "W01-DEMO-ACTIVATION",
+          "task_id": "W01.05",
+          "task_criterion_id": "W01.05-C2"
+        },
+        {
+          "criterion_id": "W01-DEMO-ACTIVATION",
+          "task_id": "W01.05",
+          "task_criterion_id": "W01.05-C3"
+        },
+        {
+          "criterion_id": "W01-REPORT-AUTH",
+          "task_id": "W01.06",
+          "task_criterion_id": "W01.06-C1"
+        },
+        {
+          "criterion_id": "W01-REPORT-AUTH",
+          "task_id": "W01.06",
+          "task_criterion_id": "W01.06-C2"
+        },
+        {
+          "criterion_id": "W01-REPORT-AUTH",
+          "task_id": "W01.06",
+          "task_criterion_id": "W01.06-C3"
+        },
+        {
+          "criterion_id": "W01-GEO-HEALTH",
+          "task_id": "W01.07",
+          "task_criterion_id": "W01.07-C1"
+        },
+        {
+          "criterion_id": "W01-GEO-HEALTH",
+          "task_id": "W01.07",
+          "task_criterion_id": "W01.07-C2"
+        },
+        {
+          "criterion_id": "W01-GEO-HEALTH",
+          "task_id": "W01.07",
+          "task_criterion_id": "W01.07-C3"
+        },
+        {
+          "criterion_id": "W01-REMAINING-BOUNDARY",
+          "task_id": "W01.08",
+          "task_criterion_id": "W01.08-C1"
+        },
+        {
+          "criterion_id": "W01-REMAINING-BOUNDARY",
+          "task_id": "W01.08",
+          "task_criterion_id": "W01.08-C2"
+        },
+        {
+          "criterion_id": "W01-REMAINING-BOUNDARY",
+          "task_id": "W01.08",
+          "task_criterion_id": "W01.08-C3"
+        },
+        {
+          "criterion_id": "W01-REMAINING-BOUNDARY",
+          "task_id": "W01.08",
+          "task_criterion_id": "W01.08-C4"
+        }
+      ],
+      "task_ids": [
+        "W01.01",
+        "W01.02",
+        "W01.03",
+        "W01.04",
+        "W01.05",
+        "W01.06",
+        "W01.07",
+        "W01.08"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "at": "2026-09-16T20:44:55.721Z",
+  "task": "W01.08",
+  "contract_digest": "d20c9215df6e8ff441ca8eb37bb2fb487e2c5109a8e249e0472399ab7e46e16c",
+  "mandate": "Current user instructed completion of original W01–W41 by delegated Astra agents and then said Can we get started? Existing local G0 mandate covers W01. No external action or owner decision is inferred.",
+  "phase": "Approved common implementation only; remaining whole-W01 criteria stay required.",
+  "baseline": {
+    "record": {
+      "path": "docs/remediation/evidence/W01.08/preflight-review.json",
+      "sha256": "4813d9464c988dee634376c677915fa445d02e554bfa94f5f6be30b2f51d7dd7"
+    },
+    "summary": "Independent nine-probe actual workerd reproduction reaches shared admin/health objects from two tenant site keys and dispatches an enforced scene job; source hashes verified by lead."
+  },
+  "implementation": [
+    "Existing early decoded-path fence denies only bare shared /realtime/connections and /realtime/health, normalized aliases included. Preserve owned connections/:userId and near prefixes.",
+    "Enforced scene messages retry individually before generateSceneToR2 or any destination/credential work. Preserve mixed ledger per-message dispositions and explicit open/demo scene behavior.",
+    "Extend only the existing boundary fixture. Name new grouped cases W01.08 common; run K1/K2 once, retain failures and superseding checks, freeze before independent review."
+  ],
+  "checks": {
+    "K1": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W01[.]08 common|W01[.]07|W04[.]02|W07[.]01|W09[.]03' --maxWorkers=1 --minWorkers=1",
+    "K2": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.ts src/index.api-boundary.test.ts && git diff --check -- src/index.ts src/index.api-boundary.test.ts"
+  },
+  "decision_state": "D01 question pending. Shared customer-profile versus separate customer-entry proposal is prepared, but neither is selected. Full selected-boundary and deployed attestation checks remain unrun.",
+  "rollback": "Worker retains exact owned deltas and before/after identities; inverse only those changes, preserving the dirty worktree.",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T20:44:55.721Z",
+    "scope": "Only src/index.ts and existing src/index.api-boundary.test.ts plus own evidence, after tracker consistency check."
+  },
+  "recording_issue": "Initial registration patch omitted a comma in its context and was rejected atomically; tracker remained at SHA256 054832a412b6e511f41cbec1528ded425946e7c1a0aab82084cf4bab480eca32 and no implementation started."
+}

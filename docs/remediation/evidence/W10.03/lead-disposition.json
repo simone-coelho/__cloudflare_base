@@ -1,0 +1,54 @@
+{
+  "task_id": "W10.03",
+  "at": "2026-09-17T22:59:39.678Z",
+  "actor_id": "w01-lead",
+  "verdict": "LOCAL_W10_IMPLEMENTED_AND_INDEPENDENTLY_VERIFIED; full acceptance withheld",
+  "artifact_digest": "b32b2ee285f059b0f48636b45bc541a2d76fc63ab8df368b0b7bd7be6e55aa02",
+  "contract_digest": "c64a29509a8dd68fe84d64ef109e84c5ae2c779be4d33db15d5f656b83a89c1d",
+  "review": {
+    "path": "docs/remediation/evidence/W10.03/review.json",
+    "sha256": "dd1263e7e222bb5eb5821b92fc304192085f8afa77269017758182ff7eb32016"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W10.03/worker.json",
+    "sha256": "798d92e948976fdcfc9f0699fe0bf7fb391b9bcfdcd72ea536b624fadf432686"
+  },
+  "source_freeze": {
+    "path": "docs/remediation/evidence/W10.03/source-freeze.json",
+    "sha256": "69e65124518bc5f2dffccbec6aa9481fa3b9af683855b0f4088654eee7b59748"
+  },
+  "results": {
+    "K1": "26passing learning/retention/recovery controls qualified fromK1.3; later production delta is exact reverse-hash-confirmed equivalent control validation spelling, native fixture unselected.",
+    "K2": "5passing actual serving/operator controls qualified fromK2.2 with same exact equivalent-validation qualification; actual owner-held transport53ms, not live latency.",
+    "K3": "7passing unchanged cell/channel controls fromK3.1; tested dependency paths unchanged.",
+    "K4": "NativeK4.8 PASS1 on final118pins: SQLite limit/noncommit,1200managed markers/1201reconciled events,256items/280570B,persisted replay/ring200+index241; actual owner7ms/held52ms,outbound0/disposed.",
+    "K5": "K5.5 exact118pins Worker compiler/scopedlint0errors7inheritedwarnings/whitespacePASS.",
+    "K6": "Distinct whole-originalW10/F08/C1–C7 source/artifact/evidence review LOCAL_PASS; C8OPEN.",
+    "K7": "Exact independent frozenK7 PASS6/171unselected; complete primary3b17a9ccbdd88983f106ea4abf204ef35ca368bf96064e345bd554f66609018b/50576B root decoded/read/integrity/command/exit and118before=after=current pins verified. Native repeated bounded restart/mass and owner controls; all sessions drained.",
+    "K8": "NOT_RUN; separately authorized final live/customer/history batch."
+  },
+  "lead_checks": "Standing agreement/full originalW10 checked;15dirty baselines/reversible deltas,118current/103protected pins,20worker primary integrity, all final passing/native outputs and7inherited warning lines verified; exact equivalent spelling reverse hash supports limited reuse. Independent exactK7 source/output qualification recorded in linked review. Root no product edits/tests.",
+  "limits": "Native DO-to-Worker full body consumption passes; prior Node DO-proxy stream failures remain unexplained and retained, not a transport fix/live HTTP acceptance. Withdrawn missing-await misread explicitly corrected. FullC8/K8/live/customer/SLO/history/actual repair/resource acceptance remainsOPEN; no release/finding closure.",
+  "next_action": "OriginalW11 approved existing-R2/all-kind/coherent-set local implementation; live batch separately authorized.",
+  "prospective_overlap": {
+    "next_task": "W11.02",
+    "paths": [
+      "src/durable-objects/LearnStats.ts",
+      "src/learn/priors.ts",
+      "src/content/service.ts",
+      "src/routes/decisions.ts",
+      "src/learn/learn.test.ts",
+      "src/content/consent.test.ts",
+      "src/routes/content.test.ts",
+      "src/index.api-boundary.test.ts",
+      "docs/kit/02-api-reference.md",
+      "src/config/publication.ts",
+      "src/config/versionedStore.ts",
+      "src/content/kinds.ts",
+      "src/learn/cycle.ts",
+      "src/reflex/configStore.ts",
+      "src/routes/content.ts"
+    ],
+    "qualification": "Only these admitted shared pins prospectively revalidate; immutable W10 localPASS and untouched assurance retained."
+  }
+}

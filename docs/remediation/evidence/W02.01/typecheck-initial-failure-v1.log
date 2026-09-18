@@ -1,0 +1,7 @@
+Command: node node_modules/typescript/bin/tsc --noEmit --composite false --incremental false
+Exit: 2
+src/middleware/auth.refresh-boundary.test.ts(209,23): error TS2352: Conversion of type '{ readonly roles: readonly ["admin"]; } | { readonly permissions: readonly ["write", "read"]; }' to type '{ required?: boolean | undefined; roles?: string[] | undefined; permissions?: string[] | undefined; } | undefined' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ readonly permissions: readonly ["write", "read"]; }' is not comparable to type '{ required?: boolean | undefined; roles?: string[] | undefined; permissions?: string[] | undefined; }'.
+    Types of property 'permissions' are incompatible.
+      The type 'readonly ["write", "read"]' is 'readonly' and cannot be assigned to the mutable type 'string[]'.
+

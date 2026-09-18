@@ -1,0 +1,63 @@
+{
+  "at": "2026-09-12T15:05:36.318Z",
+  "source_go_at": "2026-09-12T15:05:36.318Z",
+  "actor_id": "w01-lead",
+  "task_id": "W27.02",
+  "worker": "w1405-worker",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "cadfde6c36efdc4546588e6576330d601c755e95ced577de0b7dcb9e924f4ce0",
+  "plan": {
+    "path": "docs/remediation/design/W27.02/plan.md",
+    "sha256": "e1a2fa8eb9d8bad851e294dc3372b16c66c272079e5d866a172855d58e8e6547"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "f8c426",
+        "wall_time_seconds": 1.002181646,
+        "session_id": 38066,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ec8d05",
+        "wall_time_seconds": 5.001763723,
+        "session_id": 38066,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "8675a9",
+        "wall_time_seconds": 5.001187202,
+        "session_id": 38066,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ccf45e",
+        "wall_time_seconds": 0.000009278,
+        "exit_code": 0,
+        "original_token_count": 536,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=24, unscoped=17\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=83, closed=2; evidence records=243\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W27.01 — Next inspect and admit W27 page-wide replay dependencies, choice metadata and dependency-aware pins against F22, building on W27.01 archive-before-live containment. Read actual service/decide/compose/record/enqueue/replay paths before selecting the coherent next slice; cover coupled slots and exploration at gamma zero without expanding decision-path I/O or silently guessing missing dependencies. No old-archive repair, mixed-version rollout, retention or customer/release acceptance is inferred, and no external/deployment/customer-data or policy authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 17406\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=24, unscoped=17\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=83, closed=2; evidence records=243\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W27.01 — Next inspect and admit W27 page-wide replay dependencies, choice metadata and dependency-aware pins against F22, building on W27.01 archive-before-live containment. Read actual service/decide/compose/record/enqueue/replay paths before selecting the coherent next slice; cover coupled slots and exploration at gamma zero without expanding decision-path I/O or silently guessing missing dependencies. No old-archive repair, mixed-version rollout, retention or customer/release acceptance is inferred, and no external/deployment/customer-data or policy authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 17406\n"
+      }
+    ],
+    "session_id": 38066,
+    "drained": true,
+    "exit_code": 0
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1190,
+    "pins": 117,
+    "protected": 110,
+    "authority": true,
+    "actual_package_matches": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true,
+    "remaining_closed_no_planned_overlap": true
+  },
+  "limitations": "Forward page-dependency replay correction, not full W27/F22 closure or cryptographic record integrity. New manifests snapshot numeric archive identities and effective choice settings; no new archive read/write on the serving path. Legacy personalized multi-slot records without a manifest are explicitly unreplayable; safe default/catalog-pin and qualified single-slot compatibility do not recover arbitrary historic custom pure-call settings. Old writers/readers, rollout fencing, retention, missing/corrupt historic archives and complete native replay resource/SLO assurance remain open. W27.01 publisher/conditional archive safety is retained unchanged, not newly deployed. Snapshot identity/version/prior/basic consumed-shape validation is not a complete archive schema or Byzantine-store proof. Exact deterministic replay of current Thompson behavior does not remediate W28/F23 statistical/propensity issues or prove causal lift. Source/Node tests with synthetic bindings and byte measurements are not customer/native/deployed acceptance. No schema migration/backfill, learning/consent/attribution policy change, sibling-record guess, automatic data reset or repair. No external/cloud/resource/credential/customer-data/deployment/commit/push/destructive cleanup or customer-policy authority."
+}

@@ -1,0 +1,208 @@
+{
+  "task_id": "W19.03",
+  "actor_id": "w1404-reviewer",
+  "role": "implementer",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T18:04:06.860Z",
+  "contract_digest": "38af40b3ed91502fbc838e44a163cfa6e0cfd1f8b30b850b4fca11a401d7a7de",
+  "references": [
+    {
+      "path": "docs/remediation/design/W19.03/plan.md",
+      "sha256": "e3143d5063aacf8f0bcf9b4c81a3cf9b77cbfefaeaa1690970b434165c05880e"
+    },
+    {
+      "path": "docs/remediation/design/W19.03/baseline.json",
+      "sha256": "eb09127f3e6876189d171b6201f4fd45a1fbd4c6e8632981b30a7e2c823da787"
+    },
+    {
+      "path": "docs/remediation/evidence/W19.03/admission.json",
+      "sha256": "42f388012aac43076fbebfdb2e66c239df3cc00c9b668fef1be637a6bc58d9ff"
+    }
+  ],
+  "baseline": {
+    "kind": "source_confirmed_design_case",
+    "entry": "Root entry 16348/1ff5ec/ab580f/133a78 check/status VALID1517, exit0/drained; source GO ccd113, journal1522,28 pins. Two-file lint7036/f00735/33b16d zero errors/warnings.",
+    "qualification": "Read complete admitted plan/task and baseline metadata/pins; reused root board and accepted W19.02/W08.04 dependency assurance. No additional baseline runtime or broad suite. Admission record read when available; early read reported its not-yet-created directory without changing source."
+  },
+  "summary": "Existing catalog administration responses now carry bounded advisory exact-dimension/nonblank-tag diagnostics against a strict uncached tenant registry read. Exact validated/committed catalog results are reused; registry read/scan failures return unavailable without changing successful publication or immutable receipts.",
+  "criteria": [
+    {
+      "id": "W19.03-C1",
+      "verdict": "local_runtime_pass",
+      "evidence": "First grouped route case verifies case-sensitive dimension membership, nonblank explicit values independent of vocabulary/raw-source/multi, absent-own safe film fallback, explicit empty/blank suppression, derived-key exclusion, unchanged tags,50 samples with90 total/40 omitted and64-unit truncation, no ID/value leakage. Current GET and validate carry candidate/current revision; historical/noncatalog responses are unchanged."
+    },
+    {
+      "id": "W19.03-C2",
+      "verdict": "local_runtime_pass",
+      "evidence": "Actual mounted routes verify stored registry revision, definite demo absence/default, corrupt/oversized/read-failed unavailable, missing real BrightHour's mapped tenant scope and authorization-before-read. PUT/import/CSV/pull/rollback/recovery/enrichment diagnose their committed catalog; an old idempotent PUT returns original revision/document with current registry diagnostics after a newer catalog. Outage PUT still commits, GET and enrichment retry remain successful/unavailable; pending publication remains503 with no diagnostic read, recovery does not refetch. Retained revision metadata and stored objects stay unchanged by diagnostics. Human approval/service refusal and rejected-label exclusion remain."
+    },
+    {
+      "id": "W19.03-C3",
+      "verdict": "worker_checks_pass_independent_review_pending",
+      "evidence": "Three new grouped cases plus eight selected controls: final11 passed,19 unselected. Full compiler/scoped lint0errors0warnings/owned tracked whitespace passed. New untracked helper directly inspected for whitespace. Initial fixture failure retained; independent frozen review and lead acceptance remain separate."
+    }
+  ],
+  "rework": [
+    {
+      "attempt": "runtime1",
+      "result": "10passed,1failed,19unselected;exit1/drained",
+      "cause": "New bounds fixture seeded dimensions:[], which the existing strict registry validator correctly rejects; diagnostics were unavailable instead of90 warnings.",
+      "resolution": "Fixture-only replacement with one valid unrelated dimension. Same fixed11 rerun; production bytes unchanged. Existing W11 zero-KV success assertion was prospectively adapted to exact mapped registry-read-only behavior; no auth/failure assertions were relaxed."
+    }
+  ],
+  "final_results": {
+    "runtime": {
+      "passed": 11,
+      "failed": 0,
+      "skipped": 19,
+      "unselected": 19,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 6.22
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "new_warnings": 0,
+      "final_bytes": true
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "new_helper_inspection": "bf94e1: complete sed -n '1,90l' display; no trailing whitespace or missing terminal newline."
+    }
+  },
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts -t 'W19.03|W19.01|authenticated validation|history lists revisions|imports JSON|pulls from a URL|binds both modes|publishes only approved additions' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "4370d0",
+          "wall_time_seconds": 1.001109947,
+          "session_id": 91769,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "dd599d",
+          "wall_time_seconds": 0.000002013,
+          "exit_code": 1,
+          "original_token_count": 501,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n[config] stored document is invalid and was ignored\n\n ❯ src/routes/content.test.ts  (30 tests | 1 failed | 19 skipped) 236ms\n   ❯ src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n     → expected { …(8) } to match object { warningCount: 90, …(1) }\n(10 matching properties omitted from actual)\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\nAssertionError: expected { …(8) } to match object { warningCount: 90, …(1) }\n(10 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  Object {\n-   \"omittedWarningCount\": 40,\n-   \"warningCount\": 90,\n+   \"omittedWarningCount\": null,\n+   \"warningCount\": null,\n  }\n\n ❯ src/routes/content.test.ts:99:33\n     97|     const longDimension = 'x'.repeat(80);\n     98|     const bounded = await validate(Array.from({ length: 30 }, (_, i) =…\n     99|     expect(bounded.diagnostics).toMatchObject({ warningCount: 90, omit…\n       |                                 ^\n    100|     expect(bounded.diagnostics.warnings).toHaveLength(50);\n    101|     expect(bounded.diagnostics.warnings![0]).toEqual({ code: 'unknown_…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed (1)\n      Tests  1 failed | 10 passed | 19 skipped (30)\n   Start at  14:09:13\n   Duration  6.24s (transform 1.32s, setup 0ms, collect 3.10s, tests 236ms, environment 0ms, prepare 1.95s)\n\n"
+        }
+      ],
+      "chunk_id": "dd599d",
+      "wall_time_seconds": 0.000002013,
+      "session_id": 91769,
+      "original_token_count": 501,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n[config] stored document is invalid and was ignored\n\n ❯ src/routes/content.test.ts  (30 tests | 1 failed | 19 skipped) 236ms\n   ❯ src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n     → expected { …(8) } to match object { warningCount: 90, …(1) }\n(10 matching properties omitted from actual)\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\nAssertionError: expected { …(8) } to match object { warningCount: 90, …(1) }\n(10 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  Object {\n-   \"omittedWarningCount\": 40,\n-   \"warningCount\": 90,\n+   \"omittedWarningCount\": null,\n+   \"warningCount\": null,\n  }\n\n ❯ src/routes/content.test.ts:99:33\n     97|     const longDimension = 'x'.repeat(80);\n     98|     const bounded = await validate(Array.from({ length: 30 }, (_, i) =…\n     99|     expect(bounded.diagnostics).toMatchObject({ warningCount: 90, omit…\n       |                                 ^\n    100|     expect(bounded.diagnostics.warnings).toHaveLength(50);\n    101|     expect(bounded.diagnostics.warnings![0]).toEqual({ code: 'unknown_…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed (1)\n      Tests  1 failed | 10 passed | 19 skipped (30)\n   Start at  14:09:13\n   Duration  6.24s (transform 1.32s, setup 0ms, collect 3.10s, tests 236ms, environment 0ms, prepare 1.95s)\n\n",
+      "drained": true,
+      "exit_code": 1
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts -t 'W19.03|W19.01|authenticated validation|history lists revisions|imports JSON|pulls from a URL|binds both modes|publishes only approved additions' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "16a67d",
+          "wall_time_seconds": 1.00099876,
+          "session_id": 20717,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "41e956",
+          "wall_time_seconds": 3.905473643,
+          "exit_code": 0,
+          "original_token_count": 175,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n[config] stored document is invalid and was ignored\n\n ✓ src/routes/content.test.ts  (30 tests | 19 skipped) 249ms\n\n Test Files  1 passed (1)\n      Tests  11 passed | 19 skipped (30)\n   Start at  14:09:38\n   Duration  6.22s (transform 1.32s, setup 0ms, collect 3.06s, tests 249ms, environment 0ms, prepare 1.87s)\n\n"
+        }
+      ],
+      "chunk_id": "41e956",
+      "wall_time_seconds": 3.905473643,
+      "session_id": 20717,
+      "original_token_count": 175,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W19.03 reports bounded exact-registry diagnostics for catalog validation and current reads\n[config] stored document is invalid and was ignored\n\n ✓ src/routes/content.test.ts  (30 tests | 19 skipped) 249ms\n\n Test Files  1 passed (1)\n      Tests  11 passed | 19 skipped (30)\n   Start at  14:09:38\n   Duration  6.22s (transform 1.32s, setup 0ms, collect 3.06s, tests 249ms, environment 0ms, prepare 1.87s)\n\n",
+      "drained": true,
+      "exit_code": 0
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/catalogDiagnostics.ts src/routes/content.ts src/routes/content.test.ts && git diff --check -- src/content/catalogDiagnostics.ts src/routes/content.ts src/routes/content.test.ts docs/kit/02-api-reference.md",
+      "captures": [
+        {
+          "chunk_id": "7c992b",
+          "wall_time_seconds": 1.000887913,
+          "session_id": 36167,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "652e60",
+          "wall_time_seconds": 5.000565135,
+          "session_id": 36167,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "39cdce",
+          "wall_time_seconds": 5.00170332,
+          "session_id": 36167,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9e1830",
+          "wall_time_seconds": 0.37819331,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "chunk_id": "9e1830",
+      "wall_time_seconds": 0.37819331,
+      "session_id": 36167,
+      "original_token_count": 0,
+      "output": "",
+      "drained": true,
+      "exit_code": 0
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T18:11:09.883Z",
+    "files": [
+      {
+        "path": "src/content/catalogDiagnostics.ts",
+        "sha256": "799d71550ae29c10c3947b00da4fd6962b93f04a5eaf699ec789deaa013e4a9d"
+      },
+      {
+        "path": "src/routes/content.ts",
+        "sha256": "b786f7016d19833f7164630085645960846866de6e788b3b73187615d7f5f27d"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "909c09d30b2bc0b7a9dff4c5319fd17e076c7c008e73080de5c4e1737fbd1975"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "467f09625d21ff3eb0c97cc320b9a22b6a134a612725e2d74afb187cbf5e4380"
+      }
+    ],
+    "capture": "56de73"
+  },
+  "limitations": [
+    "Dimension membership and nonblank values only; no categorical vocabulary, case/locale/slot normalization, inheritance, taxonomy rewrite, learning-readiness certificate or proof an item cannot rank. Defaults, pins, legacy/manual affinity and other score terms remain.",
+    "Diagnostics are current/advisory, not persisted with receipts or an atomic catalog/registry or serving-cache snapshot. Their registry revision and warnings may change on retries while catalog receipt identity stays unchanged. No catalog reread after publication.",
+    "Strict missing/corrupt/oversized/read failures yield null counts/list and unavailable, including demo failures; only confirmed permitted-demo absence uses explicit compiled defaults. Optional entire read/scan is caught; local fixture tests cover registry failures, not native/distributed outage/SLO guarantees.",
+    "Fixed11 runs use existing synthetic KV/conditional R2 and mounted routes;19 unselected cases are not claimed passing. Expected invalid-registry log and inherited Vite CJS warning are retained. No new UI, config/serving/scoring/SDK/schema/enrichment-core changes or broad suite.",
+    "Full W19/F27/N15/customer/native/release acceptance remains open. No external operations, installs/builds/deploy/credentials/customer data/commits, governance edits or subdelegation. Independent review and lead disposition are not implementer authority."
+  ]
+}

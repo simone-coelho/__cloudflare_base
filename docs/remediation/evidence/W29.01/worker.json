@@ -1,0 +1,516 @@
+{
+  "task_id": "W29.01",
+  "actor": {
+    "agent": "/root/w2901_worker",
+    "actor_id": "w2901-worker",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "role": "implementer"
+  },
+  "scope": "Unconditional local withdrawal of unsafe autonomy cycle/apply/reject at functions/API/cron/both UIs; retained unverified read-only historical proposals and dormant legacy configuration.",
+  "admission": {
+    "plan": {
+      "path": "docs/remediation/design/W29.01/plan-v1.md",
+      "sha256": "8b75bf38d7fcea688d68aa064e460d33a10f53277e32cb86438ca2024a416f8a"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W29.01/baseline.json",
+      "sha256": "da451c5913b019190a01ac54e66e56bd5faa1678c4e4a1fe1a711736bfef3f87"
+    },
+    "approved_at": "2026-09-09T02:50:19.641Z",
+    "contract_digest": "6a1da9181e0e88700d966f58f9789e8e73e01befc06be4752daecc0fc95ff9e7",
+    "governance_basis": "Root entry check/status VALID475 reused per assignment. Root reconciled historical W21 proof before source mutation at journal483 and later reported admission check VALID483. Worker did not repeat board commands or edit governance.",
+    "baseline_verification": {
+      "captured_at": "2026-09-09T02:52:09.071Z",
+      "result": "All nine owned current SHA256 hashes matched baseline before mutation; exact UTF-8 before bytes retained in orchestration memory for reversible admission patches."
+    },
+    "case": "Source-confirmed: runCycle writes applied receipts before slots, decideProposal changes same slot name on multiple pages and ignores receipt write errors; stale/current-policy gates and transactional authority absent. Unconditional withdrawal is the bounded G0 design case."
+  },
+  "changes": [
+    {
+      "path": "src/learn/cycle.ts",
+      "before_sha256": "708c1702ed09dc70adb3a3ee9744b41d896183cbe969e0c5b73d70be2ebec34c",
+      "after_sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c",
+      "patch": "--- a/src/learn/cycle.ts\n+++ b/src/learn/cycle.ts\n@@ -1,18 +1,12 @@\n // src/learn/cycle.ts\n-// The autonomy cycle for a scope (doc 22 §11): for each slot in assisted or\n-// autonomous mode, read the lift snapshot in force, build the evidence, and\n-// either write a proposal for a person or apply the one move within bounds as\n-// a new revision of the slots document with the evidence in its note. Runs on\n-// the daily cron and on demand. Proposals are a versioned document kind of\n-// their own, so approving, rejecting and applying all leave a trail.\n+// Autonomy mutation is withdrawn until its policy/evidence gates and\n+// transactional write/receipt recovery are implemented. Historical proposals\n+// remain readable; their stored statuses are not verified application receipts.\n \n import type { Env } from '@/types/env';\n-import { read, readRevision, write, type DocumentKind, type ValidationResult } from '@/config/versionedStore';\n-import { DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';\n-import type { LearnConfig, SlotCatalog } from '@/content/types';\n-import { liftKey } from './fan';\n-import type { LiftSnapshot } from './stats';\n-import { applyProposal, DEFAULT_AUTONOMY, proposeFor, type AutonomyConfig, type Proposal } from './autonomy';\n+import type { DocumentKind, ValidationResult } from '@/config/versionedStore';\n+import type { LearnConfig } from '@/content/types';\n+import { DEFAULT_AUTONOMY, type AutonomyConfig, type Proposal } from './autonomy';\n \n export interface ProposalsDoc { version?: string; proposals: Proposal[] }\n const MAX_PROPOSALS = 200;\n@@ -35,67 +29,20 @@\n   return a ? { mode: a.mode, step: a.step, min: a.min, max: a.max, pinned: a.pinned, minN: a.minN } : DEFAULT_AUTONOMY;\n }\n \n-export interface CycleResult { slot: string; page: string; action: 'none' | 'proposed' | 'applied'; reason: string; proposal?: Proposal; revision?: number }\n-\n-/** One cycle for a scope: every page's slots, in assisted or autonomous mode. */\n-export async function runCycle(env: Env, scope: string, brand = scope, now = Date.now(), actor = 'autonomy-cycle'): Promise<CycleResult[]> {\n-  const learn = (await readRevision(env, LEARN_KIND, scope, now))?.value ?? DEFAULT_LEARN;\n-  const slotsDoc = await read<SlotCatalog>(env, SLOTS_KIND, scope, DEFAULT_SLOTS, now);\n-  const catalog = await read(env, CONTENT_KIND, scope, EMPTY_CATALOG, now);\n-  const tags: Record<string, Record<string, readonly string[]>> = Object.fromEntries(catalog.pieces.map((p) => [p.id, p.tags]));\n-  const results: CycleResult[] = [];\n-  let nextSlots = slotsDoc; let changed = false; const notes: string[] = [];\n-  const proposalsDoc = await read<ProposalsDoc>(env, PROPOSALS_KIND, scope, EMPTY_PROPOSALS, now);\n-  const newProposals: Proposal[] = [];\n-\n-  for (const [page, list] of Object.entries(slotsDoc.pages)) {\n-    for (const strategy of list) {\n-      const cfg = autonomyOf(learn, strategy.slot);\n-      if (cfg.mode === 'configured' || strategy.pinnedPieceId) { results.push({ slot: strategy.slot, page, action: 'none', reason: strategy.pinnedPieceId ? 'pinned slot' : 'configured' }); continue; }\n-      let snap: LiftSnapshot | null = null;\n-      try { snap = (await env.CACHE.get(liftKey(scope, brand, strategy.slot), 'json')) as LiftSnapshot | null; } catch { snap = null; }\n-      const { proposal, reason } = proposeFor({ tenant: scope, brand, slot: strategy.slot }, strategy.weights, tags, snap, cfg, now);\n-      if (!proposal) { results.push({ slot: strategy.slot, page, action: 'none', reason }); continue; }\n-      if (cfg.mode === 'autonomous') {\n-        const weights = applyProposal(strategy.weights, proposal, cfg);\n-        nextSlots = { ...nextSlots, pages: { ...nextSlots.pages, [page]: nextSlots.pages[page]!.map((s) => (s.slot === strategy.slot ? { ...s, weights } : s)) } };\n-        changed = true;\n-        notes.push(`${strategy.slot}: ${proposal.dimension} ${proposal.from} → ${proposal.to} (spread ${proposal.evidence[0]?.spread}, ${Math.round(proposal.exposures)} exposures, snapshot ${proposal.snapshotVersion})`);\n-        newProposals.push({ ...proposal, status: 'applied', note: 'applied autonomously within bounds' });\n-        results.push({ slot: strategy.slot, page, action: 'applied', reason, proposal });\n-      } else {\n-        newProposals.push(proposal);\n-        results.push({ slot: strategy.slot, page, action: 'proposed', reason, proposal });\n-      }\n-    }\n-  }\n-  if (newProposals.length) {\n-    await write(env, PROPOSALS_KIND, scope, { ...proposalsDoc, proposals: [...proposalsDoc.proposals, ...newProposals] }, { actor, note: `cycle: ${newProposals.length} proposal(s)`, nowMs: now });\n-  }\n-  if (changed) {\n-    const res = await write(env, SLOTS_KIND, scope, nextSlots, { actor, note: `autonomous cycle: ${notes.join('; ')}`, nowMs: now });\n-    if (res.ok) for (const r of results) if (r.action === 'applied') r.revision = res.revision.revision;\n-  }\n-  return results;\n+export interface AutonomyUnavailable {\n+  ok: false;\n+  code: 'autonomy_unavailable';\n+  error: string;\n }\n \n-/** A person's decision on a proposal: apply it as a new slots revision with the evidence in the note, or reject it. */\n-export async function decideProposal(env: Env, scope: string, id: string, decision: 'apply' | 'reject', actor: string, now = Date.now()): Promise<{ ok: boolean; error?: string; revision?: number }> {\n-  const doc = await read<ProposalsDoc>(env, PROPOSALS_KIND, scope, EMPTY_PROPOSALS, now);\n-  const p = doc.proposals.find((x) => x.id === id);\n-  if (!p) return { ok: false, error: 'proposal not found' };\n-  if (p.status !== 'proposed') return { ok: false, error: `proposal already ${p.status}` };\n-  let revision: number | undefined;\n-  if (decision === 'apply') {\n-    const learn = (await readRevision(env, LEARN_KIND, scope, now))?.value ?? DEFAULT_LEARN;\n-    const cfg = autonomyOf(learn, p.slot);\n-    const slotsDoc = await read<SlotCatalog>(env, SLOTS_KIND, scope, DEFAULT_SLOTS, now);\n-    const pages = Object.fromEntries(Object.entries(slotsDoc.pages).map(([page, list]) => [page, list.map((s) => (s.slot === p.slot ? { ...s, weights: applyProposal(s.weights, p, cfg) } : s))]));\n-    const res = await write(env, SLOTS_KIND, scope, { ...slotsDoc, pages }, { actor, note: `proposal ${p.id} applied by ${actor}: ${p.dimension} ${p.from} → ${p.to} (spread ${p.evidence[0]?.spread}, ${Math.round(p.exposures)} exposures)`, nowMs: now });\n-    if (!res.ok) return { ok: false, error: res.errors.join('; ') };\n-    revision = res.revision.revision;\n-  }\n-  const next = { ...doc, proposals: doc.proposals.map((x) => (x.id === id ? { ...x, status: decision === 'apply' ? 'applied' as const : 'rejected' as const, note: `${decision} by ${actor}` } : x)) };\n-  await write(env, PROPOSALS_KIND, scope, next, { actor, note: `proposal ${id} ${decision}`, nowMs: now });\n-  return { ok: true, ...(revision !== undefined ? { revision } : {}) };\n+function unavailable(): AutonomyUnavailable {\n+  return { ok: false, code: 'autonomy_unavailable', error: 'Autonomy cycles and proposal changes are unavailable pending safe application and evidence controls.' };\n }\n+\n+/** Unconditional refusal: do not inspect bindings, configuration or proposals. */\n+export const runCycle: (env: Env, scope: string, brand?: string, now?: number, actor?: string) => Promise<AutonomyUnavailable> =\n+  async () => unavailable();\n+\n+/** Both apply and reject would mutate unprotected receipts, so both refuse. */\n+export const decideProposal: (env: Env, scope: string, id: string, decision: 'apply' | 'reject', actor: string, now?: number) => Promise<AutonomyUnavailable> =\n+  async () => unavailable();\n"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "before_sha256": "fe758d7c92e6e079ef38669adfd71f213c7f10be5dc1ffa0ac1a829cecef5c76",
+      "after_sha256": "771faf7866d233c32ecf7bd326b54d7ff3202bd3c506e6953b1dc1e068a3239c",
+      "patch": "--- a/src/routes/decisions.ts\n+++ b/src/routes/decisions.ts\n@@ -280,25 +280,23 @@\n });\n \n /**\n- * The autonomy cycle (doc 22 §11). POST /v1/:tenant/learn/cycle runs it for the\n- * scope now, as the daily cron does; GET /v1/:tenant/learn/proposals lists what\n- * it proposed with the evidence; POST .../proposals/:id/apply or /reject is a\n- * person's decision, applied as a new revision of the slots document with the\n- * evidence in its note. Every one of these leaves a trail. All authenticated.\n+ * Autonomy mutations are unavailable. Authenticated GET retains historical\n+ * proposals, whose stored statuses and completeness are not verified.\n  */\n decisionRoutes.post('/:tenant/learn/cycle', jwt({ required: true }), async (c) => {\n   const tenant = (c.req.param('tenant') ?? '').trim();\n   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);\n   const actor = (c as unknown as { get: (k: 'auth') => AuthContext | undefined }).get('auth')?.user?.sub ?? 'operator';\n-  const results = await runCycle(c.env, tenant, (c.req.query('brand') ?? '').trim() || tenant, Date.now(), actor);\n-  return c.json({ ok: true, tenant, results });\n+  const result = await runCycle(c.env, tenant, (c.req.query('brand') ?? '').trim() || tenant, Date.now(), actor);\n+  c.header('Cache-Control', 'no-store');\n+  return c.json(result, 503);\n });\n decisionRoutes.get('/:tenant/learn/proposals', jwt({ required: true }), async (c) => {\n   const tenant = (c.req.param('tenant') ?? '').trim();\n   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);\n   const doc = await read<ProposalsDoc>(c.env, PROPOSALS_KIND, tenant, EMPTY_PROPOSALS);\n   c.header('Cache-Control', 'no-store');\n-  return c.json({ ok: true, tenant, proposals: doc.proposals });\n+  return c.json({ ok: true, tenant, proposals: doc.proposals, history: { historical: true, verified: false, readOnly: true, complete: false, mutationAvailable: false, note: 'Stored proposal statuses are unverified. This bounded listing is not a complete audit trail.' } });\n });\n decisionRoutes.post('/:tenant/learn/proposals/:id/:decision', jwt({ required: true }), async (c) => {\n   const tenant = (c.req.param('tenant') ?? '').trim();\n@@ -306,7 +304,8 @@\n   if (!TENANT.test(tenant) || (decision !== 'apply' && decision !== 'reject')) return c.json({ ok: false, error: 'tenant slug and apply | reject' }, 400);\n   const actor = (c as unknown as { get: (k: 'auth') => AuthContext | undefined }).get('auth')?.user?.sub ?? 'operator';\n   const res = await decideProposal(c.env, tenant, c.req.param('id') ?? '', decision, actor);\n-  return res.ok ? c.json(res) : c.json(res, 404);\n+  c.header('Cache-Control', 'no-store');\n+  return c.json(res, 503);\n });\n \n /** POST /v1/:tenant/trend/rollup: what the hourly cron does, on demand. Authenticated. */\n"
+    },
+    {
+      "path": "src/index.ts",
+      "before_sha256": "4f3ed7ab4eb8e0016f09931b794041c1aea649e7eccacab076e7da1dc943fcfb",
+      "after_sha256": "cac671a0fad237dd67628163ed834b4544f14c5a9d8ce30e09c6084cff8cb2f7",
+      "patch": "--- a/src/index.ts\n+++ b/src/index.ts\n@@ -168,7 +168,6 @@\n import { LearnStats } from '@/durable-objects/LearnStats';\n import { rollupTenant } from '@/reflex/regionTrend';\n import { consumeLedger } from '@/ledger/consume';\n-import { runCycle } from '@/learn/cycle';\n \n export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex, RegionTrend, DecisionRing, LearnStats };\n \n@@ -212,14 +211,6 @@\n         break;\n       }\n       case '0 3 * * *': {\n-        // Doc 22 §11: the autonomy cycle, daily. Slots in configured mode are untouched.\n-        const tenants = (env.TREND_ROLLUP_TENANTS ?? 'coach').split(',').map((t) => t.trim()).filter(Boolean);\n-        for (const tenant of tenants) {\n-          ctx.waitUntil(runCycle(env, tenant).then(\n-            (r) => console.log('autonomy cycle; actions/slots', r.filter((x) => x.action !== 'none').length, r.length),\n-            (e) => console.error('autonomy cycle failed'),\n-          ));\n-        }\n         // Doc 31: yesterday's day report, built once by the platform and read by the console with GET.\n         const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);\n         for (const tenant of tenantConfig(env).provisioned) {\n"
+    },
+    {
+      "path": "public/console/views.js",
+      "before_sha256": "18ae70abf1f9f949f5797a4794f23e952f48d03ee090339ef49083baa8e8a985",
+      "after_sha256": "4e1c98792905254b0bc5458066faccc57556bc1c664a609189484b52252855da",
+      "patch": "--- a/public/console/views.js\n+++ b/public/console/views.js\n@@ -7,7 +7,7 @@\n //   Lift       the grid: one pooled row per item, paged; an item opens its cells\n //   Slots      every slot on every page, what is set on it and what it has learned\n //   Dials      the learn document for this slot, and for the brand\n-//   Proposals  what the daily cycle proposes, to apply or reject\n+//   Proposals  historical records, read-only and unverified\n //   Erasures   the tombstones the ledger honours, and the rewrite\n //\n // The two rules that shape every table here: cells are a DRILL-DOWN and never\n@@ -43,17 +43,13 @@\n \n   // ═══════════════════════════════════════════════════════════ Work ══════════\n   const work = { proposals: null, erasures: null, loaded: false, denied: false };\n-  const awaiting = () => (work.proposals ? work.proposals.filter((p) => p.status === 'proposed').length : null);\n   const noEvidence = () => C.slotList().filter((s) => !s.evidence || !s.evidence.items).length;\n   const held = () => C.slotList().reduce((n, s) => n + (s.controls || 0), 0);\n \n   C.view({\n     id: 'work', group: 'Attention', title: 'Work', heading: 'What needs a person',\n     hint: 'Counts, and where to go. The engine runs without any of this; these are the decisions it will not take on its own.',\n-    badge: () => {\n-      const a = awaiting();\n-      return (a || 0) + S.refusals.length || null;\n-    },\n+    badge: () => S.refusals.length || null,\n     async enter() {\n       work.loaded = false;\n       const [props, eras] = await Promise.all([C.v1('/learn/proposals'), C.v1('/ledger/erasures')]);\n@@ -69,7 +65,7 @@\n         h('div', { class: 'why' }, why),\n         to ? h('div', { class: 'go' }, h('a', { href: to }, 'Open')) : null);\n       host.append(h('div', { class: 'queue' },\n-        q(awaiting(), 'Proposals awaiting a decision', 'The daily cycle proposed a weight change with its evidence. Nothing moves until a person applies it.', C.href('proposals'), true),\n+        q(work.proposals ? work.proposals.length : null, 'Historical proposals listed', 'Read-only, unverified records. Autonomy is unavailable; this bounded listing is not a complete audit trail.', C.href('proposals')),\n         q(S.refusals.length, 'Saves refused, in this browser', 'A change this browser tried that the platform would not take. They are not stored; they are gone when you close the tab.', S.refusals.length ? C.href('work') : null, true),\n         q(noEvidence(), 'Slots with nothing learned yet', 'Configured, but no snapshot has been published for them. A slot publishes about thirty seconds after the first decision it serves.', C.href('slots')),\n         q(held(), 'Items a person is holding', 'Frozen at a lift, or rejected so the learned lift is ignored. Each one is a merchandiser overruling the evidence, on purpose.', C.href('slots')),\n@@ -79,7 +75,7 @@\n       host.append(card('What this page cannot count yet',\n         'Doc 28 asks for one route that answers the whole queue. Until it exists this page counts what the listings it can already read will tell it, and says so rather than guessing.',\n         h('div', { class: 'body' }, h('div', { class: 'kv' },\n-          h('span', { class: 'k' }, 'Counted here'), h('span', { class: 'v' }, 'proposals awaiting a decision, erasures pending, slots with nothing learned, items held by a person'),\n+          h('span', { class: 'k' }, 'Counted here'), h('span', { class: 'v' }, 'historical proposals listed, erasures pending, slots with nothing learned, items held by a person'),\n           h('span', { class: 'k' }, 'Waiting on the platform'), h('span', { class: 'v' }, 'saves refused across every operator rather than this browser, and slots whose evidence has gone stale'),\n         ))));\n       if (S.refusals.length) {\n@@ -294,7 +290,7 @@\n           h('td', {}, words(s.reward), s.objective && s.objective !== 'unit' ? h('div', { class: 'itemid' }, `weighed by ${s.objective}`) : null),\n           h('td', { class: 'num' }, dec(s.gamma)),\n           h('td', {}, words(s.exploration)),\n-          h('td', {}, words(s.autonomy)),\n+          h('td', {}, `unavailable · stored ${words(s.autonomy) || 'configured'} (dormant)`),\n           h('td', { class: 'num' }, s.controls ? fmt(s.controls) : '—'),\n           h('td', {}, s.evidence === undefined ? 'not asked' : s.evidence === null ? 'nothing yet'\n             : `${plural(s.evidence.items, 'piece')}, ${plural(Math.round(s.evidence.events), 'event')}`),\n@@ -309,7 +305,7 @@\n             { key: 'reward', label: 'Learns against' },\n             { key: 'gamma', label: 'Trust', sym: 'γ', num: true, title: 'How much of the learned lift is applied: 0 shows it and changes nothing' },\n             { key: 'exploration', label: 'Exploring' },\n-            { key: 'autonomy', label: 'Autonomy' },\n+            { key: 'autonomy', label: 'Autonomy (unavailable)' },\n             { key: 'controls', label: 'Held', num: true },\n             { key: 'evidence', label: 'Learned so far' },\n           ], body)));\n@@ -413,22 +409,9 @@\n         `${pct(d.exploration.share)} of decisions`) : null,\n       d.exploration ? dial('Until it has seen', 'Observations below which a piece counts as under-observed and is worth showing again.',\n         num(d.exploration.floor, (v) => { d.exploration.floor = v ?? 0; scheduleCheck(); }, `${base}.exploration.floor`, { min: 0, step: 1 })) : null,\n-      h('div', { class: 'subhead' }, 'How much it may change on its own'),\n-      dial('Autonomy', 'Configured: the weights are what a person set. Assisted: the daily cycle proposes one bounded move with its evidence and a person applies or rejects it. Autonomous: the same move is applied within the bounds, as a new revision with the evidence in its note.',\n-        sel((d.autonomy || {}).mode || 'configured', [['configured', 'configured'], ['assisted', 'assisted'], ['autonomous', 'autonomous']], (v) => {\n-          if (v === 'configured') delete d.autonomy;\n-          else d.autonomy = { mode: v, step: (d.autonomy || {}).step ?? 0.05, min: (d.autonomy || {}).min ?? 0, max: (d.autonomy || {}).max ?? 1, pinned: (d.autonomy || {}).pinned ?? [], minN: (d.autonomy || {}).minN ?? 500 };\n-          scheduleCheck();\n-        }, `${base}.autonomy.mode`)),\n-      d.autonomy ? dial('The most one weight may move', 'Per cycle. Small steps and a daily cadence are what make it reversible.',\n-        num(d.autonomy.step, (v) => { d.autonomy.step = v ?? 0.05; scheduleCheck(); }, `${base}.autonomy.step`, { min: 0.01, max: 1, step: 0.01 })) : null,\n-      d.autonomy ? dial('The range it may not leave', 'The hard floor and ceiling for any weight.',\n-        h('div', {}, num(d.autonomy.min, (v) => { d.autonomy.min = v ?? 0; scheduleCheck(); }, `${base}.autonomy.min`, { min: 0, max: 1, step: 0.05 }),\n-                     num(d.autonomy.max, (v) => { d.autonomy.max = v ?? 1; scheduleCheck(); }, `${base}.autonomy.max`, { min: 0, max: 1, step: 0.05 }))) : null,\n-      d.autonomy ? dial('Before it may act at all', 'Exposures this slot must have seen before a cycle may move anything.',\n-        num(d.autonomy.minN, (v) => { d.autonomy.minN = v ?? 500; scheduleCheck(); }, `${base}.autonomy.minN`, { min: 1, step: 1 })) : null,\n-      d.autonomy ? dial('Weights it may never touch', 'Comma separated. A dimension a merchandiser has committed to stays where they put it.',\n-        txt((d.autonomy.pinned || []).join(', '), (v) => { d.autonomy.pinned = v.split(',').map((x) => x.trim()).filter(Boolean); scheduleCheck(); }, `${base}.autonomy.pinned`, 'occasion, line')) : null,\n+      h('div', { class: 'subhead' }, 'Autonomy unavailable'),\n+      h('div', { class: 'msg note' }, 'Stored settings are dormant. Cycles and proposal changes are disabled.'),\n+      h('pre', { class: 'dormant-autonomy' }, JSON.stringify(d.autonomy || { mode: 'configured' }, null, 2)),\n       h('div', { class: 'subhead' }, 'Their own model, on this slot'),\n       dial('How much this slot trusts it', 'Their model’s score joins the base score as a driver named external, at this weight. 0 switches the term off for this slot. The model itself is configured for the whole brand, below.',\n         num((d.external || {}).weight, (v) => { if (v === undefined || v === 0) delete d.external; else d.external = { weight: v }; scheduleCheck(); }, `${base}.external.weight`, { min: 0, max: 1, step: 0.05 }),\n@@ -522,8 +505,8 @@\n   // ══════════════════════════════════════════════════════ Proposals ══════════\n   const props = { list: null, error: '' };\n   C.view({\n-    id: 'proposals', group: 'Attention', title: 'Proposals', heading: 'What the cycle proposes',\n-    hint: 'A slot in assisted mode gets one bounded move a day, with the evidence behind it. Nothing moves until a person applies it.',\n+    id: 'proposals', group: 'Attention', title: 'Proposals', heading: 'Historical proposals',\n+    hint: 'Autonomy is unavailable. These records are read-only and unverified; this bounded listing is not a complete audit trail.',\n     async enter() {\n       const res = await C.v1('/learn/proposals');\n       props.list = res.ok ? res.data.proposals || [] : null;\n@@ -532,32 +515,20 @@\n     render(host) {\n       if (props.error) { host.append(h('div', { class: 'msg note' }, props.error)); return; }\n       const list = (props.list || []).slice().reverse();\n-      if (!list.length) { host.append(h('div', { class: 'empty' }, 'No proposals. A slot in assisted mode gets one from the daily cycle once it has seen enough exposures.')); return; }\n+      if (!list.length) { host.append(h('div', { class: 'empty' }, 'No historical proposals returned. Autonomy is unavailable.')); return; }\n       for (const p of list.slice(0, 40)) {\n         const ev = (p.evidence || [])[0];\n         host.append(card(`${p.slot} · ${p.dimension}`, null, h('div', { class: 'body' },\n           h('div', { class: 'kv' },\n             h('span', { class: 'k' }, 'Proposed'), h('span', { class: 'v' }, `${p.dimension} from ${dec(p.from)} to ${dec(p.to)}`),\n-            h('span', { class: 'k' }, 'Because'), h('span', { class: 'v' }, ev ? `${ev.dimension} separates outcomes by ${dec(ev.spread)}, over ${plural(Math.round(p.exposures), 'exposure')}` : `${plural(Math.round(p.exposures), 'exposure')}`),\n-            h('span', { class: 'k' }, 'Status'), h('span', { class: 'v' }, `${p.status} · ${p.mode} · ${when(p.at)}`),\n+            h('span', { class: 'k' }, 'Stored evidence (unverified)'), h('span', { class: 'v' }, ev ? `${ev.dimension} spread ${dec(ev.spread)}, ${plural(Math.round(p.exposures), 'exposure')} recorded` : `${plural(Math.round(p.exposures), 'exposure')}`),\n+            h('span', { class: 'k' }, 'Stored status (unverified)'), h('span', { class: 'v' }, `${p.status} · ${p.mode} · ${when(p.at)}`),\n             ...(p.note ? [h('span', { class: 'k' }, 'Note'), h('span', { class: 'v' }, p.note)] : []),\n           ),\n-          p.status !== 'proposed' ? null : h('div', { style: 'margin-top:8px' },\n-            h('button', { class: 'small', disabled: !C.canEdit(), onclick: () => decide(p.id, 'apply') }, 'Apply it'), ' ',\n-            h('button', { class: 'small warn', disabled: !C.canEdit(), onclick: () => decide(p.id, 'reject') }, 'Reject it')),\n         )));\n       }\n     },\n   });\n-  async function decide(id, decision) {\n-    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/proposals/${encodeURIComponent(id)}/${decision}`, 'POST', {});\n-    if (!res.ok || res.data.ok === false) { C.render(); return; }\n-    C.flash(decision === 'apply' ? `Applied, as slots revision ${fmt(res.data.revision)}.` : 'Rejected. The weights did not move.');\n-    const again = await C.v1('/learn/proposals');\n-    props.list = again.ok ? again.data.proposals || [] : props.list;\n-    C.render();\n-  }\n-\n   // ═══════════════════════════════════════════════════════ Erasures ══════════\n   const er = { pending: null, retentionDays: 0, error: '' };\n   C.view({\n"
+    },
+    {
+      "path": "public/learning.js",
+      "before_sha256": "8292d4ae2596fa719009bcef55c9c9f2e92d949929d9e87dc4e8b427ab5183e2",
+      "after_sha256": "7c6769550aec19398ea4fab8611b4f75a1cd5dde98a77aa8ab1abc5d3496d687",
+      "patch": "--- a/public/learning.js\n+++ b/public/learning.js\n@@ -156,13 +156,6 @@\n     flash(data.had ? `Evidence for ${nameOf(item)} discarded; the snapshot republished, recorded as revision ${data.revision}.` : `${nameOf(item)} had no evidence in this slot; recorded as revision ${data.revision}.`);\n     await Promise.all([loadLift(), loadLearnHistory()]); render();\n   }\n-  async function decideProposal(id, decision) {\n-    const res = await fetch(v1(`/learn/proposals/${encodeURIComponent(id)}/${decision}`), { method: 'POST', headers: auth() });\n-    const data = await res.json().catch(() => ({}));\n-    if (!res.ok || !data.ok) { S.errors = [data.error || `The proposal could not be ${decision === 'apply' ? 'applied' : 'rejected'}.`]; render(); return; }\n-    flash(decision === 'apply' ? `Proposal applied as slots revision ${data.revision}.` : 'Proposal rejected.');\n-    await loadProposals(); render();\n-  }\n   function presets() {\n     const base = { scope: 'session', match: 'direct', credit: 'last', ...(S.learn.policy || {}) };\n     base.windowsMs = { ...DEFAULT_WINDOWS, ...(base.windowsMs || {}) };\n@@ -311,15 +304,15 @@\n   }\n   function renderHistory() {\n     const ph = clear($('proposals'));\n+    ph.append(h('div', { class: 'msg' }, 'Autonomy is unavailable. Historical proposals are read-only and unverified; this bounded listing is not a complete audit trail.'));\n     if (S.proposalsError) ph.append(h('div', { class: 'empty' }, S.proposalsError));\n-    else if (!S.proposals || !S.proposals.length) ph.append(h('div', { class: 'empty' }, 'No proposals yet. A slot in assisted mode gets one from the daily cycle once it has seen enough exposures.'));\n+    else if (!S.proposals || !S.proposals.length) ph.append(h('div', { class: 'empty' }, 'No historical proposals returned.'));\n     else for (const p of [...S.proposals].reverse().slice(0, 12)) {\n       const ev = (p.evidence || [])[0];\n       ph.append(h('div', { class: 'prop' },\n-        h('div', { class: 'top' }, h('span', { class: 'n' }, p.slot), h('span', { class: 'st', style: `color:${p.status === 'applied' ? 'var(--ok)' : p.status === 'rejected' ? 'var(--warn)' : 'var(--ai)'}` }, p.status), h('span', { class: 'meta' }, when(p.at))),\n-        h('div', {}, `${p.dimension}: ${p.from} → ${p.to}`, ev ? ` · ${ev.dimension} separates outcomes by ${ev.spread}` : '', ` · ${Math.round(p.exposures)} exposures · ${p.mode}`),\n+        h('div', { class: 'top' }, h('span', { class: 'n' }, p.slot), h('span', { class: 'st' }, `stored status (unverified): ${p.status}`), h('span', { class: 'meta' }, when(p.at))),\n+        h('div', {}, `${p.dimension}: ${p.from} → ${p.to}`, ev ? ` · stored ${ev.dimension} spread ${ev.spread}` : '', ` · ${Math.round(p.exposures)} exposures recorded · ${p.mode}`),\n         p.note ? h('div', { class: 'ev' }, p.note) : null,\n-        p.status === 'proposed' ? h('div', { style: 'margin-top:5px' }, h('button', { class: 'small', disabled: !canEdit(), onclick: () => decideProposal(p.id, 'apply') }, 'Apply'), ' ', h('button', { class: 'small warn', disabled: !canEdit(), onclick: () => decideProposal(p.id, 'reject') }, 'Reject')) : null,\n       ));\n     }\n     const lh = clear($('learn-history'));\n@@ -387,12 +380,9 @@\n       dial('Mode', 'Rotation serves the least-observed item on a hashed share of decisions; Thompson samples each item’s rate and ranks by the sample; epsilon is uniform. Every pick is flagged on the receipt.', sel((d.exploration || {}).mode || 'off', [['off', 'off'], ['rotation', 'rotation'], ['thompson', 'thompson'], ['epsilon', 'epsilon']], (v) => { if (v === 'off') delete d.exploration; else d.exploration = { mode: v, share: (d.exploration || {}).share ?? 0.1, floor: (d.exploration || {}).floor ?? 50 }; scheduleCheck(); }, `${base}.exploration.mode`)),\n       d.exploration ? dial('Share', 'The fraction of this slot’s decisions reserved for exploration.', num(d.exploration.share, (v) => { d.exploration.share = v ?? 0; scheduleCheck(); }, `${base}.exploration.share`, { min: 0, max: 1, step: 0.01 }), `${pct(d.exploration.share)} of decisions`) : null,\n       d.exploration ? dial('Floor', 'Observations below which an item counts as under-observed and is worth exploring.', num(d.exploration.floor, (v) => { d.exploration.floor = v ?? 0; scheduleCheck(); }, `${base}.exploration.floor`, { min: 0, step: 1 })) : null,\n-      h('div', { class: 'subhead' }, 'Autonomy'),\n-      dial('Mode', 'Configured: the weights are what a person set. Assisted: the daily cycle proposes one bounded move with its evidence and a person applies or rejects it. Autonomous: the same move is applied, within the bounds, as a new revision.', sel((d.autonomy || {}).mode || 'configured', [['configured', 'configured'], ['assisted', 'assisted'], ['autonomous', 'autonomous']], (v) => { if (v === 'configured') delete d.autonomy; else d.autonomy = { mode: v, step: (d.autonomy || {}).step ?? 0.05, min: (d.autonomy || {}).min ?? 0, max: (d.autonomy || {}).max ?? 1, pinned: (d.autonomy || {}).pinned ?? [], minN: (d.autonomy || {}).minN ?? 500 }; scheduleCheck(); }, `${base}.autonomy.mode`)),\n-      d.autonomy ? dial('Step', 'The most any weight may move per cycle.', num(d.autonomy.step, (v) => { d.autonomy.step = v ?? 0.05; scheduleCheck(); }, `${base}.autonomy.step`, { min: 0.01, max: 1, step: 0.01 })) : null,\n-      d.autonomy ? dial('Bounds', 'The hard range for any weight, min and max.', h('div', {}, num(d.autonomy.min, (v) => { d.autonomy.min = v ?? 0; scheduleCheck(); }, `${base}.autonomy.min`, { min: 0, max: 1, step: 0.05 }), num(d.autonomy.max, (v) => { d.autonomy.max = v ?? 1; scheduleCheck(); }, `${base}.autonomy.max`, { min: 0, max: 1, step: 0.05 }))) : null,\n-      d.autonomy ? dial('Minimum exposures', 'The slot must have seen this many exposures before a cycle may act.', num(d.autonomy.minN, (v) => { d.autonomy.minN = v ?? 500; scheduleCheck(); }, `${base}.autonomy.minN`, { min: 1, step: 1 })) : null,\n-      d.autonomy ? dial('Pinned dimensions', 'Weights the cycle may never touch, comma separated.', txt((d.autonomy.pinned || []).join(', '), (v) => { d.autonomy.pinned = v.split(',').map((x) => x.trim()).filter(Boolean); scheduleCheck(); }, `${base}.autonomy.pinned`, 'occasion, line')) : null,\n+      h('div', { class: 'subhead' }, 'Autonomy unavailable'),\n+      h('div', { class: 'msg' }, 'Stored settings are dormant. Cycles and proposal changes are disabled.'),\n+      h('pre', { class: 'dormant-autonomy' }, JSON.stringify(d.autonomy || { mode: 'configured' }, null, 2)),\n       h('div', { class: 'subhead' }, 'Their model'),\n       dial('Weight, w_ext', 'How much this slot trusts their model: w_ext × score joins the base score as a driver named external. 0 means the term is off for this slot. The model itself is configured below, for every slot.', num((d.external || {}).weight, (v) => { if (v === undefined || v === 0) delete d.external; else d.external = { weight: v }; scheduleCheck(); }, `${base}.external.weight`, { min: 0, max: 1, step: 0.05 }), S.draft.external ? `${S.draft.external.kind} · ${S.draft.external.ref}` : 'No model configured for this scope.'),\n     );\n@@ -433,7 +423,7 @@\n     const host = clear($('messages'));\n     if (S.flash) host.append(h('div', { class: 'msg ok' }, S.flash));\n     if (S.errors.length) host.append(h('div', { class: 'msg err' }, 'The document as drafted was refused:', h('ul', {}, ...S.errors.map((e) => h('li', {}, e)))));\n-    if (!canEdit()) host.append(h('div', { class: 'msg', style: 'background:var(--tan-wash);border:1px solid var(--line-strong)' }, 'Read-only. Sign in at the top right to change the dials, the controls and the proposals, or to build a report.'));\n+    if (!canEdit()) host.append(h('div', { class: 'msg', style: 'background:var(--tan-wash);border:1px solid var(--line-strong)' }, 'Read-only. Sign in at the top right to change the dials and item controls, or to build a report.'));\n   }\n   function renderBar() {\n     const sl = $('slot');\n"
+    },
+    {
+      "path": "src/learn/phase2.test.ts",
+      "before_sha256": "52832fd3bb7ef2cbd9a0b4725b2fb5342a87d76d4adf257f2a999b7632eea593",
+      "after_sha256": "05997ad812d33a4007d78cd111b35d45c924e7c5496896a56b787b9883f97a8c",
+      "patch": "--- a/src/learn/phase2.test.ts\n+++ b/src/learn/phase2.test.ts\n@@ -1,18 +1,18 @@\n // src/learn/phase2.test.ts\n // Exploration is deterministic in its inputs and honest on the receipt; the\n-// item controls hold or ignore a lift; the autonomy cycle proposes one bounded\n-// move with its evidence, applies it only in autonomous mode, and a person's\n-// decision on a proposal is a versioned revision either way.\n+// item controls hold or ignore a lift. Autonomy mutation is withdrawn before\n+// binding access; authenticated historical reads retain unverified records.\n \n import { describe, it, expect } from 'vitest';\n+import { Hono } from 'hono';\n+import { SignJWT } from 'jose';\n+import { decisionRoutes } from '@/routes/decisions';\n import type { Env } from '@/types/env';\n import { betaSample, bucketOf, explorationPick, hourKeyOf } from './explore';\n import { applyProposal, DEFAULT_AUTONOMY, evidenceFor, proposeFor } from './autonomy';\n import { decideProposal, PROPOSALS_KIND, runCycle } from './cycle';\n import { decideContent } from '@/content/decide';\n-import { write, invalidateCache } from '@/config/versionedStore';\n-import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';\n-import { liftKey } from './fan';\n+import { invalidateCache } from '@/config/versionedStore';\n import type { LiftSnapshot } from './stats';\n import type { ContentPiece, SlotStrategy } from '@/content/types';\n \n@@ -110,8 +110,6 @@\n   });\n });\n \n-class FakeKV { store = new Map<string, string>(); async get(k: string) { const r = this.store.get(k); return r === undefined ? null : JSON.parse(r); } async put(k: string, v: string) { this.store.set(k, v); } }\n-\n describe('the autonomy cycle', () => {\n   const tags = { a: { occasion: ['evening'], line: ['drover'] }, d: { occasion: ['evening'] }, n: { occasion: ['weekend'] } };\n   const weights = { occasion: 0.35, line: 0.25 };\n@@ -134,32 +132,90 @@\n     expect(applyProposal(weights, { dimension: 'occasion', to: 1.7 }, cfg)).toEqual({ occasion: 1, line: 0.25 });\n   });\n \n-  it('assisted writes a proposal; a person applies it as a new slots revision; autonomous applies within bounds itself', async () => {\n-    invalidateCache();\n-    const kv = new FakeKV(); const env = { CACHE: kv } as unknown as Env;\n-    await write(env, CONTENT_KIND, 'coach', { pieces }, { actor: 't' });\n-    await write(env, SLOTS_KIND, 'coach', { pages: { home: slots } }, { actor: 't' });\n-    await write(env, LEARN_KIND, 'coach', { holdout: { share: 0, arms: ['default'] }, slots: { hero: { autonomy: { mode: 'assisted', step: 0.05, min: 0, max: 1, pinned: [], minN: 100 } } } }, { actor: 't' });\n-    await kv.put(liftKey('coach', 'coach', 'hero'), JSON.stringify(snap({ a: { n: 400, s: 60, lift: 1.5 }, d: { n: 400, s: 40, lift: 1 }, n: { n: 400, s: 20, lift: 0.5 } }, 1200)));\n-    const r1 = await runCycle(env, 'coach', 'coach', T0, 'cron');\n-    expect(r1).toEqual([expect.objectContaining({ slot: 'hero', action: 'proposed' })]);\n-    const id = r1[0]!.proposal!.id;\n-    const applied = await decideProposal(env, 'coach', id, 'apply', 'ops', T0 + 1);\n-    expect(applied).toMatchObject({ ok: true, revision: 2 });\n-    const slotsNow = JSON.parse(kv.store.get('slots:config:coach:current')!);\n-    expect(slotsNow.value.pages.home[0].weights.occasion).toBe(0.4);\n-    expect(slotsNow.note).toContain('applied by ops');\n-    expect((await decideProposal(env, 'coach', id, 'apply', 'ops')).ok).toBe(false);   // already applied\n-    // Autonomous: the same evidence, applied by the cycle itself, evidence in the note.\n+  it('withdraws cycle/apply/reject before all environment access, including concurrent retries', async () => {\n+    const accesses: string[] = [];\n+    const refuseAccess = (kind: string) => { accesses.push(kind); throw new Error('unexpected environment access'); };\n+    const env = new Proxy({} as Env, {\n+      get: (_target, key) => refuseAccess(String(key)),\n+      has: (_target, key) => refuseAccess(String(key)),\n+      ownKeys: () => refuseAccess('enumerate'),\n+      getOwnPropertyDescriptor: (_target, key) => refuseAccess(String(key)),\n+    });\n+    const ask = () => [\n+      runCycle(env, 'coach', 'coach', T0, 'cron'),\n+      decideProposal(env, 'coach', 'stale-proposed', 'apply', 'operator', T0),\n+      decideProposal(env, 'coach', 'already-applied', 'reject', 'admin', T0),\n+    ];\n+    for (let retry = 0; retry < 2; retry++) {\n+      const results = await Promise.all([...ask(), ...ask()]);\n+      for (const result of results) {\n+        expect(result).toMatchObject({ ok: false, code: 'autonomy_unavailable', error: expect.stringContaining('unavailable') });\n+        expect(result).not.toHaveProperty('revision');\n+        expect(result).not.toHaveProperty('results');\n+      }\n+    }\n+    expect(accesses).toEqual([]);\n+  });\n+\n+  it('real authenticated routes refuse all mutations and retain read-only unverified historical records', async () => {\n     invalidateCache();\n-    await write(env, LEARN_KIND, 'coach', { holdout: { share: 0, arms: ['default'] }, slots: { hero: { autonomy: { mode: 'autonomous', step: 0.05, min: 0, max: 1, pinned: [], minN: 100 } } } }, { actor: 't' });\n-    const r2 = await runCycle(env, 'coach', 'coach', T0 + 2, 'cron');\n-    expect(r2[0]).toMatchObject({ action: 'applied', revision: 3 });\n-    const after = JSON.parse(kv.store.get('slots:config:coach:current')!);\n-    expect(after.value.pages.home[0].weights.occasion).toBeCloseTo(0.45, 3);\n-    expect(after.note).toContain('autonomous cycle');\n-    const proposals = JSON.parse(kv.store.get('proposals:config:coach:current')!);\n-    expect(proposals.value.proposals.map((p: { status: string }) => p.status)).toEqual(['applied', 'applied']);\n+    const secret = 'w2901-local-synthetic-signing-material';\n+    const proposals = ['proposed', 'applied', 'rejected'].map((status, i) => ({\n+      id: 'same-slot-id', tenant: 'coach', brand: 'coach', slot: 'hero', at: T0 - 30 * 86_400_000,\n+      mode: 'autonomous', dimension: 'occasion', from: 0.1, to: 0.15, status,\n+      snapshotVersion: i, exposures: 10_000, evidence: [], note: 'historical unverified receipt',\n+    }));\n+    const stored = new Map([\n+      ['proposals:config:coach:current', JSON.stringify({ revision: 7, value: { proposals }, actor: 'fixture', note: '', at: T0 })],\n+      ['slots:config:coach:current', JSON.stringify({ pages: { home: [{ slot: 'hero', weights: { occasion: 0.9 }, pinnedPieceId: 'a' }], other: [{ slot: 'hero', weights: { occasion: 0.9 } }] } })],\n+      ['learn:config:coach:current', JSON.stringify({ slots: { hero: { autonomy: { mode: 'autonomous', pinned: ['occasion'], step: 0.05 } } } })],\n+    ]);\n+    const calls: string[] = [];\n+    const before = [...stored];\n+    const env = {\n+      JWT_SECRET: secret, JWT_ISSUER: 'w2901', JWT_AUDIENCE: 'w2901',\n+      CACHE: {\n+        async get(key: string) { calls.push('get:' + key); const value = stored.get(key); return value ? JSON.parse(value) : null; },\n+        async put() { calls.push('put'); throw new Error('unexpected write'); },\n+        async delete() { calls.push('delete'); throw new Error('unexpected delete'); },\n+        async list() { calls.push('list'); throw new Error('unexpected list'); },\n+      },\n+    } as unknown as Env;\n+    const app = new Hono().route('/v1', decisionRoutes);\n+    const request = (path: string, method: string, token?: string) => app.request('http://local/v1/coach/learn/' + path, {\n+      method, headers: token ? { authorization: 'Bearer ' + token } : {},\n+    }, env);\n+    for (const token of [undefined, 'invalid']) {\n+      for (const [path, method] of [['cycle', 'POST'], ['proposals/missing/apply', 'POST'], ['proposals/same-slot-id/reject', 'POST'], ['proposals', 'GET']]) {\n+        expect((await request(path, method, token)).status).toBe(401);\n+      }\n+    }\n+    expect(calls).toEqual([]);\n+    for (const role of ['operator', 'admin']) {\n+      const token = await new SignJWT({ sub: 'synthetic-' + role, roles: [role], permissions: [role === 'admin' ? '*' : 'read'] })\n+        .setProtectedHeader({ alg: 'HS256' }).setIssuer('w2901').setAudience('w2901').setExpirationTime('5m')\n+        .sign(new TextEncoder().encode(secret));\n+      for (let retry = 0; retry < 2; retry++) {\n+        const results = await Promise.all(['cycle?brand=other', 'proposals/same-slot-id/apply', 'proposals/missing/apply', 'proposals/same-slot-id/reject']\n+          .map(path => request(path, 'POST', token)));\n+        for (const result of results) {\n+          expect(result.status).toBe(503);\n+          expect(result.headers.get('cache-control')).toBe('no-store');\n+          expect(await result.json()).toMatchObject({ ok: false, code: 'autonomy_unavailable', error: expect.stringContaining('unavailable') });\n+        }\n+      }\n+      expect(calls).toEqual([]);\n+      const history = await request('proposals', 'GET', token);\n+      expect(history.status).toBe(200);\n+      expect(history.headers.get('cache-control')).toBe('no-store');\n+      expect(await history.json()).toMatchObject({\n+        ok: true, proposals,\n+        history: { historical: true, verified: false, readOnly: true, complete: false, mutationAvailable: false },\n+      });\n+      expect(calls).toEqual(['get:proposals:config:coach:current']);\n+      expect([...stored]).toEqual(before);\n+      calls.length = 0; invalidateCache();\n+    }\n     expect(PROPOSALS_KIND.name).toBe('proposals');\n   });\n });\n"
+    },
+    {
+      "path": "src/index.api-boundary.test.ts",
+      "before_sha256": "00fc6f4e6377d2d42584c73c02a6d7ed2eb3364a71211a9c2a4c7564a109754c",
+      "after_sha256": "bceeb9aed23a3b8ee42d7e9a95229bb31d87c2cece67d02ed8439132e84ef681",
+      "patch": "--- a/src/index.api-boundary.test.ts\n+++ b/src/index.api-boundary.test.ts\n@@ -526,7 +526,7 @@\n it('W07.04 keeps actual scheduled jobs/waitUntil and numeric summaries without tenant/error/cron payloads', async () => {\n   const cases = [\n     { cron: '*/5 * * * *', pending: 6 },\n-    { cron: '0 3 * * *', pending: 8 },\n+    { cron: '0 3 * * *', pending: 6 },\n     { cron: '0 * * * *', pending: 2 },\n   ];\n   for (const { cron, pending } of cases) {\n@@ -539,8 +539,10 @@\n       expect(r.calls.filter(([op, key]) => op === 'CACHE.put' && key?.startsWith('monitor:'))).toHaveLength(3);\n       expect(r.logs.filter(line => line.startsWith('monitor result; ok/decisionMs/problems '))).toHaveLength(3);\n     } else if (cron === '0 3 * * *') {\n-      expect(r.logs.filter(line => line.startsWith('autonomy cycle; actions/slots '))).toHaveLength(2);\n+      expect(r.logs.some(line => line.includes('autonomy cycle'))).toBe(false);\n+      expect(r.calls.some(([, key]) => key?.startsWith('proposals:config:') || key?.startsWith('slots:config:'))).toBe(false);\n       expect(r.logs.filter(line => line.startsWith('day report; decisions/outcomes/unfolded/truncated '))).toHaveLength(3);\n+      expect(r.calls.filter(([op, key]) => op === 'STORAGE.get' && key?.startsWith('erasures/') && key.endsWith('/rewrite.json'))).toHaveLength(3);\n       expect(r.calls.some(([op]) => op === 'STORAGE.put')).toBe(true);\n     } else {\n       expect([...r.logs].sort()).toEqual(['trend rollup; regions/countries 0 0', 'trend rollup; regions/countries 1 1']);\n@@ -550,7 +552,7 @@\n     }\n   }\n   const malformed = await probe({ path: '/', scheduled: '0 3 * * *', malformedAggregate: true });\n-  expect(malformed.status).toBe(200); expect(malformed.pending).toBe(8);\n+  expect(malformed.status).toBe(200); expect(malformed.pending).toBe(6);\n   const before = (malformed.before as { storage: [string, string][] }).storage;\n   const after = (malformed.after as { storage: [string, string][] }).storage;\n   const originalHour = before.find(([key]) => key.startsWith('aggregates/acme/'))!;\n"
+    },
+    {
+      "path": "src/console/console.render.test.ts",
+      "before_sha256": "e58e555d03df75bc4aa920166058ba8a9e7bff86a3a052165ba04af094b5243b",
+      "after_sha256": "4ec6afa487e8d1993708ae3e7788ccc38d54cc7dd0a01e692a3ffd1204d556d0",
+      "patch": "--- a/src/console/console.render.test.ts\n+++ b/src/console/console.render.test.ts\n@@ -319,7 +319,10 @@\n         n: (x.querySelector('.n')!.textContent || '').trim(),\n         what: (x.querySelector('.what')!.textContent || '').trim(),\n       }));\n-      expect(cards.find((x) => x.what === 'Proposals awaiting a decision')!.n).toBe('1');\n+      expect(cards.find((x) => x.what === 'Historical proposals listed')!.n).toBe('1');\n+      expect(c.text()).toContain('not a complete audit trail');\n+      expect(c.all('.qcard.act')).toHaveLength(0);\n+      expect(c.all('#rail-views a').find((x) => x.textContent === 'Work')!.querySelector('.n')).toBeNull();\n       expect(cards.find((x) => x.what === 'Slots with nothing learned yet')!.n).toBe('2');   // merch and strip\n       expect(cards.find((x) => x.what === 'Items a person is holding')!.n).toBe('1');\n       expect(cards.find((x) => x.what === 'Erasures pending a rewrite')!.n).toBe('1');\n@@ -410,8 +413,11 @@\n       await c.goTo('#/dials?scope=coach&slot=chero');\n       expect(c.$('savebar').hidden).toBe(true);           // nothing changed yet\n       expect(c.text()).toContain('Reading revision 2 of the learn document');\n-      for (const label of ['Trust in what was learned', 'What counts as paying off', 'How often', 'The most one weight may move', 'Held out of personalization', 'How long evidence lasts'])\n+      for (const label of ['Trust in what was learned', 'What counts as paying off', 'How often', 'Autonomy unavailable', 'Stored settings are dormant', 'Held out of personalization', 'How long evidence lasts'])\n         expect(c.text()).toContain(label);\n+      expect(c.all('[data-focus-key*=\".autonomy\"]')).toHaveLength(0);\n+      expect(c.all('select option').some((x) => ['assisted', 'autonomous'].includes(x.value))).toBe(false);\n+      expect(JSON.parse(c.all('.dormant-autonomy')[0].textContent!)).toEqual(LEARN_ON.slots.chero.autonomy);\n       expect(c.text()).not.toMatch(STRAY);\n \n       // A change arms the bar; the note goes with it; one PUT carries the document.\n@@ -431,6 +437,9 @@\n       expect(c.saved).toHaveLength(1);\n       expect(c.saved[0].note).toBe('trusting it in full');\n       expect((c.saved[0].document as { slots: Record<string, { gamma: number }> }).slots.chero.gamma).toBe(1);\n+      expect((c.saved[0].document as typeof LEARN_ON).slots.chero.autonomy).toEqual(LEARN_ON.slots.chero.autonomy);\n+      expect((c.saved[0].document as typeof LEARN_ON).slots.chero.exploration).toEqual(LEARN_ON.slots.chero.exploration);\n+      expect((c.saved[0].document as typeof LEARN_ON).slots.chero.items).toEqual(LEARN_ON.slots.chero.items);\n       expect(c.text()).toContain('Saved as learn revision 9');\n       expect(c.$('savebar').hidden).toBe(true);\n       expect(c.text()).not.toMatch(STRAY);\n@@ -461,6 +470,7 @@\n       expect(c.text()).toContain('pinned to cnt_m');\n       expect(c.text()).toContain('nothing yet');\n       expect(c.text()).toContain('2 pieces, 22 events');\n+      expect(c.text()).toContain('unavailable · stored assisted (dormant)');\n       expect(c.text()).not.toMatch(STRAY);\n       const strip = c.all('#view .link').find((b) => b.textContent === 'strip')!;\n       strip.click(); await c.settle(); await c.settle();\n@@ -666,7 +676,7 @@\n     } finally { c.close(); }\n   });\n \n-  it('proposals and erasures are read only until someone signs in', async () => {\n+  it('proposals and erasures require sign-in; historical proposals stay read only after sign-in', async () => {\n     const c = await open();\n     try {\n       await c.goTo('#/proposals?scope=coach');\n@@ -676,7 +686,11 @@\n       await c.signIn();\n       await c.goTo('#/proposals?scope=coach');\n       expect(c.text()).toContain('line from 0.25 to 0.3');\n-      expect(c.text()).toContain('separates outcomes by 0.12');\n+      expect(c.text()).toContain('line spread 0.12');\n+      expect(c.text()).toContain('Stored status (unverified)');\n+      expect(c.text()).toContain('not a complete audit trail');\n+      expect(c.all('#view button')).toHaveLength(0);\n+      expect(c.log.some((line) => line.startsWith('POST') && /learn\\/(proposals|cycle)/.test(line))).toBe(false);\n       await c.goTo('#/erasures?scope=coach');\n       expect(c.text()).toContain('vis-1');\n       expect(c.text()).toContain('kept 90 days');\n"
+    },
+    {
+      "path": "src/console/learning.render.test.ts",
+      "before_sha256": "4a7dc9cb3d8c978ee1b7e64d2244749ed1efb68054239a724e0bb2b0829e80f6",
+      "after_sha256": "39056422ace34c27ad95208bbeee0974c00a93f437c07fcb4fd0b3d595bd4ab7",
+      "patch": "--- a/src/console/learning.render.test.ts\n+++ b/src/console/learning.render.test.ts\n@@ -12,7 +12,7 @@\n \n const pub = (f: string) => readFileSync(new URL(`../../public/${f}`, import.meta.url), 'utf8');\n \n-type Fixtures = { learn: Record<string, unknown>; snapshot: Record<string, unknown> | null; report?: Record<string, unknown> };\n+type Fixtures = { learn: Record<string, unknown>; snapshot: Record<string, unknown> | null; report?: Record<string, unknown>; proposals?: Record<string, unknown>[] };\n \n const snapshot = {\n   tenant: 'coach', brand: 'coach', slot: 'chero', reward: 'click', objective: 'unit', version: 1_788_000_000_000, publishedAt: 1_788_000_000_000, events: 22,\n@@ -34,22 +34,27 @@\n };\n \n /** A fake platform: what each route the console reads answers with. */\n-function platform(fx: Fixtures, log: string[]) {\n+function platform(fx: Fixtures, log: string[], saved: Record<string, unknown>[]) {\n   const okJson = (body: unknown, status = 200) => ({ ok: status < 300, status, json: async () => body });\n-  return async (url: string, init?: { headers?: Record<string, string>; body?: string }) => {\n+  return async (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => {\n     const u = new URL(url, 'http://console.test');\n     const p = u.pathname + u.search;\n-    log.push(`${init?.body ? 'POST' : 'GET'} ${p}`);\n+    log.push(`${init?.method || 'GET'} ${p}`);\n     const signed = Boolean(init?.headers?.authorization);\n     if (p.startsWith('/content/slots')) return okJson({ ok: true, source: 'stored', revision: 3, document: { pages: { home: [{ slot: 'chero', take: 1, weights: { line: 0.35 } }, { slot: 'merch', take: 1, weights: {}, pinnedPieceId: 'cnt_m' }] } } });\n     if (p.startsWith('/content/catalog')) return okJson({ ok: true, revision: 4, document: { pieces: [{ id: 'cnt_a', customerContentId: 'CCH-001', title: 'The Tabby Shop' }, { id: 'cnt_b', customerContentId: 'CCH-003', title: 'Three ways' }] } });\n     if (p.startsWith('/content/learn/history')) return okJson({ ok: true, revisions: [{ revision: 2, at: 1_788_000_000_000, actor: 'ops', note: 'first' }] });\n     if (p.startsWith('/content/priors/history')) return okJson({ ok: true, revisions: [] });\n-    if (p.startsWith('/content/learn/validate')) return okJson({ ok: true, errors: [] });\n+    if (p.startsWith('/content/learn/validate')) return okJson({ ok: true, valid: true, errors: [] });\n+    if (p.startsWith('/content/learn') && init?.method === 'PUT') {\n+      const body = JSON.parse(init.body || '{}') as Record<string, unknown>;\n+      saved.push(body);\n+      return okJson({ ok: true, revision: 3, document: body.document });\n+    }\n     if (p.startsWith('/content/learn')) return okJson({ ok: true, source: 'stored', revision: 2, document: fx.learn });\n     if (p.startsWith('/v1/coach/lift/history')) return signed ? okJson({ ok: true, versions: [{ version: 1_788_000_000_000, size: 1200, uploaded: '2026-09-05T00:00:00Z' }] }) : okJson({ ok: false, error: 'SDK key required' }, 401);\n     if (p.startsWith('/v1/coach/lift')) return signed ? okJson({ ok: true, snapshot: fx.snapshot }) : okJson({ ok: false, error: 'SDK key required' }, 401);\n-    if (p.startsWith('/v1/coach/learn/proposals')) return signed ? okJson({ ok: true, proposals: [] }) : okJson({ ok: false }, 401);\n+    if (p.startsWith('/v1/coach/learn/proposals')) return signed ? okJson({ ok: true, proposals: fx.proposals || [] }) : okJson({ ok: false }, 401);\n     if (p.startsWith('/v1/coach/learn/report')) return fx.report ? okJson({ ok: true, report: fx.report }) : okJson({ ok: false, error: 'no report built for that day yet' }, 404);\n     if (p === '/auth/login') {\n       const b = JSON.parse(init?.body || '{}') as { email?: string; password?: string };\n@@ -78,11 +83,12 @@\n \n async function openConsole(fx: Fixtures) {\n   const log: string[] = [];\n+  const saved: Record<string, unknown>[] = [];\n   const dom = new JSDOM(pub('legacy/learning.html'), { url: 'http://console.test/learning.html?scope=coach&slot=chero', pretendToBeVisual: true, runScripts: 'outside-only' });\n   type Node = { textContent: string | null; firstChild: { textContent: string | null } | null; querySelectorAll: (sel: string) => ArrayLike<Node> };\n   type Doc = { body: Node; getElementById: (id: string) => unknown; querySelectorAll: (sel: string) => ArrayLike<Node> };\n   const w = dom.window as unknown as Record<string, unknown> & { document: Doc; eval: (s: string) => unknown; close: () => void };\n-  w.fetch = platform(fx, log);\n+  w.fetch = platform(fx, log, saved);\n   w.confirm = () => true;\n   w.eval(pub('operator-session.js'));\n   w.eval(pub('learning.js'));\n@@ -97,7 +103,7 @@\n     $('sign-in-form').dispatchEvent(new (w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('submit', { bubbles: true, cancelable: true }));\n     await settle(); await settle();\n   };\n-  return { dom, w, log, text, $, signIn, settle, close: () => w.close() };\n+  return { dom, w, log, saved, text, $, signIn, settle, close: () => w.close() };\n }\n \n const STRAY = /\\b(null|undefined|NaN)\\b/;\n@@ -176,14 +182,32 @@\n     } finally { c.close(); }\n   });\n \n-  it('every dial on: exploration, autonomy, the regional prior, their model, a frozen item, no stray value', async () => {\n-    const c = await openConsole({ learn: learnOn, snapshot: { ...snapshot, objective: 'revenue', reward: 'purchase' } });\n+  it('every dial on: dormant autonomy, read-only history and preserved manual tuning', async () => {\n+    const proposals = ['proposed', 'applied', 'rejected'].map(status => ({ id: status, slot: 'chero', dimension: 'line', from: 0.25, to: 0.3, exposures: 900, mode: 'autonomous', status, at: 1_788_000_000_000 }));\n+    const c = await openConsole({ learn: learnOn, snapshot: { ...snapshot, objective: 'revenue', reward: 'purchase' }, proposals });\n     try {\n       await c.signIn('right-password');\n       const slot = c.$('dials-slot').textContent || '', global = c.$('dials-global').textContent || '';\n-      for (const label of ['Share', 'Floor', 'Step', 'Bounds', 'Minimum exposures', 'Pinned dimensions']) expect(slot).toContain(label);\n+      for (const label of ['Share', 'Floor', 'Autonomy unavailable', 'Stored settings are dormant']) expect(slot).toContain(label);\n+      expect(Array.from(c.w.document.querySelectorAll('#dials-slot select option')).some(x => ['assisted', 'autonomous'].includes(x.textContent || ''))).toBe(false);\n+      expect(JSON.parse(c.$('dials-slot').querySelectorAll('.dormant-autonomy')[0].textContent!)).toEqual(learnOn.slots.chero.autonomy);\n+      expect(c.$('proposals').textContent).toContain('not a complete audit trail');\n+      for (const status of ['proposed', 'applied', 'rejected']) expect(c.$('proposals').textContent).toContain('stored status (unverified): ' + status);\n+      expect(c.$('proposals').querySelectorAll('button')).toHaveLength(0);\n       for (const label of ['K, the blend constant', 'Minimum events', 'Ref', 'Budget']) expect(global).toContain(label);\n       expect(c.$('grid-count').textContent).toContain('reward purchase weighed by revenue');\n+      const browser = c.dom.window as unknown as { document: { querySelector: (selector: string) => { value: string; dispatchEvent: (event: unknown) => void } }; Event: new (type: string, options: object) => unknown };\n+      const trust = browser.document.querySelector('#dials-slot input');\n+      trust.value = '1'; trust.dispatchEvent(new browser.Event('input', { bubbles: true }));\n+      await new Promise(resolve => setTimeout(resolve, 450)); await c.settle();\n+      c.$('save').click(); await c.settle();\n+      expect(c.saved).toHaveLength(1);\n+      const saved = c.saved[0].document as typeof learnOn;\n+      expect(saved.slots.chero.gamma).toBe(1);\n+      expect(saved.slots.chero.autonomy).toEqual(learnOn.slots.chero.autonomy);\n+      expect(saved.slots.chero.exploration).toEqual(learnOn.slots.chero.exploration);\n+      expect(saved.slots.chero.items).toEqual(learnOn.slots.chero.items);\n+      expect(c.log.some(line => line.startsWith('POST') && /learn\\/(proposals|cycle)/.test(line))).toBe(false);\n       expect(c.text()).not.toMatch(STRAY);\n     } finally { c.close(); }\n   });\n"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "W29.01-C1",
+      "worker_result": "local_pass_pending_independent_review",
+      "evidence": "K1 exercises actual exported functions with trapping environment and12 concurrent/retried refusals, actual Hono/JWT routes for read-only operator/admin, repeated mutation503, missing/invalid credentials401, and historical proposed/applied/rejected payloads unchanged with one read/no writes. K4 actual workerd scheduled handler retains six daily report/erasure jobs and other schedules; no cycle dispatch or proposal/slot access."
+    },
+    {
+      "id": "W29.01-C2",
+      "worker_result": "local_pass_pending_independent_review",
+      "evidence": "K2 actual modern/legacy scripts: no autonomy form fields/options or proposal buttons; stored dormant settings/history retained; manual gamma saves preserve original autonomy/exploration/item controls. Work proposals no action highlight or badge. Slots show dormant mode. Final exact K2 5/5 selected cases plus compiler/scoped lint/whitespace pass; lead-owned availability-doc qualifications separate."
+    },
+    {
+      "id": "W29.01-C3",
+      "worker_result": "pending_independent_verifier_and_lead",
+      "evidence": "Worker cannot independently verify or accept own artifact. Lead freezes final source and evidence; separate Astra/xhigh reviewer performs K1 and actual-source/proof review."
+    }
+  ],
+  "implementation_notes": [
+    "Mutation implementations contain no environment/config/proposal reads, no write imports, and no enable toggle. Both apply and reject refuse because both formerly mutated unprotected receipts.",
+    "Historical GET retains stored statuses and payloads within the existing last200 validation bound; metadata marks historical=true, verified=false, readOnly=true, complete=false, mutationAvailable=false. No repair or completeness claim. Existing modern40/legacy12 presentation limits remain explicitly qualified.",
+    "LEARN_KIND and legacy autonomy modes are unchanged, avoiding config rejection/default fallback. Pure autonomy helpers remain unconsumed by runtime mutation paths. Queue/slot historical descriptors remain available; UI labels their current availability.",
+    "Scoped ESLint covers the seven owned TypeScript files, as in prior admission practice. Actual browser scripts are parsed/exercised by K2. Seven existing src/index.ts warnings remain; no lint errors. Vite CJS deprecation stderr retained.",
+    "Only the admitted checks ran; K2 repetition and compiler/lint/whitespace revalidation address the concrete new fixture typing failure. No K1/K4 repetition, broad historical suite, new framework, production build, install, deployment, cloud/resource/customer-data operation, commit or push."
+  ],
+  "prior_assurance": {
+    "regions": [
+      {
+        "path": "public/learning.js",
+        "start": "  function renderReport()",
+        "end": "  function renderHistory()",
+        "unchanged": true
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "start": "/**\n * POST /v1/:tenant/learn/report",
+        "end": null,
+        "unchanged": true
+      },
+      {
+        "path": "src/console/learning.render.test.ts",
+        "start": "  it('W21 legacy report",
+        "end": "  it('signed out,",
+        "unchanged": true
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "start": "  it('measurement shows raw attribution diagnostics",
+        "end": "next test case",
+        "unchanged": true
+      }
+    ],
+    "unchanged_dependency_paths": [
+      "src/content/kinds.ts",
+      "src/learn/autonomy.ts",
+      "src/learn/queue.ts",
+      "src/learn/rows.ts",
+      "public/console/views-measure.js",
+      "public/console/views-config.js",
+      "src/ledger/erasure.ts"
+    ],
+    "method": "Compared region strings to captured admission bytes and the seven dependency SHA256s to baseline.pins. All unchanged; no full historical W21/erasure rerun or renewal of prior whole-artifact acceptance."
+  },
+  "rework": {
+    "at": "2026-09-09T03:01:56.415Z",
+    "reason": "Compiler TS18046 on new legacy fixture document/Event unknown types; added explicit synthetic browser shape, no application-source change. First check artifact retained.",
+    "path": "src/console/learning.render.test.ts",
+    "initial_artifact": [
+      {
+        "path": "src/learn/cycle.ts",
+        "sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "771faf7866d233c32ecf7bd326b54d7ff3202bd3c506e6953b1dc1e068a3239c"
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "cac671a0fad237dd67628163ed834b4544f14c5a9d8ce30e09c6084cff8cb2f7"
+      },
+      {
+        "path": "public/console/views.js",
+        "sha256": "4e1c98792905254b0bc5458066faccc57556bc1c664a609189484b52252855da"
+      },
+      {
+        "path": "public/learning.js",
+        "sha256": "7c6769550aec19398ea4fab8611b4f75a1cd5dde98a77aa8ab1abc5d3496d687"
+      },
+      {
+        "path": "src/learn/phase2.test.ts",
+        "sha256": "05997ad812d33a4007d78cd111b35d45c924e7c5496896a56b787b9883f97a8c"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "bceeb9aed23a3b8ee42d7e9a95229bb31d87c2cece67d02ed8439132e84ef681"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "4ec6afa487e8d1993708ae3e7788ccc38d54cc7dd0a01e692a3ffd1204d556d0"
+      },
+      {
+        "path": "src/console/learning.render.test.ts",
+        "sha256": "4d28b5c703ced3c4edae36fefeac89ca5f16d30757306d506b96cd66df53c4ea"
+      }
+    ],
+    "qualification": "First K2 ran while its new legacy fixture alias was corrected. Its successful result is retained as historical and superseded by exact K2 on frozen final files per lead direction. Initial compiler failure retained; no application source changed during rework."
+  },
+  "preparation_issues": [
+    "Initial combined reads exceeded output budget; selected governing files and task/source contract were subsequently read without relying on truncated text.",
+    "Read-only searches encountered nonexistent optional glob paths, no nested AGENTS matches, and nonexistent src/auth/tokenClaims.ts (exit2); actual middleware auth implementation and linked requirements were read directly. No source writes or evidence claims depended on missing paths.",
+    "An intermediate proposed K4 assertion targeted an erasure get that would not establish the scheduled rewrite; before checks it was corrected to the actual per-tenant rewrite.json reads, with no fixture expansion.",
+    "Source fixture typing correction happened while first K2 was still collecting, immediately reported to lead; no frozen-source changes occurred after final-check freeze."
+  ],
+  "limitations": [
+    "Withdrawal only. Full W29 scoped roles/page identity/current policy/age/pin/step/evidence gates, transactional revisions, idempotent write/receipt recovery and scientifically validated harm controls remain open, as do W11/W21 dependencies.",
+    "Local synthetic behavior and workerd scheduled fixture only. No deployed tenant/runtime, production workload, relevance/latency, customer acceptance, finding closure, gate or release approval.",
+    "Historical proposal statuses are not verified and bounded reads do not establish a complete audit trail. Existing corrupt/read-failure fallback behavior and stored history repair remain outside this task.",
+    "Existing manual tuning/exploration/item controls are preserved; preservation does not certify their unrelated open W obligations."
+  ],
+  "rollback": {
+    "method": "Each changes[].patch is the exact unified diff from admitted dirty bytes to current owned file. Reverse only this delta after lead review and verification of current hashes; preserve unrelated changes. No git restore/reset or rollback executed.",
+    "risk": "Reversing withdrawal restores unsafe mutation paths; this is not an enablement or release procedure."
+  },
+  "handoff": {
+    "status": "ready_for_independent_review",
+    "next_action": "Root incorporates completed worker.json and two lead-owned doc changes into official frozen artifact; separate Astra/xhigh reviewer verifies pins remain identical, independently runs exact K1 and inspects complete source/proof. Root alone records disposition, tracker/journal and RESUME. No worker source writes remain.",
+    "active_source_writer": false,
+    "pending_processes": [],
+    "source_frozen_at": "2026-09-09T03:01:56.415Z"
+  },
+  "recorded_at": "2026-09-09T03:09:23.274Z",
+  "checks": [
+    {
+      "id": "W29.01-K1",
+      "executable": "node",
+      "argv": [
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "src/learn/phase2.test.ts",
+        "--maxWorkers=1",
+        "--minWorkers=1"
+      ],
+      "started_at": "2026-09-09T02:59:44.357Z",
+      "finished_at": "2026-09-09T03:00:01.925Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/phase2.test.ts  (8 tests) 37ms\n\n Test Files  1 passed (1)\n      Tests  8 passed (8)\n   Start at  22:59:48\n   Duration  13.14s (transform 3.75s, setup 0ms, collect 8.09s, tests 37ms, environment 0ms, prepare 2.95s)\n\n",
+      "stderr": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n",
+      "error": null,
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/phase2.test.ts --maxWorkers=1 --minWorkers=1",
+      "attempt": 1,
+      "disposition": "passed",
+      "source_basis": "rework.initial_artifact; all application source and these fixtures unchanged since run"
+    },
+    {
+      "id": "W29.01-K2",
+      "executable": "node",
+      "argv": [
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "src/console/console.render.test.ts",
+        "src/console/learning.render.test.ts",
+        "--testNamePattern=the dials arm|proposals and erasures|every dial on|counts fill|shows every slot",
+        "--maxWorkers=1",
+        "--minWorkers=1"
+      ],
+      "started_at": "2026-09-09T02:59:44.430Z",
+      "finished_at": "2026-09-09T03:02:35.999Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/console/console.render.test.ts  (27 tests | 23 skipped) 4136ms\n ✓ src/console/learning.render.test.ts  (7 tests | 6 skipped) 1343ms\n\n Test Files  2 passed (2)\n      Tests  5 passed | 29 skipped (34)\n   Start at  22:59:48\n   Duration  166.25s (transform 250ms, setup 0ms, collect 150.61s, tests 5.48s, environment 0ms, prepare 7.91s)\n\n",
+      "stderr": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n",
+      "error": null,
+      "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts src/console/learning.render.test.ts --testNamePattern=\"the dials arm|proposals and erasures|every dial on|counts fill|shows every slot\" --maxWorkers=1 --minWorkers=1",
+      "attempt": 1,
+      "disposition": "historical_superseded",
+      "qualification": "Fixture source corrected while this run was collecting; successful result retained and superseded by exact final-source rerun.",
+      "source_basis": "qualified_mid_run_edit"
+    },
+    {
+      "id": "W29.01-K2",
+      "executable": "node",
+      "argv": [
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "src/console/console.render.test.ts",
+        "src/console/learning.render.test.ts",
+        "--testNamePattern=the dials arm|proposals and erasures|every dial on|counts fill|shows every slot",
+        "--maxWorkers=1",
+        "--minWorkers=1"
+      ],
+      "started_at": "2026-09-09T03:03:32.818Z",
+      "finished_at": "2026-09-09T03:08:27.364Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/console/console.render.test.ts  (27 tests | 23 skipped) 5146ms\n ✓ src/console/learning.render.test.ts  (7 tests | 6 skipped) 1646ms\n\n Test Files  2 passed (2)\n      Tests  5 passed | 29 skipped (34)\n   Start at  23:03:45\n   Duration  281.06s (transform 359ms, setup 0ms, collect 244.35s, tests 6.79s, environment 0ms, prepare 24.56s)\n\n",
+      "stderr": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n",
+      "error": null,
+      "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts src/console/learning.render.test.ts --testNamePattern=\"the dials arm|proposals and erasures|every dial on|counts fill|shows every slot\" --maxWorkers=1 --minWorkers=1",
+      "attempt": 2,
+      "disposition": "passed",
+      "source_basis": "changes[].after_sha256"
+    },
+    {
+      "id": "W29.01-K4",
+      "executable": "node",
+      "argv": [
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "src/index.api-boundary.test.ts",
+        "--testNamePattern=W07.04 keeps actual scheduled jobs/waitUntil",
+        "--maxWorkers=1",
+        "--minWorkers=1"
+      ],
+      "started_at": "2026-09-09T02:59:44.426Z",
+      "finished_at": "2026-09-09T03:00:23.858Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/index.api-boundary.test.ts  (27 tests | 26 skipped) 14038ms\n\n Test Files  1 passed (1)\n      Tests  1 passed | 26 skipped (27)\n   Start at  22:59:48\n   Duration  34.47s (transform 1.55s, setup 0ms, collect 13.92s, tests 14.04s, environment 0ms, prepare 4.69s)\n\n",
+      "stderr": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n",
+      "error": null,
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --testNamePattern=\"W07.04 keeps actual scheduled jobs/waitUntil\" --maxWorkers=1 --minWorkers=1",
+      "attempt": 1,
+      "disposition": "passed",
+      "source_basis": "rework.initial_artifact; all application source and these fixtures unchanged since run"
+    },
+    {
+      "id": "compiler",
+      "executable": "node",
+      "argv": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--composite",
+        "false"
+      ],
+      "started_at": "2026-09-09T02:59:44.427Z",
+      "finished_at": "2026-09-09T03:00:16.413Z",
+      "exit_code": 2,
+      "signal": null,
+      "stdout": "src/console/learning.render.test.ts(199,21): error TS18046: 'c.dom.window.document' is of type 'unknown'.\nsrc/console/learning.render.test.ts(200,50): error TS18046: 'c.dom.window.Event' is of type 'unknown'.\n",
+      "stderr": "",
+      "error": null,
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "attempt": 1,
+      "disposition": "failed_superseded",
+      "source_basis": "rework.initial_artifact"
+    },
+    {
+      "id": "compiler",
+      "executable": "node",
+      "argv": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--composite",
+        "false"
+      ],
+      "started_at": "2026-09-09T03:01:56.587Z",
+      "finished_at": "2026-09-09T03:03:04.830Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "",
+      "stderr": "",
+      "error": null,
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "attempt": 2,
+      "disposition": "passed",
+      "source_basis": "changes[].after_sha256"
+    },
+    {
+      "id": "scoped-eslint",
+      "executable": "node",
+      "argv": [
+        "node_modules/eslint/bin/eslint.js",
+        "src/learn/cycle.ts",
+        "src/routes/decisions.ts",
+        "src/index.ts",
+        "src/learn/phase2.test.ts",
+        "src/index.api-boundary.test.ts",
+        "src/console/console.render.test.ts",
+        "src/console/learning.render.test.ts"
+      ],
+      "started_at": "2026-09-09T02:59:44.453Z",
+      "finished_at": "2026-09-09T03:00:48.807Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts\n  198:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  209:23  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  221:23  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  227:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  238:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  247:48  warning  'ctx' is defined but never used           @typescript-eslint/no-unused-vars\n  262:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n✖ 7 problems (0 errors, 7 warnings)\n\n",
+      "stderr": "",
+      "error": null,
+      "command": "node node_modules/eslint/bin/eslint.js src/learn/cycle.ts src/routes/decisions.ts src/index.ts src/learn/phase2.test.ts src/index.api-boundary.test.ts src/console/console.render.test.ts src/console/learning.render.test.ts",
+      "attempt": 1,
+      "disposition": "historical_superseded",
+      "source_basis": "rework.initial_artifact"
+    },
+    {
+      "id": "scoped-eslint",
+      "executable": "node",
+      "argv": [
+        "node_modules/eslint/bin/eslint.js",
+        "src/learn/cycle.ts",
+        "src/routes/decisions.ts",
+        "src/index.ts",
+        "src/learn/phase2.test.ts",
+        "src/index.api-boundary.test.ts",
+        "src/console/console.render.test.ts",
+        "src/console/learning.render.test.ts"
+      ],
+      "started_at": "2026-09-09T03:01:56.676Z",
+      "finished_at": "2026-09-09T03:03:58.550Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts\n  198:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  209:23  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  221:23  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  227:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  238:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars\n  247:48  warning  'ctx' is defined but never used           @typescript-eslint/no-unused-vars\n  262:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n✖ 7 problems (0 errors, 7 warnings)\n\n",
+      "stderr": "",
+      "error": null,
+      "command": "node node_modules/eslint/bin/eslint.js src/learn/cycle.ts src/routes/decisions.ts src/index.ts src/learn/phase2.test.ts src/index.api-boundary.test.ts src/console/console.render.test.ts src/console/learning.render.test.ts",
+      "attempt": 2,
+      "disposition": "passed",
+      "source_basis": "changes[].after_sha256"
+    },
+    {
+      "id": "whitespace",
+      "executable": "git",
+      "argv": [
+        "diff",
+        "--check",
+        "--",
+        "src/learn/cycle.ts",
+        "src/routes/decisions.ts",
+        "src/index.ts",
+        "public/console/views.js",
+        "public/learning.js",
+        "src/learn/phase2.test.ts",
+        "src/index.api-boundary.test.ts",
+        "src/console/console.render.test.ts",
+        "src/console/learning.render.test.ts"
+      ],
+      "started_at": "2026-09-09T02:59:44.487Z",
+      "finished_at": "2026-09-09T02:59:44.810Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "",
+      "stderr": "",
+      "error": null,
+      "command": "git diff --check -- src/learn/cycle.ts src/routes/decisions.ts src/index.ts public/console/views.js public/learning.js src/learn/phase2.test.ts src/index.api-boundary.test.ts src/console/console.render.test.ts src/console/learning.render.test.ts",
+      "attempt": 1,
+      "disposition": "historical_superseded",
+      "source_basis": "rework.initial_artifact"
+    },
+    {
+      "id": "whitespace",
+      "executable": "git",
+      "argv": [
+        "diff",
+        "--check",
+        "--",
+        "src/learn/cycle.ts",
+        "src/routes/decisions.ts",
+        "src/index.ts",
+        "public/console/views.js",
+        "public/learning.js",
+        "src/learn/phase2.test.ts",
+        "src/index.api-boundary.test.ts",
+        "src/console/console.render.test.ts",
+        "src/console/learning.render.test.ts"
+      ],
+      "started_at": "2026-09-09T03:01:56.753Z",
+      "finished_at": "2026-09-09T03:01:58.571Z",
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "",
+      "stderr": "",
+      "error": null,
+      "command": "git diff --check -- src/learn/cycle.ts src/routes/decisions.ts src/index.ts public/console/views.js public/learning.js src/learn/phase2.test.ts src/index.api-boundary.test.ts src/console/console.render.test.ts src/console/learning.render.test.ts",
+      "attempt": 2,
+      "disposition": "passed",
+      "source_basis": "changes[].after_sha256"
+    }
+  ],
+  "final_source_identity_check": {
+    "at": "2026-09-09T03:09:23.235Z",
+    "files": [
+      {
+        "path": "src/learn/cycle.ts",
+        "sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c",
+        "actual_sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "771faf7866d233c32ecf7bd326b54d7ff3202bd3c506e6953b1dc1e068a3239c",
+        "actual_sha256": "771faf7866d233c32ecf7bd326b54d7ff3202bd3c506e6953b1dc1e068a3239c"
+      },
+      {
+        "path": "src/index.ts",
+        "sha256": "cac671a0fad237dd67628163ed834b4544f14c5a9d8ce30e09c6084cff8cb2f7",
+        "actual_sha256": "cac671a0fad237dd67628163ed834b4544f14c5a9d8ce30e09c6084cff8cb2f7"
+      },
+      {
+        "path": "public/console/views.js",
+        "sha256": "4e1c98792905254b0bc5458066faccc57556bc1c664a609189484b52252855da",
+        "actual_sha256": "4e1c98792905254b0bc5458066faccc57556bc1c664a609189484b52252855da"
+      },
+      {
+        "path": "public/learning.js",
+        "sha256": "7c6769550aec19398ea4fab8611b4f75a1cd5dde98a77aa8ab1abc5d3496d687",
+        "actual_sha256": "7c6769550aec19398ea4fab8611b4f75a1cd5dde98a77aa8ab1abc5d3496d687"
+      },
+      {
+        "path": "src/learn/phase2.test.ts",
+        "sha256": "05997ad812d33a4007d78cd111b35d45c924e7c5496896a56b787b9883f97a8c",
+        "actual_sha256": "05997ad812d33a4007d78cd111b35d45c924e7c5496896a56b787b9883f97a8c"
+      },
+      {
+        "path": "src/index.api-boundary.test.ts",
+        "sha256": "bceeb9aed23a3b8ee42d7e9a95229bb31d87c2cece67d02ed8439132e84ef681",
+        "actual_sha256": "bceeb9aed23a3b8ee42d7e9a95229bb31d87c2cece67d02ed8439132e84ef681"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "4ec6afa487e8d1993708ae3e7788ccc38d54cc7dd0a01e692a3ffd1204d556d0",
+        "actual_sha256": "4ec6afa487e8d1993708ae3e7788ccc38d54cc7dd0a01e692a3ffd1204d556d0"
+      },
+      {
+        "path": "src/console/learning.render.test.ts",
+        "sha256": "39056422ace34c27ad95208bbeee0974c00a93f437c07fcb4fd0b3d595bd4ab7",
+        "actual_sha256": "39056422ace34c27ad95208bbeee0974c00a93f437c07fcb4fd0b3d595bd4ab7"
+      }
+    ],
+    "unchanged": true
+  }
+}

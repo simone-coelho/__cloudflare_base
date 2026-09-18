@@ -1,0 +1,86 @@
+{
+  "task_id": "W15.02",
+  "at": "2026-09-18T20:27:00Z",
+  "verdict": "LOCAL_PASS",
+  "scope": "Complete original W15 local C1-C11 only. C12 live/customer/browser/provider/cloud/quality/latency/commercial acceptance remains OPEN and is batched with the final separately authorized live checks.",
+  "artifact": {
+    "digest": "88ac2332597d22c1521ba1fc9745611a9e7df9ca8c3f20553bfcc1d97d32b44d",
+    "contract_digest": "a6f51718893ca7c585de995e3db8b6d952991672a6b20f665486e25d5a09846a",
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W15.02/source-freeze-r1.json",
+      "sha256": "5f79784b55fea3a054b79f91c4b7ab3080dce970e0c41b6561e87ed79b47691e"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W15.02/worker-r1.json",
+      "sha256": "fbb5c6289ebc1315ca3c5565b7b530d13fabd9c21f2a78e8346101c3a68b8c20",
+      "bytes": 684010
+    }
+  },
+  "independent_review": {
+    "path": "docs/remediation/evidence/W15.02/review-r1.json",
+    "sha256": "1867ad29a4ccda00915489337917dc7b84d75e5f4a570a91d0617f1bf3628d73",
+    "bytes": 176676,
+    "reviewer": "/root/w15_r89_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "LOCAL_PASS"
+  },
+  "verification": {
+    "criteria": [
+      { "id": "W15.02-C1", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C2", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C3", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C4", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C5", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C6", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C7", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C8", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C9", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C10", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C11", "verdict": "LOCAL_PASS" },
+      { "id": "W15.02-C12", "verdict": "OPEN" }
+    ],
+    "K10": {
+      "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/listen.test.ts src/routes/auth.test.ts src/console/console.render.test.ts -t 'W15' --maxWorkers=1 --minWorkers=1",
+      "exit_code": 0,
+      "passed": 15,
+      "unselected": 112,
+      "files_passed": 4,
+      "stdout_sha256": "ceab2ed850ec9092fbeae53d602c5e4bcdb21f0731b522799a9182baa2641e4e",
+      "stderr_sha256": "2ccf520cb69fc9590ff52e6bfeb6874f30cd2190629aebb674040639e58408ea",
+      "pins": 1219,
+      "before_after_identical": true,
+      "pin_digest": "1345742dac8eba7a6ec6c77c2ce98ab0d7d7a3b18724dc54dfea01b3adf41e8e"
+    },
+    "lead_verification": "Lead independently decoded and hash-checked the review primary capture, stdout/stderr, exact counts, identical 1219 before/after pins and all current disk pins. No lead product test was run."
+  },
+  "package_qualification": {
+    "digest": "bc30b41a5fb64aaa9b5ee12d15b4e75ba25515872f18594f25ae66db9c1ceea7",
+    "raw_bytes": 11350807,
+    "raw_sha256": "2a8b255d65f3e9b811974b75ffb7b42efd95efa67072a8c34d776f2ae22d6f91",
+    "worker_bytes": 7408702,
+    "worker_sha256": "794abbd785fedb3678ca3ef6ecad13493399d55ca692bd34336ea0f85d6798e8",
+    "qualification": "The single original local-v1 package and all 14 payload hashes remain exact. 1203 physical package pins are unchanged, four virtual pins are retained, and only non-payload src/sdk/listen.test.ts differs; both corrected guide documents are outside the package source inventory. No rebuild or exact-all-current-source claim."
+  },
+  "retained_history": {
+    "rejected_review": {
+      "path": "docs/remediation/evidence/W15.02/review.json",
+      "sha256": "6120f7a944ad960a60f8578521c3e77af9f14328bacfc7a4f87cccec3002bd16"
+    },
+    "original_worker": {
+      "path": "docs/remediation/evidence/W15.02/worker.json",
+      "sha256": "87d5e3e0b8e4af061b28a322f3abfbcab470a8677397347c32222d40cb24ad37"
+    },
+    "original_artifact": "851b205284912e0383666deaf4ab0caa890f8124c58de6b89b47e88691b18b9c",
+    "note": "All 29 original attempts, the rejected R8/R9 review and initial rework timing failure remain visible and immutable."
+  },
+  "limitations": [
+    "C12 actual customer/browser/SSR/no-flash/feed/SFCC/IdP/warehouse/cloud/quality/latency/commercial acceptance is OPEN, including applicable owner material, policy and activation decisions.",
+    "JSDOM uses actual nodes but is not customer layout, visibility or human acceptance. Render ACK proves owner-durable admission, not completed sinks, viewability or causal business impact.",
+    "K1.1 separate streams/completion/pins were unavailable. Native W12 latency thresholds failed; later functional checks do not establish an SLO. Historical cross-request warnings and cold Node Request.clone cause remain qualified.",
+    "K10 retains Vite CJS and SQLite experimental warnings; the initial R8/R9 timing failure and five inherited lint warnings remain visible.",
+    "OIDC remains disabled absent approved configuration, material, links, memberships, mode and policy. Local logout is not IdP-wide deprovisioning.",
+    "No deployment, cloud/resource/credential/customer-data operation, commit, merge, push or release approval."
+  ],
+  "next_action": "Admit and delegate complete original W16 local implementation in order; retain W15 C12 for the final authorized live batch."
+}

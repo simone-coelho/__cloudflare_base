@@ -1,0 +1,340 @@
+{
+  "task_id": "W22.01",
+  "actor_id": "w2201-worker",
+  "role": "implementer",
+  "run": "/root/w2201_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-14T03:54:13.724Z",
+  "contract_digest": "875c06a0ad705e2b08c1541da73e56b50f8b733b73882bd81dd105b3c9caab5e",
+  "source_go": {
+    "journal": 1672,
+    "root_pin_capture": "4de14c"
+  },
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W22.01/plan.md",
+      "sha256": "e3cb7a308889932dbd9b42114a701e887595c08cf3a57ca00c5150c86295e895"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W22.01/baseline.json",
+      "sha256": "76e1710e65d20cda98d7980cf5ed877294f1416fcddae08785b4e3b0bc18302f"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W22.01/admission.json",
+      "sha256": "8def8f982f582bbb8d7992325cc08a5f7311aae67eb338e921f522d8a628551e"
+    }
+  },
+  "baseline_reuse": "Root entry board check/status VALID1663 exit0/drained; current approved plan and task read, all28 pre-edit baseline pins personally verified, root capture4de14c retained. Scoped baseline lint0errors/0warnings reused. No failed baseline runtime or additional board invocation claimed. Dirty worktree preserved;23 baseline dependency pins unchanged at final STOP. ledger.test.ts general loadDay/hourly consumers inspected, no new suite.",
+  "final_results": {
+    "runtime": {
+      "passed": 18,
+      "failed": 0,
+      "unselected": 28,
+      "skipped": 28,
+      "total_discovered": 46,
+      "test_files_passed": 2,
+      "exit_code": 0,
+      "drained": true,
+      "duration_seconds": 10.45,
+      "test_duration_ms": 1140,
+      "evidence": "command_captures.runtime5"
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "full": "passed",
+      "evidence": "command_captures.static3"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "baseline_errors": 0,
+      "baseline_warnings": 0,
+      "evidence": "command_captures.static3"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "scope": "Five owned source/document paths; literal required static command.",
+      "evidence": "command_captures.static3"
+    }
+  },
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.01|W31.01|W32.02|W32.01|W26.02|W30.01 restores|W30.01 preserves|W21 .*repeated credits|W33.01 only null|W06.07 keeps legacy uncertainty|the day from its hours|an hour built again' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "c1cdc0",
+          "wall_time_seconds": 1.001295192,
+          "session_id": 51654,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "044374",
+          "wall_time_seconds": 0.000001847,
+          "exit_code": 1,
+          "original_token_count": 1007,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/learn/hourly.test.ts  (28 tests | 2 failed | 18 skipped) 216ms\n   ❯ src/learn/hourly.test.ts > the hourly fold > W31.01 captures carry-in and empty-hour bases and refuses unknown mixed or relabeled accumulators before day publication\n     → invalid raw report input\n   ❯ src/learn/hourly.test.ts > the hourly fold > W06.07 keeps legacy uncertainty visible, never recreates orphan membership, and clears all seen metadata on forward rollover\n     → report unavailable\n ❯ src/learn/report.test.ts  (18 tests | 1 failed | 10 skipped) 882ms\n   ❯ src/learn/report.test.ts > the day report > W21 retains repeated credits in raw reports and withdraws historic GET inference without storage mutation\n     → expected [ …(4) ] to deeply equal [ …(3) ]\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/learn/hourly.test.ts > the hourly fold > W31.01 captures carry-in and empty-hour bases and refuses unknown mixed or relabeled accumulators before day publication\nError: invalid raw report input\n ❯ rowShape src/learn/report.ts:142:70\n    140|   if (typeof row.decision_id !== 'string' || !row.decision_id || byteL…\n    141|     || !name(row.slot) || !name(row.item_id) || !name(row.arm) || !opt…\n    142|     || typeof row.explored !== 'boolean' || !object(row.cell)) throw n…\n       |                                                                      ^\n    143|   for (const key of ['channel', 'visit_bucket', 'stage', 'region', 'af…\n    144|   products(row.featured_product_ids);\n ❯ ReportRowIdentity.admit src/learn/report.ts:162:19\n ❯ loadHourRecords src/learn/hourly.ts:628:21\n ❯ Module.buildHour src/learn/hourly.ts:648:27\n ❯ src/learn/hourly.test.ts:324:20\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯\n\n FAIL  src/learn/hourly.test.ts > the hourly fold > W06.07 keeps legacy uncertainty visible, never recreates orphan membership, and clears all seen metadata on forward rollover\nError: report unavailable\n ❯ unavailable src/learn/hourly.ts:409:39\n    407|   if (n > REPORT_LIMITS[key]) throw new ReportBudgetExceeded(key, REPO…\n    408| };\n    409| function unavailable(): never { throw new ReportUnavailableError(); }\n       |                                       ^\n    410| const aggregateMap = (v: unknown): Record<string, unknown> => objectMa…\n    411| const aggregateName = (v: string, max = 256) => {\n ❯ compatibleHours src/learn/hourly.ts:509:91\n ❯ Module.reportFromHours src/learn/hourly.ts:536:23\n ❯ src/learn/hourly.test.ts:717:12\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯\n\n FAIL  src/learn/report.test.ts > the day report > W21 retains repeated credits in raw reports and withdraws historic GET inference without storage mutation\nAssertionError: expected [ …(4) ] to deeply equal [ …(3) ]\n\n- Expected\n+ Received\n\n  Array [\n    \"reports/coach/coach/2026-09-03.json\",\n    \"reports/coach/coach/2026-09-03.json\",\n+   \"reports/coach/coach/2026-09-03.json\",\n    \"reports/coach/coach/2026-09-04.json\",\n  ]\n\n ❯ src/learn/report.test.ts:687:56\n    685|     for (const result of [body, windowBody]) expect(JSON.stringify(res…\n    686|     expect(JSON.stringify(historic)).toBe(stored);\n    687|     expect(storage.get.mock.calls.map(([key]) => key)).toEqual([\n       |                                                        ^\n    688|       reportKey('coach', 'coach', '2026-09-03'), reportKey('coach', 'c…\n    689|     ]);\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯\n\n Test Files  2 failed (2)\n      Tests  3 failed | 15 passed | 28 skipped (46)\n   Start at  23:44:13\n   Duration  11.56s (transform 2.35s, setup 0ms, collect 4.75s, tests 1.10s, environment 0ms, prepare 4.22s)\n\n"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "session_id": 51654,
+      "output_sha256": "96d9d1794806a78d08fa4b583f28c7119f4750065385429f8b679396bd58932b"
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.01|W31.01|W32.02|W32.01|W26.02|W30.01 restores|W30.01 preserves|W21 .*repeated credits|W33.01 only null|W06.07 keeps legacy uncertainty|the day from its hours|an hour built again' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "188caf",
+          "wall_time_seconds": 1.001357306,
+          "session_id": 13466,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ef3ef7",
+          "wall_time_seconds": 0.000002163,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (28 tests | 18 skipped) 213ms\n ✓ src/learn/report.test.ts  (18 tests | 10 skipped) 864ms\n\n Test Files  2 passed (2)\n      Tests  18 passed | 28 skipped (46)\n   Start at  23:46:58\n   Duration  10.61s (transform 2.25s, setup 0ms, collect 4.58s, tests 1.08s, environment 0ms, prepare 3.53s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 13466,
+      "output_sha256": "3fa4ea59a1468b5eaf0445248f2d76af3a722404a7af87ab11f9fc0e1fb6f382"
+    },
+    "runtime3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.01|W31.01|W32.02|W32.01|W26.02|W30.01 restores|W30.01 preserves|W21 .*repeated credits|W33.01 only null|W06.07 keeps legacy uncertainty|the day from its hours|an hour built again' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "fe371a",
+          "wall_time_seconds": 1.001685866,
+          "session_id": 91334,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f7f670",
+          "wall_time_seconds": 0.000002244,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (28 tests | 18 skipped) 215ms\n ✓ src/learn/report.test.ts  (18 tests | 10 skipped) 847ms\n\n Test Files  2 passed (2)\n      Tests  18 passed | 28 skipped (46)\n   Start at  23:48:52\n   Duration  11.00s (transform 2.37s, setup 0ms, collect 4.64s, tests 1.06s, environment 0ms, prepare 3.72s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 91334,
+      "output_sha256": "236b469c1ac375a6f4369876c1bdae9fe2d7ea72d07ecaa4b96add973a2b4b9b"
+    },
+    "runtime4": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.01|W31.01|W32.02|W32.01|W26.02|W30.01 restores|W30.01 preserves|W21 .*repeated credits|W33.01 only null|W06.07 keeps legacy uncertainty|the day from its hours|an hour built again' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "5f34da",
+          "wall_time_seconds": 1.001623192,
+          "session_id": 14447,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "20b85a",
+          "wall_time_seconds": 0.000002144,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (28 tests | 18 skipped) 311ms\n ✓ src/learn/report.test.ts  (18 tests | 10 skipped) 837ms\n\n Test Files  2 passed (2)\n      Tests  18 passed | 28 skipped (46)\n   Start at  23:50:28\n   Duration  10.40s (transform 2.26s, setup 0ms, collect 4.52s, tests 1.15s, environment 0ms, prepare 3.31s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 14447,
+      "output_sha256": "cd9287031c9e04a1efcf09e4b58ac3e47726b9699ee6d5099c0c12439560328f"
+    },
+    "runtime5": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.01|W31.01|W32.02|W32.01|W26.02|W30.01 restores|W30.01 preserves|W21 .*repeated credits|W33.01 only null|W06.07 keeps legacy uncertainty|the day from its hours|an hour built again' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "26a986",
+          "wall_time_seconds": 1.000849508,
+          "session_id": 2519,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2be7e8",
+          "wall_time_seconds": 0.000001769,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (28 tests | 18 skipped) 312ms\n ✓ src/learn/report.test.ts  (18 tests | 10 skipped) 823ms\n\n Test Files  2 passed (2)\n      Tests  18 passed | 28 skipped (46)\n   Start at  23:52:30\n   Duration  10.45s (transform 2.21s, setup 1ms, collect 4.52s, tests 1.14s, environment 0ms, prepare 3.41s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 2519,
+      "output_sha256": "589306e210b1a1cee277114540e55b0403328358949633bf65741a0ca25cb005"
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts docs/kit/02-api-reference.md",
+      "captures": [
+        {
+          "chunk_id": "7d9818",
+          "wall_time_seconds": 1.001621317,
+          "session_id": 22616,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b46bbb",
+          "wall_time_seconds": 5.000494151,
+          "session_id": 22616,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "8dec43",
+          "wall_time_seconds": 0.000002056,
+          "exit_code": 0,
+          "original_token_count": 57,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/report.test.ts\n  665:38  warning  '_options' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 1 problem (0 errors, 1 warning)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 22616,
+      "output_sha256": "a2af9dddb1852cac60e147685d2a0ff4b09e582e75d1fdb2f16c4ed15284a4fd"
+    },
+    "static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts docs/kit/02-api-reference.md",
+      "captures": [
+        {
+          "chunk_id": "208bc2",
+          "wall_time_seconds": 1.000757084,
+          "session_id": 26195,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4f4281",
+          "wall_time_seconds": 0.000001142,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 26195,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "static3": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts docs/kit/02-api-reference.md",
+      "captures": [
+        {
+          "chunk_id": "beb84f",
+          "wall_time_seconds": 1.001255131,
+          "session_id": 94707,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5fdc75",
+          "wall_time_seconds": 0.000001232,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 94707,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "authoring_and_rework": [
+    "Initial oversized baseline display was truncated; corrected by parsed metadata/complete task reads. One missing optional preflight-review filename was a read-only diagnostic; actual admitted review/plan/task consumed. One unmatched documentation patch context was rejected atomically and corrected. These are authoring/inspection events, not product checks.",
+    "Intentional fixed-scope fixture adaptations replace empty/duplicate capacity inputs with unique IDs, change conflicting first-match arm expectations to refusal with preserved unique arithmetic, and update exact retry/computation version expectations. Exactly3 new grouped titles plus15 existing controls.",
+    "Runtime1:15passed3failed28unselected. W31 invalid257-byte slot now refuses earlier; root approved early-refusal/no-write assertion while retaining300-valid-slot metadata-overflow/progress evidence. W06 fixture merged horizon0 with default48h; root approved consistent horizon0 while existing mixed-profile refusal remains. W21 text-only legacy reader needs prefix plus separate full read; exact4get key/range sequence now asserted with unchanged no-write/inference checks.",
+    "Before runtime2, raw outcome fixture used corrected contentId and explicit1-credit retry/2-credit distinct nonce assertions; nonce event/type consistency uses actual rewardOf. Runtime2 passed18 but is superseded. Static1 compiler/lint/whitespace exited0 but lint showed1 new unused fixture options warning, failing the0-warning criterion; corrected explicit ignored-range use.",
+    "Runtime3 passed18 after fixture warning correction but predates root-requested bounding of newly shared retained-ID allocation. Added existing16MiB UTF8-ID/1million visited-entry budgets across shards,2048-byte relevant ID maximum, and real8193-by2048-ID pre-ring-cap refusal inside existing hourly group. Runtime4/static2 passed and are retained as superseded.",
+    "Root found cross-shard partial-progress fixture would fail earlier on carrier visitor scope; approved exactly one fixture-line change to opaque legacy-shared-id so it exercises the shared retained-ID guard. Original source STOP retained below. Runtime5/static3 both pass on final bytes. No source edits during any running check; no other production change after runtime4/static2."
+  ],
+  "assertion_coverage": {
+    "C1": "Full logical JSON equality independent of object key order; validated top-level delivery provenance only; exact decision/nonce outcome suppression before unique cap, late full-payload conflicts, tenant/brand/visitor/provenance/nonce/type errors and ambiguous legacy outcomes refuse before raw publication. Physical bytes/work/object budgets remain; unique legacy and distinct nonce credits retained.",
+    "C2": "Raw/hourly counts/grids/arms/credits/exploration parity, optional duplicate counters scoped after erasure, fresh returning activity, event-time finite rings, replay, loaded conflicts before shard writes, ambiguous/cross-shard carry-in refusal with explicit prior-progress/no-aggregate evidence, retained-ID allocation bound, basis1/2 historical labels/bytes and mixed3 withholding through canonical summaries/window.",
+    "C3": "Five-file implementation/API, fixed18 runtime and full compiler/scoped0-warning lint/whitespace pass; source frozen for independent Astra/xhigh review and root acceptance. No package/finding/customer/release closure asserted."
+  },
+  "limitations": [
+    "Forward loaded-input report containment only; full W22/F16/F17/F19/F22/N10/N23 obligations remain. No producer recovery, online statistics dedup, durable reconciliation, export/replay dedup or historical repair.",
+    "Repeated nonce-free outcomes refuse even when identical; unique legacy outcomes remain. Identical legacy decisions count logical IDs, not proved unique page views. Valid nonce identity is not business-order uniqueness.",
+    "Physical object/UTF8/work budgets still count duplicate traffic. Hourly full-row comparison newly refuses above16MiB raw text and bounded work; shared retained-ID comparison additionally has16MiB ID bytes/1million visited entries and2048bytes per relevant ID. These are conservative application refusals, not native/customer capacity proof.",
+    "Compact carry-in cannot prove full logical payload equality. Relevant ambiguity/forward ID overlap refuses before mutating that shard, but earlier shard progress may already exist; no aggregate is published and no rollback is claimed. Expired/out-of-horizon unrelated history and existing partial-write/late-data/horizon limitations remain.",
+    "Basis3 means current loaded-input deduplication, not a clean-history certificate. Stored bases1/2 remain old; mixed bases withhold pooling. Old binaries/rollout, complete histories, maturity, causal inference and deployed acceptance remain separate.",
+    "Fresh erasure checks are not an atomic global fence. Served-decision denominators, distinct repeat-event credit, online ranking/stats/SDK/refresh and customer policies unchanged. No external/cloud/customer-data/credentials/install/build/commit/deploy/destructive actions."
+  ],
+  "source_stop_history": [
+    {
+      "at": "2026-09-14T03:51:53.494Z",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "68c2332cb0a0ae6ca642b20edb0f6899a8db56166e1865e81c00db1dfd02b672"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "21876bca09bfa317998c80223c232adffc5286d17bdbc8b4adcc646aa975d3d6"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "b8e504482db6bf2106775e4dc10a09539ec09a60745a19df92113bd1d4f670f4"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "4013ea9c695fd3e417afe8864df269969f62f2f1c90852dfa22722af5a134ca9"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "af9fc0d94c16fed5e785788b676fb958f2a2e8ad1bad9cb396e6f66832c2edb3"
+        }
+      ],
+      "capture": "adf536",
+      "disposition": "Superseded only for approved hourly fixture-line correction; all other source hashes retained."
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-14T03:54:13.724Z",
+    "files": [
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "68c2332cb0a0ae6ca642b20edb0f6899a8db56166e1865e81c00db1dfd02b672"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "21876bca09bfa317998c80223c232adffc5286d17bdbc8b4adcc646aa975d3d6"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "b8e504482db6bf2106775e4dc10a09539ec09a60745a19df92113bd1d4f670f4"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "e200da198aca49f2dd0015d5daad6c473e579f7c06b412d35001087d64df3df7"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "af9fc0d94c16fed5e785788b676fb958f2a2e8ad1bad9cb396e6f66832c2edb3"
+      }
+    ]
+  },
+  "source_stop_capture": "2f416c",
+  "protected_dependencies": {
+    "count": 23,
+    "unchanged": true
+  },
+  "timestamp_note": "Per-command UTC start/finish timestamps were not separately recorded. Original tool capture identities/output and runner-local start/duration are retained; STOP timestamps are actual later observations, not backdated executions.",
+  "handoff": "Only worker.json written after final source STOP. All runtime/static commands drained. Root owns exact artifact freeze, distinct independent review, tracker/journal and acceptance."
+}

@@ -1,0 +1,335 @@
+{
+  "task_id": "W08.02",
+  "actor": {
+    "id": "/root/w0802_worker",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "status": "source_stopped_pending_independent_review",
+  "contract_digest": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+  "approved_plan": {
+    "path": "docs/remediation/design/W08.02/plan.md",
+    "sha256": "4c2a8174d6e2c7187ee6cce488643fe8dac744bfb9212703fe7b39a8da2cb18d"
+  },
+  "authorization": "Root GO after admission13134 VALID journal800, exit0/drained at 2026-09-10T16:18:59Z. No source edits or product checks before GO. Root explicitly lifted first STOP only for the two-line ASCII-whitespace canonicalization correction and fixed checks under the same admission; no artifact had been frozen or accepted.",
+  "baseline": "Source-confirmed old implicit remote/guessed target, plaintext argv/generated stdout handoff, raw child failure output and plain INSERT duplicate failure. Exact 24 baseline pins and dirty worktree retained by root. No baseline seed/CLI/credential/database execution.",
+  "edited_paths": [
+    "scripts/operator-seed.mjs",
+    "scripts/operator-seed.test.mjs",
+    "docs/architecture/31-load-test-2026-09-05.md"
+  ],
+  "source_stopped_at": "2026-09-10T16:30:24.224Z",
+  "source_identity": [
+    {
+      "path": "scripts/operator-seed.mjs",
+      "bytes": 10091,
+      "sha256": "50e0b53e3b902c35013be6c38d4ee4e37319c496e5fc778f8c87e1bd16af3373"
+    },
+    {
+      "path": "scripts/operator-seed.test.mjs",
+      "bytes": 16188,
+      "sha256": "5e963036f6918bf3ceea551ba2fb46df6fddd54644d10f8d083cc25ac6782b95"
+    },
+    {
+      "path": "docs/architecture/31-load-test-2026-09-05.md",
+      "bytes": 8175,
+      "sha256": "3b0cd44153dea07a8ce40ddd50db02cd14774812bffdbaf44a16c381d0f1c174"
+    }
+  ],
+  "artifact_identity": {
+    "status": "pending_root_freeze",
+    "note": "This identifies final owned bytes only. Root owns complete dependency manifest/freeze, independent review and acceptance."
+  },
+  "implementation": [
+    "Strict duplicate/unknown/value/mode/ASCII-email/password-stdin flags; required configured binding/name, expected UUID and explicit default/named environment; remote account pin agrees with effective config account when present.",
+    "Installed smol-toml parses repository config only after arguments are valid. Named D1 arrays do not inherit, matches must be unique, local preview IDs are refused and configured compliance must be public. No target guessing, account lookup, resource creation or config mutation.",
+    "Non-TTY caller-held password input is limited to 1024 UTF8 bytes/10–200 characters and 10 seconds; fatal decoding, NUL/control/multiline and existing email/repetition policy checks precede hashing. One optional final LF/CRLF removed; password whitespace and NFKC derivation preserved.",
+    "PBKDF2-SHA256/100000/16-byte salt, fresh full UUID identity, must_change=1 and prior role/permission meanings. One atomic INSERT SELECT canonical-email guard with email DO NOTHING conflict and RETURNING id; existing account/session/audit/removal history is never updated. SQL trim now explicitly removes ASCII TAB/LF/VT/FF/CR/space, matching admitted ASCII input normalization.",
+    "Direct installed Wrangler Node entry, anchored cwd/config, explicit env/mode and no temporary account. Public production API/account/logging/metrics/error-report controls fixed; no npx install. Child stdout/stderr captured with 30-second timeout and 64KiB limit.",
+    "Exact one success result with empty rows or sole expected fresh ID determines existing/created; supplied changes metadata must agree. Child/JSON/ambiguous failures emit one fixed uncertainty/retry message, never credentials, SQL or raw diagnostics.",
+    "Doc31 operator setup advice now explains explicit prerequisites and protected stdin; historical results and load-test command preserved."
+  ],
+  "verification": {
+    "runtime": "v22.15.0",
+    "primary": {
+      "attempts": 2,
+      "final_capture_id": "primary_rework",
+      "groups": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "exit_status": 0,
+      "total_fixture_duration_ms": 560.252445,
+      "group_durations_ms": [
+        75.094843,
+        78.64948,
+        263.13341
+      ]
+    },
+    "syntax": "exit0, no diagnostics; final source",
+    "tracked_whitespace": "exit0, no diagnostics; final owned paths",
+    "untracked_fixture_whitespace": "Historical no-index check returned exit1/zero diagnostics on the first fixture and is retained exactly. Rework changes only the existing retained email literal to escaped TAB/CR; final scoped whitespace command and actual two-line rework inspection completed. No second no-index run or false final-byte no-index claim; independent review must inspect final fixture.",
+    "workload": "Three grouped tests of complete injected callable flow with synthetic config/input/child, actual migration0010 in node:sqlite :memory:, complete account/session/audit snapshot equality, initial/canonical rerun/overlapping same-connection calls, PBKDF2-NFKC compatibility, uniqueness failure and committed-write/lost-result safe retry. Child never invoked.",
+    "measurement_boundary": "One local Node fixture run only. Overlapping JS calls use the same in-memory SQLite connection; no deployed/concurrent-D1, workerd, browser, customer or SLO proof. Hash compatibility checks Node-generated hashes against the unchanged source contract; accepted W02.07 onboarding assurance is reused, not rerun."
+  },
+  "failures": [],
+  "rework": [
+    "Initial combined instruction/source reads were oversized/uncredited; required AGENTS/README/doc36/RESUME/full W08/F09 and actual source were read fully in bounded calls before implementation. Missing prospective design-path probes and oversized historical evidence-format displays are read-only, uncredited diagnostics.",
+    "First apply_patch attempted Delete/Add on the same existing path and was rejected before any modification. Replaced using Update; no file deletion/reset occurred.",
+    "Before fixed checks, root requested effective public compliance/production controls; implemented in the existing target group. Raw ASCII-before-lowercase guard and one Kelvin-sign refusal were already added. No source change after the sole passing primary run.",
+    "Root retained the failed admission metadata checks and corrected approval history before GO; those did not authorize or cause worker source changes.",
+    "After first source STOP, root identified SQLite trim(email) removes spaces only whereas admitted ASCII JS trim also removes TAB/LF/VT/FF/CR. Authorized exactly two lines: SQL lower(trim(email, char(9,10,11,12,13,32))) and existing retained uppercase email fixture with escaped TAB/CR. No group/scope/doc change. Replacement primary167f6b passed3/3; syntax01c758 and scoped whitespace648c9a exit0/drained. First PASS/STOP/identities/captures retained in source_stop_history and captures; final STOP supersedes them."
+  ],
+  "expected_failure_diagnostics": "Synthetic invalid arguments/config/password, SQL collision, child failure and malformed/lost result cases are expected negative assertions inside the three passing groups. Their raw input/rows/credentials are withheld from assertions and captured output.",
+  "captures": [
+    {
+      "id": "primary",
+      "command": "node --test scripts/operator-seed.test.mjs",
+      "launch_requested_at": "2026-09-10 16:26:07 UTC",
+      "chunks": [
+        {
+          "chunk_id": "7cfafb",
+          "wall_time_seconds": 0.470394902,
+          "exit_code": 0,
+          "original_token_count": 283,
+          "returned_characters": 1130,
+          "returned_bytes": 1130,
+          "sha256": "d8c7ed92c57b53435bef37e2665f4ea8569e5ac8afc13b90edc5a94b65b9f02d"
+        }
+      ],
+      "completion_observed_at": "2026-09-10 16:26:24 UTC",
+      "tool_session_id": null,
+      "session_drained": true,
+      "exit_status": 0,
+      "capture_method": "Direct exec_command; complete combined stdout/stderr exactly as returned, in chunk order. No capture-wrapper status substituted for child status.",
+      "combined_output": {
+        "bytes": 1130,
+        "sha256": "d8c7ed92c57b53435bef37e2665f4ea8569e5ac8afc13b90edc5a94b65b9f02d",
+        "gzip_base64": "H4sIAAAAAAAAA8WTsW7bMBCGdz3FD3hIA0RqLce24kwdumVo4BYdmwt5lghTpMA7xfXbF5QN1IOBbOl2OpH6/vtI/fj6HW+cxMWA+aKY4VOIljfzplnNb/Htz8DJ9RyU/C9KwYV2g+3zk1OGE1AAX6zAjknHxKBg0bu2U5iOQssgBYUj1PWcET+F8ZI5KEtNZLg8nD4uqKrqBRohXTzg0HFiaMc4v8eBBCYxKdvbYobt+KosuoFockahlFrWiS9sUi5t72Sabkhs2LKAdzs2Ko9wQZS8ZwvTOW8vd/vYtplHiTG4ENgWcY85yo8gAWVZFoAdE6mL4XcvG6zvq/WiWdR1Aehx4A1u8ug3BbKzSxeJyUNMxz2dXU0gQyEGZ8gjcRqD5JjC6Y3zIstBHXm5A43axeT0eAfhaR6ZttNonT6iI+kgSkeBif1A6l49Zzc1yv9BvuqqqatFvWrmy3ddbZ+fYKL37h9uOqHPiWX0ih05PyYW7JkHxFGHUWFi2Llz7lNCsw/x4Nm2jDEYTkou5JS9U8lyFig/BHXVRr1cVQ+LpmlW13XMqyr/+LklyJWMTlnwpZhhIDn1crqpYygYnq5yfpK9G4ZzrdHGqbigY7l+qO7rdV0XfwGEsPJ/agQAAA=="
+      }
+    },
+    {
+      "id": "syntax",
+      "command": "node --check scripts/operator-seed.mjs",
+      "launch_requested_at": "2026-09-10 16:26:24 UTC",
+      "completion_observed_at": "2026-09-10 16:26:24 UTC",
+      "chunks": [
+        {
+          "chunk_id": "cc112c",
+          "wall_time_seconds": 0.000003801,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "tool_session_id": null,
+      "session_drained": true,
+      "exit_status": 0,
+      "capture_method": "Direct exec_command; complete combined stdout/stderr exactly as returned, in chunk order. No capture-wrapper status substituted for child status.",
+      "combined_output": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      }
+    },
+    {
+      "id": "whitespace",
+      "command": "git diff --check -- scripts/operator-seed.mjs scripts/operator-seed.test.mjs docs/architecture/31-load-test-2026-09-05.md",
+      "launch_requested_at": "2026-09-10 16:26:24 UTC",
+      "completion_observed_at": "2026-09-10 16:26:24 UTC",
+      "chunks": [
+        {
+          "chunk_id": "926d62",
+          "wall_time_seconds": 0.000002741,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "tool_session_id": null,
+      "session_drained": true,
+      "exit_status": 0,
+      "capture_method": "Direct exec_command; complete combined stdout/stderr exactly as returned, in chunk order. No capture-wrapper status substituted for child status.",
+      "combined_output": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      }
+    },
+    {
+      "id": "fixture_whitespace",
+      "command": "git diff --no-index --check /dev/null scripts/operator-seed.test.mjs",
+      "launch_requested_at": "2026-09-10 16:26:24 UTC",
+      "completion_observed_at": "2026-09-10 16:26:24 UTC",
+      "chunks": [
+        {
+          "chunk_id": "49e654",
+          "wall_time_seconds": 0.000002574,
+          "exit_code": 1,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "tool_session_id": null,
+      "session_drained": true,
+      "exit_status": 1,
+      "capture_method": "Direct exec_command; complete combined stdout/stderr exactly as returned, in chunk order. No capture-wrapper status substituted for child status.",
+      "combined_output": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      }
+    },
+    {
+      "id": "primary_rework",
+      "command": "node --test scripts/operator-seed.test.mjs",
+      "launch_requested_at": "2026-09-10 16:29:41 UTC",
+      "chunks": [
+        {
+          "chunk_id": "167f6b",
+          "wall_time_seconds": 0.447827562,
+          "exit_code": 0,
+          "original_token_count": 283,
+          "returned_characters": 1129,
+          "returned_bytes": 1129,
+          "sha256": "34bfdd8752e1f4b5d6d3ad09e76047825dcc2308dbf7b144fccf0aa217241d96"
+        }
+      ],
+      "completion_observed_at": "2026-09-10 16:29:42 UTC",
+      "tool_session_id": null,
+      "session_drained": true,
+      "exit_status": 0,
+      "capture_method": "Direct exec_command; complete combined stdout/stderr exactly as returned, in chunk order. No capture-wrapper status substituted for child status.",
+      "combined_output": {
+        "bytes": 1129,
+        "sha256": "34bfdd8752e1f4b5d6d3ad09e76047825dcc2308dbf7b144fccf0aa217241d96",
+        "gzip_base64": "H4sIAAAAAAAAA8WTsW7bMBCGdz3FD3hIA0Sqbcmu40wdumVo4BYdmwt5lghTpMA7xfXbF5QN1EOAbOl2OpH6/vtI/fj6Ha+cxMWARV3M8ClEy9vlajPf3OLbn4GT6zko+V+UggvtFrunR6cMJ6AAvlqBPZOOiUHBondtpzAdhZZBCgonqOs5I34K4zlzUJaayHB5PH9cUFXVMzRCunjEsePE0I5xeY8jCUxiUra3xQy78UVZdAvR5IxCKbWsE1/YpFza3sk03ZDYsGUB7/dsVB7ggih5zxamc95e7/axbTOPEmNwIbAt4gELlB9BAsqyLAA7JlIXw+9etviyqub3zaapC0BPA29xk0e/KZCdXbtITB5iOu7p4moCGQoxOEMeidMYJMcUTq+cF1kO6sjLHWjULianpzsIT/PItJ1G6/QBHUkHUToJTOwHUvfiObtZovwf5Lddbap1c99s3lW1e3qEid67f7TpgD4nltEr9uT8mFhwYB4QRx1GhYlh7y6xzwHNIcSjZ9syxmA4KbmQQ/ZOJbupUX4I6k0Zy3VdLeq6WbxtY1FV+bfPLUGuZHTKgnkxw0By7uVwU8dQMDxd5PwkBzcMl1qjjVNxBcdqPa+Wq2XTrIq/4ld/CmkEAAA="
+      }
+    },
+    {
+      "id": "syntax_rework",
+      "command": "node --check scripts/operator-seed.mjs",
+      "launch_requested_at": "2026-09-10 16:29:57 UTC",
+      "completion_observed_at": "2026-09-10 16:29:57 UTC",
+      "chunks": [
+        {
+          "chunk_id": "01c758",
+          "wall_time_seconds": 0.000002841,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "tool_session_id": null,
+      "session_drained": true,
+      "exit_status": 0,
+      "capture_method": "Direct exec_command; complete combined stdout/stderr exactly as returned, in chunk order. No capture-wrapper status substituted for child status.",
+      "combined_output": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      }
+    },
+    {
+      "id": "whitespace_rework",
+      "command": "git diff --check -- scripts/operator-seed.mjs scripts/operator-seed.test.mjs docs/architecture/31-load-test-2026-09-05.md",
+      "launch_requested_at": "2026-09-10 16:29:57 UTC",
+      "completion_observed_at": "2026-09-10 16:29:57 UTC",
+      "chunks": [
+        {
+          "chunk_id": "648c9a",
+          "wall_time_seconds": 0.0000037,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "returned_characters": 0,
+          "returned_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "tool_session_id": null,
+      "session_drained": true,
+      "exit_status": 0,
+      "capture_method": "Direct exec_command; complete combined stdout/stderr exactly as returned, in chunk order. No capture-wrapper status substituted for child status.",
+      "combined_output": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gzip_base64": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+      }
+    }
+  ],
+  "limitations": [
+    "Worker checks are not independent verification or acceptance. Root must freeze the complete artifact and review separate Astra evidence.",
+    "Full W08 desired-state creation/reconcile/add-brand/rotation, real resource ownership, schema/product/demo separation, release/migration/alert/config/tenant workflow, second-brand proof and rollback/restore remain open.",
+    "ASCII bootstrap email input only. Runtime account/email policy is untouched. Existing rows are preserved without validating credentials, granting usable-password claims or reconciling identity/authority. Privileged initial bootstrap can create a fresh identity after removal while retained audit barriers remain.",
+    "Hash-bearing SQL remains in privileged child argv. Trusted host/process environment, proxies, cloud query retention and caller-side password source/handoff require operational controls; this is not a zero-secret-everywhere claim.",
+    "Installed parser/tool pins and intercepted child contract do not attest clean-clone install, real Wrangler execution, configured account ownership, deployed D1 behavior, data recovery, customer/gate/package or release acceptance.",
+    "No actual seed/Wrangler/provision/migration/project build/install command, external operation, credentials/customer data, cleanup, staging, commit or push was used. Existing engine/learning/auth/schema/config files remain outside worker ownership."
+  ],
+  "handoff": {
+    "next_action": "Root verifies final two-line correction, final three owned identities and retained complete captures, freezes dependencies/deltas, and authorizes independent /root/w0802_review. No further worker source edits.",
+    "active_verification_sessions": [],
+    "ownership": "Root retains tracker/journal/RESUME and acceptance; this worker only wrote three admitted files and this evidence."
+  },
+  "source_stop_history": [
+    {
+      "source_stopped_at": "2026-09-10T16:27:19.192Z",
+      "source_identity": [
+        {
+          "path": "scripts/operator-seed.mjs",
+          "bytes": 10067,
+          "sha256": "fbb4c1078e401e8dc499a5ee59be862f09be21e8845ca7556380f3ff819f6aaa"
+        },
+        {
+          "path": "scripts/operator-seed.test.mjs",
+          "bytes": 16184,
+          "sha256": "362b0d30e45108223ac2ba9a88b1b74fe7b7bc4311b791974a551ef193d9074e"
+        },
+        {
+          "path": "docs/architecture/31-load-test-2026-09-05.md",
+          "bytes": 8175,
+          "sha256": "3b0cd44153dea07a8ce40ddd50db02cd14774812bffdbaf44a16c381d0f1c174"
+        }
+      ],
+      "worker_record_sha256": "da4e8f829eaea58bec5551d96bb723b263eafb3ae73d6f9da666ace5841f42cf",
+      "verification": {
+        "runtime": "v22.15.0",
+        "primary": {
+          "attempts": 1,
+          "groups": 3,
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0,
+          "cancelled": 0,
+          "exit_status": 0,
+          "total_fixture_duration_ms": 579.42722,
+          "group_durations_ms": [
+            74.738322,
+            82.326815,
+            256.938886
+          ]
+        },
+        "syntax": "exit0, no diagnostics; final source",
+        "tracked_whitespace": "exit0, no diagnostics; final owned paths",
+        "untracked_fixture_whitespace": "git diff --no-index --check /dev/null fixture returned exit1 with zero output: introduced-file content differs. Exact exit retained; no whitespace diagnostics and no exit0 claim. Root also inspected complete fixture source.",
+        "workload": "Three grouped tests of complete injected callable flow with synthetic config/input/child, actual migration0010 in node:sqlite :memory:, complete account/session/audit snapshot equality, initial/canonical rerun/overlapping same-connection calls, PBKDF2-NFKC compatibility, uniqueness failure and committed-write/lost-result safe retry. Child never invoked.",
+        "measurement_boundary": "One local Node fixture run only. Overlapping JS calls use the same in-memory SQLite connection; no deployed/concurrent-D1, workerd, browser, customer or SLO proof. Hash compatibility checks Node-generated hashes against the unchanged source contract; accepted W02.07 onboarding assurance is reused, not rerun."
+      },
+      "capture_ids": [
+        "primary",
+        "syntax",
+        "whitespace",
+        "fixture_whitespace"
+      ],
+      "disposition": "Historical first PASS/source stop returned by root before freeze/acceptance for a canonical-email whitespace defect. Full original captures remain unchanged below."
+    }
+  ]
+}

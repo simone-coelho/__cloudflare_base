@@ -1,0 +1,13 @@
+{
+  "task_id": "W37.03",
+  "at": "2026-09-09T05:02:26.886Z",
+  "actor": "w01-lead",
+  "reason": "Independent review found unsigned ingest dispatch forwarding before local owner/actual-object gate; root reproduced source path. Green K1 did not cover bypass.",
+  "superseded_source_freeze": {
+    "path": "docs/remediation/evidence/W37.03/source-freeze.json",
+    "sha256": "0df1b05baf359bcba513126048bba5828246db17de6f9ae420c6714dac827205"
+  },
+  "disposition": "Same-contract C2 rework approved: withdraw pre-gate unsigned ingest forwarding, retain unsigned snapshot forwarding, refuse forwarded objects inside serialized unsigned gate; same-case bound/non-default forwarding-to-unbound-Coach refusal and zero effects. Add real crossing alarm to existing signed defaultCoach/BH loop for explicit C1 surface compatibility. No new suite/framework.",
+  "required": "Final exact K1/compiler/scoped lint/whitespace; new source freeze then independent exact K1/source/proof review. Preserve prior passing/superseded worker and reviewer runs.",
+  "authority": "Sole worker owns same two files and worker.json; root governance, reviewer review.json. No external actions."
+}

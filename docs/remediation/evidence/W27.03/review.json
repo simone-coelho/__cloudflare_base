@@ -1,0 +1,152 @@
+{
+  "at": "2026-09-12T16:10:17.204Z",
+  "task_id": "W27.03",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "baaa8c8960c2ab203994f8f8e9a6733b62ba941b9c44ba2b7cc79635eb5a529e",
+  "contract_digest": "dfb704bd384177fadcb26cfe36072c7f0e308090b66fc6af0282e61d52498ecb",
+  "verdict": "PASS",
+  "summary": "Independent frozen source review and the admitted six local runtime checks pass. Exact consumed dependency identities are guarded; this is not configuration immutability or full W27/F22 acceptance.",
+  "criteria": [
+    {
+      "id": "W27.03-C1",
+      "verdict": "PASS",
+      "evidence": "Actual replay.ts refuses malformed versions objects and all five consumed identities before dependency I/O, preserving explicit zero/default and missing pre-Phase3 handling. replayDeps.doc checks the returned envelope revision against the requested revision, without substituting current/default content for positive missing or mismatched dependencies. The new pure replay group exercises malformed objects/identities, no-read refusals and explicit defaults; selected W27.02 cases preserve qualified legacy pin behavior."
+    },
+    {
+      "id": "W27.03-C2",
+      "verdict": "PASS",
+      "evidence": "The new actual authenticated replay-route group uses retained records/configuration and archive snapshots to distinguish valid equality, wrong envelope revisions, missing/read-failed dependencies and malformed tuples. It verifies no-store, acknowledged audit ordering, grants and unchanged backing stores. Existing W27.02 coupled/gamma-zero/pin/service checks and the W03.04 six-reader case pass. The only production delta is replay-local; no serving, schema, choice, publisher or route implementation changed."
+    },
+    {
+      "id": "W27.03-C3",
+      "verdict": "PASS",
+      "evidence": "All four actual baseline-to-frozen deltas and both grouped additions were independently inspected. Exact fixed runtime ran once on frozen bytes: 6 passed, 51 unselected. Final worker compiler, scoped lint (0 errors, the same 1 inherited warning) and whitespace checks were read and reused. Before/after verification confirms all 123 artifact pins, 113 protected pins and four exact forward/reverse deltas; unchanged publisher/manifest dependency assurance is reused with the stated limits."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W27.03/plan.md",
+      "sha256": "ab0bd921591a76dca15bd734200d4fb19806d732b9cca90a256c2a399b8064b6"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W27.03/artifact.json",
+      "sha256": "847e72683fb42e71a55c9c81b1fe777c7ab70a3a3400ab61783cb6360e2d77f1"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W27.03/worker.json",
+      "sha256": "9946e004122debecc7da82c48ca804f802bdd11f88e92ef043c1a320fef9e0d2"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/phase3.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts -t 'W27.03|W27.02|W03.04 acknowledges' --maxWorkers=1 --minWorkers=1",
+    "session_id": 97865,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "621240",
+        "wall_time_seconds": 1.001525815,
+        "session_id": 97865,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "71df8a",
+        "wall_time_seconds": 0.000002115,
+        "exit_code": 0,
+        "original_token_count": 156,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (23 tests | 21 skipped) 88ms\n ✓ src/content/consent.test.ts  (20 tests | 19 skipped) 57ms\n ✓ src/learn/phase3.test.ts  (14 tests | 11 skipped) 29ms\n\n Test Files  3 passed (3)\n      Tests  6 passed | 51 skipped (57)\n   Start at  12:04:41\n   Duration  30.39s (transform 5.95s, setup 0ms, collect 16.41s, tests 174ms, environment 1ms, prepare 10.22s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 6,
+      "unselected": 51,
+      "total": 57,
+      "test_files": 3,
+      "new_grouped_cases": 2,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 123,
+    "source_and_output_pins": 117,
+    "protected_pins": 113,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 4,
+    "manifest_sha256": "847e72683fb42e71a55c9c81b1fe777c7ab70a3a3400ab61783cb6360e2d77f1",
+    "before": {
+      "at": "2026-09-12T16:04:16.571Z",
+      "captures": [
+        "28be55",
+        "8575d2"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T16:08:57.442Z",
+      "captures": [
+        "849218",
+        "079b50"
+      ],
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_checks": {
+      "before": [
+        {
+          "chunk_id": "ff08f6",
+          "wall_time_seconds": 0.199399967,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T16:04:16.718Z\",\"task\":\"W27.03\",\"state\":\"verification\",\"contract_digest\":\"dfb704bd384177fadcb26cfe36072c7f0e308090b66fc6af0282e61d52498ecb\",\"artifact_digest\":\"baaa8c8960c2ab203994f8f8e9a6733b62ba941b9c44ba2b7cc79635eb5a529e\"}\n"
+        }
+      ],
+      "after": [
+        {
+          "chunk_id": "89b6d3",
+          "wall_time_seconds": 0.232613453,
+          "exit_code": 0,
+          "original_token_count": 61,
+          "output": "{\"at\":\"2026-09-12T16:08:57.538Z\",\"task\":\"W27.03\",\"state\":\"verification\",\"contract_digest\":\"dfb704bd384177fadcb26cfe36072c7f0e308090b66fc6af0282e61d52498ecb\",\"artifact_digest\":\"baaa8c8960c2ab203994f8f8e9a6733b62ba941b9c44ba2b7cc79635eb5a529e\"}\n"
+        }
+      ]
+    },
+    "inspection": "Actual current plan/checkpoint/task and four complete deltas: 98fbba; full frozen worker evidence and final static captures: 792dfc; relevant replay, versioned-store and authenticated route source: 2aa9f3. Valid personally completed mandatory governance and full W27/F22 reads were reused. Baseline bytes, all final files and exact bidirectional patches were independently verified without writing source."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W27.03/worker.json",
+      "sha256": "9946e004122debecc7da82c48ca804f802bdd11f88e92ef043c1a320fef9e0d2"
+    },
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/replay.ts src/learn/phase3.test.ts src/ledger/ledger.test.ts --max-warnings 1 && git diff --check -- src/learn/replay.ts src/learn/phase3.test.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+    "session_id": 61125,
+    "captures": [
+      "ab2318",
+      "49515f"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 1,
+    "qualification": "Final K2 completed before source STOP 2026-09-12T16:01:35.457Z. The sole replay.ts unused _c warning is inherited (baseline line 158, final line 166), not an addition. No independent static rerun."
+  },
+  "retained_failures_and_qualifications": [
+    "Worker fixed K1 and K2 passed on their first attempts for this task; no failed or superseded candidate is omitted. Worker runtime 81711/e7403d and independent runtime both select 6 of 57 checks.",
+    "The independent runtime's existing Vite CJS deprecation warning is retained verbatim in the complete captures.",
+    "The design gap was source-confirmed; no separate pre-fix failure execution or broader historical suite is claimed. Unchanged W27.01 publisher and W27.02 manifest/transport assurance is reused, with only the contract's selected dependency cases rerun."
+  ],
+  "limitations": [
+    "This checks the exact consumed five-field tuple and returned document envelope revision. A different body overwritten under the same revision is not detected; generic writers and immutable configuration storage remain outside scope.",
+    "Explicit revision zero still means compiled defaults. Code versions, normalization history and retained configuration/archive availability are not reconstructed; existing versioned-store read errors may appear as missing dependencies.",
+    "The route proof uses the real local authenticated Hono route and actual replay modules with synthetic backing bindings. It is not deployed HTTP/native-provider, customer-data, capacity, latency or release acceptance.",
+    "Full W27/F22 closure, retention/rollout/history guarantees and statistical or causal replay claims remain open. Only review.json is written here; lead acceptance is separate."
+  ]
+}

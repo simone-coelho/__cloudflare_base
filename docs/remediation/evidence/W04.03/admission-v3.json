@@ -1,0 +1,152 @@
+{
+  "task_id": "W04.03",
+  "at": "2026-09-17T01:00:14.141Z",
+  "supersedes": {
+    "path": "docs/remediation/evidence/W04.03/admission-v2.json",
+    "sha256": "777620e37f93e38e8c948c779eacd4d63b4c5bd6cf4aa019bb70b44a727a928b"
+  },
+  "scope": "Add only two existing provider transport files to the same whole-W04 local task; no new suite, live operation, or other scope change.",
+  "source_findings": [
+    "Root and read-only scout inspected actual FX dispatcher void fetch and ODP Promise.race: underlying transport can outlive owner drain. ODP event/profile POST starts after awaited identity mapping without an effect-time public-expiry check.",
+    "Existing decision/sort tombstone awaits can cross public expiry before ring/exposure/R2 effects; correct inside existing owned binding boundary. These are source-confirmed schedules, not claimed runtime failures.",
+    "Distinct reviewer confirmed older compatibility-pointer expiry can erase a renewed session under new alarm logic. Correct within already-owned files without inventing a whole-owner retention policy."
+  ],
+  "baseline": {
+    "inherited": {
+      "path": "docs/remediation/evidence/W04.03/admission-v2.json",
+      "sha256": "777620e37f93e38e8c948c779eacd4d63b4c5bd6cf4aa019bb70b44a727a928b"
+    },
+    "original_baselines": {
+      "path": "docs/remediation/evidence/W04.03/admission.json",
+      "sha256": "1f18cf2342cc8ce7839de54a47d88f7089c51a90bd01d6dcabe0f8cd3ca87c27"
+    },
+    "additional_outputs": [
+      {
+        "path": "src/services/OptimizelyService.ts",
+        "sha256": "502e29ea57a57cbaa116cf54519c0c81292e6ff3f0f4cb99cc259febbaa0337d"
+      },
+      {
+        "path": "src/services/odpLoop.ts",
+        "sha256": "133ab863b7b0b00a6f88aeb82509ccdb8b59b9d28a7487daade868d13a30ab68"
+      }
+    ],
+    "case": "Both added files exactly match their prior admission read pins; retain complete dirty originals and reversible task-only deltas before editing. Existing41 originals and in-progress changes remain preserved."
+  },
+  "exclusive_outputs": [
+    "src/identity/sessionAuthority.ts",
+    "src/identity/sessionCapability.ts",
+    "src/identity/consentContinuity.ts",
+    "src/identity/link.ts",
+    "src/identity/erase.ts",
+    "src/services/SessionManager.ts",
+    "src/services/RealtimeSegmentEngine.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/durable-objects/PersonalizationWebSocket.ts",
+    "src/routes/identity.ts",
+    "src/routes/realtime.ts",
+    "src/routes/decisions.ts",
+    "src/routes/sort.ts",
+    "src/routes/tracking.ts",
+    "src/routes/optimizely.ts",
+    "src/content/service.ts",
+    "src/identity/material.mjs",
+    "src/identity/assertion.ts",
+    "src/identity/shopperId.ts",
+    "src/routes/health.ts",
+    "src/ops/monitor.ts",
+    "src/sdk/core.ts",
+    "src/sdk/types.ts",
+    "src/sdk/host.ts",
+    "src/sdk/listen.ts",
+    "src/sdk/testHost.ts",
+    "public/sdk/edge-personalization.esm.js",
+    "public/sdk/edge-personalization.js",
+    "scripts/identity-material.mjs",
+    "scripts/identity-material.test.mjs",
+    "src/identity/identity.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/index.api-boundary.test.ts",
+    "src/routes/identity.test.ts",
+    "src/services/SessionManager.identity.test.ts",
+    "src/services/sessionDefer.test.ts",
+    "src/sdk/core.test.ts",
+    "src/sdk/identify.test.ts",
+    "src/sdk/listen.test.ts",
+    "src/ops/monitor.test.ts",
+    "src/identity/history.ts",
+    "src/services/OptimizelyService.ts",
+    "src/services/odpLoop.ts"
+  ],
+  "implementation": "One exported owner-effect helper checks active/public authority at actual call and registers the underlying operation, not only timeout/race wrappers; private binding adapters cover downstream sinks. Preserve callback/runtime semantics and non-owner behavior. Backend operations retain distinct epoch/consent authority. Do not claim recall of already-transmitted bytes or native/deployed timing acceptance.",
+  "changed_criteria": [
+    {
+      "id": "W04.03-C2",
+      "description": "Existing per-shopper ShopperReflex is the sole serialized authority for exact current tenant/subject/SID/grant/epoch and actual session-host reads, KV writes, derived responses, connector/ledger/learning effects and both socket hosts. Private owner-held invocation cannot be asserted by HTTP headers/body/env flags; exact method/path/object/selector checks repeat at owner ingress. Started deferred effects drain within ownership; later work requires fresh exact-grant admission. No guard-RPC-then-external-effect gap or owner/relay callback cycle. Recheck public expiry at actual external-binding/provider effect entry and retain underlying FX/ODP operations across fire-and-forget callbacks or timeout races; authorized backend owner operations retain their separate generation/consent authority.",
+      "required_evidence_kinds": [
+        "runtime_test"
+      ],
+      "minimum_claim": "local_runtime"
+    }
+  ],
+  "changed_checks": [
+    {
+      "id": "W04.03-K1",
+      "criterion_ids": [
+        "W04.03-C1",
+        "W04.03-C2",
+        "W04.03-C3"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts src/index.api-boundary.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/identity/identity.test.ts src/ops/monitor.test.ts -t 'W04[.]0[123]|W35[.]0[345678]|W05[.]01|W06[.]0[89]|W03[.]07|cleans both actual bound reset hosts|the assertion|the shopper id|W12[.]01' --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd with synthetic bindings and native local socket boundary; no deployed runtime",
+      "workload": "Existing affected groups plus new W04.03: actual both-host current grants, signed409/bootstrap/link/detach/reset/erase/transfer/import concurrency and fault/restart cases; outer deferred/connector/ledger/response effects; both socket hosts including native boundary; identity material readiness. Retain exact foreign-state, denial-before-effects, witness, consent and prior connector oracles; no broad suite. Include paused-read expiry before sink writes and actual FX/ODP transport-drain schedules in the existing W04.03 groups.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W04.03-K3",
+      "criterion_ids": [
+        "W04.03-C1",
+        "W04.03-C2",
+        "W04.03-C3",
+        "W04.03-C4",
+        "W04.03-C5"
+      ],
+      "required": true,
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p src/sdk --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/identity/sessionAuthority.ts src/identity/sessionCapability.ts src/identity/consentContinuity.ts src/identity/link.ts src/identity/erase.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/durable-objects/PersonalizationWebSocket.ts src/routes/identity.ts src/routes/realtime.ts src/routes/decisions.ts src/routes/sort.ts src/routes/tracking.ts src/routes/optimizely.ts src/content/service.ts src/identity/material.mjs src/identity/assertion.ts src/identity/shopperId.ts src/routes/health.ts src/ops/monitor.ts src/sdk/core.ts src/sdk/types.ts src/sdk/host.ts src/sdk/listen.ts src/sdk/testHost.ts src/identity/identity.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/routes/identity.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/ops/monitor.test.ts src/identity/history.ts src/services/OptimizelyService.ts src/services/odpLoop.ts && node --check scripts/identity-material.mjs && node --check scripts/identity-material.test.mjs && node --check src/identity/material.mjs && node --check public/sdk/edge-personalization.esm.js && node --check public/sdk/edge-personalization.js && git diff --check -- src/identity/sessionAuthority.ts src/identity/sessionCapability.ts src/identity/consentContinuity.ts src/identity/link.ts src/identity/erase.ts src/services/SessionManager.ts src/services/RealtimeSegmentEngine.ts src/durable-objects/ShopperReflex.ts src/durable-objects/PersonalizationWebSocket.ts src/routes/identity.ts src/routes/realtime.ts src/routes/decisions.ts src/routes/sort.ts src/routes/tracking.ts src/routes/optimizely.ts src/content/service.ts src/identity/material.mjs src/identity/assertion.ts src/identity/shopperId.ts src/routes/health.ts src/ops/monitor.ts src/sdk/core.ts src/sdk/types.ts src/sdk/host.ts src/sdk/listen.ts src/sdk/testHost.ts public/sdk/edge-personalization.esm.js public/sdk/edge-personalization.js scripts/identity-material.mjs scripts/identity-material.test.mjs src/identity/identity.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/routes/identity.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts src/ops/monitor.test.ts src/identity/history.ts src/services/OptimizelyService.ts src/services/odpLoop.ts",
+      "runtime": "Installed server/SDK compilers, scoped lint/syntax/whitespace and existing SDK generator",
+      "workload": "43 owned outputs only; distinguish inherited/new warning signatures and inspect new-file whitespace. Verify both SDK bundle bytes against same generator after a second identical build, retaining before/after hashes; no wider build/CI.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W04.03-K5",
+      "criterion_ids": [
+        "W04.03-C1",
+        "W04.03-C2",
+        "W04.03-C3",
+        "W04.03-C4",
+        "W04.03-C5"
+      ],
+      "required": true,
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/routes/identity.test.ts src/index.api-boundary.test.ts src/services/SessionManager.identity.test.ts src/services/sessionDefer.test.ts src/identity/identity.test.ts src/ops/monitor.test.ts src/sdk/core.test.ts src/sdk/identify.test.ts src/sdk/listen.test.ts -t 'W04[.]03' --maxWorkers=1 --minWorkers=1 && node --test scripts/identity-material.test.mjs",
+      "runtime": "Installed local Node/Vitest/Miniflare/workerd with synthetic bindings and native local socket boundary; no deployed runtime",
+      "workload": "One independent new grouped W04.03 execution on frozen bytes, SDK source and both shipped bundles, actual both-host/native socket boundary and synthetic provisioning transport; reuse valid broader worker checks. No extra framework. Independently include the same new expiry/underlying-provider-drain groups.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": "Existing W03 local connector remedies and all previously qualified proof/history retained; original task dependencies and live limits unchanged.",
+  "rollback": "Task-only reverse patches for all43 dirty baselines, never HEAD restore; no live rollback performed.",
+  "preflight_review": {
+    "actor_id": "w0403-reviewer",
+    "verdict": "PASS_PREFLIGHT",
+    "basis": "Distinct reviewer source inspection confirms both transport files necessary; underlying operations must drain, not merely timeout wrappers; keep helper inactive outside owner invocation and public expiry separate from backend authority."
+  },
+  "contract_digest": "dfbbecbf7135869e6b481ca27a0bab25f49d9056437739bac99d71540990c392",
+  "approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-17T01:00:14.141Z",
+    "rationale": "Concrete W04 current-authority/drain defects justify only two source outputs and corresponding existing scoped static inputs; runtime selection unchanged."
+  }
+}

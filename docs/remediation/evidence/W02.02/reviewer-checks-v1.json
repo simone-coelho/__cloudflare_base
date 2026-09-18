@@ -1,0 +1,46 @@
+{
+  "artifact_digest": "e96e57fa6b2fa46bbe92e7caac450c70e6d5340b500fbd8d91eb4f9b5960202b",
+  "checks": [
+    {
+      "id": "k1",
+      "command": "node node_modules/vitest/vitest.mjs run src/auth/signing-config.boundary.test.ts src/middleware/auth.refresh-boundary.test.ts src/routes/auth.test.ts src/auth/accounts.test.ts src/middleware/edgeAccess.test.ts src/routes/content.test.ts src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-07T01:59:23.802Z",
+      "observedCompleteAt": "2026-09-07T02:00:40.576Z",
+      "exit_code": 0,
+      "log": "reviewer-k1-v1.log"
+    },
+    {
+      "id": "k2",
+      "command": "node docs/remediation/evidence/W02.02/workerd-boundary.mjs",
+      "startedAt": "2026-09-07T01:59:23.802Z",
+      "observedCompleteAt": "2026-09-07T01:59:55.286Z",
+      "exit_code": 0,
+      "log": "reviewer-k2-v1.log"
+    },
+    {
+      "id": "k3",
+      "command": "node --test scripts/lib/tool-token.test.mjs",
+      "startedAt": "2026-09-07T01:59:23.802Z",
+      "observedCompleteAt": "2026-09-07T01:59:55.286Z",
+      "exit_code": 0,
+      "log": "reviewer-k3-v1.log"
+    },
+    {
+      "id": "challenge",
+      "command": "node docs/remediation/evidence/W02.02/reviewer-runtime-probe-v1.mjs",
+      "startedAt": "2026-09-07T01:59:23.802Z",
+      "observedCompleteAt": "2026-09-07T01:59:55.286Z",
+      "exit_code": 0,
+      "log": "reviewer-challenge-v1.log"
+    },
+    {
+      "id": "identity",
+      "command": "node docs/remediation/evidence/W02.02/lead-artifact-v1.mjs --verify",
+      "startedAt": "2026-09-07T01:59:23.802Z",
+      "observedCompleteAt": "2026-09-07T01:59:55.286Z",
+      "exit_code": 0,
+      "log": "reviewer-identity-v1.log"
+    }
+  ]
+}
+

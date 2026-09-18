@@ -1,0 +1,181 @@
+{
+  "at": "2026-09-12T22:58:22Z",
+  "task_id": "W32.04",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "6a75b40ed2f6169f198cbabe0f8c0be2592facd6d659c482b02089b65bd94868",
+  "contract_digest": "c470e26db44f8a4b3d8dc5ce6404477a7f2c9be6e2ca6d33085e84c59a781722",
+  "verdict": "PASS",
+  "summary": "Independent final-byte review passes forward single-object lightweight canonical summaries and bounded coherent window reads. No full W31/W32, paging, workload-capacity or customer acceptance claim.",
+  "criteria": [
+    {
+      "id": "W32.04-C1",
+      "verdict": "PASS",
+      "evidence": "Actual raw and hourly strict-null canonical branches synchronously serialize the reserved version-1 summary and original full fields into one body and one existing put. The whole UTF-8 opening frame, comma and LF fit 64 KiB; complete body admission remains 8 MiB before put. Public report objects and diagnostic day GET omit the reserved field. Actual groups preserve full field equality, raw/hourly coverage and repeated counts, one-put effects, before-put size refusal, reserved-name refusal and custom/empty/preset nonpersistence. Storage-summary limits do not apply to custom arrays."
+    },
+    {
+      "id": "W32.04-C2",
+      "verdict": "PASS",
+      "evidence": "Actual reader requests offset 0/length 65,536, distinguishes full-object size from received bytes, charges entire chunks and fallback transfers, decodes only bytes before LF, and validates marker/version/owner/consumed summary fields. Missing/overlong/malformed recognized frames are terminal; legacy fallback discards prefix facts and takes one bounded full version, with null-after-presence unavailable. Existing finite ratio, cell, output and conservative coverage guards remain. Independent fixed11 passed 28/92-day exact window parity and byte/request comparisons, malformed/UTF-8-tail/replacement/fallback cases, and the actual installed local R2 range primitive case."
+    },
+    {
+      "id": "W32.04-C3",
+      "verdict": "PASS",
+      "evidence": "Read the complete admitted plan/current criteria, actual seven deltas and relevant readers, all three new groups and eight retained controls, kit and complete worker/failure captures. Reconstructed seven retained failed-candidate source hashes and confirmed only two fixture corrections. The single independent final-byte command passed 11 with 34 unselected; final compiler/six-file zero-warning lint/seven-file whitespace reused. All 46 pins, 32 protected pins, seven exact forward/reverse deltas and contract remain unchanged before/after. No broader suite or benchmark."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W32.04/plan.md",
+      "sha256": "de9bdf039cd65d4c9de063f32e9e5499cc7bc179fa2330c4ad6f8f5d3874f0d6"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W32.04/artifact.json",
+      "sha256": "ed9979e91bd83db59c84202f82d43043ef67a2ffe2070137a15b7ec3ffde5c0b"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.04/worker.json",
+      "sha256": "68881c2e8bf024300c945b5235a13d8257248856d5a7ac7c6991546e6d5b443c"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts -t 'W32.04|W32.03|W33.01|W30.02|preserves repeated credits and zero-denominator' --maxWorkers=1 --minWorkers=1",
+    "session_id": 99173,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "d74ea1",
+        "wall_time_seconds": 1.000474688,
+        "session_id": 99173,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "855a24",
+        "wall_time_seconds": 0.000002048,
+        "exit_code": 0,
+        "original_token_count": 258,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/report.test.ts  (15 tests | 10 skipped) 189ms\n ✓ src/learn/hourly.test.ts  (23 tests | 20 skipped) 198ms\nW32.04 byte_measurement [{\"days\":28,\"requests\":28,\"full_canonical_bytes\":18197938,\"delivered_and_charged_prefix_bytes\":1835008,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":92,\"requests\":92,\"full_canonical_bytes\":59793216,\"delivered_and_charged_prefix_bytes\":6029312,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"}]\n ✓ src/measure/window.test.ts  (7 tests | 4 skipped) 4061ms\n\n Test Files  3 passed (3)\n      Tests  11 passed | 34 skipped (45)\n   Start at  18:56:19\n   Duration  20.16s (transform 2.97s, setup 1ms, collect 8.90s, tests 4.45s, environment 0ms, prepare 4.80s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 11,
+      "unselected": 34,
+      "total": 45,
+      "test_files": 3,
+      "new_grouped_cases": 3,
+      "retained_selected_cases": 8,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 46,
+    "source_and_output_pins": 39,
+    "protected_pins": 32,
+    "exact_forward_and_reverse_deltas": 7,
+    "manifest_sha256": "ed9979e91bd83db59c84202f82d43043ef67a2ffe2070137a15b7ec3ffde5c0b",
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "output_ownership_mismatches": [],
+    "before": {
+      "at": "2026-09-12T22:56:17.418Z",
+      "capture": "1498a3",
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-12T22:58:22.317Z",
+      "capture": "a4c856",
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_before": [
+      {
+        "chunk_id": "6f7dc4",
+        "wall_time_seconds": 0.008551986,
+        "exit_code": 0,
+        "original_token_count": 61,
+        "output": "{\"at\":\"2026-09-12T22:56:17.445Z\",\"task\":\"W32.04\",\"state\":\"verification\",\"contract_digest\":\"c470e26db44f8a4b3d8dc5ce6404477a7f2c9be6e2ca6d33085e84c59a781722\",\"artifact_digest\":\"6a75b40ed2f6169f198cbabe0f8c0be2592facd6d659c482b02089b65bd94868\"}\n"
+      }
+    ],
+    "contract_after": [
+      {
+        "chunk_id": "500e3f",
+        "wall_time_seconds": 0.010552248,
+        "exit_code": 0,
+        "original_token_count": 61,
+        "output": "{\"at\":\"2026-09-12T22:58:22.346Z\",\"task\":\"W32.04\",\"state\":\"verification\",\"contract_digest\":\"c470e26db44f8a4b3d8dc5ce6404477a7f2c9be6e2ca6d33085e84c59a781722\",\"artifact_digest\":\"6a75b40ed2f6169f198cbabe0f8c0be2592facd6d659c482b02089b65bd94868\"}\n"
+      }
+    ],
+    "source_stopped_at": "2026-09-12T22:52:54.331Z",
+    "inspection": "Actual plan/task/freeze manifest edcaa3; three production deltas d72d67; fixtures/kit 70cf69/2d9e24; worker metadata 924c21, complete final command/STOP captures 27423d and full retained failure output 070ea2 supplement the truncated initial display. All seven historical candidate reconstructions and exact two-fixture corrections, installed versions and output ownership verified in 269557. Reused personally read canonical W32/W31/F34 scope and applicable governance; lead entry board assurance not replayed."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.04/worker.json",
+      "sha256": "68881c2e8bf024300c945b5235a13d8257248856d5a7ac7c6991546e6d5b443c"
+    },
+    "command_capture": "command_captures.static_final",
+    "session_id": 98064,
+    "captures": [
+      "090a80",
+      "20f6e4"
+    ],
+    "started_at": "2026-09-12T22:52:06.506Z",
+    "finished_at": "2026-09-12T22:52:47.643Z",
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace": "PASS",
+    "reviewer_reruns": 0,
+    "qualification": "Full actual compound command and terminal capture inspected; valid final static evidence reused."
+  },
+  "byte_measurement": {
+    "source": "Independent fixed11 terminal capture 855a24; same measured values as final worker capture a9986c.",
+    "cases": [
+      {
+        "days": 28,
+        "requests": 28,
+        "full_canonical_bytes": 18197938,
+        "delivered_and_charged_prefix_bytes": 1835008,
+        "exact_window_parity": true
+      },
+      {
+        "days": 92,
+        "requests": 92,
+        "full_canonical_bytes": 59793216,
+        "delivered_and_charged_prefix_bytes": 6029312,
+        "exact_window_parity": true
+      }
+    ],
+    "shape": "1,000 items × six levels in one slot; one decision/three credits per day; varied missing/truncated/unadvanced and zero-horizon coverage.",
+    "reference": "Original full report fields with only unused grids removed for bounded legacy comparison, not the embedded summary and not a claim the former heavy 92-day read completed.",
+    "qualification": "Serialized full size versus actual delivered/charged prefix bytes and request counts. No CPU timing threshold, native workload capacity or SLO inference."
+  },
+  "local_r2_primitive": {
+    "execution": "Included in the single independent fixed11 invocation, not an extra suite.",
+    "miniflare": "4.20260625.0",
+    "workerd": "1.20260625.1",
+    "result": "PASS",
+    "boundary": "Actual synthetic R2 range/full-size assertions and actual window reader; cf:false, outbound service throws, disposal awaited in finally. This proves the local storage primitive, not deployed engine capacity."
+  },
+  "retained_failures_and_qualifications": [
+    "candidate-attempt1.json SHA b687dc15448bebc49ea1497baf70f40b357ca52eb05356e9e3ba91054f7ba35b preserves the first exact seven deltas and runtime 37144/4b1bb7, exit 1: seven tests passed, one failed, one suite transform error, 30 unselected. No byte/native evidence is inferred from it.",
+    "The range-result fixture helper lacked a closing brace; the W33 overlap assertion still expected pre-summary raw-string equality. Final corrections close that helper and remove only the additive reserved field before full equality in the canonical completion branch; the other ordering retains exact previous bytes. Production is identical to the first candidate.",
+    "Final worker runtime 85213/a9986c passed 11, followed by final static and STOP. Independent fixed11 also passed. Original failures remain historical, not rewritten."
+  ],
+  "limitations": [
+    "Forward canonical format only. Single-body publication keeps summary and full fields together for these synchronous writer-owned results; existing swallowed write acknowledgements and concurrent canonical publication races are not repaired.",
+    "Managed window reads validate summary framing/owner/consumed fields, not unread grid/tail integrity or historical/external writer consistency. Day GET retains bounded full validation; unchanged public shapes are not an attestation of every old reader.",
+    "Legacy reads can require an additional charged prefix transfer and may refuse below 92 days. Older writers can restore coherent slower legacy JSON. No migration, sidecar, historical repair or universal long-window availability.",
+    "Application byte/cell/output limits do not prove memory/CPU/provider capacity. Text-only adapters materialize before checking bytes and must honor the requested range to gain the short-read path.",
+    "Policy compatibility, experimental maturity, six-month measurement, model/reference objectives, useful grid paging, fold/shard/config/tombstone bounds, native workload qualification and customer/release acceptance remain separate. No source/governance edits, external/cloud/deploy/customer-data/commit operations or full-package closure."
+  ]
+}

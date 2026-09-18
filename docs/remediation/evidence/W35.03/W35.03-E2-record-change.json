@@ -1,0 +1,181 @@
+{
+  "before": null,
+  "after": {
+    "id": "W35.03-E2",
+    "task_id": "W35.03",
+    "check_id": "W35.03-K2",
+    "criterion_ids": [
+      "W35.03-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w3503-worker",
+    "run_id": "/root/w3503_link_investigation",
+    "file": {
+      "path": "docs/remediation/evidence/W35.03/worker.json",
+      "sha256": "9e68b247e517ce2f157372e6a6030f8d6ee44c1ee56d7afe9fcb857107d352aa"
+    },
+    "at": "2026-09-16T00:05:47.865Z",
+    "limitations": "Local DO link-transfer evidence only. No full W35/F14 closure, host cutover, migration, historical repair, native/customer/browser/latency/SLO or release proof. Prepared/in-flight erasure, deletion epochs, stale detach/erase bearer revocation, pushed-frame revocation, historical membership completeness and mixed-version writers remain open. W35.02 exact artifact remains revalidation_required.",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/identity/link.ts src/identity/store.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts && git diff --check -- src/identity/link.ts src/identity/store.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+    "runtime": "Existing no-emit compiler; four owned TS files under ESLint; scoped whitespace.",
+    "workload": "Zero errors and no warning-signature increase from 109-warning pre-edit baseline.",
+    "result": "pass",
+    "artifact_digest": "182955eb8285eab9e374abbccc7844eede3e7618a2b6177297c35c0b850b0a5f",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "0046f1b04a0e82a0388d32bec7300870adc7dded8c16a69b7408fb639bcd35b1",
+      "configuration": "Local W35.03 recoverable DO link transfer and source-writer fence under approved D03 direction only. Session host retained. No host toggle, migration, historical repair, deployment, native/customer/SLO/release acceptance or full W35/F14 closure. Prepared/in-flight erasure, complete deletion epochs, stale bearer detach/erase revocation and pushed-frame revocation remain open. One-time KV adoption is compatibility only; mixed-version writers and historical completeness are unproved. No install/stage/commit/push/cloud/credentials/customer-data/destructive/external operations.",
+      "files": [
+        {
+          "path": "src/identity/link.ts",
+          "sha256": "dea9305e971ca2913fee2c70f4d23d3404e7044addded63bcafe33bb69e94978",
+          "role": "output"
+        },
+        {
+          "path": "src/identity/store.ts",
+          "sha256": "d361fd4f741994a174998c6ffbbf6460f8e01d9286946a3d54f1ffbb2849ce24",
+          "role": "output"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "9693e8071e14a5ffc3ca5e75a198ff0e7e40e3a3d39b3fd26f35c520e322c444",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "452940cea677fad2a6294ae48fbf51ccccc12198fd7c0e6d04f8e0d869458a63",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/identity.ts",
+          "sha256": "ba760b40f7939cf96f2d8ca485b3b469f34a60260745f22857e40dccafe2be9c",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49",
+          "role": "source"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930",
+          "role": "source"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "sha256": "19faab942934a61c7ef13db67e62fcb06228346be85abed9d3b71ac00d37d186",
+          "role": "source"
+        },
+        {
+          "path": "src/reflex/identityMerge.ts",
+          "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/profileEnrichment.ts",
+          "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5",
+          "role": "source"
+        },
+        {
+          "path": "src/services/visit.ts",
+          "sha256": "9bf380f59633c1eb23cabcec60acf6318ff17eb8898172c71a1fa4ecd3b244d6",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/objects.ts",
+          "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+          "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W35.03/plan.md",
+          "sha256": "6e27126338a77c715e35deff12899a7cc9cd262ec5f1166f3c26d0431967a47d",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W35.03/baseline.json",
+          "sha256": "4f42d52a8aa4687b88182708ea3e3da85d61b09f8a8dc5b42db41f3dae87054f",
+          "role": "configuration"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "configuration"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "configuration"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "configuration"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "configuration"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "configuration"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.03/worker.json",
+          "sha256": "9e68b247e517ce2f157372e6a6030f8d6ee44c1ee56d7afe9fcb857107d352aa",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.03/admission.json",
+          "sha256": "22fccf4bcc0d12784b4d5d30597f4ea508cef1796b90b43e706df200e5a1975e",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.03/package-coverage.json",
+          "sha256": "e2bb11286259193ef2837813f6b5bd9a60d506eef3dad8f7023d623423084e9d",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.03/review.json",
+          "sha256": "bf3ecf393d58b856968fa5889d6f93055ad3546ad64607dd1fdbece6a8ea9e94",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W35.03/source-freeze-v2.json",
+          "sha256": "dc3d38bc3bd44b93ee326a26e5cd90df82852291c6ef0fdedb2fc0b3461e06ba",
+          "role": "configuration"
+        }
+      ],
+      "digest": "182955eb8285eab9e374abbccc7844eede3e7618a2b6177297c35c0b850b0a5f"
+    }
+  }
+}

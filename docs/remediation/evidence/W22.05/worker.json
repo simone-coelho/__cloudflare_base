@@ -1,0 +1,314 @@
+{
+  "task_id": "W22.05",
+  "actor_id": "w2205-worker",
+  "run_id": "/root/w2205_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15 13:33:53 UTC",
+  "source_go": {
+    "journal": 1795,
+    "contract_digest": "b5871d3e160137093f0291862962022418b1949a67e3bd6b0c0521fb1d55cb27"
+  },
+  "references": {
+    "docs/remediation/design/W22.05/plan.md": {
+      "path": "docs/remediation/design/W22.05/plan.md",
+      "sha256": "c50df6aaa4401b8dbc3e100e359c7e87796eb3960caa36a70a73d80376a51818"
+    },
+    "docs/remediation/design/W22.05/baseline.json": {
+      "path": "docs/remediation/design/W22.05/baseline.json",
+      "sha256": "d555a14b6d77c2b4461b2c4725e66f7d3b441edc5a157c9d5f94a4e22e1de97b"
+    },
+    "docs/remediation/design/W22.05/authorization.md": {
+      "path": "docs/remediation/design/W22.05/authorization.md",
+      "sha256": "03fbcb4efcf1fed6dc3fa4a2f4b04b3790383ede8d91eb92db25df33c01d6264"
+    },
+    "docs/remediation/evidence/W22.05/admission.json": {
+      "path": "docs/remediation/evidence/W22.05/admission.json",
+      "sha256": "18c1cd96941d5e57809b3700bb18d2182e677c6b43429e330944e2930cb24b8b"
+    }
+  },
+  "pre_edit_verification": {
+    "chunk_id": "715834",
+    "wall_time_seconds": 0.03129324,
+    "exit_code": 0,
+    "original_token_count": 69,
+    "output": "{\"at\":\"2026-09-15T13:26:14.779Z\",\"owned\":3,\"protected\":29,\"W3004\":45,\"review_unchanged\":true,\"plan_sha256\":\"c50df6aaa4401b8dbc3e100e359c7e87796eb3960caa36a70a73d80376a51818\",\"baseline_sha256\":\"d555a14b6d77c2b4461b2c4725e66f7d3b441edc5a157c9d5f94a4e22e1de97b\",\"matched\":true}\n",
+    "description": "All three current owned files and decoded baseline originals matched, all29 protected and accepted W30.04 45pins plus review matched before source edits. Lead entry board VALID1790 reused; worker ran no board command."
+  },
+  "baseline_case": "Source-confirmed: both tracking enrichment objects replaced the required occurrence timestamp with Date.now. No failed baseline runtime claimed; the admitted reproduction/design case was inspected source and the exact existing both-host fixtures.",
+  "implementation": [
+    "parseOwnedEvent uses existing isEventTimestamp immediately after EventSchema parsing, before consent hints or any owned state/context/dispatch.",
+    "Single and batch routes retain the supplied occurrence timestamp by removing both Date.now overrides. Dispatcher and its separate queue/retry envelope timestamps are unchanged.",
+    "Exactly two grouped cases appended within the existing W05.05 block: changed receipt clocks, repeated logical event, old/epoch/out-of-order/max-valid-Date positives; invalid required/type/numeric/date inputs and raw parsed ±Infinity before state/consent/context/egress. Original three tests and shared boundary helper unchanged.",
+    "Existing API Eventing paragraph describes required occurrence milliseconds, preserved payload versus queue clock, complete invalid-request refusal, and separate lifecycle/identity limitations."
+  ],
+  "attempts": [
+    {
+      "id": "fixed6_candidate1",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/telemetry.boundary.test.ts -t 'W05[.]05 owned generic tracking|batch errors keep per-event' --maxWorkers=1 --minWorkers=1",
+      "source": {
+        "at": "2026-09-15T13:28:31.994Z",
+        "files": [
+          {
+            "path": "src/routes/tracking.ts",
+            "sha256": "60f4a2b0a31de73fd532da2888478ee0f54887e5af2075495938a50d62b38da0"
+          },
+          {
+            "path": "src/routes/realtime.sdkContract.test.ts",
+            "sha256": "56877df9d654bdaf0c0d596b7146b157f0f83af2bf76d820c618f04cfe5c1559"
+          },
+          {
+            "path": "docs/api/01-rest-endpoints.md",
+            "sha256": "b3d5db0193a0733b583479e8159c76e2f545cc52b1e3816544e64fbb3369db6b"
+          }
+        ],
+        "protected_matched": 29,
+        "W3004_matched": 45
+      },
+      "started_at": "2026-09-15 13:28:40 UTC",
+      "initial": {
+        "chunk_id": "c9830c",
+        "wall_time_seconds": 1.000862022,
+        "session_id": 15248,
+        "original_token_count": 0,
+        "output": "",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "polls": [
+        {
+          "chunk_id": "01d7b1",
+          "wall_time_seconds": 5.000587513,
+          "session_id": 15248,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n",
+          "output_sha256": "73db9ef36c5d3ccdb15993ca5115f919b41454f1bedbb874cb0dcbd9eac2e908"
+        },
+        {
+          "chunk_id": "58481d",
+          "wall_time_seconds": 0.000002103,
+          "exit_code": 0,
+          "original_token_count": 4013,
+          "output": "stdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > gates all four stored switch combinations before context collection, with actual retry/event queue positives and one consent read per batch\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\nBatch tracking error\nBatch tracking error\nBatch tracking error\nBatch tracking error\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\nBatch tracking error\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nFailed to dispatch event\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\n<empty line>\nstderr | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > keeps cold state necessary-only and denies owned-state/envelope/read/refusal-write failures before configured dispatch\nFailed to dispatch event\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > preserves occurrence time for delayed, repeated and out-of-order events while retry/event envelopes use receipt time\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.05 owned generic tracking > refuses invalid occurrence times before owned state, consent hints, context or dispatch for single and whole batches\nUsing mock Optimizely client (no SDK key configured)\n\n ✓ src/routes/realtime.sdkContract.test.ts  (51 tests | 46 skipped) 710ms\n ✓ src/telemetry.boundary.test.ts  (29 tests | 28 skipped) 12ms\n\n Test Files  2 passed (2)\n      Tests  6 passed | 74 skipped (80)\n   Start at  09:28:45\n   Duration  23.68s (transform 7.40s, setup 0ms, collect 14.57s, tests 722ms, environment 0ms, prepare 6.13s)\n\n",
+          "output_sha256": "7c7158079980a5350128b81e4c452e96370c04c4f17d1a17f51d36e6e70bd773"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "completed_at": "2026-09-15 13:29:15 UTC",
+      "combined_output_sha256": "29e80632fa0dba8439fb2544e3ab56c0277bf4c1323104196037e29f461e891f",
+      "result": "pass"
+    },
+    {
+      "id": "static_candidate1",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/routes/tracking.ts src/routes/realtime.sdkContract.test.ts --max-warnings 94 && git diff --check -- src/routes/tracking.ts src/routes/realtime.sdkContract.test.ts docs/api/01-rest-endpoints.md",
+      "source": {
+        "at": "2026-09-15T13:28:31.994Z",
+        "files": [
+          {
+            "path": "src/routes/tracking.ts",
+            "sha256": "60f4a2b0a31de73fd532da2888478ee0f54887e5af2075495938a50d62b38da0"
+          },
+          {
+            "path": "src/routes/realtime.sdkContract.test.ts",
+            "sha256": "56877df9d654bdaf0c0d596b7146b157f0f83af2bf76d820c618f04cfe5c1559"
+          },
+          {
+            "path": "docs/api/01-rest-endpoints.md",
+            "sha256": "b3d5db0193a0733b583479e8159c76e2f545cc52b1e3816544e64fbb3369db6b"
+          }
+        ],
+        "protected_matched": 29,
+        "W3004_matched": 45
+      },
+      "started_at": "2026-09-15 13:29:29 UTC",
+      "initial": {
+        "chunk_id": "aa6fd6",
+        "wall_time_seconds": 1.00078059,
+        "session_id": 85913,
+        "original_token_count": 0,
+        "output": "",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "polls": [
+        {
+          "chunk_id": "b5eb33",
+          "wall_time_seconds": 0.000002681,
+          "exit_code": 1,
+          "original_token_count": 154,
+          "output": "node:internal/bootstrap/switches/does_own_process_state:142\n    cachedCwd = rawMethods.cwd();\n                           ^\n\nError: ENOENT: no such file or directory, uv_cwd\n    at process.wrappedCwd [as cwd] (node:internal/bootstrap/switches/does_own_process_state:142:28)\n    at node:path:1171:24\n    at Object.resolve (node:path:1199:19)\n    at resolveMainPath (node:internal/modules/run_main:39:38)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:162:20)\n    at node:internal/main/run_main_module:36:49 {\n  errno: -2,\n  code: 'ENOENT',\n  syscall: 'uv_cwd'\n}\n\nNode.js v22.15.0\n",
+          "output_sha256": "49916755ce01c22a911147cca0851652d345dd1eb88e57a9438258d29668075d"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "completed_at": "2026-09-15 13:30:08 UTC",
+      "combined_output_sha256": "49916755ce01c22a911147cca0851652d345dd1eb88e57a9438258d29668075d",
+      "result": "failed"
+    },
+    {
+      "id": "static_candidate1_retry",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/routes/tracking.ts src/routes/realtime.sdkContract.test.ts --max-warnings 94 && git diff --check -- src/routes/tracking.ts src/routes/realtime.sdkContract.test.ts docs/api/01-rest-endpoints.md",
+      "source": {
+        "at": "2026-09-15T13:28:31.994Z",
+        "files": [
+          {
+            "path": "src/routes/tracking.ts",
+            "sha256": "60f4a2b0a31de73fd532da2888478ee0f54887e5af2075495938a50d62b38da0"
+          },
+          {
+            "path": "src/routes/realtime.sdkContract.test.ts",
+            "sha256": "56877df9d654bdaf0c0d596b7146b157f0f83af2bf76d820c618f04cfe5c1559"
+          },
+          {
+            "path": "docs/api/01-rest-endpoints.md",
+            "sha256": "b3d5db0193a0733b583479e8159c76e2f545cc52b1e3816544e64fbb3369db6b"
+          }
+        ],
+        "protected_matched": 29,
+        "W3004_matched": 45
+      },
+      "started_at": "2026-09-15 13:30:41 UTC",
+      "workdir": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base",
+      "reason": "Prior exact static command failed with Node uv_cwd ENOENT. Read-only explicit-workdir diagnostic succeeded; same three candidate source hashes and29 protected/W30.04 45 pins confirmed.",
+      "initial": {
+        "chunk_id": "aa2ddc",
+        "wall_time_seconds": 1.00033136,
+        "session_id": 84627,
+        "original_token_count": 0,
+        "output": "",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "polls": [
+        {
+          "chunk_id": "7d36d0",
+          "wall_time_seconds": 5.001468845,
+          "session_id": 84627,
+          "original_token_count": 0,
+          "output": "",
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "chunk_id": "dd39e2",
+          "wall_time_seconds": 0.000002098,
+          "exit_code": 0,
+          "original_token_count": 2532,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts\n   118:129  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n  1552:30   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1553:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1557:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1560:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1571:40   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1599:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1618:95   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1624:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1625:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1662:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1674:173  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1682:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1683:76   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1713:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1714:24   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1715:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:36   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1731:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1744:55   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1745:57   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1751:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1778:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1840:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1844:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1845:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1846:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1859:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1877:47   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  1923:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1927:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1930:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1933:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1933:37   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2025:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2029:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2030:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2031:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2123:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2126:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2130:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2138:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2146:25   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2164:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2170:60   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2183:71   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2190:100  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2208:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2215:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2232:110  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2238:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2239:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2240:68   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2251:52   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2252:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2252:109  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2253:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2256:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2267:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2269:119  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2284:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2289:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2291:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2314:112  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2320:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2321:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2322:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2325:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2373:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2424:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2437:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2460:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2475:101  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2482:65   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2520:153  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2554:55   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2579:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2589:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2606:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2608:77   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2620:64   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2624:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2637:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2640:41   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2645:130  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2648:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2659:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2690:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2691:71   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  2708:125  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2711:122  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n\n✖ 94 problems (0 errors, 94 warnings)\n\n",
+          "output_sha256": "c17d50c70a25073d9286389002e4499b3b036f7cb054949be3d9f5219df74515"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "completed_at": "2026-09-15 13:31:40 UTC",
+      "combined_output_sha256": "c17d50c70a25073d9286389002e4499b3b036f7cb054949be3d9f5219df74515",
+      "result": "pass"
+    }
+  ],
+  "failures_and_rework": [
+    {
+      "attempt": "static_candidate1",
+      "failure": "Node startup uv_cwd ENOENT, exit1/drained; no compiler/lint/whitespace stage credited.",
+      "diagnostic": {
+        "chunk_id": "87ed8f",
+        "wall_time_seconds": 0.05455945,
+        "exit_code": 0,
+        "original_token_count": 179,
+        "output": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n69:16607023630719857 directory .\n69:16607023630719857 directory /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n{\"at\":\"2026-09-15T13:30:33.341Z\",\"files\":[{\"path\":\"src/routes/tracking.ts\",\"sha256\":\"60f4a2b0a31de73fd532da2888478ee0f54887e5af2075495938a50d62b38da0\"},{\"path\":\"src/routes/realtime.sdkContract.test.ts\",\"sha256\":\"56877df9d654bdaf0c0d596b7146b157f0f83af2bf76d820c618f04cfe5c1559\"},{\"path\":\"docs/api/01-rest-endpoints.md\",\"sha256\":\"b3d5db0193a0733b583479e8159c76e2f545cc52b1e3816544e64fbb3369db6b\"}],\"protected_matched\":29,\"W3004_matched\":45}\n"
+      },
+      "resolution": "Explicit same-workdir read-only pwd/stat/Node and pin diagnostic passed; exact original K2 retried with explicit workdir and passed. Source bytes unchanged; no code rework."
+    },
+    {
+      "kind": "pre_admission_diagnostics",
+      "description": "Oversized combined read displays were uncredited and replaced with bounded governance/current-checkpoint/task-scope/source reads. A pre-admission rg of the not-yet-created evidence directory returned2; no mutation or check claim. Lead's pre-admission maxWarnings0 lint exit1 for94 inherited warnings remains in the pinned baseline and is not relabeled a pass."
+    }
+  ],
+  "criteria": {
+    "W22.05-C1": "PASS in worker local runtime: exact occurrence time/eventId preserved through both hosts, single response, actual configured destination payload, retry/event nested payload; separate queue clock changes, zero/old/out-of-order/max-valid-Date/repeated submissions preserved.",
+    "W22.05-C2": "PASS in worker local runtime: invalid single and final batch members refuse400 before any observed owned state/consent/context/queue/external effect; original ownership, stored switch/refusal, expiry and failure controls pass.",
+    "W22.05-C3": "Worker checks PASS on one unchanged three-file candidate:6 selected, full compiler, scoped lint0errors94unchanged warnings, three-file whitespace. Distinct frozen independent review and lead acceptance remain pending."
+  },
+  "measurement": {
+    "runtime": "Installed Node22.15.0/Vitest1.6.1; actual Hono routers, EventDispatcher, SessionManager and ShopperReflex modules with synthetic state and intercepted fetch/queues.",
+    "final_tests": 6,
+    "deliberately_unselected_tests": 74,
+    "test_files": 2,
+    "new_grouped_cases": 2,
+    "retained_original_selected_cases": 4,
+    "new_group_configured_destination_attempts": 12,
+    "new_group_retry_envelopes": 12,
+    "new_group_event_envelopes": 12,
+    "new_group_invalid_requests": 36,
+    "vitest_reported_duration_seconds": 23.68,
+    "vitest_reported_test_time_ms": 722,
+    "limits": "Functional fixture timings only, not throughput/latency/SLO proof. Added validation performs no I/O. Destination returns synthetic503 to exercise actual retry-envelope construction; no live destination delivery or deployed queue attestation."
+  },
+  "lint": {
+    "at": "2026-09-15T13:32:06.816Z",
+    "baseline_warnings": 94,
+    "final_warnings": 94,
+    "final_errors": 0,
+    "signatures_and_source_lines_unchanged": true,
+    "baseline_signatures_sha256": "614b75733bb9fcce5b8e073733109a88e805c7dbf4b866a5bb6a95bacf5f9bb9",
+    "final_signatures_sha256": "614b75733bb9fcce5b8e073733109a88e805c7dbf4b866a5bb6a95bacf5f9bb9",
+    "new_warning_signatures": [],
+    "missing_warning_signatures": [],
+    "comparison": "Actual admitted K2 stylish output mapped to current source text; line/column shifts ignored; no second lint run.",
+    "capture": {
+      "chunk_id": "bcd21c",
+      "wall_time_seconds": 0.663831111,
+      "exit_code": 0,
+      "original_token_count": 129,
+      "output": "{\"at\":\"2026-09-15T13:32:06.816Z\",\"baseline_warnings\":94,\"final_warnings\":94,\"final_errors\":0,\"signatures_and_source_lines_unchanged\":true,\"baseline_signatures_sha256\":\"614b75733bb9fcce5b8e073733109a88e805c7dbf4b866a5bb6a95bacf5f9bb9\",\"final_signatures_sha256\":\"614b75733bb9fcce5b8e073733109a88e805c7dbf4b866a5bb6a95bacf5f9bb9\",\"new_warning_signatures\":[],\"missing_warning_signatures\":[],\"comparison\":\"Actual admitted K2 stylish output mapped to current source text; line/column shifts ignored; no second lint run.\"}\n"
+    },
+    "output_hash_capture": "d4680f"
+  },
+  "final_source": {
+    "at": "2026-09-15T13:32:30.119Z",
+    "files": [
+      {
+        "path": "src/routes/tracking.ts",
+        "sha256": "60f4a2b0a31de73fd532da2888478ee0f54887e5af2075495938a50d62b38da0"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "56877df9d654bdaf0c0d596b7146b157f0f83af2bf76d820c618f04cfe5c1559"
+      },
+      {
+        "path": "docs/api/01-rest-endpoints.md",
+        "sha256": "b3d5db0193a0733b583479e8159c76e2f545cc52b1e3816544e64fbb3369db6b"
+      }
+    ],
+    "protected_matched": 29,
+    "W3004_matched": 45,
+    "W3004_review_matched": true,
+    "same_bytes_for_final_runtime_and_static": true,
+    "verification_capture": {
+      "chunk_id": "740569",
+      "wall_time_seconds": 0.066616012,
+      "exit_code": 0,
+      "original_token_count": 300,
+      "output": "{\"at\":\"2026-09-15T13:32:30.119Z\",\"files\":[{\"path\":\"src/routes/tracking.ts\",\"sha256\":\"60f4a2b0a31de73fd532da2888478ee0f54887e5af2075495938a50d62b38da0\"},{\"path\":\"src/routes/realtime.sdkContract.test.ts\",\"sha256\":\"56877df9d654bdaf0c0d596b7146b157f0f83af2bf76d820c618f04cfe5c1559\"},{\"path\":\"docs/api/01-rest-endpoints.md\",\"sha256\":\"b3d5db0193a0733b583479e8159c76e2f545cc52b1e3816544e64fbb3369db6b\"}],\"references\":{\"docs/remediation/design/W22.05/plan.md\":{\"path\":\"docs/remediation/design/W22.05/plan.md\",\"sha256\":\"c50df6aaa4401b8dbc3e100e359c7e87796eb3960caa36a70a73d80376a51818\"},\"docs/remediation/design/W22.05/baseline.json\":{\"path\":\"docs/remediation/design/W22.05/baseline.json\",\"sha256\":\"d555a14b6d77c2b4461b2c4725e66f7d3b441edc5a157c9d5f94a4e22e1de97b\"},\"docs/remediation/design/W22.05/authorization.md\":{\"path\":\"docs/remediation/design/W22.05/authorization.md\",\"sha256\":\"03fbcb4efcf1fed6dc3fa4a2f4b04b3790383ede8d91eb92db25df33c01d6264\"},\"docs/remediation/evidence/W22.05/admission.json\":{\"path\":\"docs/remediation/evidence/W22.05/admission.json\",\"sha256\":\"18c1cd96941d5e57809b3700bb18d2182e677c6b43429e330944e2930cb24b8b\"}},\"protected_matched\":29,\"W3004_matched\":45,\"W3004_review_matched\":true}\n"
+    }
+  },
+  "delta_inspection": {
+    "capture": "2b06b7",
+    "description": "Complete actual baseline-relative three-file delta inspected. Tracking import/check plus two removals;76 added fixture lines only in owned block; one existing API paragraph. Root separately reviewed complete deltas and requested no source changes."
+  },
+  "limitations": [
+    "Generic tracking is not the realtime decision/outcome ledger. No completed-hour/history reconstruction, retained carry-in, current affinity ordering or accumulation generation changes.",
+    "Timestamp validation enforces numeric representation and supported Date range; it does not authenticate the client clock or select experiment/measurement lifecycle eligibility, event-age/skew, attribution or retention policy.",
+    "Repeated inputs still dispatch; no implicit deduplication, across-sink exactly-once, automatic retry execution, producer recovery or external destination transform/delivery guarantee.",
+    "Local synthetic host/state checks are not native workerd, deployed queue, customer/privacy/scientific, SLO or release acceptance. All protected W30.04 source/evidence pins remain unchanged.",
+    "Historical/erasure reconstruction, SDK buffering, business lifecycle and D04/D06/W24 choices remain separate. No install/build/commit/push/deploy/provision/cloud/credentials/customer-data/destructive/external operations."
+  ],
+  "rollback": "Root-reviewed exact inverse of the three owned baseline-relative deltas only; preserve pre-existing dirty worktree. No rollback performed.",
+  "disposition": {
+    "status": "ready_for_independent_review",
+    "source_stopped": true,
+    "source_stopped_at": "2026-09-15T13:32:30.119Z",
+    "evidence_stopped": true,
+    "running_commands": [],
+    "independent_reviewer": "/root/late_hour_next_review",
+    "lead_acceptance": "pending",
+    "next_action": "Root freezes exact source/evidence, distinct reviewer runs the fixed6 once and reuses verified same-byte final static, then root records disposition/handoff."
+  }
+}

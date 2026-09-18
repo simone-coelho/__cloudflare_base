@@ -1,0 +1,167 @@
+{
+  "task_id": "W22.02",
+  "actor_id": "w2202-worker",
+  "role": "implementer",
+  "run": "/root/w2202_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-14 13:12:52 UTC",
+  "contract_digest": "8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2",
+  "source_go": {
+    "journal": 1685,
+    "root_pin_capture": "29df47",
+    "worker_pre_edit_pin_capture": "7c7091"
+  },
+  "basis": [
+    {
+      "path": "docs/remediation/design/W22.02/plan.md",
+      "sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435"
+    },
+    {
+      "path": "docs/remediation/design/W22.02/baseline.json",
+      "sha256": "96cba01da8a25be555d8ea6e05f0ce26fa42087c0772d22ed276af391dac0d3c"
+    },
+    {
+      "path": "docs/remediation/evidence/W22.02/admission.json",
+      "sha256": "6fdb2fcc99305188c4d6b3bb209303ba861b94236c19264dca7ddaea5e7745c2"
+    }
+  ],
+  "baseline_reuse": "Read complete task, plan/admission and baseline metadata; gzip payload display was truncated, then all32 owned/protected files were hashed and matched. Root entry board VALID1677 both commands0/24508 historical notes; reused accepted same-byte W22.01 compiler/lint0/0. Source-confirmed design case, no failed baseline runtime claimed.",
+  "implementation": "Strict loadDay and hourly listed missing objects refuse with ReportUnavailableError; malformed hourly JSON refuses with ReportInputError. Existing hourly listKeys now rejects missing/repeated truncated cursors and charges pages/keys against existing work ceiling before incomplete publication. Non-strict day missing/malformed skips, physical caps, identity/basis/attribution and erasure semantics retained.",
+  "results": {
+    "runtime": {
+      "passed": 10,
+      "failed": 0,
+      "unselected": 38,
+      "discovered": 48,
+      "test_files": 2,
+      "exit_code": 0,
+      "drained": true,
+      "test_duration_ms": 378,
+      "duration_seconds": 11.34
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true
+    },
+    "lint": {
+      "exit_code": 0,
+      "errors": 0,
+      "warnings": 0,
+      "baseline_errors": 0,
+      "baseline_warnings": 0
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "scope": "Five owned paths"
+    }
+  },
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W22.02|W22.01|loadDay reads|an hour built again|an hour past the object cap|the five-minute job|the run continues past an hour whose fold throws' --maxWorkers=1 --minWorkers=1",
+      "started": "2026-09-14 13:10:53 UTC",
+      "captures": [
+        {
+          "chunk_id": "dc5fb3",
+          "wall_time_seconds": 1.001501144,
+          "session_id": 59479,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9becc7",
+          "wall_time_seconds": 0.00000225,
+          "exit_code": 0,
+          "original_token_count": 140,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (29 tests | 22 skipped) 337ms\n ✓ src/learn/report.test.ts  (19 tests | 16 skipped) 41ms\n\n Test Files  2 passed (2)\n      Tests  10 passed | 38 skipped (48)\n   Start at  09:10:57\n   Duration  11.34s (transform 2.37s, setup 0ms, collect 4.91s, tests 378ms, environment 0ms, prepare 4.37s)\n\n"
+        }
+      ],
+      "finished": "2026-09-14 13:11:15 UTC"
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/learn/report.test.ts src/learn/hourly.test.ts docs/kit/02-api-reference.md",
+      "started": "2026-09-14 13:11:03 UTC",
+      "captures": [
+        {
+          "chunk_id": "8b28a4",
+          "wall_time_seconds": 1.00100111,
+          "session_id": 25015,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b7aee5",
+          "wall_time_seconds": 5.001499127,
+          "session_id": 25015,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "543189",
+          "wall_time_seconds": 5.001580611,
+          "session_id": 25015,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6841fb",
+          "wall_time_seconds": 5.001913783,
+          "session_id": 25015,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d866d6",
+          "wall_time_seconds": 0.00000153,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "finished": "2026-09-14 13:12:16 UTC"
+    }
+  },
+  "assertion_coverage": {
+    "C1": "Raw missing decision/outcome after valid input, malformed JSON and cursor refusal preserve canonical bytes/zero puts; non-strict missing/malformed compatibility and restored exact counts/credits/pagination. Hourly missing/malformed both streams preserves entire prior-hour shard/aggregate/canonical map and zero puts; direct buildHour and single-hour catchUp fail honestly.",
+    "C2": "Missing/repeated cursors at raw-hour and aggregate-inventory listing refuse; page+key work stops at existing1,000,001 observed ceiling before mutation. Restored valid paginated inventory/raw input gives exactly one new hour (2 decisions,1 outcome,1 credit; canonical3 decisions,1 outcome), then catchUp no-op. Existing cap/repeated-hour/cadence/failure-budget and W22.01 identity/compatibility controls pass.",
+    "C3": "Exactly two grouped additions in existing fixtures; fixed10, full compiler/scoped lint0/0/whitespace pass first run. Five source/doc files frozen; independent review and lead acceptance pending."
+  },
+  "limitations": [
+    "Forward listed-input refusal only; availability/corruption is not repaired automatically. Single pending-hour recovery proven before later progress. Existing catchUp continues after failures: later-hour progress/eviction may lose carry-in and is not rebuilt.",
+    "Historical partial aggregates/shards, same-count late data, event-time manifests, producer/online/export/point-read reconciliation, complete retention and full W09/W22/F16/F17/F19/F22 remain open.",
+    "Selected physical caps/truncation, attribution basis/horizons, served denominators, customer policies and erasure races unchanged. No native/SLO/customer/release claim or external/build/install/cloud/credential/customer-data/commit/deploy/destructive operation.",
+    "Root source-confirmed route ReportUnavailableError→503 and cron rejection logging reused; no new route or deployed test claimed."
+  ],
+  "failures_and_rework": [],
+  "final_source_stop": {
+    "at": "2026-09-14 13:12:52 UTC",
+    "files": [
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "344b264bf8132246a18c903f80b739c0d46d4e7475b18136ca2165e5b749f0b7"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "cf838dd6bf1cb7946d8b52f8177e0ef4b3d53012eb1735b540e75ce173e3f382"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "a0d6ccaac1a501dd362ef83a26326cc3a8a9b232af00525695a617d12ccc443d"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "7e2a514516ee25d1bcfda5858beb119e4804e738c84ae8caf45e8318650aaf46"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "f07d4b0fabb7ba90cf0119f1eaddd305e0435dd59bd203f67e3f633f2d5fd0e1"
+      }
+    ],
+    "pin_capture": "c51a98"
+  },
+  "protected_dependencies": {
+    "count": 27,
+    "unchanged": true
+  },
+  "handoff": "Source STOP. All required worker commands exited0/drained; only worker.json written after STOP. Root owns frozen diff/artifact, independent review, governance and acceptance."
+}

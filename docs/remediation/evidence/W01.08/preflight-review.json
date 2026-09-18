@@ -1,0 +1,57 @@
+{
+  "task": "W01.08",
+  "reviewer": {
+    "run": "/root/w01_reviewer",
+    "model": "gpt-6-astra",
+    "reasoning": "xhigh",
+    "role": "independent reviewer; no implementation or further delegation"
+  },
+  "recorded_at": "2026-09-16 20:40:59 UTC",
+  "verdict": "Common-phase preflight acceptable subject to the explicit acceptance conditions below; not full W01 acceptance.",
+  "source_contract": "Document 35 section 5 W01 and F01/F03/F25/F33/N01/N03/N04. Complete route/binding policy before dispatch; retained scoped authorization, actual methods/upgrades and destination evidence. D01 topology, assets and binding/resource acceptance remain pending.",
+  "ownership": {
+    "implementation": [
+      "src/index.ts",
+      "src/index.api-boundary.test.ts"
+    ],
+    "reviewer": [
+      "docs/remediation/evidence/W01.08/preflight-review.json"
+    ],
+    "lead": "Admission, tracker/journal, RESUME and final acceptance."
+  },
+  "baseline": {
+    "evidence_class": "Actual Worker/Hono in local workerd; synthetic environment and destination spies; no customer data or outbound access.",
+    "command": "node --input-type=module <<'NODE'\nimport { readFileSync } from 'node:fs';\nimport { build } from 'esbuild';\nimport { Miniflare } from 'miniflare';\nconst text = readFileSync('src/index.api-boundary.test.ts', 'utf8');\nconst start = text.indexOf('const wrapper = ') + 'const wrapper = '.length;\nconst end = text.indexOf('\\n\\nlet runtime:', start);\nconst values = { SECRET: 'w0102-local-synthetic-signing-material', PRIVATE: 'W0102_PRIVATE_VALUE', CACHE_KEY: 't:globex:private:catalog', STORAGE_KEY: 'globex/2026-09-06/13/decisions/private.ndjson', STATE_KEY: 't:globex:private-state' };\nconst wrapper = Function(...Object.keys(values), 'return ' + text.slice(start, end))(...Object.values(values));\nconst bundled = await build({ stdin: { contents: wrapper, resolveDir: process.cwd(), sourcefile: 'w0102-runtime.ts', loader: 'ts' }, bundle: true, write: false, format: 'esm', platform: 'browser', target: 'es2022', conditions: ['workerd', 'worker', 'browser'], external: ['cloudflare:*', 'node:*'], alias: { path: 'node:path', 'node:os': 'unenv/node/os' }, banner: { js: \"import { createRequire } from 'node:module'; const require = createRequire('/w0102-worker.mjs'); globalThis.__W0102_LOGS__ = []; for (const method of ['log', 'warn', 'error', 'info', 'debug']) console[method] = (...values) => globalThis.__W0102_LOGS__.push(values.map(String).join(' '));\" }, logLevel: 'silent' });\nlet outbound = 0;\nconst runtime = new Miniflare({ modules: [{ type: 'ESModule', path: 'w0102-worker.mjs', contents: bundled.outputFiles[0].text }], compatibilityDate: '2025-06-01', compatibilityFlags: ['nodejs_compat'], durableObjects: { SHOPPER_REFLEX: 'ShopperReflex', PERSONALIZATION_WEBSOCKET: 'PersonalizationWebSocket' }, kvNamespaces: ['CACHE', 'SESSIONS'], bindings: { JWT_SECRET: values.SECRET, JWT_ISSUER: 'w0102', JWT_AUDIENCE: 'w0102', CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', TENANTS: JSON.stringify({ provisioned: ['acme', 'globex'], hosts: { 'acme.example': 'acme' } }) }, outboundService: () => { outbound++; throw new Error('Outbound forbidden'); } });\ntry {\n await runtime.ready;\n for (const tenant of ['acme', 'globex']) for (const path of ['/realtime/connections', '/realtime/health']) for (const method of ['GET', 'HEAD']) {\n  const input = { path, method, requestHost: 'shared.example', headers: { 'X-Tenant': tenant, 'X-SDK-Key': 'synthetic-' + tenant + '-key' } };\n  const transport = await runtime.dispatchFetch('http://w0102.local/probe', { method: 'POST', body: JSON.stringify(input) });\n  const result = await transport.json();\n  console.log(JSON.stringify({ tenant, path, method, transport: transport.status, status: result.status, calls: result.calls, leakedFixture: result.body.includes(values.PRIVATE) }));\n }\n const transport = await runtime.dispatchFetch('http://w0102.local/probe', { method: 'POST', body: JSON.stringify({ path: '/', cachedScene: true, queue: [{ kind: 'scene', productId: 'w0701-subject', sceneId: 'w0701-scene', type: 'search', sceneContext: 'synthetic' }] }) });\n const scene = await transport.json(); console.log(JSON.stringify({ queue: 'scene', transport: transport.status, calls: scene.calls, envAccess: scene.envAccess }));\n console.log(JSON.stringify({ outbound }));\n} finally { await runtime.dispose(); }\nNODE",
+    "stdout": "{\"tenant\":\"acme\",\"path\":\"/realtime/connections\",\"method\":\"GET\",\"transport\":200,\"status\":200,\"calls\":[[\"PERSONALIZATION_WEBSOCKET.idFromName\",\"admin\"],[\"PERSONALIZATION_WEBSOCKET.get\",\"admin\"],[\"PERSONALIZATION_WEBSOCKET.fetch\",\"admin\"]],\"leakedFixture\":true}\n{\"tenant\":\"acme\",\"path\":\"/realtime/connections\",\"method\":\"HEAD\",\"transport\":200,\"status\":200,\"calls\":[[\"PERSONALIZATION_WEBSOCKET.idFromName\",\"admin\"],[\"PERSONALIZATION_WEBSOCKET.get\",\"admin\"],[\"PERSONALIZATION_WEBSOCKET.fetch\",\"admin\"]],\"leakedFixture\":false}\n{\"tenant\":\"acme\",\"path\":\"/realtime/health\",\"method\":\"GET\",\"transport\":200,\"status\":200,\"calls\":[[\"PERSONALIZATION_WEBSOCKET.idFromName\",\"health-check\"],[\"PERSONALIZATION_WEBSOCKET.get\",\"health-check\"],[\"PERSONALIZATION_WEBSOCKET.fetch\",\"health-check\"],[\"CACHE.get\",\"t:acme:profile:health-check-user\"]],\"leakedFixture\":true}\n{\"tenant\":\"acme\",\"path\":\"/realtime/health\",\"method\":\"HEAD\",\"transport\":200,\"status\":200,\"calls\":[[\"PERSONALIZATION_WEBSOCKET.idFromName\",\"health-check\"],[\"PERSONALIZATION_WEBSOCKET.get\",\"health-check\"],[\"PERSONALIZATION_WEBSOCKET.fetch\",\"health-check\"],[\"CACHE.get\",\"t:acme:profile:health-check-user\"]],\"leakedFixture\":false}\n{\"tenant\":\"globex\",\"path\":\"/realtime/connections\",\"method\":\"GET\",\"transport\":200,\"status\":200,\"calls\":[[\"PERSONALIZATION_WEBSOCKET.idFromName\",\"admin\"],[\"PERSONALIZATION_WEBSOCKET.get\",\"admin\"],[\"PERSONALIZATION_WEBSOCKET.fetch\",\"admin\"]],\"leakedFixture\":true}\n{\"tenant\":\"globex\",\"path\":\"/realtime/connections\",\"method\":\"HEAD\",\"transport\":200,\"status\":200,\"calls\":[[\"PERSONALIZATION_WEBSOCKET.idFromName\",\"admin\"],[\"PERSONALIZATION_WEBSOCKET.get\",\"admin\"],[\"PERSONALIZATION_WEBSOCKET.fetch\",\"admin\"]],\"leakedFixture\":false}\n{\"tenant\":\"globex\",\"path\":\"/realtime/health\",\"method\":\"GET\",\"transport\":200,\"status\":200,\"calls\":[[\"PERSONALIZATION_WEBSOCKET.idFromName\",\"health-check\"],[\"PERSONALIZATION_WEBSOCKET.get\",\"health-check\"],[\"PERSONALIZATION_WEBSOCKET.fetch\",\"health-check\"],[\"CACHE.get\",\"t:globex:profile:health-check-user\"]],\"leakedFixture\":true}\n{\"tenant\":\"globex\",\"path\":\"/realtime/health\",\"method\":\"HEAD\",\"transport\":200,\"status\":200,\"calls\":[[\"PERSONALIZATION_WEBSOCKET.idFromName\",\"health-check\"],[\"PERSONALIZATION_WEBSOCKET.get\",\"health-check\"],[\"PERSONALIZATION_WEBSOCKET.fetch\",\"health-check\"],[\"CACHE.get\",\"t:globex:profile:health-check-user\"]],\"leakedFixture\":false}\n{\"queue\":\"scene\",\"transport\":200,\"calls\":[[\"STORAGE.head\",\"scene/live/w0701-subject__w0701-scene.jpg\"],[\"queue.ack\"]],\"envAccess\":[\"get:STORAGE\"]}\n{\"outbound\":0}\n",
+    "exit_code": 0,
+    "session_id": 26132,
+    "session_drained": true,
+    "probes": 9,
+    "interpretation": "Both tenant site keys reach the same singleton DO names through GET/HEAD. GET discloses the fixture sentinel, not demonstrated native-object personal data. Enforced cached scene dispatch touches STORAGE and acknowledges without reading AUTH_MODE. Model generation itself was not executed.",
+    "hashes_recorded": "Read after the reproduced run, before admitted source edits; focused source identities only, not full dependency/deployed artifact attestation.",
+    "sha256": {
+      "src/index.ts": "b161958178f76cf997210fd4c4c139671cc26b1fe87a947f6103199c8834eabf",
+      "src/index.api-boundary.test.ts": "8dd867f1298f266eafbe8132aec05e456c19e86d3b58c79d8dbca7948eac92b0",
+      "src/routes/realtime.ts": "6057c647b83593d27fcc2f4bb44532d8a2c8cb374403dd42fca27fe27ef65697",
+      "src/services/sceneGen.ts": "81f64caf0e818e557c9ce4a80b90d0d7fdeb09e2d1882f467f492c5447f5428f",
+      "src/middleware/edgeAccess.ts": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342",
+      "src/identity/sessionCapability.ts": "53126644d359f4e19da37bafa419b4e6eef4a919a3d9ae23cf98cfbf8c65c25a",
+      "wrangler.toml": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923"
+    }
+  },
+  "acceptance_conditions": [
+    "Enforced bare /realtime/connections and /realtime/health refuse before tenant/credential/body/destination work, using the existing decoded-path boundary. Cover GET, HEAD, OPTIONS, unsupported methods, upgrades and normalized aliases without disclosing request fields.",
+    "Preserve /realtime/connections/:userId: requireShopper validates path/query subject against the signed principal before dispatch. Prove a matching owned caller reaches its tenant-qualified object and mismatched/missing authority has no destination effects. Do not deny the entire connections prefix.",
+    "Enforced kind=scene must perform zero STORAGE/ASSETS/model/credential work. Preferred disposition is per-message retry, leaving existing retry/DLQ handling intact. Do not newly acknowledge unprocessed jobs by accident; any permanent discard requires an explicit lead-approved disposition and retained limitation.",
+    "Preserve ledger sibling ack/retry dispositions and non-scene handling. Check one mixed scene/ledger delivery with exact queue positions. Avoid changing consumeLedger, DLQ configuration or recovery semantics.",
+    "Retain W07.01 cached-scene and handled-failure privacy assertions in explicit open demo mode. Enforced denial receives its own assertions, including unchanged destination state and no raw scene payload/error logging.",
+    "Extend the existing fixture with grouped cases and select affected W01 boundary, W07 queue and W09 mixed-disposition checks. Reuse unchanged dependency evidence; scoped static verification and distinct stopped-artifact review follow implementation."
+  ],
+  "residual_full_w01": [
+    "D01 choice: rigorously disabled/omitted shared-artifact boundary or separate customer deployable.",
+    "Actual asset routing and prohibited demo/static/backup availability, customer binding policy and demo-resource omission/disablement.",
+    "Complete current mounted route/method/upgrade authorization and destination proof; existing withdrawals and protected documents/reports/shopper paths must remain.",
+    "Selected customer/deployed resource ownership and operating-boundary attestation are not supplied by these local tests. No W02 advancement or full-W01 acceptance follows common-phase success."
+  ],
+  "limits": "No implementation, cloud/resource operation, credential access, customer-data operation, broad CI, commit/push/merge/deploy or cleanup. Only this assigned preflight record is written; lead board checks are reused."
+}

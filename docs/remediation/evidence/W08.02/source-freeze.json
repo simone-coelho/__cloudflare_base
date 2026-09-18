@@ -1,0 +1,140 @@
+{
+  "at": "2026-09-10T16:31:50Z",
+  "task_id": "W08.02",
+  "contract_digest": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+  "source": "Worker explicit source STOP after fixed checks; root freeze.",
+  "source_stopped_at": "2026-09-10T16:30:24.224Z",
+  "owned": [
+    "scripts/operator-seed.mjs",
+    "scripts/operator-seed.test.mjs",
+    "docs/architecture/31-load-test-2026-09-05.md"
+  ],
+  "pins": [
+    {
+      "path": "scripts/operator-seed.mjs",
+      "role": "output",
+      "sha256": "50e0b53e3b902c35013be6c38d4ee4e37319c496e5fc778f8c87e1bd16af3373"
+    },
+    {
+      "path": "docs/architecture/31-load-test-2026-09-05.md",
+      "role": "output",
+      "sha256": "3b0cd44153dea07a8ce40ddd50db02cd14774812bffdbaf44a16c381d0f1c174"
+    },
+    {
+      "path": "migrations/0010_operator_accounts.sql",
+      "role": "source",
+      "sha256": "7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55"
+    },
+    {
+      "path": "src/auth/accounts.ts",
+      "role": "source",
+      "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+    },
+    {
+      "path": "src/auth/store.ts",
+      "role": "source",
+      "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6"
+    },
+    {
+      "path": "scripts/provision-stamp.sh",
+      "role": "source",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+    },
+    {
+      "path": "scripts/provision-staging.sh",
+      "role": "source",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "role": "source",
+      "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "wrangler.toml",
+      "role": "source",
+      "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa"
+    },
+    {
+      "path": "node_modules/wrangler/package.json",
+      "role": "source",
+      "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8"
+    },
+    {
+      "path": "node_modules/wrangler/wrangler-dist/cli.js",
+      "role": "source",
+      "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889"
+    },
+    {
+      "path": "node_modules/smol-toml/package.json",
+      "role": "source",
+      "sha256": "52a0c051286f51ec4d039ed357260950c8e1e7349c003417e988d8c451cc07af"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/date.js",
+      "role": "source",
+      "sha256": "da5549142bbb43537c03dd9164ad434c3d5ffcc7f674e39e076e8cd23cc719c7"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/error.js",
+      "role": "source",
+      "sha256": "9f8d7d23f463a2993afa0aafe54a66e959949dbda7499949693f88115b461312"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/extract.js",
+      "role": "source",
+      "sha256": "c58c68bcd8ee693d2d4e547b07d561b21313c7457e85ee96309c581bd100e98a"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/index.cjs",
+      "role": "source",
+      "sha256": "a726cbf954b0f166cb6d7e0cf78c5c078f974cdb0d5792502c8ee58f9c84fdf7"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/index.js",
+      "role": "source",
+      "sha256": "4c488bcf2932b62e1fd99f72e89a97ba52eb3f876047b62ff5cddf7f1d69cccc"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/parse.js",
+      "role": "source",
+      "sha256": "bf0c4aeb2645fb80d6743bc662990c4807c2858f55548113f60fe98fac6a8210"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/primitive.js",
+      "role": "source",
+      "sha256": "2407a810149df6ba91a5e8c0747d746af5e29a6fbc03c218c32e99020035d78e"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/stringify.js",
+      "role": "source",
+      "sha256": "5efe476690082b4f63d6017382251d4b03260e14a3379751cb6889140383cee1"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/struct.js",
+      "role": "source",
+      "sha256": "89fc4aa4e837e9ac432fb20d2da59fa5d2a30a29a5ab5f4749e8e8ed3ec2b7a9"
+    },
+    {
+      "path": "node_modules/smol-toml/dist/util.js",
+      "role": "source",
+      "sha256": "955fdd5299536ee7e0286dbdbb481e86e76a6056599f1d92bda8c360f3231c52"
+    },
+    {
+      "path": "scripts/operator-seed.test.mjs",
+      "role": "output",
+      "sha256": "5e963036f6918bf3ceea551ba2fb46df6fddd54644d10f8d083cc25ac6782b95"
+    }
+  ],
+  "unowned_unchanged": 22
+}

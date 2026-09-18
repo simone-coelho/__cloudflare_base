@@ -1,0 +1,51 @@
+{
+  "at": "2026-09-11T23:18:39Z",
+  "task_id": "W09.02",
+  "journal": 1033,
+  "artifact_digest": "7cd11b57727b90b206600cbb610601fb2927928e2f3e99e44258df65f6e8dff7",
+  "command": "node --max-old-space-size=768 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>134217728&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+  "session_id": 92743,
+  "captures": [
+    {
+      "chunk_id": "e3bd28",
+      "wall_time_seconds": 1.002093847,
+      "session_id": 92743,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "820d71",
+      "wall_time_seconds": 5.001116742,
+      "session_id": 92743,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "8bb84b",
+      "wall_time_seconds": 5.000289055,
+      "session_id": 92743,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "35de2b",
+      "wall_time_seconds": 5.001181332,
+      "session_id": 92743,
+      "original_token_count": 251,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=18, unscoped=23\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=73, closed=2; evidence records=213\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.02 — W09.02 local managed recovery is complete. Next inspect the remaining N10/W09 consumer loss paths in src/index.ts, src/ledger/consume.ts and src/learn/fan.ts against document35, then admit the smallest authorized local recovery/fan-out correction. Keep pre-capture process loss, legacy delivery and held erasure conflicts explicit. No blind replay, deletion/rebase of recovery intents, new cloud resources or activation/deployment without applicable authority. Full W09 and W06 remain open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 13026\n"
+    },
+    {
+      "chunk_id": "a156f1",
+      "wall_time_seconds": 0.00000245,
+      "exit_code": 0,
+      "original_token_count": 251,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=18, unscoped=23\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=73, closed=2; evidence records=213\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.02 — W09.02 local managed recovery is complete. Next inspect the remaining N10/W09 consumer loss paths in src/index.ts, src/ledger/consume.ts and src/learn/fan.ts against document35, then admit the smallest authorized local recovery/fan-out correction. Keep pre-capture process loss, legacy delivery and held erasure conflicts explicit. No blind replay, deletion/rebase of recovery intents, new cloud resources or activation/deployment without applicable authority. Full W09 and W06 remain open.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 13026\n"
+    }
+  ],
+  "exit_code": 0,
+  "drained": true,
+  "check": "VALID",
+  "status": "VALID",
+  "historical_limitation_notes_each": 13026,
+  "qualification": "Actual existing board check/status; tracker consistency only, not engine/customer/release acceptance. No active implementation or remaining task tool session."
+}

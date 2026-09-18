@@ -1,0 +1,450 @@
+{
+  "before": {
+    "id": "W32.01-E3",
+    "task_id": "W32.01",
+    "check_id": "W32.01-K3",
+    "criterion_ids": [
+      "W32.01-C2",
+      "W32.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W32.01/review.json",
+      "sha256": "a4a28f440ba0f4b90c23be2beb397ae53b4b4549a15d0657345f4fd193a5420f"
+    },
+    "at": "2026-09-12T20:25:29.443Z",
+    "limitations": "First-match decision-ID lookup containment only, with O(distinct decisions) additional references. Remaining visitor-ring attribution construction/filtering/sorting, repeated exposure/slot scans, payload/grid/window bounds and model validation remain open under full W32/F34/F32/N20/N21/N24. No mandate for leave-one-out or change to objective, weights, policy, duplicate identity, counts or schemas. Local Node paired timings and exact-output parity are not Worker CPU, maximum workload, latency SLO, lift or customer acceptance. W33.01 nonpersistent custom overlays and W30.02 conservative coverage remain implemented; overlapping broad W33.01 proof is explicitly qualified and prior acceptance preserved. Historical report provenance/repair and W30 reconstruction remain open. No serving I/O, new benchmark/test infrastructure, external/cloud/resource/credential/customer-data/deployment/commit/push/destructive or customer-policy authority.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts -t 'W32.01|W33.01|W21 retains repeated credits|the learning grid, the reporting overlays' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct Astra/xhigh exact frozen artifact review/fixed5; inspect and reuse root paired actual-module measurement and final worker static.",
+    "workload": "Two deltas and protected pins; measurement.json must contain exact command, drained captures, baseline/final identities, pairwise full-output equality and local-only limitations.",
+    "result": "pass",
+    "artifact_digest": "aa778b38f1979fdeb85e546ec05ef73664bb2535e38ee841875f9d720591b224",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "4643c75175caf8f491f831b95ff1b76913bf9f45eff78dab09b8bbc67ebffebd",
+      "configuration": "First-match decision-ID lookup containment only, with O(distinct decisions) additional references. Remaining visitor-ring attribution construction/filtering/sorting, repeated exposure/slot scans, payload/grid/window bounds and model validation remain open under full W32/F34/F32/N20/N21/N24. No mandate for leave-one-out or change to objective, weights, policy, duplicate identity, counts or schemas. Local Node paired timings and exact-output parity are not Worker CPU, maximum workload, latency SLO, lift or customer acceptance. W33.01 nonpersistent custom overlays and W30.02 conservative coverage remain implemented; overlapping broad W33.01 proof is explicitly qualified and prior acceptance preserved. Historical report provenance/repair and W30 reconstruction remain open. No serving I/O, new benchmark/test infrastructure, external/cloud/resource/credential/customer-data/deployment/commit/push/destructive or customer-policy authority.",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "role": "output",
+          "sha256": "62318a298a46c055a861cf0e3a636dfa746bf4a0f9ebcad5741a0e60919a4091"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "role": "output",
+          "sha256": "c5dd0444eee89a18bd807e5b5294e07d556c13e3886cb9891fae2c235599084d"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "source",
+          "sha256": "94f180647f94692d505b6520c4ae4ab71be6708130355845bae9596f476cf640"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "source",
+          "sha256": "0f7cb03abfca3202fb02b49588049163c18d007c7bfd47e9598ca9237b4638da"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "source",
+          "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "role": "source",
+          "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "4d890aa841d57e07d8b00eb46f65217b2287274655c02e1c9e0231c20a4128ae"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-learning-and-statistics.md",
+          "role": "source",
+          "sha256": "0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F17.md",
+          "role": "source",
+          "sha256": "84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F25.md",
+          "role": "source",
+          "sha256": "2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F34.md",
+          "role": "source",
+          "sha256": "19fb69a80a5261cc36561ff880a940822191d677f768ce1890777b3265497f12"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/measurement.json",
+          "role": "output",
+          "sha256": "7a67c02ba0a5ac1707b95f3d294444e9eb192ff3e92c5d358bd609a578fdc3d9"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/worker.json",
+          "role": "output",
+          "sha256": "8dae9a27a2d1dd6ddca55613872adf44e159a6433f11496902353a3d6e63f36f"
+        },
+        {
+          "path": "docs/remediation/design/W32.01/plan.md",
+          "role": "configuration",
+          "sha256": "733b3864c438e1717498d574d9b49c0523a5913d9b6aff16edf7dc4dfb02d4c1"
+        },
+        {
+          "path": "docs/remediation/design/W32.01/baseline.json",
+          "role": "configuration",
+          "sha256": "66268d6dd4714b7a2d3c50b902971cc028a8b0e9646119d248e4324db2786b8d"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/admission.json",
+          "role": "configuration",
+          "sha256": "bb76bf585fc3ff9874facea6724d026d1598b17a147c2f9e6009044222bccfc1"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/source-freeze.json",
+          "sha256": "db660048c78e2b870df51b25eebaa20d6aacdc274582f2eef631f0210bdaf447",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/source-deltas.json",
+          "sha256": "05cb0a21b6f7cfc67e9ca6e40b159c4760370654fb95b38e57b74ba17eb11197",
+          "role": "configuration"
+        }
+      ],
+      "digest": "aa778b38f1979fdeb85e546ec05ef73664bb2535e38ee841875f9d720591b224"
+    }
+  },
+  "after": {
+    "id": "W32.01-E3",
+    "task_id": "W32.01",
+    "check_id": "W32.01-K3",
+    "criterion_ids": [
+      "W32.01-C2",
+      "W32.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W32.01/review.json",
+      "sha256": "a4a28f440ba0f4b90c23be2beb397ae53b4b4549a15d0657345f4fd193a5420f"
+    },
+    "at": "2026-09-12T20:25:29.443Z",
+    "limitations": "First-match decision-ID lookup containment only, with O(distinct decisions) additional references. Remaining visitor-ring attribution construction/filtering/sorting, repeated exposure/slot scans, payload/grid/window bounds and model validation remain open under full W32/F34/F32/N20/N21/N24. No mandate for leave-one-out or change to objective, weights, policy, duplicate identity, counts or schemas. Local Node paired timings and exact-output parity are not Worker CPU, maximum workload, latency SLO, lift or customer acceptance. W33.01 nonpersistent custom overlays and W30.02 conservative coverage remain implemented; overlapping broad W33.01 proof is explicitly qualified and prior acceptance preserved. Historical report provenance/repair and W30 reconstruction remain open. No serving I/O, new benchmark/test infrastructure, external/cloud/resource/credential/customer-data/deployment/commit/push/destructive or customer-policy authority.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts -t 'W32.01|W33.01|W21 retains repeated credits|the learning grid, the reporting overlays' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct Astra/xhigh exact frozen artifact review/fixed5; inspect and reuse root paired actual-module measurement and final worker static.",
+    "workload": "Two deltas and protected pins; measurement.json must contain exact command, drained captures, baseline/final identities, pairwise full-output equality and local-only limitations.",
+    "result": "pass",
+    "artifact_digest": "aa778b38f1979fdeb85e546ec05ef73664bb2535e38ee841875f9d720591b224",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "4643c75175caf8f491f831b95ff1b76913bf9f45eff78dab09b8bbc67ebffebd",
+      "configuration": "First-match decision-ID lookup containment only, with O(distinct decisions) additional references. Remaining visitor-ring attribution construction/filtering/sorting, repeated exposure/slot scans, payload/grid/window bounds and model validation remain open under full W32/F34/F32/N20/N21/N24. No mandate for leave-one-out or change to objective, weights, policy, duplicate identity, counts or schemas. Local Node paired timings and exact-output parity are not Worker CPU, maximum workload, latency SLO, lift or customer acceptance. W33.01 nonpersistent custom overlays and W30.02 conservative coverage remain implemented; overlapping broad W33.01 proof is explicitly qualified and prior acceptance preserved. Historical report provenance/repair and W30 reconstruction remain open. No serving I/O, new benchmark/test infrastructure, external/cloud/resource/credential/customer-data/deployment/commit/push/destructive or customer-policy authority.",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "role": "output",
+          "sha256": "62318a298a46c055a861cf0e3a636dfa746bf4a0f9ebcad5741a0e60919a4091"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "role": "output",
+          "sha256": "c5dd0444eee89a18bd807e5b5294e07d556c13e3886cb9891fae2c235599084d"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "source",
+          "sha256": "94f180647f94692d505b6520c4ae4ab71be6708130355845bae9596f476cf640"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "source",
+          "sha256": "0f7cb03abfca3202fb02b49588049163c18d007c7bfd47e9598ca9237b4638da"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "source",
+          "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "role": "source",
+          "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "4d890aa841d57e07d8b00eb46f65217b2287274655c02e1c9e0231c20a4128ae"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-learning-and-statistics.md",
+          "role": "source",
+          "sha256": "0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F17.md",
+          "role": "source",
+          "sha256": "84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F25.md",
+          "role": "source",
+          "sha256": "2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F34.md",
+          "role": "source",
+          "sha256": "19fb69a80a5261cc36561ff880a940822191d677f768ce1890777b3265497f12"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/measurement.json",
+          "role": "output",
+          "sha256": "7a67c02ba0a5ac1707b95f3d294444e9eb192ff3e92c5d358bd609a578fdc3d9"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/worker.json",
+          "role": "output",
+          "sha256": "8dae9a27a2d1dd6ddca55613872adf44e159a6433f11496902353a3d6e63f36f"
+        },
+        {
+          "path": "docs/remediation/design/W32.01/plan.md",
+          "role": "configuration",
+          "sha256": "733b3864c438e1717498d574d9b49c0523a5913d9b6aff16edf7dc4dfb02d4c1"
+        },
+        {
+          "path": "docs/remediation/design/W32.01/baseline.json",
+          "role": "configuration",
+          "sha256": "66268d6dd4714b7a2d3c50b902971cc028a8b0e9646119d248e4324db2786b8d"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/admission.json",
+          "role": "configuration",
+          "sha256": "bb76bf585fc3ff9874facea6724d026d1598b17a147c2f9e6009044222bccfc1"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/source-freeze.json",
+          "sha256": "db660048c78e2b870df51b25eebaa20d6aacdc274582f2eef631f0210bdaf447",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.01/source-deltas.json",
+          "sha256": "05cb0a21b6f7cfc67e9ca6e40b159c4760370654fb95b38e57b74ba17eb11197",
+          "role": "configuration"
+        }
+      ],
+      "digest": "aa778b38f1979fdeb85e546ec05ef73664bb2535e38ee841875f9d720591b224"
+    }
+  }
+}

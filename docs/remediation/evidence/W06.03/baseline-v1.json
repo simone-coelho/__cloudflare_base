@@ -1,0 +1,26 @@
+{
+  "task_id": "W06.03",
+  "kind": "source_confirmed",
+  "at": "2026-09-08T14:58:01Z",
+  "head": "e49aef83c9a9843dd21479f1b08d53e7709fac41",
+  "tracker_sha256": "8cf4b4affa847523466e6e915db3b9024f9bd14c765585abf4955ca3180badbe",
+  "journal_seq": 324,
+  "entry": {
+    "board_check": {
+      "exit_code": 0,
+      "header": "Tracker VALID | mode=local_remediation_authorized"
+    },
+    "board_status": {
+      "exit_code": 0,
+      "header": "Tracker VALID | mode=local_remediation_authorized"
+    }
+  },
+  "source_hashes": {
+    "src/ledger/erasure.ts": "cb76469bbb606eba781116ba85bc0d685933f43ce5fcd8986ea580559929877a",
+    "src/ledger/erasure.test.ts": "5f0fd09a6904bb636c64a2d80e45d116e40658bdaccf27a6b94ae4cd4d9e7905",
+    "src/ledger/ledger.test.ts": "8990fbeea353848e1c0a1819de16811e7874dc1ce527df8f3f7131f2f92149db"
+  },
+  "source_observation": "rewriteErasures checks maxObjects only before a day, processes every listed object in that day, and persists done_through/counters only after the full day. A dense day exceeds the declared cap and interruption repeats already-mutated work with counters not durably attributable.",
+  "reproduction_basis": "Source-confirmed by two independent Astra/xhigh reads and existing F06 R4/R5 reports (48 opens with cap5 and lost progress after interruption). New grouped assertions use the existing erasure fixture; no broad baseline suite.",
+  "limits": "No concurrent cross-store fence, shopper revocation, other-destination reconciliation, approved retention/physical SLA, deployed/customer or release acceptance."
+}

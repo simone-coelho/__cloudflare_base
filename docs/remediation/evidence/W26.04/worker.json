@@ -1,0 +1,393 @@
+{
+  "task_id": "W26.04",
+  "actor_id": "w2206-worker",
+  "run_id": "/root/w2206_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go": {
+    "journal": 1891,
+    "contract_digest": "8dec7911792e2d0f16be670645e7e4f2a03931cc2c63cc15dd4f6fd0a9d407f3",
+    "lead": "w01-lead",
+    "authority": "Admitted bounded local source GO; only two assigned source files and this worker evidence."
+  },
+  "references": [
+    {
+      "path": "docs/remediation/design/W26.04/plan.md",
+      "sha256": "34a04b5f864fc229f142c30c84fe2a3455e8fa9ecfb528f9b1713a5095e32719"
+    },
+    {
+      "path": "docs/remediation/design/W26.04/baseline.json",
+      "sha256": "c36a93b851949e6fa28ef4f10a6a6ba6cd159619ad7fa24062512661208f1f1f"
+    },
+    {
+      "path": "docs/remediation/evidence/W26.04/admission.json",
+      "sha256": "5d0d0097ac3c650ad5007f69f1a628d1f40ca4a72cdf04f4443294dbba90df51"
+    }
+  ],
+  "pre_edit_verification": {
+    "at": "2026-09-15T19:57:28.903Z",
+    "capture": "362244",
+    "owned_originals": [
+      {
+        "path": "src/content/service.ts",
+        "sha256": "f3623f7864ebde3ea38b1b23549175be1f866303b4bb1dd6e89f3ae371809389",
+        "matches": true,
+        "decoded_matches": true
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "9659f4c56a76a7d8746666d6ffe35c583dcf7c771a363e4917f60aef53b82a50",
+        "matches": true,
+        "decoded_matches": true
+      }
+    ],
+    "protected_count": 32,
+    "accepted": [
+      {
+        "task_id": "W22.07",
+        "files": 51,
+        "review": {
+          "path": "docs/remediation/evidence/W22.07/review.json",
+          "sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c"
+        }
+      },
+      {
+        "task_id": "W22.09",
+        "files": 32,
+        "review": {
+          "path": "docs/remediation/evidence/W22.09/review.json",
+          "sha256": "ee455d4dd1e263d6d83387b9039ca07ce4d52554e07d6b7998d302cc1dbf13f9"
+        }
+      }
+    ],
+    "mismatches": [],
+    "entry_board_reused": {
+      "captures": [
+        "920216",
+        "c80cda",
+        "993214"
+      ],
+      "journal": 1886,
+      "check_exit": 0,
+      "status_exit": 0,
+      "drained": true,
+      "verdict": "VALID"
+    },
+    "admission_board_lead_report": {
+      "journal": 1891,
+      "captures": [
+        "09c185",
+        "a06f56",
+        "cb4ed0",
+        "bda2fa"
+      ],
+      "check_exit": 0,
+      "status_exit": 0,
+      "drained": true,
+      "verdict": "VALID"
+    },
+    "baseline_lint_reused": {
+      "command": "node --max-old-space-size=512 --input-type=module -e 'import {ESLint} from \"eslint\";const rows=await new ESLint().lintFiles([\"src/content/service.ts\",\"src/content/consent.test.ts\"]);console.log(JSON.stringify(rows.map(r=>({path:r.filePath.split(\"/__cloudflare_base/\")[1],errors:r.errorCount,warnings:r.warningCount,signatures:r.messages.map(m=>[m.ruleId,m.message]).sort()}))));process.exitCode=rows.some(r=>r.errorCount)?1:0;'",
+      "captures": [
+        "975751",
+        "2ee74b"
+      ],
+      "exit_code": 0,
+      "session_drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "rows": [
+        {
+          "path": "src/content/service.ts",
+          "errors": 0,
+          "warnings": 0,
+          "signatures": []
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "errors": 0,
+          "warnings": 0,
+          "signatures": []
+        }
+      ]
+    },
+    "scope_reads": "Complete required AGENTS/entry/governance/checkpoint, admitted task/plan, W26 and linked findings/customer accepted-view section 1.7/doc22 recent-ring and fatigue requirements, applicable service/fatigue/replay/config sources. Initial read-only discovery bbb3ea exit2 referenced nonexistent src/learn/freshFatigue.test.ts; corrected to src/content/freshFatigue.test.ts (6605a9/4c76e4), no runtime baseline claim."
+  },
+  "baseline_case": "Source-confirmed whole tenant+visitor ring feeds timestamp/item-only servedCounts and lowers actual live scores across brands. Missing-brand inputs cannot establish membership in requested live brand. Exact-brand consumer filter preserves within-brand global-item fatigue; no failed baseline runtime claimed.",
+  "implementation": [
+    "One production predicate filters the live ring to e.brand === brand before servedCounts; absent-brand history contributes no live fatigue.",
+    "Existing envWith gains optional tenant='coach' used only for its three publication scopes. One grouped actual service/replay case uses explicitly published synthetic meridian Reflex config and two non-default brands, with requested alpha distinct from tenant.",
+    "Empty/foreign-only/brandless-only match; mixed matches own-only; same-brand other-page/slot default and no_learning views retain counts and change actual winner. JSON-roundtripped receipts replay with frozen counts despite changed ring; default mode does not read ring. Three selected freshFatigue controls unchanged."
+  ],
+  "canonical_source": {
+    "basis": {
+      "path": "docs/remediation/design/W26.04/baseline.json",
+      "sha256": "c36a93b851949e6fa28ef4f10a6a6ba6cd159619ad7fa24062512661208f1f1f",
+      "description": "Unique union of baseline.owned_before, baseline.protected, accepted_dependencies[].files and accepted_dependencies[].review; current owned hashes replace their original hashes. Sorted path.localeCompare, each {path,sha256}, digest SHA256(JSON.stringify(map)). Baseline dependencies are referenced once, not repeated per check."
+    },
+    "snapshot_command": "node - digest <<'NODE'\nconst fs=require('node:fs'),c=require('node:crypto');\nconst b=JSON.parse(fs.readFileSync('docs/remediation/design/W26.04/baseline.json','utf8')),hash=bytes=>c.createHash('sha256').update(bytes).digest('hex'),pin=x=>({path:x.path,sha256:hash(fs.readFileSync(x.path))}),owned=new Set(b.owned_before.map(x=>x.path));\nconst expected=[...b.protected,...b.accepted_dependencies.flatMap(d=>[...d.files.filter(x=>!owned.has(x.path)),d.review])];\nconst protectedMismatches=expected.filter(x=>pin(x).sha256!==x.sha256).map(x=>x.path);\nconst map=[...new Map([...b.owned_before,...expected].map(x=>[x.path,pin(x)])).values()].sort((a,b)=>a.path.localeCompare(b.path));\nconsole.log(JSON.stringify({at:new Date().toISOString(),pin_count:map.length,pin_digest:hash(JSON.stringify(map)),protected_mismatches:protectedMismatches,...(process.argv[2]==='full'?{pins:map}:{}),owned:b.owned_before.map(pin)}));\nif(protectedMismatches.length)process.exitCode=1;\nNODE",
+    "pin_count": 83,
+    "final_owned": [
+      {
+        "path": "src/content/service.ts",
+        "sha256": "47461ca8909b90718dab66cbe4123cf0b265561d8c5e52b81d4e0f59493b21a3"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "ff17cdccdcf2d9b848e353cea035c702ec4a7fddd203d550d3bb6ccb2582f7b2"
+      }
+    ],
+    "final_digest": "db77f934c9e45e3d430e1d5888f93781499183d5201cebbd8a76d7eb12788aef"
+  },
+  "attempts": [
+    {
+      "id": "fixed4-initial",
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/content/freshFatigue.test.ts -t 'W26[.]04|is off without a ring read|reads the ring.*full records|counts the ring inside' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "36b31e",
+        "exit_code": 0,
+        "at": "2026-09-15T19:59:29.597Z",
+        "pin_count": 83,
+        "pin_digest": "64e643feea9de80cffca9c181e465d532cd56b7f277e8ec3e34d1d92f98a4c46",
+        "protected_mismatches": [],
+        "owned": [
+          {
+            "path": "src/content/service.ts",
+            "sha256": "47461ca8909b90718dab66cbe4123cf0b265561d8c5e52b81d4e0f59493b21a3"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "82e0eafe4c5aa56e4bd8b08702faae71f98c4d0749ef309d613b31113997987c"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "4024a9",
+        "wall_time_seconds": 1.001256221,
+        "session_id": 28838,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "d533c0",
+          "wall_time_seconds": 0.000001781,
+          "exit_code": 1,
+          "original_token_count": 418,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ❯ src/content/consent.test.ts  (27 tests | 1 failed | 26 skipped) 24ms\n   ❯ src/content/consent.test.ts > CW31 consent on the content service > W26.04 keeps actual fatigue ranking receipts and replay within the requested brand\n     → Reflex configuration unavailable for scope \"meridian\"\n ✓ src/content/freshFatigue.test.ts  (8 tests | 5 skipped) 27ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/content/consent.test.ts > CW31 consent on the content service > W26.04 keeps actual fatigue ranking receipts and replay within the requested brand\nReflexConfigUnavailableError: Reflex configuration unavailable for scope \"meridian\"\n ❯ Module.compiledDefaultFor src/reflex/configStore.ts:340:9\n    338|   }\n    339|   if (scope === DEFAULT_SCOPE) return DEFAULT_REFLEX_CONFIG;\n    340|   throw new ReflexConfigUnavailableError(scope);\n       |         ^\n    341| }\n    342| \n ❯ Module.resolveTenantReflexConfigRevision src/demos/registry.ts:171:26\n ❯ Module.serveContentDecisions src/content/service.ts:168:52\n ❯ get src/content/consent.test.ts:149:88\n ❯ src/content/consent.test.ts:151:19\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n Test Files  1 failed | 1 passed (2)\n      Tests  1 failed | 3 passed | 31 skipped (35)\n   Start at  15:59:32\n   Duration  15.99s (transform 2.83s, setup 0ms, collect 4.43s, tests 51ms, environment 0ms, prepare 7.82s)\n\n"
+        }
+      ],
+      "after": {
+        "capture": "31e9f0",
+        "exit_code": 0,
+        "at": "2026-09-15T20:01:57.232Z",
+        "pin_count": 83,
+        "pin_digest": "64e643feea9de80cffca9c181e465d532cd56b7f277e8ec3e34d1d92f98a4c46",
+        "protected_mismatches": [],
+        "owned": [
+          {
+            "path": "src/content/service.ts",
+            "sha256": "47461ca8909b90718dab66cbe4123cf0b265561d8c5e52b81d4e0f59493b21a3"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "82e0eafe4c5aa56e4bd8b08702faae71f98c4d0749ef309d613b31113997987c"
+          }
+        ]
+      },
+      "exit_code": 1,
+      "session_drained": true,
+      "result": "FAIL: one new group failed at missing synthetic meridian Reflex config before ranking; three unchanged controls passed, 31 skipped."
+    },
+    {
+      "id": "fixed4-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/content/freshFatigue.test.ts -t 'W26[.]04|is off without a ring read|reads the ring.*full records|counts the ring inside' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "07378e",
+        "exit_code": 0,
+        "at": "2026-09-15T20:02:37.137Z",
+        "pin_count": 83,
+        "pin_digest": "db77f934c9e45e3d430e1d5888f93781499183d5201cebbd8a76d7eb12788aef",
+        "protected_mismatches": [],
+        "owned": [
+          {
+            "path": "src/content/service.ts",
+            "sha256": "47461ca8909b90718dab66cbe4123cf0b265561d8c5e52b81d4e0f59493b21a3"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "ff17cdccdcf2d9b848e353cea035c702ec4a7fddd203d550d3bb6ccb2582f7b2"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "31b496",
+        "wall_time_seconds": 1.000981892,
+        "session_id": 48427,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "8390bf",
+          "wall_time_seconds": 5.001375577,
+          "session_id": 48427,
+          "original_token_count": 678,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W26.04 keeps actual fatigue ranking receipts and replay within the requested brand\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  coalesced: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (27 tests | 26 skipped) 32ms\n"
+        },
+        {
+          "chunk_id": "c3c09b",
+          "wall_time_seconds": 0.000001924,
+          "exit_code": 0,
+          "original_token_count": 66,
+          "output": " ✓ src/content/freshFatigue.test.ts  (8 tests | 5 skipped) 27ms\n\n Test Files  2 passed (2)\n      Tests  4 passed | 31 skipped (35)\n   Start at  16:02:39\n   Duration  15.32s (transform 4.34s, setup 1ms, collect 8.63s, tests 59ms, environment 0ms, prepare 4.76s)\n\n"
+        }
+      ],
+      "after": {
+        "capture": "75bd03",
+        "exit_code": 0,
+        "at": "2026-09-15T20:03:01.519Z",
+        "pin_count": 83,
+        "pin_digest": "db77f934c9e45e3d430e1d5888f93781499183d5201cebbd8a76d7eb12788aef",
+        "protected_mismatches": [],
+        "owned": [
+          {
+            "path": "src/content/service.ts",
+            "sha256": "47461ca8909b90718dab66cbe4123cf0b265561d8c5e52b81d4e0f59493b21a3"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "ff17cdccdcf2d9b848e353cea035c702ec4a7fddd203d550d3bb6ccb2582f7b2"
+          }
+        ]
+      },
+      "exit_code": 0,
+      "session_drained": true,
+      "result": "PASS: 4 passed, 31 skipped; two files passed. Expected five learning_incomplete diagnostics from the synthetic ring binding retained; not durable append/exposure assurance."
+    },
+    {
+      "id": "static-final",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/service.ts src/content/consent.test.ts --max-warnings 0 && git diff --check -- src/content/service.ts src/content/consent.test.ts",
+      "before": {
+        "capture": "75bd03",
+        "exit_code": 0,
+        "at": "2026-09-15T20:03:01.519Z",
+        "pin_count": 83,
+        "pin_digest": "db77f934c9e45e3d430e1d5888f93781499183d5201cebbd8a76d7eb12788aef",
+        "protected_mismatches": [],
+        "owned": [
+          {
+            "path": "src/content/service.ts",
+            "sha256": "47461ca8909b90718dab66cbe4123cf0b265561d8c5e52b81d4e0f59493b21a3"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "ff17cdccdcf2d9b848e353cea035c702ec4a7fddd203d550d3bb6ccb2582f7b2"
+          }
+        ]
+      },
+      "initial": {
+        "chunk_id": "b0bc12",
+        "wall_time_seconds": 1.001759525,
+        "session_id": 23178,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "68c584",
+          "wall_time_seconds": 5.001333116,
+          "session_id": 23178,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "726e6f",
+          "wall_time_seconds": 5.00132745,
+          "session_id": 23178,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3ba179",
+          "wall_time_seconds": 0.000001133,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "after": {
+        "capture": "9a6a5b",
+        "exit_code": 0,
+        "at": "2026-09-15T20:04:24.165Z",
+        "pin_count": 83,
+        "pin_digest": "db77f934c9e45e3d430e1d5888f93781499183d5201cebbd8a76d7eb12788aef",
+        "protected_mismatches": [],
+        "owned": [
+          {
+            "path": "src/content/service.ts",
+            "sha256": "47461ca8909b90718dab66cbe4123cf0b265561d8c5e52b81d4e0f59493b21a3"
+          },
+          {
+            "path": "src/content/consent.test.ts",
+            "sha256": "ff17cdccdcf2d9b848e353cea035c702ec4a7fddd203d550d3bb6ccb2582f7b2"
+          }
+        ]
+      },
+      "exit_code": 0,
+      "session_drained": true,
+      "result": "PASS: no-emit nonincremental compiler1536, two-file ESLint 0 errors/0 warnings with max-warnings 0, then two-file git diff --check. No separate warning-signature rerun: baseline and final both 0/0."
+    }
+  ],
+  "failures_and_rework": [
+    {
+      "attempt": "fixed4-initial",
+      "captures": [
+        "4024a9",
+        "d533c0"
+      ],
+      "exit_code": 1,
+      "basis_digest": "64e643feea9de80cffca9c181e465d532cd56b7f277e8ec3e34d1d92f98a4c46",
+      "post_capture": "31e9f0",
+      "cause": "Synthetic non-default tenant had no Reflex config; ReflexConfigUnavailableError occurred before ranking assertions.",
+      "correction": "Imported existing DEFAULT_REFLEX_CONFIG/writeReflexConfig and explicitly published synthetic config within the same grouped case. Production unchanged.",
+      "lead_approval": "Root approved fixture-only correction after first failure, preserving raw evidence and same fixed4/static scope.",
+      "superseded_by": "fixed4-final"
+    }
+  ],
+  "delta_inspection": {
+    "capture": "cb0c18",
+    "exit_code": 0,
+    "complete": true,
+    "method": "diff -u each current owned file against baseline gzip-decoded original via stdin; each diff status 1 denotes expected change.",
+    "scope": "Exactly one service predicate; one optional default-preserving fixture tenant parameter with three scoped writes, three imports/type additions, and one grouped case. No other source writes."
+  },
+  "criteria": {
+    "W26.04-C1": "Worker local runtime PASS: actual ranking, candidates, full explanations and inputs exclude foreign/brandless histories and mixed equals own-only.",
+    "W26.04-C2": "Worker local runtime PASS: own-brand cross-page/slot/arm fatigue retained, actual recorded-input replay succeeds without new ring read; three unchanged freshFatigue controls pass.",
+    "W26.04-C3": "Worker fixed4 and same-byte compiler1536/two-file lint0/0/whitespace PASS; 32 protected and complete W22.07/W22.09 artifacts/reviews unchanged across checks. Independent frozen-source runtime/review and lead acceptance remain pending."
+  },
+  "measurement": {
+    "extra_work": "One O(n) in-memory filter over the existing ring; no new I/O.",
+    "claim": "Local synthetic Node/Vitest service/replay behavior only, not deployed latency or durable learning delivery."
+  },
+  "limitations": "Live brand-local fatigue eligibility only. Preserve same-brand cross-slot/page/arm counting, windows/default/timeout, shared optional-brand helper and historical recorded-input replay. No new policy/history/retention, historical ranking repair, full W26/finding/hard-isolation/customer/SLO/release acceptance or external operations. W22.07/W22.09 complete accepted artifacts/reviews preserved. Existing synthetic namespace does not provide a valid append acknowledgement; five learning_incomplete diagnostics are retained and no durable ring/exposure delivery is claimed. Vite CJS deprecation warning is pre-existing tool output, not an ESLint warning.",
+  "rollback": "Reviewed inverse of only this task's two-file baseline-relative delta; preserve inherited dirty worktree and all unowned artifacts.",
+  "at": "2026-09-15T20:05:01.119Z",
+  "final_source": {
+    "at": "2026-09-15T20:04:24.165Z",
+    "pin_digest": "db77f934c9e45e3d430e1d5888f93781499183d5201cebbd8a76d7eb12788aef",
+    "pin_count": 83,
+    "protected_mismatches": [],
+    "source_stop": true,
+    "capture": "9a6a5b"
+  },
+  "disposition": {
+    "source_stopped": true,
+    "evidence_stopped": true,
+    "active_commands": [],
+    "independent_review": "pending root freeze and distinct reviewer",
+    "lead_acceptance": "pending",
+    "next_action": "Root freezes exact two-file artifact and worker record, then distinct reviewer fixed4/actual source review; lead alone updates governance."
+  }
+}

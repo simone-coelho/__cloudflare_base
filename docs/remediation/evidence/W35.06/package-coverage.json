@@ -1,0 +1,442 @@
+{
+  "before": {
+    "id": "W35",
+    "canonical": {
+      "gate_scope": "**G1 before real-data pilot**, G2 performance",
+      "full_scope": "Choose and prove transactional shopper authority. If using ShopperReflex, first carry session/identity/visit/channel/consent and complete link/erase/SDK/sort/fatigue parity. Test concurrent writes, stale pointers, delayed creates, restart, ownership and rollback. Then qualify exact browser/server/runtime tails on the selected release and customer workload. Neither a host toggle nor January deferral closes this.",
+      "finding_refs": "F14/F13/F05/F29/F32",
+      "sizing_owner": "L; D + OL/S/P/C"
+    },
+    "title": "Transactional shopper authority",
+    "gates": [
+      "G1",
+      "G2"
+    ],
+    "source_findings": [
+      "F14",
+      "F13",
+      "F05",
+      "F29",
+      "F32"
+    ],
+    "proposed_owner": "D + OL/S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W35-AUTHORITY",
+          "description": "Choose and prove transactional shopper authority under D03; default KV race remains open; no host toggle acceptance."
+        },
+        {
+          "id": "W35-PARITY",
+          "description": "Selected authority carries session/identity/visit/channel/consent and complete link/erase/SDK/sort/fatigue parity."
+        },
+        {
+          "id": "W35-RECOVERY",
+          "description": "Concurrent writes, stale pointers, delayed creates, restart, ownership and rollback proven on selected authority; W35.01 covers only existing object local commit/cache/publication subset."
+        },
+        {
+          "id": "W35-PERFORMANCE",
+          "description": "Qualify exact browser/server/runtime tails on selected release and customer workload, preserving customer-neutral deterministic North Star."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.01",
+          "task_criterion_id": "W35.01-C1"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.01",
+          "task_criterion_id": "W35.01-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.01",
+          "task_criterion_id": "W35.01-C3"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.02",
+          "task_criterion_id": "W35.02-C1"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.02",
+          "task_criterion_id": "W35.02-C2"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.02",
+          "task_criterion_id": "W35.02-C3"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C1"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C2"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C3"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C1"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C3"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C1"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C2"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C3"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C1"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C3"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C1"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C3"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C1"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C2"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C3"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C1"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C1"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C3"
+        }
+      ],
+      "task_ids": [
+        "W35.01",
+        "W35.02",
+        "W35.03",
+        "W35.04",
+        "W35.05"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W35",
+    "canonical": {
+      "gate_scope": "**G1 before real-data pilot**, G2 performance",
+      "full_scope": "Choose and prove transactional shopper authority. If using ShopperReflex, first carry session/identity/visit/channel/consent and complete link/erase/SDK/sort/fatigue parity. Test concurrent writes, stale pointers, delayed creates, restart, ownership and rollback. Then qualify exact browser/server/runtime tails on the selected release and customer workload. Neither a host toggle nor January deferral closes this.",
+      "finding_refs": "F14/F13/F05/F29/F32",
+      "sizing_owner": "L; D + OL/S/P/C"
+    },
+    "title": "Transactional shopper authority",
+    "gates": [
+      "G1",
+      "G2"
+    ],
+    "source_findings": [
+      "F14",
+      "F13",
+      "F05",
+      "F29",
+      "F32"
+    ],
+    "proposed_owner": "D + OL/S/P/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W35-AUTHORITY",
+          "description": "Choose and prove transactional shopper authority under D03; default KV race remains open; no host toggle acceptance."
+        },
+        {
+          "id": "W35-PARITY",
+          "description": "Selected authority carries session/identity/visit/channel/consent and complete link/erase/SDK/sort/fatigue parity."
+        },
+        {
+          "id": "W35-RECOVERY",
+          "description": "Concurrent writes, stale pointers, delayed creates, restart, ownership and rollback proven on selected authority; W35.01 covers only existing object local commit/cache/publication subset."
+        },
+        {
+          "id": "W35-PERFORMANCE",
+          "description": "Qualify exact browser/server/runtime tails on selected release and customer workload, preserving customer-neutral deterministic North Star."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.01",
+          "task_criterion_id": "W35.01-C1"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.01",
+          "task_criterion_id": "W35.01-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.01",
+          "task_criterion_id": "W35.01-C3"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.02",
+          "task_criterion_id": "W35.02-C1"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.02",
+          "task_criterion_id": "W35.02-C2"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.02",
+          "task_criterion_id": "W35.02-C3"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C1"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C2"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C3"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C1"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.03",
+          "task_criterion_id": "W35.03-C3"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C1"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C2"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C3"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C1"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C3"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C1"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.04",
+          "task_criterion_id": "W35.04-C3"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C1"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C2"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C3"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C1"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C1"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.05",
+          "task_criterion_id": "W35.05-C3"
+        },
+        {
+          "criterion_id": "W35-AUTHORITY",
+          "task_id": "W35.06",
+          "task_criterion_id": "W35.06-C1"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.06",
+          "task_criterion_id": "W35.06-C1"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.06",
+          "task_criterion_id": "W35.06-C2"
+        },
+        {
+          "criterion_id": "W35-PARITY",
+          "task_id": "W35.06",
+          "task_criterion_id": "W35.06-C3"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.06",
+          "task_criterion_id": "W35.06-C1"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.06",
+          "task_criterion_id": "W35.06-C2"
+        },
+        {
+          "criterion_id": "W35-RECOVERY",
+          "task_id": "W35.06",
+          "task_criterion_id": "W35.06-C3"
+        }
+      ],
+      "task_ids": [
+        "W35.01",
+        "W35.02",
+        "W35.03",
+        "W35.04",
+        "W35.05",
+        "W35.06"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

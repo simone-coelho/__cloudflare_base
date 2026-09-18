@@ -1,0 +1,12 @@
+{
+  "at": "2026-09-08T01:13:40Z",
+  "actor_id": "w01-lead",
+  "independent_run": "/root/w0506_review",
+  "rejected_artifact": "1b5723d66f18acbc9f68fb376111572000311388c16cc5f5411c909932682849",
+  "criterion": "W05.07-C2",
+  "finding": "If an old core.ready() resolves after page.sdk is replaced, its capture callback reaches experiment/creative tags before checking that page.sdk.core is still that core. Transport is stopped later but stale behavior collection occurs.",
+  "approval": "Return only public/storefront.js callback entry guard and existing worker caller smoke/proof to the sole worker. Same-core/current-generation/tracking guard must precede tag reads. Add this bounded case to existing in-memory smoke; no new harness, source/helper/TS change.",
+  "validation": "Keep exact worker50/50 and independently running K1 on unchanged TS graph, no app compiler rerun. Worker final JS syntax/caller smoke/scoped diff and final source pins; independent final caller smoke, unchanged K1 inputs proof and actual before/v1/v2/pins/evidence inspection. Preserve v1 source/proof/failure and superseding v2 artifact; no unaccepted state promoted.",
+  "preserved": "frozen-artifact-v1.json and pre-rework-proof-v1.json; original sources remain before-sources-v1.json",
+  "not_approved": "No broad scope/test matrix, provider webhook or preference remediation in this task."
+}

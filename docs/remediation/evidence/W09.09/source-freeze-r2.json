@@ -1,0 +1,145 @@
+{
+  "task_id": "W09.09",
+  "at": "2026-09-17T21:47:54.130Z",
+  "source_state": "SOURCE/EVIDENCE STOP; all worker/native sessions drained. Distinct consolidated read-only source review found no further blocker; final whole-W09 review-r2/K8 pending boardGO.",
+  "worker": {
+    "path": "docs/remediation/evidence/W09.09/worker-r2.json",
+    "sha256": "678fc0483c4839d1468d46c0a16ec2870ba34c66ba36e00f791824f9aadc0900",
+    "bytes": 167637
+  },
+  "admission": {
+    "path": "docs/remediation/evidence/W09.09/admission-ring-alarm.json",
+    "sha256": "3e7cffbff84e1d5eee38042aad77ebfaf65a796f87d41ed9e57dfa85bc8354ca",
+    "bytes": 14897
+  },
+  "previous_review": {
+    "path": "docs/remediation/evidence/W09.09/review-r1.json",
+    "sha256": "dd44b345f5a318c2f661c2414b2dcaf39300f89cba55407f4c0f2965f01b7cc7",
+    "bytes": 12619
+  },
+  "previous_freeze": {
+    "path": "docs/remediation/evidence/W09.09/source-freeze-r1.json",
+    "sha256": "3b855d410f3a08f61e6d254e324b738755238d228e9fd6f1221e288b5a6f352f",
+    "bytes": 6583
+  },
+  "artifact": {
+    "digest": "af9af103b3e5099638ed1bbce4b2e5f26cca0cb8217b032e1bc91a57c80b685d",
+    "contract_digest": "ea9b09b82fe2a51aff057120bac7c3cc0b2067f54eed3356af0ba137cfd6a70b",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W09.09",
+    "files": 102,
+    "worker_pin_digest": "1310ff1400407cad797d116a463de87cf47ad0c179a52337cf5ece8fc2d51cda"
+  },
+  "identity": {
+    "rework_originals": 2,
+    "reversible_deltas": 2,
+    "changed_outputs": 2,
+    "protected_unchanged": 100,
+    "complete_primaries": 5,
+    "root_verification": "Two admitted dirty baselines and reversible patches,102current/100protected pins, five complete primary hashes/lengths/commands and four exact-final passes verified. Six prior evidence identities unchanged; four affected warning source lines unchanged and remaining170 diagnostics on unchanged sources."
+  },
+  "results": [
+    {
+      "check": "K2",
+      "attempt": "R2.K2.1",
+      "primary_sha256": "091619ed216883cb4f6ed0bc9a721deb48ce05eb4ab372e60fd506ece53673fe",
+      "primary_bytes": 16405,
+      "started_at": "2026-09-17T21:40:21.483Z",
+      "finished_at": "2026-09-17T21:40:32.633Z",
+      "exit_code": 0,
+      "status": "PASS_exact_final_102pins",
+      "result": "23pass/23unselected"
+    },
+    {
+      "check": "K3",
+      "attempt": "R2.K3.1",
+      "primary_sha256": "b395f39f14e84d519eecc856d4fee7442c9892df8102c3d78396861f13d7a30f",
+      "primary_bytes": 116667,
+      "started_at": "2026-09-17T21:40:22.991Z",
+      "finished_at": "2026-09-17T21:40:41.494Z",
+      "exit_code": 0,
+      "status": "PASS_exact_final_102pins",
+      "result": "11pass/134unselected"
+    },
+    {
+      "check": "K6_affected_component",
+      "attempt": "R2.static.1",
+      "primary_sha256": "ebf2a954fed43f435a09e5b6fe9c5af8e2731ea5a45a65eee14402b018d4047a",
+      "primary_bytes": 15450,
+      "started_at": "2026-09-17T21:40:26.125Z",
+      "finished_at": "2026-09-17T21:40:59.637Z",
+      "exit_code": 0,
+      "status": "PASS_exact_final_102pins",
+      "result": "Worker compiler/two-file lint0errors4inheritedwarnings/whitespace passed"
+    },
+    {
+      "check": "K4",
+      "attempt": "R2.K4.1",
+      "primary_sha256": "35eb16b2108e35634008fcddb392b6d50a25628f3bbdfdd0d0bec5d8aaf738d0",
+      "primary_bytes": 16075,
+      "started_at": "2026-09-17T21:40:24.555Z",
+      "finished_at": "2026-09-17T21:41:04.310Z",
+      "exit_code": 0,
+      "status": "PASS_exact_final_102pins",
+      "result": "5pass/62unselected; native source retries1,2,3/healthy once/oneDLQ body/onepersisted row/outbound0/disposed"
+    }
+  ],
+  "reused": [
+    {
+      "attempt": "R.K1.1",
+      "source": {
+        "path": "docs/remediation/evidence/W09.09/worker-r1.json",
+        "sha256": "44d2523511e5b593b946edec49dea5c23408ee0b512062b1ddc94cbced526d81",
+        "bytes": 841956
+      },
+      "primary_sha256": "242681686418df6d22f0fa370396065515b9e80a181ca29c75972183c5fd3abc",
+      "source_differences": [
+        "src/durable-objects/DecisionRing.ts",
+        "src/learn/learn.test.ts",
+        "src/routes/realtime.sdkContract.test.ts"
+      ],
+      "qualification": "Unchanged ledger/erasure or workflow selected code and dependencies. DecisionRing behavior freshly covered by K2/K3/K4; changed learning/realtime fixtures are outside reused check."
+    },
+    {
+      "attempt": "R.K5.1",
+      "source": {
+        "path": "docs/remediation/evidence/W09.09/worker-r1.json",
+        "sha256": "44d2523511e5b593b946edec49dea5c23408ee0b512062b1ddc94cbced526d81",
+        "bytes": 841956
+      },
+      "primary_sha256": "4d5bcd7a281e0fa7ebbaccbdbfa2db98ec5fe8d3da220b34b501f55d30f99c2d",
+      "source_differences": [
+        "src/durable-objects/DecisionRing.ts",
+        "src/learn/learn.test.ts",
+        "src/routes/realtime.sdkContract.test.ts"
+      ],
+      "qualification": "Unchanged ledger/erasure or workflow selected code and dependencies. DecisionRing behavior freshly covered by K2/K3/K4; changed learning/realtime fixtures are outside reused check."
+    },
+    {
+      "attempt": "R.K6.2",
+      "source": {
+        "path": "docs/remediation/evidence/W09.09/worker-r1.json",
+        "sha256": "44d2523511e5b593b946edec49dea5c23408ee0b512062b1ddc94cbced526d81",
+        "bytes": 841956
+      },
+      "primary_sha256": "325013cfc491c5d9e8cd78f2781383bee5b8a4e389d8028b938e2c0c27a383b2",
+      "source_differences": [
+        "src/durable-objects/DecisionRing.ts",
+        "src/learn/learn.test.ts"
+      ],
+      "qualification": "Reuse only unchanged other30TS lint/2JS syntax/other35 whitespace; final Worker compiler and affected2-file lint/whitespace freshly pass. Not a full final K6 rerun."
+    }
+  ],
+  "warning_counts": {
+    "affected": 4,
+    "inherited": 4,
+    "new": 0,
+    "resolved": 0,
+    "unchanged_other": 170,
+    "errors": 0
+  },
+  "limitations": [
+    "Focused pre-fix failure and all prior rejected evidence retained. No independent K8 run yet or local acceptance.",
+    "C9/K9 live/customer/resource/actual policies/disposal/activation/count reconciliation/history remains OPEN final authorized batch. No broadCI/package/SDK rebuild or external operation."
+  ]
+}

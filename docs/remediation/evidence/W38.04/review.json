@@ -1,0 +1,142 @@
+{
+  "task_id": "W38.04",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "at": "2026-09-13T12:43:03.523Z",
+  "artifact_digest": "c7663a4fd16b5f4f61ec6463da487525279f9f1f206cd5a84c22cdc797034f46",
+  "contract_digest": "7caca3e31f35c13a6c6470f363594732da084720e0ab9f05168f885ff40e1991",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W38.04-C1",
+      "verdict": "PASS",
+      "evidence": "Actual six frozen deltas reviewed. Shared geometric-buffer reader checks actual 2 MiB bytes before copying/parsing, cancels/releases failed streams, and preserves HTTP replacement/BOM decoding. All consuming config/content/import/pull/rollback lanes use it; read failures cannot become optional empty rollback. Independent runtime proves exact-byte admission, overflow-before-parse, 20 mounted lanes, authority/preconditions, remote refusals and no refusal writes."
+    },
+    {
+      "id": "W38.04-C2",
+      "verdict": "PASS",
+      "evidence": "Raw selected/direct catalog and prior arrays are capped at 10,000 before normalization/validation. CSV enforces text bytes, 10,000 data rows, 256 fields and 100,000 scanned AND projected materialized cells before retention/materialization. Refusal is whole-input, not truncation. Existing and grouped cases retain quoted/multiline/blank-cell semantics, 501-piece admission, publication replay and optional rollback."
+    },
+    {
+      "id": "W38.04-C3",
+      "verdict": "PASS",
+      "evidence": "Independent exact admitted command ran once on final bytes: 19 passed, 15 unselected. Reused final worker compiler/lint/whitespace proof. All 36 pins, 24 protected files, six forward/reverse deltas and current contract match. No additional suite or source change."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W38.04/plan.md",
+      "sha256": "2e8719753464ca73df2897e28b2b7e09a978a1c1fcb5eb160b78d574cf63b7a1"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W38.04/artifact.json",
+      "sha256": "b916634ed1d417ba38e639026bbec94d75bb6d4cdca8c050282547c4fab8877d"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W38.04/worker.json",
+      "sha256": "beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/content/import.test.ts src/routes/content.test.ts -t 'W38.04|reads tags from an object|accepts the demo catalog shape|finds the records in a JSON export|parses quoted fields|a csv export becomes|replace drops what is not|the publish window gates|the http source pulls|requires explicit initialization|authenticated validation runs|history lists revisions|imports JSON \\(replace\\)|pulls from a URL|binds both modes to typed tenant authority|preserves stored reads, merged validation|W38.03 returns typed' --maxWorkers=1 --minWorkers=1",
+    "session_id": 32095,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "d67bd2",
+        "wall_time_seconds": 1.000296687,
+        "session_id": 32095,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "7a08c0",
+        "wall_time_seconds": 0.000002442,
+        "exit_code": 0,
+        "original_token_count": 283,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/content.test.ts  (24 tests | 15 skipped) 262ms\nstdout | src/routes/content.test.ts > authenticated reflex administration > W38.04 bounds every consuming route before effects and preserves authority optional rollback and import replay\nW38.04 mounted admission {\"guarded_lanes\":20,\"admitted_pieces\":501,\"remote_refusals\":2,\"writes_before_refusal\":0}\n\nstdout | src/content/import.test.ts > W38.04 input admission > W38.04 counts streamed local and direct remote bytes before parsing and preserves HTTP decoding\nW38.04 stream admission {\"exact_bytes\":2097152,\"overflow_pulls\":2,\"overflow_cancelled\":true,\"oversize_parsed\":false}\n\n ✓ src/content/import.test.ts  (10 tests) 90ms\n\n Test Files  2 passed (2)\n      Tests  19 passed | 15 skipped (34)\n   Start at  08:37:01\n   Duration  11.55s (transform 1.44s, setup 0ms, collect 4.38s, tests 352ms, environment 0ms, prepare 4.84s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 19,
+      "unselected": 15,
+      "total": 34,
+      "files": 2,
+      "duration_seconds": 11.55,
+      "final_bytes": true
+    }
+  },
+  "source_and_artifact_review": {
+    "inspected": "Actual plan/admission/current C1–C3, all six baseline-to-final source deltas and fixtures, full worker captures, artifact and freeze. Source inspection 3761e2; admission f59227; task 873999; evidence ddbd10/e6f35e/efcd7e.",
+    "source_stop": "2026-09-13T12:34:23.702Z",
+    "pins": 36,
+    "source_and_output": 30,
+    "protected_unchanged": 24,
+    "exact_bidirectional_deltas": 6,
+    "before": "730a68 verified every actual pin/protected hash and forward/reverse reconstruction before runtime; its absent-before metadata assumption failed. c11075 reconciled that encoding after runtime launch, without changing artifact bytes.",
+    "corrected_comparison": {
+      "chunk_id": "c11075",
+      "wall_time_seconds": 0.085119739,
+      "exit_code": 0,
+      "original_token_count": 411,
+      "output": "{\n  \"at\": \"2026-09-13T12:37:25.692Z\",\n  \"artifact_digest\": \"c7663a4fd16b5f4f61ec6463da487525279f9f1f206cd5a84c22cdc797034f46\",\n  \"manifest_sha256\": \"b916634ed1d417ba38e639026bbec94d75bb6d4cdca8c050282547c4fab8877d\",\n  \"pins\": 36,\n  \"bad\": [],\n  \"protected_count\": 24,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/config/input.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/config.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/content.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/content/import.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/content/import.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/content.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W38.04/plan.md\",\n      \"sha256\": \"2e8719753464ca73df2897e28b2b7e09a978a1c1fcb5eb160b78d574cf63b7a1\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.04/artifact.json\",\n      \"sha256\": \"b916634ed1d417ba38e639026bbec94d75bb6d4cdca8c050282547c4fab8877d\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.04/worker.json\",\n      \"sha256\": \"beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757\"\n    }\n  ]\n}\n"
+    },
+    "after": {
+      "chunk_id": "f79c2f",
+      "wall_time_seconds": 0.058980129,
+      "exit_code": 0,
+      "original_token_count": 411,
+      "output": "{\n  \"at\": \"2026-09-13T12:42:14.276Z\",\n  \"artifact_digest\": \"c7663a4fd16b5f4f61ec6463da487525279f9f1f206cd5a84c22cdc797034f46\",\n  \"manifest_sha256\": \"b916634ed1d417ba38e639026bbec94d75bb6d4cdca8c050282547c4fab8877d\",\n  \"pins\": 36,\n  \"bad\": [],\n  \"protected_count\": 24,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/config/input.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/config.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/content.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/content/import.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/content/import.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/content.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W38.04/plan.md\",\n      \"sha256\": \"2e8719753464ca73df2897e28b2b7e09a978a1c1fcb5eb160b78d574cf63b7a1\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.04/artifact.json\",\n      \"sha256\": \"b916634ed1d417ba38e639026bbec94d75bb6d4cdca8c050282547c4fab8877d\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.04/worker.json\",\n      \"sha256\": \"beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757\"\n    }\n  ]\n}\n"
+    },
+    "contract_after": {
+      "chunk_id": "c7c6fa",
+      "wall_time_seconds": 0.018008579,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T12:42:14.522Z\",\"task\":\"W38.04\",\"state\":\"verification\",\"contract_digest\":\"7caca3e31f35c13a6c6470f363594732da084720e0ab9f05168f885ff40e1991\",\"artifact_digest\":\"c7663a4fd16b5f4f61ec6463da487525279f9f1f206cd5a84c22cdc797034f46\"}\n"
+    }
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W38.04/worker.json",
+      "sha256": "beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757"
+    },
+    "session_id": 14373,
+    "captures": [
+      "d06b73",
+      "149bcb",
+      "fe16e2",
+      "fc56ba"
+    ],
+    "started_at": "2026-09-13T12:33:02.627Z",
+    "finished_at": "2026-09-13T12:33:42.157Z",
+    "exit_status": 0,
+    "drained": true,
+    "result": "Compiler passed; six-file lint zero errors/warnings; tracked-file whitespace and separate actual new-helper whitespace passed. No independent static rerun.",
+    "worker_runtime": "Final worker session 95274, d0a783/4e8953, also passed 19/15. It is reused evidence, not the independent invocation."
+  },
+  "retained_history": {
+    "worker": "No executed worker runtime/static failures. Pre-check text_code_units label correction and admitted CSV projected-materialization clarification are retained; no retrospective validation claim.",
+    "reviewer_assumption_failure": {
+      "explanation": "730a68 exited 1 solely because the ephemeral verifier expected null before_sha256 for an absent helper. Baseline/delta explicitly use original_absent:true plus SHA-256 of empty bytes. Actual hashes and forward/reverse reconstructions already matched. ddbd10 inspected the encoding; corrected c11075 and final f79c2f pass without source or evidence rework.",
+      "capture": {
+        "chunk_id": "730a68",
+        "wall_time_seconds": 0.459303708,
+        "exit_code": 1,
+        "original_token_count": 412,
+        "output": "{\n  \"at\": \"2026-09-13T12:36:57.536Z\",\n  \"artifact_digest\": \"c7663a4fd16b5f4f61ec6463da487525279f9f1f206cd5a84c22cdc797034f46\",\n  \"manifest_sha256\": \"b916634ed1d417ba38e639026bbec94d75bb6d4cdca8c050282547c4fab8877d\",\n  \"pins\": 36,\n  \"bad\": [],\n  \"protected_count\": 24,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/config/input.ts\",\n      \"before\": false,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/config.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/content.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/content/import.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/content/import.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/content.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W38.04/plan.md\",\n      \"sha256\": \"2e8719753464ca73df2897e28b2b7e09a978a1c1fcb5eb160b78d574cf63b7a1\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.04/artifact.json\",\n      \"sha256\": \"b916634ed1d417ba38e639026bbec94d75bb6d4cdca8c050282547c4fab8877d\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.04/worker.json\",\n      \"sha256\": \"beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757\"\n    }\n  ]\n}\n"
+      }
+    },
+    "prior_proof": "W38.03 overlapping prior-byte assurance was prospectively qualified; its entire old artifact was not rerun. Existing implementation and selected compatibility controls are preserved."
+  },
+  "limitations": [
+    "Application admission budgets, not customer limits or native heap/CPU/concurrency/latency guarantees. JSON count checks follow bounded parsing; upstream chunks, validators, normalization expansion and merged-corpus growth are not fully allocation-bounded.",
+    "HTTP replacement-character/BOM behavior is intentionally preserved. Stream/read failures are sanitized; ordinary remote failures retain the existing 502 posture. Remote URL policy, timeout and broader transport lifecycle remain outside this slice.",
+    "Synthetic mounted bindings and direct stream cases establish the declared local boundary, not deployed authority, provider capacity or customer acceptance.",
+    "No publication/KV atomicity, cache/history redesign, whole-W38/finding closure, release approval or broader benchmark claim."
+  ]
+}

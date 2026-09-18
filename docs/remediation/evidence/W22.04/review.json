@@ -1,0 +1,102 @@
+{
+  "task_id": "W22.04",
+  "verdict": "pass",
+  "artifact_digest": "56731ffc87ad54ef9d6af9e027ecb920412697cb20c6cc00d34ad80ae95fadda",
+  "contract_digest": "654a5f53b1631379685824545d9f57c6270d041ead2d57e3dbc4863cae941020",
+  "actor": {
+    "actor_id": "w2204-reviewer",
+    "run_id": "/root/w2204_review",
+    "role": "independent_reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "at": "2026-09-14T16:09:56Z",
+  "artifact_verification": {
+    "before_capture": "44e770",
+    "after_capture": "9cdd62",
+    "exit_code": 0,
+    "drained": true,
+    "pins": 52,
+    "mismatches": [],
+    "protected_pins": 38,
+    "protected_mismatches": [],
+    "baseline_forward_deltas": "All five original payload hashes, current hashes and retained forward patches independently verified.",
+    "scope": "Exact replacement deltas inspected; only bounded indexed membership capture and two push/shrink controls changed from first frozen source. Reused prior complete inspection of unchanged portions with matching pins."
+  },
+  "criteria": [
+    {
+      "id": "W22.04-C1",
+      "verdict": "pass",
+      "evidence": "Whole surviving decision IDs reconcile before config/sinks; exact copies coalesce and distinct IDs survive. Actual ring/aggregate assertions cover holdout separation, physical cutoff, late conflict no-effects, partial-scan coalesced=0, detached caller mutation and physical/work limits. Indexed membership captured before serialization fixes the rejected push/shrink defect, including pushing beyond1000 and retaining the second original member after shrink."
+    },
+    {
+      "id": "W22.04-C2",
+      "verdict": "pass",
+      "evidence": "Shared outcome identity validation precedes fan barrier/direct ring current()/credit planning. Malformed nonce/source/ID/reward/provenance produces no reads/writes/credits; original own-undefined fields refuse before JSON normalization. Valid provided/request nonce, truly legacy repeated calls and explicit correlation controls pass. LearnStats and retained ring schema are unchanged."
+    },
+    {
+      "id": "W22.04-C3",
+      "verdict": "pass",
+      "evidence": "First and only independent fixed12 passed on replacement bytes;24 tests intentionally unselected. Same-byte worker full compiler/scoped lint/whitespace reused after inspecting commands, results and seven unchanged diagnostic signatures. API states numeric coalescing, conservative limits and continuing across-call/delivery/privacy limitations."
+    }
+  ],
+  "runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts -t 'W22\\.04|W26\\.03 surfaces|W26\\.02 narrows|W09\\.04|W24\\.01 pins|feeds no exposures|keeps only post-cutoff|starts no ring/exposure|W06\\.06 rejects an append|W10\\.02 bounds actual' --maxWorkers=1 --minWorkers=1",
+    "started_at": "2026-09-14 16:09:17 UTC",
+    "initial": {
+      "chunk_id": "2c8b47",
+      "wall_time_seconds": 1.001318516,
+      "session_id": 94850,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "92a4df",
+        "wall_time_seconds": 0.000002158,
+        "exit_code": 0,
+        "original_token_count": 253,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (29 tests | 22 skipped) 282ms\n ✓ src/learn/holdoutArms.test.ts  (7 tests | 2 skipped) 36ms\n\n Test Files  2 passed (2)\n      Tests  12 passed | 24 skipped (36)\n   Start at  12:09:19\n   Duration  7.23s (transform 989ms, setup 0ms, collect 2.18s, tests 318ms, environment 0ms, prepare 3.44s)\n\n"
+      }
+    ],
+    "result": "pass",
+    "exit_code": 0,
+    "drained": true,
+    "passed": 12,
+    "unselected": 24,
+    "files": 2,
+    "vitest_duration_seconds": 7.23,
+    "test_execution_seconds": 0.318,
+    "classification": "Local Node/Vitest actual modules with synthetic bindings; not native/deployed/customer/SLO proof.",
+    "output_note": "Complete capture retains the Vite CJS deprecation warning and eight existing config-fallback diagnostics from W09.04."
+  },
+  "reused_static": {
+    "evidence": {
+      "path": "docs/remediation/evidence/W22.04/worker.json",
+      "sha256": "b198bd556f2ba0553b0b1cc998be6d6474b55799b1833b03321ad023b955db16",
+      "attempt": "static-final"
+    },
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/fan.ts src/durable-objects/DecisionRing.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts && git diff --check -- src/learn/fan.ts src/durable-objects/DecisionRing.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts docs/kit/02-api-reference.md",
+    "result": "pass",
+    "exit_code": 0,
+    "drained": true,
+    "final_capture": "3a9c66",
+    "errors": 0,
+    "inherited_warnings": 7,
+    "signature_comparison": "Inspected baseline c42739 and final output: three learn.test.ts unused-variable warnings (_key,_url,_init); three holdoutArms.test.ts explicit-any warnings and one empty-setAlarm warning. No new file/rule/message signatures."
+  },
+  "retained_rework": {
+    "review": {
+      "path": "docs/remediation/evidence/W22.04/review-attempt-1.json",
+      "sha256": "eecb4e9d5d1ecd7ebf02e2b5bb9446130ac6550cbc02c54a46fd7dc25d1e79fc"
+    },
+    "resolution": "Prior source FAIL was not runtime-tested or accepted. Approved membership capture plus actual push/shrink assertions resolve it on this replacement. Original worker TS2339 failure/correction and superseded successes remain in worker-attempt-1.json; no historical result was relabeled as replacement validation."
+  },
+  "limitations": "Same-invocation decision coalescing and malformed online outcome admission only. Separate calls still increment exposures/credits, and retained ring collisions can coexist with independently accepted statistics. No durable sink idempotency, historical repair, global erasure fence, generation/reset/attribution/denominator change, native/SLO/customer/release acceptance. D06 privacy/retention/erasure approval for any retained linkable token and W24 transition/recovery remain required. Full W22/W09 and linked findings remain open.",
+  "disposition": {
+    "lead_acceptance": "pending",
+    "next": "Lead inspect and disposition; independent reviewer source/evidence STOP.",
+    "running_commands": [],
+    "source_edits": 0
+  }
+}

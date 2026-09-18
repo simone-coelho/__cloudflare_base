@@ -1,0 +1,87 @@
+{
+  "task": "W34.01",
+  "planSha256": "a89dc247a159a1ede3a07ecd3b66e777d0d47b673ca3958d62c4de00fac58e3f",
+  "contractDigest": "493bc4435de040b1db24f8b58a9aec18bb80e8681d917bd8018a515aadce6dd9",
+  "checks": [
+    {
+      "label": "K1 initial",
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/learn/phase3.test.ts src/content/decide.test.ts src/learn/holdoutArms.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAtUTC": "2026-09-07 04:35:42 UTC",
+      "collectedAtUTC": "2026-09-07 04:36:21 UTC",
+      "exitCode": 1,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/phase3.test.ts  (10 tests) 21ms\n ❯ src/content/consent.test.ts  (10 tests | 4 failed) 60ms\n   ❯ src/content/consent.test.ts > W34.01 deployment-off external scoring on the actual service > withdraws 'service' / 'https://synthetic.invalid/score' despite a valid positive-weight stored document\n     → expected [ 'v1 GET /snapshot' ] to deeply equal [ 'coach:v1 GET /snapshot' ]\n   ❯ src/content/consent.test.ts > W34.01 deployment-off external scoring on the actual service > withdraws 'service' / 'MODEL' despite a valid positive-weight stored document\n     → expected [ 'v1 GET /snapshot' ] to deeply equal [ 'coach:v1 GET /snapshot' ]\n   ❯ src/content/consent.test.ts > W34.01 deployment-off external scoring on the actual service > withdraws 'workers_ai' / 'synthetic-model' despite a valid positive-weight stored document\n     → expected [ 'v1 GET /snapshot' ] to deeply equal [ 'coach:v1 GET /snapshot' ]\n   ❯ src/content/consent.test.ts > W34.01 deployment-off external scoring on the actual service > withdraws 'table' / 'synthetic-table' despite a valid positive-weight stored document\n     → expected [ 'v1 GET /snapshot' ] to deeply equal [ 'coach:v1 GET /snapshot' ]\n ✓ src/content/decide.test.ts  (10 tests) 6ms\n ✓ src/learn/holdoutArms.test.ts  (3 tests) 18ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/content/consent.test.ts > W34.01 deployment-off external scoring on the actual service > withdraws 'service' / 'https://synthetic.invalid/score' despite a valid positive-weight stored document\n FAIL  src/content/consent.test.ts > W34.01 deployment-off external scoring on the actual service > withdraws 'service' / 'MODEL' despite a valid positive-weight stored document\n FAIL  src/content/consent.test.ts > W34.01 deployment-off external scoring on the actual service > withdraws 'workers_ai' / 'synthetic-model' despite a valid positive-weight stored document\n FAIL  src/content/consent.test.ts > W34.01 deployment-off external scoring on the actual service > withdraws 'table' / 'synthetic-table' despite a valid positive-weight stored document\nAssertionError: expected [ 'v1 GET /snapshot' ] to deeply equal [ 'coach:v1 GET /snapshot' ]\n\n- Expected\n+ Received\n\n  Array [\n-   \"coach:v1 GET /snapshot\",\n+   \"v1 GET /snapshot\",\n  ]\n\n ❯ src/content/consent.test.ts:145:21\n    143|     expect(kv.reads.filter((key) => key.startsWith('ext:'))).toEqual([…\n    144|     for (const call of [fetchCall, bindingCall, aiCall, bindingRead, a…\n    145|     expect(shopper).toEqual(['coach:v1 GET /snapshot']);\n       |                     ^\n    146|     expect(ring).toEqual(['coach:v1 POST /append']);\n    147| \n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯\n\n Test Files  1 failed | 3 passed (4)\n      Tests  4 failed | 29 passed (33)\n   Start at  00:35:45\n   Duration  19.10s (transform 2.86s, setup 0ms, collect 5.42s, tests 105ms, environment 1ms, prepare 9.66s)\n\n",
+      "result": "29 passed / 4 failed: positive-control shopper object label incorrectly expected coach:v1; actual existing default-tenant key is v1. Production and preceding external-effect assertions were unchanged.",
+      "fixtureSha256": "9b1e7ac403d2149c02932e44ae63ca9c836f97f075f81eae8fcaba9aecae5865"
+    },
+    {
+      "label": "Application TypeScript initial",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w3401-typecheck.Afav3u/application.tsbuildinfo",
+      "startedAtUTC": "2026-09-07 04:35:57 UTC",
+      "collectedAtUTC": "2026-09-07 04:36:22 UTC",
+      "exitCode": 2,
+      "output": "src/content/consent.test.ts(113,19): error TS2322: Type 'VitestUtils' is not assignable to type 'Awaitable<void>'.\n",
+      "result": "Fixture afterEach returned VitestUtils. Corrected to a void block; no production change."
+    },
+    {
+      "label": "K1 after shopper-label correction, before cleanup typing correction",
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/learn/phase3.test.ts src/content/decide.test.ts src/learn/holdoutArms.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAtUTC": "2026-09-07 04:36:21 UTC",
+      "collectedAtUTC": "2026-09-07 04:36:54 UTC",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/phase3.test.ts  (10 tests) 21ms\n ✓ src/content/consent.test.ts  (10 tests) 18ms\n ✓ src/content/decide.test.ts  (10 tests) 8ms\n ✓ src/learn/holdoutArms.test.ts  (3 tests) 19ms\n\n Test Files  4 passed (4)\n      Tests  33 passed (33)\n   Start at  00:36:26\n   Duration  18.42s (transform 2.18s, setup 0ms, collect 4.24s, tests 66ms, environment 0ms, prepare 10.77s)\n\n",
+      "result": "33/33 passed; superseded by final exact-source run below."
+    },
+    {
+      "label": "K1 final",
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/learn/phase3.test.ts src/content/decide.test.ts src/learn/holdoutArms.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAtUTC": "2026-09-07 04:37:09 UTC",
+      "collectedAtUTC": "2026-09-07 04:37:33 UTC",
+      "exitCode": 0,
+      "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/phase3.test.ts  (10 tests) 21ms\n ✓ src/content/consent.test.ts  (10 tests) 23ms\n ✓ src/content/decide.test.ts  (10 tests) 6ms\n ✓ src/learn/holdoutArms.test.ts  (3 tests) 19ms\n\n Test Files  4 passed (4)\n      Tests  33 passed (33)\n   Start at  00:37:11\n   Duration  15.33s (transform 1.92s, setup 0ms, collect 3.87s, tests 69ms, environment 0ms, prepare 8.26s)\n\n",
+      "result": "33/33 passed across four suites; final artifact."
+    },
+    {
+      "label": "Application TypeScript final",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --tsBuildInfoFile /tmp/w3401-typecheck.Afav3u/application.tsbuildinfo",
+      "startedAtUTC": "2026-09-07 04:37:09 UTC",
+      "collectedAtUTC": "2026-09-07 04:37:33 UTC",
+      "exitCode": 0,
+      "output": "",
+      "result": "Passed; compiler metadata confined to task-temporary directory."
+    },
+    {
+      "label": "Scoped diff check",
+      "command": "git diff --check -- src/content/service.ts src/content/consent.test.ts",
+      "startedAtUTC": "2026-09-07 04:37:09 UTC",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "label": "Source identity and remaining scorer references",
+      "command": "sha256sum src/content/service.ts src/content/consent.test.ts docs/remediation/evidence/W34.01/baseline.json\nrg -n 'scoreExternal\\(' src --glob '!*.test.ts'",
+      "startedAtUTC": "2026-09-07 04:37:09 UTC",
+      "exitCode": 0,
+      "output": "dff26109e9389cacb1f2bfae4db220f926bbaca6b10376023535e46a3b1a2bf8  src/content/service.ts\n83bd9de816cb610913a80e45df44ca32742f566a8281ad0961e991a073f37b09  src/content/consent.test.ts\n4b3ff3702bcaa0d59a11b5dbfedb7d85883d4bac7608c873577f7785a91a7d8a  docs/remediation/evidence/W34.01/baseline.json\nsrc/learn/external.ts:102:export async function scoreExternal(cfg: ExternalModelConfig, req: ExternalRequest, now: number, deps: ExternalDeps): Promise<ExternalResult> {\n"
+    }
+  ],
+  "sourceFreeze": [
+    {
+      "path": "src/content/service.ts",
+      "sha256": "dff26109e9389cacb1f2bfae4db220f926bbaca6b10376023535e46a3b1a2bf8"
+    },
+    {
+      "path": "src/content/consent.test.ts",
+      "sha256": "83bd9de816cb610913a80e45df44ca32742f566a8281ad0961e991a073f37b09"
+    },
+    {
+      "path": "docs/remediation/evidence/W34.01/baseline.json",
+      "sha256": "4b3ff3702bcaa0d59a11b5dbfedb7d85883d4bac7608c873577f7785a91a7d8a"
+    }
+  ],
+  "limitations": [
+    "Local synthetic Node integration and source/type checking only; no native/deployed/runtime SLO, customer, full W34/F30 or release acceptance.",
+    "Table scoring is deliberately disabled too; helpers and historical replay remain available but do not authorize a live seam.",
+    "Original baseline reported52 inputs but did not retain the full input graph; no reconstructed graph is claimed.",
+    "All initiated test/compiler processes collected; no pending processes. Independent review and lead acceptance remain pending."
+  ]
+}

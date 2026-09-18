@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-12T01:08:33.365Z",
+  "task_id": "W09.05",
+  "source_go_at": "2026-09-12T01:08:33.365Z",
+  "entry_board": {
+    "session_id": 57048,
+    "result": "VALID1061",
+    "exit_code": 0,
+    "drained": true
+  },
+  "direct_check": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from'node:fs';import assert from'node:assert/strict';import{sha256,taskContractDigest}from'./scripts/remediation/board.mjs';const t=JSON.parse(fs.readFileSync('docs/remediation/tracker.json')),task=t.tasks.find(x=>x.id==='W09.05'),b=JSON.parse(fs.readFileSync('docs/remediation/design/W09.05/baseline.json'));assert.equal(task.state,'in_progress');assert.equal(taskContractDigest(task),task.preflight.contract_digest);assert.equal(sha256(fs.readFileSync(task.preflight.plan.path)),task.preflight.plan.sha256);assert.equal(sha256(JSON.stringify(t.journal.slice(0,b.prior_journal_length))),b.prior_journal_sha256);assert.deepEqual(t.journal.findLast(x=>x.task_id===task.id&&x.to==='in_progress').plan_snapshot,task.preflight);assert(t.authority.local_authorization.scope_task_ids.includes(task.id));for(const p of b.pins)assert.equal(sha256(fs.readFileSync(p.path)),p.sha256,p.path);for(const x of t.tasks.filter(x=>x.state==='closed'))for(const p of x.artifact.files)assert.equal(sha256(fs.readFileSync(p.path)),p.sha256,p.path);console.log(JSON.stringify({at:new Date().toISOString(),task:task.id,contract:task.preflight.contract_digest,journal:t.journal.length,pins:b.pins.length,owned:b.owned.length,entry:'VALID1061/57048',checks:'authority/plan/contract/immutable journal/GO snapshot/pins/remaining closed artifact',result:'pass'}));\nNODE",
+    "captures": [
+      {
+        "chunk_id": "af55d2",
+        "wall_time_seconds": 0.358424141,
+        "exit_code": 0,
+        "original_token_count": 76,
+        "output": "{\"at\":\"2026-09-12T01:08:21.088Z\",\"task\":\"W09.05\",\"contract\":\"177cd97bc99674ffc027bca9d0da7f42a87a072a65a2183fee9e827ad7ab9105\",\"journal\":1070,\"pins\":102,\"owned\":16,\"entry\":\"VALID1061/57048\",\"checks\":\"authority/plan/contract/immutable journal/GO snapshot/pins/remaining closed artifact\",\"result\":\"pass\"}\n"
+      }
+    ]
+  },
+  "contract_digest": "177cd97bc99674ffc027bca9d0da7f42a87a072a65a2183fee9e827ad7ab9105",
+  "scope": "16 owned source/fixture/SDK outputs/kit paths plus worker.json only; existing build outputs permitted; no new sink state/retries/external authority"
+}

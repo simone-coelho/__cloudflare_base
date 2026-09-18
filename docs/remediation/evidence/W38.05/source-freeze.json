@@ -1,0 +1,154 @@
+{
+  "at": "2026-09-13T13:43:32.618Z",
+  "task_id": "W38.05",
+  "contract_digest": "f8032721bc8205ae21a3e862d3a75bb3516e88ff42ad41ff7895f3864eb619c8",
+  "source": "Root inspected two actual deltas and complete final worker captures. Final-byte exact admitted selection (14 actual)/static passed, protected pins match pre-GO; distinct frozen review remains required. Original captured-driver values, complete output/hook parity and observed serve-only driver work plus bounded paired timing checked in exact14; no native or total heap claim.",
+  "source_stopped_at": "2026-09-13T13:41:59.265Z",
+  "owned_whitespace": {
+    "method": "Final source lines compared with retained baseline, admitting only unchanged inherited whitespace, alongside scoped git whitespace.",
+    "results": [
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      },
+      {
+        "path": "src/reflex/contentCompose.test.ts",
+        "new_trailing_whitespace": 0,
+        "inherited_trailing_whitespace_lines": []
+      }
+    ]
+  },
+  "owned": [
+    "src/reflex/contentCompose.ts",
+    "src/reflex/contentCompose.test.ts"
+  ],
+  "pins": [
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "role": "output",
+      "sha256": "d4e4ba1f889939e71f096c771437da92354f03102baf9d348604a8b9f18dcf34"
+    },
+    {
+      "path": "src/reflex/contentCompose.test.ts",
+      "role": "output",
+      "sha256": "10c663c2555d816eeb988e705f5b660b265851d9b19992c8a8054f37a74a834c"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "role": "source",
+      "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+    },
+    {
+      "path": "src/content/decide.test.ts",
+      "role": "source",
+      "sha256": "56946e6ad16abec73520f0dfe79003ec280cc272a062d744b8c766489cb6af6f"
+    },
+    {
+      "path": "src/content/merchandisingSeam.test.ts",
+      "role": "source",
+      "sha256": "083968330562f2249ba7fcea1b06fb920a7af431b9354220598e68201cd67b73"
+    },
+    {
+      "path": "src/content/inventoryDiversity.test.ts",
+      "role": "source",
+      "sha256": "7fc426419ee9eed15b41f47ab0758e70eb420f4fc019dcdce1dc140431124c74"
+    },
+    {
+      "path": "src/learn/phase3.test.ts",
+      "role": "source",
+      "sha256": "5bb9d165bca35887b40309015becb7ab2683008799118adf2be6d2192c4051d2"
+    },
+    {
+      "path": "src/learn/replay.ts",
+      "role": "source",
+      "sha256": "659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a"
+    },
+    {
+      "path": "src/learn/explore.ts",
+      "role": "source",
+      "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "role": "source",
+      "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+    },
+    {
+      "path": "src/learn/priors.ts",
+      "role": "source",
+      "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "source",
+      "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+    },
+    {
+      "path": "src/content/lifecycle.ts",
+      "role": "source",
+      "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+    },
+    {
+      "path": "src/reflex/merchandising.ts",
+      "role": "source",
+      "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+    },
+    {
+      "path": "src/services/JourneyStage.ts",
+      "role": "source",
+      "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "role": "source",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "docs/architecture/33-adversarial-audit-brief.md",
+      "role": "source",
+      "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.04/acceptance.md",
+      "role": "source",
+      "sha256": "7cf05b7ce159d355eb8da48757eb5919bf62a8da6ae70568a7eeb98896086cf3"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.04/worker.json",
+      "role": "source",
+      "sha256": "beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    }
+  ],
+  "unowned_unchanged": 23
+}

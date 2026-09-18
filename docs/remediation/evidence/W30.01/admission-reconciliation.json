@@ -1,0 +1,7 @@
+{
+  "at": "2026-09-12T17:40:12.830Z",
+  "status": "corrected_before_source_go",
+  "failed_check_chunk": "51c745",
+  "cause": "Generated low-context patch applied W30 decomposition to structurally identical W15 block. Direct GO actual-package equality failed; no implementation began.",
+  "correction": "Restore W15 unscoped decomposition and apply recorded W30 package admission to actual W30. Journal preserved; reuse context40 for unambiguous governance patching."
+}

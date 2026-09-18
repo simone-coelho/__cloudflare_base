@@ -1,0 +1,178 @@
+{
+  "at": "2026-09-14 02:32:04 UTC",
+  "task_id": "W26.03",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "independence": "Distinct independent reviewer; no source implementation, governance edits, subdelegation or external operations.",
+  "artifact_digest": "3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af",
+  "contract_digest": "41daf7a67d737b929b3a3b982c1f96120cc7ab40b75d374b8a0841ea04cdaa42",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W26.03-C1",
+      "verdict": "PASS",
+      "evidence": "Actual nonrecursive complete JSON comparison preserves own-key/value and array-order semantics. Serialized append stages unique inputs only after scope/fresh cutoff; late conflicts leave storage/cache unchanged. Exact retained/in-batch repeats, ambiguous or changed same-ID rows, index-only collisions, missing index, capacity, concurrency, lost acknowledgements/restart, inclusive erasure, expiry and reset are covered by the passing selected fixtures. Existing request/state bounds and single put/cache-after-ack remain."
+    },
+    {
+      "id": "W26.03-C2",
+      "verdict": "PASS",
+      "evidence": "Actual fan validates the v2 received=accepted+duplicates+cutoffSkipped equation and retains v1 without fabricated duplicate counts. Malformed/version/count acknowledgements are unknown without retries. Actual local fan/ring/stats tests prove one retained fatigue/exact target after retry while repeated exposures and credits still increment twice; a ring collision does not roll back independently processed stats."
+    },
+    {
+      "id": "W26.03-C3",
+      "verdict": "PASS",
+      "evidence": "Eight total selected tests passed once independently: six existing controls plus two new groups. All four exact deltas and 35 manifest pins verified; 25 protected inputs unchanged and both patch directions reconstruct exact bytes. Final full compiler, scoped lint with three unchanged inherited signatures, and four-file whitespace evidence reused. API documentation accurately limits retry assurance and mixed-version/history semantics."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W26.03/plan.md",
+      "sha256": "3585359789eb65b49554cd66f3134389ab9dde0a1e72e753c013dec13f301e44"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W26.03/baseline.json",
+      "sha256": "f0714d9232180176b68e5ee80e55b9eb30f3e1bc2f0cfe876c5479be38d828dd"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W26.03/worker.json",
+      "sha256": "59e6616fc8344d6b14911528be133e604aae4d9d6d5d308ad595abbe512d2f2f"
+    },
+    "artifact": "docs/remediation/evidence/W26.03/artifact.json",
+    "source_freeze": "docs/remediation/evidence/W26.03/source-freeze.json",
+    "source_deltas": "docs/remediation/evidence/W26.03/source-deltas.json",
+    "source_stopped_at": "2026-09-14T02:27:28.535Z",
+    "frozen_at": "2026-09-14T02:28:56.476Z",
+    "required_reads": "Personally read complete plan (ff513e), current W26/F16/F21/F34 and doc22 sections3–4/15 (2befe9), full F16 verifier (36a8e8), current ring/fan and applicable fixture/API source. Reused valid personal governance/dependency reads and lead VALID1649 entry assurance; no duplicate board run.",
+    "source_reads": "All four final actual deltas read in 1b6f98/8cbd34; complete worker evidence in ab2379. Current task criteria/checks/identity read in 0fc792. Baseline/static and frozen record read in 3ca2b0/15c870."
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W26.03|W26.02|W10.02|W09.04|W06.06 suppresses old decisions|W06.06 exposes no records' --maxWorkers=1 --minWorkers=1",
+    "session_id": 2628,
+    "invocations": 1,
+    "launched_at": "2026-09-14 02:30:13 UTC",
+    "drained_at": "2026-09-14 02:30:51 UTC",
+    "captures": [
+      {
+        "chunk_id": "5f8d85",
+        "wall_time_seconds": 1.001737726,
+        "session_id": 2628,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ed0283",
+        "wall_time_seconds": 0.000002529,
+        "exit_code": 0,
+        "original_token_count": 237,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (27 tests | 19 skipped) 454ms\n\n Test Files  1 passed (1)\n      Tests  8 passed | 19 skipped (27)\n   Start at  22:30:23\n   Duration  18.94s (transform 4.20s, setup 0ms, collect 6.84s, tests 454ms, environment 0ms, prepare 7.76s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 19,
+      "unselected": 19,
+      "total_discovered": 27,
+      "test_files_passed": 1,
+      "duration_seconds": 18.94
+    },
+    "qualification": "Complete actual captures retained, including eight inherited config-fallback log lines in the selected W09.04 fixture. These logs are not a new delivery guarantee. No additional suite or rerun."
+  },
+  "source_verification": {
+    "verdict": "PASS",
+    "manifest_files": 35,
+    "source_pins": 29,
+    "owned": 4,
+    "protected": 25,
+    "before_capture": {
+      "chunk_id": "0fc792",
+      "wall_time_seconds": 0.98094757,
+      "exit_code": 0,
+      "original_token_count": 1131,
+      "output": "{\n  \"task\": \"W26.03\",\n  \"state\": \"verification\",\n  \"criteria\": [\n    {\n      \"id\": \"W26.03-C1\",\n      \"description\": \"Exact unique retained/in-batch payload repeats add no row/index; object key order irrelevant, array order preserved. Ambiguous existing IDs, changed payloads and index-only collisions refuse the whole append before mutations. Full comparison, request/state bounds, fresh erasure and existing retention/reset preserved.\",\n      \"required_evidence_kinds\": [\n        \"runtime_test\"\n      ],\n      \"minimum_claim\": \"local_runtime\"\n    },\n    {\n      \"id\": \"W26.03-C2\",\n      \"description\": \"Append v2 received=accepted+duplicates+cutoffSkipped; fan validates/surfaces it and preserves explicit legacy v1 without inventing dedup assurance. Exact retry preserves fatigue and explicit target uniqueness while independent stats writes remain non-idempotent; unknown acknowledgements do not cause retries.\",\n      \"required_evidence_kinds\": [\n        \"runtime_test\"\n      ],\n      \"minimum_claim\": \"local_runtime\"\n    },\n    {\n      \"id\": \"W26.03-C3\",\n      \"description\": \"Fixed8 existing/new grouped checks, full compiler, scoped lint0errors/no new diagnostic multiplicities over3inheritedwarnings, four-file whitespace and distinct frozen actual-source review. Document bounded local acknowledgement and mixed-version/history limits without W26/finding/release closure.\",\n      \"required_evidence_kinds\": [\n        \"runtime_test\",\n        \"design_review\"\n      ],\n      \"minimum_claim\": \"source_confirmed\"\n    }\n  ],\n  \"checks\": [\n    {\n      \"id\": \"W26.03-K1\",\n      \"required\": true,\n      \"criterion_ids\": [\n        \"W26.03-C1\",\n        \"W26.03-C2\",\n        \"W26.03-C3\"\n      ],\n      \"command\": \"node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W26.03|W26.02|W10.02|W09.04|W06.06 suppresses old decisions|W06.06 exposes no records' --maxWorkers=1 --minWorkers=1\",\n      \"runtime\": \"Installed Node/Vitest actual ring/fan/stats with existing synthetic storage boundaries.\",\n      \"workload\": \"Fixed8:6existing controls+2grouped additions in existing learn.test; no new suite/native run.\",\n      \"result\": \"not_run\",\n      \"evidence_ids\": []\n    },\n    {\n      \"id\": \"W26.03-K2\",\n      \"required\": true,\n      \"criterion_ids\": [\n        \"W26.03-C3\"\n      ],\n      \"command\": \"node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/fan.ts src/learn/learn.test.ts && git diff --check -- src/durable-objects/DecisionRing.ts src/learn/fan.ts src/learn/learn.test.ts docs/kit/02-api-reference.md\",\n      \"runtime\": \"Full compiler,3source-file ESLint,4file whitespace; no emitted output or build.\",\n      \"workload\": \"0lint errors/no new file-rule-message multiplicities over3inheritedwarnings; source-level scope only.\",\n      \"result\": \"pass\",\n      \"evidence_ids\": [\n        \"W26.03-E2\"\n      ]\n    },\n    {\n      \"id\": \"W26.03-K3\",\n      \"required\": true,\n      \"criterion_ids\": [\n        \"W26.03-C1\",\n        \"W26.03-C2\",\n        \"W26.03-C3\"\n      ],\n      \"command\": \"node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W26.03|W26.02|W10.02|W09.04|W06.06 suppresses old decisions|W06.06 exposes no records' --maxWorkers=1 --minWorkers=1\",\n      \"runtime\": \"Distinct Astra/xhigh frozen actual-source review and fixed8 once; final static reused.\",\n      \"workload\": \"4exact deltas, protected pins, atomicity/receipt/legacy safety; not customer/native acceptance.\",\n      \"result\": \"not_run\",\n      \"evidence_ids\": []\n    }\n  ],\n  \"assignments\": {\n    \"implementer\": \"w1404-reviewer\",\n    \"independent_reviewer\": \"w1405-reviewer\",\n    \"lead\": \"w01-lead\"\n  },\n  \"files\": 35,\n  \"bad\": [],\n  \"artifact_digest\": \"3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af\",\n  \"worker_sha\": \"59e6616fc8344d6b14911528be133e604aae4d9d6d5d308ad595abbe512d2f2f\",\n  \"plan_sha\": \"3585359789eb65b49554cd66f3134389ab9dde0a1e72e753c013dec13f301e44\",\n  \"worker_keys\": [\n    \"task_id\",\n    \"actor_id\",\n    \"role\",\n    \"run\",\n    \"model\",\n    \"reasoning_effort\",\n    \"at\",\n    \"contract_digest\",\n    \"source_go\",\n    \"basis\",\n    \"baseline_reuse\",\n    \"final_results\",\n    \"command_captures\",\n    \"authoring_and_rework\",\n    \"assertion_coverage\",\n    \"limitations\",\n    \"source_stop_history\",\n    \"final_source_stop\",\n    \"source_stop_capture\",\n    \"handoff\"\n  ],\n  \"capture_keys\": [\n    \"runtime1\",\n    \"static1\"\n  ]\n}\n"
+    },
+    "bidirectional_capture": {
+      "chunk_id": "0b8079",
+      "wall_time_seconds": 0.090328266,
+      "exit_code": 0,
+      "original_token_count": 344,
+      "output": "{\n  \"at\": \"2026-09-14T02:31:22.555Z\",\n  \"artifact_digest\": \"3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af\",\n  \"manifest_sha256\": \"56ee943540bee3543d52f2b8025ffec4b58907425c4aafa072e300ff7b42cd9c\",\n  \"pins\": 35,\n  \"bad\": [],\n  \"protected_count\": 25,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/durable-objects/DecisionRing.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/learn/fan.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/learn/learn.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W26.03/plan.md\",\n      \"sha256\": \"3585359789eb65b49554cd66f3134389ab9dde0a1e72e753c013dec13f301e44\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W26.03/artifact.json\",\n      \"sha256\": \"56ee943540bee3543d52f2b8025ffec4b58907425c4aafa072e300ff7b42cd9c\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W26.03/worker.json\",\n      \"sha256\": \"59e6616fc8344d6b14911528be133e604aae4d9d6d5d308ad595abbe512d2f2f\"\n    }\n  ]\n}\n"
+    },
+    "contract_capture": {
+      "chunk_id": "8ca48d",
+      "wall_time_seconds": 0.110413336,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-14T02:31:22.928Z\",\"task\":\"W26.03\",\"state\":\"verification\",\"contract_digest\":\"41daf7a67d737b929b3a3b982c1f96120cc7ab40b75d374b8a0841ea04cdaa42\",\"artifact_digest\":\"3feeb71e434b2a3da5fef7e7d8b4ea3ab8158811fd18f4395102b99b9f0de8af\"}\n"
+    },
+    "after_capture": {
+      "chunk_id": "ca698d",
+      "wall_time_seconds": 0.043496176,
+      "exit_code": 0,
+      "original_token_count": 210,
+      "output": "{\n  \"at\": \"2026-09-14T02:32:04.768Z\",\n  \"pins\": 35,\n  \"failures\": [],\n  \"baseline\": [\n    \"src/learn/learn.test.ts|warning|'_init' is defined but never used|@typescript-eslint/no-unused-vars\",\n    \"src/learn/learn.test.ts|warning|'_key' is defined but never used|@typescript-eslint/no-unused-vars\",\n    \"src/learn/learn.test.ts|warning|'_url' is defined but never used|@typescript-eslint/no-unused-vars\"\n  ],\n  \"current\": [\n    \"src/learn/learn.test.ts|warning|'_init' is defined but never used|@typescript-eslint/no-unused-vars\",\n    \"src/learn/learn.test.ts|warning|'_key' is defined but never used|@typescript-eslint/no-unused-vars\",\n    \"src/learn/learn.test.ts|warning|'_url' is defined but never used|@typescript-eslint/no-unused-vars\"\n  ],\n  \"identical\": true,\n  \"static_exit\": 0,\n  \"static_drained\": true,\n  \"static_reruns\": 0\n}\n"
+    },
+    "method": "Actual SHA-256 of every frozen manifest file; canonical current task/artifact digests; original gzip owned bytes reconstructed forward/reverse in memory with all four deltas exact. Protected baseline pins unchanged. No source restored."
+  },
+  "static_reuse": {
+    "worker_record": "docs/remediation/evidence/W26.03/worker.json#command_captures.static1",
+    "worker_sha256": "59e6616fc8344d6b14911528be133e604aae4d9d6d5d308ad595abbe512d2f2f",
+    "session_id": 95780,
+    "captures": [
+      "9aed8d",
+      "d91106",
+      "6b78ec",
+      "e9c4b3"
+    ],
+    "started_at": "2026-09-14T02:26:02.173Z",
+    "finished_at": "2026-09-14T02:27:08.735Z",
+    "exit_status": 0,
+    "drained": true,
+    "full_compiler": "PASS",
+    "lint": {
+      "errors": 0,
+      "warnings": 3,
+      "inherited": 3,
+      "new_signatures": 0
+    },
+    "whitespace": "PASS: four owned files",
+    "fresh_invocations": 0,
+    "signature_comparison": {
+      "command": "node - <<'NODE'\nconst fs=require('fs'),crypto=require('crypto'),h=x=>crypto.createHash('sha256').update(x).digest('hex');const b=JSON.parse(fs.readFileSync('docs/remediation/design/W26.03/baseline.json')),w=JSON.parse(fs.readFileSync('docs/remediation/evidence/W26.03/worker.json')),a=JSON.parse(fs.readFileSync('docs/remediation/evidence/W26.03/artifact.json'));const clean=s=>s.replace(/\\.$/,'');const prior=b.baseline_lint.results.flatMap(x=>x.messages.map(m=>[x.file,m.severity===1?'warning':'error',clean(m.message),m.ruleId].join('|'))).sort();let file='',current=[];for(const line of w.command_captures.static1.captures.map(c=>c.output).join('').split('\\n')){if(line.startsWith('/'))file=line.slice(line.indexOf('/src/')+1);const m=line.match(/^\\s+\\d+:\\d+\\s+(warning|error)\\s+(.+?)\\s{2,}(\\S+)\\s*$/);if(m)current.push([file,m[1],clean(m[2]),m[3]].join('|'));}current.sort();const failures=a.files.filter(x=>h(fs.readFileSync(x.path))!==x.sha256);console.log(JSON.stringify({at:new Date().toISOString(),pins:a.files.length,failures,baseline:prior,current,identical:JSON.stringify(prior)===JSON.stringify(current),static_exit:w.command_captures.static1.exit_code,static_drained:w.command_captures.static1.drained,static_reruns:0},null,2));if(failures.length||JSON.stringify(prior)!==JSON.stringify(current)||current.length!==3)process.exit(1);\nNODE",
+      "capture": {
+        "chunk_id": "ca698d",
+        "wall_time_seconds": 0.043496176,
+        "exit_code": 0,
+        "original_token_count": 210,
+        "output": "{\n  \"at\": \"2026-09-14T02:32:04.768Z\",\n  \"pins\": 35,\n  \"failures\": [],\n  \"baseline\": [\n    \"src/learn/learn.test.ts|warning|'_init' is defined but never used|@typescript-eslint/no-unused-vars\",\n    \"src/learn/learn.test.ts|warning|'_key' is defined but never used|@typescript-eslint/no-unused-vars\",\n    \"src/learn/learn.test.ts|warning|'_url' is defined but never used|@typescript-eslint/no-unused-vars\"\n  ],\n  \"current\": [\n    \"src/learn/learn.test.ts|warning|'_init' is defined but never used|@typescript-eslint/no-unused-vars\",\n    \"src/learn/learn.test.ts|warning|'_key' is defined but never used|@typescript-eslint/no-unused-vars\",\n    \"src/learn/learn.test.ts|warning|'_url' is defined but never used|@typescript-eslint/no-unused-vars\"\n  ],\n  \"identical\": true,\n  \"static_exit\": 0,\n  \"static_drained\": true,\n  \"static_reruns\": 0\n}\n"
+      }
+    }
+  },
+  "history": [
+    "No executed worker runtime/static failure or superseding source rework. Initial candidate and final STOP hashes are identical; worker runtime1 passed8/19 and static1 passed on those bytes.",
+    "Before runtime, existing W10.02 byte/index overflow fixtures were changed to genuine distinct IDs/payloads, preserving actual overflow, no-put and independently accepted stats assertions. W09.04 exact append receipt changes to v2; API link clarified. Two new grouped cases only.",
+    "My preflight message's phrase suggesting eight controls plus two additions was a wording error, explicitly corrected: the unchanged plan/selector always specifies eight total = six existing plus two new.",
+    "W26.02 overlapping exact-byte proof is prospectively qualified by lead; its implemented correlation and historical evidence remain. No source-confirmed baseline case is mislabeled as an executed failing runtime."
+  ],
+  "limitations": [
+    "Forward retained DecisionRing append containment only. Exact repeats can still perform the existing candidate save/pruning; no guarantee beyond evidence retained through existing expiry/reset.",
+    "Ambiguous full-record IDs and index-only collisions refuse, even when they might be historical retries. Unrelated historical duplicates are not repaired; no new identity storage, retention schema or history migration.",
+    "V1 receipts remain legacy acceptance. Older v1-only callers treat v2 as unknown; no mixed-version rollout/deployment proof and no safe automatic full fan-out retry.",
+    "Statistics exposure/outcome writes remain non-idempotent; no identifier was added to LearnStats. Ring-local applied:false is not rollback of independently accepted stats, nor an exactly-once pipeline/reconciliation guarantee.",
+    "Fresh inclusive erasure checks preserve existing behavior but are not an atomic global erasure fence. Existing native storage, retention/capacity and recovery limitations remain.",
+    "No rendered/viewable denominator, fatigue-policy, SDK/ranking/report/replay change or full W26/F16/F21 closure. Local synthetic storage/DO fixtures do not establish customer, native latency/capacity, SLO or release acceptance; 19 unselected tests are not passed."
+  ],
+  "ownership": {
+    "writes": [
+      "docs/remediation/evidence/W26.03/review.json"
+    ],
+    "source_changes": 0,
+    "governance_changes": 0,
+    "subdelegations": 0,
+    "external_operations": 0
+  }
+}

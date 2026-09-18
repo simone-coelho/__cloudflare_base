@@ -1,0 +1,359 @@
+{
+  "task_id": "W11.02",
+  "at": "2026-09-18T00:44:13.818Z",
+  "source_state": "SOURCE/EVIDENCE STOP; all worker/native sessions drained/disposed. Connected source findings corrected and read-only reviewer supported; final frozen whole-W11/K6/K7 pending boardGO.",
+  "worker": {
+    "path": "docs/remediation/evidence/W11.02/worker.json",
+    "sha256": "15e35f9840768a9017ee4f5e293e0d1568acf17303d183be74092478d0ae50ce",
+    "bytes": 1448929
+  },
+  "admissions": [
+    {
+      "path": "docs/remediation/evidence/W11.02/admission.json",
+      "sha256": "e2e9e58586cb4e4b632f7cae424f65b14a7114d5ad2908f7a65822b24252793c",
+      "bytes": 40022
+    },
+    {
+      "path": "docs/remediation/evidence/W11.02/admission-static-amendment.json",
+      "sha256": "f0c9256ddc0046156349b0b043200f3bd1c5cdc1e2e4caf92fc59638166eb096",
+      "bytes": 10649
+    },
+    {
+      "path": "docs/remediation/evidence/W11.02/admission-static-normalization.json",
+      "sha256": "7dda9c0b83c065ed23f92b33b0bc4eee10e5243ada15523f0968909d2dfdf681",
+      "bytes": 2999
+    }
+  ],
+  "artifact": {
+    "digest": "3894be2a58e75934a4a5d19b965b264a440eea0c0adca5c66db8a45ba8dfe407",
+    "contract_digest": "09043d78a779aa4043892dd3d9cbc0cf8dba58ba7a5bc8031c43a959543c49c0",
+    "manifest_path": "docs/remediation/tracker.json",
+    "task_id": "W11.02",
+    "files": 134,
+    "worker_pin_digest": "904da3fc92c7373319982509eabde7e3bf0769f87016a475bbdb70da819f1125"
+  },
+  "identity": {
+    "originals": 29,
+    "reversible_deltas": 29,
+    "changed_outputs": 29,
+    "protected_unchanged": 105,
+    "complete_primary_integrities": 17,
+    "root_verification": "Matched 29 dirty originals to admission and forward/reverse patches to exact original/final bytes; verified134current/105protected pins and all17 primary gzip hashes/lengths/metadata. Fully read all16 non-baseline primaries; baseline repetitive312diagnostic output root integrity/header/tail and unchanged-error source only, not a false full read. FinalK5 exact current command and134pins; all23 inherited diagnostic original/final source lines identical. K1.4 native12actual sources current plus exact inlinevirtual. All source-qualification path sets equal actual attempt drift sets; distinct final semantic reuse review remains pending."
+  },
+  "results": [
+    {
+      "id": "K1.4",
+      "result": "PASS",
+      "passed": 75,
+      "qualification": "source_qualification",
+      "check_id": "W11.02-K1",
+      "primary_sha256": "b00a7ef63e26b20898b32b5369ba51fa725ff89cf2e8a725ed98a9fa1f26b709",
+      "primary_bytes": 23600,
+      "started_at": "2026-09-18T00:23:14.286Z",
+      "finished_at": "2026-09-18T00:24:26.936Z",
+      "exit_code": 0
+    },
+    {
+      "id": "K2.4",
+      "result": "PASS",
+      "passed": 45,
+      "unselected": 57,
+      "qualification": "source_qualification",
+      "check_id": "W11.02-K2",
+      "primary_sha256": "5fb201177c66d62ee03b53c998840c55a6403c91ed64c184815c0ffae9700f68",
+      "primary_bytes": 39298,
+      "started_at": "2026-09-18T00:21:24.502Z",
+      "finished_at": "2026-09-18T00:22:29.508Z",
+      "exit_code": 0
+    },
+    {
+      "id": "K3.2",
+      "result": "PASS",
+      "passed": 57,
+      "qualification": "source_qualification",
+      "check_id": "W11.02-K3",
+      "primary_sha256": "fa134664226f13e343f025a085ac9e493cce21fa109f9211497ea9ec1d250151",
+      "primary_bytes": 21023,
+      "started_at": "2026-09-18T00:05:08.236Z",
+      "finished_at": "2026-09-18T00:08:09.524Z",
+      "exit_code": 0
+    },
+    {
+      "id": "K4.1",
+      "result": "PASS",
+      "passed": 1,
+      "unselected": 67,
+      "qualification": "source_qualification",
+      "check_id": "W11.02-K4",
+      "primary_sha256": "0301f22d083602c5a61eb01dac1092f7be4c1531cf485071f7cd2d337ab433f0",
+      "primary_bytes": 27923,
+      "started_at": "2026-09-17T23:47:37.253Z",
+      "finished_at": "2026-09-17T23:48:15.153Z",
+      "exit_code": 0
+    },
+    {
+      "id": "K5.5",
+      "result": "PASS_COMPILER_NO_NEW_DIAGNOSTICS_WHITESPACE",
+      "compiler": 0,
+      "raw_full_lint": "FAIL",
+      "inherited_errors": 8,
+      "inherited_warnings": 15,
+      "new_diagnostics": 0,
+      "whitespace": 0,
+      "qualification": "Exact final134pins; normalized installed stylish comparison under current admission.",
+      "check_id": "W11.02-K5",
+      "primary_sha256": "3a599d3260e826002b4947955b6010e16a520d1ec70ee439b0ee8cec1e6ba4ca",
+      "primary_bytes": 40286,
+      "started_at": "2026-09-18T00:34:14.918Z",
+      "finished_at": "2026-09-18T00:35:08.220Z",
+      "exit_code": 0
+    }
+  ],
+  "source_qualification": [
+    {
+      "id": "K1.4",
+      "source_differences": [
+        {
+          "path": "public/console/views.js",
+          "before_sha256": "01ce952b8ad9fa3c2140aa78074b3ad24e5cd8269e3c49b9f1093f2dd41d48d2",
+          "after_sha256": "e3b528636332e38e0151b578392bfd835115b896f508958c7f9ef047748fc5e4"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "before_sha256": "1b1a115db15130ac12959f8affbed2c6aa806d57be39588c937886653bbc7908",
+          "after_sha256": "f8a73bfebb24bd985468aff82aeac486a51c65255a9fc71092b621a6ac55762b"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "before_sha256": "5d13a138fd2a077b7ad83428414ccab933adc1fb62533dbaea76a2f19e6cee94",
+          "after_sha256": "d280d02325ecf21333e174da87536c80a8bbd1fb5f2255edb5e49d6cb94c58d0"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "before_sha256": "d981cf33c630f967baaf7581feb8ac8ae87aee5c3f6dbdc97b481f79c751a05c",
+          "after_sha256": "6baf9669586b4a46bbecfac27ba28e776fad6420a3d65c9dbce2f4ee6fb857bd"
+        }
+      ],
+      "basis": "Reused passing complete 75-test command; final deltas are only two removed unused global-comment declarations in unselected browser views, deletion of an unused plain fixture CACHE binding, and a comment inside an unselected synthetic no-op alarm. All production authority/runtime code is unchanged."
+    },
+    {
+      "id": "K2.4",
+      "source_differences": [
+        {
+          "path": "public/console/views.js",
+          "before_sha256": "01ce952b8ad9fa3c2140aa78074b3ad24e5cd8269e3c49b9f1093f2dd41d48d2",
+          "after_sha256": "e3b528636332e38e0151b578392bfd835115b896f508958c7f9ef047748fc5e4"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "before_sha256": "1b1a115db15130ac12959f8affbed2c6aa806d57be39588c937886653bbc7908",
+          "after_sha256": "f8a73bfebb24bd985468aff82aeac486a51c65255a9fc71092b621a6ac55762b"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "before_sha256": "92a4dfe43d77c98b44c2a3a514dc4ebf383d22ae1e585d9146d9befeb0e913d3",
+          "after_sha256": "d280d02325ecf21333e174da87536c80a8bbd1fb5f2255edb5e49d6cb94c58d0"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "before_sha256": "d981cf33c630f967baaf7581feb8ac8ae87aee5c3f6dbdc97b481f79c751a05c",
+          "after_sha256": "6baf9669586b4a46bbecfac27ba28e776fad6420a3d65c9dbce2f4ee6fb857bd"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "before_sha256": "a7462e944e2665c8ce8104272ce26fc3f86e9cd7b40d39073b684c8235c21ab4",
+          "after_sha256": "dbb390329e7f4bda63d2ac6fde363d7d910bc2c312af93f2ad7d667438b9336d"
+        },
+        {
+          "path": "src/console/learning.render.test.ts",
+          "before_sha256": "6ae3b6cf0ca86d12b1db0d15f9fb0be6799595d14c23ce9c74613dfa1161d0f0",
+          "after_sha256": "0714f6b61b723f87eefc0a4609e0e650120aba91bcd52fc05d8786a0d4974fd0"
+        }
+      ],
+      "basis": "Reused passing 45-selected-test command; selected fixture delta only documents the existing synthetic no-op alarm. Other later deltas are unselected route/render fixture typing/setup and two unused browser-global comment removals. All exercised production source and original lifetime/conservation/privacy assertions are unchanged."
+    },
+    {
+      "id": "K3.2",
+      "source_differences": [
+        {
+          "path": "src/routes/content.ts",
+          "before_sha256": "bd49e57e6d98ab84c4c7fa8360293b2525f5c2a0e3f3efe9c17941303e1f2ed0",
+          "after_sha256": "55b3f683b9a6c11e139b150587fdc37d12dd93825bf5a7c15ec8c25650f2ead3"
+        },
+        {
+          "path": "public/console/views.js",
+          "before_sha256": "01ce952b8ad9fa3c2140aa78074b3ad24e5cd8269e3c49b9f1093f2dd41d48d2",
+          "after_sha256": "e3b528636332e38e0151b578392bfd835115b896f508958c7f9ef047748fc5e4"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "before_sha256": "1b1a115db15130ac12959f8affbed2c6aa806d57be39588c937886653bbc7908",
+          "after_sha256": "f8a73bfebb24bd985468aff82aeac486a51c65255a9fc71092b621a6ac55762b"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "before_sha256": "de64f83e32b4285cd3251e75248b9914fc82e22594be1a8b01f9b19842b461b3",
+          "after_sha256": "7d9bfc621bfc4b020ad838bd29ab1b159a255e7ea18f04d0805d49f6cd9c8999"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "before_sha256": "1d016906d5834b16a1e42ac10659666ec5ba1a8a67bb93dbdf994d53ee7e80f2",
+          "after_sha256": "d280d02325ecf21333e174da87536c80a8bbd1fb5f2255edb5e49d6cb94c58d0"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "before_sha256": "95c00cc53e067a3a7945dbe52d7abd89549a729663c755f3a6e9f72b7e0ba249",
+          "after_sha256": "6baf9669586b4a46bbecfac27ba28e776fad6420a3d65c9dbce2f4ee6fb857bd"
+        },
+        {
+          "path": "src/learn/phase2.test.ts",
+          "before_sha256": "0c4674d10df5a354d71bac4b0a3bc44d0ede91359c09ff6af26de6c1a579db71",
+          "after_sha256": "a9ad31a3cf2ad3fb5f3799db3a3bd871ef7fca3197c70ddb51ebe9f06e271903"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "before_sha256": "4c793accdd379deee9d06f7af8196249d968f83153c2bde867570d9486e6e2c3",
+          "after_sha256": "3beee5dd16560983348b5c5e12a21999362e51cf99407da506f684ffe5da2990"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "before_sha256": "1494e5e4fb137d4ee2d1f62eba62bce957422c94bca834e54fa930eddf275d91",
+          "after_sha256": "09801e9ce112815e466e187b6a182751c25ca8c157758748001b73356ba8f2ef"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "before_sha256": "eef029de3ca8cd4755695fece6b6783d2bc54fe685fafd9fa00cd739b2a408dc",
+          "after_sha256": "dbb390329e7f4bda63d2ac6fde363d7d910bc2c312af93f2ad7d667438b9336d"
+        },
+        {
+          "path": "src/console/learning.render.test.ts",
+          "before_sha256": "a2b0286eaebadc795780cd629165fac8b1d0e7f561490bbd2b0400e4ca074a25",
+          "after_sha256": "0714f6b61b723f87eefc0a4609e0e650120aba91bcd52fc05d8786a0d4974fd0"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "before_sha256": "e7526215da99e12f7fce455fc5a7a2a87eedd1842b79d592173a01d7a53f2159",
+          "after_sha256": "3a9eb3a9caa883dc17b320f307476a8845bd087bc8a85a10830fbc5f21ad3677"
+        }
+      ],
+      "basis": "Reused passing 57-test rendered-client command. Production browser deltas only remove two unused global comments; later render-fixture changes are erased TypeScript annotations, equivalent references to the same JSDOM window, Array.from versus iterable spread, and equivalent unique-ID querySelector. Other changes are unselected server/other fixtures/API guidance; early administrative PUT validation is covered by K1.4, not these synthetic browser responses."
+    },
+    {
+      "id": "K4.1",
+      "source_differences": [
+        {
+          "path": "src/routes/content.ts",
+          "before_sha256": "bd49e57e6d98ab84c4c7fa8360293b2525f5c2a0e3f3efe9c17941303e1f2ed0",
+          "after_sha256": "55b3f683b9a6c11e139b150587fdc37d12dd93825bf5a7c15ec8c25650f2ead3"
+        },
+        {
+          "path": "public/console/shell.js",
+          "before_sha256": "21df1bd21333f10397d4b6ae80f6dd83be1fbc6c24250967494adbf391b3b85a",
+          "after_sha256": "ab21a8896c30ba4c207386ad318299368ce3549c946f12eeca1e2c1db036156e"
+        },
+        {
+          "path": "public/console/views.js",
+          "before_sha256": "01ce952b8ad9fa3c2140aa78074b3ad24e5cd8269e3c49b9f1093f2dd41d48d2",
+          "after_sha256": "e3b528636332e38e0151b578392bfd835115b896f508958c7f9ef047748fc5e4"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "before_sha256": "1b1a115db15130ac12959f8affbed2c6aa806d57be39588c937886653bbc7908",
+          "after_sha256": "f8a73bfebb24bd985468aff82aeac486a51c65255a9fc71092b621a6ac55762b"
+        },
+        {
+          "path": "public/learning.js",
+          "before_sha256": "93aaf1944b498d01899eb3b6e4f0e215753da2938e72afe24e7a34e171ca9e1c",
+          "after_sha256": "a2c5281733634d3c2ca46b58847704101cb826536d4a13da94083b20dd8703d2"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "before_sha256": "00f83402b9d11e2620109c0795c8eb22a069628c7624ad4276c7334d796fa93d",
+          "after_sha256": "7d9bfc621bfc4b020ad838bd29ab1b159a255e7ea18f04d0805d49f6cd9c8999"
+        },
+        {
+          "path": "src/reflex/configStore.test.ts",
+          "before_sha256": "5e03d1334216ca6521e62e6b8afec21abf6844a4663e31359b6e5f11a8fa4082",
+          "after_sha256": "668a0767459d14e1c9d9fc4087e498786ac41d2f64d45849f224bde8ca9396f6"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "before_sha256": "89de18a399e63c42ec81f04f51e8fcf89715c50322c213bc30c128ec4b400687",
+          "after_sha256": "d280d02325ecf21333e174da87536c80a8bbd1fb5f2255edb5e49d6cb94c58d0"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "before_sha256": "766cea490a173085b3d0754f56b5d06c81721fc8c0c901bc4690097ccd324671",
+          "after_sha256": "6baf9669586b4a46bbecfac27ba28e776fad6420a3d65c9dbce2f4ee6fb857bd"
+        },
+        {
+          "path": "src/learn/phase2.test.ts",
+          "before_sha256": "fb4c15c29895ee58ebb523d847b1bc265d28d8893aee1c3321aaa3c119da6ce2",
+          "after_sha256": "a9ad31a3cf2ad3fb5f3799db3a3bd871ef7fca3197c70ddb51ebe9f06e271903"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "before_sha256": "4c793accdd379deee9d06f7af8196249d968f83153c2bde867570d9486e6e2c3",
+          "after_sha256": "3beee5dd16560983348b5c5e12a21999362e51cf99407da506f684ffe5da2990"
+        },
+        {
+          "path": "src/learn/learn.test.ts",
+          "before_sha256": "1494e5e4fb137d4ee2d1f62eba62bce957422c94bca834e54fa930eddf275d91",
+          "after_sha256": "09801e9ce112815e466e187b6a182751c25ca8c157758748001b73356ba8f2ef"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "before_sha256": "180e44298b36e24a8945c2376cbe290fa75b7ce504eea8b1ecc966dd3286451e",
+          "after_sha256": "dbb390329e7f4bda63d2ac6fde363d7d910bc2c312af93f2ad7d667438b9336d"
+        },
+        {
+          "path": "src/console/learning.render.test.ts",
+          "before_sha256": "54907f8d55552a93578ae9543601457846c2044eba76f98044b19ddc70ed2882",
+          "after_sha256": "0714f6b61b723f87eefc0a4609e0e650120aba91bcd52fc05d8786a0d4974fd0"
+        },
+        {
+          "path": "public/meridian/meridian.js",
+          "before_sha256": "843556be1045c1bc6ae44bc230c68bd5f11f68e4f4b4745cb1268bbea66e08c3",
+          "after_sha256": "4e7bbd50adb22207e058386840605746f186ba0469ee671dd9affd93ed9667fd"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "before_sha256": "e7526215da99e12f7fce455fc5a7a2a87eedd1842b79d592173a01d7a53f2159",
+          "after_sha256": "3a9eb3a9caa883dc17b320f307476a8845bd087bc8a85a10830fbc5f21ad3677"
+        }
+      ],
+      "basis": "Reused passing actual W10 SQLite/native component command. Its fixture, conditional authority/core, LearnStats, DecisionRing, owner/retention and selected runtime dependencies retain their passing identities. Later production changes are browser publication continuation handling and administrative content PUT early schema validation, neither exercised by this selected native phase; other deltas are unselected fixtures and API guidance. No claim that the earlier W10 Node proxy transport limitation is fixed."
+    },
+    {
+      "id": "K5.5",
+      "source_differences": [],
+      "basis": "Exact final134pins; raw full lintFAIL8 kept separate from PASS compiler, exact no-new diagnostic gate and whitespace."
+    }
+  ],
+  "diagnostics": {
+    "raw_full_lint": "FAIL",
+    "errors": 8,
+    "warnings": 15,
+    "inherited": 23,
+    "new": 0,
+    "gate": "Compiler/no-new-diagnostic/whitespace PASS only; installed-stylish terminal-period normalization is exact approved comparison."
+  },
+  "native": {
+    "configuration": "K1.4 actual distinct native workers/shared R2, six kinds, one concurrent winner/one409, exact recovery/original actor, coherent multi-kind revision3; cf:false/outbound denied/disposed.",
+    "state": "K4.1 actual native SQLite 3MiB SQLITE_TOOBIG/noncommit,1200markers/1201events/256items/280570B,persisted restart/ring200+index241,owner health6ms/held53ms,outbound0/disposed; exact retained learn/prior coherent baseline.",
+    "qualification": "Finite synthetic component proof, not deployed capacity/SLO. Prior W10 Node-proxy transport limitation remains qualified."
+  },
+  "limitations": [
+    "Independent frozen whole-original W11/F15/F24 review, K6/K7 and lead disposition remain pending. Worker proof is not independent acceptance.",
+    "C9/K8 actual initialization/adoption/old-writer cutover, historical migration/recovery, deployed R2 behavior/throughput/propagation/customer-immediacy/SLO remain open for the separately authorized final batch.",
+    "Raw full-file lint remains failed on eight unchanged inherited Meridian errors. The scoped static gate proves compiler/no-new-diagnostics/whitespace only, not W13 lint or release acceptance.",
+    "Native proof is finite local synthetic cf:false/outbound-denied component coverage; no cloud/resource/deploy/customer/credential operation, actual initialization/migration, broad CI or package/SDK build occurred. Prior W10 Node proxy transport limitations remain qualified."
+  ],
+  "failures_preserved": [
+    "Every baseline/failed/superseding primary remains unchanged. K1 initial failures included the real validation-after-authority-read regression, corrected by early candidate validation; old KV/default/custom-kind/zero-prior expectations are explicitly superseded by admitted strict coherent R2 authority, not silently passed.",
+    "Historical fixture lifetime/owner setup now uses original timestamps and grants; replay/lift/ledger/ranking/conservation assertions remain. W28 prior/config fixture explicitly declares unit objective so unchanged legacy normalization does not invalidate its snapshot witness. Distinct reviewer source-qualified these changes; K2.4 passes.",
+    "Original enrichment drift fixture assigned its unchanged original tag; the corrected differing tag retains 409/no-write assertions. Original recovery HTTP response never exposed actor/note/at; original attribution is asserted through authoritative recovered version readback instead.",
+    "K3.1 positive password fixture omitted required replacement tokens; synthetic tokens restore its original positive flow and a new missing-token case retains sign-out. No protected session implementation changed.",
+    "K5.1/K5.2/K5.3/K5.4 remain failures. K5.4 exact API messages differed from stylish baseline presentation; only installed formatter-equivalent comparison is superseded. Four genuinely introduced warnings were corrected without rule suppression or unrelated cleanup."
+  ]
+}

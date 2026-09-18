@@ -1,0 +1,552 @@
+{
+  "task_id": "W22.09",
+  "actor_id": "w2206-worker",
+  "run_id": "/root/w2206_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15T19:42:14.800Z",
+  "source_go": {
+    "journal": 1881,
+    "contract_digest": "dc5bfdcb459a45fc3b427946a80227ccdfcafae565a1091a28ea739393102609"
+  },
+  "references": {
+    "docs/remediation/design/W22.09/plan.md": "784611309ae0c3d2abbbd512db7666167206d6322c7f1bfa457fdbd19703c0f0",
+    "docs/remediation/design/W22.09/baseline.json": "bba831f4d34804fda2b2a7602bba992763a8807645110d8fb23af000561f9f70",
+    "docs/remediation/evidence/W22.09/admission.json": "80ec4c17d0ec3558ead06df38a637661d024a171d0ae862561c784e108b9de10"
+  },
+  "pre_edit_verification": {
+    "capture": "3189d0",
+    "at": "2026-09-15T19:37:48.245Z",
+    "exit_code": 0,
+    "owned_originals_and_decoded_baseline_matched": 2,
+    "protected_matched": 24,
+    "accepted_dependencies": [
+      {
+        "task_id": "W22.07",
+        "unowned": 51,
+        "review": {
+          "path": "docs/remediation/evidence/W22.07/review.json",
+          "sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c"
+        }
+      },
+      {
+        "task_id": "W22.08",
+        "unowned": 30,
+        "review": {
+          "path": "docs/remediation/evidence/W22.08/review.json",
+          "sha256": "8cbca7c723bd00e6ba450d37d055c62812ed1cefb99d95050b5978fbb1452954"
+        }
+      }
+    ],
+    "mismatches": [],
+    "description": "Read instructions/governance/checkpoint, complete W22/W26 and linked canonical findings, actual Ring/policy/fan/hourly/LearnStats/source fixtures; then complete admitted task/plan/baseline/admission. Verified original and decoded hashes and all protected/accepted-unowned files/reviews before edit. W22.08 two owned overlap pins prospectively qualified by root; all other accepted assurance retained. Reused root entry board VALID1872 (95a38f to6172d3), baseline lint23f840 to11a870 to700033 0errors/3warnings; root reported admission board VALID1881 68b6a4 to45cb80 to5a662c to834373 both0/drained. No worker board or baseline runtime."
+  },
+  "baseline_case": "Source-confirmed tenant+visitor ring admits mixed brands; uncorrelated personalized-only filter permits foreign decision credit under outcome brand. Hourly already exact-brand filters this branch. No failed baseline runtime claimed.",
+  "implementation": [
+    "One predicate change in DecisionRing's uncorrelated candidate branch: personalized arm AND exact e.brand === outcome.brand. Full correlated candidate set and its cross-brand duplicate ambiguity checks remain untouched.",
+    "No shared policy, ring ordering/index/retention, timestamps, erasure, capacity, receipt/configuration, original payload or statistics arithmetic change.",
+    "One grouped addition (48lines) in existing learn.test.ts uses non-default tenant meridian with distinct alpha/beta brands and actual DecisionRing→LearnStats, reusing existing cloned synthetic storage fixtures. Direct item, featured product and any with first/last each prove foreign-only zero then own positive despite foreign earlier/later candidates that would otherwise win.",
+    "Assertions cover exact selected decision/destination/credit payload and original timestamp, actual own-brand stored success count, unchanged exposures, no foreign item materialization, unchanged foreign-brand statistics and unchanged retained ring. W26.02 correlated ambiguity/holdout and both W22.08 controls are unmodified."
+  ],
+  "canonical_source": {
+    "pin_count": 71,
+    "pin_digest": "babbc34088180d77ae6a6fa24d7129249569fef0392922f546666d5d16dcccd8",
+    "hash_algorithm": "SHA-256 of JSON.stringify(path-sorted array of {path,sha256}); path.localeCompare ordering",
+    "pins": [
+      {
+        "path": ".eslintrc.json",
+        "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+      },
+      {
+        "path": "docs/api/01-rest-endpoints.md",
+        "sha256": "e5faf25dc5fbe432a61ebc47de7be6a9137d14c718587d62bf45bd61c18a6238"
+      },
+      {
+        "path": "docs/architecture/16-edge-affinity-reflex.md",
+        "sha256": "b30b96e1edb2ee468742b180c0dba544d3f21ddb30cb2404f62e12509605de43"
+      },
+      {
+        "path": "docs/architecture/22-outcome-learning-design.md",
+        "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+      },
+      {
+        "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+        "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+      },
+      {
+        "path": "docs/remediation/decisions/D06-buffered-action-purpose-approved-2026-09-15.json",
+        "sha256": "469cc9e3c566c9430b855e01d200120e5c5f075ef9b595b0ca99db22e64923db"
+      },
+      {
+        "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+        "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72"
+      },
+      {
+        "path": "docs/remediation/design/W22.07/baseline.json",
+        "sha256": "091a30fd9adedc20b05cde6369ec919cf6aaa2c073f41ad75bbf8db0997fe279"
+      },
+      {
+        "path": "docs/remediation/design/W22.07/plan.md",
+        "sha256": "d57a14dde34afb8d662f54149ba38326a8c380663b0cda5b2a87cd35963c784e"
+      },
+      {
+        "path": "docs/remediation/design/W22.08/baseline.json",
+        "sha256": "9642307a6400bbcb0fdf883b71b8c0824edae305ee991fd005356ec5048b4ece"
+      },
+      {
+        "path": "docs/remediation/design/W22.08/plan.md",
+        "sha256": "beddf33de0f0e352368cf503b096ade1967b353cf2d159949c7735d43f0dad05"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/admission.json",
+        "sha256": "2098cddce90f455c295ec00d6d2e8f4182aa489b80e8ef41957b9c07a65e799d"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/review.json",
+        "sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/source-deltas.json",
+        "sha256": "06466cded378a347ea2cd6a87a6b565f37bf2ae4f515eed24192c6e8b1ff16b8"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/source-freeze.json",
+        "sha256": "286129cc6e8e91b88537c2a3978c2bae29175d77e705b945b7c2bf94cd8621e2"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.07/worker.json",
+        "sha256": "f193a97d87069b547b4be5be8c95895239781686b0d5e827fa87bb2a3809b41f"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.08/admission.json",
+        "sha256": "eefe15e1b1941f9c685a2f8a06ab4e6d186e324ef811241844d481d1742d653d"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.08/review.json",
+        "sha256": "8cbca7c723bd00e6ba450d37d055c62812ed1cefb99d95050b5978fbb1452954"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.08/source-deltas.json",
+        "sha256": "396297feb5175a4903bc82c4c793a45c5dad816572ede7dd363ed0ece9a494aa"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.08/source-freeze.json",
+        "sha256": "ff61e82e30e579d1079a4c6064eac595b3c9f582b99446c7321235d717308d9d"
+      },
+      {
+        "path": "docs/remediation/evidence/W22.08/worker.json",
+        "sha256": "9ce5473452c69586c65ff6d087eac35b24f00fb4aa469d9270fa0c13cf847924"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+      },
+      {
+        "path": "package.json",
+        "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+      },
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+      },
+      {
+        "path": "src/connectors/AudienceStore.ts",
+        "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf"
+      },
+      {
+        "path": "src/connectors/index.ts",
+        "sha256": "656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67"
+      },
+      {
+        "path": "src/connectors/SegmentProvider.ts",
+        "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359"
+      },
+      {
+        "path": "src/content/consent.ts",
+        "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5"
+      },
+      {
+        "path": "src/demos/registry.ts",
+        "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+      },
+      {
+        "path": "src/durable-objects/DecisionRing.ts",
+        "sha256": "fd62f49928ddd8b9176273ea87743231fc6ad75f42b01ca9683fb1bcaa5073b1"
+      },
+      {
+        "path": "src/durable-objects/LearnStats.ts",
+        "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974"
+      },
+      {
+        "path": "src/durable-objects/RegionTrend.ts",
+        "sha256": "1244d0bfd4869a0385b7734694ea88c309a584fb597ae0f2e1b7b6d3503dcc0d"
+      },
+      {
+        "path": "src/durable-objects/ShopperReflex.ts",
+        "sha256": "c5f4df17a111772c3c6863e7b27edea2456287df513b2719a49cd7d38ace1ba9"
+      },
+      {
+        "path": "src/events/actionTypes.ts",
+        "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3"
+      },
+      {
+        "path": "src/identity/erase.ts",
+        "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+      },
+      {
+        "path": "src/identity/history.ts",
+        "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7"
+      },
+      {
+        "path": "src/identity/profileEnrichment.ts",
+        "sha256": "fc1913afb57e6bcff085d20363d4b312d4fae1110280f62a2c087e10202134b5"
+      },
+      {
+        "path": "src/identity/sessionCapability.ts",
+        "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+      },
+      {
+        "path": "src/learn/fan.ts",
+        "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc"
+      },
+      {
+        "path": "src/learn/learn.test.ts",
+        "sha256": "7f483bd57927bc47c60b04de406ff49ac0dd5ef641a8f8ffc55fba506f3362aa"
+      },
+      {
+        "path": "src/learn/policy.ts",
+        "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98"
+      },
+      {
+        "path": "src/learn/route.ts",
+        "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+      },
+      {
+        "path": "src/learn/stats.ts",
+        "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+      },
+      {
+        "path": "src/ledger/delivery.ts",
+        "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf"
+      },
+      {
+        "path": "src/ledger/enqueue.ts",
+        "sha256": "831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9"
+      },
+      {
+        "path": "src/ledger/erasure.ts",
+        "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+      },
+      {
+        "path": "src/ledger/records.ts",
+        "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e"
+      },
+      {
+        "path": "src/ledger/writer.ts",
+        "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d"
+      },
+      {
+        "path": "src/reflex/bufferedAction.ts",
+        "sha256": "272445c8c7518012be0034cc24a96c71ae3c2ca298f8bdef529ef73cba96bb86"
+      },
+      {
+        "path": "src/reflex/contentTelemetry.ts",
+        "sha256": "8153296908e6fbca19b20b45d447b635f1d20539b09d79f723ebb283551a770e"
+      },
+      {
+        "path": "src/reflex/core.ts",
+        "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+      },
+      {
+        "path": "src/reflex/identityMerge.ts",
+        "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+      },
+      {
+        "path": "src/reflex/regionTrend.ts",
+        "sha256": "e5ab4379a4fab720fe04eeb1ed1af55e390db033caad91c3afd7e45e7e6430e0"
+      },
+      {
+        "path": "src/routes/realtime.sdkContract.test.ts",
+        "sha256": "d48ab9222a2ab660f612c1dfd38f798cfc8b4a9aaf5e475cf4875f21ab911087"
+      },
+      {
+        "path": "src/routes/realtime.ts",
+        "sha256": "2b11bcb80a14065164e47922b33b8c7417228e9c87f60c1c605cceae45c9f7d9"
+      },
+      {
+        "path": "src/sdk/core.ts",
+        "sha256": "d183cc129206527fe5df917502d88904c86728afea3b5a15f8a9058c64c834eb"
+      },
+      {
+        "path": "src/sdk/emit.ts",
+        "sha256": "188cb582218166ceac62005e20e32be068cae03f2b8d99195167bafb3de636a5"
+      },
+      {
+        "path": "src/sdk/types.ts",
+        "sha256": "d3e62ac2d34223188a4a43b52070e0a4af02cfa705edf6e0103ebd2686bd1cf4"
+      },
+      {
+        "path": "src/services/demoEventCapture.ts",
+        "sha256": "eb64be869e76f3db40288e4a1da135f62de84806dc8a0b9dc0de653eb8ff5456"
+      },
+      {
+        "path": "src/services/odpLoop.ts",
+        "sha256": "52348b653a209e56384568f0e73f87690ef68316d3f8b4d9b7f7a7d3c72e029e"
+      },
+      {
+        "path": "src/services/RealtimeSegmentEngine.ts",
+        "sha256": "4231483bd4aafe6b438c15f88350b201a10b3818e7e7439edc0a38bdae970970"
+      },
+      {
+        "path": "src/services/SessionManager.ts",
+        "sha256": "fd97cf625f3181bed8d5f4b12153e63387603e67913e263a068ceb943bf33efd"
+      },
+      {
+        "path": "src/tenancy/objects.ts",
+        "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+      },
+      {
+        "path": "src/tenancy/tenant.ts",
+        "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+      },
+      {
+        "path": "src/types/env.ts",
+        "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+      },
+      {
+        "path": "vitest.config.ts",
+        "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+      },
+      {
+        "path": "wrangler.toml",
+        "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923"
+      }
+    ],
+    "snapshot_command": "node - digest <<'NODE'\nconst fs=require('node:fs'),c=require('node:crypto');\nconst b=JSON.parse(fs.readFileSync('docs/remediation/design/W22.09/baseline.json','utf8')),hash=bytes=>c.createHash('sha256').update(bytes).digest('hex'),pin=x=>({path:x.path,sha256:hash(fs.readFileSync(x.path))}),owned=new Set(b.owned_before.map(x=>x.path));\nconst expected=[...b.protected,...b.accepted_dependencies.flatMap(d=>[...d.files.filter(x=>!owned.has(x.path)),d.review])];\nconst protectedMismatches=expected.filter(x=>pin(x).sha256!==x.sha256).map(x=>x.path);\nconst map=[...new Map([...b.owned_before,...expected].map(x=>[x.path,pin(x)])).values()].sort((a,b)=>a.path.localeCompare(b.path));\nconsole.log(JSON.stringify({at:new Date().toISOString(),pin_count:map.length,pin_digest:hash(JSON.stringify(map)),protected_mismatches:protectedMismatches,...(process.argv[2]==='full'?{pins:map}:{}),owned:b.owned_before.map(pin)}));\nif(protectedMismatches.length)process.exitCode=1;\nNODE"
+  },
+  "attempts": [
+    {
+      "id": "runtime_final",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W22[.]09|W26[.]02 narrows|W22[.]08' --maxWorkers=1 --minWorkers=1",
+      "before": {
+        "capture": "c6dae9",
+        "exit_code": 0,
+        "at": "2026-09-15T19:39:16.935Z",
+        "pin_count": 71,
+        "pin_digest": "babbc34088180d77ae6a6fa24d7129249569fef0392922f546666d5d16dcccd8",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "61e5e9",
+        "wall_time_seconds": 1.001483833,
+        "session_id": 52737,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "c8b809",
+          "wall_time_seconds": 0.00000183,
+          "exit_code": 0,
+          "original_token_count": 124,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/learn.test.ts  (32 tests | 28 skipped) 117ms\n\n Test Files  1 passed (1)\n      Tests  4 passed | 28 skipped (32)\n   Start at  15:39:19\n   Duration  4.45s (transform 919ms, setup 0ms, collect 1.66s, tests 117ms, environment 0ms, prepare 1.85s)\n\n"
+        }
+      ],
+      "after": {
+        "capture": "6a909e",
+        "exit_code": 0,
+        "at": "2026-09-15T19:39:37.665Z",
+        "pin_count": 71,
+        "pin_digest": "babbc34088180d77ae6a6fa24d7129249569fef0392922f546666d5d16dcccd8",
+        "protected_mismatches": []
+      },
+      "exit_code": 0,
+      "session_drained": true,
+      "result": {
+        "passed": 4,
+        "failed": 0,
+        "deliberately_unselected": 28,
+        "total": 32,
+        "test_files": 1,
+        "duration_seconds": 4.45,
+        "test_seconds": 0.117
+      }
+    },
+    {
+      "id": "static_final",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/learn.test.ts --max-warnings 3 && git diff --check -- src/durable-objects/DecisionRing.ts src/learn/learn.test.ts",
+      "before": {
+        "capture": "6a909e",
+        "exit_code": 0,
+        "at": "2026-09-15T19:39:37.665Z",
+        "pin_count": 71,
+        "pin_digest": "babbc34088180d77ae6a6fa24d7129249569fef0392922f546666d5d16dcccd8",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "9a8132",
+        "wall_time_seconds": 1.000968776,
+        "session_id": 19598,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "9c9121",
+          "wall_time_seconds": 5.000211415,
+          "session_id": 19598,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "6ba415",
+          "wall_time_seconds": 0.000001852,
+          "exit_code": 0,
+          "original_token_count": 100,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  674:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  675:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  675:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "after": {
+        "capture": "5cfc2d",
+        "exit_code": 0,
+        "at": "2026-09-15T19:40:24.323Z",
+        "pin_count": 71,
+        "pin_digest": "babbc34088180d77ae6a6fa24d7129249569fef0392922f546666d5d16dcccd8",
+        "protected_mismatches": []
+      },
+      "exit_code": 0,
+      "session_drained": true,
+      "result": {
+        "compiler_exit": 0,
+        "scoped_lint_errors": 0,
+        "scoped_lint_warnings": 3,
+        "whitespace_exit": 0
+      }
+    },
+    {
+      "id": "required_warning_comparison",
+      "command": "node --max-old-space-size=512 --input-type=module <<'NODE'\nimport fs from 'node:fs'; import z from 'node:zlib'; import { ESLint } from 'eslint';\nconst b=JSON.parse(fs.readFileSync('docs/remediation/design/W22.09/baseline.json','utf8')), files=b.owned_before;\nconst results=await new ESLint().lintFiles(files.map(x=>x.path));\nconst rows=results.map(r=>({path:r.filePath.split('/__cloudflare_base/')[1],errors:r.errorCount,warnings:r.warningCount,signatures:r.messages.map(m=>[m.ruleId,m.message]).sort()}));\nconst differences=[],newWarningSource=[];\nfor(const row of rows){const remaining=(b.lint.rows.find(p=>p.path===row.path)?.signatures??[]).map(x=>JSON.stringify(x));\nfor(const signature of row.signatures){const key=JSON.stringify(signature),i=remaining.indexOf(key);if(i<0)differences.push({path:row.path,signature});else remaining.splice(i,1);}\nconst originalLines=new Set(z.gunzipSync(Buffer.from(files.find(p=>p.path===row.path).gzip_base64,'base64')).toString().split('\\n').map(x=>x.trim())),source=fs.readFileSync(row.path,'utf8').split('\\n');\nfor(const m of results.find(r=>r.filePath.endsWith('/'+row.path)).messages)if(!originalLines.has((source[m.line-1]??'').trim()))newWarningSource.push({path:row.path,line:m.line,rule:m.ruleId,message:m.message,source:source[m.line-1]});}\nconst errors=rows.reduce((n,r)=>n+r.errors,0),warnings=rows.reduce((n,r)=>n+r.warnings,0);console.log(JSON.stringify({errors,warnings,baseline_errors:b.lint.errors,baseline_warnings:b.lint.warnings,rows,new_signatures:differences,new_warning_source:newWarningSource}));process.exitCode=errors||warnings>b.lint.warnings||differences.length||newWarningSource.length?1:0;\nNODE",
+      "before": {
+        "capture": "5cfc2d",
+        "exit_code": 0,
+        "at": "2026-09-15T19:40:24.323Z",
+        "pin_count": 71,
+        "pin_digest": "babbc34088180d77ae6a6fa24d7129249569fef0392922f546666d5d16dcccd8",
+        "protected_mismatches": []
+      },
+      "initial": {
+        "chunk_id": "812c07",
+        "wall_time_seconds": 1.001868891,
+        "session_id": 3710,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "096ee4",
+          "wall_time_seconds": 5.000933336,
+          "session_id": 3710,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "154cc9",
+          "wall_time_seconds": 0.0000021,
+          "exit_code": 0,
+          "original_token_count": 127,
+          "output": "{\"errors\":0,\"warnings\":3,\"baseline_errors\":0,\"baseline_warnings\":3,\"rows\":[{\"path\":\"src/durable-objects/DecisionRing.ts\",\"errors\":0,\"warnings\":0,\"signatures\":[]},{\"path\":\"src/learn/learn.test.ts\",\"errors\":0,\"warnings\":3,\"signatures\":[[\"@typescript-eslint/no-unused-vars\",\"'_init' is defined but never used.\"],[\"@typescript-eslint/no-unused-vars\",\"'_key' is defined but never used.\"],[\"@typescript-eslint/no-unused-vars\",\"'_url' is defined but never used.\"]]}],\"new_signatures\":[],\"new_warning_source\":[]}\n"
+        }
+      ],
+      "after": {
+        "capture": "5c3819",
+        "exit_code": 0,
+        "at": "2026-09-15T19:41:04.684Z",
+        "pin_count": 71,
+        "pin_digest": "babbc34088180d77ae6a6fa24d7129249569fef0392922f546666d5d16dcccd8",
+        "protected_mismatches": []
+      },
+      "exit_code": 0,
+      "session_drained": true,
+      "result": {
+        "errors": 0,
+        "warnings": 3,
+        "baseline_errors": 0,
+        "baseline_warnings": 3,
+        "new_signatures": [],
+        "new_warning_source": [],
+        "description": "Per-file rule/message multisets match admitted baseline; every current diagnostic source line appears verbatim after trimming in its admitted original."
+      }
+    }
+  ],
+  "failures_and_rework": [],
+  "delta_inspection": {
+    "capture": "2cf977",
+    "description": "Complete two-file admitted-original-relative deltas read; both diff statuses1 (expected differences), empty stderr. One uncorrelated predicate and48 fixture lines/one grouped case; all three selected existing controls and28 unselected tests unchanged. No outside source edit."
+  },
+  "criteria": {
+    "W22.09-C1": "Local actual Ring→LearnStats pass: exact same-brand eligibility retains valid first/last item/product/any credits; foreign-only sets produce no destinations or state change, and earlier/later foreign winners cannot displace the valid own candidate. Exact credited ID, destination and stored success mass/original time confirmed.",
+    "W22.09-C2": "Unchanged W26.02 control passes correlated full-candidate ambiguity and holdout handling; both unchanged W22.08 controls pass event-time ordering, equal-time semantics and original-time correlation/restart. Shared optional-brand policy and all protected source remain unchanged.",
+    "W22.09-C3": "Fixed4 once on final bytes, compiler1536/two-file lint0errors3unchanged warnings/whitespace and required signature/source comparison pass on same71-pin basis. W22.07 all51pins/review and W22.08 unowned30pins/review preserved. Independent review and lead acceptance pending."
+  },
+  "measurement": {
+    "selected_tests": 4,
+    "new_grouped_cases": 1,
+    "unchanged_selected_controls": 3,
+    "deliberately_unselected_tests": 28,
+    "test_files": 1,
+    "vitest_duration_seconds": 4.45,
+    "vitest_test_seconds": 0.117,
+    "baseline_lint_errors": 0,
+    "baseline_lint_warnings": 3,
+    "final_lint_errors": 0,
+    "final_lint_warnings": 3,
+    "scope": "Local synthetic correctness only. Existing bounded-ring filter remains O(n); no performance benchmark, native capacity, customer or deployed-runtime/SLO measurement."
+  },
+  "final_source": {
+    "capture": "5c3819",
+    "exit_code": 0,
+    "at": "2026-09-15T19:41:04.684Z",
+    "pin_count": 71,
+    "pin_digest": "babbc34088180d77ae6a6fa24d7129249569fef0392922f546666d5d16dcccd8",
+    "protected_mismatches": [],
+    "same_bytes_for_final_runtime_static_and_warning_comparison": true,
+    "source_rework": false
+  },
+  "limitations": [
+    "Forward online uncorrelated eligibility only. Previously contaminated statistics, lost/evicted evidence and completed reports are not repaired or reconstructed.",
+    "Shared policy's legacy optional-brand semantics and full correlated ambiguity behavior remain unchanged. This does not establish full tenant/brand hard isolation, a new placement model or customer-scoped acceptance.",
+    "No new history, retention, policy/lifecycle/horizon/generation, timestamps, receipt schema, replay activation or cross-call statistics idempotence.",
+    "New case executes actual Ring and LearnStats against cloned synthetic storage; observed local persisted counts are not deployed storage/destination attestation or customer-data recovery. Existing W22.08 correlation control still uses its documented synthetic stats acknowledgment.",
+    "W22.07 all accepted files/review and W22.08 unowned files/review preserved; W22.08 overlapping exact proof was prospectively qualified by root, with implementation and acceptance history retained. No blanket prior-artifact reacceptance.",
+    "No broader/new suite/helper/framework, SDK/API/docs/governance source writes, subdelegation, install/emitted build/stage/commit/push/deploy/provision/cloud/credentials/customer-data/destructive/external actions.",
+    "Worker checks are not independent verification, full W22/W26 or F03/F16/F17/F19/F21/F22 closure, customer/SLO/scientific acceptance or release approval."
+  ],
+  "rollback": "Root-reviewed inverse of this task's two owned admitted-baseline deltas only; preserve inherited dirty worktree and prior W22.07/W22.08 remedies. No rollback performed.",
+  "disposition": {
+    "status": "worker_checks_passed_review_pending",
+    "source_stopped": true,
+    "source_stopped_at": "2026-09-15T19:41:04.684Z",
+    "evidence_stopped": true,
+    "running_commands": [],
+    "independent_reviewer": "/root/late_hour_next_review pending frozen artifact",
+    "lead_acceptance": "pending",
+    "next_action": "Root freezes exact source/evidence; distinct reviewer reads actual artifact and runs admitted fixed4 once, reusing same-byte static. Root owns governance and final disposition."
+  }
+}
+

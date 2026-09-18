@@ -1,0 +1,168 @@
+{
+  "task_id": "W10.02",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12T03:29:31.784Z",
+  "verdict": "pass",
+  "artifact_digest": "dedc13bae3bf33bbce5fa3642d290ddd2d93d786d00f9f126af63937caa66653",
+  "contract_digest": "4d9a0eec9a42d1724ecd79a1a3d3bca4208e463731e6a8a3ead53950b5a4df7c",
+  "summary": "Pass for the admitted full-record, ring-local application admission guard; not provider-capacity, complete history or full W10/F08 acceptance.",
+  "criteria": [
+    {
+      "id": "W10.02-C1",
+      "verdict": "pass",
+      "evidence": [
+        "Actual source bounds streamed append/outcome bytes at 1MiB, append rows at 1000 and decision/outcome/index IDs at 2048 UTF-8 bytes. Whole post-retention {ring,index} is checked against 1MiB, ring200 and index4096 before put/cache replacement; no new slicing, partial batch admission or record projection.",
+        "Independent fixed runtime passed streamed-overflow cancellation, exact request/ID boundaries, whole candidate byte/index refusal, unchanged stored/readable state and actual fanDecisions partial effects. Ring refusal is incomplete while concurrent statistics exposure is acknowledged; no retry or global rollback is claimed."
+      ]
+    },
+    {
+      "id": "W10.02-C2",
+      "verdict": "pass",
+      "evidence": [
+        "Loaded state shape/cardinality/bytes and existing carrier/subject/index timestamp coherence are validated before caching or cutoff derivation. Existing invalid/oversized state is translated to sanitized 503, not 413/applied:false; reset remains reachable without loading it.",
+        "Actual source retains existing detached candidate, ambiguous save/reset cache invalidation, fresh inclusive tombstone filtering and outcome delivery outside the serialized read lock. No new Capacity throw occurs after acknowledged put/reset. Selected W06.06/W09.04 cases preserve that dependency assurance, rather than count it as newly implemented behavior.",
+        "New cloned-storage cases cover held-state reads/append/outcome, same-instance and restarted reads after committed/uncommitted ambiguous writes/resets, exact append-only age boundaries and complete field readback with typed SlotCandidate objects. Full business-record schema validation was not added or claimed."
+      ]
+    },
+    {
+      "id": "W10.02-C3",
+      "verdict": "pass",
+      "evidence": [
+        "Exact K3 executed once on frozen bytes: 12 passed, seven intentionally unselected, final exit 0/drained. All 110 artifact pins, 104 source pins/101 protected and three exact forward/reverse deltas reconcile before and after runtime; artifact/contract match.",
+        "Full worker command captures inspected. Final sequential compiler/two-file lint/three-file whitespace session20208/capture aad25e exited0/drained; three inherited unused fixture parameters remain, no new warning. Static checks reused, not rerun.",
+        "Plan and actual C1–C3, final fixture/kit deltas, source-freeze and worker evidence inspected. Reconciliation proves only shared TextEncoder reuse and equivalent for(;;) changed since preliminary production review. Independent verdict only; lead acceptance remains separate."
+      ]
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W10.02/plan.md",
+      "sha256": "527947aad9ee65cd05f1c1a59ed88c08e19d457f4f154acb44c8de05913b6ce3"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W10.02/artifact.json",
+      "sha256": "ce56623197ddb369b97814a304bbb8c16ae5805d50194906275e65cc46ba19bb"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W10.02/worker.json",
+      "sha256": "04ef8fe92a62f06fb44058be39c2f51ae5d55f8bcdbb3dba52438ee5cac1a0bd"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W06.06|the ring keeps the last 200|W09.04|W10.01|W10.02' --maxWorkers=1 --minWorkers=1",
+    "session_id": 58358,
+    "invocations": 1,
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 12,
+      "failed": 0,
+      "intentionally_unselected": 7,
+      "total": 19,
+      "test_files_passed": 1,
+      "new_groups": 2,
+      "runtime": "Installed Node/Vitest; actual modules with synthetic cloned/byte-limited storage, not native provider proof."
+    },
+    "captures": [
+      {
+        "chunk_id": "1f7a5b",
+        "wall_time_seconds": 1.001016167,
+        "session_id": 58358,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "bd0bf2",
+        "wall_time_seconds": 5.000810517,
+        "session_id": 58358,
+        "original_token_count": 60,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+      },
+      {
+        "chunk_id": "bfc39a",
+        "wall_time_seconds": 0.000002675,
+        "exit_code": 0,
+        "original_token_count": 177,
+        "output": "stderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (19 tests | 7 skipped) 865ms\n\n Test Files  1 passed (1)\n      Tests  12 passed | 7 skipped (19)\n   Start at  23:27:41\n   Duration  19.10s (transform 2.72s, setup 0ms, collect 8.61s, tests 865ms, environment 0ms, prepare 6.62s)\n\n"
+      }
+    ]
+  },
+  "artifact_checks": {
+    "before": {
+      "at": "2026-09-12T03:27:16.096Z",
+      "capture": "96f58e",
+      "exit_status": 0,
+      "artifact_digest": "dedc13bae3bf33bbce5fa3642d290ddd2d93d786d00f9f126af63937caa66653",
+      "pins": 110,
+      "mismatches": [],
+      "protected_count": 101,
+      "protected_mismatches": [],
+      "bidirectional_deltas": 3,
+      "all_exact": true
+    },
+    "after": {
+      "at": "2026-09-12T03:28:21.611Z",
+      "captures": [
+        "6ee8cf",
+        "34d03e"
+      ],
+      "session_id": 12525,
+      "exit_status": 0,
+      "drained": true,
+      "artifact_digest": "dedc13bae3bf33bbce5fa3642d290ddd2d93d786d00f9f126af63937caa66653",
+      "pins": 110,
+      "mismatches": [],
+      "protected_count": 101,
+      "protected_mismatches": [],
+      "bidirectional_deltas": 3,
+      "all_exact": true
+    },
+    "contract_before": {
+      "capture": "f6be80",
+      "at": "2026-09-12T03:27:15.575Z",
+      "task": "W10.02",
+      "state": "verification",
+      "contract_digest": "4d9a0eec9a42d1724ecd79a1a3d3bca4208e463731e6a8a3ead53950b5a4df7c",
+      "artifact_digest": "dedc13bae3bf33bbce5fa3642d290ddd2d93d786d00f9f126af63937caa66653"
+    },
+    "contract_after": {
+      "capture": "c050fc",
+      "at": "2026-09-12T03:28:20.757Z",
+      "task": "W10.02",
+      "state": "verification",
+      "contract_digest": "4d9a0eec9a42d1724ecd79a1a3d3bca4208e463731e6a8a3ead53950b5a4df7c",
+      "artifact_digest": "dedc13bae3bf33bbce5fa3642d290ddd2d93d786d00f9f126af63937caa66653"
+    },
+    "source_inspection": {
+      "preliminary": [
+        "48c72e",
+        "bfe848",
+        "493d48"
+      ],
+      "final_fixture_kit_criteria": "47a79b",
+      "worker_full_evidence_and_freeze": "0d2160",
+      "final_production_reconciliation": "3d8897",
+      "source_stopped_at": "2026-09-12T03:25:16.570Z",
+      "decisionring_sha256": "2b42844e924fff2539d8516672601f221a37a5297f3ab392926582b43a9864ab",
+      "normalized_to_preliminary_sha256": "0201596a528371ed80cd65c33c70aa7070eb98e2ae9e3a8797dc5b2f1f269da6",
+      "matches": true
+    }
+  },
+  "retained_failures_and_qualifications": [
+    "Worker runtime candidates1 and2 passed12; they are superseded evidence, not failures. Candidate1 fixture readback used untyped strings before being strengthened to actual SlotCandidate objects.",
+    "Worker static_candidate_1 session67692/capture1c3852 failed lint's no-constant-condition rule (one error, three inherited warnings); compiler had completed and whitespace was not reached. Equivalent for(;;) superseded those bytes. Final runtime44457/f78fa6 and static20208/aad25e passed; original captures remain.",
+    "Reviewer normalization in0d2160 initially assumed encoder variable utf8 and reported false. Corrected read-only normalization3d8897 uses actual encoder name and exactly matches the preliminary hash; no source drift or edits.",
+    "Existing Vite CJS deprecation and W09.04 configuration-fallback diagnostics are retained verbatim in runtime captures; no configuration fallback fix is claimed."
+  ],
+  "limitations": [
+    "Application JSON/cardinality admission budgets only, with synthetic storage. No native/provider encoding or limit, sustained/ordinary traffic capacity, latency or 200-full-record guarantee; rich full records can reach the byte cap sooner.",
+    "Ring-local refusal can leave incomplete history, fatigue and attribution while concurrent exposure learning succeeds. No automatic retry, sink idempotency, reconciliation or global learning rollback.",
+    "Legacy invalid/oversized state is held, not reconstructed or automatically reset. Existing reset, erasure cutoffs and delivery acknowledgement behavior are preserved, not full privacy/atomic fencing or recovery closure.",
+    "No retention/policy/projection/schema migration, full W10/F08, customer/deployed/release or completeness acceptance. Seven cases intentionally unselected; no broad/native/static replay.",
+    "Reviewer wrote only review.json, with no source/governance edits, external operations or further delegation. Root owns disposition."
+  ]
+}

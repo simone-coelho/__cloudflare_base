@@ -1,0 +1,183 @@
+{
+  "task_id": "W14.04",
+  "actor_id": "w1404-reviewer",
+  "run_id": "/root/w1404_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "verdict": "pass",
+  "at": "2026-09-11 04:46:40 UTC",
+  "artifact_digest": "db8d45f22d9eaaa4f84307845793fd66b9c9e95e3ac9bf246f3fd5e4ba78fb64",
+  "contract_digest": "f863dc6b45282b591e4c099bf5268c53055816244ed35666b67695425365683e",
+  "summary": "C1-C3 pass for bounded local publication of retained human-approved additions. Independent fixed route primary passed21/21 once on frozen bytes; lead acceptance remains separate.",
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W14.04/plan.md",
+      "sha256": "9e70bd636896f2250bc25a55126ba5220531a1c39f99ddaa3e62f55d75cd8902"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W14.04/artifact.json",
+      "sha256": "4e69dca324248c3536aa1f1d1e94e2b32ed244d9c539b43d38fa494c5f9e4d2d"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W14.04/worker.json",
+      "sha256": "22218a82d98f94b62b5275f9d4c70cc8ad1315bf66d005a98b6277955dc93dc3"
+    },
+    "source_stopped_at": "2026-09-11T04:42:34.877Z",
+    "source_frozen_at": "2026-09-11T04:43:21Z",
+    "review": "Read actual admitted task/plan, full W14 scope and linked canonical findings, accepted-view v8 clause and related sample/delivery requirements during preflight. Inspected actual adapter, route, all three appended fixture groups and kit wording, unchanged proposal/publication/auth/tenant/validator and relevant deterministic decision/lifecycle source, complete worker captures and W11 independent native evidence. Independently reconstructed admitted before bytes and verified all forward/reverse patches in memory, artifact/contract identities and protected pins before and after runtime."
+  },
+  "criteria": [
+    {
+      "id": "W14.04-C1",
+      "verdict": "pass",
+      "evidence": "publishEnrichment validates exactly both confirmed digests against immutable proposal/review, binds ID/digests in request and fixed retained revision note, and compares complete raw approved targets inside unchanged exact-base publish callback before reservation. Own-property-safe per-dimension sets append only genuinely new approved/edited values; rejected labels and no-op applications cannot add a revision. Actual route fixture verifies exact complete catalog equality including original duplicate tags, Unicode/case, inherited toString dimension, lifecycle/windows/stock/merchandising/product fields, order and newer unrelated title. Actual stored catalog changes deterministic selection from competitor score0.3 to sample score0.9 with occasion:evening explanation; draft/stock exclusions and repeat output remain intact. This proves bounded integration, not customer relevance quality."
+    },
+    {
+      "id": "W14.04-C2",
+      "verdict": "pass",
+      "evidence": "Actual Hono tenant/JWT/current-account middleware in open and enforced modes requires granted current human operator/admin before body/storage; unauthorized, expired-authority/session, service/untyped, selectors and publication-precondition negatives observe zero body-reader/STORAGE accesses. Missing/unreviewed/corrupt/mismatched evidence, full raw target drift/missing identity, all-rejected/no-op and corrupt/uninitialized catalog return refusal with zero put attempts and identical retained object state. Concurrent generic catalog writer yields one success/one409, stale requests conflict, original operation replay returns identical receipt after later commits, and a different human cannot impersonate the initiating actor. Lost revision acknowledgement leaves pending intent; granted service recovery finishes original intent without reapproval or changed attribution, and other tenant state stays byte-identical. No new egress path exists."
+    },
+    {
+      "id": "W14.04-C3",
+      "verdict": "pass",
+      "evidence": "Four exact admitted deltas only; three new grouped route cases retain original18cases. Both identity checks verify36artifact pins,31source pins,27protected baseline pins, four bidirectional deltas and recomputed artifact/contract digests without mismatch. Fixed independent primary21/21 passed on frozen source. Complete final compiler/scoped lint/whitespace evidence is reused with initial24-diagnostic compiler failure and corrections retained. Exact unchanged W11 publication/store/kinds/native fixture and prior review identities support scoped assurance reuse; whole-artifact qualification is preserved. Kit explicitly qualifies operation-local published:false, exact sample/cutover/retry/recovery/cache and customer limits."
+    }
+  ],
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts --maxWorkers=1 --minWorkers=1",
+    "started_at": "2026-09-11 04:45:44 UTC",
+    "captures": [
+      {
+        "chunk_id": "95b343",
+        "wall_time_seconds": 1.000777779,
+        "session_id": 1015,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "6235ef",
+        "wall_time_seconds": 4.651162375,
+        "exit_code": 0,
+        "original_token_count": 119,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/content.test.ts  (21 tests) 984ms\n\n Test Files  1 passed (1)\n      Tests  21 passed (21)\n   Start at  00:45:51\n   Duration  15.23s (transform 2.05s, setup 0ms, collect 5.10s, tests 984ms, environment 0ms, prepare 6.29s)\n\n"
+      }
+    ],
+    "session_id": 1015,
+    "exit_status": 0,
+    "drained": true,
+    "completed_at": "2026-09-11 04:46:07 UTC",
+    "result": "Executed exactly once on frozen bytes:1file,21/21PASS,15.23s reported duration and984ms tests. Existing18cases plus3new groups; synthetic conditional R2 with actual route/auth/publisher/decision source, not native/deployed/customer/SLO proof."
+  },
+  "artifact_verification": {
+    "before_runtime": {
+      "at": "2026-09-11T04:45:40.469Z",
+      "artifact_digest": "db8d45f22d9eaaa4f84307845793fd66b9c9e95e3ac9bf246f3fd5e4ba78fb64",
+      "contract_digest": "f863dc6b45282b591e4c099bf5268c53055816244ed35666b67695425365683e",
+      "artifact_files": 36,
+      "source_pins": 31,
+      "protected_pins": 27,
+      "bidirectional_deltas": 4,
+      "refs": [
+        {
+          "path": "docs/remediation/evidence/W14.04/artifact.json",
+          "sha256": "4e69dca324248c3536aa1f1d1e94e2b32ed244d9c539b43d38fa494c5f9e4d2d"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.04/source-freeze.json",
+          "sha256": "55faede90d9e8aaed4c1bc9142f56b580c83080fe829f81eabfe5ffd2ce74000"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.04/source-deltas.json",
+          "sha256": "2f76f448123f5b260e9eb6f658f7002d819027ef1c9196ad82ce7597fd04f5fc"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.04/worker.json",
+          "sha256": "22218a82d98f94b62b5275f9d4c70cc8ad1315bf66d005a98b6277955dc93dc3"
+        }
+      ],
+      "errors": [],
+      "chunk_id": "5b80cc",
+      "exit_code": 0
+    },
+    "after_runtime": {
+      "at": "2026-09-11T04:46:40.440Z",
+      "artifact_digest": "db8d45f22d9eaaa4f84307845793fd66b9c9e95e3ac9bf246f3fd5e4ba78fb64",
+      "contract_digest": "f863dc6b45282b591e4c099bf5268c53055816244ed35666b67695425365683e",
+      "artifact_files": 36,
+      "source_pins": 31,
+      "protected_pins": 27,
+      "bidirectional_deltas": 4,
+      "refs": [
+        {
+          "path": "docs/remediation/evidence/W14.04/artifact.json",
+          "sha256": "4e69dca324248c3536aa1f1d1e94e2b32ed244d9c539b43d38fa494c5f9e4d2d"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.04/source-freeze.json",
+          "sha256": "55faede90d9e8aaed4c1bc9142f56b580c83080fe829f81eabfe5ffd2ce74000"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.04/source-deltas.json",
+          "sha256": "2f76f448123f5b260e9eb6f658f7002d819027ef1c9196ad82ce7597fd04f5fc"
+        },
+        {
+          "path": "docs/remediation/evidence/W14.04/worker.json",
+          "sha256": "22218a82d98f94b62b5275f9d4c70cc8ad1315bf66d005a98b6277955dc93dc3"
+        }
+      ],
+      "errors": [],
+      "chunk_id": "e85221",
+      "exit_code": 0
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W14.04/source-freeze.json",
+      "sha256": "55faede90d9e8aaed4c1bc9142f56b580c83080fe829f81eabfe5ffd2ce74000"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W14.04/source-deltas.json",
+      "sha256": "2f76f448123f5b260e9eb6f658f7002d819027ef1c9196ad82ce7597fd04f5fc"
+    },
+    "method": "Read-only imported existing artifactDigest/taskContractDigest; hashes over actual bytes; baseline gzip decoded and exact diff.applyPatch forward/reverse performed in memory. No board command, new suite or source write."
+  },
+  "reused_worker_checks": {
+    "review": "Complete worker.json command/capture outputs and STOP identities inspected. Final runtime/compiler/lint/whitespace cover corrected source. Initial runtime is retained as historical, not current-byte proof.",
+    "primary_final": "28812/f88a34 exit0/drained,21/21PASS,7.04s reported,754ms tests.",
+    "compiler_final": "32420/7026b3 exit0/drained,empty output; exact planned Node memory cap and compiler options.",
+    "lint_final": "42427/598c56 exit0/drained,empty output,zero warnings; exact3TS scoped command.",
+    "whitespace": "f17d78 scoped git diff --check exit0/empty. New-module dfc65c git diff --no-index --check literal exit1/empty is difference status with no whitespace diagnostics, not relabeled exit0.",
+    "rework": "Initial compiler95586/9bef33 exit2 retained24diagnostics from readonly cloned tag inference and fixture header inference. Mutable clone/Set typing and header annotation corrected within scope. Initial27901/57ae9e21/21PASS remains superseded for current bytes."
+  },
+  "reused_dependency_assurance": {
+    "task": "W11.01",
+    "historical_artifact_digest": "df6bd826171cfcd029a971a5ca7071629389977d302a0c68492ffbffb5fc510a",
+    "review": {
+      "path": "docs/remediation/evidence/W11.01/review.json",
+      "sha256": "00b4e5fe2a5831f66b40e7bfbb6441e5e60c76953003512e0954e7c9c36e9a17"
+    },
+    "verified_unchanged": [
+      "src/config/publication.ts",
+      "src/config/versionedStore.ts",
+      "src/content/kinds.ts",
+      "src/config/versionedStore.test.ts"
+    ],
+    "evidence": "Read retained76304/cff64840/40PASS and native input hashes: two actual in-memory workers, one successful concurrent writer and one409. Reused for identical primitive sources only. New endpoint independently exercised here; W11 reopened whole-artifact state is not relabeled accepted, and no native/deployed rerun claimed."
+  },
+  "limitations": [
+    "Bounded local supplied-proposal publication only. FullW14/F07/F11/F29/F31/N16/N17, fullW11/other configuration kinds, customer clause/acceptance, gates/release and D05/D10 remain open.",
+    "No AI/provider generation or egress, UI, taxonomy/sample calibration, customer feed/asset-byte attestation, real catalog initialization/cutover, deployment or external operation. Arbitrary reviewed tags do not establish a usable configured dimension or measured customer relevance.",
+    "Complete raw sample match deliberately rejects extra/unknown metadata absent from normalized current catalog. W19 lossless importer is unresolved; only approved targets bind sample identity, while If-Match fences the whole current revision.",
+    "Human session checks establish account authority at request admission, not physical-person identity or atomic in-flight revocation. Generic recovery may finish retained human intent under current granted human/service authority without new approval.",
+    "Original operation replay requires readable retained enrichment evidence and may return a revision older than the current catalog. Generic retained-intent recovery remains available independently of a fresh proposal read. No global proposal-applied flag or historical deletion/retention reconciliation is supplied.",
+    "published:false on capture/read/export is documented as operation-local and does not inspect publication history. Serving cache remains<=30s excluding in-flight reads; no immediate-effect, throughput, latency or SLO claim.",
+    "Current fixture uses synthetic conditional R2. Unchanged W11 native assurance is reused; no deployed resource/retention/throttling proof. Storage failure may leave pending reservation requiring authorized exact recovery.",
+    "36selected artifact pins are not an exhaustive installed dependency or deployed-artifact manifest. Deterministic before/after decision fixture is not browser/customer acceptance, product lift or a calibrated relevance benchmark."
+  ],
+  "diagnostics": [
+    "Initial oversized metadata/delta displays were truncated and not credited as complete reads; needed fields, full worker record, scoped forward deltas and dependency evidence were read in bounded form, with bidirectional bytes verified in memory. No product check rerun was needed.",
+    "Independent runtime emitted inherited Vite CJS deprecation only; no failure."
+  ],
+  "pending_sessions": [],
+  "writes": [
+    "docs/remediation/evidence/W14.04/review.json"
+  ]
+}

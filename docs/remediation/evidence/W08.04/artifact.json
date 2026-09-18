@@ -1,0 +1,83 @@
+{
+  "status": "recorded",
+  "contract_digest": "fdad1b6c528d6a9e281897aff6852bbc687aa494db9252df53df7cf47cb478b4",
+  "configuration": "W08.04 one-line package deploy delegation to unchanged guarded script. Source/JSON/exact-delta/protected/npm-observation hashes only; no CLI/body execution, new fixture, dependency or engine change. Existing guard and auth/bootstrap assurance reused with overlap qualified; full release/customer scope open.",
+  "files": [
+    {
+      "path": "package-lock.json",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+      "role": "source"
+    },
+    {
+      "path": "scripts/deploy.sh",
+      "sha256": "d5f6bd176028afa02ce4da8661ec2a289d3257eed63dce9a955606cc8d74b21f",
+      "role": "source"
+    },
+    {
+      "path": "scripts/provision-stamp.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/provision-staging.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+      "role": "source"
+    },
+    {
+      "path": "docs/deployment/01-deploy.md",
+      "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee",
+      "role": "source"
+    },
+    {
+      "path": "package.json",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+      "role": "output"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+      "role": "source"
+    },
+    {
+      "path": "node_modules/wrangler/package.json",
+      "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+      "role": "source"
+    },
+    {
+      "path": "node_modules/wrangler/wrangler-dist/cli.js",
+      "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889",
+      "role": "source"
+    },
+    {
+      "path": "docs/remediation/evidence/W08.04/worker.json",
+      "sha256": "33c5c1ee42033eaa1dafba83529483552d6bca32cfd0a60e322ba5a1dfe440ec",
+      "role": "output"
+    },
+    {
+      "path": "docs/remediation/design/W08.04/plan.md",
+      "sha256": "6313a1f777084bcd366b3f8a334b8a1fd47559b3a47b3b714e5b7b51efe77f8d",
+      "role": "configuration"
+    },
+    {
+      "path": "docs/remediation/design/W08.04/baseline.json",
+      "sha256": "f5bd5b7a1ed8b07f216a00c6b4fb3afcd94cecb6f99db6a231cf17a40808f9ff",
+      "role": "configuration"
+    },
+    {
+      "path": "docs/remediation/evidence/W08.04/source-freeze.json",
+      "sha256": "ae463a51315c9ab29f22915d3465504194f2002d23ec48f84ae473cc194a40a7",
+      "role": "configuration"
+    },
+    {
+      "path": "docs/remediation/evidence/W08.04/source-deltas.json",
+      "sha256": "7660e3ded4f87f2a46d405a346a5b4239e79afa61e255317560c2b8932f6eed4",
+      "role": "configuration"
+    }
+  ],
+  "digest": "8242bc1a57c43def04c5733a62e529ad7ff215299556d0f90c647a970ee8b17e"
+}

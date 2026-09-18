@@ -1,0 +1,90 @@
+{
+  "at": "2026-09-12T20:33:50.402Z",
+  "task_id": "W32.01",
+  "artifact_digest": "fc6e2e81124d048a10610cd0c23c4dfdb4450c13e340405bcc505674d9bb6ab3",
+  "journal_seq": 1295,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "942eea",
+        "wall_time_seconds": 1.002065725,
+        "session_id": 27704,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "55caf8",
+        "wall_time_seconds": 30.001252099,
+        "session_id": 27704,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "2c0737",
+        "wall_time_seconds": 10.367771094,
+        "exit_code": 0,
+        "original_token_count": 602,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=28, unscoped=13\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=90, closed=2; evidence records=267\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W32.01 — Next admit a coherent W32 remaining report-envelope slice: inspect and address repeated policy-independent exposure/slot scans together with explicit record/work/output admission bounds on raw/overlay reports and lightweight summary reads where required by F34/L6. Read actual raw/hour/window callers and full W32/F34 before selecting the bound; do not infer a Worker capacity threshold from these local timings or silently discard excess rows. Preserve first-match ID behavior, W33 canonical isolation and W30 coverage. Zero-base/receipt/serving-reference model validation remains separately open pending an agreed objective; historical repair and customer/release authority remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 19305\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=28, unscoped=13\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=90, closed=2; evidence records=267\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W32.01 — Next admit a coherent W32 remaining report-envelope slice: inspect and address repeated policy-independent exposure/slot scans together with explicit record/work/output admission bounds on raw/overlay reports and lightweight summary reads where required by F34/L6. Read actual raw/hour/window callers and full W32/F34 before selecting the bound; do not infer a Worker capacity threshold from these local timings or silently discard excess rows. Preserve first-match ID behavior, W33 canonical isolation and W30 coverage. Zero-base/receipt/serving-reference model validation remains separately open pending an agreed objective; historical repair and customer/release authority remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 19305\n"
+      }
+    ],
+    "session_id": 27704,
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      19305,
+      19305
+    ]
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';import assert from 'node:assert/strict';import {sha256,artifactDigest,taskContractDigest} from './scripts/remediation/board.mjs';const t=JSON.parse(fs.readFileSync('docs/remediation/tracker.json'));const task=t.tasks.find(x=>x.id==='W32.01'),a=task.artifact;assert.equal(task.state,'closed');assert.equal(taskContractDigest(task),task.preflight.contract_digest);assert.equal(artifactDigest(a),a.digest);for(const f of a.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);assert.equal(sha256(fs.readFileSync(task.independent_review.record.path)),task.independent_review.record.sha256);assert.equal(task.lead_signoff.review_sha256,sha256(JSON.stringify(task.independent_review)));assert.equal(sha256(fs.readFileSync(task.lead_signoff.record.path)),task.lead_signoff.record.sha256);const b=JSON.parse(fs.readFileSync('docs/remediation/design/W32.01/baseline.json'));assert.equal(sha256(JSON.stringify(t.journal.slice(0,b.prior_journal_length))),b.prior_journal_sha256);const m=JSON.parse(fs.readFileSync('docs/remediation/evidence/W32.01/measurement.json'));for(const f of m.result.dependencies)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);console.log(JSON.stringify({state:task.state,artifact:a.digest,contract:task.preflight.contract_digest,artifact_pins:a.files.length,measurement_dependency_pins:m.result.dependencies.length,prior_journal_preserved:true,review_and_signoff:true,journal:t.journal.length},null,2));\nNODE",
+    "captures": [
+      {
+        "chunk_id": "61f997",
+        "wall_time_seconds": 0.570210385,
+        "exit_code": 0,
+        "original_token_count": 83,
+        "output": "{\n  \"state\": \"closed\",\n  \"artifact\": \"fc6e2e81124d048a10610cd0c23c4dfdb4450c13e340405bcc505674d9bb6ab3\",\n  \"contract\": \"4643c75175caf8f491f831b95ff1b76913bf9f45eff78dab09b8bbc67ebffebd\",\n  \"artifact_pins\": 38,\n  \"measurement_dependency_pins\": 92,\n  \"prior_journal_preserved\": true,\n  \"review_and_signoff\": true,\n  \"journal\": 1295\n}\n"
+      }
+    ],
+    "exit_code": 0,
+    "drained": true,
+    "inspections": {
+      "source_deltas": "10556c",
+      "worker": "0f9276",
+      "measurement": "13315/cdabf6",
+      "review": "2182fb",
+      "role_addendum": "dd50cd",
+      "original_acceptance": "0fbba4"
+    }
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_first_match_report_lookup",
+    "package_W32": "open",
+    "finding_F34": "open",
+    "finding_F32": "open",
+    "finding_N20": "open",
+    "finding_N21": "open",
+    "finding_N24": "open",
+    "package_W33": "open",
+    "finding_N09": "open",
+    "package_W30": "open",
+    "finding_F17": "open",
+    "finding_F18": "open",
+    "finding_F25": "open",
+    "finding_N08": "open",
+    "finding_N23": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Next admit a coherent W32 remaining report-envelope slice: inspect and address repeated policy-independent exposure/slot scans together with explicit record/work/output admission bounds on raw/overlay reports and lightweight summary reads where required by F34/L6. Read actual raw/hour/window callers and full W32/F34 before selecting the bound; do not infer a Worker capacity threshold from these local timings or silently discard excess rows. Preserve first-match ID behavior, W33 canonical isolation and W30 coverage. Zero-base/receipt/serving-reference model validation remains separately open pending an agreed objective; historical repair and customer/release authority remain separate."
+  },
+  "historical_board_failure": {
+    "path": "docs/remediation/evidence/W32.01/board-failed-role.json",
+    "role_correction": "docs/remediation/evidence/W32.01/metadata-reconciliation.json",
+    "independent_addendum": "docs/remediation/evidence/W32.01/review-r2.json",
+    "source_and_execution_unchanged": true
+  },
+  "limitations": "First-match decision-ID lookup containment only, with O(distinct decisions) additional references. Remaining visitor-ring attribution construction/filtering/sorting, repeated exposure/slot scans, payload/grid/window bounds and model validation remain open under full W32/F34/F32/N20/N21/N24. No mandate for leave-one-out or change to objective, weights, policy, duplicate identity, counts or schemas. Local Node paired timings and exact-output parity are not Worker CPU, maximum workload, latency SLO, lift or customer acceptance. W33.01 nonpersistent custom overlays and W30.02 conservative coverage remain implemented; overlapping broad W33.01 proof is explicitly qualified and prior acceptance preserved. Historical report provenance/repair and W30 reconstruction remain open. No serving I/O, new benchmark/test infrastructure, external/cloud/resource/credential/customer-data/deployment/commit/push/destructive or customer-policy authority."
+}

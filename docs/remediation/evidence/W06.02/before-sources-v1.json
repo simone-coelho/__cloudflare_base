@@ -1,0 +1,20 @@
+{
+  "task_id": "W06.02",
+  "at": "2026-09-08T13:28:58Z",
+  "head": "e49aef83c9a9843dd21479f1b08d53e7709fac41",
+  "tracker_sha256": "e4b9175e048146769fa070801be7820eda98b5e73e885fce990f613cff2b5814",
+  "files": [
+    {"path": "src/ledger/erasure.ts", "sha256": "37004b4a6ff99c49b608aad812f487366d71d6c0c8dfed963c4ef23fc106d490"},
+    {"path": "src/ledger/consume.ts", "sha256": "046f3fb3b2938aaced340ab74576fbdace4341ffade548d1d8d56e07d1e3cf28"},
+    {"path": "src/ledger/writer.ts", "sha256": "c1d51c467ae6a8623677a36c7df43750b28c85a945d85278e68ad6900742b002"},
+    {"path": "src/ledger/erasure.test.ts", "sha256": "598c26e9fa68e4d529621f6bd6270507fd6cd96c2b7b99ca1478826baff93217"},
+    {"path": "src/ledger/ledger.test.ts", "sha256": "f3682ea4a37e43de4f6117ce60d690dc08b8ad0c552d77e435a15aa0f5eea82a"}
+  ],
+  "configuration": [
+    {"path": "package.json", "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c"},
+    {"path": "package-lock.json", "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"},
+    {"path": "tsconfig.json", "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"},
+    {"path": "vitest.config.ts", "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"}
+  ],
+  "worktree": "Dirty user/remediation tree preserved. Only the five listed task paths are mutable by w0602-worker; erasure.ts and erasure.test.ts overlap the accepted W06.01 artifact and its proof is qualified before edits."
+}

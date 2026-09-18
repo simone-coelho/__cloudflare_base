@@ -1,0 +1,172 @@
+{
+  "task_id": "W37.01",
+  "actor": {
+    "agent": "/root/w3701_review",
+    "actor_id": "w3701-reviewer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "role": "independent_verifier",
+    "provenance": "Distinct lead-delegated Astra/xhigh run under AGENTS.md; no source implementation or subdelegation."
+  },
+  "reviewed_at": "2026-09-09T03:48:09Z",
+  "verdict": "pass",
+  "scope": "Bounded G0 local audience publication and session-host qualification with tenant-owned stores and no automatic non-default demo seeding. Full W37 remains open.",
+  "basis": {
+    "canonical_audit": {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    "plan": {
+      "path": "docs/remediation/design/W37.01/plan-v1.md",
+      "sha256": "5a102f98d438f7ef2371795e5f7bb8581fa7513c82f7d4b4263f3a5ff9e17d87"
+    },
+    "contract_digest": "c8cf00acb81d7c439e1d5a0a3f2f2095aa6b47a09ed3c0ed7511aa60a791e113",
+    "read": "AGENTS.md, execution README, full governance36/RESUME, complete canonical W37/F31/F33/F03/N29 and linked verifier reports, OD-8 and linked stamp/brand/regional requirements, doc35 customer-clause reconciliation, admitted task/plan, actual factory/operator/session/realtime/connector/regional/history/link/sort/ODP source, five admission patches and five complete worker check outputs.",
+    "entry_checks": "Reused lead's check/status VALID489 exit0 completed2026-09-09T03:27:41Z; admission VALID498 exit0 completed03:36:52UTC. No duplicate board/framework commands.",
+    "baseline": "Source-confirmed admitted failure/design case; no before-change dynamic execution claimed. Independently reversed/reapplied all five patches against admission hashes; retained pre-existing dirty changes."
+  },
+  "artifact": {
+    "path": "docs/remediation/evidence/W37.01/artifact.json",
+    "sha256": "6c9f55f1eef0dc60999684490704b84f2b1135d5507e824f8c0740fef2913c4a",
+    "digest": "e6e686f48b724756c4c5deb5da4ead78624b9bfdc582e06634b419e948bdcb1e",
+    "pins": 315
+  },
+  "worker_proof": {
+    "path": "docs/remediation/evidence/W37.01/worker.json",
+    "sha256": "2c81536b3b3c76c1df275b149e8a02a7b46d8cfdca596e0bcc7b1f175ae41431",
+    "checks_inspected": 5
+  },
+  "identity": {
+    "at": "2026-09-09T03:46:51.408Z",
+    "officialPins": 315,
+    "officialDigest": "e6e686f48b724756c4c5deb5da4ead78624b9bfdc582e06634b419e948bdcb1e",
+    "digestMatches": true,
+    "contractMatches": true,
+    "trackerArtifactMatches": true,
+    "officialMismatches": [],
+    "sourceFreezePins": 310,
+    "freezeCovered": true,
+    "artifactSha256": "6c9f55f1eef0dc60999684490704b84f2b1135d5507e824f8c0740fef2913c4a",
+    "workerSha256": "2c81536b3b3c76c1df275b149e8a02a7b46d8cfdca596e0bcc7b1f175ae41431",
+    "planSha256": "5a102f98d438f7ef2371795e5f7bb8581fa7513c82f7d4b4263f3a5ff9e17d87",
+    "canonicalSha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+    "admission_reconstruction": {
+      "at": "2026-09-09T03:45:50.716Z",
+      "sourceFreezePins": 310,
+      "sourceFreezeMismatches": [],
+      "unownedPins": 305,
+      "unownedMismatches": [],
+      "patchResults": [
+        {
+          "path": "src/connectors/index.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/routes/operator.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "beforeMatches": true,
+          "admissionMatches": true,
+          "afterMatches": true,
+          "reapplyMatches": true
+        }
+      ],
+      "lintWarningCount": 117,
+      "warningsOnAddedLines": [],
+      "workerSha256": "2c81536b3b3c76c1df275b149e8a02a7b46d8cfdca596e0bcc7b1f175ae41431"
+    }
+  },
+  "independent_check": {
+    "id": "W37.01-K3/exact-K1",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --testNamePattern=\"W37.01|keeps preference writes necessary-only\" --maxWorkers=1 --minWorkers=1",
+    "invocation_started_at": "2026-09-09T03:42:34Z",
+    "completion_observed_at": "2026-09-09T03:42:51Z",
+    "attempts": 1,
+    "exit_code": 0,
+    "runtime": "Installed Node v22.15.0 / Vitest v1.6.1, actual Hono routes/operatorWrites/JWT and shopper capabilities; synthetic memory stores, no external network.",
+    "result": "3 selected passed; 24 excluded by the admitted filter. Duration13.28s; selected cases614ms. No selected skip, failure, timeout or rework.",
+    "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.01 tenant-owned local audiences > publishes through the authenticated operator router and qualifies two non-default tenants in their own physical stores despite demo hints\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.01 tenant-owned local audiences > publishes through the authenticated operator router and qualifies two non-default tenants in their own physical stores despite demo hints\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.01 tenant-owned local audiences > publishes through the authenticated operator router and qualifies two non-default tenants in their own physical stores despite demo hints\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W37.01 tenant-owned local audiences > publishes through the authenticated operator router and qualifies two non-default tenants in their own physical stores despite demo hints\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.08 owned preferences and reads > keeps preference writes necessary-only and gates populated reads/assignment under every switch combination, with real consenting positives\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.08 owned preferences and reads > keeps preference writes necessary-only and gates populated reads/assignment under every switch combination, with real consenting positives\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.08 owned preferences and reads > keeps preference writes necessary-only and gates populated reads/assignment under every switch combination, with real consenting positives\nUsing mock Optimizely client (no SDK key configured)\n\nstdout | src/routes/realtime.sdkContract.test.ts > W05.08 owned preferences and reads > keeps preference writes necessary-only and gates populated reads/assignment under every switch combination, with real consenting positives\n[reflex] catalog audiences regenerated: +37 ~0 −0 (skipped: 0 human-edited, 0 pinned)\n\n ✓ src/routes/realtime.sdkContract.test.ts  (27 tests | 24 skipped) 614ms\n\n Test Files  1 passed (1)\n      Tests  3 passed | 24 skipped (27)\n   Start at  23:42:37\n   Duration  13.28s (transform 5.30s, setup 0ms, collect 8.25s, tests 614ms, environment 0ms, prepare 3.01s)\n\n",
+    "output_note": "Combined stdout/stderr as returned by command tool; Vite CJS deprecation retained. Runner timings do not measure serving latency."
+  },
+  "worker_checks_inspected": [
+    {
+      "id": "W37.01-K1",
+      "result": "Exit0;3passed24filtered. Same frozen source."
+    },
+    {
+      "id": "W37.01-K2",
+      "result": "Exit0;2passed22filtered. Both required existing default-demo cases executed."
+    },
+    {
+      "id": "compiler",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "result": "Exit0;empty stdout/stderr."
+    },
+    {
+      "id": "scoped-eslint",
+      "result": "Exit0;0errors117warnings. Independently mapped all117 warning locations to unchanged admission context, none on added/replaced lines; no warning-clean claim."
+    },
+    {
+      "id": "whitespace",
+      "result": "git diff --check on five owned files exit0;empty output."
+    }
+  ],
+  "criteria": [
+    {
+      "id": "W37.01-C1",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "finding": "Actual authenticated operator publish/list and signed shopper action/segment handlers use two non-default tenants with identical audience key, subject and session IDs. Distinct page_views==1 versus ==2 rules each exercise positive and negative results; assertions inspect actual tenant session/audience bytes plus unchanged peer/default sentinels. Brighthour hints cannot hide these local authored records. Factory and implicit engine connectors scope the store; all nine real realtime injections carry the same tenant as engine options. Engine, shared and operator seed guards prevent non-default demo seeding, generation markers and related I/O; shared seeder environment/catalog proxies see zero access."
+    },
+    {
+      "id": "W37.01-C2",
+      "verdict": "pass",
+      "claim": "local_synthetic",
+      "finding": "Default branch retains original unprefixed Coach and Brighthour audience generation/filter behavior; exact K2 source and complete output checked. Existing W05.08 preference/refusal test retains all switch-combination neutral-response, necessary-only persistence, no-behavior/no-effect/cookie/assignment assertions for both hosts. Its session positive now uses an explicit tenant-owned rule, strengthens the returned-key assertion and expects no demo seed. Compiler/lint/whitespace pass. Unmodified W06 v4 and actual W29 withdrawal sources retained; no renewed full-package assurance inferred."
+    },
+    {
+      "id": "W37.01-C3",
+      "verdict": "pass",
+      "claim": "source_confirmed",
+      "finding": "All315 official pins and manifest/contract digest match; all310 original frozen source pins covered unchanged before/after independent K1. Five patches reverse to admitted hashes and reapply to current bytes, with305unowned input pins unchanged. Full worker outputs inspected independently; exact K1 rerun once. Source/pin coverage includes relevant connector/audience/demo catalog/config/consent/session/auth/route and concrete JSON dependencies. Five extra JSON inputs were captured separately at actual03:36:29.633Z before checks, preserving original baseline chronology."
+    }
+  ],
+  "limitations": [
+    "Local synthetic and source evidence only; no deployed-runtime, customer, relevance, throughput or serving-latency acceptance.",
+    "REFLEX_ENABLED=false in the two-tenant authored-rule flow deliberately isolates local audience qualification. Generic catalogs/configuration, reflex-derived memberships, automatic customer-owned generation and mock NL suggestions using demo insights remain open; consent/default-demo cases retain reflex behavior.",
+    "Regional producer/reader/cron semantics remain unchanged and open, including default demo population merging and a real tenant named brighthour aliasing demo trends. No data migration or historical contamination repair.",
+    "Object-host connectors, live ODP/MCP identity/credentials/attributes, history/link/sort, ingress/operator tenant authority, broadcast discovery, managed registry/stamp/resource/provisioning ownership, shared-load isolation and complete export/erasure remain open. Custom injected connectors remain caller-owned.",
+    "Full W37/F31/F33/F03/N29, customer generation/isolation acceptance, gates and release approval are not established. Existing W05/W29 whole-source evidence stays historically qualified as recorded by root."
+  ],
+  "review_notes": [
+    "One read-only JSON-summary formatter hit a recursion error and was corrected before reading the full evidence. This was not a product check, changed no files, and caused no test rerun."
+  ],
+  "handoff": {
+    "status": "ready_for_lead_disposition",
+    "next_action": "Lead inspect this review and primary evidence, accept or return only W37.01, then update tracker/journal/RESUME and board check/status.",
+    "pending_commands": [],
+    "owned_output": "docs/remediation/evidence/W37.01/review.json"
+  }
+}

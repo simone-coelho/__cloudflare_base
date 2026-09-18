@@ -1,0 +1,394 @@
+{
+  "task_id": "W14.02",
+  "actor_id": "w1402-worker",
+  "run_id": "/root/w1402_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "ready_for_independent_review",
+  "admission": {
+    "plan": "docs/remediation/design/W14.02/plan.md",
+    "plan_sha256": "1cd7d7daeae1c3a5322336942beec67354e71cdb3fa1868d1e0cad43a32927e1",
+    "contract_digest": "dbf4aa5e8f2d1e2851a340d40d25630364f56550271352fe040661e52106f8b9",
+    "board": {
+      "session_id": 97064,
+      "chunk_id": "391a13",
+      "exit_status": 0,
+      "drained": true,
+      "status": "VALID",
+      "notes": 9434
+    },
+    "baseline": "docs/remediation/design/W14.02/baseline.json",
+    "correction_approval": "docs/remediation/design/W14.02/implementation-review.json"
+  },
+  "summary": "Both signed sort routes schedule bounded whole-response product-sort records to existing R2 with explicit best-effort status. Records preserve signed identity, pre-affinity timestamp/UUID, effective consent/config/weights, exact ranking/drivers/counts and normalized intent. Explicit operator read/export validates this stream; content budgets/selectors exclude it; queue wire, learning and erasure implementation remain unchanged.",
+  "criteria": [
+    {
+      "id": "W14.02-C1",
+      "worker_result": "pass",
+      "evidence": "Existing sort fixture adds two groups using real signed capabilities/SessionManager and synthetic KV/controlled DO/R2/context. Both modes and two tenant registries persist exact returned order/items/config/effective weights/counts with UUID-isolated keys, while held R2 reads prove response completion without persistence await. No queue/ring/stats/AE or behavioral mutation; request/profile/header markers absent. Effective personalization refusal can record only default order/empty drivers."
+    },
+    {
+      "id": "W14.02-C2",
+      "worker_result": "pass",
+      "evidence": "Same two route groups exercise stored/body/cookie/DO tracking refusal, ownership, absent/throwing context/getter, binding absence, nonfinite/nonserializable/oversize receipts, 500x8 scheduler shape, Unicode normalized filters and pre-affinity cutoff. One existing ledger group verifies strict record/carrier readback, real operator JWT/tenant grants/selector conflicts, explicit product/default exports, legacy key preservation, exact stream segment including tenant product-sort and decision/outcome tenant collisions, content budgets/loadDay, queue rejection, tombstone equality/post-cutoff/errors and existing physical rewrite."
+    },
+    {
+      "id": "W14.02-C3",
+      "worker_result": "pass_pending_independent_review",
+      "evidence": "Exactly ten implementation/fixture/doc paths and three grouped additions. Final fixed two-file runtime pass, no-emit compiler, nine-file lint and scoped tracked/untracked whitespace are retained below. Root must freeze exact artifact, inspect independent review and accept; no task/package/finding/customer/release closure is claimed."
+    }
+  ],
+  "rework": [
+    {
+      "phase": "before_first_primary",
+      "description": "Root source review required record construction/serialization exceptions to return invalid_record. Added scoped catch before runtime checks; no test failed for this correction."
+    },
+    {
+      "phase": "after_first_primary",
+      "description": "Primary15154 passed22/22, then compiler65792 exited2 with fixture-only recordId callback narrowing, throwing-list inferred return, and missing delete structural type. Root integration review also found newstream contamination for tenants named decision/outcome; worker identified valid U+0130 lowercase expansion beyond stored128-unit filter bound. Root approved unchanged-contract correction at journal857. Corrected explicit content exports/loadDay exclusion, normalized stored max256 without changing request max128, fixture typing and focused assertions in the same three groups. First pass and failed compiler are retained; final primary52662 supersedes their artifact basis."
+    },
+    {
+      "phase": "communication_correction",
+      "description": "One chat update incorrectly said baseline lint completed23:50:29UTC; immediately corrected from actual retained tool times: start2026-09-10 23:45:51UTC, completion observed23:46:55UTC. Evidence below uses actual capture times."
+    },
+    {
+      "phase": "after_final_runtime_and_compiler",
+      "description": "Final runtime52662 passed22/22 and compiler27487 passed. Lint36475 exited0 but revealed two new no-empty-function warnings in required passThroughOnException fixture stubs, plus one inherited any warning. Added exactly two comments `/* No passthrough in this fixture. */` inside those stubs, with no runtime/type changes, and repeated scoped lint/whitespace under root approval. Worker runtime/compiler therefore precede only those comments; independent primary must exercise final frozen bytes. No runtime/compiler rerun credited."
+    }
+  ],
+  "preservation": {
+    "owned_paths_only": "Worker edits only the ten admitted source/fixture/doc paths and worker.json. Root owns protected-pin comparison and exact freeze; inherited dirty work retained.",
+    "unchanged": "No edits to consumer, enqueue, index, pure rankers/core, erasure implementation, auth/tenant authority or resources. Existing LedgerMessage/queue wire union retained; product message is a separate writer union.",
+    "assurance": "Controlled DO replies and synthetic R2/KV/context are local route evidence. Unchanged signed DO/perimeter/consent/erasure dependencies are reused, not newly native/deployed proof.",
+    "whitespace": "Tracked scoped git diff --check exited0 with no output. Untracked new-module git diff --no-index --check /dev/null src/ledger/productSort.ts exited1 with no output: literal --no-index difference status retained, no whitespace diagnostic; not misreported as exit0."
+  },
+  "limitations": [
+    "Best-effort background R2 registration is not durable acknowledgement. Storage failure, process termination/time limits and erasure suppression can leave scheduled IDs unreadable; no durable retry/outbox/every-decision/exactly-once guarantee.",
+    "Whole receipt limit is1MiB actual UTF8 NDJSON including newline. Oversize/invalid receipts are not stored and are not truncated; plain-sort request/response limits are otherwise unchanged.",
+    "One object/request increases listing and erasure costs. Local synthetic fixture timings are not throughput/latency/SLO/lift/deployed or customer acceptance.",
+    "Existing erasure check/put race, historical/retention/full export and scheduled warehouse reconciliation, W09/W22 delivery work and full W14§1.6 remain open.",
+    "Legacy non-product stream-selection behavior remains; only the new exact product-sort partition is excluded from default/content selectors and content budgets.",
+    "No external/cloud/credential/customer-data/deploy/build/install/seed/provision/commit/push/cleanup action."
+  ],
+  "handoff": {
+    "next_action": "Root freezes the ten-path artifact and related current dependency pins, independently reviews all C1-C3 with the same fixed two-file runtime command and retained static evidence, then accepts or returns bounded W14.02.",
+    "authority": "Worker is stopped after evidence; only root may admit rework or mark task acceptance."
+  },
+  "recorded_at": "2026-09-11 00:08:12 UTC",
+  "source_stopped_at": "2026-09-11T00:07:59.178Z",
+  "files": [
+    {
+      "path": "src/ledger/productSort.ts",
+      "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322"
+    },
+    {
+      "path": "src/ledger/records.ts",
+      "sha256": "f0a6285ae7371d4dc1e2830c8133d25ff72885ececff77641c282a52673473d7"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "sha256": "da7743fdfec69d2f549fff954435a273b14d90493255efba9f4f74a08c5901e9"
+    },
+    {
+      "path": "src/routes/sort.ts",
+      "sha256": "f41238f99a40fca924f6e22cb93ea08d6c857af0bfe9b0c933b285517ed9f484"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "sha256": "66693cba2fda80b183804a0f4764c3a3a474500e620538f36ad2931ca399a360"
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "sha256": "c120ae2ef6391495429debf8139a9d41f8060462f17087893bc3c759c760048b"
+    },
+    {
+      "path": "src/learn/report.ts",
+      "sha256": "faa9211fe078e6069e095e556a1d34cf05569ff96ae52be2dee7d7add3bb1b65"
+    },
+    {
+      "path": "src/routes/sort.test.ts",
+      "sha256": "75be2d38dd22a1a76d127eaeeeeb969e9c8871bcc758ab6df2846ab18f98c57c"
+    },
+    {
+      "path": "src/ledger/ledger.test.ts",
+      "sha256": "67bfe36a23ad62105f6e84d3f72e1cc62f70c0c775f3fd0d8598996390eee794"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "da9cf9605e9e4bbaa4b32cd248b597e2103563f8883446b7c7d532c12f624f09"
+    }
+  ],
+  "source_identity_capture": {
+    "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport crypto from 'node:crypto';\nconst paths=['src/ledger/productSort.ts','src/ledger/records.ts','src/ledger/writer.ts','src/routes/sort.ts','src/routes/decisions.ts','src/learn/hourly.ts','src/learn/report.ts','src/routes/sort.test.ts','src/ledger/ledger.test.ts','docs/kit/02-api-reference.md'];\nconsole.log(JSON.stringify({source_stopped_at:new Date().toISOString(),files:paths.map(path=>({path,sha256:crypto.createHash('sha256').update(fs.readFileSync(path)).digest('hex')}))},null,2));\nNODE",
+    "result": {
+      "chunk_id": "1326ab",
+      "wall_time_seconds": 0.000006473,
+      "exit_code": 0,
+      "original_token_count": 358,
+      "output": "{\n  \"source_stopped_at\": \"2026-09-11T00:07:59.178Z\",\n  \"files\": [\n    {\n      \"path\": \"src/ledger/productSort.ts\",\n      \"sha256\": \"f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322\"\n    },\n    {\n      \"path\": \"src/ledger/records.ts\",\n      \"sha256\": \"f0a6285ae7371d4dc1e2830c8133d25ff72885ececff77641c282a52673473d7\"\n    },\n    {\n      \"path\": \"src/ledger/writer.ts\",\n      \"sha256\": \"da7743fdfec69d2f549fff954435a273b14d90493255efba9f4f74a08c5901e9\"\n    },\n    {\n      \"path\": \"src/routes/sort.ts\",\n      \"sha256\": \"f41238f99a40fca924f6e22cb93ea08d6c857af0bfe9b0c933b285517ed9f484\"\n    },\n    {\n      \"path\": \"src/routes/decisions.ts\",\n      \"sha256\": \"66693cba2fda80b183804a0f4764c3a3a474500e620538f36ad2931ca399a360\"\n    },\n    {\n      \"path\": \"src/learn/hourly.ts\",\n      \"sha256\": \"c120ae2ef6391495429debf8139a9d41f8060462f17087893bc3c759c760048b\"\n    },\n    {\n      \"path\": \"src/learn/report.ts\",\n      \"sha256\": \"faa9211fe078e6069e095e556a1d34cf05569ff96ae52be2dee7d7add3bb1b65\"\n    },\n    {\n      \"path\": \"src/routes/sort.test.ts\",\n      \"sha256\": \"75be2d38dd22a1a76d127eaeeeeb969e9c8871bcc758ab6df2846ab18f98c57c\"\n    },\n    {\n      \"path\": \"src/ledger/ledger.test.ts\",\n      \"sha256\": \"67bfe36a23ad62105f6e84d3f72e1cc62f70c0c775f3fd0d8598996390eee794\"\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"sha256\": \"da9cf9605e9e4bbaa4b32cd248b597e2103563f8883446b7c7d532c12f624f09\"\n    }\n  ]\n}\n"
+    }
+  },
+  "checks": [
+    {
+      "name": "baseline_lint",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/records.ts src/ledger/writer.ts src/routes/sort.ts src/routes/decisions.ts src/learn/hourly.ts src/learn/report.ts src/routes/sort.test.ts src/ledger/ledger.test.ts --format json",
+      "started_at": "2026-09-10 23:45:51 UTC",
+      "captures": [
+        {
+          "chunk_id": "c89c5c",
+          "wall_time_seconds": 1.001173076,
+          "session_id": 37630,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "94e1a2",
+          "wall_time_seconds": 5.001627178,
+          "session_id": 37630,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "4492a2",
+          "wall_time_seconds": 5.001783819,
+          "session_id": 37630,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b686d4",
+          "wall_time_seconds": 4.458169535,
+          "exit_code": 0,
+          "original_token_count": 6592,
+          "output": "[{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/hourly.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/report.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/ledger.test.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/records.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/writer.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/decisions.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/sort.test.ts\",\"messages\":[{\"ruleId\":\"@typescript-eslint/no-explicit-any\",\"severity\":1,\"message\":\"Unexpected any. Specify a different type.\",\"line\":97,\"column\":29,\"nodeType\":\"TSAnyKeyword\",\"messageId\":\"unexpectedAny\",\"endLine\":97,\"endColumn\":32,\"suggestions\":[{\"messageId\":\"suggestUnknown\",\"fix\":{\"range\":[5493,5496],\"text\":\"unknown\"},\"desc\":\"Use `unknown` instead, this will force you to explicitly, and safely assert the type is correct.\"},{\"messageId\":\"suggestNever\",\"fix\":{\"range\":[5493,5496],\"text\":\"never\"},\"desc\":\"Use `never` instead, this is useful when instantiating generic type parameters that you don't need to know the type of.\"}]}],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":1,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"source\":\"// src/routes/sort.test.ts\\n//\\n// The pure sorter is covered in sortCandidates.test.ts. This proves the route:\\n// the shape a commerce platform gets back, parity through the wire, and the two\\n// refusals.\\n\\nimport { describe, it, expect, vi } from 'vitest';\\nimport { sortRoutes } from '@/routes/sort';\\nimport { newAnonymousSession, SHOPPER_HEADER } from '@/identity/sessionCapability';\\nimport type { Env } from '@/types/env';\\nimport { SessionManager } from '@/services/SessionManager';\\nimport { apply, emptyState, DEFAULT_REFLEX_CONFIG, type ReflexConfig } from '@/reflex/core';\\nimport { invalidateConfigCache, reflexScopeForTenant, writeReflexConfig } from '@/reflex/configStore';\\nimport { searchCandidates, type SearchResult } from '@/reflex/searchCandidates';\\nimport { tenantKey } from '@/tenancy/tenant';\\n\\nclass FakeKV {\\n  store = new Map<string, string>();\\n  async get(key: string, type?: string) { const r = this.store.get(key); return r === undefined ? null : (type === 'json' ? JSON.parse(r) : r); }\\n  async put(key: string, value: string) { this.store.set(key, value); }\\n  async delete(key: string) { this.store.delete(key); }\\n  async list(o?: { prefix?: string }) { const p = o?.prefix ?? ''; return { keys: [...this.store.keys()].filter((k) => k.startsWith(p)).map((name) => ({ name })) }; }\\n}\\n\\nfunction env(overrides: Record<string, unknown> = {}) {\\n  return {\\n    CACHE: new FakeKV(), SESSIONS: new FakeKV(),\\n    ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock',\\n    JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',\\n    ...overrides,\\n  } as unknown as Record<string, unknown>;\\n}\\n\\nconst FEED = [\\n  { id: 'P1', line: 'Rogue', price_usd: 795 },\\n  { id: 'P2', line: 'Tabby', price_usd: 380 },\\n  { id: 'P3', line: 'Tabby', price_usd: 350 },\\n];\\n\\nasync function post(body: unknown, e = env()) {\\n  const session = await newAnonymousSession(e as unknown as Env, 'coach');\\n  const input = body as { userId?: string };\\n  const target = input.userId && !input.userId.startsWith('t:') ? { ...input, userId: session.subject } : input;\\n  const res = await sortRoutes.request('/', {\\n    method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: session.capability }, body: JSON.stringify(target),\\n  }, e);\\n  return { status: res.status, body: (await res.json()) as Record<string, unknown> };\\n}\\n\\ndescribe('POST /sort', () => {\\n  it('returns the ids in an order, plus the receipt a commerce team can read', async () => {\\n    const { status, body } = await post({ userId: 'vis-new', candidates: FEED });\\n    expect(status).toBe(200);\\n    expect(body.ok).toBe(true);\\n    expect(body.order).toEqual(['P1', 'P2', 'P3']);       // no history: the platform's order stands\\n    expect(body.tenant).toBe('coach');\\n    expect(typeof body.configVersion).toBe('string');\\n    expect(Array.isArray(body.items)).toBe(true);\\n  });\\n\\n  it('reproduces the feed order at affinity 0, through the wire', async () => {\\n    const { body } = await post({ userId: 'vis-new', candidates: FEED, weights: { affinity: 0 } });\\n    expect(body.order).toEqual(['P1', 'P2', 'P3']);\\n    expect(body.affinityWeight).toBe(0);\\n  });\\n\\n  it('refuses a malformed body with 400, not 500', async () => {\\n    expect((await post({ candidates: FEED })).status).toBe(400);\\n    expect((await post({ userId: 'v', candidates: 'nope' })).status).toBe(400);\\n    expect((await post({ userId: 'v', candidates: [{ line: 'x' }] })).status).toBe(400);\\n    for (const consent of [null, false, [], { tracking: 'false' }, { personalization: 0 }]) {\\n      expect((await post({ userId: 'v', candidates: FEED, consent })).status).toBe(400);\\n    }\\n  });\\n\\n  it('W05.03 validates the DO consent envelope before returning a ranked receipt', async () => {\\n    for (const reply of [\\n      { status: 503, body: { ok: false } }, { status: 200, body: { ok: false } },\\n      { status: 200, body: { ok: true } }, { status: 200, body: { ok: true, consent: null } },\\n      { status: 200, body: { ok: true, consent: {} } }, { status: 200, body: { ok: true, consent: { tracking: 'false', personalization: true } } },\\n    ]) {\\n      const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json(reply.body, { status: reply.status }) }) } });\\n      const out = await post({ userId: 'v', candidates: FEED }, e);\\n      expect(out.status).toBeGreaterThanOrEqual(400); expect(out.body).not.toHaveProperty('items'); expect(out.body).not.toHaveProperty('order');\\n    }\\n  });\\n\\n  it('W05.03 uses the existing signed snapshot projection and never lets a zero dial substitute for an empty refused vector', async () => {\\n    const asked: Array<{ url: string; headers: Headers }> = [];\\n    const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async (url: string, init: RequestInit) => {\\n      asked.push({ url, headers: new Headers(init.headers) });\\n      return Response.json({ ok: true, consent: { tracking: false, personalization: true }, affinity: { dims: { line: { Tabby: 0.8 } } } });\\n    } }) } });\\n    for (const affinity of [0, 4]) {\\n      const { status, body } = await post({ userId: 'v', candidates: [...FEED, { id: ' P2 ', line: 'Rogue' }, { id: ' ' }], consent: { personalization: false }, weights: { affinity } }, e);\\n      expect(status).toBe(200); expect(body.order).toEqual(['P1', 'P2', 'P3']); expect(body.dropped).toBe(2); expect(body.affinityWeight).toBe(affinity);\\n      expect((body.items as any[]).every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);\\n    }\\n    expect(asked).toHaveLength(2);\\n    for (const request of asked) {\\n      expect(request.url).toBe('https://shopper-reflex/snapshot?projection=sort');\\n      expect(request.headers.get(SHOPPER_HEADER)).toMatch(/^ss1\\\\./);\\n      expect(request.headers.get('x-tenant')).toBe('coach');\\n      expect(request.headers.get('cookie')).toBe('opt_personalization_enabled=false');\\n    }\\n  });\\n\\n  it('bounds the candidate set, because a page of results is not a catalog', async () => {\\n    const huge = Array.from({ length: 501 }, (_, i) => ({ id: `P${i}` }));\\n    expect((await post({ userId: 'v', candidates: huge })).status).toBe(400);\\n  });\\n\\n  it('refuses a visitor id that addresses another brand, on the DO host', async () => {\\n    const asked: string[] = [];\\n    const e = env({\\n      REFLEX_HOST: 'do',\\n      SHOPPER_REFLEX: {\\n        idFromName: (n: string) => { asked.push(n); return n; },\\n        get: () => ({ fetch: async () => new Response(JSON.stringify({ affinity: { dims: {} } })) }),\\n      },\\n    });\\n    const { status } = await post({ userId: 't:kate-spade:vis-victim', candidates: FEED }, e);\\n    expect(status).toBe(401);\\n    expect(asked).toEqual([]);\\n  });\\n});\\n\\ndescribe('W14.01 POST /sort/intent', () => {\\n  type Grant = Awaited<ReturnType<typeof newAnonymousSession>>;\\n  type FixtureEnv = Env & { CACHE: FakeKV; SESSIONS: FakeKV };\\n  type Receipt = SearchResult & { ok: boolean; tenant: string; configVersion: string; error?: string };\\n  const specs = [\\n    { tenant: 'meridian', dimension: 'fabric', source: 'weave', favorite: 'Silk', values: ['Linen', 'Silk'], winner: 'p2' },\\n    { tenant: 'brighthour', dimension: 'tone', source: 'hue', favorite: 'Ocean', values: ['Ocean', 'Sand'], winner: 'p1' },\\n  ];\\n  const feed = [\\n    { id: 'p1', inStock: true, weave: 'Linen', hue: 'Ocean', uses: ['work'], amount: 45 },\\n    { id: 'p2', inStock: true, weave: 'Silk', hue: 'Sand', uses: ['work', 'travel'], amount: 45 },\\n  ];\\n  const config = (index = 0): ReflexConfig => {\\n    const spec = specs[index]!;\\n    return { ...DEFAULT_REFLEX_CONFIG, version: `w1401-${spec.tenant}`, tauMs: 1_000_000_000,\\n      weights: { product_view: 3 }, dimensions: [\\n        { key: spec.dimension, source: spec.source },\\n        { key: 'occasion', source: 'uses', multi: true },\\n        { key: 'priceBand', source: 'amount', derive: 'band', cuts: index ? [5, 15] : [30, 100], labels: ['low', 'middle', 'high'] },\\n      ] };\\n  };\\n  async function configured(overrides: Record<string, unknown> = {}) {\\n    invalidateConfigCache();\\n    const e = env({ TENANTS: JSON.stringify({ provisioned: specs.map(s => s.tenant) }), ...overrides }) as unknown as FixtureEnv;\\n    e.CACHE.store.set('reflex:config:brighthour:current', 'private-demo-config-marker');\\n    for (let i = 0; i < specs.length; i++) {\\n      expect((await writeReflexConfig(e, reflexScopeForTenant(specs[i]!.tenant), config(i), { actor: 'synthetic' })).ok).toBe(true);\\n    }\\n    return e;\\n  }\\n  async function warm(e: FixtureEnv, index = 0) {\\n    const spec = specs[index]!;\\n    const grant = await newAnonymousSession(e, spec.tenant);\\n    await new SessionManager(e, { tenant: spec.tenant, principal: grant }).createOrUpdateSession(grant.sessionId, grant.subject, {\\n      reflex: apply(emptyState(config(index)), { action: 'product_view', touches: [{ dim: spec.dimension, value: spec.favorite }] }, Date.now(), config(index)).state,\\n      preferences: { trackingConsent: true, personalizationEnabled: true, cookieConsent: true },\\n    });\\n    return grant;\\n  }\\n  const requestBody = (grant: Grant, overrides: Record<string, unknown> = {}) => ({\\n    userId: grant.subject, sessionId: grant.sessionId, candidates: feed, intent: { filters: [] }, ...overrides,\\n  });\\n  async function call(e: FixtureEnv, grant: Grant, overrides: Record<string, unknown> = {}, headers: Record<string, string> = {}) {\\n    const response = await sortRoutes.request('/intent', {\\n      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Tenant': grant.tenant, [SHOPPER_HEADER]: grant.capability, ...headers },\\n      body: JSON.stringify(requestBody(grant, overrides)),\\n    }, e);\\n    return { response, body: await response.json() as Receipt };\\n  }\\n\\n  it('uses two nondefault registries and the owned live profile on session and signed DO projection paths', async () => {\\n    const e = await configured();\\n    const grants = await Promise.all(specs.map((_, index) => warm(e, index)));\\n    const before = [...e.SESSIONS.store];\\n    for (let index = 0; index < specs.length; index++) {\\n      const spec = specs[index]!, grant = grants[index]!;\\n      const input = { surface: 'brighthour', intent: { filters: [{ dimension: spec.dimension, values: spec.values }] } };\\n      const { response, body } = await call(e, grant, input);\\n      expect(response.status).toBe(200); expect(response.headers.get('cache-control')).toBe('no-store');\\n      expect(body).toMatchObject({ ok: true, source: 'structured-intent', tenant: spec.tenant, configVersion: `w1401-${spec.tenant}+r1`, eligibleCount: 2 });\\n      expect(body.order[0]).toBe(spec.winner);\\n      expect(body.items[0]!.drivers).toEqual([expect.objectContaining({ dim: spec.dimension, value: spec.favorite })]);\\n      expect(body.items[0]!.score).toBeGreaterThan(0);\\n      expect((await call(e, grant, { ...input, weights: { affinity: 0 } })).body.order).toEqual(['p1', 'p2']);\\n      const cold = await newAnonymousSession(e, spec.tenant);\\n      expect((await call(e, cold, input)).body.order).toEqual(['p1', 'p2']);\\n\\n      const asked: Array<{ name: string; url: string; headers: Headers }> = [];\\n      const d = { ...e, REFLEX_HOST: 'do', SHOPPER_REFLEX: {\\n        idFromName: (name: string) => name,\\n        get: (name: string) => ({ fetch: async (url: string, init: RequestInit) => {\\n          asked.push({ name, url, headers: new Headers(init.headers) });\\n          return Response.json({ ok: true, consent: { tracking: true, personalization: true }, affinity: { dims: { [spec.dimension]: { [spec.favorite]: 0.8 } } } });\\n        } }),\\n      } } as unknown as FixtureEnv;\\n      expect((await call(d, grant, input)).body.order[0]).toBe(spec.winner);\\n      expect(asked).toHaveLength(1);\\n      expect(asked[0]!.name).toBe(tenantKey(spec.tenant, grant.subject));\\n      expect(asked[0]!.url).toBe('https://shopper-reflex/snapshot?projection=sort&surface=brighthour');\\n      expect(asked[0]!.headers.get(SHOPPER_HEADER)).toBe(grant.capability);\\n      expect(asked[0]!.headers.get('x-tenant')).toBe(spec.tenant);\\n    }\\n    expect([...e.SESSIONS.store]).toEqual(before);\\n    expect(e.CACHE.store.get('reflex:config:brighthour:current')).toBe('private-demo-config-marker');\\n  });\\n\\n  it('keeps first-ID eligibility, exact AND/OR filters, bands, original ranks and truthful prelimit counts', async () => {\\n    const e = await configured(), grant = await warm(e);\\n    const candidates = [\\n      { ...feed[1]!, id: ' unavailable ', inStock: false },\\n      { ...feed[1]!, id: 'unavailable' },\\n      { ...feed[0]!, id: 'filtered', uses: ['evening'] },\\n      { ...feed[1]!, id: ' filtered ' },\\n      { ...feed[0]!, id: 'linen', weave: ' LINEN ' },\\n      { ...feed[1]!, id: 'silk' },\\n      { ...feed[1]!, id: 'tie' },\\n      { ...feed[1]!, id: 'wrong-band', amount: 120 },\\n      { ...feed[1]!, id: 'not-substring', uses: ['workshop'] },\\n    ];\\n    const intent = { filters: [\\n      { dimension: 'fabric', values: [' linen ', 'SILK'] },\\n      { dimension: 'occasion', values: [' WORK ', 'travel'] },\\n      { dimension: 'priceBand', values: ['Middle'] },\\n    ] };\\n    const { response, body } = await call(e, grant, { candidates, intent, limit: 1 });\\n    expect(response.status).toBe(200); expect(body.order).toEqual(['silk']);\\n    expect(body).toMatchObject({ inputCount: 9, dropped: 2, filteredCount: 4, eligibleCount: 3 });\\n    expect(body.items[0]).toMatchObject({ id: 'silk', feedRank: 5, rank: 0 });\\n    const all = (await call(e, grant, { candidates, intent, limit: 500 })).body;\\n    expect(all.order).toEqual(['silk', 'tie', 'linen']);\\n    expect(all.items.map(item => item.feedRank)).toEqual([5, 6, 4]);\\n    const parity = (await call(e, grant, { candidates, intent, weights: { affinity: 0 } })).body;\\n    expect(parity.order).toEqual(['linen', 'silk', 'tie']);\\n    expect(parity.items.map(item => item.feedRank)).toEqual([4, 5, 6]);\\n    const none = (await call(e, grant, { candidates, intent: { filters: [{ dimension: 'occasion', values: ['missing'] }] } })).body;\\n    expect(none).toMatchObject({ order: [], items: [], eligibleCount: 0, filteredCount: 7, dropped: 2 });\\n    const ten = Array.from({ length: 10 }, (_, i) => ({ ...feed[0]!, id: `id-${i}` }));\\n    expect((await call(e, grant, { candidates: ten })).body).toMatchObject({ eligibleCount: 10, order: ten.slice(0, 9).map(p => p.id) });\\n    for (const filters of [\\n      [{ dimension: 'unknown', values: ['x'] }],\\n      [{ dimension: 'Fabric', values: ['Silk'] }],\\n      [{ dimension: 'fabric', values: ['Silk'] }, { dimension: ' fabric ', values: ['Linen'] }],\\n    ]) {\\n      const failed = await call(e, grant, { intent: { filters } });\\n      expect(failed.response.status).toBe(400); expect(failed.body).toEqual({ ok: false, error: 'Invalid intent filters' });\\n    }\\n    // Internal helper also fails stock closed and accounts for unusable IDs.\\n    expect(searchCandidates([{ id: ' ' }, { id: 'missing' }, { id: 'false', inStock: false }, { id: 'yes', inStock: true }], { filters: [] }, {}, config()))\\n      .toMatchObject({ order: ['yes'], inputCount: 4, dropped: 1, filteredCount: 2, eligibleCount: 1, items: [expect.objectContaining({ feedRank: 3 })] });\\n  });\\n\\n  it('enforces owned consent, generic failures and authenticated streamed request bounds without behavior writes', async () => {\\n    const e = await configured(), grant = await warm(e);\\n    const sessionReads = vi.spyOn(e.SESSIONS, 'get');\\n    const before = [...e.SESSIONS.store];\\n    for (const invalid of [\\n      { affinity: { fabric: { Silk: 1 } } }, { query: 'silk' }, { priceMax: 20 },\\n      { intent: { filters: [], query: 'silk' } }, { candidates: [{ id: 'x' }] },\\n      { candidates: [{ id: ' ', inStock: true }] }, { candidates: [{ id: 'x', inStock: 'true' }] },\\n      { candidates: [{ id: 'x', inStock: true, nested: { secret: true } }] },\\n      { candidates: Array.from({ length: 501 }, (_, i) => ({ id: `${i}`, inStock: true })) },\\n      { intent: { filters: Array.from({ length: 17 }, () => ({ dimension: 'fabric', values: ['Silk'] })) } },\\n      { intent: { filters: [{ dimension: 'fabric', values: Array(9).fill('Silk') }] } },\\n      { intent: { filters: [{ dimension: 'fabric', values: [] }] } },\\n      { intent: { filters: [{ dimension: 'fabric', values: ['x'.repeat(129)] }] } },\\n      { intent: { filters: [{ dimension: 'x'.repeat(65), values: ['Silk'] }] } },\\n      { weights: { affinity: -1 } }, { weights: { dims: { fabric: 11 } } },\\n      { limit: 0 }, { limit: 501 }, { limit: 1.5 }, { consent: { tracking: 'false' } },\\n    ]) {\\n      const out = await call(e, grant, invalid);\\n      expect(out.response.status).toBe(400); expect(out.body).toEqual({ ok: false, error: 'Invalid intent request' });\\n    }\\n    for (const overrides of [{ userId: 'vis-victim' }, { sessionId: 's-victim' }]) expect((await call(e, grant, overrides)).response.status).toBe(401);\\n    expect((await call(e, grant, {}, { 'X-Tenant': 'brighthour' })).response.status).toBe(401);\\n    expect(sessionReads).not.toHaveBeenCalled();\\n    expect([...e.SESSIONS.store]).toEqual(before);\\n\\n    async function streamed(text: string, authenticated: boolean, contentLength?: string) {\\n      let pulls = 0, cancelled = false;\\n      const chunks = new TextEncoder().encode(text);\\n      const stream = new ReadableStream<Uint8Array>({\\n        pull(controller) { pulls++; controller.enqueue(chunks); if (chunks.byteLength <= 256 * 1024) controller.close(); },\\n        cancel() { cancelled = true; },\\n      }, { highWaterMark: 0 });\\n      const headers = { 'Content-Type': 'application/json', 'X-Tenant': grant.tenant,\\n        ...(authenticated ? { [SHOPPER_HEADER]: grant.capability } : {}), ...(contentLength === undefined ? {} : { 'Content-Length': contentLength }) };\\n      const response = await sortRoutes.request(new Request('https://example.test/intent', {\\n        method: 'POST', headers, body: stream, duplex: 'half',\\n      } as RequestInit & { duplex: string }), undefined, e);\\n      return { response, pulls, cancelled, body: await response.json() };\\n    }\\n    const unauthorized = await streamed('x'.repeat(256 * 1024 + 1), false);\\n    expect(unauthorized.response.status).toBe(401); expect(unauthorized.pulls).toBe(0);\\n    for (const length of [undefined, '1']) {\\n      const oversized = await streamed(JSON.stringify(requestBody(grant, { candidates: [{ id: 'x', inStock: true, label: 'é'.repeat(128 * 1024) }] })), true, length);\\n      expect(oversized.response.status).toBe(413); expect(oversized.cancelled).toBe(true);\\n      expect(oversized.body).toEqual({ ok: false, error: 'Intent request too large' });\\n    }\\n    expect((await streamed('{broken', true)).response.status).toBe(400);\\n    expect(sessionReads).not.toHaveBeenCalled();\\n    const base = JSON.stringify(requestBody(grant, { candidates: [{ id: 'x', inStock: true, padding: '' }] }));\\n    const atLimit = base.replace('\\\"padding\\\":\\\"\\\"', `\\\"padding\\\":\\\"${'x'.repeat(256 * 1024 - new TextEncoder().encode(base).byteLength)}\\\"`);\\n    expect((await streamed(atLimit, true)).response.status).toBe(200);\\n\\n    for (const mode of ['stored', 'body', 'cookie'] as const) {\\n      const current = await warm(e);\\n      const key = tenantKey(current.tenant, `session:${current.sessionId}`);\\n      if (mode === 'stored') {\\n        const data = JSON.parse(e.SESSIONS.store.get(key)!);\\n        data.preferences.trackingConsent = false;\\n        e.SESSIONS.store.set(key, JSON.stringify(data));\\n      }\\n      const rawBefore = JSON.parse(e.SESSIONS.store.get(key)!);\\n      const out = await call(e, current, { weights: { affinity: 10 }, consent: mode === 'body' ? { personalization: false } : { tracking: true, personalization: true } },\\n        mode === 'cookie' ? { Cookie: 'opt_tracking_consent=false' } : {});\\n      expect(out.response.status).toBe(200); expect(out.body.order).toEqual(['p1', 'p2']);\\n      expect(out.body.items.every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);\\n      const rawAfter = JSON.parse(e.SESSIONS.store.get(key)!);\\n      expect(rawAfter.reflex).toEqual(rawBefore.reflex); expect(rawAfter.metadata).toEqual(rawBefore.metadata);\\n      expect((await call(e, current)).body.items.every(item => item.drivers.length === 0)).toBe(true);\\n    }\\n    const cold = await newAnonymousSession(e, grant.tenant);\\n    const coldBefore = new Set(e.SESSIONS.store.keys());\\n    expect((await call(e, cold, { consent: { tracking: false } })).response.status).toBe(200);\\n    const refusalKey = tenantKey(cold.tenant, `session:${cold.sessionId}`);\\n    expect([...e.SESSIONS.store.keys()].filter(key => !coldBefore.has(key))).toEqual([refusalKey]);\\n    const refusal = JSON.parse(e.SESSIONS.store.get(refusalKey)!);\\n    expect(refusal).not.toHaveProperty('reflex'); expect(refusal.metadata.sessionCount).toBe(0);\\n\\n    const asked: Headers[] = [];\\n    for (const reply of [\\n      { ok: true, consent: { tracking: false, personalization: true }, affinity: { dims: { fabric: { Silk: 0.9 } } } },\\n      { ok: true, consent: { tracking: true, personalization: true }, affinity: { dims: { fabric: { Silk: 0.9 } } } },\\n      { ok: true, consent: null, error: 'private-do-marker' }, { ok: false, error: 'private-do-marker' },\\n    ]) {\\n      const d = { ...e, REFLEX_HOST: 'do', SHOPPER_REFLEX: {\\n        idFromName: (name: string) => name, get: () => ({ fetch: async (_url: string, init: RequestInit) => {\\n          asked.push(new Headers(init.headers)); return Response.json(reply);\\n        } }),\\n      } } as unknown as FixtureEnv;\\n      const out = await call(d, grant, { consent: { personalization: false } });\\n      if (reply.ok && reply.consent) {\\n        expect(out.response.status).toBe(200); expect(out.body.order).toEqual(['p1', 'p2']);\\n        expect(out.body.items.every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);\\n      } else {\\n        expect(out.response.status).toBe(503); expect(out.body).toEqual({ ok: false, error: 'Intent ranking unavailable' });\\n      }\\n    }\\n    expect(asked.every(headers => headers.get('cookie') === 'opt_personalization_enabled=false' && headers.get(SHOPPER_HEADER) === grant.capability)).toBe(true);\\n    invalidateConfigCache();\\n    e.CACHE.store.set(`reflex:config:${grant.tenant}:current`, 'private-config-marker');\\n    const unavailable = await call(e, grant);\\n    expect(unavailable.response.status).toBe(503); expect(unavailable.body).toEqual({ ok: false, error: 'Intent ranking unavailable' });\\n    sessionReads.mockRestore();\\n  });\\n});\\n\",\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/sort.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]}]\n"
+        }
+      ],
+      "exit_status": 0,
+      "completion_observed_at": "2026-09-10 23:46:55 UTC",
+      "drained": true,
+      "session_id": 37630
+    },
+    {
+      "name": "primary",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/sort.test.ts src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-10 23:58:15 UTC",
+      "captures": [
+        {
+          "chunk_id": "2eafb4",
+          "wall_time_seconds": 1.000620641,
+          "session_id": 15154,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5cdb8e",
+          "wall_time_seconds": 5.001834243,
+          "session_id": 15154,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "3cf09b",
+          "wall_time_seconds": 2.466364868,
+          "exit_code": 0,
+          "original_token_count": 124,
+          "output": "stderr | src/routes/sort.test.ts > W14.01 POST /sort/intent > enforces owned consent, generic failures and authenticated streamed request bounds without behavior writes\n[config] read failed, serving fallback\n\n ✓ src/routes/sort.test.ts  (12 tests) 429ms\n ✓ src/ledger/ledger.test.ts  (10 tests) 72ms\n\n Test Files  2 passed (2)\n      Tests  22 passed (22)\n   Start at  19:58:23\n   Duration  43.53s (transform 8.20s, setup 0ms, collect 18.44s, tests 501ms, environment 0ms, prepare 18.00s)\n\n"
+        }
+      ],
+      "exit_status": 0,
+      "completion_observed_at": "2026-09-10 23:59:07 UTC",
+      "drained": true,
+      "session_id": 15154
+    },
+    {
+      "name": "compiler",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "started_at": "2026-09-10 23:59:14 UTC",
+      "captures": [
+        {
+          "chunk_id": "40fb2c",
+          "wall_time_seconds": 1.003877279,
+          "session_id": 65792,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "68ebdb",
+          "wall_time_seconds": 5.001088334,
+          "session_id": 65792,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f8d44a",
+          "wall_time_seconds": 0.000002135,
+          "exit_code": 2,
+          "original_token_count": 483,
+          "output": "src/routes/sort.test.ts(240,112): error TS2339: Property 'recordId' does not exist on type 'ProductSortPersistence'.\n  Property 'recordId' does not exist on type '{ status: \"not_scheduled\"; reason: \"tracking_refused\" | \"storage_unavailable\" | \"context_unavailable\" | \"invalid_record\" | \"record_too_large\"; }'.\nsrc/routes/sort.test.ts(298,34): error TS2345: Argument of type 'SortR2' is not assignable to parameter of type 'R2Like'.\n  The types returned by 'list(...)' are incompatible between these types.\n    Type 'Promise<void>' is not assignable to type 'Promise<{ objects: { key: string; }[]; truncated: boolean; cursor?: string | undefined; }>'.\n      Type 'void' is not assignable to type '{ objects: { key: string; }[]; truncated: boolean; cursor?: string | undefined; }'.\nsrc/routes/sort.test.ts(301,32): error TS2345: Argument of type 'SortR2' is not assignable to parameter of type 'R2Like'.\n  The types returned by 'list(...)' are incompatible between these types.\n    Type 'Promise<void>' is not assignable to type 'Promise<{ objects: { key: string; }[]; truncated: boolean; cursor?: string | undefined; }>'.\n      Type 'void' is not assignable to type '{ objects: { key: string; }[]; truncated: boolean; cursor?: string | undefined; }'.\nsrc/routes/sort.test.ts(306,32): error TS2345: Argument of type 'SortR2' is not assignable to parameter of type 'R2Like'.\n  The types returned by 'list(...)' are incompatible between these types.\n    Type 'Promise<void>' is not assignable to type 'Promise<{ objects: { key: string; }[]; truncated: boolean; cursor?: string | undefined; }>'.\n      Type 'void' is not assignable to type '{ objects: { key: string; }[]; truncated: boolean; cursor?: string | undefined; }'.\nsrc/routes/sort.test.ts(314,28): error TS2345: Argument of type 'SortR2' is not assignable to parameter of type 'R2Erasable'.\n  Property 'delete' is missing in type 'SortR2' but required in type 'R2Erasable'.\n"
+        }
+      ],
+      "exit_status": 2,
+      "completion_observed_at": "2026-09-11 00:00:20 UTC",
+      "drained": true,
+      "session_id": 65792
+    },
+    {
+      "name": "primary_final",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/sort.test.ts src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-11 00:02:36 UTC",
+      "captures": [
+        {
+          "chunk_id": "d58bb9",
+          "wall_time_seconds": 1.001577057,
+          "session_id": 52662,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "960285",
+          "wall_time_seconds": 5.001319317,
+          "session_id": 52662,
+          "original_token_count": 124,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/sort.test.ts  (12 tests) 261ms\nstderr | src/routes/sort.test.ts > W14.01 POST /sort/intent > enforces owned consent, generic failures and authenticated streamed request bounds without behavior writes\n[config] read failed, serving fallback\n\n"
+        },
+        {
+          "chunk_id": "333450",
+          "wall_time_seconds": 0.000002457,
+          "exit_code": 0,
+          "original_token_count": 60,
+          "output": " ✓ src/ledger/ledger.test.ts  (10 tests) 48ms\n\n Test Files  2 passed (2)\n      Tests  22 passed (22)\n   Start at  20:02:41\n   Duration  29.13s (transform 6.41s, setup 0ms, collect 14.02s, tests 309ms, environment 0ms, prepare 10.49s)\n\n"
+        }
+      ],
+      "exit_status": 0,
+      "completion_observed_at": "2026-09-11 00:03:25 UTC",
+      "drained": true,
+      "session_id": 52662
+    },
+    {
+      "name": "compiler_final",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "started_at": "2026-09-11 00:03:34 UTC",
+      "captures": [
+        {
+          "chunk_id": "8bbd7c",
+          "wall_time_seconds": 1.00078488,
+          "session_id": 27487,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c7c72b",
+          "wall_time_seconds": 3.078915405,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "exit_status": 0,
+      "completion_observed_at": "2026-09-11 00:04:11 UTC",
+      "drained": true,
+      "session_id": 27487
+    },
+    {
+      "name": "lint_final",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/productSort.ts src/ledger/records.ts src/ledger/writer.ts src/routes/sort.ts src/routes/decisions.ts src/learn/hourly.ts src/learn/report.ts src/routes/sort.test.ts src/ledger/ledger.test.ts --format stylish",
+      "started_at": "2026-09-11 00:04:18 UTC",
+      "captures": [
+        {
+          "chunk_id": "0e0006",
+          "wall_time_seconds": 1.001068067,
+          "session_id": 36475,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "cab51e",
+          "wall_time_seconds": 5.000990108,
+          "session_id": 36475,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "87173f",
+          "wall_time_seconds": 0.000002361,
+          "exit_code": 0,
+          "original_token_count": 114,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/sort.test.ts\n  113:29   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  212:137  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n  262:141  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+        }
+      ],
+      "exit_status": 0,
+      "completion_observed_at": "2026-09-11 00:06:07 UTC",
+      "drained": true,
+      "session_id": 36475
+    },
+    {
+      "name": "lint_final_replacement",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/productSort.ts src/ledger/records.ts src/ledger/writer.ts src/routes/sort.ts src/routes/decisions.ts src/learn/hourly.ts src/learn/report.ts src/routes/sort.test.ts src/ledger/ledger.test.ts --format stylish",
+      "started_at": "2026-09-11 00:06:42 UTC",
+      "captures": [
+        {
+          "chunk_id": "385795",
+          "wall_time_seconds": 1.000589098,
+          "session_id": 99545,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5f4e98",
+          "wall_time_seconds": 0.000003028,
+          "exit_code": 0,
+          "original_token_count": 58,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/sort.test.ts\n  113:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n\n✖ 1 problem (0 errors, 1 warning)\n\n"
+        }
+      ],
+      "exit_status": 0,
+      "completion_observed_at": "2026-09-11 00:07:48 UTC",
+      "drained": true,
+      "session_id": 99545
+    },
+    {
+      "name": "whitespace",
+      "command": "git diff --check -- src/ledger/productSort.ts src/ledger/records.ts src/ledger/writer.ts src/routes/sort.ts src/routes/decisions.ts src/learn/hourly.ts src/learn/report.ts src/routes/sort.test.ts src/ledger/ledger.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-11 00:06:57 UTC",
+      "completion_observed_at": "2026-09-11 00:06:58 UTC",
+      "exit_status": 0,
+      "drained": true,
+      "captures": [
+        {
+          "chunk_id": "a6ce06",
+          "wall_time_seconds": 0.784377306,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": null
+    },
+    {
+      "name": "whitespace_untracked",
+      "command": "git diff --no-index --check /dev/null src/ledger/productSort.ts",
+      "started_at": "2026-09-11 00:06:58 UTC",
+      "completion_observed_at": "2026-09-11 00:06:58 UTC",
+      "exit_status": 1,
+      "drained": true,
+      "captures": [
+        {
+          "chunk_id": "1dbc13",
+          "wall_time_seconds": 0.006457794,
+          "exit_code": 1,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": null
+    }
+  ],
+  "results": {
+    "primary_final": "22/22PASS,2files,29.13sreported; source precedes only two nonexecuting fixture comments",
+    "compiler_final": "exit0/drained; source precedes only two fixture comments",
+    "lint_final": "exit0/drained,0errors and1inherited no-explicit-any warning at sort.test.ts:113; no new warnings",
+    "whitespace": "Scoped tracked check exit0; untracked no-index check exit1/no diagnostics due new-file difference. Literal statuses retained.",
+    "active_sessions": []
+  }
+}
+

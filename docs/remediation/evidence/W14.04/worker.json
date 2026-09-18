@@ -1,0 +1,255 @@
+{
+  "task_id": "W14.04",
+  "actor_id": "w1404-worker",
+  "run_id": "/root/w1404_worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "status": "ready_for_independent_review",
+  "admission": {
+    "plan": "docs/remediation/design/W14.04/plan.md",
+    "plan_sha256": "9e70bd636896f2250bc25a55126ba5220531a1c39f99ddaa3e62f55d75cd8902",
+    "contract_digest": "f863dc6b45282b591e4c099bf5268c53055816244ed35666b67695425365683e",
+    "baseline": "docs/remediation/design/W14.04/baseline.json",
+    "go_at": "2026-09-11T04:33:23Z",
+    "journal": 901,
+    "root_reported_entry": "Full check/status54306/7b362c VALID893, both exit0/drained reused; worker did not repeat board.",
+    "root_reported_admission": "53825/ed2dd2 exit0/drained direct current-contract/start/authority/all30pre-edit-pins/four-owned checks. Not a full admission checker; final full board remains root responsibility.",
+    "root_reported_baseline_lint": "42153/1f212b exit0/drained empty, zero warnings, before GO."
+  },
+  "summary": "Explicit current-human publication of approved/edited tag additions through unchanged conditional catalog authority. Full raw target samples and both confirmed evidence digests bind the request; immutable revision note retains proposal/review linkage. Existing metadata/order/non-target state and deterministic decision behavior are preserved.",
+  "criteria": [
+    {
+      "id": "W14.04-C1",
+      "worker_result": "pass",
+      "evidence": "New first grouped route case applies approve/edit dispositions only, ignores rejected/existing/duplicate additions, preserves Unicode/case/original duplicate tags and inherited name toString, all metadata/windows/lifecycle/stock/product links and a newer unrelated title. Draft remains draft and out-of-stock excluded. Actual readPublication catalogs enter unchanged decideContent: competitor score0.3 before, approved sample score0.9 after with exact occasion:evening affinity driver; repeat on receipt document equals full decision output. Receipt retains original actor/time/operation/proposal/digests and JSON server note; proposal/review remain unmodified and capture/read/export published:false remains operation-local."
+    },
+    {
+      "id": "W14.04-C2",
+      "worker_result": "pass",
+      "evidence": "New second group rejects mismatched/malformed/extra-input digests and fields, missing/unreviewed/corrupt evidence, all-rejected/no-change, missing/replaced targets and raw drift in title/lifecycle presence/window/product-array order/unknown metadata/tags, plus corrupt/uninitialized catalog; every refusal asserts no put and identical object state. Third group runs open/enforced and atelier-a/atelier-b with real Hono tenant/JWT/current memory account-session checks; denied legacy/service/refresh/stale/demoted/disabled/password-change/revoked/cross-tenant/selectors/preconditions perform zero body getReader calls and zero STORAGE binding reads. Competing catalog publication yields one success/one409, exact original request replay returns same receipt even after later revision, another current human cannot replay as original actor, and one lost revision-write acknowledgement is recovered through existing generic service-authorized retained-intent recovery even with proposal temporarily absent. Other tenant objects remain byte-identical."
+    },
+    {
+      "id": "W14.04-C3",
+      "worker_result": "pass_pending_independent_review",
+      "evidence": "Exactly four source/doc files edited, one new adapter and three grouped additions to existing route fixture; final21 tests include original18. Final installed compiler and scoped3TS lint pass with zero warnings, scoped whitespace no diagnostics. Unchanged proposal/publisher/native primitive assurance reused per root admission; root owns protected-pin comparison, exact inverse deltas/freeze and separate review. No worker acceptance or full-W14 claim."
+    }
+  ],
+  "rework": [
+    {
+      "phase": "first_compiler_failure",
+      "description": "Initial route runtime27901 passed21/21. Compiler95586 exited2: inferred readonly tag array prohibited push after cloning, and new fixture default header inference rejected generic publication header maps. Changed adapter Map to retain explicit mutable cloned values with membership Set, and added Record<string,string> fixture parameter annotation. No scope/group expansion. Final compiler32420 and fixed primary28812 cover corrected source; full failed output retained below."
+    },
+    {
+      "phase": "read_only_preparation",
+      "description": "Initial broad text/read output was truncated; task-relevant source and instructions were reread in bounded calls. No truncated diagnostic or board run is credited as passing implementation evidence."
+    }
+  ],
+  "checks": [
+    {
+      "id": "W14.04-K1-initial",
+      "role": "historical_pre_correction_runtime",
+      "result": "pass_superseded_for_current_bytes",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts --maxWorkers=1 --minWorkers=1",
+      "results": [
+        {
+          "chunk_id": "675345",
+          "wall_time_seconds": 1.000327765,
+          "session_id": 27901,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b56094",
+          "wall_time_seconds": 5.000828836,
+          "session_id": 27901,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "57ae9e",
+          "wall_time_seconds": 0.000002028,
+          "exit_code": 0,
+          "original_token_count": 60,
+          "output": " ✓ src/routes/content.test.ts  (21 tests) 722ms\n\n Test Files  1 passed (1)\n      Tests  21 passed (21)\n   Start at  00:38:08\n   Duration  10.65s (transform 1.37s, setup 0ms, collect 4.09s, tests 722ms, environment 0ms, prepare 4.17s)\n\n"
+        }
+      ],
+      "first_yield_observed_at": "2026-09-11T04:38:05.313Z",
+      "drained": true
+    },
+    {
+      "id": "W14.04-K2-initial-compiler",
+      "role": "retained_failure",
+      "result": "fail",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "startedAt": "2026-09-11T04:38:39.579Z",
+      "results": [
+        {
+          "chunk_id": "d180ea",
+          "wall_time_seconds": 1.000462766,
+          "session_id": 95586,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "718bbe",
+          "wall_time_seconds": 5.00055497,
+          "session_id": 95586,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "9bef33",
+          "wall_time_seconds": 0.000002452,
+          "exit_code": 2,
+          "original_token_count": 2274,
+          "output": "src/content/enrichmentPublication.ts(54,28): error TS2339: Property 'push' does not exist on type 'readonly string[]'.\nsrc/routes/content.test.ts(532,63): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(545,118): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(572,91): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(607,133): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(624,74): error TS2345: Argument of type '{ Authorization: string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ Authorization: string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant'\nsrc/routes/content.test.ts(627,61): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(629,50): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(632,116): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(636,50): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(638,88): error TS2353: Object literal may only specify known properties, and ''If-Match'' does not exist in type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\nsrc/routes/content.test.ts(639,50): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(643,58): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(646,76): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(646,120): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(650,66): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(652,64): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(653,58): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(655,65): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(656,64): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(661,58): error TS2345: Argument of type '{ Authorization: string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ Authorization: string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant'\nsrc/routes/content.test.ts(665,74): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\nsrc/routes/content.test.ts(669,72): error TS2345: Argument of type '{ Authorization: string; }' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type '{ Authorization: string; }' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant'\nsrc/routes/content.test.ts(671,84): error TS2345: Argument of type 'Record<string, string>' is not assignable to parameter of type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }'.\n  Type 'Record<string, string>' is missing the following properties from type '{ 'Content-Type': string; 'X-Tenant': string; Authorization: string; }': 'Content-Type', 'X-Tenant', Authorization\n"
+        }
+      ],
+      "drained": true
+    },
+    {
+      "id": "W14.04-K2-final-lint",
+      "result": "pass",
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/enrichmentPublication.ts src/routes/content.ts src/routes/content.test.ts --format stylish",
+      "startedAt": "2026-09-11T04:39:54.928Z",
+      "results": [
+        {
+          "chunk_id": "a91f16",
+          "wall_time_seconds": 1.000680463,
+          "session_id": 42427,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "dd87c6",
+          "wall_time_seconds": 5.001289705,
+          "session_id": 42427,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "598c56",
+          "wall_time_seconds": 0.000001419,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "drained": true
+    },
+    {
+      "id": "W14.04-K2-final-compiler",
+      "result": "pass",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false",
+      "startedAt": "2026-09-11T04:40:37.000Z",
+      "results": [
+        {
+          "chunk_id": "92e802",
+          "wall_time_seconds": 1.000516639,
+          "session_id": 32420,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "7026b3",
+          "wall_time_seconds": 1.543385056,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "drained": true
+    },
+    {
+      "id": "W14.04-K2-tracked-whitespace",
+      "result": "pass",
+      "command": "git diff --check -- src/content/enrichmentPublication.ts src/routes/content.ts src/routes/content.test.ts docs/kit/03-payload-schemas.md",
+      "startedAt": "2026-09-11T04:40:25.070Z",
+      "results": [
+        {
+          "chunk_id": "f17d78",
+          "wall_time_seconds": 0.00548989,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "drained": true
+    },
+    {
+      "id": "W14.04-K2-new-module-whitespace",
+      "result": "no_whitespace_diagnostics",
+      "qualification": "git diff --no-index --check /dev/null newfile exits1 for file difference with empty output; actual exit1 retained, not relabeled exit0.",
+      "command": "git diff --no-index --check /dev/null src/content/enrichmentPublication.ts",
+      "startedAt": "2026-09-11T04:40:25.070Z",
+      "results": [
+        {
+          "chunk_id": "dfc65c",
+          "wall_time_seconds": 0.000002143,
+          "exit_code": 1,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "drained": true
+    },
+    {
+      "id": "W14.04-K1-final",
+      "role": "final_bytes_primary",
+      "result": "pass",
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/content.test.ts --maxWorkers=1 --minWorkers=1",
+      "startedAt": "2026-09-11T04:41:00.700Z",
+      "results": [
+        {
+          "chunk_id": "04fc97",
+          "wall_time_seconds": 1.000674331,
+          "session_id": 28812,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "f88a34",
+          "wall_time_seconds": 0.00000247,
+          "exit_code": 0,
+          "original_token_count": 119,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/routes/content.test.ts  (21 tests) 754ms\n\n Test Files  1 passed (1)\n      Tests  21 passed (21)\n   Start at  00:41:03\n   Duration  7.04s (transform 1.08s, setup 0ms, collect 2.66s, tests 754ms, environment 0ms, prepare 2.45s)\n\n"
+        }
+      ],
+      "drained": true
+    }
+  ],
+  "limitations": [
+    "Bounded local supplied-proposal publication leg only; no AI generation/provider/network call, UI, taxonomy/customer sample calibration, asset-byte attestation, real initialization/cutover or full §1.3/W14 acceptance.",
+    "Current human session establishes current account authority at admission, not physical-person identity or atomic revocation of already-running work. Generic recovery may finish already-retained human intent under current human/service tenant authority without new approval.",
+    "Synthetic conditional R2 route fixture is integration evidence; unchanged accepted W11 native primitive assurance is reused, not a new native/deployed consistency test. Storage throttling/error yields503 and may leave a pending reservation requiring exact recovery.",
+    "Raw sample extra metadata absent from normalized current catalog conflicts; this adapter does not solve W19 lossless importing. Unrelated catalog-level version and non-target changes are permitted only with current If-Match. All-rejected/no-change application does not create a revision.",
+    "Original receipt replay may be older than current catalog. Existing published:false responses do not inspect publication history. Serving visibility retains unchanged <=30s cache bound excluding in-flight reads; no immediate-effect/SLO/customer guarantee.",
+    "21 local tests and decision score example are not product lift, browser/customer acceptance or throughput/latency qualification. D05/D10, retention/privacy/audit policies, full W11/W14/findings/gates/release remain open.",
+    "Only assigned source/doc/evidence paths edited. No governance edits, commits/pushes/deploy/build/install/provision/seed/cloud/credentials/customer-data/external messages/destructive cleanup or rollback."
+  ],
+  "source_stop_at": "2026-09-11T04:42:34.877Z",
+  "source_identity": {
+    "observed_at": "2026-09-11T04:41:17.107Z",
+    "files": [
+      {
+        "path": "src/content/enrichmentPublication.ts",
+        "sha256": "8956b007c0a9a766d794d7f33f07ca268607dfbd7f4921f4bb23e9a8edbcb21d"
+      },
+      {
+        "path": "src/routes/content.ts",
+        "sha256": "38ca715650d602fb7ce07316494911dad6a657a614114f3b00ccca850b69e0ee"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "68d111cd19045415e0f486f573eb168b92281585d84b0df3037b496ad7e56fad"
+      },
+      {
+        "path": "docs/kit/03-payload-schemas.md",
+        "sha256": "749ed9c30312df9ad456dc6f46ecc4a9b5657d026371e4e91396cbcffd0b21c5"
+      }
+    ]
+  },
+  "pending_sessions": [],
+  "rollback": "Root-managed exact inverse deltas of the four owned outputs, preserving inherited work; no rollback executed.",
+  "next_action": "Root freezes exact artifact/protected pins/bidirectional deltas and assigns separate Astra/xhigh reviewer. Worker remains STOP; lead alone accepts bounded task and updates tracker/journal/RESUME and final full board."
+}

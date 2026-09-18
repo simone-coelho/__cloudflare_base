@@ -1,0 +1,68 @@
+{
+  "task_id": "W08.05",
+  "at": "2026-09-17T19:08:40.000Z",
+  "actor_id": "w01-lead",
+  "verdict": "LOCAL_W08_IMPLEMENTED_AND_INDEPENDENTLY_VERIFIED; full acceptance withheld",
+  "artifact_digest": "4a6048227ba05e1a72be6c12f148b05173b74ffe53083298505f376f5696e5ed",
+  "contract_digest": "19a5a684f4cdf78a065a9d255bdba6be73edceb1ffcbe246205233f0e41a67d2",
+  "review": {
+    "path": "docs/remediation/evidence/W08.05/review-r1.json",
+    "sha256": "6c6c5aa6b9561cba69cf2ff91376aa6e2d6ffedf473cec948a38b4435d690c52"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W08.05/worker-r1.json",
+    "sha256": "9d3f154b69e31ee7e5283b773274ec42c71603a6ca7316024aacd3dcb42943c3"
+  },
+  "source_freeze": {
+    "path": "docs/remediation/evidence/W08.05/source-freeze-r1.json",
+    "sha256": "99e418289d45fa1506fa53d74eabad7e14c29d16717b33898bd3bc0b63f58387"
+  },
+  "results": {
+    "K1": "Qualified component assurance: unchanged original seed/material controls plus superseding corrected workflow and actual package/native. Original failed full commands remain; no final fullK1 PASS claimed.",
+    "K2": "Final exact fourJSsyntax/threebashparse/12outputwhitespace PASS, fd5eb7dad1e45deb66e321b4d00d8c96a986b685eb68f836f51444f172c41608/8784B. No shell script body executed.",
+    "K3": "Distinct whole-original-W08 C1-C7 actual source/delta/dependency/primary review PASS_LOCAL; R1–R3, completed-quarantine continuation and final activation-drift corrections confirmed.",
+    "K4": "Exact independent corrected new-group command PASS11; complete primary and969before/after pins retained in review-r1. All969artifact pins unchanged. Earlier PASS8 non-discriminating/rejection and all worker red attempts preserved.",
+    "K5": "NOT_RUN: full separately authorized live/customer/account/resource/material/schema/alert/maintenance/rollback/restore/provider/privacy/history acceptance."
+  },
+  "lead_checks": "Reread standing agreement and complete originalW08/criteria; independently verified3rework reversible patches against held dirty baselines,62final/966unchanged protected pins,8primaryintegrities,936package inputs/337barriers and exact unrelated postpackage guard qualification; original12deltas/5primaries assurance retained. Read distinct final review and complete independentprimary; no root product edits/tests.",
+  "package": {
+    "artifact": "ad18e9851b65bcb00164a8f99894e0f47b741764f209e578b3431c97204c5763",
+    "primary": "d164135a52077990fb0119016ab5110a779ab1f4d30b00efe31eb80b72a070a0",
+    "manifest": {
+      "sha256": "e3b7432e1cd5838d835d614b385c3b49570ecffacb117ae0a532653693106fe4",
+      "bytes": 344293,
+      "reference": "Complete canonical Offline artifact manifest retained in R.package.1 stdout chunks; remove TAP newline # continuation only."
+    },
+    "qualification": "Only late resume schedules/traffic/final-activation guards and wording changed after package: builder, validation/closure, imports/config/tools, actual engine/SDK/assets/migrations and 337 enforcement pins unchanged. No rebuilt artifact or final whole-script package claim."
+  },
+  "limits": "FullC8/K5/W08/finding/customer/provider/resource/history/release remains open. This transport is not cross-operation atomic; actual owner-maintained quiescence and live evidence remain required. SOURCE/EVIDENCE STOP and all worker/reviewer sessions drained.",
+  "next_action": "OriginalW09 local implementation under standing ordered mandate; prospectively qualify only 26 overlapping pins, preserve this immutable local verdict and all untouched remedies. Batch separately authorized live checks at end.",
+  "prospective_overlap": [
+    "docs/deployment/01-deploy.md",
+    "scripts/stamp-workflow.mjs",
+    "scripts/stamp-workflow.test.mjs",
+    "src/auth/store.ts",
+    "src/auth/subjectAudit.ts",
+    "src/content/service.ts",
+    "src/customerBoundary.ts",
+    "src/durable-objects/DecisionRing.ts",
+    "src/durable-objects/LearnStats.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/identity/erase.ts",
+    "src/identity/sessionAuthority.ts",
+    "src/index.ts",
+    "src/learn/fan.ts",
+    "src/learn/route.ts",
+    "src/ledger/consume.ts",
+    "src/ledger/delivery.ts",
+    "src/ledger/enqueue.ts",
+    "src/ledger/erasure.ts",
+    "src/ledger/writer.ts",
+    "src/retention.ts",
+    "src/routes/decisions.ts",
+    "src/routes/health.ts",
+    "src/routes/realtime.ts",
+    "src/types/env.ts",
+    "wrangler.toml"
+  ]
+}

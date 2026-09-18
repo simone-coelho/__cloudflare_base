@@ -1,0 +1,33 @@
+{
+  "task_id": "W07.05",
+  "at": "2026-09-17T17:20:09.734Z",
+  "actor_id": "w01-lead",
+  "verdict": "LOCAL_W07_IMPLEMENTED_AND_INDEPENDENTLY_VERIFIED; full acceptance withheld",
+  "artifact_digest": "fdad94054d8eb62702ffa01974a337430ce44fd1adfe86f1f1a33b0f277cbdd2",
+  "contract_digest": "d6b0a2d4a31c5055c4f318a01962ab21bb911aed22abdc2bbb1dfea9fe8e4969",
+  "review": {
+    "path": "docs/remediation/evidence/W07.05/review.json",
+    "sha256": "19ef760827c192eaee918f4823151bccb5489986939724353521aaf0e5f49efb"
+  },
+  "worker": {
+    "path": "docs/remediation/evidence/W07.05/worker.json",
+    "sha256": "e744a4169afed51eea1fcbe6acfc6a07aa398e0574ec5fb3c7e33cf6808e1a1c"
+  },
+  "source_freeze": {
+    "path": "docs/remediation/evidence/W07.05/source-freeze.json",
+    "sha256": "dbaddd25d654757e4d56eca284d901754e8fecaf8f1ad02ed7182f94ab35ea0a"
+  },
+  "results": {
+    "K1": "67passes source-qualified after equivalent tokenizer and unrelated later fixture/doc changes; not a post-rework full-command rerun.",
+    "K2": "Qualified component assurance only:43unchangedpasses from K2.2 exit1 plus corrected1case; exact sole import reversed to held input. R1.runtime.1 supersedes affectedpreferences/consent with15pass. NOT full final-command PASS.",
+    "K3": "89passes and generator/source/ESM/IIFE retained; unchanged SDK and exact tokenizer qualification. Byte-identical bundleRepeat retained.",
+    "K4": "Bothcompilers/scopedlint/bundle syntax/whitespace pass with explicit reused unchanged components; final server/two-file static supersedes rework.216warnings=205inherited+11test-only added,9resolved;111reworkwarnings unchanged.",
+    "K5": "Distinct whole-original-W07 C1-C6 actual source/delta/dependency/primary review PASS_LOCAL; all33dirty-baselines/243pins/22worker primary integrities verified.",
+    "K6": "Exact independent14-fixture new-group command PASS15/401unselected,9filespass/5withoutselectedgroups,71.94s. Primary JSON3726bytes SHA234d75b2d33c7428742facf8428e175394a8c8c87ef8a1d13d87ae1705d3378a; all243before/after/currentpins identical.",
+    "K7": "NOT_RUN: separately authorized final live/historical/resource/access/retention/customer/provider/browser acceptance."
+  },
+  "lead_checks": "Reread AGENTS and complete current W07 criteria/originalscope; inspected final review and primary. b68a70 verified33forward/reverse patches/22primaries/243pins/original10field recovery. 6c2f0b verified narrow5route+29fixture rework.683e14 independently decoded/read/hashchecked completeK6 and243pins. Root no product edits/tests.",
+  "history": "Original19attempts/failures intact; three rework attempts retain actual red/green/static outcomes and times. Restart recovery attribution preserved. No prior run redated/relabelled and no finalfullK2 PASS invented.",
+  "limits": "Full C7/K7/W07/finding/customer/provider/resource/history/browser/release remains open. No actual privacy periods, historical disposition or external operations approved. SOURCE/EVIDENCE STOP, all review/worker sessions drained.",
+  "next_action": "OriginalW08 local implementation under standing ordered mandate. Prospectively qualify only wrangler.toml overlap, retain immutable W07 local PASS and242untouched pins/component assurance; final separately authorized live batch."
+}

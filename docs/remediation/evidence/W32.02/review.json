@@ -1,0 +1,209 @@
+{
+  "at": "2026-09-12T21:44:05Z",
+  "task_id": "W32.02",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "dd085b87c12bead51df2a315a483716b413ad97bf09fd75103e760f44fb4f066",
+  "contract_digest": "61a2d54d608eb5525991b612c92b220d9f0eccf7f3685140a5034e22c1463250",
+  "verdict": "PASS",
+  "summary": "Independent review passes the admitted raw-report reuse and application-budget slice on frozen bytes. This is not full W32, a net performance improvement, native capacity, customer acceptance or release approval.",
+  "criteria": [
+    {
+      "id": "W32.02-C1",
+      "verdict": "PASS",
+      "evidence": "Inspected the actual report implementation and grouped fixture: policy-independent exposures and slot counts are computed once; each policy receives a detached full StatsState. Original input order, first-ID-wins attribution, repeated credits, later duplicate-policy-name overwrite, sorted outputs and input immutability remain. The independent fixed command passed; the retained lead comparison establishes exact full-JSON parity for all eight outputs per size at 2,000 and 10,000 decisions."
+    },
+    {
+      "id": "W32.02-C2",
+      "verdict": "PASS",
+      "evidence": "Actual pure builder, strict raw loader, hourly bridge and authenticated POST enforce the admitted bounds: 50,000 records per stream, six total policies, 800 shared objects, 16 MiB per object and combined raw text, 1,000,000 estimated work, 16,384 projected cells, component/key bounds, 8 MiB output and 64 KiB streamed POST body. Both raw streams are listed into a shared bounded key cache before object reads; cursor/traversal bounds prevent indefinite listing. Native size prechecks and actual UTF-8 checks, cached nested-map projection/parent closure, sanitized no-store 400/413 and refusal before canonical put were inspected. Existing grouped cases cover exact boundaries, early cancellation, no partial publication, real JWT/tenant routing, legacy POST zero omission and generic loadDay behavior."
+    },
+    {
+      "id": "W32.02-C3",
+      "verdict": "PASS",
+      "evidence": "Reviewed the actual five forward/reverse deltas, final source, all three new fixture groups and six retained selections, kit limits, complete worker history and both measurements. The single independent final-byte invocation passed 9 with 25 unselected. Reused the final compiler/lint/whitespace capture and lead measurement without rerunning either. All 46 artifact pins, 30 protected pins, five bidirectional reconstructions and the current task contract match before and after execution."
+    }
+  ],
+  "findings": [],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W32.02/plan-r2.md",
+      "sha256": "2885e740b617bbac4cd30c2d05d4d76946c65d074d68d5cf6a44e335247847da"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W32.02/artifact.json",
+      "sha256": "1fc794330a5db636bb9fa53d6d534f01fb22746137802867df2946fc92bcc6cd"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.02/worker.json",
+      "sha256": "d846de149980bc13228a21dfd7a17ca558a946eec1da88ecfe9d338f2c50d888"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts -t 'W32.02|W32.01|W33.01|W21 retains repeated credits|the learning grid, the reporting overlays|the day report comes from the hours' --maxWorkers=1 --minWorkers=1",
+    "session_id": 98509,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "24edd9",
+        "wall_time_seconds": 1.001228784,
+        "session_id": 98509,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "bf5d4a",
+        "wall_time_seconds": 0.000001927,
+        "exit_code": 0,
+        "original_token_count": 139,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/report.test.ts  (13 tests | 5 skipped) 480ms\n ✓ src/learn/hourly.test.ts  (21 tests | 20 skipped) 12ms\n\n Test Files  2 passed (2)\n      Tests  9 passed | 25 skipped (34)\n   Start at  17:36:00\n   Duration  9.41s (transform 1.99s, setup 0ms, collect 4.22s, tests 492ms, environment 0ms, prepare 3.34s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 9,
+      "unselected": 25,
+      "total": 34,
+      "test_files": 2,
+      "new_grouped_cases": 3,
+      "retained_selected_cases": 6,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 46,
+    "source_and_output_pins": 35,
+    "protected_pins": 30,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 5,
+    "manifest_sha256": "1fc794330a5db636bb9fa53d6d534f01fb22746137802867df2946fc92bcc6cd",
+    "before": [
+      {
+        "chunk_id": "bd3a13",
+        "wall_time_seconds": 0.045432058,
+        "exit_code": 0,
+        "original_token_count": 377,
+        "output": "{\n  \"at\": \"2026-09-12T21:35:57.105Z\",\n  \"artifact_digest\": \"dd085b87c12bead51df2a315a483716b413ad97bf09fd75103e760f44fb4f066\",\n  \"manifest_sha256\": \"1fc794330a5db636bb9fa53d6d534f01fb22746137802867df2946fc92bcc6cd\",\n  \"pins\": 46,\n  \"bad\": [],\n  \"protected_count\": 30,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/learn/report.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/learn/hourly.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/decisions.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/learn/report.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W32.02/plan-r2.md\",\n      \"sha256\": \"2885e740b617bbac4cd30c2d05d4d76946c65d074d68d5cf6a44e335247847da\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W32.02/artifact.json\",\n      \"sha256\": \"1fc794330a5db636bb9fa53d6d534f01fb22746137802867df2946fc92bcc6cd\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W32.02/worker.json\",\n      \"sha256\": \"d846de149980bc13228a21dfd7a17ca558a946eec1da88ecfe9d338f2c50d888\"\n    }\n  ]\n}\n"
+      }
+    ],
+    "after": [
+      {
+        "chunk_id": "1d9fdc",
+        "wall_time_seconds": 0.080577381,
+        "exit_code": 0,
+        "original_token_count": 377,
+        "output": "{\n  \"at\": \"2026-09-12T21:44:02.056Z\",\n  \"artifact_digest\": \"dd085b87c12bead51df2a315a483716b413ad97bf09fd75103e760f44fb4f066\",\n  \"manifest_sha256\": \"1fc794330a5db636bb9fa53d6d534f01fb22746137802867df2946fc92bcc6cd\",\n  \"pins\": 46,\n  \"bad\": [],\n  \"protected_count\": 30,\n  \"protected_bad\": [],\n  \"deltas\": [\n    {\n      \"path\": \"src/learn/report.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/learn/hourly.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/routes/decisions.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"src/learn/report.test.ts\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"before\": true,\n      \"after\": true,\n      \"forward\": true,\n      \"reverse\": true\n    }\n  ],\n  \"basis\": [\n    {\n      \"path\": \"docs/remediation/design/W32.02/plan-r2.md\",\n      \"sha256\": \"2885e740b617bbac4cd30c2d05d4d76946c65d074d68d5cf6a44e335247847da\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W32.02/artifact.json\",\n      \"sha256\": \"1fc794330a5db636bb9fa53d6d534f01fb22746137802867df2946fc92bcc6cd\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W32.02/worker.json\",\n      \"sha256\": \"d846de149980bc13228a21dfd7a17ca558a946eec1da88ecfe9d338f2c50d888\"\n    }\n  ]\n}\n"
+      }
+    ],
+    "contract_before": [
+      {
+        "chunk_id": "010fe2",
+        "wall_time_seconds": 0.017503856,
+        "exit_code": 0,
+        "original_token_count": 61,
+        "output": "{\"at\":\"2026-09-12T21:35:57.357Z\",\"task\":\"W32.02\",\"state\":\"verification\",\"contract_digest\":\"61a2d54d608eb5525991b612c92b220d9f0eccf7f3685140a5034e22c1463250\",\"artifact_digest\":\"dd085b87c12bead51df2a315a483716b413ad97bf09fd75103e760f44fb4f066\"}\n"
+      }
+    ],
+    "contract_after": [
+      {
+        "chunk_id": "b3d505",
+        "wall_time_seconds": 0.031114789,
+        "exit_code": 0,
+        "original_token_count": 61,
+        "output": "{\"at\":\"2026-09-12T21:44:02.093Z\",\"task\":\"W32.02\",\"state\":\"verification\",\"contract_digest\":\"61a2d54d608eb5525991b612c92b220d9f0eccf7f3685140a5034e22c1463250\",\"artifact_digest\":\"dd085b87c12bead51df2a315a483716b413ad97bf09fd75103e760f44fb4f066\"}\n"
+      }
+    ],
+    "output_ownership_mismatches": [],
+    "inspection": "Actual plan/task and frozen metadata: 0f4c00/11c362. Actual five deltas and complete grouped fixtures: 898b50/e952aa/a117fc. Full worker history, final commands and both STOP captures: 01d9ee/369e7e/7c21e0. The truncated initial worker display was supplemented by complete selected capture reads. Actual measurement commands/results, captured-result equality, executed source reconstruction and all 92 dependency identities in each measurement: 97d711/8da78b."
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W32.02/worker.json",
+      "sha256": "d846de149980bc13228a21dfd7a17ca558a946eec1da88ecfe9d338f2c50d888"
+    },
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/report.test.ts src/learn/hourly.ts src/routes/decisions.ts --max-warnings 0 && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/routes/decisions.ts src/learn/report.test.ts docs/kit/02-api-reference.md",
+    "session_id": 1367,
+    "captures": [
+      "e51e46",
+      "251dfd"
+    ],
+    "started_at": "2026-09-12T21:31:54.097Z",
+    "ended_at": "2026-09-12T21:32:56.533Z",
+    "exit_status": 0,
+    "drained": true,
+    "compiler_errors": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace": "PASS",
+    "reviewer_reruns": 0,
+    "qualification": "Final worker captures inspected and bound to the frozen source; no static replay."
+  },
+  "measurement_reuse": {
+    "path": "docs/remediation/evidence/W32.02/measurement.json",
+    "sha256": "e7d2445ff9991ed539b2d395134750351741b4f084a04688b279385e00298d04",
+    "actor": "lead; reused, not reviewer execution",
+    "session_id": 50533,
+    "captures": [
+      "4b54e9",
+      "a871d3"
+    ],
+    "at": "2026-09-12T21:33:21.967Z",
+    "exit_status": 0,
+    "drained": true,
+    "reviewer_reruns": 0,
+    "dependency_identities_checked": 92,
+    "actual_captured_result_matches_record": true,
+    "source_before_sha256": "62318a298a46c055a861cf0e3a636dfa746bf4a0f9ebcad5741a0e60919a4091",
+    "source_after_sha256": "5a7d06a222680a6ba4714994f1a242948afae6b4bbd270671f2ce74f8ffe51f8",
+    "comparisons": [
+      {
+        "decisions": 2000,
+        "outputs_compared": 8,
+        "exact_json_parity": true,
+        "input_unchanged": true,
+        "before_median_ms": 9.566971,
+        "after_median_ms": 11.773879
+      },
+      {
+        "decisions": 10000,
+        "outputs_compared": 8,
+        "exact_json_parity": true,
+        "input_unchanged": true,
+        "before_median_ms": 42.977108,
+        "after_median_ms": 45.921923
+      }
+    ],
+    "retained_attempt": {
+      "path": "docs/remediation/evidence/W32.02/measurement-attempt1.json",
+      "sha256": "597f54cbd361092e6d85dee28b8d47b7c5347a36e941d07fe729cb4d994cb9d0",
+      "session_id": 52483,
+      "captures": [
+        "50b44b",
+        "a6b9d2"
+      ],
+      "at": "2026-09-12T21:26:31.830Z",
+      "exit_status": 0,
+      "exact_json_parity": true,
+      "decisions_10000_before_median_ms": 45.464485,
+      "decisions_10000_after_median_ms": 150.627448,
+      "qualification": "Executed candidate source reconstructed from retained baseline and delta; regression prompted allocation optimizations without loosening budgets. Superseded, not hidden."
+    },
+    "qualification": "Local Node v22.15.0/linux x64, actual before/current modules bundled in memory, low-cardinality synthetic data, one warmup pair and three alternating measured pairs. Final timings retain modest overhead, not a total speedup or native/SLO claim. The generic record wording 'excludes serialization' is overbroad: the actual timer includes all buildReport work, including admission/full-row JSON and internal rawReportJson output-limit serialization; only the external comparison JSON.stringify after elapsed is excluded."
+  },
+  "retained_failures_and_qualifications": [
+    "The initial five-policy cap was corrected to six total policies in plan-r2 before any runtime, preserving the existing four-preset-plus-custom UI flow; original admission history remains.",
+    "Retained a no-write kit patch-context failure. Initial static session 14392/8b6f44 exited 2 on a fixture mock signature and required TextDecoder ignoreBOM options; lint/whitespace were not reached.",
+    "Worker runtime candidates 88998/9b0a08, 28022/9ef385 and 92806/f7156b passed but were superseded by compatibility corrections and the measured-regression optimization. Static 72428/5ae75f and the first STOP were likewise superseded. Final runtime 22936/975063 and static 1367/251dfd apply to final STOP 2026-09-12T21:33:03.194Z.",
+    "Both passing-output measurements and the initial substantial regression remain. No measurement or source history was rewritten to manufacture a speedup."
+  ],
+  "limitations": [
+    "Raw-report application admission only: estimates are not native instruction, memory or provider-capacity guarantees. Pure caller inputs already exist; full-row and final-output serialization allocate before their resulting size can be checked. Text-only R2 adapters lack native preallocation prevention; stream/native-size paths are stronger.",
+    "Aggregate construction, saved GET/window reports, lightweight summaries, tombstone/config/auth loading, full W32 model/envelope work and customer operating ranges remain outside this slice.",
+    "Existing first-ID and duplicate-policy-name semantics, canonical-versus-canonical races, swallowed canonical persistence acknowledgements and historical repair limitations are preserved, not fixed. W33 custom-report isolation and retained W30/W21 checks remain intact.",
+    "No deployed/native/HTTP load benchmark, statistical acceptance, cloud operation, customer-data exercise, new infrastructure, full-package closure or release approval."
+  ]
+}

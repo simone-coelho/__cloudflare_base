@@ -1,0 +1,19 @@
+{
+  "at": "2026-09-11T23:55:41Z",
+  "actor": "w01-lead",
+  "source_go": true,
+  "command": "node --input-type=module -e 'import fs from \"node:fs\";import assert from \"node:assert/strict\";import{sha256,taskContractDigest}from\"./scripts/remediation/board.mjs\";const d=JSON.parse(fs.readFileSync(\"docs/remediation/tracker.json\")),t=d.tasks.find(t=>t.id===\"W09.03\"),b=JSON.parse(fs.readFileSync(\"docs/remediation/design/W09.03/baseline.json\"));assert.equal(t.state,\"in_progress\");assert.equal(d.tasks.filter(t=>[\"in_progress\",\"verification\"].includes(t.state)).length,1);assert.equal(sha256(fs.readFileSync(t.preflight.plan.path)),t.preflight.plan.sha256);assert.equal(taskContractDigest(t),t.preflight.contract_digest);const s=d.journal.find(e=>e.task_id===t.id&&e.to===\"in_progress\");assert.deepEqual(s.plan_snapshot,t.preflight);const a=d.authority.local_authorization.scope_extensions.find(e=>e.scope_task_ids.includes(t.id));assert(a);assert.equal(sha256(fs.readFileSync(a.record.path)),a.record.sha256);assert(a.at<=s.at);for(const f of b.pins)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);for(const c of d.tasks.filter(t=>t.state===\"closed\"))for(const f of c.artifact.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256);assert.equal(sha256(JSON.stringify(d.journal.slice(0,b.prior_journal_length))),b.prior_journal_sha256);console.log(JSON.stringify({task:t.id,journal:d.journal.length,plan:t.preflight.plan.sha256,contract:t.preflight.contract_digest,pins:b.pins.length,owned:b.owned.length,protected:b.pins.filter(p=>p.role!==\"output\").length,checks:\"PASS\",source_go:\"eligible\"}));'",
+  "captures": [
+    {
+      "chunk_id": "0491c4",
+      "wall_time_seconds": 0.761054623,
+      "exit_code": 0,
+      "original_token_count": 65,
+      "output": "{\"task\":\"W09.03\",\"journal\":1042,\"plan\":\"b7cf4ee1964c95ffa41f191be0b8376c2742ca65456594526ba89e820579e90b\",\"contract\":\"ad654fb9be1c7cc87d44475863bac22cb8f581f238131b1bf49cfc05685047b6\",\"pins\":75,\"owned\":6,\"protected\":69,\"checks\":\"PASS\",\"source_go\":\"eligible\"}\n"
+    }
+  ],
+  "exit_code": 0,
+  "drained": true,
+  "entry": "check/status99719 VALID1033 reused; append-only journal prefix and exact source pins checked.",
+  "limitations": "Consumer malformed-envelope and positional acknowledgement containment only. No full W09/F16/N10 closure, durable quarantine/DLQ, provider retry-exhaustion recovery, legacy partial-write idempotency, per-delivery storage-failure isolation, fan-out/logical-event reconciliation, complete erasure fencing, fold/capacity, deployed SLO/customer/release assurance. Unversioned/version1 legacy remain supported; a completely removed managed ID is indistinguishable from legitimate legacy. No external/cloud-resource/customer-data/credential/deploy/install/emitted-build/commit/push/cleanup or customer-policy authority."
+}

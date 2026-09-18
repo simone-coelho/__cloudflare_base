@@ -1,0 +1,56 @@
+{
+  "at": "2026-09-11T22:04:08Z",
+  "task_id": "W09.01",
+  "journal_seq": 1019,
+  "command": "node --max-old-space-size=768 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>134217728&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+  "session_id": 56257,
+  "exit_status": 0,
+  "drained": true,
+  "result": "Both existing board check/status VALID after lead acceptance; tracker consistency only.",
+  "historical_limitation_notes_each": 12411,
+  "captures": [
+    {
+      "chunk_id": "f3e197",
+      "wall_time_seconds": 1.001144725,
+      "session_id": 56257,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "c54897",
+      "wall_time_seconds": 5.001168223,
+      "session_id": 56257,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "191ee6",
+      "wall_time_seconds": 5.000707542,
+      "session_id": 56257,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "df6b67",
+      "wall_time_seconds": 10.001104604,
+      "session_id": 56257,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "51ec97",
+      "wall_time_seconds": 10.000698062,
+      "session_id": 56257,
+      "original_token_count": 192,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=18, unscoped=23\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=72, closed=2; evidence records=210\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.01 — W09.01 local containment complete. Next discuss a separately bounded durable producer-recovery slice and its authority/operational choices before implementation; full W09/DLQ/reconciliation/fold and cloud/customer operations are not authorized by this task.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 12411\n"
+    },
+    {
+      "chunk_id": "a911d7",
+      "wall_time_seconds": 9.059725407,
+      "exit_code": 0,
+      "original_token_count": 193,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=18, unscoped=23\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=72, closed=2; evidence records=210\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.01 — W09.01 local containment complete. Next discuss a separately bounded durable producer-recovery slice and its authority/operational choices before implementation; full W09/DLQ/reconciliation/fold and cloud/customer operations are not authorized by this task.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 12411\n"
+    }
+  ],
+  "next_action": "No implementation/check work remains for W09.01. Discuss bounded durable producer recovery and required authority; full W09/customer/deployed/release acceptance remains open."
+}

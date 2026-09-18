@@ -1,0 +1,81 @@
+{
+  "task_id": "W22.07",
+  "at": "2026-09-15T18:52:24.192Z",
+  "journal_seq": 1862,
+  "artifact_digest": "0c509d8108cb3b7b81f6cfb3f5419bf352fc162dc82bb3939531b5ec9a97dbcc",
+  "contract_digest": "9388bfa39bb92b5b39951df4cfb146f390a9cbce76c90f76dc7dc6666bf67b83",
+  "acceptance": {
+    "path": "docs/remediation/evidence/W22.07/acceptance.md",
+    "sha256": "0b462939fbdc5c0de3ab65d8632ca85358310b516b94d0f03fe903d73436d8e2"
+  },
+  "review": {
+    "path": "docs/remediation/evidence/W22.07/review.json",
+    "sha256": "5b5256fbc5720b7570db5e1a5b3ca5bfe9486c4c855e03fb0811ce608ac8784c"
+  },
+  "root_review_capture": [
+    "f454b2",
+    "5cc3e5"
+  ],
+  "board": {
+    "initial": {
+      "chunk_id": "9b9978",
+      "wall_time_seconds": 1.001674964,
+      "session_id": 22182,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "2b9bfe",
+        "wall_time_seconds": 5.001645621,
+        "session_id": 22182,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "ac77a1",
+        "wall_time_seconds": 5.000535924,
+        "session_id": 22182,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "067f00",
+        "wall_time_seconds": 5.001608054,
+        "session_id": 22182,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "395d3d",
+        "wall_time_seconds": 5.000613697,
+        "session_id": 22182,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "70cc51",
+        "wall_time_seconds": 5.000526033,
+        "session_id": 22182,
+        "original_token_count": 320,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=128, closed=1; evidence records=380\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.07 — Continue remaining W22/W30 late-event measurement/reconstruction using decisions/D06-W30-late-event-scenarios-2026-09-14.json and the approved buffered-purpose record. Read actual outcomeToLearning/DecisionRing eligibility and hourly retained-input/configuration basis against the whole parent scope before admitting the next coherent remedy. Distinguish valid original-time evidence from actual historical credit; identify concrete scenario-specific D04/D06/W24 owner choices where required, without a blanket age cutoff, extra personal retention, invented experiment lifecycle or blind refold. Preserve W22.07 buffered handling and all prior unowned remedies; overlapping old exact proofs remain qualified. No deployment/customer-data operation or release authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 26668\n"
+      },
+      {
+        "chunk_id": "e12685",
+        "wall_time_seconds": 3.300173782,
+        "exit_code": 0,
+        "original_token_count": 320,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=128, closed=1; evidence records=380\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W22.07 — Continue remaining W22/W30 late-event measurement/reconstruction using decisions/D06-W30-late-event-scenarios-2026-09-14.json and the approved buffered-purpose record. Read actual outcomeToLearning/DecisionRing eligibility and hourly retained-input/configuration basis against the whole parent scope before admitting the next coherent remedy. Distinguish valid original-time evidence from actual historical credit; identify concrete scenario-specific D04/D06/W24 owner choices where required, without a blanket age cutoff, extra personal retention, invented experiment lifecycle or blind refold. Preserve W22.07 buffered handling and all prior unowned remedies; overlapping old exact proofs remain qualified. No deployment/customer-data operation or release authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 26668\n"
+      }
+    ],
+    "result": "VALID",
+    "scope": "Existing read-only board check/status with cached filesystem reads and NOTE-only output filtering; checker rules unchanged."
+  },
+  "handoff": "Source/evidence STOP;51 artifact pins and W09.08/W22.06/W23.02 unowned pins/reviews unchanged; overlapping exact proofs qualified. No worker/reviewer commands running. Tracker consistency is not engine/customer/SLO/release acceptance.",
+  "next_action": "Continue remaining W22/W30 late-event measurement/reconstruction using decisions/D06-W30-late-event-scenarios-2026-09-14.json and the approved buffered-purpose record. Read actual outcomeToLearning/DecisionRing eligibility and hourly retained-input/configuration basis against the whole parent scope before admitting the next coherent remedy. Distinguish valid original-time evidence from actual historical credit; identify concrete scenario-specific D04/D06/W24 owner choices where required, without a blanket age cutoff, extra personal retention, invented experiment lifecycle or blind refold. Preserve W22.07 buffered handling and all prior unowned remedies; overlapping old exact proofs remain qualified. No deployment/customer-data operation or release authority.",
+  "approved_buffered_purpose": {
+    "path": "docs/remediation/decisions/D06-buffered-action-purpose-approved-2026-09-15.json",
+    "sha256": "469cc9e3c566c9430b855e01d200120e5c5f075ef9b595b0ca99db22e64923db"
+  },
+  "limitations": "Explicit HTTP buffered-action purpose/occurrence-time current interest and original-time evidence only. Live traffic unchanged. No SDK offline queue, across-call personal dedup, atomic KV/erasure fence, new retention, original-policy/experiment lifecycle reconstruction, historical report repair, generation reset or full W22/W23/W30/customer/SLO/release claim. Preserve all unowned accepted dependencies; overlapping exact proofs qualified with history retained. No installs/emitted build/commit/stage/push/deploy/cloud/credentials/customer-data/destructive/external operations. Worker and independent reviewer each passed exact6 local synthetic checks. Same-byte compiler1536/six-file lint0errors125unchanged warnings/no new signatures/whitespace passed. Not native/cloud failure, customer or SLO evidence."
+}

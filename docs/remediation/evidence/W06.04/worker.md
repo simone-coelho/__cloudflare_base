@@ -1,0 +1,13 @@
+# W06.04 worker handoff
+
+Frozen local candidate; independent review and lead acceptance are pending. Sole worker `w0602-worker`, gpt-6-astra/xhigh; no subdelegation. Contract `17630fb1c8d82ea67a3fb6a0941f78e13ce6dcd413b84615bbcbdf45e15942ff`.
+
+New v2 jobs freeze the three exact profile keys per discovered subject and all raw-validated, completely paginated tenant override keys before deletion. CACHE deletions use the existing 32-attempt/checkpoint mechanism before discovery links are removed. Missing bindings, malformed pages/plans and ambiguous deletes/checkpoints stop truthfully; retries use the stored plan, actor and cutoff. Pending v1 schema/order/cursors remain unchanged and complete as v1 without claiming CACHE cleanup; a subsequent explicit erase starts fresh v2 discovery.
+
+The single existing identity fixture verifies actual cached profile/override removal and cold/absent RealtimeSegmentEngine, FeatureVariableManager and CDPService reads; both active hosts, actual reset implementations, two non-default tenants/non-target preservation, pagination, failure/retry, legacy cursor15 after link loss, and bounded continuation. Storage/DO backing is synthetic; the profile-reader connector argument is an unused synthetic constructor dependency, not an external integration claim.
+
+Checks: K1 attempt1 passed29/29. App noEmit attempt1 failed TS2345 on nullable logical-key narrowing; the lead approved the runtime-equivalent `return unavailable()` correction and final-byte rerun. NoEmit attempt2 passed; final K1 passed29/29 (6.37s). Exact commands, timestamps, complete outputs, original source contents/hashes, scoped before/current diff and whitespace result are in worker-checks.json. The first K1 is superseded, not rewritten; no broad suite/build ran.
+
+Final source SHA256: erase.ts `0cb39bd64454dd0bcf17e55dcf0092233a5870717d98da2302583209bc1efa43`; identity.test.ts `b466d97a8d4c16df43251b61370006469aade91ca05b0b2e27cd1c44129d6bda`. Only these two source/fixture files and the two declared worker evidence files were edited.
+
+Limits: `complete:false` remains. No email/account alias or orphan discovery, full-cache scan, shared config/datafile removal, in-memory isolate purge, concurrent-writer fence, stale-cookie/session generation, ring/seen/D1/AE/log/external cleanup, retention/re-entry or accountability policy. Discovery pagination is complete but not a transaction against concurrent writers; 32 limits deletion attempts, not discovery listing/memory. Rollback must retain a v2-capable retry reader and its persisted jobs; do not discard pending v2 state or run old v1-only code over it. W06/F06/N05 and D03/D06 remain open beyond this repair.

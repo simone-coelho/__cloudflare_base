@@ -1,0 +1,13 @@
+# W09.04 — lead acceptance
+
+Accepted 2026-09-12T00:51:04.764Z by w01-lead. Artifact 301969dacd8e2a18ecbf4d87555d649b6e7d3fa2a4a9521d99256d6dddc65a69, contract 504fa293e91fcae2a9c16f003374086884451a872997b5aec435073c1d4dd651, independent review ebfaadd1550fb7b35fa98ef605eb8c5bdb8a278534e210e27b2f6c82135993f2.
+
+Implemented strict versioned/count-conserving acknowledgements through fan, visitor ring and statistics writes. Processed rows require an acknowledged save; failed mutation/save clears the cached candidate and remains ambiguous, while alarm scheduling status is separate. Ring credit waits release its serialized read path. Actual content/outcome callers consume incomplete delivery with fixed count-only diagnostics. No retries, new resources or scoring changes.
+
+Root inspected nine deltas and full worker/reviewer captures; 88 artifact/82 source/73 protected pins and bidirectional deltas passed (6462f8). Fixed24 passed on final bytes, compiler/scopedlint0errors/8 inherited warnings/whitespace passed, independent Astra/xhigh source/runtime C1–C3 passed. Three grouped additions in existing fixtures only;13 unselected cases are not evidence. Earlier runtime/static failures remain recorded: stale publication fixture/preconditions/capabilities/lifecycle, incorrect fallback expectation, and two new mock warnings corrected without weakening production. Legacy configuration KV failures still fall back; the propagated preparation-exception check explicitly mocks one rejected dependency.
+
+Local downstream handler acknowledgement containment only, not full W09/F16/N10 closure or durable logical-event reconciliation, idempotency, retry/exhaustion recovery, DLQ/quarantine, aggregate repair/retention, late-erasure fencing, lift publication, deployed SLO, customer acceptance or release. No retries of exposure/credit writes, raw outbox, cloud/resource/customer-data/credential/deploy/install/build/commit/push/cleanup or policy changes.
+
+W09.03 consumer remedy/history retained with prospectively qualified overlapping full artifact; W08.04 unchanged. Full W09/W22/findings/customer/release remain open.
+
+Next: W09.04 local learning acknowledgement containment is complete. Next inspect and admit a bounded W09/W22 logical-event identity and online sink-idempotency correction before adding any replay. Retain current privacy barriers, holdout isolation and latency constraints; do not equate handler receipts with durable reconciliation. DLQ/exhaustion recovery, activation, resource changes and retention/customer decisions remain separately authorized work; full W09/W22 remain open.

@@ -1,0 +1,1958 @@
+{
+  "actor_id": "w0202-worker",
+  "run_id": "/root/w0202_impl",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "authority": "Lead-approved read-only in-memory preflight; evidence retention separately released before engine/test admission.",
+  "before_source": {
+    "path": "src/middleware/auth.ts",
+    "sha256": "71b8bff20c06df6fdcbddd37678a73fcdfe7b0b3dcafbfba49d16b70587c1316",
+    "content": "import { Context, MiddlewareHandler } from 'hono';\nimport { createMiddleware } from 'hono/factory';\nimport * as jose from 'jose';\nimport type { Env } from '@/types/env';\nimport { readSigningConfig, SIGNING_CONFIGURATION_UNAVAILABLE } from '@/auth/signingConfig.mjs';\n\nexport interface JWTPayload {\n  sub: string;\n  email?: string;\n  roles?: string[];\n  permissions?: string[];\n  exp?: number;\n  iat?: number;\n  iss?: string;\n  aud?: string | string[];\n}\n\nexport interface AuthContext {\n  user?: JWTPayload;\n  isAuthenticated: boolean;\n}\n\nconst extractToken = (authorization: string | undefined): string | null => {\n  if (!authorization) return null;\n  const parts = authorization.split(' ');\n  if (parts.length !== 2 || parts[0] !== 'Bearer') return null;\n  return parts[1];\n};\n\nexport const jwt = (options?: {\n  required?: boolean;\n  roles?: string[];\n  permissions?: string[];\n}): MiddlewareHandler<{ Bindings: Env; Variables: { auth: AuthContext } }> => {\n  return createMiddleware(async (c, next) => {\n    const { required = true, roles = [], permissions = [] } = options || {};\n    \n    const authorization = c.req.header('Authorization');\n    const token = extractToken(authorization);\n    \n    if (!token) {\n      if (required) {\n        return c.json({ error: 'Authorization token required' }, 401);\n      }\n      c.set('auth', { isAuthenticated: false });\n      return next();\n    }\n    \n    const signing = readSigningConfig(c.env);\n    if (!signing) {\n      c.header('Cache-Control', 'no-store');\n      return c.json({ error: SIGNING_CONFIGURATION_UNAVAILABLE }, 503);\n    }\n\n    try {\n      const { payload } = await jose.jwtVerify(token, signing.key, {\n        issuer: signing.issuer,\n        audience: signing.audience,\n      });\n      // Refresh credentials are accepted only by the session-renewal endpoint.\n      if (payload.type === 'refresh') {\n        return c.json({ error: 'Invalid token' }, 401);\n      }\n      \n      const jwtPayload = payload as unknown as JWTPayload;\n      \n      if (roles.length > 0) {\n        const userRoles = jwtPayload.roles || [];\n        const hasRole = roles.some(role => userRoles.includes(role));\n        if (!hasRole) {\n          return c.json({ error: 'Insufficient role permissions' }, 403);\n        }\n      }\n      \n      if (permissions.length > 0) {\n        const userPermissions = jwtPayload.permissions || [];\n        const hasPermission = permissions.every(permission => \n          userPermissions.includes(permission)\n        );\n        if (!hasPermission) {\n          return c.json({ error: 'Insufficient permissions' }, 403);\n        }\n      }\n      \n      c.set('auth', {\n        user: jwtPayload,\n        isAuthenticated: true,\n      });\n      \n      return next();\n    } catch (error) {\n      if (error instanceof jose.errors.JWTExpired) {\n        return c.json({ error: 'Token expired' }, 401);\n      }\n      if (error instanceof jose.errors.JWTInvalid) {\n        return c.json({ error: 'Invalid token' }, 401);\n      }\n      return c.json({ error: 'Authentication failed' }, 401);\n    }\n  });\n};\n\nexport const apiKey = (options?: {\n  headerName?: string;\n  required?: boolean;\n}): MiddlewareHandler<{ Bindings: Env; Variables: { auth: AuthContext } }> => {\n  return createMiddleware(async (c, next) => {\n    const { headerName = 'X-API-Key', required = true } = options || {};\n    \n    const apiKey = c.req.header(headerName);\n    \n    if (!apiKey) {\n      if (required) {\n        return c.json({ error: 'API key required' }, 401);\n      }\n      c.set('auth', { isAuthenticated: false });\n      return next();\n    }\n    \n    const validApiKeys = c.env.API_KEYS?.split(',') || [];\n    \n    if (!validApiKeys.includes(apiKey)) {\n      return c.json({ error: 'Invalid API key' }, 401);\n    }\n    \n    c.set('auth', {\n      user: { sub: `api-key-${apiKey.substring(0, 8)}` },\n      isAuthenticated: true,\n    });\n    \n    return next();\n  });\n};\n\nexport const composite = (\n  ...middlewares: MiddlewareHandler[]\n): MiddlewareHandler => {\n  return createMiddleware(async (c, next) => {\n    for (const middleware of middlewares) {\n      let nextCalled = false;\n      const result = await middleware(c as any, async () => {\n        nextCalled = true;\n      });\n      \n      if (result) return result;\n      if (!nextCalled) return;\n    }\n    return next();\n  });\n};\n"
+  },
+  "command": "node --input-type=module <<'W0203_NODE'\nimport { build } from 'esbuild';\nimport { Module } from 'node:module';\nimport { resolve } from 'node:path';\nimport { readFileSync } from 'node:fs';\nimport { createHash } from 'node:crypto';\nlet outbound=0;globalThis.fetch=async()=>{outbound++;throw new Error('Outbound forbidden in synthetic preflight')};\nconst started=new Date().toISOString();\nconst source=\"\\nimport assert from 'node:assert/strict';\\nimport { Hono } from 'hono';\\nimport { SignJWT } from 'jose';\\nimport { authRoutes } from '@/routes/auth';\\nimport { configRoutes } from '@/routes/config';\\nimport { memoryStore } from '@/auth/store';\\nimport { jwt } from '@/middleware/auth';\\nimport { invalidateConfigCache } from '@/reflex/configStore';\\nconst CFG={JWT_SECRET:'w0203-preflight-synthetic-signing-material',JWT_ISSUER:'w0203',JWT_AUDIENCE:'w0203',AUTH_MODE:'enforced'};\\nconst normal={sub:'synthetic-actor',roles:['admin'],permissions:['write']};\\nconst cases=[\\n ['sub absent',{roles:['admin'],permissions:['write']}],\\n ...[['empty',''],['blank',' \\\\t\\\\n'],['null',null],['number',7],['boolean',true],['array',['actor']],['object',{id:'actor'}]].map(([name,sub])=>['sub '+name,{...normal,sub}]),\\n ...[['substring','not-admin'],['empty',''],['null',null],['number',7],['object',{}],['mixed',['admin',7]],['nested',[['admin']]]].map(([name,roles])=>['roles '+name,{...normal,roles}]),\\n ...[['substring','not-write'],['empty',''],['null',null],['number',7],['object',{}],['mixed',['write',7]],['nested',[['write']]]].map(([name,permissions])=>['permissions '+name,{...normal,permissions}]),\\n ['valid arrays',normal],['valid sub only',{sub:'synthetic-tool'}],['valid exact strings',{sub:' \\\\t客户 synthetic actor ',roles:['admin','','admin'],permissions:['write','*','']}]\\n];\\nexport async function run(){\\n const rows=[];\\n for(const [label,payload] of cases){\\n  invalidateConfigCache();\\n  const store=memoryStore(),kv=new Map(),calls=[];\\n  await store.put({id:'existing',email:'existing@example.invalid',name:'Synthetic Existing',roles:['operator'],permissions:['read'],must_change_password:false});\\n  const accounts=new Proxy(store,{get(target,key){const value=Reflect.get(target,key);return typeof value==='function'?(...args)=>{calls.push('ACCOUNTS.'+String(key));return Reflect.apply(value,target,args)}:value}});\\n  const cache={async get(key,type){calls.push('CACHE.get');const raw=kv.get(key);return raw===undefined?null:type==='json'?JSON.parse(raw):raw},async put(key,value){calls.push('CACHE.put');kv.set(key,value)},async delete(key){calls.push('CACHE.delete');kv.delete(key)}};\\n  const env={...CFG,ACCOUNTS:accounts,CACHE:cache};\\n  const app=new Hono();app.route('/auth',authRoutes);app.route('/config',configRoutes);\\n  // Explicit test composition exercises the real shared permissions option;\\n  // no production route currently configures jwt({permissions:...}).\\n  app.use('/permission-config/*',jwt({permissions:['write']}));app.route('/permission-config',configRoutes);\\n  const token=await new SignJWT(payload).setProtectedHeader({alg:'HS256'}).setIssuedAt().setIssuer(CFG.JWT_ISSUER).setAudience(CFG.JWT_AUDIENCE).setExpirationTime('5m').sign(new TextEncoder().encode(CFG.JWT_SECRET));\\n  const observations=[];\\n  for(const [path,method,body] of [\\n   ['/auth/users','GET'],\\n   ['/auth/users','POST',{email:'new@example.invalid',name:'Synthetic New'}],\\n   ['/config/reflex?scope=w0203-baseline','PATCH',{patch:{K:17}}],\\n   ['/permission-config/reflex?scope=w0203-permission-baseline','PATCH',{patch:{K:23}}],\\n  ]){\\n   calls.length=0;\\n   const r=await app.request('https://w0203.example.invalid'+path,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})},env);\\n   const data=await r.json();\\n   observations.push({path,method,status:r.status,calls:[...calls],...(Array.isArray(data.users)?{returnedUsers:data.users.length}:{}),...(data.revision?{revision:data.revision,K:data.config.K}:{})});\\n  }\\n  rows.push({label,observations,accountCount:store.users.size,audit:store.log.map(e=>({action:e.action,actorId:e.actorId})),configState:[...kv].filter(([k])=>k.endsWith(':current')).map(([key,value])=>{const r=JSON.parse(value);return{key,revision:r.revision,actor:r.actor,K:r.value.K}})});\\n }\\n assert.equal(rows.find(r=>r.label==='valid arrays').accountCount,2);\\n assert.equal(rows.find(r=>r.label==='valid arrays').observations[3].status,200);\\n return rows;\\n}\";\nconst result=await build({stdin:{contents:source,resolveDir:process.cwd(),sourcefile:'w0203-preflight-in-memory.ts',loader:'ts'},bundle:true,write:false,metafile:true,platform:'node',format:'cjs',logLevel:'silent'});\nconst module=new Module(resolve('w0203-preflight-in-memory.cjs'));module.filename=resolve('w0203-preflight-in-memory.cjs');module.paths=Module._nodeModulePaths(process.cwd());module._compile(result.outputFiles[0].text,module.filename);\nconst rows=await module.exports.run();\nconst sha=path=>createHash('sha256').update(readFileSync(path)).digest('hex');\nconsole.log(JSON.stringify({started,finished:new Date().toISOString(),node:process.version,authSha256:sha('src/middleware/auth.ts'),inputs:Object.keys(result.metafile.inputs).sort(),outbound,rows},null,2));\n\nW0203_NODE",
+  "repeat_file_command": "node docs/remediation/evidence/W02.03/baseline-probe.mjs",
+  "first_execution": {
+    "chunk_id": "0bf7ac",
+    "wall_time_seconds": 0.993337392,
+    "exit_code": 0,
+    "original_token_count": 12333,
+    "output": "Warning: truncated output (original token count: 12333)\nTotal output lines: 1909\n\n{\n  \"started\": \"2026-09-07T02:56:03.609Z\",\n  \"finished\": \"2026-09-07T02:56:04.673Z\",\n  \"node\": \"v22.15.0\",\n  \"authSha256\": \"71b8bff20c06df6fdcbddd37678a73fcdfe7b0b3dcafbfba49d16b70587c1316\",\n  \"inputs\": [\n    \"node_modules/hono/dist/compose.js\",\n    \"node_modules/hono/dist/context.js\",\n    \"node_modules/hono/dist/helper/factory/index.js\",\n    \"node_modules/hono/dist/hono-base.js\",\n    \"node_modules/hono/dist/hono.js\",\n    \"node_modules/hono/dist/http-exception.js\",\n    \"node_modules/hono/dist/index.js\",\n    \"node_modules/hono/dist/request.js\",\n    \"node_modules/hono/dist/request/constants.js\",\n    \"node_modules/hono/dist/router.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/index.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/matcher.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/node.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/prepared-router.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/router.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/trie.js\",\n    \"node_modules/hono/dist/router/smart-router/index.js\",\n    \"node_modules/hono/dist/router/smart-router/router.js\",\n    \"node_modules/hono/dist/router/trie-router/index.js\",\n    \"node_modules/hono/dist/router/trie-router/node.js\",\n    \"node_modules/hono/dist/router/trie-router/router.js\",\n    \"node_modules/hono/dist/utils/body.js\",\n    \"node_modules/hono/dist/utils/constants.js\",\n    \"node_modules/hono/dist/utils/html.js\",\n    \"node_modules/hono/dist/utils/url.js\",\n    \"node_modules/jose/dist/node/esm/index.js\",\n    \"node_modules/jose/dist/node/esm/jwe/compact/decrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/compact/encrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/flattened/decrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/flattened/encrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/general/decrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/general/encrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwk/embedded.js\",\n    \"node_modules/jose/dist/node/esm/jwk/thumbprint.js\",\n    \"node_modules/jose/dist/node/esm/jwks/local.js\",\n    \"node_modules/jose/dist/node/esm/jwks/remote.js\",\n    \"node_modules/jose/dist/node/esm/jws/compact/sign.js\",\n    \"node_modules/jose/dist/node/esm/jws/compact/verify.js\",\n    \"node_modules/jose/dist/node/esm/jws/flattened/sign.js\",\n    \"node_modules/jose/dist/node/esm/jws/flattened/verify.js\",\n    \"node_modules/jose/dist/node/esm/jws/general/sign.js\",\n    \"node_modules/jose/dist/node/esm/jws/general/verify.js\",\n    \"node_modules/jose/dist/node/esm/jwt/decrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwt/encrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwt/produce.js\",\n    \"node_modules/jose/dist/node/esm/jwt/sign.js\",\n    \"node_modules/jose/dist/node/esm/jwt/unsecured.js\",\n    \"node_modules/jose/dist/node/esm/jwt/verify.js\",\n    \"node_modules/jose/dist/node/esm/key/export.js\",\n    \"node_modules/jose/dist/node/esm/key/generate_key_pair.js\",\n    \"node_modules/jose/dist/node/esm/key/generate_secret.js\",\n    \"node_modules/jose/dist/node/esm/key/import.js\",\n    \"node_modules/jose/dist/node/esm/lib/aesgcmkw.js\",\n    \"node_modules/jose/dist/node/esm/lib/buffer_utils.js\",\n    \"node_modules/jose/dist/node/esm/lib/cek.js\",\n    \"node_modules/jose/dist/node/esm/lib/check_iv_length.js\",\n    \"node_modules/jose/dist/node/esm/lib/check_key_type.js\",\n    \"node_modules/jose/dist/node/esm/lib/check_p2s.js\",\n    \"node_modules/jose/dist/node/esm/lib/crypto_key.js\",\n    \"node_modules/jose/dist/node/esm/lib/decrypt_key_management.js\",\n    \"node_modules/jose/dist/node/esm/lib/encrypt_key_management.js\",\n    \"node_modules/jose/dist/node/esm/lib/epoch.js\",\n    \"node_modules/jose/dist/node/esm/lib/invalid_key_input.js\",\n    \"node_modules/jose/dist/node/esm/lib/is_disjoint.js\",\n    \"node_modules/jose/dist/node/esm/lib/is_jwk.js\",\n    \"node_modules/jose/dist/node/esm/lib/is_object.js\",\n    \"node_modules/jose/dist/node/esm/lib/iv.js\",\n    \"node_modules/jose/dist/node/esm/lib/jwt_claims_set.js\",\n    \"node_modules…10333 tokens truncated…seline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"valid sub only\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 403,\n          \"calls\": []\n        }\n      ],\n      \"accountCount\": 1,\n      \"audit\": [],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-tool\",\n          \"K\": 17\n        }\n      ]\n    },\n    {\n      \"label\": \"valid exact strings\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \" \\t客户 synthetic actor \"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \" \\t客户 synthetic actor \",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \" \\t客户 synthetic actor \",\n          \"K\": 23\n        }\n      ]\n    }\n  ]\n}\n",
+    "capture_limit_tokens": 2000,
+    "disposition": "Execution exited 0, but captured output was truncated; not used as complete evidence. Repeated identical command with sufficient capture budget."
+  },
+  "complete_repeat": {
+    "chunk_id": "cbc336",
+    "wall_time_seconds": 0.000001586,
+    "exit_code": 0,
+    "original_token_count": 0,
+    "output": "{\n  \"started\": \"2026-09-07T02:56:20.078Z\",\n  \"finished\": \"2026-09-07T02:56:21.148Z\",\n  \"node\": \"v22.15.0\",\n  \"authSha256\": \"71b8bff20c06df6fdcbddd37678a73fcdfe7b0b3dcafbfba49d16b70587c1316\",\n  \"inputs\": [\n    \"node_modules/hono/dist/compose.js\",\n    \"node_modules/hono/dist/context.js\",\n    \"node_modules/hono/dist/helper/factory/index.js\",\n    \"node_modules/hono/dist/hono-base.js\",\n    \"node_modules/hono/dist/hono.js\",\n    \"node_modules/hono/dist/http-exception.js\",\n    \"node_modules/hono/dist/index.js\",\n    \"node_modules/hono/dist/request.js\",\n    \"node_modules/hono/dist/request/constants.js\",\n    \"node_modules/hono/dist/router.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/index.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/matcher.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/node.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/prepared-router.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/router.js\",\n    \"node_modules/hono/dist/router/reg-exp-router/trie.js\",\n    \"node_modules/hono/dist/router/smart-router/index.js\",\n    \"node_modules/hono/dist/router/smart-router/router.js\",\n    \"node_modules/hono/dist/router/trie-router/index.js\",\n    \"node_modules/hono/dist/router/trie-router/node.js\",\n    \"node_modules/hono/dist/router/trie-router/router.js\",\n    \"node_modules/hono/dist/utils/body.js\",\n    \"node_modules/hono/dist/utils/constants.js\",\n    \"node_modules/hono/dist/utils/html.js\",\n    \"node_modules/hono/dist/utils/url.js\",\n    \"node_modules/jose/dist/node/esm/index.js\",\n    \"node_modules/jose/dist/node/esm/jwe/compact/decrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/compact/encrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/flattened/decrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/flattened/encrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/general/decrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwe/general/encrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwk/embedded.js\",\n    \"node_modules/jose/dist/node/esm/jwk/thumbprint.js\",\n    \"node_modules/jose/dist/node/esm/jwks/local.js\",\n    \"node_modules/jose/dist/node/esm/jwks/remote.js\",\n    \"node_modules/jose/dist/node/esm/jws/compact/sign.js\",\n    \"node_modules/jose/dist/node/esm/jws/compact/verify.js\",\n    \"node_modules/jose/dist/node/esm/jws/flattened/sign.js\",\n    \"node_modules/jose/dist/node/esm/jws/flattened/verify.js\",\n    \"node_modules/jose/dist/node/esm/jws/general/sign.js\",\n    \"node_modules/jose/dist/node/esm/jws/general/verify.js\",\n    \"node_modules/jose/dist/node/esm/jwt/decrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwt/encrypt.js\",\n    \"node_modules/jose/dist/node/esm/jwt/produce.js\",\n    \"node_modules/jose/dist/node/esm/jwt/sign.js\",\n    \"node_modules/jose/dist/node/esm/jwt/unsecured.js\",\n    \"node_modules/jose/dist/node/esm/jwt/verify.js\",\n    \"node_modules/jose/dist/node/esm/key/export.js\",\n    \"node_modules/jose/dist/node/esm/key/generate_key_pair.js\",\n    \"node_modules/jose/dist/node/esm/key/generate_secret.js\",\n    \"node_modules/jose/dist/node/esm/key/import.js\",\n    \"node_modules/jose/dist/node/esm/lib/aesgcmkw.js\",\n    \"node_modules/jose/dist/node/esm/lib/buffer_utils.js\",\n    \"node_modules/jose/dist/node/esm/lib/cek.js\",\n    \"node_modules/jose/dist/node/esm/lib/check_iv_length.js\",\n    \"node_modules/jose/dist/node/esm/lib/check_key_type.js\",\n    \"node_modules/jose/dist/node/esm/lib/check_p2s.js\",\n    \"node_modules/jose/dist/node/esm/lib/crypto_key.js\",\n    \"node_modules/jose/dist/node/esm/lib/decrypt_key_management.js\",\n    \"node_modules/jose/dist/node/esm/lib/encrypt_key_management.js\",\n    \"node_modules/jose/dist/node/esm/lib/epoch.js\",\n    \"node_modules/jose/dist/node/esm/lib/invalid_key_input.js\",\n    \"node_modules/jose/dist/node/esm/lib/is_disjoint.js\",\n    \"node_modules/jose/dist/node/esm/lib/is_jwk.js\",\n    \"node_modules/jose/dist/node/esm/lib/is_object.js\",\n    \"node_modules/jose/dist/node/esm/lib/iv.js\",\n    \"node_modules/jose/dist/node/esm/lib/jwt_claims_set.js\",\n    \"node_modules/jose/dist/node/esm/lib/private_symbols.js\",\n    \"node_modules/jose/dist/node/esm/lib/secs.js\",\n    \"node_modules/jose/dist/node/esm/lib/validate_algorithms.js\",\n    \"node_modules/jose/dist/node/esm/lib/validate_crit.js\",\n    \"node_modules/jose/dist/node/esm/runtime/aeskw.js\",\n    \"node_modules/jose/dist/node/esm/runtime/asn1.js\",\n    \"node_modules/jose/dist/node/esm/runtime/base64url.js\",\n    \"node_modules/jose/dist/node/esm/runtime/cbc_tag.js\",\n    \"node_modules/jose/dist/node/esm/runtime/check_cek_length.js\",\n    \"node_modules/jose/dist/node/esm/runtime/check_key_length.js\",\n    \"node_modules/jose/dist/node/esm/runtime/ciphers.js\",\n    \"node_modules/jose/dist/node/esm/runtime/decrypt.js\",\n    \"node_modules/jose/dist/node/esm/runtime/digest.js\",\n    \"node_modules/jose/dist/node/esm/runtime/dsa_digest.js\",\n    \"node_modules/jose/dist/node/esm/runtime/ecdhes.js\",\n    \"node_modules/jose/dist/node/esm/runtime/encrypt.js\",\n    \"node_modules/jose/dist/node/esm/runtime/fetch_jwks.js\",\n    \"node_modules/jose/dist/node/esm/runtime/generate.js\",\n    \"node_modules/jose/dist/node/esm/runtime/get_named_curve.js\",\n    \"node_modules/jose/dist/node/esm/runtime/get_sign_verify_key.js\",\n    \"node_modules/jose/dist/node/esm/runtime/hmac_digest.js\",\n    \"node_modules/jose/dist/node/esm/runtime/is_key_like.js\",\n    \"node_modules/jose/dist/node/esm/runtime/is_key_object.js\",\n    \"node_modules/jose/dist/node/esm/runtime/jwk_to_key.js\",\n    \"node_modules/jose/dist/node/esm/runtime/key_to_jwk.js\",\n    \"node_modules/jose/dist/node/esm/runtime/node_key.js\",\n    \"node_modules/jose/dist/node/esm/runtime/normalize_key.js\",\n    \"node_modules/jose/dist/node/esm/runtime/pbes2kw.js\",\n    \"node_modules/jose/dist/node/esm/runtime/random.js\",\n    \"node_modules/jose/dist/node/esm/runtime/rsaes.js\",\n    \"node_modules/jose/dist/node/esm/runtime/runtime.js\",\n    \"node_modules/jose/dist/node/esm/runtime/sign.js\",\n    \"node_modules/jose/dist/node/esm/runtime/timing_safe_equal.js\",\n    \"node_modules/jose/dist/node/esm/runtime/verify.js\",\n    \"node_modules/jose/dist/node/esm/runtime/webcrypto.js\",\n    \"node_modules/jose/dist/node/esm/util/base64url.js\",\n    \"node_modules/jose/dist/node/esm/util/decode_jwt.js\",\n    \"node_modules/jose/dist/node/esm/util/decode_protected_header.js\",\n    \"node_modules/jose/dist/node/esm/util/errors.js\",\n    \"node_modules/jose/dist/node/esm/util/runtime.js\",\n    \"node_modules/zod/index.js\",\n    \"node_modules/zod/v4/classic/checks.js\",\n    \"node_modules/zod/v4/classic/coerce.js\",\n    \"node_modules/zod/v4/classic/compat.js\",\n    \"node_modules/zod/v4/classic/errors.js\",\n    \"node_modules/zod/v4/classic/external.js\",\n    \"node_modules/zod/v4/classic/from-json-schema.js\",\n    \"node_modules/zod/v4/classic/iso.js\",\n    \"node_modules/zod/v4/classic/parse.js\",\n    \"node_modules/zod/v4/classic/schemas.js\",\n    \"node_modules/zod/v4/core/api.js\",\n    \"node_modules/zod/v4/core/checks.js\",\n    \"node_modules/zod/v4/core/core.js\",\n    \"node_modules/zod/v4/core/doc.js\",\n    \"node_modules/zod/v4/core/errors.js\",\n    \"node_modules/zod/v4/core/index.js\",\n    \"node_modules/zod/v4/core/json-schema-generator.js\",\n    \"node_modules/zod/v4/core/json-schema-processors.js\",\n    \"node_modules/zod/v4/core/json-schema.js\",\n    \"node_modules/zod/v4/core/parse.js\",\n    \"node_modules/zod/v4/core/regexes.js\",\n    \"node_modules/zod/v4/core/registries.js\",\n    \"node_modules/zod/v4/core/schemas.js\",\n    \"node_modules/zod/v4/core/to-json-schema.js\",\n    \"node_modules/zod/v4/core/util.js\",\n    \"node_modules/zod/v4/core/versions.js\",\n    \"node_modules/zod/v4/locales/ar.js\",\n    \"node_modules/zod/v4/locales/az.js\",\n    \"node_modules/zod/v4/locales/be.js\",\n    \"node_modules/zod/v4/locales/bg.js\",\n    \"node_modules/zod/v4/locales/ca.js\",\n    \"node_modules/zod/v4/locales/cs.js\",\n    \"node_modules/zod/v4/locales/da.js\",\n    \"node_modules/zod/v4/locales/de.js\",\n    \"node_modules/zod/v4/locales/el.js\",\n    \"node_modules/zod/v4/locales/en.js\",\n    \"node_modules/zod/v4/locales/eo.js\",\n    \"node_modules/zod/v4/locales/es.js\",\n    \"node_modules/zod/v4/locales/fa.js\",\n    \"node_modules/zod/v4/locales/fi.js\",\n    \"node_modules/zod/v4/locales/fr-CA.js\",\n    \"node_modules/zod/v4/locales/fr.js\",\n    \"node_modules/zod/v4/locales/he.js\",\n    \"node_modules/zod/v4/locales/hr.js\",\n    \"node_modules/zod/v4/locales/hu.js\",\n    \"node_modules/zod/v4/locales/hy.js\",\n    \"node_modules/zod/v4/locales/id.js\",\n    \"node_modules/zod/v4/locales/index.js\",\n    \"node_modules/zod/v4/locales/is.js\",\n    \"node_modules/zod/v4/locales/it.js\",\n    \"node_modules/zod/v4/locales/ja.js\",\n    \"node_modules/zod/v4/locales/ka.js\",\n    \"node_modules/zod/v4/locales/kh.js\",\n    \"node_modules/zod/v4/locales/km.js\",\n    \"node_modules/zod/v4/locales/ko.js\",\n    \"node_modules/zod/v4/locales/lt.js\",\n    \"node_modules/zod/v4/locales/mk.js\",\n    \"node_modules/zod/v4/locales/ms.js\",\n    \"node_modules/zod/v4/locales/nl.js\",\n    \"node_modules/zod/v4/locales/no.js\",\n    \"node_modules/zod/v4/locales/ota.js\",\n    \"node_modules/zod/v4/locales/pl.js\",\n    \"node_modules/zod/v4/locales/ps.js\",\n    \"node_modules/zod/v4/locales/pt.js\",\n    \"node_modules/zod/v4/locales/ro.js\",\n    \"node_modules/zod/v4/locales/ru.js\",\n    \"node_modules/zod/v4/locales/sl.js\",\n    \"node_modules/zod/v4/locales/sv.js\",\n    \"node_modules/zod/v4/locales/ta.js\",\n    \"node_modules/zod/v4/locales/th.js\",\n    \"node_modules/zod/v4/locales/tr.js\",\n    \"node_modules/zod/v4/locales/ua.js\",\n    \"node_modules/zod/v4/locales/uk.js\",\n    \"node_modules/zod/v4/locales/ur.js\",\n    \"node_modules/zod/v4/locales/uz.js\",\n    \"node_modules/zod/v4/locales/vi.js\",\n    \"node_modules/zod/v4/locales/yo.js\",\n    \"node_modules/zod/v4/locales/zh-CN.js\",\n    \"node_modules/zod/v4/locales/zh-TW.js\",\n    \"src/auth/accounts.ts\",\n    \"src/auth/signingConfig.mjs\",\n    \"src/auth/store.ts\",\n    \"src/config/versionedStore.ts\",\n    \"src/demos/brighthour/reflexConfig.ts\",\n    \"src/middleware/auth.ts\",\n    \"src/reflex/configStore.ts\",\n    \"src/reflex/core.ts\",\n    \"src/routes/auth.ts\",\n    \"src/routes/config.ts\",\n    \"w0203-preflight-in-memory.ts\"\n  ],\n  \"outbound\": 0,\n  \"rows\": [\n    {\n      \"label\": \"sub absent\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": null\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"unknown\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"unknown\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"sub empty\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"unknown\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"unknown\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"sub blank\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \" \\t\\n\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \" \\t\\n\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \" \\t\\n\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"sub null\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": null\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"unknown\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"unknown\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"sub number\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": 7\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": 7,\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": 7,\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"sub boolean\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": true\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": true,\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": true,\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"sub array\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": [\n            \"actor\"\n          ]\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": [\n            \"actor\"\n          ],\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": [\n            \"actor\"\n          ],\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"sub object\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": {\n            \"id\": \"actor\"\n          }\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": {\n            \"id\": \"actor\"\n          },\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": {\n            \"id\": \"actor\"\n          },\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"roles substring\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"roles empty\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 1,\n      \"audit\": [],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"roles null\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 1,\n      \"audit\": [],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"roles number\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 401,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 401,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 1,\n      \"audit\": [],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"roles object\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 401,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 401,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 1,\n      \"audit\": [],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"roles mixed\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"roles nested\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 1,\n      \"audit\": [],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"permissions substring\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"permissions empty\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 403,\n          \"calls\": []\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        }\n      ]\n    },\n    {\n      \"label\": \"permissions null\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 403,\n          \"calls\": []\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        }\n      ]\n    },\n    {\n      \"label\": \"permissions number\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 401,\n          \"calls\": []\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        }\n      ]\n    },\n    {\n      \"label\": \"permissions object\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 401,\n          \"calls\": []\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        }\n      ]\n    },\n    {\n      \"label\": \"permissions mixed\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"permissions nested\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 403,\n          \"calls\": []\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        }\n      ]\n    },\n    {\n      \"label\": \"valid arrays\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \"synthetic-actor\"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-actor\",\n          \"K\": 23\n        }\n      ]\n    },\n    {\n      \"label\": \"valid sub only\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 403,\n          \"calls\": []\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 403,\n          \"calls\": []\n        }\n      ],\n      \"accountCount\": 1,\n      \"audit\": [],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \"synthetic-tool\",\n          \"K\": 17\n        }\n      ]\n    },\n    {\n      \"label\": \"valid exact strings\",\n      \"observations\": [\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"GET\",\n          \"status\": 200,\n          \"calls\": [\n            \"ACCOUNTS.list\"\n          ],\n          \"returnedUsers\": 1\n        },\n        {\n          \"path\": \"/auth/users\",\n          \"method\": \"POST\",\n          \"status\": 201,\n          \"calls\": [\n            \"ACCOUNTS.getByEmail\",\n            \"CACHE.get\",\n            \"ACCOUNTS.put\",\n            \"ACCOUNTS.audit\"\n          ]\n        },\n        {\n          \"path\": \"/config/reflex?scope=w0203-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 17\n        },\n        {\n          \"path\": \"/permission-config/reflex?scope=w0203-permission-baseline\",\n          \"method\": \"PATCH\",\n          \"status\": 200,\n          \"calls\": [\n            \"CACHE.get\",\n            \"CACHE.put\",\n            \"CACHE.put\",\n            \"CACHE.get\",\n            \"CACHE.put\"\n          ],\n          \"revision\": 1,\n          \"K\": 23\n        }\n      ],\n      \"accountCount\": 2,\n      \"audit\": [\n        {\n          \"action\": \"account_created\",\n          \"actorId\": \" \\t客户 synthetic actor \"\n        }\n      ],\n      \"configState\": [\n        {\n          \"key\": \"reflex:config:w0203-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \" \\t客户 synthetic actor \",\n          \"K\": 17\n        },\n        {\n          \"key\": \"reflex:config:w0203-permission-baseline:current\",\n          \"revision\": 1,\n          \"actor\": \" \\t客户 synthetic actor \",\n          \"K\": 23\n        }\n      ]\n    }\n  ]\n}\n",
+    "capture_limit_tokens": 25000,
+    "disposition": "Complete raw stdout parsed successfully; no synthetic JWT/password/secret values printed. Tool display may truncate, retained output itself is complete."
+  },
+  "observed": {
+    "started": "2026-09-07T02:56:20.078Z",
+    "finished": "2026-09-07T02:56:21.148Z",
+    "node": "v22.15.0",
+    "authSha256": "71b8bff20c06df6fdcbddd37678a73fcdfe7b0b3dcafbfba49d16b70587c1316",
+    "inputs": [
+      "node_modules/hono/dist/compose.js",
+      "node_modules/hono/dist/context.js",
+      "node_modules/hono/dist/helper/factory/index.js",
+      "node_modules/hono/dist/hono-base.js",
+      "node_modules/hono/dist/hono.js",
+      "node_modules/hono/dist/http-exception.js",
+      "node_modules/hono/dist/index.js",
+      "node_modules/hono/dist/request.js",
+      "node_modules/hono/dist/request/constants.js",
+      "node_modules/hono/dist/router.js",
+      "node_modules/hono/dist/router/reg-exp-router/index.js",
+      "node_modules/hono/dist/router/reg-exp-router/matcher.js",
+      "node_modules/hono/dist/router/reg-exp-router/node.js",
+      "node_modules/hono/dist/router/reg-exp-router/prepared-router.js",
+      "node_modules/hono/dist/router/reg-exp-router/router.js",
+      "node_modules/hono/dist/router/reg-exp-router/trie.js",
+      "node_modules/hono/dist/router/smart-router/index.js",
+      "node_modules/hono/dist/router/smart-router/router.js",
+      "node_modules/hono/dist/router/trie-router/index.js",
+      "node_modules/hono/dist/router/trie-router/node.js",
+      "node_modules/hono/dist/router/trie-router/router.js",
+      "node_modules/hono/dist/utils/body.js",
+      "node_modules/hono/dist/utils/constants.js",
+      "node_modules/hono/dist/utils/html.js",
+      "node_modules/hono/dist/utils/url.js",
+      "node_modules/jose/dist/node/esm/index.js",
+      "node_modules/jose/dist/node/esm/jwe/compact/decrypt.js",
+      "node_modules/jose/dist/node/esm/jwe/compact/encrypt.js",
+      "node_modules/jose/dist/node/esm/jwe/flattened/decrypt.js",
+      "node_modules/jose/dist/node/esm/jwe/flattened/encrypt.js",
+      "node_modules/jose/dist/node/esm/jwe/general/decrypt.js",
+      "node_modules/jose/dist/node/esm/jwe/general/encrypt.js",
+      "node_modules/jose/dist/node/esm/jwk/embedded.js",
+      "node_modules/jose/dist/node/esm/jwk/thumbprint.js",
+      "node_modules/jose/dist/node/esm/jwks/local.js",
+      "node_modules/jose/dist/node/esm/jwks/remote.js",
+      "node_modules/jose/dist/node/esm/jws/compact/sign.js",
+      "node_modules/jose/dist/node/esm/jws/compact/verify.js",
+      "node_modules/jose/dist/node/esm/jws/flattened/sign.js",
+      "node_modules/jose/dist/node/esm/jws/flattened/verify.js",
+      "node_modules/jose/dist/node/esm/jws/general/sign.js",
+      "node_modules/jose/dist/node/esm/jws/general/verify.js",
+      "node_modules/jose/dist/node/esm/jwt/decrypt.js",
+      "node_modules/jose/dist/node/esm/jwt/encrypt.js",
+      "node_modules/jose/dist/node/esm/jwt/produce.js",
+      "node_modules/jose/dist/node/esm/jwt/sign.js",
+      "node_modules/jose/dist/node/esm/jwt/unsecured.js",
+      "node_modules/jose/dist/node/esm/jwt/verify.js",
+      "node_modules/jose/dist/node/esm/key/export.js",
+      "node_modules/jose/dist/node/esm/key/generate_key_pair.js",
+      "node_modules/jose/dist/node/esm/key/generate_secret.js",
+      "node_modules/jose/dist/node/esm/key/import.js",
+      "node_modules/jose/dist/node/esm/lib/aesgcmkw.js",
+      "node_modules/jose/dist/node/esm/lib/buffer_utils.js",
+      "node_modules/jose/dist/node/esm/lib/cek.js",
+      "node_modules/jose/dist/node/esm/lib/check_iv_length.js",
+      "node_modules/jose/dist/node/esm/lib/check_key_type.js",
+      "node_modules/jose/dist/node/esm/lib/check_p2s.js",
+      "node_modules/jose/dist/node/esm/lib/crypto_key.js",
+      "node_modules/jose/dist/node/esm/lib/decrypt_key_management.js",
+      "node_modules/jose/dist/node/esm/lib/encrypt_key_management.js",
+      "node_modules/jose/dist/node/esm/lib/epoch.js",
+      "node_modules/jose/dist/node/esm/lib/invalid_key_input.js",
+      "node_modules/jose/dist/node/esm/lib/is_disjoint.js",
+      "node_modules/jose/dist/node/esm/lib/is_jwk.js",
+      "node_modules/jose/dist/node/esm/lib/is_object.js",
+      "node_modules/jose/dist/node/esm/lib/iv.js",
+      "node_modules/jose/dist/node/esm/lib/jwt_claims_set.js",
+      "node_modules/jose/dist/node/esm/lib/private_symbols.js",
+      "node_modules/jose/dist/node/esm/lib/secs.js",
+      "node_modules/jose/dist/node/esm/lib/validate_algorithms.js",
+      "node_modules/jose/dist/node/esm/lib/validate_crit.js",
+      "node_modules/jose/dist/node/esm/runtime/aeskw.js",
+      "node_modules/jose/dist/node/esm/runtime/asn1.js",
+      "node_modules/jose/dist/node/esm/runtime/base64url.js",
+      "node_modules/jose/dist/node/esm/runtime/cbc_tag.js",
+      "node_modules/jose/dist/node/esm/runtime/check_cek_length.js",
+      "node_modules/jose/dist/node/esm/runtime/check_key_length.js",
+      "node_modules/jose/dist/node/esm/runtime/ciphers.js",
+      "node_modules/jose/dist/node/esm/runtime/decrypt.js",
+      "node_modules/jose/dist/node/esm/runtime/digest.js",
+      "node_modules/jose/dist/node/esm/runtime/dsa_digest.js",
+      "node_modules/jose/dist/node/esm/runtime/ecdhes.js",
+      "node_modules/jose/dist/node/esm/runtime/encrypt.js",
+      "node_modules/jose/dist/node/esm/runtime/fetch_jwks.js",
+      "node_modules/jose/dist/node/esm/runtime/generate.js",
+      "node_modules/jose/dist/node/esm/runtime/get_named_curve.js",
+      "node_modules/jose/dist/node/esm/runtime/get_sign_verify_key.js",
+      "node_modules/jose/dist/node/esm/runtime/hmac_digest.js",
+      "node_modules/jose/dist/node/esm/runtime/is_key_like.js",
+      "node_modules/jose/dist/node/esm/runtime/is_key_object.js",
+      "node_modules/jose/dist/node/esm/runtime/jwk_to_key.js",
+      "node_modules/jose/dist/node/esm/runtime/key_to_jwk.js",
+      "node_modules/jose/dist/node/esm/runtime/node_key.js",
+      "node_modules/jose/dist/node/esm/runtime/normalize_key.js",
+      "node_modules/jose/dist/node/esm/runtime/pbes2kw.js",
+      "node_modules/jose/dist/node/esm/runtime/random.js",
+      "node_modules/jose/dist/node/esm/runtime/rsaes.js",
+      "node_modules/jose/dist/node/esm/runtime/runtime.js",
+      "node_modules/jose/dist/node/esm/runtime/sign.js",
+      "node_modules/jose/dist/node/esm/runtime/timing_safe_equal.js",
+      "node_modules/jose/dist/node/esm/runtime/verify.js",
+      "node_modules/jose/dist/node/esm/runtime/webcrypto.js",
+      "node_modules/jose/dist/node/esm/util/base64url.js",
+      "node_modules/jose/dist/node/esm/util/decode_jwt.js",
+      "node_modules/jose/dist/node/esm/util/decode_protected_header.js",
+      "node_modules/jose/dist/node/esm/util/errors.js",
+      "node_modules/jose/dist/node/esm/util/runtime.js",
+      "node_modules/zod/index.js",
+      "node_modules/zod/v4/classic/checks.js",
+      "node_modules/zod/v4/classic/coerce.js",
+      "node_modules/zod/v4/classic/compat.js",
+      "node_modules/zod/v4/classic/errors.js",
+      "node_modules/zod/v4/classic/external.js",
+      "node_modules/zod/v4/classic/from-json-schema.js",
+      "node_modules/zod/v4/classic/iso.js",
+      "node_modules/zod/v4/classic/parse.js",
+      "node_modules/zod/v4/classic/schemas.js",
+      "node_modules/zod/v4/core/api.js",
+      "node_modules/zod/v4/core/checks.js",
+      "node_modules/zod/v4/core/core.js",
+      "node_modules/zod/v4/core/doc.js",
+      "node_modules/zod/v4/core/errors.js",
+      "node_modules/zod/v4/core/index.js",
+      "node_modules/zod/v4/core/json-schema-generator.js",
+      "node_modules/zod/v4/core/json-schema-processors.js",
+      "node_modules/zod/v4/core/json-schema.js",
+      "node_modules/zod/v4/core/parse.js",
+      "node_modules/zod/v4/core/regexes.js",
+      "node_modules/zod/v4/core/registries.js",
+      "node_modules/zod/v4/core/schemas.js",
+      "node_modules/zod/v4/core/to-json-schema.js",
+      "node_modules/zod/v4/core/util.js",
+      "node_modules/zod/v4/core/versions.js",
+      "node_modules/zod/v4/locales/ar.js",
+      "node_modules/zod/v4/locales/az.js",
+      "node_modules/zod/v4/locales/be.js",
+      "node_modules/zod/v4/locales/bg.js",
+      "node_modules/zod/v4/locales/ca.js",
+      "node_modules/zod/v4/locales/cs.js",
+      "node_modules/zod/v4/locales/da.js",
+      "node_modules/zod/v4/locales/de.js",
+      "node_modules/zod/v4/locales/el.js",
+      "node_modules/zod/v4/locales/en.js",
+      "node_modules/zod/v4/locales/eo.js",
+      "node_modules/zod/v4/locales/es.js",
+      "node_modules/zod/v4/locales/fa.js",
+      "node_modules/zod/v4/locales/fi.js",
+      "node_modules/zod/v4/locales/fr-CA.js",
+      "node_modules/zod/v4/locales/fr.js",
+      "node_modules/zod/v4/locales/he.js",
+      "node_modules/zod/v4/locales/hr.js",
+      "node_modules/zod/v4/locales/hu.js",
+      "node_modules/zod/v4/locales/hy.js",
+      "node_modules/zod/v4/locales/id.js",
+      "node_modules/zod/v4/locales/index.js",
+      "node_modules/zod/v4/locales/is.js",
+      "node_modules/zod/v4/locales/it.js",
+      "node_modules/zod/v4/locales/ja.js",
+      "node_modules/zod/v4/locales/ka.js",
+      "node_modules/zod/v4/locales/kh.js",
+      "node_modules/zod/v4/locales/km.js",
+      "node_modules/zod/v4/locales/ko.js",
+      "node_modules/zod/v4/locales/lt.js",
+      "node_modules/zod/v4/locales/mk.js",
+      "node_modules/zod/v4/locales/ms.js",
+      "node_modules/zod/v4/locales/nl.js",
+      "node_modules/zod/v4/locales/no.js",
+      "node_modules/zod/v4/locales/ota.js",
+      "node_modules/zod/v4/locales/pl.js",
+      "node_modules/zod/v4/locales/ps.js",
+      "node_modules/zod/v4/locales/pt.js",
+      "node_modules/zod/v4/locales/ro.js",
+      "node_modules/zod/v4/locales/ru.js",
+      "node_modules/zod/v4/locales/sl.js",
+      "node_modules/zod/v4/locales/sv.js",
+      "node_modules/zod/v4/locales/ta.js",
+      "node_modules/zod/v4/locales/th.js",
+      "node_modules/zod/v4/locales/tr.js",
+      "node_modules/zod/v4/locales/ua.js",
+      "node_modules/zod/v4/locales/uk.js",
+      "node_modules/zod/v4/locales/ur.js",
+      "node_modules/zod/v4/locales/uz.js",
+      "node_modules/zod/v4/locales/vi.js",
+      "node_modules/zod/v4/locales/yo.js",
+      "node_modules/zod/v4/locales/zh-CN.js",
+      "node_modules/zod/v4/locales/zh-TW.js",
+      "src/auth/accounts.ts",
+      "src/auth/signingConfig.mjs",
+      "src/auth/store.ts",
+      "src/config/versionedStore.ts",
+      "src/demos/brighthour/reflexConfig.ts",
+      "src/middleware/auth.ts",
+      "src/reflex/configStore.ts",
+      "src/reflex/core.ts",
+      "src/routes/auth.ts",
+      "src/routes/config.ts",
+      "w0203-preflight-in-memory.ts"
+    ],
+    "outbound": 0,
+    "rows": [
+      {
+        "label": "sub absent",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": null
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "unknown",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "unknown",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "sub empty",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": ""
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "unknown",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "unknown",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "sub blank",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": " \t\n"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": " \t\n",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": " \t\n",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "sub null",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": null
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "unknown",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "unknown",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "sub number",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": 7
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": 7,
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": 7,
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "sub boolean",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": true
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": true,
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": true,
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "sub array",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": [
+              "actor"
+            ]
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": [
+              "actor"
+            ],
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": [
+              "actor"
+            ],
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "sub object",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": {
+              "id": "actor"
+            }
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": {
+              "id": "actor"
+            },
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": {
+              "id": "actor"
+            },
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "roles substring",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "roles empty",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 403,
+            "calls": []
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 403,
+            "calls": []
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 1,
+        "audit": [],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "roles null",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 403,
+            "calls": []
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 403,
+            "calls": []
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 1,
+        "audit": [],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "roles number",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 401,
+            "calls": []
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 401,
+            "calls": []
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 1,
+        "audit": [],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "roles object",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 401,
+            "calls": []
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 401,
+            "calls": []
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 1,
+        "audit": [],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "roles mixed",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "roles nested",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 403,
+            "calls": []
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 403,
+            "calls": []
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 1,
+        "audit": [],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "permissions substring",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "permissions empty",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 403,
+            "calls": []
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          }
+        ]
+      },
+      {
+        "label": "permissions null",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 403,
+            "calls": []
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          }
+        ]
+      },
+      {
+        "label": "permissions number",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 401,
+            "calls": []
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          }
+        ]
+      },
+      {
+        "label": "permissions object",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 401,
+            "calls": []
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          }
+        ]
+      },
+      {
+        "label": "permissions mixed",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "permissions nested",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 403,
+            "calls": []
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          }
+        ]
+      },
+      {
+        "label": "valid arrays",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": "synthetic-actor"
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-actor",
+            "K": 23
+          }
+        ]
+      },
+      {
+        "label": "valid sub only",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 403,
+            "calls": []
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 403,
+            "calls": []
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 403,
+            "calls": []
+          }
+        ],
+        "accountCount": 1,
+        "audit": [],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": "synthetic-tool",
+            "K": 17
+          }
+        ]
+      },
+      {
+        "label": "valid exact strings",
+        "observations": [
+          {
+            "path": "/auth/users",
+            "method": "GET",
+            "status": 200,
+            "calls": [
+              "ACCOUNTS.list"
+            ],
+            "returnedUsers": 1
+          },
+          {
+            "path": "/auth/users",
+            "method": "POST",
+            "status": 201,
+            "calls": [
+              "ACCOUNTS.getByEmail",
+              "CACHE.get",
+              "ACCOUNTS.put",
+              "ACCOUNTS.audit"
+            ]
+          },
+          {
+            "path": "/config/reflex?scope=w0203-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 17
+          },
+          {
+            "path": "/permission-config/reflex?scope=w0203-permission-baseline",
+            "method": "PATCH",
+            "status": 200,
+            "calls": [
+              "CACHE.get",
+              "CACHE.put",
+              "CACHE.put",
+              "CACHE.get",
+              "CACHE.put"
+            ],
+            "revision": 1,
+            "K": 23
+          }
+        ],
+        "accountCount": 2,
+        "audit": [
+          {
+            "action": "account_created",
+            "actorId": " \t客户 synthetic actor "
+          }
+        ],
+        "configState": [
+          {
+            "key": "reflex:config:w0203-baseline:current",
+            "revision": 1,
+            "actor": " \t客户 synthetic actor ",
+            "K": 17
+          },
+          {
+            "key": "reflex:config:w0203-permission-baseline:current",
+            "revision": 1,
+            "actor": " \t客户 synthetic actor ",
+            "K": 23
+          }
+        ]
+      }
+    ]
+  },
+  "check_results": {
+    "check": {
+      "chunk_id": "b01dc6",
+      "wall_time_seconds": 0.000002164,
+      "exit_code": 0,
+      "original_token_count": 1857,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=2, unscoped=39\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=1, closed=3; evidence records=17\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W01.02 — Admit the next bounded W02 JWT subject/roles/permissions shape guard, preserve the baseline and reproduce actual account/config effects before coding, then implement and independently verify. Read RESUME.md for completed seq77 acceptance, final consistency evidence, retained limitations and standing local-only authority. No new slice is yet admitted; do not restart historical inventory.\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W02.01 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE revalidation_required: W01.01-E1 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE revalidation_required: W01.01-E2 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W02.01-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E1 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W02.01-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E2 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE limits: Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker.\nNo task, finding, package or gate was changed by this command.\n"
+    },
+    "status": {
+      "chunk_id": "17eca3",
+      "wall_time_seconds": 0.000001568,
+      "exit_code": 0,
+      "original_token_count": 1857,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=2, unscoped=39\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=1, closed=3; evidence records=17\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W01.02 — Admit the next bounded W02 JWT subject/roles/permissions shape guard, preserve the baseline and reproduce actual account/config effects before coding, then implement and independently verify. Read RESUME.md for completed seq77 acceptance, final consistency evidence, retained limitations and standing local-only authority. No new slice is yet admitted; do not restart historical inventory.\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01 artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W02.01 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E1 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE revalidation_required: W01.01-E1 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/index.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: missing/unreadable src/routes/api.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.01-E2 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE revalidation_required: W01.01-E2 is retained historical proof awaiting a replacement; it cannot support acceptance\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E1 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E2 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W02.01-E1 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E1 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E1 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W02.01-E2 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E2 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W02.01-E2 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E3 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at src/middleware/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at src/routes/auth.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at src/routes/health.ts; preserve record and revalidate\nNOTE stale_proof: W01.02-E4 historical artifact: hash mismatch at tsconfig.json; preserve record and revalidate\nNOTE limits: Checks validate recorded consistency and local hashes only; they do not authenticate people, attest deployed correctness, approve customer scope or authorize release. Append-only proof needs an independently retained prior tracker.\nNo task, finding, package or gate was changed by this command.\n"
+    }
+  },
+  "limitations": "Selected actual Hono/auth/config/account modules in Node with successful synthetic memory adapters. Extra permission-config mount applies the real jwt permissions option; no production route currently uses that option. No workerd/default-export/native-resource/deployed/customer/SLO proof. Before-source contents retained for reviewer-owned replay without source restoration. Bundle graph includes one virtual stdin input."
+}

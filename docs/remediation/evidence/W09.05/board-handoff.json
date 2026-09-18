@@ -1,0 +1,77 @@
+{
+  "at": "2026-09-12T01:29:53.099Z",
+  "task_id": "W09.05",
+  "journal_seq": 1075,
+  "tracker_sha256": "5f412bb28557893d5a36ad2b0ab85de20df846c7d6bd626a5102191abc8eeaf7",
+  "artifact_digest": "d8d9ae3f1170952b7b11737189c8322edef88b67d06dac404df2bdf234d2d02f",
+  "contract_digest": "177cd97bc99674ffc027bca9d0da7f42a87a072a65a2183fee9e827ad7ab9105",
+  "state": "closed",
+  "final_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "7ebfc1",
+        "wall_time_seconds": 1.001131667,
+        "session_id": 98059,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "60aeef",
+        "wall_time_seconds": 5.00070731,
+        "session_id": 98059,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "85b73b",
+        "wall_time_seconds": 5.000693011,
+        "session_id": 98059,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "363353",
+        "wall_time_seconds": 5.000393896,
+        "session_id": 98059,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f80eb9",
+        "wall_time_seconds": 0.000002227,
+        "exit_code": 0,
+        "original_token_count": 485,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=18, unscoped=23\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=76, closed=2; evidence records=222\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.05 — Next inspect and admit the W10 G1 learning-ingestion/state-bound correction against F08, preserving the customer-neutral deterministic core and latency. Do not leave capacity containment waiting for a larger recovery programme. W09/W22 logical sink idempotency, durable reconciliation, DLQ/exhaustion and marker/reset/erasure lifecycle remain explicitly open; no blind retries, retention decision, resource mutation or customer/release approval is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 15953\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=18, unscoped=23\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=76, closed=2; evidence records=222\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.05 — Next inspect and admit the W10 G1 learning-ingestion/state-bound correction against F08, preserving the customer-neutral deterministic core and latency. Do not leave capacity containment waiting for a larger recovery programme. W09/W22 logical sink idempotency, durable reconciliation, DLQ/exhaustion and marker/reset/erasure lifecycle remain explicitly open; no blind retries, retention decision, resource mutation or customer/release approval is inferred.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 15953\n"
+      }
+    ],
+    "session_id": 98059,
+    "exit_code": 0,
+    "drained": true,
+    "check": "VALID",
+    "status": "VALID",
+    "note_counts": {
+      "check": 15953,
+      "status": 15953
+    },
+    "interpretation": "Actual existing checker/status run with read/stat memoization; NOTE lines counted, validation unchanged. Valid tracker is not engine, full package or release acceptance."
+  },
+  "root_frozen_check": {
+    "command": "node --input-type=module -e 'import fs from'\\''node:fs'\\'';import assert from'\\''node:assert/strict'\\'';import{gunzipSync}from'\\''node:zlib'\\'';import{applyPatch}from'\\''diff'\\'';import{sha256,artifactDigest,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';const j=p=>JSON.parse(fs.readFileSync(p)),t=j('\\''docs/remediation/tracker.json'\\''),task=t.tasks.find(x=>x.id==='\\''W09.05'\\''),b=j('\\''docs/remediation/design/W09.05/baseline.json'\\''),a=j('\\''docs/remediation/evidence/W09.05/artifact.json'\\''),d=j('\\''docs/remediation/evidence/W09.05/source-deltas.json'\\'');assert.deepEqual(task.artifact,a);assert.equal(a.digest,artifactDigest(a));assert.equal(a.contract_digest,taskContractDigest(task));for(const f of a.files)assert.equal(sha256(fs.readFileSync(f.path)),f.sha256,f.path);for(const x of d.deltas){const before=gunzipSync(Buffer.from(b.owned.find(f=>f.path===x.path).content_gzip_base64,'\\''base64'\\'')).toString(),after=fs.readFileSync(x.path,'\\''utf8'\\'');assert.equal(applyPatch(before,x.forward),after,x.path);assert.equal(applyPatch(after,x.reverse),before,x.path);}console.log(JSON.stringify({ok:true,at:new Date().toISOString(),artifact:a.digest,files:a.files.length,source:b.pins.length,protected:b.pins.filter(f=>f.role==='\\''source'\\'').length,deltas:d.deltas.length,contract:a.contract_digest}));'",
+    "captures": [
+      {
+        "chunk_id": "d01579",
+        "wall_time_seconds": 0.471584618,
+        "exit_code": 0,
+        "original_token_count": 63,
+        "output": "{\"ok\":true,\"at\":\"2026-09-12T01:22:15.767Z\",\"artifact\":\"d8d9ae3f1170952b7b11737189c8322edef88b67d06dac404df2bdf234d2d02f\",\"files\":108,\"source\":102,\"protected\":86,\"deltas\":16,\"contract\":\"177cd97bc99674ffc027bca9d0da7f42a87a072a65a2183fee9e827ad7ab9105\"}\n"
+      }
+    ]
+  },
+  "handoff": {
+    "all_task_tools_drained": true,
+    "implementation_active": false,
+    "next_action": "Next inspect and admit the W10 G1 learning-ingestion/state-bound correction against F08, preserving the customer-neutral deterministic core and latency. Do not leave capacity containment waiting for a larger recovery programme. W09/W22 logical sink idempotency, durable reconciliation, DLQ/exhaustion and marker/reset/erasure lifecycle remain explicitly open; no blind retries, retention decision, resource mutation or customer/release approval is inferred.",
+    "limitations": "Local collision-resistant logical identity only: not sink idempotency, replay/retry safety, payload-conflict detection, durable reconciliation, W09/W22/F16 closure, retention/reset-generation policy, DLQ/exhaustion recovery, deployed SLO, customer acceptance or release. Same immutable timestamp/nonce/subject/scope required; legacy server fallback has no repeat-request identity guarantee. Existing SDK noncryptographic Host.uuid fallbacks remain statistically collision-resistant, not adversarial/global uniqueness. No new persistent marker state, retry, scoring/seed change, install, external/cloud/resource/credential/customer-data/deploy/commit/push/cleanup or policy amendment. Only existing two SDK bundles may be regenerated locally with the existing build script."
+  }
+}

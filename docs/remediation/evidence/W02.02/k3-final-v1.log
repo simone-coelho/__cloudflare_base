@@ -1,0 +1,190 @@
+TAP version 13
+# Subtest: explicit opaque tokens have priority without consulting local signing settings
+ok 1 - explicit opaque tokens have priority without consulting local signing settings
+  ---
+  duration_ms: 1.199637
+  type: 'test'
+  ...
+# Subtest: shared signing policy refuses unsafe keys and identity configuration
+ok 2 - shared signing policy refuses unsafe keys and identity configuration
+  ---
+  duration_ms: 2.474887
+  type: 'test'
+  ...
+# Subtest: local target policy uses exact parsed loopback names
+ok 3 - local target policy uses exact parsed loopback names
+  ---
+  duration_ms: 0.180893
+  type: 'test'
+  ...
+# Subtest: dev-token: unsafe configuration stops before operational or configuration-file effects
+ok 4 - dev-token: unsafe configuration stops before operational or configuration-file effects
+  ---
+  duration_ms: 21.778215
+  type: 'test'
+  ...
+# Subtest: dev-token: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+ok 5 - dev-token: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+  ---
+  duration_ms: 7.038198
+  type: 'test'
+  ...
+# Subtest: dev-token: OPERATOR_TOKEN passes through without signing configuration
+ok 6 - dev-token: OPERATOR_TOKEN passes through without signing configuration
+  ---
+  duration_ms: 2.791328
+  type: 'test'
+  ...
+# Subtest: acceptance-run: unsafe configuration stops before operational or configuration-file effects
+ok 7 - acceptance-run: unsafe configuration stops before operational or configuration-file effects
+  ---
+  duration_ms: 21.289518
+  type: 'test'
+  ...
+# Subtest: acceptance-run: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+ok 8 - acceptance-run: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+  ---
+  duration_ms: 8.175848
+  type: 'test'
+  ...
+# Subtest: acceptance-run: OPERATOR_TOKEN passes through without signing configuration
+ok 9 - acceptance-run: OPERATOR_TOKEN passes through without signing configuration
+  ---
+  duration_ms: 5.92279
+  type: 'test'
+  ...
+# Subtest: import-content: unsafe configuration stops before operational or configuration-file effects
+ok 10 - import-content: unsafe configuration stops before operational or configuration-file effects
+  ---
+  duration_ms: 18.631325
+  type: 'test'
+  ...
+# Subtest: import-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+ok 11 - import-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+  ---
+  duration_ms: 3.771062
+  type: 'test'
+  ...
+# Subtest: import-content: OPERATOR_TOKEN passes through without signing configuration
+ok 12 - import-content: OPERATOR_TOKEN passes through without signing configuration
+  ---
+  duration_ms: 2.517493
+  type: 'test'
+  ...
+# Subtest: seed-coach-content: unsafe configuration stops before operational or configuration-file effects
+ok 13 - seed-coach-content: unsafe configuration stops before operational or configuration-file effects
+  ---
+  duration_ms: 16.674223
+  type: 'test'
+  ...
+# Subtest: seed-coach-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+ok 14 - seed-coach-content: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+  ---
+  duration_ms: 5.164524
+  type: 'test'
+  ...
+# Subtest: seed-coach-content: OPERATOR_TOKEN passes through without signing configuration
+ok 15 - seed-coach-content: OPERATOR_TOKEN passes through without signing configuration
+  ---
+  duration_ms: 2.17005
+  type: 'test'
+  ...
+# Subtest: console-operator: unsafe configuration stops before operational or configuration-file effects
+ok 16 - console-operator: unsafe configuration stops before operational or configuration-file effects
+  ---
+  duration_ms: 30.210715
+  type: 'test'
+  ...
+# Subtest: console-operator: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+ok 17 - console-operator: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+  ---
+  duration_ms: 4.463137
+  type: 'test'
+  ...
+# Subtest: console-operator: OPERATOR_TOKEN passes through without signing configuration
+ok 18 - console-operator: OPERATOR_TOKEN passes through without signing configuration
+  ---
+  duration_ms: 3.260631
+  type: 'test'
+  ...
+# Subtest: holdout-proof: unsafe configuration stops before operational or configuration-file effects
+ok 19 - holdout-proof: unsafe configuration stops before operational or configuration-file effects
+  ---
+  duration_ms: 17.930496
+  type: 'test'
+  ...
+# Subtest: holdout-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+ok 20 - holdout-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+  ---
+  duration_ms: 3.466209
+  type: 'test'
+  ...
+# Subtest: holdout-proof: OPERATOR_TOKEN passes through without signing configuration
+ok 21 - holdout-proof: OPERATOR_TOKEN passes through without signing configuration
+  ---
+  duration_ms: 2.625787
+  type: 'test'
+  ...
+# Subtest: identity-proof: unsafe configuration stops before operational or configuration-file effects
+ok 22 - identity-proof: unsafe configuration stops before operational or configuration-file effects
+  ---
+  duration_ms: 17.020434
+  type: 'test'
+  ...
+# Subtest: identity-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+ok 23 - identity-proof: explicit settings preserve claims, lifetime, verifier compatibility and adapter use
+  ---
+  duration_ms: 4.078073
+  type: 'test'
+  ...
+# Subtest: identity-proof: OPERATOR_TOKEN passes through without signing configuration
+ok 24 - identity-proof: OPERATOR_TOKEN passes through without signing configuration
+  ---
+  duration_ms: 3.121414
+  type: 'test'
+  ...
+# Subtest: acceptance-run: CLI precedence and remote token path; no ambiguous local mint
+ok 25 - acceptance-run: CLI precedence and remote token path; no ambiguous local mint
+  ---
+  duration_ms: 48.599501
+  type: 'test'
+  ...
+# Subtest: import-content: CLI precedence and remote token path; no ambiguous local mint
+ok 26 - import-content: CLI precedence and remote token path; no ambiguous local mint
+  ---
+  duration_ms: 24.418181
+  type: 'test'
+  ...
+# Subtest: seed-coach-content: CLI precedence and remote token path; no ambiguous local mint
+ok 27 - seed-coach-content: CLI precedence and remote token path; no ambiguous local mint
+  ---
+  duration_ms: 33.890631
+  type: 'test'
+  ...
+# Subtest: console remains local-only, while existing remote-capable proof scripts remain usable
+ok 28 - console remains local-only, while existing remote-capable proof scripts remain usable
+  ---
+  duration_ms: 12.882801
+  type: 'test'
+  ...
+# Subtest: rehearsal refuses unsafe/missing configuration visibly before screenshot read or later curl
+ok 29 - rehearsal refuses unsafe/missing configuration visibly before screenshot read or later curl
+  ---
+  duration_ms: 3239.907814
+  type: 'test'
+  ...
+# Subtest: rehearsal accepts explicit bearer or custom settings and preserves the historical token
+ok 30 - rehearsal accepts explicit bearer or custom settings and preserves the historical token
+  ---
+  duration_ms: 1885.905554
+  type: 'test'
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13465.310041

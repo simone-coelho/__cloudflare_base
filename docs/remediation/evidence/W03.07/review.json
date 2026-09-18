@@ -1,0 +1,97 @@
+{
+  "task_id": "W03.07",
+  "reviewer": {
+    "actor_id": "w0307-reviewer",
+    "run_id": "/root/w01_reviewer",
+    "model": "gpt-6-astra",
+    "reasoning": "xhigh",
+    "independent_of": "/root/w01_worker"
+  },
+  "verdict": "PASS_LOCAL",
+  "artifact": "1381f9b8b4eefbb2c8377681723e34dc6e90c4a5e6777fcb02401f537ab849ff",
+  "contract": "e76d21836ee7ef906636a71e37c71de5695a6cc9f582479745cfebb4496460ae",
+  "scope": "Complete original W03 local review (document35 §5; F03/F31/F33; N01/N03/N13/N29), retaining v1–v4 admissions and earlier W01/W02/W03/W37 remedies. Not full-item, finding, customer, deployed or release acceptance.",
+  "evidence": {
+    "freeze": {
+      "path": "docs/remediation/evidence/W03.07/source-freeze.json",
+      "sha256": "f85a34863c0a79382dc06fff5fcf5ddb32109cfc8741ce9644df14b20bed964a"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W03.07/worker.json",
+      "sha256": "74eeb9f8d14a1519fe90afce77c5b8d693a8567133087358f1dea80f297ac033"
+    },
+    "identity": "Independently matched all78 frozen pins and all24 admitted dirty-baseline/final hashes; parsed and reversed every task-only patch, matched baseline bytes, then reconstructed exact final bytes. All78 pins matched again after K5. No source drift.",
+    "K5": {
+      "command": "node node_modules/vitest/vitest.mjs run src/reflex/odpLoop.test.ts src/identity/identity.test.ts src/routes/realtime.sdkContract.test.ts src/index.api-boundary.test.ts src/ledger/ledger.test.ts src/routes/identity.test.ts -t 'W03[.]07' --maxWorkers=1 --minWorkers=1",
+      "executions": 1,
+      "start_utc": "2026-09-17 00:04:20 UTC",
+      "completion_observed_utc": "2026-09-17 00:06:11 UTC",
+      "exit_code": 0,
+      "files_passed": 6,
+      "passed": 10,
+      "unselected": 241,
+      "vitest_duration_seconds": 37.39,
+      "session": 81261,
+      "drained": true,
+      "primary_output": {
+        "path": "docs/remediation/evidence/W03.07/reviewer-k5-output.txt",
+        "sha256": "f7106a64cd868ead10ffce963ca7b6ad5c6eb03cbcc59d6d5eeacd66ca3c81d5"
+      }
+    },
+    "reused": [
+      {
+        "id": "K1",
+        "worker_attempt": 9,
+        "result": "49 passed, exit0",
+        "qualification": "Historical execution on final production inputs, not a newly dated run. Sole subsequent change strengthened routes/identity.test.ts (6bc723f94930e95532d0ff49cb15eeef60eb68e02a3e7ef22cfaa2362e5c326d → 24a339fadd8c0f4563f7ffee6335ed450f2603a93ca51c16c92c14071207c278), outside K1 selection/imports; all other23 outputs unchanged."
+      },
+      {
+        "id": "K2",
+        "worker_attempt": 12,
+        "result": "42 passed /167 unselected, exit0, exact final fixture"
+      },
+      {
+        "id": "K3",
+        "worker_attempt": 13,
+        "result": "Compiler/scoped lint/whitespace exit0; 0 errors,200 warnings (189 inherited,11 added no-explicit-any)."
+      }
+    ],
+    "history": "All14 worker attempts, initial12 K2 failures and4 compiler errors, intermediate failures and superseding outputs retained. Two reviewer read-only inspection errors (undefined optional metadata; reversePatch required parsePatch) corrected without file writes or extra test executions."
+  },
+  "coverage": [
+    {
+      "criteria": "C1; F03/N01/N03/N13",
+      "assessment": "Canonical request tenant rejects path/header/host/query/scope disagreements before effects; SDK fetch/header and socket query agree with CORS. Current W02 membership/service authority remains in jwt/operatorJwt; tenant roles replace shared-account roles and owner recovery is not product bypass. W01 customer dispatch/raw-API removal remains. Mounted K2 exercises two-nondefault denied and allowed document revisions, audience writes, subject reads/export/erasure and phased tenant/actor audit including HEAD, admission refusal and post-effect uncertainty. Named backend proof/rotation survives; wildcard multi-tenant proof refuses before identity effects."
+    },
+    {
+      "criteria": "C2–C3; F31/F33",
+      "assessment": "TENANT_CONNECTORS is subordinate to canonical TENANTS; customer missing registry fails closed. Strict mapping/raw tenant-key validation and explicit selected secret references prevent global/demo fallback. FX ordinary/direct FeatureVariableManager/fresh DecisionProvider/refresh paths bind tenant cache, external identity, account/project and destinations. Provider SDK construction/network are intercepted synthetic proof, not live account acceptance."
+    },
+    {
+      "criteria": "C4; F31",
+      "assessment": "Both hosts configure ODP actions/fields/profile/audience mapping and tenant-scoped external identity. Retained seed/ring pins are checked per source against current tenant/settings/secret before use. Reviewed event, read, analytics, manual candidate, signed socket, restarted alarm, buffered, identity merge and content/general snapshot tails. Stage derives after rejected labels are removed; same-label local membership from another source survives. Refusal response cookies contain consent only. Read projections do not mutate raw erasure/transfer witnesses or add network; buffered paths retain no new provider I/O/activity/retention."
+    },
+    {
+      "criteria": "C5; N29",
+      "assessment": "Every managed/legacy envelope constituent is admitted before any binding/tombstone/storage access; unknown/removed/invalid tenants retry whole envelopes without partial effects while valid siblings keep exact positional dispositions. Restored configuration resumes pending work. Retained mounted cron tests and source use the same provisioned manifest; no second runtime tenant list or hidden default customer introduced."
+    },
+    {
+      "criteria": "C1/C4; retained erasure",
+      "assessment": "Selected erasure positives use signed/verified canonically valid subject/SID/epoch grants in matching real-class objects over synthetic storage, not mocked allow verdicts. Legacy unregistered refusal remains explicit. Physical KV/cache/private-object/ring removal, exact foreign KV/cache/object/ring bytes, exact three-record UUID/epoch/job/SID denial metadata, v6 compact minimization, fresh later SID, ring-fault reachability and actor/cutoff/audit ambiguity oracles are preserved. This does not prove bootstrap or W04 session-host lifecycle parity."
+    },
+    {
+      "criteria": "C6",
+      "assessment": "All interim concrete findings corrected in frozen source and focused oracles: scoped refresh/raw keys; provenance before stage/analytics/manual/socket/refusal; reserved mapped envelope keys and GraphQL primitive serialization; per-source merge collision; actual content/reflex stage; refusal cookies; exact erasure barriers/foreign rings. Reviewed existing fixture corrections against current grant/adoption, integer timestamp and customer audience-store behavior; no skip/status-only relaxation or authority bypass found."
+    }
+  ],
+  "remaining": [
+    "C7/K6 and D08: actual selected customer/environment/brand/provider/resource/credential mappings, live two-brand connector/job/export/erasure acceptance remain unrun and require separately authorized final batch.",
+    "Local Miniflare/workerd mounted-boundary evidence uses synthetic bindings. Both-host state/erasure fixtures use real classes with synthetic storage; FX adapter test intercepts SDK construction. No deployed native lifecycle, provisioning, residency, release pinning, load/SLO or external deletion claim.",
+    "K5 retains expected fixed-label absent-FX and synthetic unavailable queue/learning diagnostics. They are not successful end-to-end provider/learning-delivery evidence.",
+    "Original ordered remaining W items, including W04 ownership/concurrency/session-parity work and W08 provisioning, remain separate. No live vector restoration or full F03/F31/F33 closure is inferred."
+  ],
+  "findings": [],
+  "full_item_acceptance": false,
+  "product_edits_by_reviewer": false,
+  "external_actions": false
+}

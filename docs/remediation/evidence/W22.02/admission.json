@@ -1,0 +1,30 @@
+{
+  "task_id": "W22.02",
+  "at": "2026-09-14T13:07:29.741Z",
+  "plan": {
+    "path": "docs/remediation/design/W22.02/plan.md",
+    "sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W22.02/baseline.json",
+    "sha256": "96cba01da8a25be555d8ea6e05f0ce26fa42087c0772d22ed276af391dac0d3c"
+  },
+  "contract_digest": "8bb41200cfa52d1820f9d9958fee40fd3fdf61f0854e33c8d1cc04c057498bf2",
+  "independent_preflight": {
+    "actor_id": "w2202-reviewer",
+    "run_id": "/root/w2202_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435",
+    "limitations": "Design only. Provider/stream errors propagate; recovered earlier input does not rebuild later-hour carry-in."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-14T13:07:29.741Z",
+    "plan_sha256": "89fd28c37ccde543616de77d60704524096559aabd8a7a5fbcc29138cc076435",
+    "rationale": "Root actual-source design case; distinct Astra/xhigh exact-plan PASS89fd28c; fixed10 sufficient, later-progress limit explicit. All prior artifact pins identical and lint0/0 reused."
+  },
+  "fixed_checks": 10,
+  "scope": "Forward listed-input completeness refusal only: unavailable/corrupt input is not repaired automatically. Existing catchUp can retry after availability is restored, within its lookback/horizon; historical partial aggregates, late arrivals, partially written shards, event-time manifests, durable producer recovery, online/export/point-read reconciliation and complete retention remain open. Physical caps and explicit truncation unchanged, no served/rendered/viewable or customer policy change. No native/SLO/customer/release claim or commit/push/build/install/deploy/cloud/credential/customer-data/destructive/external operation. Recovery assurance covers retry before later-hour progress; catchUp still continues after failure, so later carry-in/attribution may remain incomplete and is not rebuilt."
+}

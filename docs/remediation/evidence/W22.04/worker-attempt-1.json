@@ -1,0 +1,220 @@
+{
+  "task_id": "W22.04",
+  "actor": {
+    "actor_id": "w2204-worker",
+    "run_id": "/root/w2204_worker",
+    "role": "implementer",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "provenance": "Parent assigned Astra/xhigh; no subdelegation."
+  },
+  "plan": {
+    "path": "docs/remediation/design/W22.04/plan.md",
+    "sha256": "ae83df765514550f2ab99b0163b3b5f810a2498b76388e816c2c68ffecf950cf"
+  },
+  "contract_digest": "654a5f53b1631379685824545d9f57c6270d041ead2d57e3dbc4863cae941020",
+  "baseline": {
+    "path": "docs/remediation/design/W22.04/baseline.json",
+    "sha256": "30822fe2a8da48bc947d2c8a5102a3d558ee9217d64252bbb9b0687e6332460e",
+    "case": "Source-confirmed repeated same-call exposures and malformed online outcome identity admission; no failed runtime baseline claimed.",
+    "initial_pin_check": "86a428: all5 owned and38 protected pins matched before edits; exact plan SHA matched."
+  },
+  "changes": [
+    "Bounded physical input snapshot before asynchronous reads; original and detached scope/carrier/provenance validation.",
+    "Physical cutoff suppression before complete surviving-ID reconciliation; exact full-wire-JSON copies coalesce with count-only receipt/diagnostic, conflicts refuse before config or destination effects.",
+    "Fan and direct ring reject malformed supplied outcome identity; valid nonce and truly legacy inputs retain attribution and separate-call repetition.",
+    "Two grouped actual-object fixtures, the three explicitly admitted stale-fixture corrections, and concise API contract."
+  ],
+  "rework": [
+    {
+      "approval": "Lead message before final checks under admitted plan",
+      "change": "Moved original scope check before serialization in both fan paths; same grouped toJSON controls confirm refusal."
+    },
+    {
+      "approval": "Lead acknowledged TS2339 fixture-only correction within admitted scope",
+      "change": "First static failed because contextual fixture toJSON this inferred as {}; explicit this:{brand:string} annotation corrects compile without production/runtime change. Retained first runtime success/static failure and reran exact fixed12/static."
+    }
+  ],
+  "criteria": {
+    "W22.04-C1": "PASS locally: actual ring/statistics same-call copies, distinct IDs, all arms, physical cutoff conflicts, late payload conflict no-effects, held-barrier source mutation,1000-row boundary, physical UTF-8/work limits.",
+    "W22.04-C2": "PASS locally: malformed supplied nonce/source/carrier/reward/provenance refuses before fan/ring reads or credits; valid nonce/request provenance, legacy repetitions and exact receipt correlation controls preserved.",
+    "W22.04-C3": "PASS worker checks on exact files: fixed12, full compiler, scoped lint0 errors/7 same inherited diagnostics, owned whitespace. Independent review and lead acceptance pending."
+  },
+  "attempts": [
+    {
+      "id": "runtime-initial",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts -t 'W22\\.04|W26\\.03 surfaces|W26\\.02 narrows|W09\\.04|W24\\.01 pins|feeds no exposures|keeps only post-cutoff|starts no ring/exposure|W06\\.06 rejects an append|W10\\.02 bounds actual' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-14 15:56:01 UTC",
+      "initial": {
+        "chunk_id": "39fb33",
+        "wall_time_seconds": 1.001632284,
+        "session_id": 97756,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "4a1bb1",
+          "wall_time_seconds": 0.00000219,
+          "exit_code": 0,
+          "original_token_count": 253,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (29 tests | 22 skipped) 259ms\n ✓ src/learn/holdoutArms.test.ts  (7 tests | 2 skipped) 41ms\n\n Test Files  2 passed (2)\n      Tests  12 passed | 24 skipped (36)\n   Start at  11:56:04\n   Duration  8.90s (transform 1.41s, setup 0ms, collect 2.82s, tests 300ms, environment 0ms, prepare 4.24s)\n\n"
+        }
+      ],
+      "result": "pass",
+      "drained": true,
+      "superseded_by": "runtime-final"
+    },
+    {
+      "id": "static-initial",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/fan.ts src/durable-objects/DecisionRing.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts && git diff --check -- src/learn/fan.ts src/durable-objects/DecisionRing.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-14 15:56:20 UTC",
+      "initial": {
+        "chunk_id": "d5674e",
+        "wall_time_seconds": 1.000935388,
+        "session_id": 20294,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "3c18ec",
+          "wall_time_seconds": 5.001486455,
+          "session_id": 20294,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "0e1a05",
+          "wall_time_seconds": 0.000001868,
+          "exit_code": 2,
+          "original_token_count": 24,
+          "output": "src/learn/learn.test.ts(790,67): error TS2339: Property 'brand' does not exist on type '{}'.\n"
+        }
+      ],
+      "result": "fail",
+      "drained": true,
+      "superseded_by": "static-final"
+    },
+    {
+      "id": "runtime-final",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts -t 'W22\\.04|W26\\.03 surfaces|W26\\.02 narrows|W09\\.04|W24\\.01 pins|feeds no exposures|keeps only post-cutoff|starts no ring/exposure|W06\\.06 rejects an append|W10\\.02 bounds actual' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-14 15:57:20 UTC",
+      "initial": {
+        "chunk_id": "d5b807",
+        "wall_time_seconds": 1.001480646,
+        "session_id": 92409,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "61843a",
+          "wall_time_seconds": 0.000002153,
+          "exit_code": 0,
+          "original_token_count": 253,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/learn/learn.test.ts > the objects > W09.04 reports acknowledged statistics processing and the complete ring credit cascade\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n\n ✓ src/learn/learn.test.ts  (29 tests | 22 skipped) 262ms\n ✓ src/learn/holdoutArms.test.ts  (7 tests | 2 skipped) 34ms\n\n Test Files  2 passed (2)\n      Tests  12 passed | 24 skipped (36)\n   Start at  11:57:23\n   Duration  7.84s (transform 1.24s, setup 0ms, collect 2.63s, tests 296ms, environment 0ms, prepare 3.54s)\n\n"
+        }
+      ],
+      "result": "pass",
+      "drained": true
+    },
+    {
+      "id": "static-final",
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/fan.ts src/durable-objects/DecisionRing.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts && git diff --check -- src/learn/fan.ts src/durable-objects/DecisionRing.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-14 15:57:26 UTC",
+      "initial": {
+        "chunk_id": "1b1636",
+        "wall_time_seconds": 1.001946366,
+        "session_id": 48725,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "polls": [
+        {
+          "chunk_id": "9f3792",
+          "wall_time_seconds": 5.001880946,
+          "session_id": 48725,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "3f4b45",
+          "wall_time_seconds": 2.475610375,
+          "exit_code": 0,
+          "original_token_count": 222,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/holdoutArms.test.ts\n  101:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  127:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  132:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  134:63  warning  Unexpected empty async method 'setAlarm'  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  674:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  675:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  675:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 7 problems (0 errors, 7 warnings)\n\n"
+        }
+      ],
+      "result": "pass",
+      "drained": true
+    }
+  ],
+  "lint": {
+    "baseline_errors": 0,
+    "baseline_warnings": 7,
+    "final_errors": 0,
+    "final_warnings": 7,
+    "comparison": "Final CLI diagnostics match baseline by file, rule and message:3 no-unused-vars in learn.test.ts (_key,_url,_init);3 no-explicit-any and1 no-empty-function(setAlarm) in holdoutArms.test.ts. Only line positions shifted; no new diagnostics."
+  },
+  "measurement": {
+    "classification": "Local synthetic actual-module Node/Vitest with fake bindings; no provider/deployed/customer-data workload.",
+    "final_tests": 12,
+    "unselected": 24,
+    "files": 2,
+    "vitest_duration_seconds": 7.84,
+    "reported_test_execution_seconds": 0.296,
+    "limits": {
+      "physical_rows": 1000,
+      "combined_serialized_record_utf8_bytes": 16777216,
+      "row_comparison_work": 1000000
+    },
+    "performance_claim": "Refusal budgets only; a row can materialize before its byte check. No native-capacity, response-latency or SLO claim."
+  },
+  "files": [
+    {
+      "path": "src/learn/fan.ts",
+      "sha256": "be1b4fababcb5c9b53f1bec8d8d848550755c09f247728c2119980436134e71c"
+    },
+    {
+      "path": "src/durable-objects/DecisionRing.ts",
+      "sha256": "6ac4874c35f1dbf0abe0ee32cb7d0605676a32e2b25f7e4ebcb8db2075245c3e"
+    },
+    {
+      "path": "src/learn/learn.test.ts",
+      "sha256": "304d05e932f30708cd3bcc031ba5986d62ec085462459cfcaf5842c653f4c06c"
+    },
+    {
+      "path": "src/learn/holdoutArms.test.ts",
+      "sha256": "a572cabba1c66c8121180979cd783b9aa26b7d71eb43808763a2aa36076acbd8"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "sha256": "e43414e619fca8268c8ac45251462ee123081ed780478487c20732adb037ea65"
+    }
+  ],
+  "protected_count": 38,
+  "protected_mismatches": [],
+  "versions": {
+    "node": "v22.15.0",
+    "vitest": "1.6.1",
+    "typescript": "5.9.2",
+    "eslint": "8.57.1"
+  },
+  "source_identity_capture": {
+    "chunk_id": "d77dc8",
+    "wall_time_seconds": 0.115031884,
+    "exit_code": 0,
+    "original_token_count": 229,
+    "output": "{\"at\":\"2026-09-14T15:58:06.061Z\",\"baseline_sha256\":\"30822fe2a8da48bc947d2c8a5102a3d558ee9217d64252bbb9b0687e6332460e\",\"plan_sha256\":\"ae83df765514550f2ab99b0163b3b5f810a2498b76388e816c2c68ffecf950cf\",\"files\":[{\"path\":\"src/learn/fan.ts\",\"sha256\":\"be1b4fababcb5c9b53f1bec8d8d848550755c09f247728c2119980436134e71c\"},{\"path\":\"src/durable-objects/DecisionRing.ts\",\"sha256\":\"6ac4874c35f1dbf0abe0ee32cb7d0605676a32e2b25f7e4ebcb8db2075245c3e\"},{\"path\":\"src/learn/learn.test.ts\",\"sha256\":\"304d05e932f30708cd3bcc031ba5986d62ec085462459cfcaf5842c653f4c06c\"},{\"path\":\"src/learn/holdoutArms.test.ts\",\"sha256\":\"a572cabba1c66c8121180979cd783b9aa26b7d71eb43808763a2aa36076acbd8\"},{\"path\":\"docs/kit/02-api-reference.md\",\"sha256\":\"e43414e619fca8268c8ac45251462ee123081ed780478487c20732adb037ea65\"}],\"protected_count\":38,\"protected_mismatches\":[],\"versions\":{\"node\":\"v22.15.0\",\"vitest\":\"1.6.1\",\"typescript\":\"5.9.2\",\"eslint\":\"8.57.1\"}}\n"
+  },
+  "source_stop": "2026-09-14 15:59:09 UTC",
+  "limitations": "Same-invocation decision coalescing and malformed online outcome identity refusal only. Separate invocations still increment exposure/credit counters, and retained ring collisions can still coexist with statistics acceptance. No durable sink idempotency, completeness, historical repair, accumulation/reset transition, served/rendered/viewable denominator or customer policy change. LearnStats remains identifier-free; any persistent event token, including a linkable hash, needs the D06 privacy/retention/erasure decision and W24 transition/recovery design. Existing cross-store erasure races and stricter retained ring full-payload comparison remain. New fan physical/work caps are conservative local admission limits, not native/SLO/customer/release acceptance. No commits/push/build/install/deploy/cloud/credentials/customer-data/destructive/external operations.",
+  "disposition": {
+    "worker": "pass",
+    "independent_review": "pending",
+    "lead_acceptance": "pending",
+    "next": "Root freezes five-file artifact and hands off to distinct reviewer. Source and worker evidence STOP.",
+    "running_commands": []
+  }
+}

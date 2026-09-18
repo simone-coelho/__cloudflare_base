@@ -1,0 +1,481 @@
+{
+  "task_id": "W31.01",
+  "actor_id": "w1405-worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T01:31:28.494Z",
+  "contract_digest": "c3c5e454b333b71f5eeedfcef2a7cd53e20bd9f7c57520c0d818746c8f5c4b48",
+  "references": [
+    {
+      "path": "docs/remediation/design/W31.01/plan.md",
+      "sha256": "064da2c8dfa88bfe0e9cef4716619e5d42d3b7b12c176b76a75d10f97d79fd02"
+    },
+    {
+      "path": "docs/remediation/design/W31.01/baseline.json",
+      "sha256": "7821a2484a27919ca2350b8ee0a1e7fa4749570076075fcc005978e18bc50de3"
+    },
+    {
+      "path": "docs/remediation/evidence/W31.01/admission.json",
+      "sha256": "5b1e43822f0eecaaea3385c5456acb11b47f451c30eeafaf8cf216078c441874"
+    }
+  ],
+  "baseline": {
+    "kind": "source_confirmed_design_case_and_accepted_dependency_reuse",
+    "entry": "Root 71704/f77b0d VALID1354; admission direct check journal1363. No worker baseline runtime or duplicate board run."
+  },
+  "implementation_summary": [
+    "Raw/hour producers record bounded normalized computation: policies, slot reward/objective/tau, source/horizon/ring cap and unweighted count unit. Ambiguous custom labels retain prior output with unknown computation.",
+    "Hour metadata-only representation failures preserve numeric hour publication with null basis. Day construction validates all contributing bases/configuration and bounds their final union before merging or replacing canonical bytes.",
+    "Same-object summaries and diagnostic/paged reads preserve known basis. Windows withhold mixed/unknown/unrepresented slot arms with independent reasons/dates; found reports, source counts and coverage remain. Modern UI displays withholding and unverified experimental compatibility."
+  ],
+  "criterion_verdicts": {
+    "W31.01-C1": "PASS in admitted local fixtures; canonical preservation, carry-in and visitor-only hours, metadata refusal/unknown fallback, equivalent ordering, config and union guards exercised.",
+    "W31.01-C2": "PASS in admitted local fixtures and rendered UI; compatible raw counts and mixed/unknown/unrepresented withholding, both contribution orders, coverage and bounded prefix reads.",
+    "W31.01-C3": "Final fixed14/static and owned/protected hashes PASS; distinct frozen independent review and lead disposition pending."
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 14,
+      "unselected": 70,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "command_capture": "runtime3"
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static2"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "new_warnings": 0,
+      "command_capture": "static2"
+    },
+    "javascript_syntax": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static2"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static2"
+    }
+  },
+  "measurement": {
+    "counts": {
+      "compatible": {
+        "decisions": 2,
+        "credited": 6
+      },
+      "mixed_unknown_or_unrepresented_pooled_rows": 0,
+      "reads_per_two_days": 2
+    },
+    "prefix": [
+      {
+        "days": 28,
+        "requests": 28,
+        "full_canonical_bytes": 18226262,
+        "delivered_and_charged_prefix_bytes": 1835008
+      },
+      {
+        "days": 92,
+        "requests": 92,
+        "full_canonical_bytes": 59886296,
+        "delivered_and_charged_prefix_bytes": 6029312
+      }
+    ],
+    "page": {
+      "full_get_bytes": 185456,
+      "page_envelope_bytes": 7922,
+      "union_items": 121,
+      "page_items": 50,
+      "gets_per_page": 1
+    },
+    "qualification": "Actual retained groups; exact full-field/prefix parity uses independent full fields without unused grids. Synthetic compatible days use a consistent hourly-ring 1h/200 profile. No storage-read/CPU/SLO, native-capacity or scientific acceptance inferred."
+  },
+  "execution_history": [
+    {
+      "candidate": 1,
+      "at": "2026-09-13T01:44:34.046Z",
+      "capture_id": "455f12",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "5e9709b4e8b6712630cf7940b670f0a406ba72de34e77c6709adb12e04b7aa41"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "b92ec6e12a5b74c016980c71115b7bb8212a754e13dd3e6f266c1664b1238557"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "77c928b425fd626e3b54cc5d3237dd25c2523cfde0d4483b5f765bf558544c85"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "sha256": "c7066c7b345b46f11542919efe37d442bc46e4797ce06eb386268ff0bc0ed0bb"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "31a6acee457195d756a7d8cbf963d424bc242b28ba1f21186fbb828729ddf72f"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "a4dc8e1be32afee825ac4cbf8030c922947e0fd55680a5c4a78e494b31e32aec"
+        },
+        {
+          "path": "src/measure/window.test.ts",
+          "sha256": "39587feda34b812724b62fab600724babfd5e77f26090843ca65d43449b006aa"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "sha256": "3ac11408f17869620297cfee8f33c96df3bff67e53387fbef9797bd5ba25f529"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "53bf636c9ceac41631b7ce90c43b4f681742a23d92a4d81879f1e8af8e23ae41"
+        }
+      ],
+      "runtime": "runtime1: 14 PASS / 70 unselected",
+      "disposition": "superseded",
+      "reason": "Source review required metadata-only hourly unknown fallback, independent mixed/unrepresented reasons and pre-merge final basis-union bound. No runtime failure."
+    },
+    {
+      "candidate": 2,
+      "at": "2026-09-13T01:49:05.834Z",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "5e9709b4e8b6712630cf7940b670f0a406ba72de34e77c6709adb12e04b7aa41"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "e23a3ca9a93f84a72b98a260a850229844abe9ee2c70dbd65e0096e85acb7bd6"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "af9384431cd03f5acf2792cf292225393013b5f39366f7208d9f79ec44f75237"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "sha256": "c7066c7b345b46f11542919efe37d442bc46e4797ce06eb386268ff0bc0ed0bb"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "31a6acee457195d756a7d8cbf963d424bc242b28ba1f21186fbb828729ddf72f"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "b5ee5645787a8868c81ece004d1681179a927a6764ba745c8c75defa4ced5b56"
+        },
+        {
+          "path": "src/measure/window.test.ts",
+          "sha256": "a9f002d07e922b297e506dc61478e0953ea8ebd421d4b4619fa2868688a571d6"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "sha256": "3ac11408f17869620297cfee8f33c96df3bff67e53387fbef9797bd5ba25f529"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "53bf636c9ceac41631b7ce90c43b4f681742a23d92a4d81879f1e8af8e23ae41"
+        }
+      ],
+      "runtime": "runtime2: 14 PASS / 70 unselected",
+      "static": "static1 compiler exit2; lint/JS/whitespace not run",
+      "disposition": "superseded",
+      "reason": "Typing-equivalent correction: declaration of never-returning unavailable helper, narrowed windows local, DOM assertion using existing typed query API."
+    },
+    {
+      "candidate": 3,
+      "at": "2026-09-13T01:55:58.320Z",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "08a114118a56efa7103e4f7f3285286ca22ac6a1c5d84ea089871ca943bd3a4c"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "c84939e35174e8f67f21c0e21b9c80c4b45474447826d5c07345692f876567f5"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "af9384431cd03f5acf2792cf292225393013b5f39366f7208d9f79ec44f75237"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "sha256": "c7066c7b345b46f11542919efe37d442bc46e4797ce06eb386268ff0bc0ed0bb"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "31a6acee457195d756a7d8cbf963d424bc242b28ba1f21186fbb828729ddf72f"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "b5ee5645787a8868c81ece004d1681179a927a6764ba745c8c75defa4ced5b56"
+        },
+        {
+          "path": "src/measure/window.test.ts",
+          "sha256": "a9f002d07e922b297e506dc61478e0953ea8ebd421d4b4619fa2868688a571d6"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "sha256": "a04ffc77400005b2095994b498d587d802e40029d82e252c1ab3a659c52518b0"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "53bf636c9ceac41631b7ce90c43b4f681742a23d92a4d81879f1e8af8e23ae41"
+        }
+      ],
+      "runtime": "runtime3: 14 PASS / 70 unselected",
+      "static": "static2 all stages exit0/drained",
+      "disposition": "final"
+    }
+  ],
+  "fixture_adaptations": [
+    "W30.02 mixed 0/48h hourly construction now refuses; compatible zero-horizon branch retains actual progress flags, and explicit unknown saved metadata still normalizes conservatively.",
+    "W32.04 synthetic pooling days explicitly record one consistent hourly source/profile/horizon; missing/truncated/unadvanced variations, independent numeric/byte parity and installed local R2 range smoke remain.",
+    "Existing pooling helpers and modern protocol fixtures deliberately identify known synthetic basis; legacy unknown is exercised separately. Owned aggregate budget helper retains an explicitly matching one-policy basis."
+  ],
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts src/console/console.render.test.ts -t 'W31.01|W32.05|W32.04|W33.01 only null|W30.02|measurement shows raw attribution diagnostics' --maxWorkers=1 --minWorkers=1",
+      "captures": [
+        {
+          "chunk_id": "c25629",
+          "wall_time_seconds": 1.001357013,
+          "session_id": 62465,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2d203b",
+          "wall_time_seconds": 0.000002049,
+          "exit_code": 0,
+          "original_token_count": 478,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/console/console.render.test.ts > the operator application, rendered > W32.05 pages saved comparisons and withholds stale context, navigation and build completions\nW32.05 modern DOM {\"union_items\":121,\"rendered_page_items\":50,\"canonical_gets_paged\":true,\"build_candidate_not_rendered\":true}\n\n ✓ src/console/console.render.test.ts  (35 tests | 31 skipped) 9698ms\n ✓ src/learn/report.test.ts  (17 tests | 12 skipped) 195ms\nstdout | src/learn/report.test.ts > the day report > W32.05 pages authenticated saved reports by exact content and query while preserving full exports and diagnostics\nW32.05 response bytes {\"full_get_bytes\":185456,\"page_envelope_bytes\":7922,\"union_items\":121,\"page_items\":50,\"gets_per_page\":1,\"note\":\"same bounded full server read; no CPU/storage-read improvement claimed\"}\n\n ✓ src/learn/hourly.test.ts  (24 tests | 21 skipped) 66ms\nW31.01 counts {\"compatible\":{\"decisions\":2,\"credited\":6},\"mixed_unknown_or_unrepresented_pooled_rows\":0,\"reads_per_two_days\":2}\nW32.04 byte_measurement [{\"days\":28,\"requests\":28,\"full_canonical_bytes\":18226262,\"delivered_and_charged_prefix_bytes\":1835008,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":92,\"requests\":92,\"full_canonical_bytes\":59886296,\"delivered_and_charged_prefix_bytes\":6029312,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"}]\n ✓ src/measure/window.test.ts  (8 tests | 6 skipped) 3843ms\n\n Test Files  4 passed (4)\n      Tests  14 passed | 70 skipped (84)\n   Start at  21:45:17\n   Duration  49.38s (transform 3.01s, setup 0ms, collect 26.67s, tests 13.80s, environment 0ms, prepare 6.52s)\n\n"
+        }
+      ],
+      "session_id": 62465,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-13 01:46:23 UTC",
+      "observed_at": "2026-09-13 01:46:23 UTC",
+      "final_bytes": false,
+      "disposition": "superseded_pass"
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts src/console/console.render.test.ts -t 'W31.01|W32.05|W32.04|W33.01 only null|W30.02|measurement shows raw attribution diagnostics' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 01:52:38 UTC",
+      "captures": [
+        {
+          "chunk_id": "3da15a",
+          "wall_time_seconds": 1.001291969,
+          "session_id": 80855,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "2b8e9a",
+          "wall_time_seconds": 5.001534299,
+          "session_id": 80855,
+          "original_token_count": 60,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n"
+        },
+        {
+          "chunk_id": "c2ee66",
+          "wall_time_seconds": 5.000378227,
+          "session_id": 80855,
+          "original_token_count": 353,
+          "output": "stdout | src/console/console.render.test.ts > the operator application, rendered > W32.05 pages saved comparisons and withholds stale context, navigation and build completions\nW32.05 modern DOM {\"union_items\":121,\"rendered_page_items\":50,\"canonical_gets_paged\":true,\"build_candidate_not_rendered\":true}\n\n ✓ src/console/console.render.test.ts  (35 tests | 31 skipped) 9798ms\n ✓ src/learn/report.test.ts  (17 tests | 12 skipped) 185ms\nstdout | src/learn/report.test.ts > the day report > W32.05 pages authenticated saved reports by exact content and query while preserving full exports and diagnostics\nW32.05 response bytes {\"full_get_bytes\":185456,\"page_envelope_bytes\":7922,\"union_items\":121,\"page_items\":50,\"gets_per_page\":1,\"note\":\"same bounded full server read; no CPU/storage-read improvement claimed\"}\n\n ✓ src/learn/hourly.test.ts  (24 tests | 21 skipped) 81ms\nW31.01 counts {\"compatible\":{\"decisions\":2,\"credited\":6},\"mixed_unknown_or_unrepresented_pooled_rows\":0,\"reads_per_two_days\":2}\nW32.04 byte_measurement [{\"days\":28,\"requests\":28,\"full_canonical_bytes\":18226262,\"delivered_and_charged_prefix_bytes\":1835008,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":92,\"requests\":92,\"full_canonical_bytes\":59886296,\"delivered_and_charged_prefix_bytes\":6029312,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"}]\n"
+        },
+        {
+          "chunk_id": "5957c5",
+          "wall_time_seconds": 0.000002238,
+          "exit_code": 0,
+          "original_token_count": 66,
+          "output": " ✓ src/measure/window.test.ts  (8 tests | 6 skipped) 3603ms\n\n Test Files  4 passed (4)\n      Tests  14 passed | 70 skipped (84)\n   Start at  21:52:40\n   Duration  52.37s (transform 3.63s, setup 0ms, collect 29.42s, tests 13.67s, environment 0ms, prepare 6.74s)\n\n"
+        }
+      ],
+      "session_id": 80855,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-13 01:53:58 UTC",
+      "final_bytes": false,
+      "disposition": "superseded_pass"
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/measure/window.ts src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts src/console/console.render.test.ts --max-warnings 0 && node --check public/console/views-measure.js && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/measure/window.ts public/console/views-measure.js src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts src/console/console.render.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-13 01:53:58 UTC",
+      "captures": [
+        {
+          "chunk_id": "bb2bc8",
+          "wall_time_seconds": 1.001256696,
+          "session_id": 92220,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "45fc39",
+          "wall_time_seconds": 0.000002436,
+          "exit_code": 2,
+          "original_token_count": 268,
+          "output": "src/console/console.render.test.ts(879,84): error TS2339: Property 'children' does not exist on type 'El'.\nsrc/learn/hourly.ts(478,59): error TS18047: 'basis' is possibly 'null'.\nsrc/learn/hourly.ts(478,89): error TS18047: 'basis' is possibly 'null'.\nsrc/learn/hourly.ts(481,16): error TS2345: Argument of type 'ComputationBasis | null' is not assignable to parameter of type 'ComputationBasis'.\n  Type 'null' is not assignable to type 'ComputationBasis'.\nsrc/learn/hourly.ts(481,34): error TS2454: Variable 'expected' is used before being assigned.\nsrc/learn/hourly.ts(481,82): error TS2345: Argument of type 'ComputationBasis | null' is not assignable to parameter of type 'ComputationBasis'.\n  Type 'null' is not assignable to type 'ComputationBasis'.\nsrc/learn/hourly.ts(482,28): error TS18047: 'basis' is possibly 'null'.\nsrc/learn/hourly.ts(483,21): error TS2454: Variable 'expected' is used before being assigned.\nsrc/learn/hourly.ts(489,21): error TS18047: 'basis' is possibly 'null'.\nsrc/learn/report.ts(95,48): error TS18046: 'row.policy' is of type 'unknown'.\n"
+        }
+      ],
+      "session_id": 92220,
+      "exit_code": 2,
+      "drained": true,
+      "finished_at": "2026-09-13 01:55:01 UTC",
+      "final_bytes": false,
+      "stages": {
+        "compiler": {
+          "exit_code": 2
+        },
+        "lint": {
+          "status": "not_run"
+        },
+        "javascript_syntax": {
+          "status": "not_run"
+        },
+        "whitespace": {
+          "status": "not_run"
+        }
+      }
+    },
+    "runtime3": {
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts src/console/console.render.test.ts -t 'W31.01|W32.05|W32.04|W33.01 only null|W30.02|measurement shows raw attribution diagnostics' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 01:55:58 UTC",
+      "captures": [
+        {
+          "chunk_id": "f13255",
+          "wall_time_seconds": 1.00179251,
+          "session_id": 57275,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "ffc7e4",
+          "wall_time_seconds": 5.001337188,
+          "session_id": 57275,
+          "original_token_count": 278,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/console/console.render.test.ts > the operator application, rendered > W32.05 pages saved comparisons and withholds stale context, navigation and build completions\nW32.05 modern DOM {\"union_items\":121,\"rendered_page_items\":50,\"canonical_gets_paged\":true,\"build_candidate_not_rendered\":true}\n\n ✓ src/console/console.render.test.ts  (35 tests | 31 skipped) 9681ms\n ✓ src/learn/report.test.ts  (17 tests | 12 skipped) 181ms\nstdout | src/learn/report.test.ts > the day report > W32.05 pages authenticated saved reports by exact content and query while preserving full exports and diagnostics\nW32.05 response bytes {\"full_get_bytes\":185456,\"page_envelope_bytes\":7922,\"union_items\":121,\"page_items\":50,\"gets_per_page\":1,\"note\":\"same bounded full server read; no CPU/storage-read improvement claimed\"}\n\n ✓ src/learn/hourly.test.ts  (24 tests | 21 skipped) 83ms\n"
+        },
+        {
+          "chunk_id": "76f8ea",
+          "wall_time_seconds": 0.000002281,
+          "exit_code": 0,
+          "original_token_count": 201,
+          "output": "W31.01 counts {\"compatible\":{\"decisions\":2,\"credited\":6},\"mixed_unknown_or_unrepresented_pooled_rows\":0,\"reads_per_two_days\":2}\nW32.04 byte_measurement [{\"days\":28,\"requests\":28,\"full_canonical_bytes\":18226262,\"delivered_and_charged_prefix_bytes\":1835008,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":92,\"requests\":92,\"full_canonical_bytes\":59886296,\"delivered_and_charged_prefix_bytes\":6029312,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"}]\n ✓ src/measure/window.test.ts  (8 tests | 6 skipped) 3105ms\n\n Test Files  4 passed (4)\n      Tests  14 passed | 70 skipped (84)\n   Start at  21:56:00\n   Duration  48.84s (transform 3.03s, setup 0ms, collect 27.08s, tests 13.05s, environment 1ms, prepare 6.33s)\n\n"
+        }
+      ],
+      "session_id": 57275,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-13 01:57:17 UTC",
+      "final_bytes": true
+    },
+    "static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/hourly.ts src/measure/window.ts src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts src/console/console.render.test.ts --max-warnings 0 && node --check public/console/views-measure.js && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/measure/window.ts public/console/views-measure.js src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts src/console/console.render.test.ts docs/kit/02-api-reference.md",
+      "started_at": "2026-09-13 01:57:17 UTC",
+      "captures": [
+        {
+          "chunk_id": "99cfbd",
+          "wall_time_seconds": 1.000841201,
+          "session_id": 83550,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d81c85",
+          "wall_time_seconds": 0.000001439,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 83550,
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-13 01:58:07 UTC",
+      "final_bytes": true
+    },
+    "source_stop": {
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=path=>createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\");const b=JSON.parse(fs.readFileSync(\"docs/remediation/design/W31.01/baseline.json\",\"utf8\")),owned=new Set(b.owned.map(f=>f.path)),protectedPins=b.pins.filter(f=>!owned.has(f.path));const mismatches=protectedPins.filter(f=>hash(f.path)!==f.sha256).map(f=>({path:f.path,expected:f.sha256,actual:hash(f.path)}));console.log(JSON.stringify({at:new Date().toISOString(),files:b.owned.map(({path})=>({path,sha256:hash(path)})),protected_comparison:{checked:protectedPins.length,matched:protectedPins.length-mismatches.length,mismatches},references:[\"docs/remediation/design/W31.01/plan.md\",\"docs/remediation/design/W31.01/baseline.json\",\"docs/remediation/evidence/W31.01/admission.json\"].map(path=>({path,sha256:hash(path)}))}));if(mismatches.length)process.exitCode=1;'",
+      "captures": [
+        {
+          "chunk_id": "8b115b",
+          "wall_time_seconds": 0.00000428,
+          "exit_code": 0,
+          "original_token_count": 385,
+          "output": "{\"at\":\"2026-09-13T01:58:31.725Z\",\"files\":[{\"path\":\"src/learn/report.ts\",\"sha256\":\"08a114118a56efa7103e4f7f3285286ca22ac6a1c5d84ea089871ca943bd3a4c\"},{\"path\":\"src/learn/hourly.ts\",\"sha256\":\"c84939e35174e8f67f21c0e21b9c80c4b45474447826d5c07345692f876567f5\"},{\"path\":\"src/measure/window.ts\",\"sha256\":\"af9384431cd03f5acf2792cf292225393013b5f39366f7208d9f79ec44f75237\"},{\"path\":\"public/console/views-measure.js\",\"sha256\":\"c7066c7b345b46f11542919efe37d442bc46e4797ce06eb386268ff0bc0ed0bb\"},{\"path\":\"src/learn/report.test.ts\",\"sha256\":\"31a6acee457195d756a7d8cbf963d424bc242b28ba1f21186fbb828729ddf72f\"},{\"path\":\"src/learn/hourly.test.ts\",\"sha256\":\"b5ee5645787a8868c81ece004d1681179a927a6764ba745c8c75defa4ced5b56\"},{\"path\":\"src/measure/window.test.ts\",\"sha256\":\"a9f002d07e922b297e506dc61478e0953ea8ebd421d4b4619fa2868688a571d6\"},{\"path\":\"src/console/console.render.test.ts\",\"sha256\":\"a04ffc77400005b2095994b498d587d802e40029d82e252c1ab3a659c52518b0\"},{\"path\":\"docs/kit/02-api-reference.md\",\"sha256\":\"53bf636c9ceac41631b7ce90c43b4f681742a23d92a4d81879f1e8af8e23ae41\"}],\"protected_comparison\":{\"checked\":43,\"matched\":43,\"mismatches\":[]},\"references\":[{\"path\":\"docs/remediation/design/W31.01/plan.md\",\"sha256\":\"064da2c8dfa88bfe0e9cef4716619e5d42d3b7b12c176b76a75d10f97d79fd02\"},{\"path\":\"docs/remediation/design/W31.01/baseline.json\",\"sha256\":\"7821a2484a27919ca2350b8ee0a1e7fa4749570076075fcc005978e18bc50de3\"},{\"path\":\"docs/remediation/evidence/W31.01/admission.json\",\"sha256\":\"5b1e43822f0eecaaea3385c5456acb11b47f451c30eeafaf8cf216078c441874\"}]}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T01:58:31.725Z",
+    "files": [
+      {
+        "path": "src/learn/report.ts",
+        "sha256": "08a114118a56efa7103e4f7f3285286ca22ac6a1c5d84ea089871ca943bd3a4c"
+      },
+      {
+        "path": "src/learn/hourly.ts",
+        "sha256": "c84939e35174e8f67f21c0e21b9c80c4b45474447826d5c07345692f876567f5"
+      },
+      {
+        "path": "src/measure/window.ts",
+        "sha256": "af9384431cd03f5acf2792cf292225393013b5f39366f7208d9f79ec44f75237"
+      },
+      {
+        "path": "public/console/views-measure.js",
+        "sha256": "c7066c7b345b46f11542919efe37d442bc46e4797ce06eb386268ff0bc0ed0bb"
+      },
+      {
+        "path": "src/learn/report.test.ts",
+        "sha256": "31a6acee457195d756a7d8cbf963d424bc242b28ba1f21186fbb828729ddf72f"
+      },
+      {
+        "path": "src/learn/hourly.test.ts",
+        "sha256": "b5ee5645787a8868c81ece004d1681179a927a6764ba745c8c75defa4ced5b56"
+      },
+      {
+        "path": "src/measure/window.test.ts",
+        "sha256": "a9f002d07e922b297e506dc61478e0953ea8ebd421d4b4619fa2868688a571d6"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "a04ffc77400005b2095994b498d587d802e40029d82e252c1ab3a659c52518b0"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "53bf636c9ceac41631b7ce90c43b4f681742a23d92a4d81879f1e8af8e23ae41"
+      }
+    ]
+  },
+  "protected_comparison": {
+    "checked": 43,
+    "matched": 43,
+    "mismatches": []
+  },
+  "limitations": [
+    "Computation compatibility only: no served control/allocation/enrollment, metric/target-version or experimental/causal attestation. Objective/tau describe grids; arm credits are unweighted repeated counts.",
+    "No legacy restamping, history rebuild, generation change, model/business policy, deployment or cloud operations. Unknown/mixed hourly sources refuse new day publication; saved legacy days remain readable but do not establish pooling compatibility.",
+    "Hour metadata that cannot fit the bounded representation publishes as unknown after existing numeric folding; unrelated storage/fold failures still fail. Existing non-atomic shard/hour/canonical acknowledgements and concurrent writers remain qualified.",
+    "Carry-in-only slot metadata is recorded, but this slice does not redesign the historical zero-decision arm projection; missing/empty projected contributions are withheld.",
+    "Old strict summary readers may reject additive metadata; reader-first rollout remains separately qualified. Existing maturity/coverage/92-day/storage/cell and full-hour ingestion limitations remain.",
+    "Three runtime attempts passed; the first static compound failed at compiler and is preserved. Only final candidate3 is current proof. Independent frozen review/lead acceptance are not supplied by this worker."
+  ],
+  "independent_review": {
+    "status": "pending",
+    "reviewer_id": "w1405-reviewer"
+  }
+}

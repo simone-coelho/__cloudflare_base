@@ -1,0 +1,270 @@
+{
+  "task_id": "W09.08",
+  "actor_id": "w2205-reviewer",
+  "run_id": "/root/late_hour_next_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-15 16:49:00 UTC",
+  "verdict": "pass",
+  "claim": "local_runtime",
+  "artifact_digest": "6e643f5ff488f5b0f2ed54afc51115e081884a9805d55dcd0c436755c734ad01",
+  "contract_digest": "edfe2f6bf671c5fca5b95535f26c789d999c385563fa5f7fdd17a54d7dbd8ae9",
+  "verification_journal": 1825,
+  "canonical_pin_references": {
+    "artifact": {
+      "path": "docs/remediation/evidence/W09.08/register-e2.json",
+      "pointer": "after.artifact_basis.files",
+      "count": 33,
+      "artifact_digest": "6e643f5ff488f5b0f2ed54afc51115e081884a9805d55dcd0c436755c734ad01"
+    },
+    "worker": {
+      "path": "docs/remediation/evidence/W09.08/worker.json",
+      "sha256": "9b40b42aecfed1cd5fc427cbac7f2a83feb439fa593cb7a79dae2a3af91aab98",
+      "pointer": "canonical_source.pins",
+      "count": 59,
+      "digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W09.08/baseline.json",
+      "sha256": "c6d1a4449bdb065f37ec4dd4ff455ca40a19539c5e03efd6bb218273b3a08bff",
+      "pointers": [
+        "protected",
+        "accepted_dependency.files",
+        "accepted_dependency.review"
+      ]
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W09.08/source-freeze.json",
+      "sha256": "4340306afd6c9882f952c2d41e46b0d8fa1a07a092d6e78777274b1c9fe332aa"
+    },
+    "deltas": {
+      "path": "docs/remediation/evidence/W09.08/source-deltas.json",
+      "sha256": "4a9ce3b8e61599b569f225f4cc6b7bcbf78ffc2ec53dd08c6a7c59f60704ad73"
+    },
+    "digest_algorithm": "Snapshot digests: SHA-256 of JSON.stringify(path.localeCompare-sorted array of {path,sha256}); artifact/contract digests independently recomputed using existing board.mjs definitions."
+  },
+  "pin_snapshots": [
+    {
+      "capture": "6eb8ac",
+      "exit_code": 0,
+      "at": "2026-09-15T16:47:09.401Z",
+      "artifact_digest": "6e643f5ff488f5b0f2ed54afc51115e081884a9805d55dcd0c436755c734ad01",
+      "contract_digest": "edfe2f6bf671c5fca5b95535f26c789d999c385563fa5f7fdd17a54d7dbd8ae9",
+      "worker_sha256": "9b40b42aecfed1cd5fc427cbac7f2a83feb439fa593cb7a79dae2a3af91aab98",
+      "source_freeze_sha256": "4340306afd6c9882f952c2d41e46b0d8fa1a07a092d6e78777274b1c9fe332aa",
+      "delta_sha256": "4a9ce3b8e61599b569f225f4cc6b7bcbf78ffc2ec53dd08c6a7c59f60704ad73",
+      "verified": {
+        "artifact": {
+          "count": 33,
+          "digest": "d46214fc6d4111e6b571a49d4752315068bf93a14b58be547f40fb2b6e375fae",
+          "mismatches": []
+        },
+        "protected": {
+          "count": 25,
+          "digest": "d015605161de19b5e6b5c8093c773ea4375b2919e4341888b3df74b026af7cd5",
+          "mismatches": []
+        },
+        "accepted_dependency": {
+          "count": 44,
+          "digest": "3b76fe82dfc56a0bb75bb7096fd26d9f0157018fe2b43050cbea464b95865363",
+          "mismatches": []
+        },
+        "accepted_review": {
+          "count": 1,
+          "digest": "a61c4de8db9656e5b840efe67b5408452ea2a847af0cc8a5a6e9a96050b63848",
+          "mismatches": []
+        },
+        "worker_canonical": {
+          "count": 59,
+          "digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+          "mismatches": []
+        }
+      },
+      "full_baseline_relative_deltas_match": true,
+      "prior_fixture_hash": "67868d05b4887bb77de7cc38f117801758e69de6b32ec025798c029547cdd831",
+      "only_four_fixture_type_corrections": true,
+      "static_same_bytes": true
+    },
+    {
+      "capture": "b6d0b7",
+      "exit_code": 0,
+      "at": "2026-09-15T16:47:39.911Z",
+      "artifact_digest": "6e643f5ff488f5b0f2ed54afc51115e081884a9805d55dcd0c436755c734ad01",
+      "contract_digest": "edfe2f6bf671c5fca5b95535f26c789d999c385563fa5f7fdd17a54d7dbd8ae9",
+      "worker_sha256": "9b40b42aecfed1cd5fc427cbac7f2a83feb439fa593cb7a79dae2a3af91aab98",
+      "source_freeze_sha256": "4340306afd6c9882f952c2d41e46b0d8fa1a07a092d6e78777274b1c9fe332aa",
+      "delta_sha256": "4a9ce3b8e61599b569f225f4cc6b7bcbf78ffc2ec53dd08c6a7c59f60704ad73",
+      "verified": {
+        "artifact": {
+          "count": 33,
+          "digest": "d46214fc6d4111e6b571a49d4752315068bf93a14b58be547f40fb2b6e375fae",
+          "mismatches": []
+        },
+        "protected": {
+          "count": 25,
+          "digest": "d015605161de19b5e6b5c8093c773ea4375b2919e4341888b3df74b026af7cd5",
+          "mismatches": []
+        },
+        "accepted_dependency": {
+          "count": 44,
+          "digest": "3b76fe82dfc56a0bb75bb7096fd26d9f0157018fe2b43050cbea464b95865363",
+          "mismatches": []
+        },
+        "accepted_review": {
+          "count": 1,
+          "digest": "a61c4de8db9656e5b840efe67b5408452ea2a847af0cc8a5a6e9a96050b63848",
+          "mismatches": []
+        },
+        "worker_canonical": {
+          "count": 59,
+          "digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+          "mismatches": []
+        }
+      },
+      "full_baseline_relative_deltas_match": true,
+      "prior_fixture_hash": "67868d05b4887bb77de7cc38f117801758e69de6b32ec025798c029547cdd831",
+      "only_four_fixture_type_corrections": true,
+      "static_same_bytes": true
+    }
+  ],
+  "source_review": {
+    "captures": [
+      "664dad",
+      "7a263d",
+      "6ea7e8",
+      "6eb8ac"
+    ],
+    "exact_plan_sha256": "bf65ebc518b82bf23d12ad9e05ec9fa0e3ed4a6ce0639a026b3bbeb02bc0a2eb",
+    "result": "Read complete C1-C3 contract, actual producer/callers and two baseline-relative deltas. Reused prospective review after hash match. Applied recorded deltas to gzip originals in memory and matched actual final bytes. Reversing exactly four final fixture typing corrections reconstructs independently reviewed fixture 67868d05b4887bb77de7cc38f117801758e69de6b32ec025798c029547cdd831; production remains 831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9.",
+    "findings": []
+  },
+  "independent_runtime": {
+    "check_id": "W09.08-K3",
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts -t 'enqueues a small decision set|W09[.]01 (packs|refuses)|W09[.]02 producer fallback|W09[.]08' --maxWorkers=1 --minWorkers=1",
+    "cwd": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base",
+    "initial": {
+      "chunk_id": "2869ae",
+      "wall_time_seconds": 1.001723303,
+      "session_id": 68811,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "6a23e7",
+        "wall_time_seconds": 0.000002362,
+        "exit_code": 0,
+        "original_token_count": 392,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/ledger/ledger.test.ts > producer > W09.01 packs real decision sets by UTF-8 bytes with lossless legacy expansion, storage and receipts\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 36032,\n  manifestBytes: 487,\n  rankingBytes: 21,\n  addedBytes: 4064,\n  actualBytes: 40096,\n  messages: 1,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 8,\n  values: 24,\n  regional: false,\n  baselineBytes: 135062,\n  manifestBytes: 1321,\n  rankingBytes: 21,\n  addedBytes: 40260,\n  actualBytes: 175322,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 30,\n  dimensions: 6,\n  values: 24,\n  regional: true,\n  baselineBytes: 188672,\n  manifestBytes: 1321,\n  rankingBytes: 21,\n  addedBytes: 40260,\n  actualBytes: 228932,\n  messages: 2,\n  batches: 1\n}\nW27.02 packing bytes {\n  positions: 8,\n  dimensions: 8,\n  values: 128,\n  regional: true,\n  baselineBytes: 291941,\n  manifestBytes: 487,\n  rankingBytes: 21,\n  addedBytes: 4064,\n  actualBytes: 296005,\n  messages: 3,\n  batches: 2\n}\n\n ✓ src/ledger/ledger.test.ts  (27 tests | 21 skipped) 249ms\n\n Test Files  1 passed (1)\n      Tests  6 passed | 21 skipped (27)\n   Start at  12:47:21\n   Duration  11.45s (transform 3.16s, setup 0ms, collect 8.09s, tests 249ms, environment 0ms, prepare 1.92s)\n\n"
+      }
+    ],
+    "exit_code": 0,
+    "session_drained": true,
+    "result": "pass",
+    "passed": 6,
+    "failed": 0,
+    "deliberately_unselected": 21,
+    "total": 27,
+    "test_files": 1,
+    "runner_seconds": 11.45,
+    "test_seconds": 0.249,
+    "scope": "Literal admitted selection executed once on frozen final bytes; no independent static, board, native, hourly or broader suite."
+  },
+  "static_reuse": {
+    "worker_reference": "canonical_pin_references.worker",
+    "attempt_id": "static2",
+    "result": "pass",
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/enqueue.ts src/ledger/ledger.test.ts --max-warnings 0 && git diff --check -- src/ledger/enqueue.ts src/ledger/ledger.test.ts",
+    "source_digest": "255acf1933742b20c34302af08cd71cdcd0fa42ec115b771e9fdeb8841c2faa4",
+    "before": {
+      "capture": "07ee54",
+      "at": "2026-09-15T16:41:08.980Z"
+    },
+    "captures": [
+      "aa5505",
+      "d913e5",
+      "6d67ec"
+    ],
+    "session_id": 36940,
+    "exit_code": 0,
+    "session_drained": true,
+    "after": {
+      "capture": "bd33d4",
+      "at": "2026-09-15T16:42:09.932Z"
+    },
+    "compiler_exit": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "whitespace_exit": 0,
+    "basis": "Inspected actual command, full empty initial/poll outputs and final drained exit0; && chain completed all three checks. Worker before/after59-pin digest and independent before/after snapshots match. No static rerun."
+  },
+  "retained_attempts": [
+    {
+      "attempt": "runtime",
+      "captures": [
+        "61b818",
+        "d053ae"
+      ],
+      "exit_code": 1,
+      "session_drained": true,
+      "result": "5 passed,1 existing historical packing projection failed,21 unselected; both new groups passed. Protected decide.ts already adds ranking_position:0 (21 bytes/row). Lead-approved correction removes it only from cloned historical projection, asserts current0 and accounts its bytes separately; original constants, queue budgets and full roundtrip remain."
+    },
+    {
+      "attempt": "runtime2",
+      "captures": [
+        "18273d",
+        "cf3a7a"
+      ],
+      "exit_code": 0,
+      "session_drained": true,
+      "result": "6 passed/21 unselected on packing-corrected fixture; superseded by final typing correction, not credited as final-source runtime."
+    },
+    {
+      "attempt": "static",
+      "captures": [
+        "c0e85e",
+        "40c3b3"
+      ],
+      "exit_code": 2,
+      "session_drained": true,
+      "result": "Two narrow-object Env casts and void-inferred throwing getter caused compiler diagnostics; lint/whitespace were not reached. Exactly four fixture-only typing corrections preserved runtime behavior."
+    },
+    {
+      "attempt": "runtime3",
+      "captures": [
+        "a1ad9d",
+        "14b26e"
+      ],
+      "exit_code": 0,
+      "session_drained": true,
+      "result": "Final worker6 passed/21 unselected; full outputs and source digests inspected, independently repeated once."
+    }
+  ],
+  "criteria": {
+    "C1": {
+      "result": "pass",
+      "finding": "Optional analytics acquisition/scheduling no longer aborts either producer. Queue acquisition is inside existing receiver-bound capability guard, once after valid nonempty preflight; unavailable means all planned work notAttempted, not unknown. Explicitly opted-in managed fallback stores actual frozen canonical payloads; existing byte budgets, partial-ack uncertainty and identity convergence retained."
+    },
+    "C2": {
+      "result": "pass",
+      "finding": "One recovery-setting read precedes telemetry/wire/storage; unreadable returns configuration_unavailable/prepared:false with known records notAttempted and zero planned messages. Only literal string true enables recovery; empty calls touch no bindings. Missing/throwing storage acquisition is notAttempted, while unexpected post-call rejection remains unknown. Safe diagnostics/count conservation and existing tombstone suppression verified."
+    },
+    "C3": {
+      "result": "pass",
+      "finding": "Exactly four existing controls plus two new groups pass independently on frozen bytes. Same-byte worker compiler/lint0/0/whitespace reused, failures retained. All33artifact/25protected and accepted W22.06 all44pins plus review unchanged before/after; no route, identity, consent, event-time, erasure or retention edits."
+    }
+  },
+  "limitations": [
+    "Local synthetic binding failures and existing canonical recovery only; no live outage, deployed activation, throughput or SLO claim.",
+    "Managed recovery remains exact-string opt-in/default-off. No new resources/state/retention/outbox/quarantine, cross-sink exactly-once, historical repair or full erasure fence.",
+    "No source/governance writes, subdelegation, external operations or extra suites. Only this independent review artifact written.",
+    "This verifies the bounded W09.08 task, not full W09/W22/F16/N07/N08/N10, customer, package or release acceptance; lead disposition remains required."
+  ],
+  "disposition": {
+    "status": "independent_review_passed",
+    "running_commands": [],
+    "source_stopped": true,
+    "evidence_stopped": true,
+    "lead_acceptance": "pending"
+  }
+}

@@ -1,0 +1,317 @@
+{
+  "task_id": "W38.01",
+  "actor_id": "w1405-worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T03:14:00.392Z",
+  "contract_digest": "837a994a11c3e933d1128edf1ef4fa3fb8095aee518e90fd0c191f0fd6f7a25e",
+  "references": [
+    {
+      "path": "docs/remediation/design/W38.01/baseline.json",
+      "sha256": "28a6c6a6c16590c7a61d26a7dab49a9bf26bcdbe65ccce10e3dcf7df235fc1f1"
+    },
+    {
+      "path": "docs/remediation/design/W38.01/plan.md",
+      "sha256": "62910562742a2b34a939b92961239cde972dae999a3ece7ea4399d92bd6a08e1"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.01/admission.json",
+      "sha256": "9e3e58ef47406fe71a9dfb907445dd20986fff717af6b1144e8d0c06bbe8e65f"
+    }
+  ],
+  "baseline": {
+    "kind": "source-confirmed design case; no new runtime baseline",
+    "entry_board": "Root40112/9d0959 VALID1382,exit0/drained",
+    "owned_source_assurance": "Historical W11.01 bytes matched; baseline lint66138/3a6c1b0. Root verified73pins of W31.02/W08.04 without overlap.",
+    "failure": "Serving maps retained quiet expired scopes without count/byte eviction; in-flight reads could refill after reset/write deletion."
+  },
+  "implementation_summary": "Global32-entry/8MiB charged-byte LRU across actual binding/scope, opportunistic expiry and clock cleanup, unchanged read-start30s TTL. Charge verified raw revision bytes+UTF8 key+256 accounting allowance. Bounded epoch plus newer-resident gates prevent stale refill. Start/finally invalidation covers publish/recover/initialize including failure and idempotent no-put returns.",
+  "criterion_verdicts": {
+    "C1": "PASS local actual hits/misses: global count and byte pressure, binding/scope isolation, LRU, quiet expiry, clock rollback, removal/replacement/reset accounting. Values remain exact and frozen; pressure affects caching only.",
+    "C2": "PASS local: ten controlled reset/write/ambiguous/during-write/newer-resident/idempotent scenarios plus retained W11 authority/history/recovery/size/TTL/service-refusal groups. No serving-hit I/O or unbounded flight/generation registry.",
+    "C3": "Final fixed5/compiler/two-filelint0/declared git whitespace PASS. Both owned/18protected pins recorded. publication.ts is inherited untracked, so root direct source-whitespace check and separate frozen review remain acceptance work."
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 5,
+      "unselected": 19,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 9.35,
+      "command_capture": "runtime2"
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "command_capture": "static2"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 0,
+      "inherited_warnings": 0,
+      "new_warnings": 0,
+      "command_capture": "static2"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static2",
+      "qualification": "Declared git diff --check covers tracked owned test diff; inherited-untracked publication.ts is not covered. Root will directly check actual owned-file whitespace at freeze; no staging performed."
+    },
+    "qualification": "Final && compound completed all three stages. Prior compiler failure retained, not converted into a pass."
+  },
+  "measurements": {
+    "source": "runtime2/15ab3a",
+    "residency": {
+      "entryLimit": 32,
+      "byteLimit": 8388608,
+      "countPressure": {
+        "inserted": 33,
+        "retainedHits": 32,
+        "evictedMisses": 1
+      },
+      "bytePressure": {
+        "inserted": 5,
+        "retainedHits": 4,
+        "evictedMisses": 1,
+        "charges": [
+          1740886,
+          1740886,
+          1740886,
+          1740886,
+          1740886
+        ],
+        "insertedCharge": 8704430,
+        "retainedCharge": 6963544
+      },
+      "measuredHeap": false
+    },
+    "fences": {
+      "beforeWriteOrResetCases": 4,
+      "duringWriteCases": 1,
+      "newerResidentCases": 2,
+      "committedNoPutCases": 3,
+      "originalInflightRevisionPreserved": true
+    },
+    "qualification": "Synthetic R2 using actual publication serializer/validator/reader. Charged bytes and hit/miss behavior, not retained JS heap, concurrent-miss allocation, native capacity or latency/SLO."
+  },
+  "execution_history": [
+    {
+      "id": "candidate1",
+      "at": "2026-09-13T03:21:26.648Z",
+      "files": [
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "sha256": "8b6b00296f47c9861f1b8e38fd23bee1330f4bee08d57a4d3ab532858964f759"
+        }
+      ],
+      "root_source_review": "Approved exact bytes before checks",
+      "runtime": "runtime1",
+      "static": "static1",
+      "disposition": "Superseded: runtime5PASS; compiler TS2322 at fixture134 (lifecycle.status widened string). Lint/whitespace not run because && stopped."
+    },
+    {
+      "id": "candidate2",
+      "at": "2026-09-13T03:27:19.950Z",
+      "files": [
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "sha256": "0a1882688ed530b58cf6e6c33ad03df3cc94ae8f8a86134442216a7cb0239b93"
+        }
+      ],
+      "change": "Only existing synthetic catalogPiece lifecycle.status narrowed to 'live' as const; runtime value unchanged.",
+      "root_source_review": "aa2e35 verified one-line reverse replacement/hash at03:27:37.243Z; explicit rerun GO.",
+      "runtime": "runtime2",
+      "static": "static2",
+      "disposition": "Final worker candidate; no source edits after final checks."
+    }
+  ],
+  "failures": [
+    {
+      "command_capture": "static1",
+      "exit_code": 2,
+      "stage": "compiler",
+      "diagnostic": "TS2322 src/config/versionedStore.test.ts(134,66): lifecycle.status string not assignable to live|draft|expired.",
+      "downstream_stages": "lint and whitespace unrun",
+      "corrected_by": "candidate2"
+    }
+  ],
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts -t 'W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 03:25:34 UTC",
+      "captures": [
+        {
+          "chunk_id": "9146b0",
+          "wall_time_seconds": 1.000963167,
+          "session_id": 29565,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b07b8a",
+          "wall_time_seconds": 0.000001931,
+          "exit_code": 0,
+          "original_token_count": 336,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 bounds global charged residency with LRU expiry and binding-scope isolation\nW38.01 cache residency {\"entryLimit\":32,\"byteLimit\":8388608,\"countPressure\":{\"inserted\":33,\"retainedHits\":32,\"evictedMisses\":1},\"bytePressure\":{\"inserted\":5,\"retainedHits\":4,\"evictedMisses\":1,\"charges\":[1740886,1740886,1740886,1740886,1740886],\"insertedCharge\":8704430,\"retainedCharge\":6963544},\"measuredHeap\":false}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 fences delayed reads across local writes resets unknown acknowledgements and newer residents\nW38.01 cache fences {\"beforeWriteOrResetCases\":4,\"duringWriteCases\":1,\"newerResidentCases\":2,\"committedNoPutCases\":3,\"originalInflightRevisionPreserved\":true}\n\n ✓ src/config/versionedStore.test.ts  (24 tests | 19 skipped) 3400ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 19 skipped (24)\n   Start at  23:25:38\n   Duration  14.42s (transform 2.55s, setup 0ms, collect 6.72s, tests 3.40s, environment 0ms, prepare 3.13s)\n\n"
+        }
+      ],
+      "session_id": 29565,
+      "source_candidate": "candidate1",
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-13 03:25:56 UTC"
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/publication.ts src/config/versionedStore.test.ts --max-warnings 0 && git diff --check -- src/config/publication.ts src/config/versionedStore.test.ts",
+      "started_at": "2026-09-13 03:26:02 UTC",
+      "captures": [
+        {
+          "chunk_id": "f2a08f",
+          "wall_time_seconds": 1.001667221,
+          "session_id": 64983,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "af6d17",
+          "wall_time_seconds": 10.001171765,
+          "session_id": 64983,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d1b3c6",
+          "wall_time_seconds": 0.000002085,
+          "exit_code": 2,
+          "original_token_count": 102,
+          "output": "src/config/versionedStore.test.ts(134,66): error TS2322: Type '{ title: string; id: string; customerContentId: string; type: string; tags: { theme: string[]; }; slotTypes: string[]; lifecycle: { status: string; }; }' is not assignable to type 'ContentPiece'.\n  The types of 'lifecycle.status' are incompatible between these types.\n    Type 'string' is not assignable to type '\"live\" | \"draft\" | \"expired\"'.\n"
+        }
+      ],
+      "session_id": 64983,
+      "source_candidate": "candidate1",
+      "exit_code": 2,
+      "drained": true,
+      "finished_at": "2026-09-13 03:26:46 UTC"
+    },
+    "runtime2": {
+      "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts -t 'W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 03:27:48 UTC",
+      "captures": [
+        {
+          "chunk_id": "3cce9e",
+          "wall_time_seconds": 1.000805739,
+          "session_id": 89411,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "15ab3a",
+          "wall_time_seconds": 4.158801167,
+          "exit_code": 0,
+          "original_token_count": 335,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 bounds global charged residency with LRU expiry and binding-scope isolation\nW38.01 cache residency {\"entryLimit\":32,\"byteLimit\":8388608,\"countPressure\":{\"inserted\":33,\"retainedHits\":32,\"evictedMisses\":1},\"bytePressure\":{\"inserted\":5,\"retainedHits\":4,\"evictedMisses\":1,\"charges\":[1740886,1740886,1740886,1740886,1740886],\"insertedCharge\":8704430,\"retainedCharge\":6963544},\"measuredHeap\":false}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 fences delayed reads across local writes resets unknown acknowledgements and newer residents\nW38.01 cache fences {\"beforeWriteOrResetCases\":4,\"duringWriteCases\":1,\"newerResidentCases\":2,\"committedNoPutCases\":3,\"originalInflightRevisionPreserved\":true}\n\n ✓ src/config/versionedStore.test.ts  (24 tests | 19 skipped) 2565ms\n\n Test Files  1 passed (1)\n      Tests  5 passed | 19 skipped (24)\n   Start at  23:27:51\n   Duration  9.35s (transform 2.04s, setup 0ms, collect 4.12s, tests 2.56s, environment 0ms, prepare 1.80s)\n\n"
+        }
+      ],
+      "session_id": 89411,
+      "source_candidate": "candidate2",
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-13 03:28:00 UTC"
+    },
+    "static2": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/publication.ts src/config/versionedStore.test.ts --max-warnings 0 && git diff --check -- src/config/publication.ts src/config/versionedStore.test.ts",
+      "started_at": "2026-09-13 03:28:04 UTC",
+      "captures": [
+        {
+          "chunk_id": "963290",
+          "wall_time_seconds": 1.001432569,
+          "session_id": 42284,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "1ac2a4",
+          "wall_time_seconds": 10.001243006,
+          "session_id": 42284,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "232011",
+          "wall_time_seconds": 10.0010644,
+          "session_id": 42284,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "c77064",
+          "wall_time_seconds": 0.000002047,
+          "exit_code": 0,
+          "original_token_count": 0,
+          "output": ""
+        }
+      ],
+      "session_id": 42284,
+      "source_candidate": "candidate2",
+      "exit_code": 0,
+      "drained": true,
+      "finished_at": "2026-09-13 03:29:09 UTC"
+    },
+    "source_stop": {
+      "command": "node -e 'const fs=require(\"fs\"),c=require(\"crypto\"),base=\"docs/remediation/design/W38.01/baseline.json\",b=JSON.parse(fs.readFileSync(base,\"utf8\")),owned=b.owned.map(x=>x.path),sha=path=>c.createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\"),protectedPins=b.pins.filter(x=>!owned.includes(x.path)),comparison=protectedPins.map(x=>({path:x.path,expected_sha256:x.sha256,sha256:sha(x.path)}));const result={at:new Date().toISOString(),files:owned.map(path=>({path,sha256:sha(path)})),protected_comparison:{expected:18,actual:comparison.length,unchanged:comparison.every(x=>x.sha256===x.expected_sha256),files:comparison},references:[base,\"docs/remediation/design/W38.01/plan.md\",\"docs/remediation/evidence/W38.01/admission.json\"].map(path=>({path,sha256:sha(path)}))};console.log(JSON.stringify(result,null,2));if(comparison.length!==18||!result.protected_comparison.unchanged)process.exitCode=1;'",
+      "captures": [
+        {
+          "chunk_id": "b3a807",
+          "wall_time_seconds": 0.000003761,
+          "exit_code": 0,
+          "original_token_count": 1337,
+          "output": "{\n  \"at\": \"2026-09-13T03:29:23.684Z\",\n  \"files\": [\n    {\n      \"path\": \"src/config/publication.ts\",\n      \"sha256\": \"b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956\"\n    },\n    {\n      \"path\": \"src/config/versionedStore.test.ts\",\n      \"sha256\": \"0a1882688ed530b58cf6e6c33ad03df3cc94ae8f8a86134442216a7cb0239b93\"\n    }\n  ],\n  \"protected_comparison\": {\n    \"expected\": 18,\n    \"actual\": 18,\n    \"unchanged\": true,\n    \"files\": [\n      {\n        \"path\": \"src/config/versionedStore.ts\",\n        \"expected_sha256\": \"b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff\",\n        \"sha256\": \"b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff\"\n      },\n      {\n        \"path\": \"src/content/kinds.ts\",\n        \"expected_sha256\": \"7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8\",\n        \"sha256\": \"7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8\"\n      },\n      {\n        \"path\": \"src/content/types.ts\",\n        \"expected_sha256\": \"26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df\",\n        \"sha256\": \"26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df\"\n      },\n      {\n        \"path\": \"src/content/service.ts\",\n        \"expected_sha256\": \"918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f\",\n        \"sha256\": \"918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f\"\n      },\n      {\n        \"path\": \"src/content/decide.ts\",\n        \"expected_sha256\": \"a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b\",\n        \"sha256\": \"a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b\"\n      },\n      {\n        \"path\": \"src/reflex/contentCompose.ts\",\n        \"expected_sha256\": \"0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe\",\n        \"sha256\": \"0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe\"\n      },\n      {\n        \"path\": \"src/routes/content.ts\",\n        \"expected_sha256\": \"38ca715650d602fb7ce07316494911dad6a657a614114f3b00ccca850b69e0ee\",\n        \"sha256\": \"38ca715650d602fb7ce07316494911dad6a657a614114f3b00ccca850b69e0ee\"\n      },\n      {\n        \"path\": \"src/types/env.ts\",\n        \"expected_sha256\": \"222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab\",\n        \"sha256\": \"222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab\"\n      },\n      {\n        \"path\": \"docs/architecture/35-audit-verification-and-source-of-truth.md\",\n        \"expected_sha256\": \"5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4\",\n        \"sha256\": \"5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4\"\n      },\n      {\n        \"path\": \"docs/architecture/35-verification-reports/F32.md\",\n        \"expected_sha256\": \"cb855f278bd500f51567f2f5c3cb7c0988c3c1e309987d9ca1c7f7a9b3748df4\",\n        \"sha256\": \"cb855f278bd500f51567f2f5c3cb7c0988c3c1e309987d9ca1c7f7a9b3748df4\"\n      },\n      {\n        \"path\": \"docs/architecture/33-adversarial-audit-brief.md\",\n        \"expected_sha256\": \"21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028\",\n        \"sha256\": \"21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028\"\n      },\n      {\n        \"path\": \"docs/remediation/design/W11.01/plan-v2.md\",\n        \"expected_sha256\": \"5ee066b9c819c187d4d23627f39994bc0cc2a61689bdc6946d486f14a0f4eeaf\",\n        \"sha256\": \"5ee066b9c819c187d4d23627f39994bc0cc2a61689bdc6946d486f14a0f4eeaf\"\n      },\n      {\n        \"path\": \"docs/remediation/evidence/W11.01/acceptance.md\",\n        \"expected_sha256\": \"5acbcfec49a0de4ce81465f23b1d72db925a5c5679c65a501bbe1ecd7b157695\",\n        \"sha256\": \"5acbcfec49a0de4ce81465f23b1d72db925a5c5679c65a501bbe1ecd7b157695\"\n      },\n      {\n        \"path\": \"package.json\",\n        \"expected_sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\",\n        \"sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\"\n      },\n      {\n        \"path\": \"package-lock.json\",\n        \"expected_sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\",\n        \"sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\"\n      },\n      {\n        \"path\": \"tsconfig.json\",\n        \"expected_sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\",\n        \"sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\"\n      },\n      {\n        \"path\": \"vitest.config.ts\",\n        \"expected_sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\",\n        \"sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\"\n      },\n      {\n        \"path\": \".eslintrc.json\",\n        \"expected_sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\",\n        \"sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\"\n      }\n    ]\n  },\n  \"references\": [\n    {\n      \"path\": \"docs/remediation/design/W38.01/baseline.json\",\n      \"sha256\": \"28a6c6a6c16590c7a61d26a7dab49a9bf26bcdbe65ccce10e3dcf7df235fc1f1\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W38.01/plan.md\",\n      \"sha256\": \"62910562742a2b34a939b92961239cde972dae999a3ece7ea4399d92bd6a08e1\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.01/admission.json\",\n      \"sha256\": \"9e3e58ef47406fe71a9dfb907445dd20986fff717af6b1144e8d0c06bbe8e65f\"\n    }\n  ]\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T03:29:23.684Z",
+    "files": [
+      {
+        "path": "src/config/publication.ts",
+        "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+      },
+      {
+        "path": "src/config/versionedStore.test.ts",
+        "sha256": "0a1882688ed530b58cf6e6c33ad03df3cc94ae8f8a86134442216a7cb0239b93"
+      }
+    ]
+  },
+  "protected_comparison": {
+    "expected": 18,
+    "actual": 18,
+    "unchanged": true,
+    "baseline": "docs/remediation/design/W38.01/baseline.json",
+    "all_actual_and_expected_hashes": "command_captures.source_stop.captures[0].output"
+  },
+  "limitations": [
+    "Cache residency containment only, not full W38/F32/F08/N07 or customer/release acceptance.",
+    "32 entries/8MiB charge is an application accounting limit, not total heap or concurrent-miss memory. Expiry is opportunistic; idle residency stays bounded.",
+    "Remote binding/isolate staleness remains up to30s from read start; original in-flight calls may return their captured validated revision. Local invalidation prevents later cache refill, not cancellation.",
+    "Legacy KV caches/compatibility fields, immutable-history retention/cutover and full parse/validate/compose/ranking/workload qualification remain separate.",
+    "No new native run: accepted W11 conditional-adapter assurance reused with unchanged authority semantics. No provider/deployed/SLO/science claim.",
+    "No source ownership expansion, delegation, governance write, external/cloud/customer operation, install/emitted build or commit."
+  ],
+  "independent_review": "pending"
+}

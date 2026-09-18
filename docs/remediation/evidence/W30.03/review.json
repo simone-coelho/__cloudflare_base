@@ -1,0 +1,147 @@
+{
+  "task_id": "W30.03",
+  "actor_id": "w3003-reviewer",
+  "run_id": "/root/w3003_review",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "role": "independent_verifier",
+  "at": "2026-09-14T21:43:38.816Z",
+  "verdict": "pass",
+  "artifact_digest": "dab855b1061967dfe6b9904ebf282f4a913ae890fe8c3091bb4f7ea82256c244",
+  "contract_digest": "888baa98abb8958e2b54b5d6cc95fb7cf8e18d3a1cfc20d34b990a5d56799ead",
+  "claim": "local_runtime",
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W30.03/plan.md",
+      "sha256": "bb488d16dc7e0b0c08c635987ed60c4a57ef72d5f8be76890327ba286633afa3"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W30.03/source-deltas.json",
+      "sha256": "842aad9168614d978f55892ba84ccca5cb73e7dbdb327e41edb6ecc5b1b7c627"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W30.03/source-freeze.json",
+      "sha256": "8f94640771b53956169f1ff61a3db2a7f64edf2ad3124b9b41ba2a777b1ed49a"
+    },
+    "audit_sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+    "preimplementation_case": "Independently source-confirmed: catchUp selected only built dates while runDayReport swallowed aggregate put errors. No failed runtime baseline is claimed."
+  },
+  "criteria": [
+    {
+      "id": "W30.03-C1",
+      "verdict": "pass",
+      "evidence": "Grouped actual-module fixture distinguishes missing/stale canonical put failure from successful hourly progress; next built=[] call publishes all date hours, including hour11 outside the one-hour lookback. Counts2/1/2 and learning credit1, missing-hour coverage and unchanged raw/hour/ring bytes are asserted. Lost acknowledgement remains failed on the throwing call and converges without rewriting a matching saved report. Restored and already-current calls preserve no-op zero writes."
+    },
+    {
+      "id": "W30.03-C2",
+      "verdict": "pass",
+      "evidence": "Summary outage/size refusal, missing/malformed aggregate, incompatible computation, vanished inventory and put outage produce fixed date-level failures without raw fallback or report replacement; another selected date publishes. Full-date membership rejects absent, repeated, invalid and wrongly typed values; order-independent equality skips. Indexed own-entry and integer/range checks source-inspected; sparse fixture serializes holes to null, which proves malformed persisted membership rather than a JSON-surviving hole. Four-date custom lookback reads/publishes only newest3 in ascending date order and explicitly defers the oldest; next no-op reads only those three summaries. Source shares one bounded summary budget. Actual index.ts scheduled consumer logs only fixed text and numeric published/failed/deferred counts."
+    },
+    {
+      "id": "W30.03-C3",
+      "verdict": "pass",
+      "evidence": "Exact fixed10 passes independently. Existing W22.02 failed-fold prior-byte/no-op assertions remain, alongside hour order/budget, W31.01 basis refusal, W30.02 coverage, W32.04 canonical serializer and both W33.01 custom isolation controls. Shared private publisher preserves the original tombstone loading/reportFromHours/canonicalReportJson path; strict catchUp refuses absent aggregates and propagates failed persistence, ordinary runDayReport retains best-effort aggregate response and original raw/custom fallbacks. All four complete baseline-relative deltas reviewed; report.ts and all34 protected sources unchanged. Full compiler/scoped lint/whitespace reused only after exact source comparison."
+    }
+  ],
+  "runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts -t 'W30[.]03|W22[.]02 preserves|W31[.]01 captures|W30[.]02 carries|W33[.]01|W32[.]04 stores|the five-minute job|the run continues past|the day report comes' --maxWorkers=1 --minWorkers=1",
+    "initial": {
+      "chunk_id": "57534d",
+      "wall_time_seconds": 1.000330749,
+      "session_id": 25301,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "2ab110",
+        "wall_time_seconds": 0.000002259,
+        "exit_code": 0,
+        "original_token_count": 140,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/learn/hourly.test.ts  (30 tests | 22 skipped) 288ms\n ✓ src/learn/report.test.ts  (19 tests | 17 skipped) 87ms\n\n Test Files  2 passed (2)\n      Tests  10 passed | 39 skipped (49)\n   Start at  17:42:51\n   Duration  9.31s (transform 2.13s, setup 0ms, collect 4.37s, tests 375ms, environment 0ms, prepare 3.24s)\n\n"
+      }
+    ],
+    "result": "pass",
+    "drained": true,
+    "exit_code": 0,
+    "passed": 10,
+    "unselected": 39,
+    "files": 2,
+    "assertion_time_ms": 375,
+    "duration_seconds": 9.31,
+    "runtime": "Installed Node/Vitest1.6.1; existing in-memory FakeR2, actual hourly/report modules and existing authenticated report route fixtures.",
+    "executions": 1,
+    "qualification": "39 cases deliberately unselected by the approved expression. Local fixture duration is not a CPU, Worker, customer workload or SLO measurement."
+  },
+  "reused_static": {
+    "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/hourly.ts src/learn/hourly.test.ts src/index.ts && git diff --check -- src/learn/hourly.ts src/learn/hourly.test.ts src/index.ts docs/kit/02-api-reference.md",
+    "result": "pass",
+    "evidence": {
+      "path": "docs/remediation/evidence/W30.03/worker.json",
+      "sha256": "948fc5062087f6ce13fc70934b016ce0c1573cac1c2c7be220507bde45baf266"
+    },
+    "attempt": "static_candidate1",
+    "captures": [
+      "0a3f62",
+      "09851e",
+      "8593ae"
+    ],
+    "drained": true,
+    "exit_code": 0,
+    "compiler_exit_code": 0,
+    "lint_errors": 0,
+    "lint_warnings": 7,
+    "new_warning_signatures": [],
+    "whitespace_exit_code": 0,
+    "reuse_basis": "Independently read exact static command and full captured output; final exit0 proves all three && components ran. All four source hashes match static snapshot before and after independent runtime. Compared baseline lint capture229b2b against final8593ae: five unused e, one unused ctx, one explicit-any warning remain confined to index.ts; hourly source/fixture have none. Lead explicitly instructed same-byte reuse, superseding worker next_action shorthand; no static rerun."
+  },
+  "pin_verification": {
+    "procedure": "node --input-type=module -e 'import fs from \"node:fs\";import crypto from \"node:crypto\";import zlib from \"node:zlib\";import {createRequire} from \"node:module\";const require=createRequire(import.meta.url),diff=require(\"diff\"),read=p=>JSON.parse(fs.readFileSync(p,\"utf8\")),hash=s=>crypto.createHash(\"sha256\").update(s).digest(\"hex\"),file=p=>hash(fs.readFileSync(p));const task=read(\"docs/remediation/tracker.json\").tasks.find(t=>t.id===\"W30.03\"),a=task.artifact,b=read(\"docs/remediation/design/W30.03/baseline.json\"),d=read(\"docs/remediation/evidence/W30.03/source-deltas.json\"),w=read(\"docs/remediation/evidence/W30.03/worker.json\");const mismatches=a.files.filter(f=>file(f.path)!==f.sha256),protectedChanges=b.protected.filter(f=>file(f.path)!==f.sha256),deltaChecks=d.files.map(f=>{const old=b.owned_before.find(p=>p.path===f.path),text=zlib.gunzipSync(Buffer.from(old.gzip_base64,\"base64\")).toString(\"utf8\");return{path:f.path,baseline:hash(text)===old.sha256&&old.sha256===f.before_sha256,patchedMatchesCurrent:diff.applyPatch(text,f.diff)===fs.readFileSync(f.path,\"utf8\"),after:f.after_sha256===file(f.path)};});const artifactDigest=hash(JSON.stringify({contract_digest:a.contract_digest,configuration:a.configuration,files:a.files.map(({path,sha256,role})=>({path,sha256,role})).sort((x,y)=>x.path.localeCompare(y.path))}));const contractDigest=hash(JSON.stringify({id:task.id,package_id:task.package_id,kind:task.kind,scope:task.scope,read_paths:task.read_paths,write_paths:task.write_paths,non_goals:task.non_goals,criteria:task.criteria,checks:task.checks.map(({id,required,criterion_ids,command,runtime,workload})=>({id,required,criterion_ids,command,runtime,workload})),dependencies:task.dependencies,assignments:task.assignments}));const staticBytes=w.attempts.find(x=>x.id===\"static_candidate1\").source.files.every(f=>file(f.path)===f.sha256);const result={at:new Date().toISOString(),pins:a.files.length,mismatches,protected:b.protected.length,protectedChanges,deltaChecks,artifactDigest,artifactMatches:artifactDigest===a.digest,contractDigest,contractMatches:contractDigest===a.contract_digest,staticBytes};console.log(JSON.stringify(result,null,2));if(mismatches.length||protectedChanges.length||deltaChecks.some(x=>!x.baseline||!x.patchedMatchesCurrent||!x.after)||!staticBytes||artifactDigest!==a.digest||contractDigest!==a.contract_digest)process.exitCode=1;'",
+    "before": {
+      "chunk_id": "81bd8b",
+      "wall_time_seconds": 1.026058504,
+      "exit_code": 0,
+      "original_token_count": 232,
+      "output": "{\n  \"at\": \"2026-09-14T21:42:42.934Z\",\n  \"pins\": 44,\n  \"mismatches\": [],\n  \"protected\": 34,\n  \"protectedChanges\": [],\n  \"deltaChecks\": [\n    {\n      \"path\": \"src/learn/hourly.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/learn/hourly.test.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/index.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    }\n  ],\n  \"artifactDigest\": \"dab855b1061967dfe6b9904ebf282f4a913ae890fe8c3091bb4f7ea82256c244\",\n  \"artifactMatches\": true,\n  \"contractDigest\": \"888baa98abb8958e2b54b5d6cc95fb7cf8e18d3a1cfc20d34b990a5d56799ead\",\n  \"contractMatches\": true,\n  \"staticBytes\": true\n}\n"
+    },
+    "after": {
+      "chunk_id": "ebd2bf",
+      "wall_time_seconds": 0.728228986,
+      "exit_code": 0,
+      "original_token_count": 232,
+      "output": "{\n  \"at\": \"2026-09-14T21:43:38.816Z\",\n  \"pins\": 44,\n  \"mismatches\": [],\n  \"protected\": 34,\n  \"protectedChanges\": [],\n  \"deltaChecks\": [\n    {\n      \"path\": \"src/learn/hourly.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/learn/hourly.test.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"src/index.ts\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    },\n    {\n      \"path\": \"docs/kit/02-api-reference.md\",\n      \"baseline\": true,\n      \"patchedMatchesCurrent\": true,\n      \"after\": true\n    }\n  ],\n  \"artifactDigest\": \"dab855b1061967dfe6b9904ebf282f4a913ae890fe8c3091bb4f7ea82256c244\",\n  \"artifactMatches\": true,\n  \"contractDigest\": \"888baa98abb8958e2b54b5d6cc95fb7cf8e18d3a1cfc20d34b990a5d56799ead\",\n  \"contractMatches\": true,\n  \"staticBytes\": true\n}\n"
+    },
+    "pins": 44,
+    "matched": 44,
+    "protected": 34,
+    "protected_unchanged": 34,
+    "mismatches": [],
+    "all_four_deltas_match_baseline_and_current": true,
+    "artifact_and_contract_recomputed": true
+  },
+  "source_inspection": {
+    "paths": [
+      "src/learn/hourly.ts",
+      "src/learn/hourly.test.ts",
+      "src/index.ts",
+      "docs/kit/02-api-reference.md"
+    ],
+    "scope": "Read every complete retained four-file delta and the actual catchUp/private publisher/runDayReport, existing construction/summary reader and scheduled consumer. Applied each retained delta to decompressed admitted baseline entirely in memory and compared resulting complete bytes with current file. No source edits, report schema changes, new subject state or queue-consumer changes.",
+    "test_assertions": "Inspected all new grouped assertions and all superseded exact return-shape expectations. They preserve earlier byte/no-write assertions. Unchanged construction checks enforce existing erasure counts, unknown maturity, compatibility and canonical custom-response isolation; no new privacy or scientific acceptance inferred."
+  },
+  "failures": [],
+  "limitations": [
+    "Active-lookback aggregate-backed canonical publication recovery only. Exact hour membership does not attest same-hour aggregate content, config or erasure freshness, newly closed missing-hour flags, delivery completeness or mature measurement.",
+    "Newest-three cap can defer older custom-lookback dates without historical-recovery fairness; dates leaving lookback need separate recovery. Late/mutable-input detection, dependent-hour and partial-shard reconstruction, retained-history backfill and durable online/export reconciliation remain open.",
+    "No canonical CAS/concurrent-publication fencing or stronger nightly/raw publication durability. A throwing put may already have committed; failure status is deliberately conservative and a later matching summary may skip another write.",
+    "Current tombstone/computation/coverage behavior is preserved, not newly certified as complete erasure or policy reconstruction. D06/D08/W24 and full W09/W22/W30 remain open.",
+    "Local Node/Vitest proof and reused compiler/lint/whitespace evidence are not deployed runtime, customer/scientific/SLO or release acceptance. No board commands, suite expansion, source mutation, external operation, deployment, commit/push or subdelegation performed."
+  ],
+  "disposition": {
+    "status": "review_complete_source_stop",
+    "running_commands": [],
+    "independent_review": "pass",
+    "lead_acceptance": "pending",
+    "next_action": "Lead read complete review.json and exact captures, record bounded disposition and durable handoff, then run existing final board checks. No further worker/reviewer command is running."
+  }
+}

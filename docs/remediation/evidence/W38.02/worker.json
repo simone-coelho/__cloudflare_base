@@ -1,0 +1,273 @@
+{
+  "task_id": "W38.02",
+  "actor_id": "w1405-worker",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "source_go_at": "2026-09-13T04:17:31.800Z",
+  "contract_digest": "028d1e7b2371c445cbab8149ebd755611f5a6699ff8f9fe1118a9074363a71e7",
+  "references": [
+    {
+      "path": "docs/remediation/design/W38.02/baseline.json",
+      "sha256": "1486f45e0f9b60f3554a2cd18e89bd39d2dc405894e665190e195adb2ccbf4f1"
+    },
+    {
+      "path": "docs/remediation/design/W38.02/plan.md",
+      "sha256": "04a439782cb9360b92b18ba01730a7e1cc61eaf6c9e3e73d7a4615f0f96f5105"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.02/admission.json",
+      "sha256": "25e75a450bed6df75b897a290502d4e74e452b820973c5ee6ed2ce0825d6caa9"
+    }
+  ],
+  "baseline": {
+    "kind": "source-confirmed design case; no new runtime baseline",
+    "entry_board": "Root4688/5d1008 VALID1392, exit0/drained",
+    "failure": "Unbounded binding-blind legacy cache exposed mutable retained revisions and allowed reset/partial-write delayed refill.",
+    "static": "Root52802/387f91 baseline lint:0 errors/1 inherited coerce scope warning; original max0 exit1 retained in baseline.json, admitted max1. Prior accepted source/static reused; W31.02/W38.01 overlapping byte proof prospectively qualified by root, history preserved."
+  },
+  "implementation_summary": "Independent global32-entry/8MiB charged-JSON legacy LRU keyed by actual KV binding, kind object/name/active stored-validator and scope. Bounded JSON-only admission precedes mutable snapshot cloning; caller-owned clones or verified fully frozen value plus fresh revision wrapper cannot grow resident data. Physical logical/wall expiry, read-start freshness and reset/write start+finally epoch fences; older order/lower revision/null completions do not replace newer valid residents. Keys, coerce hooks, fallback, writes/index/history and content dispatch preserved.",
+  "criterion_verdicts": {
+    "C1": "PASS local: global count/byte pressure including null, exact binding/kind/hook/scope isolation, LRU and removal accounting; actual mutable graph/wrapper isolation, real Reflex deep freezing, oversized/partial-frozen/exotic valid-result uncached bypass.",
+    "C2": "PASS local: logical and wall TTL/clock-invalid/slow reads; read failure and binding getter fallback; public all/kind/scope resets; successful/failed/lost-current/index writes and during-write fences; delayed older reads and later stale-revision/null reads preserve newer residents. No hot-hit KV I/O/JSON parse/revalidation. Selected ordinary write/patch/rollback/history/compatibility and publication controls pass.",
+    "C3": "Actual unchanged K1 selects17, not the plan's16 label: extra existing Reflex revision-history case was already matched. Root clarified before runtime. Final compiler/scoped lint with exactly1 inherited warning/no new/whitespace PASS;2owned and24protected pins recorded. Distinct frozen review pending."
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 17,
+      "unselected": 61,
+      "exit_code": 0,
+      "drained": true,
+      "final_bytes": true,
+      "duration_seconds": 14.95,
+      "command_capture": "runtime1",
+      "selection_qualification": "Admitted literal command unchanged. Root a01dcf identified17 matches before execution; plan16 was a count-label error, not an expanded suite."
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "command_capture": "static1"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "warnings": 1,
+      "inherited_warnings": 1,
+      "new_warnings": 0,
+      "command_capture": "static1"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "static1",
+      "qualification": "Both owned files tracked; scoped git diff --check."
+    },
+    "qualification": "Final && static compound completed all3 stages; no executed runtime/compiler/static failure."
+  },
+  "measurements": {
+    "source": "runtime1/1df877",
+    "entry_limit": 32,
+    "charged_byte_limit": 8388608,
+    "candidate_bytes": [
+      1740382,
+      1740382,
+      1740382,
+      1740382,
+      1740382
+    ],
+    "candidate_total": 8701910,
+    "retained_large_hits": 4,
+    "retained_large_charge": 6961528,
+    "charge": "UTF8 JSON revision + UTF8 JSON [kind name,scope] +256 accounting allowance per entry; exact bounded walk, no full document stringify for admission.",
+    "qualification": "Actual read hit/miss assertions with synthetic KV and real store. Charged serialization is not JS heap, concurrent-miss memory, native capacity or measured latency. Existing W38.01 numeric outputs retained in runtime capture, not a new publication measurement programme."
+  },
+  "execution_history": [
+    {
+      "stage": "source_ready1",
+      "at": "2026-09-13T04:24:23.164Z",
+      "files": [
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "e2408d1b690c459891bf6d4c827230f1f8456aee87c8c132e1248f20bba3959b"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "sha256": "245ce692da2e343e3efe6261f1d9aad15e096096632ba7e733cc4ef2f471de31"
+        }
+      ],
+      "capture_id": "bc75e2",
+      "checks_run": false,
+      "note": "Coherent production/two groups; final read identified nested spy setup before any execution."
+    },
+    {
+      "stage": "source_ready2",
+      "at": "2026-09-13T04:25:22.952Z",
+      "files": [
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "e2408d1b690c459891bf6d4c827230f1f8456aee87c8c132e1248f20bba3959b"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "sha256": "178aae18f1634b6eb641924638a22c8be4667ae12b9db0473b8a7ebbc1b6453a"
+        }
+      ],
+      "capture_id": "647c57",
+      "checks_run": false,
+      "note": "Single spy/two gates replaces nested spy in delayed stale-revision/null fixture."
+    },
+    {
+      "stage": "source_ready3_final",
+      "at": "2026-09-13T04:26:16.456Z",
+      "files": [
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "906928a653f79dd395c03a30b1bd6b0ca59fdab62204adb98e085664dfb5f0b2"
+        },
+        {
+          "path": "src/config/versionedStore.test.ts",
+          "sha256": "178aae18f1634b6eb641924638a22c8be4667ae12b9db0473b8a7ebbc1b6453a"
+        }
+      ],
+      "capture_id": "98621e",
+      "checks_run": true,
+      "note": "Root requested one-line mutable-array nonwritable length bypass; exact final production and fixture reviewed before GO. Earlier completion-clock/binding-getter/revision non-regression corrections already incorporated before ready1."
+    }
+  ],
+  "failures": [],
+  "command_captures": {
+    "runtime1": {
+      "command": "node node_modules/vitest/vitest.mjs run src/config/versionedStore.test.ts src/reflex/configStore.test.ts -t 'W38.02|W38.01|rejects concurrent/stale writes|contains every partial put/lost acknowledgement|bounds immutable serving snapshots|versions, attributes|rolls forward on rollback|serves the fallback|merges nested objects instead|accepts the legacy|writes both field names|keeps every revision body|serves repeat reads from the isolate cache|re-reads once the TTL' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-13 04:26:45 UTC",
+      "source": {
+        "at": "2026-09-13T04:26:16.456Z",
+        "files": [
+          {
+            "path": "src/config/versionedStore.ts",
+            "sha256": "906928a653f79dd395c03a30b1bd6b0ca59fdab62204adb98e085664dfb5f0b2"
+          },
+          {
+            "path": "src/config/versionedStore.test.ts",
+            "sha256": "178aae18f1634b6eb641924638a22c8be4667ae12b9db0473b8a7ebbc1b6453a"
+          }
+        ]
+      },
+      "captures": [
+        {
+          "chunk_id": "a51bb9",
+          "wall_time_seconds": 1.000932757,
+          "session_id": 1577,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "1df877",
+          "wall_time_seconds": 4.533725164,
+          "exit_code": 0,
+          "original_token_count": 573,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 bounds global charged residency with LRU expiry and binding-scope isolation\nW38.01 cache residency {\"entryLimit\":32,\"byteLimit\":8388608,\"countPressure\":{\"inserted\":33,\"retainedHits\":32,\"evictedMisses\":1},\"bytePressure\":{\"inserted\":5,\"retainedHits\":4,\"evictedMisses\":1,\"charges\":[1740886,1740886,1740886,1740886,1740886],\"insertedCharge\":8704430,\"retainedCharge\":6963544},\"measuredHeap\":false}\n\nstdout | src/config/versionedStore.test.ts > W11.01 conditional content publication > W38.01 fences delayed reads across local writes resets unknown acknowledgements and newer residents\nW38.01 cache fences {\"beforeWriteOrResetCases\":4,\"duringWriteCases\":1,\"newerResidentCases\":2,\"committedNoPutCases\":3,\"originalInflightRevisionPreserved\":true}\n\n ✓ src/config/versionedStore.test.ts  (26 tests | 12 skipped) 3149ms\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 fences both clocks resets partial writes and older delayed cache fills\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n\nstderr | src/config/versionedStore.test.ts > a second document kind inherits the whole store > serves the fallback rather than throwing when KV is down\n[config] read failed, serving fallback\n\nstdout | src/config/versionedStore.test.ts > a second document kind inherits the whole store > W38.02 bounds legacy residency and isolates binding kind hooks and caller-owned values\nW38.02 charged residency {\"limit\":8388608,\"entries\":32,\"candidate_bytes\":[1740382,1740382,1740382,1740382,1740382],\"candidate_total\":8701910,\"retained_large_hits\":4}\n\n ✓ src/reflex/configStore.test.ts  (52 tests | 49 skipped) 4ms\n\n Test Files  2 passed (2)\n      Tests  17 passed | 61 skipped (78)\n   Start at  00:26:47\n   Duration  14.95s (transform 2.71s, setup 0ms, collect 6.77s, tests 3.15s, environment 0ms, prepare 3.70s)\n\n"
+        }
+      ],
+      "session_id": 1577,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 04:27:02 UTC"
+    },
+    "static1": {
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/versionedStore.ts src/config/versionedStore.test.ts --max-warnings 1 && git diff --check -- src/config/versionedStore.ts src/config/versionedStore.test.ts",
+      "started_at": "2026-09-13 04:27:20 UTC",
+      "source": {
+        "at": "2026-09-13T04:26:16.456Z",
+        "files": [
+          {
+            "path": "src/config/versionedStore.ts",
+            "sha256": "906928a653f79dd395c03a30b1bd6b0ca59fdab62204adb98e085664dfb5f0b2"
+          },
+          {
+            "path": "src/config/versionedStore.test.ts",
+            "sha256": "178aae18f1634b6eb641924638a22c8be4667ae12b9db0473b8a7ebbc1b6453a"
+          }
+        ]
+      },
+      "captures": [
+        {
+          "chunk_id": "b9141d",
+          "wall_time_seconds": 1.000626236,
+          "session_id": 22084,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "a822c5",
+          "wall_time_seconds": 5.001407065,
+          "session_id": 22084,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5288ad",
+          "wall_time_seconds": 5.001227325,
+          "session_id": 22084,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "d2f8c7",
+          "wall_time_seconds": 0.545557012,
+          "exit_code": 0,
+          "original_token_count": 57,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/versionedStore.ts\n  304:57  warning  'scope' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 1 problem (0 errors, 1 warning)\n\n"
+        }
+      ],
+      "session_id": 22084,
+      "drained": true,
+      "exit_code": 0,
+      "finished_at": "2026-09-13 04:27:59 UTC"
+    },
+    "source_stop": {
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=path=>createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\"),baseline=JSON.parse(fs.readFileSync(\"docs/remediation/design/W38.02/baseline.json\",\"utf8\"));const files=baseline.owned.map(({path})=>({path,sha256:hash(path)})),protectedPins=baseline.pins.filter(p=>p.role!==\"output\").map(p=>({...p,actual_sha256:hash(p.path)})),references=[\"docs/remediation/design/W38.02/baseline.json\",\"docs/remediation/design/W38.02/plan.md\",\"docs/remediation/evidence/W38.02/admission.json\"].map(path=>({path,sha256:hash(path)}));console.log(JSON.stringify({at:new Date().toISOString(),files,protectedPins,references,unchanged:protectedPins.every(p=>p.sha256===p.actual_sha256)},null,2));'",
+      "captures": [
+        {
+          "chunk_id": "6e455a",
+          "wall_time_seconds": 0.000003934,
+          "exit_code": 0,
+          "original_token_count": 1744,
+          "output": "{\n  \"at\": \"2026-09-13T04:28:10.642Z\",\n  \"files\": [\n    {\n      \"path\": \"src/config/versionedStore.ts\",\n      \"sha256\": \"906928a653f79dd395c03a30b1bd6b0ca59fdab62204adb98e085664dfb5f0b2\"\n    },\n    {\n      \"path\": \"src/config/versionedStore.test.ts\",\n      \"sha256\": \"178aae18f1634b6eb641924638a22c8be4667ae12b9db0473b8a7ebbc1b6453a\"\n    }\n  ],\n  \"protectedPins\": [\n    {\n      \"path\": \"src/config/publication.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956\",\n      \"actual_sha256\": \"b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956\"\n    },\n    {\n      \"path\": \"src/reflex/configStore.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53\",\n      \"actual_sha256\": \"a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53\"\n    },\n    {\n      \"path\": \"src/reflex/configStore.test.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"a65c44dc36816a11c9c47c2e28eacbd555ecc9e0bd7bb19ffbbbcd9e0d7ba05d\",\n      \"actual_sha256\": \"a65c44dc36816a11c9c47c2e28eacbd555ecc9e0bd7bb19ffbbbcd9e0d7ba05d\"\n    },\n    {\n      \"path\": \"src/content/kinds.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8\",\n      \"actual_sha256\": \"7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8\"\n    },\n    {\n      \"path\": \"src/content/types.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df\",\n      \"actual_sha256\": \"26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df\"\n    },\n    {\n      \"path\": \"src/content/service.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f\",\n      \"actual_sha256\": \"918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f\"\n    },\n    {\n      \"path\": \"src/content/decide.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b\",\n      \"actual_sha256\": \"a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b\"\n    },\n    {\n      \"path\": \"src/reflex/contentCompose.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe\",\n      \"actual_sha256\": \"0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe\"\n    },\n    {\n      \"path\": \"src/learn/cycle.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c\",\n      \"actual_sha256\": \"ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c\"\n    },\n    {\n      \"path\": \"src/learn/priors.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad\",\n      \"actual_sha256\": \"da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad\"\n    },\n    {\n      \"path\": \"src/learn/route.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad\",\n      \"actual_sha256\": \"3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad\"\n    },\n    {\n      \"path\": \"src/learn/replay.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a\",\n      \"actual_sha256\": \"659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a\"\n    },\n    {\n      \"path\": \"src/routes/decisions.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da\",\n      \"actual_sha256\": \"39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da\"\n    },\n    {\n      \"path\": \"src/routes/content.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"38ca715650d602fb7ce07316494911dad6a657a614114f3b00ccca850b69e0ee\",\n      \"actual_sha256\": \"38ca715650d602fb7ce07316494911dad6a657a614114f3b00ccca850b69e0ee\"\n    },\n    {\n      \"path\": \"src/types/env.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab\",\n      \"actual_sha256\": \"222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab\"\n    },\n    {\n      \"path\": \"docs/architecture/35-audit-verification-and-source-of-truth.md\",\n      \"role\": \"source\",\n      \"sha256\": \"5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4\",\n      \"actual_sha256\": \"5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4\"\n    },\n    {\n      \"path\": \"docs/architecture/33-adversarial-audit-brief.md\",\n      \"role\": \"source\",\n      \"sha256\": \"21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028\",\n      \"actual_sha256\": \"21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.01/acceptance.md\",\n      \"role\": \"source\",\n      \"sha256\": \"1c0076af128b09e23a1ebc556d2fa8abc32ccc18a8c6bdda9f58f62c45dbd7e9\",\n      \"actual_sha256\": \"1c0076af128b09e23a1ebc556d2fa8abc32ccc18a8c6bdda9f58f62c45dbd7e9\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.01/worker.json\",\n      \"role\": \"source\",\n      \"sha256\": \"127d3c6303ed1b37b9b193867d329174029569be403b88d40165787afa298ee8\",\n      \"actual_sha256\": \"127d3c6303ed1b37b9b193867d329174029569be403b88d40165787afa298ee8\"\n    },\n    {\n      \"path\": \"package.json\",\n      \"role\": \"source\",\n      \"sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\",\n      \"actual_sha256\": \"c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3\"\n    },\n    {\n      \"path\": \"package-lock.json\",\n      \"role\": \"source\",\n      \"sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\",\n      \"actual_sha256\": \"e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f\"\n    },\n    {\n      \"path\": \"tsconfig.json\",\n      \"role\": \"source\",\n      \"sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\",\n      \"actual_sha256\": \"727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782\"\n    },\n    {\n      \"path\": \"vitest.config.ts\",\n      \"role\": \"source\",\n      \"sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\",\n      \"actual_sha256\": \"e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc\"\n    },\n    {\n      \"path\": \".eslintrc.json\",\n      \"role\": \"source\",\n      \"sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\",\n      \"actual_sha256\": \"419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39\"\n    }\n  ],\n  \"references\": [\n    {\n      \"path\": \"docs/remediation/design/W38.02/baseline.json\",\n      \"sha256\": \"1486f45e0f9b60f3554a2cd18e89bd39d2dc405894e665190e195adb2ccbf4f1\"\n    },\n    {\n      \"path\": \"docs/remediation/design/W38.02/plan.md\",\n      \"sha256\": \"04a439782cb9360b92b18ba01730a7e1cc61eaf6c9e3e73d7a4615f0f96f5105\"\n    },\n    {\n      \"path\": \"docs/remediation/evidence/W38.02/admission.json\",\n      \"sha256\": \"25e75a450bed6df75b897a290502d4e74e452b820973c5ee6ed2ce0825d6caa9\"\n    }\n  ],\n  \"unchanged\": true\n}\n"
+        }
+      ],
+      "session_id": null,
+      "exit_code": 0,
+      "drained": true
+    }
+  },
+  "final_source_stop": {
+    "at": "2026-09-13T04:28:10.642Z",
+    "files": [
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "906928a653f79dd395c03a30b1bd6b0ca59fdab62204adb98e085664dfb5f0b2"
+      },
+      {
+        "path": "src/config/versionedStore.test.ts",
+        "sha256": "178aae18f1634b6eb641924638a22c8be4667ae12b9db0473b8a7ebbc1b6453a"
+      }
+    ]
+  },
+  "protected_comparison": {
+    "expected": 24,
+    "actual": 24,
+    "unchanged": true,
+    "baseline": "docs/remediation/design/W38.02/baseline.json",
+    "all_actual_and_expected_hashes": "command_captures.source_stop.captures[0].output"
+  },
+  "limitations": [
+    "Legacy cache containment only; no full W38/F32/F08/N07/customer/release acceptance or reapproval of historical overlapping artifacts.",
+    "Independent32-entry/8MiB charged-serialization cap, not total heap or combined content+legacy budget. Expiry opportunistic; concurrent misses/provider JSON parsing/validation and oversized input memory remain outside retained-cache guarantee.",
+    "Mutable hits add structuredClone CPU/transient memory, not parsing/validation/I/O. JSON-only snapshot admission skips unsafe/partially-frozen/exotic/cyclic/deep or large values unchanged; depth64/100000visited-node admission limits are cache bypass, not document rejection.",
+    "Original in-flight calls can return original validated value/null. Local fences prevent later refill, not cancellation; remote KV/isolate staleness and revision/current/index concurrency/atomicity remain W35 work.",
+    "Compiled fallback identity, retained validators, existing duplicate envelope fields and all immutable-history bodies/keys retained. No ranking/candidate/model/schema changes or full-path/native latency/SLO claim.",
+    "No source ownership expansion, delegation, governance write, external/cloud/customer operation, install/emitted build or commit. Source immutable after STOP."
+  ],
+  "independent_review": "pending"
+}

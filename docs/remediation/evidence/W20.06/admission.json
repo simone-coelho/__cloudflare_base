@@ -1,0 +1,76 @@
+{
+  "at": "2026-09-13T22:43:08Z",
+  "task_id": "W20.06",
+  "journal": 1604,
+  "contract_digest": "bb54ccb02e5133e9769978cac0c0335945275f8228b9bbe043f837ce7c0970f3",
+  "plan": {
+    "path": "docs/remediation/design/W20.06/plan.md",
+    "sha256": "bd11438994c02ff61a1fe6c493e9f45bb98eb817e10d4e18b767cdb57253a0fe"
+  },
+  "scope": "Seven-file local SDK absence/ordering/capture and actual storefront default-paint ownership, paired SDK artifacts and concise existing integration guidance.",
+  "owned": [
+    "src/sdk/listen.ts",
+    "src/sdk/listen.test.ts",
+    "public/storefront.js",
+    "public/sdk/edge-personalization.js",
+    "public/sdk/edge-personalization.esm.js",
+    "src/sdk/README.md",
+    "docs/kit/01-integration-guide.md"
+  ],
+  "source_pins": 35,
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "2a4359",
+        "wall_time_seconds": 1.001650625,
+        "session_id": 89414,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "5c4ddf",
+        "wall_time_seconds": 5.000933579,
+        "session_id": 89414,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "cd2516",
+        "wall_time_seconds": 0.000002698,
+        "exit_code": 0,
+        "original_token_count": 520,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=110, closed=2; evidence records=327\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.05 — Finish remaining W20 customer-default handoff against the existing SDK/site adapter and explicit customer contract. First check delivered coverage; do not rebuild pins or hard constraints, invent fallback assets or equate local checks with actual customer walkthrough. If remaining W20 scope requires customer-owned configuration/acceptance, record the precise missing input and move to the next authorized document35 code remedy. W19 vocabulary/inheritance, W35 native authority/latency and release acceptance remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 22985\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=110, closed=2; evidence records=327\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.05 — Finish remaining W20 customer-default handoff against the existing SDK/site adapter and explicit customer contract. First check delivered coverage; do not rebuild pins or hard constraints, invent fallback assets or equate local checks with actual customer walkthrough. If remaining W20 scope requires customer-owned configuration/acceptance, record the precise missing input and move to the next authorized document35 code remedy. W19 vocabulary/inheritance, W35 native authority/latency and release acceptance remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 22985\n"
+      }
+    ],
+    "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=110, closed=2; evidence records=327\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.05 — Finish remaining W20 customer-default handoff against the existing SDK/site adapter and explicit customer contract. First check delivered coverage; do not rebuild pins or hard constraints, invent fallback assets or equate local checks with actual customer walkthrough. If remaining W20 scope requires customer-owned configuration/acceptance, record the precise missing input and move to the next authorized document35 code remedy. W19 vocabulary/inheritance, W35 native authority/latency and release acceptance remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 22985\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=33, unscoped=8\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=110, closed=2; evidence records=327\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W20.05 — Finish remaining W20 customer-default handoff against the existing SDK/site adapter and explicit customer contract. First check delivered coverage; do not rebuild pins or hard constraints, invent fallback assets or equate local checks with actual customer walkthrough. If remaining W20 scope requires customer-owned configuration/acceptance, record the precise missing input and move to the next authorized document35 code remedy. W19 vocabulary/inheritance, W35 native authority/latency and release acceptance remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 22985\n",
+    "session_id": 89414,
+    "drained": true,
+    "exit_code": 0,
+    "metadata_probe": {
+      "captures": [
+        {
+          "chunk_id": "f14aa2",
+          "wall_time_seconds": 1.001371256,
+          "session_id": 42562,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "981684",
+          "wall_time_seconds": 0.000003783,
+          "exit_code": 1,
+          "original_token_count": 176,
+          "output": "node:internal/modules/run_main:122\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n74 !== 67\n\n    at file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/[eval1]:16:8\n    at ModuleJob.run (node:internal/modules/esm/module_job:274:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:268:26)\n    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:264:20)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 74,\n  expected: 67,\n  operator: 'strictEqual'\n}\n\nNode.js v22.15.0\n"
+        }
+      ],
+      "qualification": "Read-only admission generation used the previous task's accepted-pin count67. All hashes passed; actual count74 triggered the expected-count assertion before any file write. Corrected count reflects W20.05's59 plus W08.04's15, no source/evidence drift."
+    }
+  },
+  "prior_journal_length": 1595,
+  "prior_journal_sha256": "ef37f6181f55066745b605cd13d6165effc846892305895f39032384bc829c7b",
+  "closed_pins_verified": 74,
+  "qualification": "Bounded local customer-neutral absence/default handoff only; no engine ranking, pins, governance schema, receipts/replay, server routes, consent/identity authority or model changes. Existing site default helpers remain site-owned; no customer-selected assets or arbitrary replacement. Source and both SDK bundles are checked with local synthetic hosts/DOM and actual guarded renderer code, not a customer browser/walkthrough, first-paint/no-flash guarantee, deployed latency/native/SLO, scientific or release acceptance. No new refresh/push server, infrastructure, test suite, cloud/resource/customer-data/credential operations, deployment, dev/provision/seed/install, destructive cleanup, commit/push or external action. SDK generation is installed esbuild write:false with apply_patch of owned outputs only. Full W20/W15/F28/F29, actual customer default mappings and server-render timing remain open. W20.05 exact-byte proof is prospectively qualified for its listen dependency; its implemented pin/ranking/replay/report controls and history remain, W08.04 unchanged. Storefront has30 inherited lint errors and6 warnings; SDK6 warnings. Exact unchanged baseline diagnostics may remain, no new errors/warnings or disabled rules; not a full storefront lint pass.",
+  "lead": "w01-lead",
+  "source_go": "Pending direct pins/contract check; no source edits before GO."
+}

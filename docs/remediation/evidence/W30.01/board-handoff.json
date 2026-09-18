@@ -1,0 +1,64 @@
+{
+  "at": "2026-09-12T17:53:43.869Z",
+  "task_id": "W30.01",
+  "artifact_digest": "933f82dc339e9edebe073fd5f1e88c229c6b8d2286c96bf42eb4b4392c5926dc",
+  "journal_seq": 1237,
+  "board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "9cb5d9",
+        "wall_time_seconds": 1.001496272,
+        "session_id": 34209,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "be9b31",
+        "wall_time_seconds": 5.001999964,
+        "session_id": 34209,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "7a1db7",
+        "wall_time_seconds": 0.000001916,
+        "exit_code": 0,
+        "original_token_count": 529,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=26, unscoped=15\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=87, closed=2; evidence records=255\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.01 — Continue W30 with a bounded correction for visible report incompleteness (unfolded/ringsFolded=false, horizon and maturity propagation), reading the full parent scope/current report/window/UI paths before admission. Late/mutable-object detection, event-time checkpoints/retained-history reconstruction, higher-cap dependent-hour repair, capacity and seven-day customer proof remain separate open obligations. Preserve W30.01 current-loaded temporal correction and existing W28 withdrawal; no customer-data repair or external/deployment authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 18909\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=26, unscoped=15\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=87, closed=2; evidence records=255\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.01 — Continue W30 with a bounded correction for visible report incompleteness (unfolded/ringsFolded=false, horizon and maturity propagation), reading the full parent scope/current report/window/UI paths before admission. Late/mutable-object detection, event-time checkpoints/retained-history reconstruction, higher-cap dependent-hour repair, capacity and seven-day customer proof remain separate open obligations. Preserve W30.01 current-loaded temporal correction and existing W28 withdrawal; no customer-data repair or external/deployment authority.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 18909\n"
+      }
+    ],
+    "session_id": 34209,
+    "drained": true,
+    "exit_code": 0,
+    "valid": true,
+    "note_counts": [
+      18909,
+      18909
+    ]
+  },
+  "root_frozen_check": {
+    "chunk_id": "07e3b6",
+    "exit_code": 0,
+    "drained": true,
+    "at": "2026-09-12T17:49:07.477Z",
+    "journal": 1234,
+    "artifact": "933f82dc339e9edebe073fd5f1e88c229c6b8d2286c96bf42eb4b4392c5926dc",
+    "contract": "ab5cba3191239452ec1b0da84d67c0481e066779bd9d5911d9c6b2a87cda49b6",
+    "checks": "Actual verification state, recomputed artifact/task contract, all30 file hashes, worker SHA and source stop."
+  },
+  "remaining": {
+    "implementation_active": false,
+    "task_acceptance": "bounded_current_hour_temporal_attribution",
+    "package_W30": "open",
+    "finding_F17": "open",
+    "finding_F18": "open",
+    "finding_F25": "open",
+    "finding_N08": "open",
+    "finding_N23": "open",
+    "customer_acceptance": false,
+    "release": "not_authorized",
+    "next_action": "Continue W30 with a bounded correction for visible report incompleteness (unfolded/ringsFolded=false, horizon and maturity propagation), reading the full parent scope/current report/window/UI paths before admission. Late/mutable-object detection, event-time checkpoints/retained-history reconstruction, higher-cap dependent-hour repair, capacity and seven-day customer proof remain separate open obligations. Preserve W30.01 current-loaded temporal correction and existing W28 withdrawal; no customer-data repair or external/deployment authority."
+  },
+  "limitations": "Bounded local event-time attribution over already-loaded current-hour rows and available retained carry-in; not full W30/F17/F18/F25/N08/N23 reconstruction, arbitrary late/mutable/hour repair, seven-day policy, online/batch parity, workload capacity, policy/maturity/report-window assurance or customer/release acceptance. Preceding decisions can still exhaust the retained cap (actual F17 P2 remains); no historical carry-in evicted by cap/horizon is recovered. Aggregate/ring persistence is not transactional; newer-date refusal and non-forward ringsFolded=false remain. W06 privacy and W26 named placement retained. W28 actual withdrawal unchanged but broad shared-artifact proof qualified prospectively; W08.04 unchanged. No serving-path I/O, new infrastructure/schema, deployment/cloud/resource/credential/customer-data repair, external messages, contract amendment, destructive/commit/push authority."
+}

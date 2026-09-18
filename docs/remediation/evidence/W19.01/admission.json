@@ -1,0 +1,52 @@
+{
+  "at": "2026-09-13T15:35:25.643Z",
+  "source_go_at": "2026-09-13T15:35:25.643Z",
+  "actor_id": "w01-lead",
+  "task_id": "W19.01",
+  "worker": "w1404-reviewer",
+  "reviewer": "w1405-reviewer",
+  "contract_digest": "83bdfaedf1798b44e338769ec51d3ecc1d8395f56085bb693d81834cd881f994",
+  "plan": {
+    "path": "docs/remediation/design/W19.01/plan.md",
+    "sha256": "c215795d22413d561de53aef9fdb71e6c5f0eb6f2241fc0e051baf79ab20f27f"
+  },
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "02ab29",
+        "wall_time_seconds": 1.00114846,
+        "session_id": 62655,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b5bfbd",
+        "exit_code": 0,
+        "drained": true,
+        "summary": "Actual root entry check/status both VALID; NOTE counts21446 each; journal1482."
+      }
+    ],
+    "chunk_id": "02ab29",
+    "wall_time_seconds": 1.00114846,
+    "session_id": 62655,
+    "original_token_count": 0,
+    "output": "",
+    "exit_code": 0,
+    "drained": true
+  },
+  "direct_check": {
+    "status": "passed",
+    "journal_seq": 1495,
+    "pins": 27,
+    "protected": 21,
+    "authority": true,
+    "actual_package_matches": true,
+    "prior_journal_preserved": true,
+    "preflight_start_snapshot": true,
+    "dependencies_resolve": true,
+    "remaining_closed_artifacts_match": true,
+    "remaining_closed_no_planned_overlap": true
+  },
+  "limitations": "Bounded current supported-field import/merge fidelity, promised stage aliases and duplicate-tag refusal with retained-history compatibility only. Full W19/F27/N15 stays open: canonical type/film-video signal and ranking agreement, registry/locale/slot vocabulary, unusable taxonomy policy, product-attribute inheritance, full versioned feed/customer acceptance remain. Stored duplicate tags retain old scoring; new writes/rollback/enrichment containing them refuse until explicit correction; no silent historical rewrite. No new infrastructure, broad suite, benchmark, scoring/model/consent/authority change, emitted build/install, cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions."
+}

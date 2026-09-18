@@ -1,0 +1,19 @@
+{
+  "at": "2026-09-13T14:22:49.602Z",
+  "source_go_at": "2026-09-13T14:22:49.602Z",
+  "task_id": "W20.01",
+  "actor_id": "w01-lead",
+  "worker": "w1404-reviewer",
+  "reviewer": "w1405-reviewer",
+  "supersedes": "docs/remediation/evidence/W20.01/admission.json",
+  "contract_digest": "a9e68aa8f01af9825531d13b8231ce5331149513d97d18d915630964acc64fc6",
+  "plan": {
+    "path": "docs/remediation/design/W20.01/plan.md",
+    "sha256": "ae3616d15e5341e91a128b39a1de8e5e72dd27c2d624f03f8c300ea5dc53b052"
+  },
+  "journal_seq": 1464,
+  "source_before_all_baseline_pins": true,
+  "no_edits_reported": true,
+  "correction": "Impossible mixed evidence minimum corrected; actual runtime18/static/review remain mandatory unchanged.",
+  "limits": "Bounded W20 pin reservation, publication contradictions, refusal diagnostics and replay compatibility only. Full W20/F28/F26 activation/reference warnings, exclusions/off-limits, customer fallback/priority/multi-position design, actual merchandiser walkthrough and customer acceptance remain open. Legacy invalid pins remain readable but are refused without arbitrary fill in new runtime; retained receipts use recorded legacy semantics. No cross-page dedupe, ranking/model or exploration-policy change; W38.05 explanation optimization retained. Local synthetic checks are not deployed/runtime/SLO or release acceptance. Existing slot KV transaction/propagation limitations and W35 authority remain separate. No deploy/cloud/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external operations or customer-policy amendments."
+}

@@ -1,0 +1,90 @@
+{
+  "task_id": "W11.02",
+  "at": "2026-09-17T23:37:53.685Z",
+  "actor_id": "w01-lead",
+  "before": "fd9bd210e5c019e3d6a34fb91b0eec7c953b53d2defcb4592c243c60237889e6",
+  "after": "5c9690aafabd5166f6b29f1172cd5df7f40fb8df2f7aeba665c6cb3b522e96b4",
+  "scope": "Validation-only amendment; originalW11/C1–C9,29outputs/105protectedpins, product architecture/ownership/mandate and all otherchecks unchanged.",
+  "prior_preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/evidence/W11.02/admission.json",
+      "sha256": "e2e9e58586cb4e4b632f7cae424f65b14a7114d5ad2908f7a65822b24252793c"
+    },
+    "contract_digest": "fd9bd210e5c019e3d6a34fb91b0eec7c953b53d2defcb4592c243c60237889e6",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-17T22:59:39.678Z",
+      "plan_sha256": "e2e9e58586cb4e4b632f7cae424f65b14a7114d5ad2908f7a65822b24252793c",
+      "rationale": "Approve whole remaining originalW11 coherent local all-kind R2 authority/client/reader integration on29exclusiveoutputs; product/checkGO held for valid board."
+    }
+  },
+  "checks": {
+    "before": {
+      "id": "W11.02-K5",
+      "required": true,
+      "criterion_ids": [
+        "W11.02-C1",
+        "W11.02-C2",
+        "W11.02-C3",
+        "W11.02-C4",
+        "W11.02-C5",
+        "W11.02-C6",
+        "W11.02-C7",
+        "W11.02-C8"
+      ],
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/eslint/bin/eslint.js src/config/publication.ts src/config/versionedStore.ts src/reflex/configStore.ts src/content/kinds.ts src/learn/priors.ts src/learn/cycle.ts src/routes/config.ts src/routes/content.ts src/routes/decisions.ts src/content/service.ts src/demos/registry.ts src/durable-objects/LearnStats.ts public/console/shell.js public/console/views.js public/console/views-config.js public/console/views-measure.js public/learning.js src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/phase2.test.ts src/learn/phase3.test.ts src/learn/learn.test.ts src/console/console.render.test.ts src/console/learning.render.test.ts src/index.api-boundary.test.ts public/meridian/meridian.js && git diff --check -- src/config/publication.ts src/config/versionedStore.ts src/reflex/configStore.ts src/content/kinds.ts src/learn/priors.ts src/learn/cycle.ts src/routes/config.ts src/routes/content.ts src/routes/decisions.ts src/content/service.ts src/demos/registry.ts src/durable-objects/LearnStats.ts public/console/shell.js public/console/views.js public/console/views-config.js public/console/views-measure.js public/learning.js src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/phase2.test.ts src/learn/phase3.test.ts src/learn/learn.test.ts src/console/console.render.test.ts src/console/learning.render.test.ts src/index.api-boundary.test.ts public/meridian/meridian.js docs/kit/02-api-reference.md",
+      "runtime": "Installed Worker compiler, scoped28TS/JS lint and29file whitespace",
+      "workload": "Baseline warning comparison; no SDK/compiler/package/broadCI.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    "after": {
+      "id": "W11.02-K5",
+      "required": true,
+      "criterion_ids": [
+        "W11.02-C1",
+        "W11.02-C2",
+        "W11.02-C3",
+        "W11.02-C4",
+        "W11.02-C5",
+        "W11.02-C6",
+        "W11.02-C7",
+        "W11.02-C8"
+      ],
+      "command": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node -e 'const fs=require(\"node:fs\"),z=require(\"node:zlib\"),path=require(\"node:path\"),{ESLint}=require(\"eslint\");(async()=>{const e=JSON.parse(fs.readFileSync(\"docs/remediation/evidence/W11.02/worker.json\"));const a=e.attempts.find(a=>a.id===\"baseline.1\");const p=JSON.parse(z.gunzipSync(Buffer.from(a.gzip_base64,\"base64\")));const original=new Map(e.originals.map(o=>[o.path,z.gunzipSync(Buffer.from(o.original,\"base64\")).toString().split(\"\\n\")]));const raw=p.chunks.map(c=>Buffer.from(c.base64,\"base64\").toString()).join(\"\");let file=\"\";const pool=[];for(const line of raw.split(\"\\n\")){if(line.startsWith(process.cwd()+\"/\"))file=path.relative(process.cwd(),line.trim());const m=/^\\s*(\\d+):(\\d+)\\s+(error|warning)\\s+(.+?)\\s{2,}(\\S+)\\s*$/.exec(line);if(m)pool.push({file,line:Number(m[1]),column:Number(m[2]),severity:m[3]===\"error\"?2:1,message:m[4],ruleId:m[5],source:original.get(file)?.[Number(m[1])-1]});}const admitted=new Set([\"1020:41\",\"1024:105\",\"1365:3\",\"1525:47\",\"1526:31\",\"1527:25\",\"1527:41\",\"1914:100\"]);const results=await new ESLint().lintFiles([\"src/config/publication.ts\",\"src/config/versionedStore.ts\",\"src/reflex/configStore.ts\",\"src/content/kinds.ts\",\"src/learn/priors.ts\",\"src/learn/cycle.ts\",\"src/routes/config.ts\",\"src/routes/content.ts\",\"src/routes/decisions.ts\",\"src/content/service.ts\",\"src/demos/registry.ts\",\"src/durable-objects/LearnStats.ts\",\"public/console/shell.js\",\"public/console/views.js\",\"public/console/views-config.js\",\"public/console/views-measure.js\",\"public/learning.js\",\"src/config/versionedStore.test.ts\",\"src/reflex/configStore.test.ts\",\"src/routes/content.test.ts\",\"src/content/consent.test.ts\",\"src/learn/phase2.test.ts\",\"src/learn/phase3.test.ts\",\"src/learn/learn.test.ts\",\"src/console/console.render.test.ts\",\"src/console/learning.render.test.ts\",\"src/index.api-boundary.test.ts\",\"public/meridian/meridian.js\"]);const unmatched=[],matched=[];let errors=0,warnings=0;for(const r of results){const file=path.relative(process.cwd(),r.filePath),lines=fs.readFileSync(r.filePath,\"utf8\").split(\"\\n\");for(const m of r.messages){if(m.severity===2)errors++;else warnings++;const index=pool.findIndex(b=>b.file===file&&b.severity===m.severity&&b.ruleId===m.ruleId&&b.message===m.message&&b.source===lines[m.line-1]);if(index<0){unmatched.push({file,...m,reason:\"new-or-changed-source\"});continue;}const b=pool.splice(index,1)[0];if(m.severity===2&&(file!==\"public/meridian/meridian.js\"||!admitted.has(b.line+\":\"+b.column)))unmatched.push({file,...m,reason:\"not-admitted-inherited-error\"});matched.push({file,ruleId:m.ruleId,severity:m.severity,originalLine:b.line,currentLine:m.line});}}const pass=errors===8&&unmatched.length===0;console.log(JSON.stringify({rawLintExit:errors?1:0,errors,warnings,diagnostics:results.map(r=>({filePath:r.filePath,messages:r.messages,errorCount:r.errorCount,warningCount:r.warningCount})),matched,unmatched,deltaGate:pass?\"PASS\":\"FAIL\"}));process.exitCode=pass?0:1;})().catch(e=>{console.error(e);process.exitCode=1;});' && git diff --check -- src/config/publication.ts src/config/versionedStore.ts src/reflex/configStore.ts src/content/kinds.ts src/learn/priors.ts src/learn/cycle.ts src/routes/config.ts src/routes/content.ts src/routes/decisions.ts src/content/service.ts src/demos/registry.ts src/durable-objects/LearnStats.ts public/console/shell.js public/console/views.js public/console/views-config.js public/console/views-measure.js public/learning.js src/config/versionedStore.test.ts src/reflex/configStore.test.ts src/routes/content.test.ts src/content/consent.test.ts src/learn/phase2.test.ts src/learn/phase3.test.ts src/learn/learn.test.ts src/console/console.render.test.ts src/console/learning.render.test.ts src/index.api-boundary.test.ts public/meridian/meridian.js docs/kit/02-api-reference.md",
+      "runtime": "Installed Worker compiler, exact28-file ESLint with saved-source baseline diagnostic comparison,29-file whitespace",
+      "workload": "Compiler and whitespace must pass. Print every raw lint diagnostic and rawLintExit separately; require exactly eight independently source-qualified inherited Meridian errors and no unmatched/new error or warning against exact saved baseline multiset (path,severity,rule,message,source line). Full-file lint remains failed with those inherited errors; this is only a no-new-diagnostics gate, not W13 lint/release acceptance. No rule suppression/new helper/framework/broadCI.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  },
+  "baseline": {
+    "path": "docs/remediation/evidence/W11.02/worker.json",
+    "attempt": "baseline.1",
+    "primary_sha256": "f60ac70570b44d0743333e43ed9f63a307509cb2a193b4fe31578b7f8a4faaae",
+    "primary_bytes": 53623,
+    "originals": "All29 original gzip bytes/hash/length matched original admission;105protectedpins unchanged. Reverify exact baseline/originals at freeze.",
+    "original_meridian_errors": [
+      "1020:41 no-empty",
+      "1024:105 no-empty",
+      "1365:3 no-unreachable",
+      "1525:47 no-undef rows",
+      "1526:31 no-undef map",
+      "1527:25 no-undef rows",
+      "1527:41 no-undef map",
+      "1914:100 no-empty"
+    ],
+    "source_qualification": "Root compared all offending original/current blocks; distinct reviewer independently full-read baseline/K5.1 and confirmed byte-identical statements, unused predictThenProve and no W11 publication-path dependency. Scope is inherited exact diagnostics only, not wildcard rule/line suppression."
+  },
+  "reason": "Exact initial scoped lint revealed inherited browser globals plus eight unrelated dormant/demo diagnostics. Add proper browser/real-global declarations and correct introduced diagnostics within ownedfiles; do not expand W11 into unrelated cleanup or claim full lint passes. Superseding focused static gate retains raw lint failure and proves no regression relative to exact original diagnostics.",
+  "retained_failure": {
+    "attempt": "K5.1",
+    "sha256": "380840fab937e4c1712c173b605baf21769fd575f1c58045f022a2eb1d25720e",
+    "bytes": 36448,
+    "result": "CompilerPASS; lintFAIL131errors23warnings; whitespaceNOTreached. Root and distinct reviewer full-output/integrity verified. Never rewritten as pass."
+  },
+  "acceptance": "Only exact superseding K5 after boardGO may establish compiler/no-new-diagnostics/whitespace PASS; no final result yet. Original lint errors/fullW13/release remain unresolved. All runtime/native/client wholeW11 requirements and independent frozen review unchanged.",
+  "rollback": "Retain original plan/check/failure immutably; no product rollback or external operation.",
+  "approval": "Lead approves this validation-only supersession under existing local mandate; finalstaticGO held for valid board. Product/file ownership unchanged; no newuserdecision, rule weakening, helper file, broadCI or external operation."
+}

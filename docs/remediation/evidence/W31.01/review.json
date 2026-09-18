@@ -1,0 +1,190 @@
+{
+  "at": "2026-09-13 02:04:31 UTC",
+  "task_id": "W31.01",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "8b8b176398d7c11f8a21645224e2162698a81339331e21a30c161c679ff2f03b",
+  "contract_digest": "c3c5e454b333b71f5eeedfcef2a7cd53e20bd9f7c57520c0d818746c8f5c4b48",
+  "verdict": "PASS",
+  "summary": "Independent source/evidence review and one final-byte fixed14 pass for recorded computation-basis compatibility containment. Lead acceptance remains separate.",
+  "criteria": [
+    {
+      "id": "W31.01-C1",
+      "verdict": "PASS",
+      "evidence": "Actual raw/hour producers record normalized effective policy windows/defaults, roles, slot reward/objective/tau and raw-day versus hourly horizon/cap profile. Carry-in-only credited slots and visitor-only brands are covered; duplicate custom labels retain prior response-only data with unknown basis. All contributing hourly definitions/configuration and the bounded final slot union are checked before merge/day publication. Missing/mixed/unsupported basis cannot relabel accumulators or replace saved canonical bytes. Only explicit late metadata representation errors become null hourly basis while numeric publication continues; unrelated storage/fold errors are outside that catch. Full/paged diagnostics and same-object summaries preserve validated basis, leaving legacy identity unknown."
+    },
+    {
+      "id": "W31.01-C2",
+      "verdict": "PASS",
+      "evidence": "Actual window source requires equal known recorded learning basis per represented slot contribution. Unknown, unrepresented and mixed reasons accumulate independently; mixed plus missing/empty counts remains mixed in either day order. Affected pooled arms are withheld, while found days, source counts and coverage remain; unaffected compatible slots retain exact raw counts. The actual modern UI shows withholding/dates before empty-row handling and keeps experimental compatibility unverified. Fixed groups prove2 decisions/6 repeated unweighted credits versus zero withheld pooled rows,2 reads/two days, and bounded full-field/prefix parity."
+    },
+    {
+      "id": "W31.01-C3",
+      "verdict": "PASS",
+      "evidence": "Personally read complete plan/task/admission and nine actual baseline deltas, consolidated three source defects, checked their four-file correction, then reconciled three final typing-only changes exactly. All58 artifact pins,43 protected pins,current contract and nine bidirectional deltas match before/after one exact fixed14 invocation:14passed/70unselected. Full worker candidate/runtime/static/STOP evidence inspected; final static2 reused without additional suites. Prior paging, canonical isolation, coverage, prefix bounds and inherited edits remain qualified and preserved."
+    }
+  ],
+  "findings": [],
+  "resolved_pre_freeze_findings": [
+    "Known mixed identity is no longer hidden by empty/missing rows: independent sorted reasons retain mixed_basis and unrepresented_counts together.",
+    "Late hourly metadata InputError or summaryBytes refusal records computation:null without discarding already-folded numeric hour data; no unrelated fold/storage error is swallowed.",
+    "The combined hourly slot basis is bounded and validated before any day merge, preventing a too-large known union from silently disappearing from a published summary.",
+    "Final typing corrections bind narrowed policy windows locally, declare the never-returning unavailable helper, and use the existing typed DOM cell query. No runtime behavior expansion."
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W31.01/plan.md",
+      "sha256": "064da2c8dfa88bfe0e9cef4716619e5d42d3b7b12c176b76a75d10f97d79fd02"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W31.01/artifact.json",
+      "sha256": "621ce9a8de72a727d27fb602e92dcc9fce41058bf8a7b387b873f10e93cd4bce"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W31.01/worker.json",
+      "sha256": "caa2063caffb63bbd89fb08cb153360184226b808f72749594357db13352a3b1"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/report.test.ts src/learn/hourly.test.ts src/measure/window.test.ts src/console/console.render.test.ts -t 'W31.01|W32.05|W32.04|W33.01 only null|W30.02|measurement shows raw attribution diagnostics' --maxWorkers=1 --minWorkers=1",
+    "session_id": 91385,
+    "invocations": 1,
+    "captures": [
+      {
+        "chunk_id": "9219a9",
+        "wall_time_seconds": 1.001046985,
+        "session_id": 91385,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "f82f44",
+        "wall_time_seconds": 0.00000209,
+        "exit_code": 0,
+        "original_token_count": 478,
+        "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstdout | src/console/console.render.test.ts > the operator application, rendered > W32.05 pages saved comparisons and withholds stale context, navigation and build completions\nW32.05 modern DOM {\"union_items\":121,\"rendered_page_items\":50,\"canonical_gets_paged\":true,\"build_candidate_not_rendered\":true}\n\n ✓ src/console/console.render.test.ts  (35 tests | 31 skipped) 9676ms\n ✓ src/learn/report.test.ts  (17 tests | 12 skipped) 191ms\nstdout | src/learn/report.test.ts > the day report > W32.05 pages authenticated saved reports by exact content and query while preserving full exports and diagnostics\nW32.05 response bytes {\"full_get_bytes\":185456,\"page_envelope_bytes\":7922,\"union_items\":121,\"page_items\":50,\"gets_per_page\":1,\"note\":\"same bounded full server read; no CPU/storage-read improvement claimed\"}\n\n ✓ src/learn/hourly.test.ts  (24 tests | 21 skipped) 96ms\nW31.01 counts {\"compatible\":{\"decisions\":2,\"credited\":6},\"mixed_unknown_or_unrepresented_pooled_rows\":0,\"reads_per_two_days\":2}\nW32.04 byte_measurement [{\"days\":28,\"requests\":28,\"full_canonical_bytes\":18226262,\"delivered_and_charged_prefix_bytes\":1835008,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"},{\"days\":92,\"requests\":92,\"full_canonical_bytes\":59886296,\"delivered_and_charged_prefix_bytes\":6029312,\"parity\":\"exact window vs independent legacy full-field projection without unused grids\"}]\n ✓ src/measure/window.test.ts  (8 tests | 6 skipped) 3647ms\n\n Test Files  4 passed (4)\n      Tests  14 passed | 70 skipped (84)\n   Start at  22:01:56\n   Duration  51.47s (transform 3.09s, setup 0ms, collect 27.91s, tests 13.61s, environment 0ms, prepare 7.33s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 14,
+      "unselected": 70,
+      "total": 84,
+      "test_files": 4,
+      "new_grouped_cases": 4,
+      "retained_selected_cases": 10,
+      "final_bytes": true
+    }
+  },
+  "artifact_checks": {
+    "artifact_pins": 58,
+    "source_and_output_pins": 52,
+    "protected_pins": 43,
+    "pin_mismatches": [],
+    "changed_protected": [],
+    "exact_forward_and_reverse_deltas": 9,
+    "manifest_sha256": "621ce9a8de72a727d27fb602e92dcc9fce41058bf8a7b387b873f10e93cd4bce",
+    "before": {
+      "at": "2026-09-13T02:01:38.771Z",
+      "capture": "d3d933",
+      "exit_status": 0,
+      "drained": true
+    },
+    "after": {
+      "at": "2026-09-13T02:03:19.018Z",
+      "capture": "015274",
+      "exit_status": 0,
+      "drained": true
+    },
+    "contract_before": {
+      "chunk_id": "2f98c4",
+      "wall_time_seconds": 0.009802829,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T02:01:39.024Z\",\"task\":\"W31.01\",\"state\":\"verification\",\"contract_digest\":\"c3c5e454b333b71f5eeedfcef2a7cd53e20bd9f7c57520c0d818746c8f5c4b48\",\"artifact_digest\":\"8b8b176398d7c11f8a21645224e2162698a81339331e21a30c161c679ff2f03b\"}\n"
+    },
+    "contract_after": {
+      "chunk_id": "03b93f",
+      "wall_time_seconds": 0.017517347,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "{\"at\":\"2026-09-13T02:03:19.279Z\",\"task\":\"W31.01\",\"state\":\"verification\",\"contract_digest\":\"c3c5e454b333b71f5eeedfcef2a7cd53e20bd9f7c57520c0d818746c8f5c4b48\",\"artifact_digest\":\"8b8b176398d7c11f8a21645224e2162698a81339331e21a30c161c679ff2f03b\"}\n"
+    },
+    "source_stopped_at": "2026-09-13T01:58:31.725Z",
+    "inspection": {
+      "plan_task_admission": "910da4",
+      "initial_nine_deltas": [
+        "856839",
+        "a1cd14",
+        "aca158",
+        "d73f95",
+        "634b6d"
+      ],
+      "three_defect_corrections": [
+        "4fc918",
+        "557cac"
+      ],
+      "final_typing_and_hash_reconciliation": "448648",
+      "complete_worker_and_freeze_metadata": "4f78db",
+      "complete_worker_command_captures": "91051c",
+      "qualification": "Reused prior personal canonical/governance/source reads and root entry71704/f77b0d VALID1354. Current final code reconstructs all nine previously inspected candidate2 hashes exactly after undoing only the three typing corrections; final forward/reverse deltas reconstruct admitted original and frozen bytes. No duplicate board, static or benchmark."
+    }
+  },
+  "static_reuse": {
+    "worker_record": {
+      "path": "docs/remediation/evidence/W31.01/worker.json",
+      "sha256": "caa2063caffb63bbd89fb08cb153360184226b808f72749594357db13352a3b1"
+    },
+    "command_capture": "command_captures.static2",
+    "session_id": 83550,
+    "captures": [
+      "99cfbd",
+      "d81c85"
+    ],
+    "inspection_capture": "91051c",
+    "started_at": "2026-09-13 01:57:17 UTC",
+    "finished_at": "2026-09-13 01:58:07 UTC",
+    "exit_status": 0,
+    "drained": true,
+    "compiler_exit_status": 0,
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "javascript_syntax_files": 1,
+    "whitespace": "PASS",
+    "reviewer_reruns": 0
+  },
+  "measured_effects": {
+    "basis": "Actual independent fixed14 output and existing grouped assertions; no separate benchmark.",
+    "compatible": {
+      "decisions": 2,
+      "credited": 6
+    },
+    "mixed_unknown_or_unrepresented_pooled_rows": 0,
+    "reads_per_two_days": 2,
+    "page": {
+      "full_get_bytes": 185456,
+      "page_envelope_bytes": 7922,
+      "union_items": 121,
+      "page_items": 50,
+      "gets_per_page": 1
+    },
+    "qualification": "Retained28/92-day synthetic prefix comparisons use explicit consistent hourly1h/200 computation and independent full fields without unused grids. Input bytes now include basis metadata; actual prefix transfers remain1,835,008/6,029,312 bytes. These are bounded count/byte/request effects, not engine CPU/native/browser-layout/SLO or scientific evidence."
+  },
+  "retained_failures_and_qualifications": [
+    "Worker candidate1 runtime62465/c25629/2d203b passed14/70 but was superseded by the three source-review corrections. Candidate2 runtime80855/3da15a/2b8e9a/c2ee66/5957c5 also passed14/70 but was superseded by typing corrections. Their execution identities and full captures remain in worker.json; neither is final-byte acceptance.",
+    "Worker static1 session92220/bb2bc8/45fc39 exited2 at compiler: typed DOM children access, never-returning helper narrowing/expected assignment, and policy.windowsMs narrowing. Lint, JavaScript syntax and whitespace were not reached. No failed runtime is invented.",
+    "Worker final candidate3 runtime57275/f13255/ffc7e4/76f8ea passed14/70; final static2 passed all stages. The independent91385 invocation is separately captured above. Runtime Vite CJS deprecation remains verbatim; scoped lint has zero warnings.",
+    "Deliberately mixed0/48h hourly coverage fixture now refuses; compatible zero-horizon progress and unknown saved-read normalization remain tested. Known synthetic pooling fixtures explicitly carry valid basis rather than silently blessing absent legacy metadata.70 unselected tests are not passing coverage."
+  ],
+  "limitations": [
+    "Equality establishes recorded reporting computation only, not served control/allocation/enrollment/share, tenant metric/target versions, experimental compatibility, causal business lift or customer/release acceptance. Arm credits remain unweighted repeated outcomes per content-item decision; objective/tau describe accumulated grids, while estimator-only presentation changes remain possible.",
+    "No historical restamping/rebuild, generation/reset change, hot-path serving, model/scientific/business-policy amendment or full W31/F25/F07/F34 closure.",
+    "Carry-in-only slot identity is captured, but historical missing/zero-decision arm projection is not redesigned; missing/empty represented contributions are withheld. Existing source coverage, maturity unknown, ring/history limits and full-hour ingestion limitations remain.",
+    "Late unrepresentable hourly metadata is explicitly unknown; unrelated errors still fail. Existing shard/hour/canonical non-atomic writes, swallowed canonical acknowledgement and concurrent-writer uncertainty are not repaired.",
+    "Basis and same-object summary retain application byte/cell limits. Older strict summary readers can reject the additive metadata, so reader-first rollout needs separate qualification. Prefix reads still do not validate unread full-tail integrity.",
+    "Per-page full saved reads/hashing, explicit full exports/custom POST and92-day/window limits remain. Actual helper/route and DOM fixtures use synthetic storage/platform data; retained installed local R2 primitive is dependency proof, not deployed HTTP/cloud/customer/native engine capacity. No extra suite, static replay or benchmark was performed."
+  ]
+}

@@ -1,0 +1,176 @@
+{
+  "at": "2026-09-13 22:01:31 UTC",
+  "task_id": "W20.05",
+  "actor_id": "w1405-reviewer",
+  "run_id": "/root/w1405_safety_review",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "artifact_digest": "41ee785836fb39d3e234f21fbbd8e391eaf355f12cda89ba98d3db4c767c29f7",
+  "contract_digest": "8e23fb28189276ab6995c8605f38134e7c614f3a89d719e3851705b439b69975",
+  "verdict": "PASS",
+  "criteria": [
+    {
+      "id": "W20.05-C1",
+      "verdict": "PASS",
+      "evidence": "Personally inspected version3 validation/current-versus-stored parsing, exact dense distinct prefix IDs, scalar mutual exclusion, active take limits and dormant offLimits handling. Atomic all-member eligibility/ownership validation commits no partial reservations; refused prefixes release every member, hard gates precede all-arm pin/rank/explore work, and pre-hook snapshots preserve prefix identities/order/diversity seeds. Composer, mounted publication and service assertions passed in the independent fixed selection; older stored formats retain unknown-prefix stripping."
+    },
+    {
+      "id": "W20.05-C2",
+      "verdict": "PASS",
+      "evidence": "Inspected independent absent/v1/prefix-reserved-v2 replay dispatch and full-page reservation context with rankingSlots limiting actual ranking/snapshot dependencies. Pin records have singleton candidates and zero scoring/learning/exploration, while mixed tails retain real snapshot versions/candidates and ranking_position. Actual all-arm record/archive/replay assertions cover missing required archives, forged authority/ordinal/position and historical controls. Raw/hourly equality uses first ranked ordinal for current records, preserves legacy physical-position semantics and refuses malformed current ordinals without changing attribution. Fixed36 terminal result and complete inspected worker evidence support these assertions."
+    },
+    {
+      "id": "W20.05-C3",
+      "verdict": "PASS",
+      "evidence": "Inspected Rules per-strategy/per-field exact JSON editing, malformed/stale safeguards, pin-index diagnostics, actual index/queue ranked capacity and shared readback. Selected DOM tests use actual validator/index plus mocked HTTP; selected authenticated mounted API tests exercise publication/GET/rollback separately. Service tests use actual current/cache, enqueue/consumer/readback/replay with synthetic bindings. These are local integration proofs, not customer or learning-sink durability acceptance. Independent36 passed and final static5 is reused on identical bytes."
+    }
+  ],
+  "basis": {
+    "plan": {
+      "path": "docs/remediation/design/W20.05/plan.md",
+      "sha256": "7617ce7ea49b6b8490b5f06220399e8075074691ed63e26b2364f9e091c01def"
+    },
+    "artifact_manifest": {
+      "path": "docs/remediation/evidence/W20.05/artifact.json",
+      "sha256": "593c11cef0b17aedc32e26a782666de50be4a375caa0b677aa3fb24df083b057"
+    },
+    "worker_record": {
+      "path": "docs/remediation/evidence/W20.05/worker.json",
+      "sha256": "53b4858e6fa9fda254eab74aef96e54268e82f5a6e1c3a94a3a08f8eebf492c8"
+    },
+    "source_freeze": {
+      "path": "docs/remediation/evidence/W20.05/source-freeze.json",
+      "sha256": "ccf031e8a8f7b74d3dc5e4b83818a5b0f272ccf8b9e455af985fb3b95b191279"
+    },
+    "source_deltas": {
+      "path": "docs/remediation/evidence/W20.05/source-deltas.json",
+      "sha256": "97c3073444d505d3e0e95a671419eef420f35042c2c49ed9aecf08bc490057c2"
+    }
+  },
+  "independent_runtime": {
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.test.ts src/learn/queue.test.ts src/learn/hourly.test.ts -t 'W20.05|groups every slot by page with what is set on it, and counts the pieces eligible now|counts pending proposals, slots without evidence, slots acting, controls and erasures|the day from its hours is the day from its records: grids, arms, exploration, credits, counts|W20.04|W38.05|W20.03|W20.01|W20.02|W18.01|W19.02|W27.02|history shows every document|W03.03 carries named auth context|w_ext × score joins the base score' --maxWorkers=1 --minWorkers=1",
+    "session_id": 31387,
+    "invocations": 1,
+    "launched_at": "2026-09-13 21:54:05 UTC",
+    "drained_at": "2026-09-13 21:56:02 UTC",
+    "captures": [
+      {
+        "chunk_id": "4eee1d",
+        "wall_time_seconds": 1.001110464,
+        "session_id": 31387,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "0b6ae3",
+        "wall_time_seconds": 5.000925767,
+        "session_id": 31387,
+        "original_token_count": 4631,
+        "output": "Warning: truncated output (original token count: 4631)\nTotal output lines: 725\n\n\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\nstderr | src/routes/content.test.ts > /content routes > W20.02 reports bounded current pin diagnostics on slot reads and validation without crossing authority\n[config] read failed, serving fallback\n\n ✓ src/routes/content.test.ts  (35 tests | 29 skipped) 114ms\n ✓ src/console/console.render.test.ts  (41 tests | 33 skipped) 52001ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 5,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 5,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.05 serves dense prefixes and ranked tails with real receipts cached revisions and queue readback\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 5,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0…3131 tokens truncated…creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] read failed, serving fallback\n[config] stored document is invalid and was ignored\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\n[config] stored document is invalid and was ignored\n[config] read failed, serving fallback\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W20.03 serves hard gates across arms and cached reads without optional dormant work or compiled absence fill\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 0,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W19.02 serves and replays projected content formats with independent historical policy\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 1,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 1,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (25 tests | 20 skipped) 161ms\n ✓ src/learn/hourly.test.ts  (25 tests | 23 skipped) 25ms\n"
+      },
+      {
+        "chunk_id": "ac929e",
+        "wall_time_seconds": 0.000002092,
+        "exit_code": 0,
+        "original_token_count": 536,
+        "output": " ✓ src/learn/phase3.test.ts  (19 tests | 12 skipped) 62ms\n ✓ src/reflex/contentCompose.test.ts  (9 tests | 3 skipped) 1602ms\nstdout | src/reflex/contentCompose.test.ts > W38.05 served explanations > W38.05 measures paired actual composer work and warm timings at 30 and 1000 pieces\nW38.05 measurement {\"pieces\":30,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"cb1d2cb02dd7c2a305e0b92ee7e256d5f22ec6e4a346415ca09e1edc2e5a9b31\",\"callback_sha256\":\"7f124594a1679357171dc46f0ca68b9d8b31926eadbd2b482fd428c48502298b\",\"before\":{\"samples_ms\":[5.175933999998961,3.5554730000003474,3.1055750000086846,3.7107299999915995,3.26815400000487],\"median_ms\":3.5554730000003474,\"driver_sort_calls\":83,\"driver_rows\":1335},\"current\":{\"samples_ms\":[2.6853770000016084,3.167524999997113,3.3122020000009798,2.7584549999883166,2.9064849999995204],\"median_ms\":2.9064849999995204,\"driver_sort_calls\":8,\"driver_rows\":129},\"median_improved\":true}\nW38.05 measurement {\"pieces\":1000,\"dimensions\":8,\"tags_per_dimension\":2,\"takes\":[1,2,5],\"pins\":1,\"candidate_limit\":10,\"warmups\":10,\"samples\":5,\"calls_per_sample\":20,\"parity\":true,\"callback_parity\":true,\"output_sha256\":\"09f715bff10c96c5fd0a64301bd9052c7c6b045ac69880a58ddf7018e49699ab\",\"callback_sha256\":\"549583a33a126fd2a1c553b508ff371b3c7ff0b4e05570ab0062b95653c0988b\",\"before\":{\"samples_ms\":[128.87109999998938,129.45649699999194,130.14732899999944,129.15178699999524,127.51194500000565],\"median_ms\":129.15178699999524,\"driver_sort_calls\":2993,\"driver_rows\":48218},\"current\":{\"samples_ms\":[90.68371699999261,85.8504910000047,87.78082200000063,87.69879399999627,84.88546000000497],\"median_ms\":87.69879399999627,\"driver_sort_calls\":8,\"driver_rows\":135},\"median_improved\":true}\n\n ✓ src/learn/rows.test.ts  (7 tests | 6 skipped) 2ms\n ✓ src/learn/queue.test.ts  (1 test) 2ms\n\n Test Files  8 passed (8)\n      Tests  36 passed | 126 skipped (162)\n   Start at  17:54:07\n   Duration  100.21s (transform 4.46s, setup 0ms, collect 27.85s, tests 53.97s, environment 1ms, prepare 13.69s)\n\n"
+      }
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "result": {
+      "passed": 36,
+      "failed": 0,
+      "unselected": 126,
+      "total": 162,
+      "files_passed": 8,
+      "duration_seconds": 100.21
+    },
+    "capture_qualification": "Poll 0b6ae3 used a 1500-token output cap and returned a truncated 4631-token chunk; its exact returned text and explicit truncation marker are retained, not reconstructed or replaced with worker output. Visible portions include all four early file summaries and synthetic learning_incomplete/fallback diagnostics. Missing middle text is not relied upon for any criterion, diagnostic-count or delivery claim. Complete terminal capture ac929e independently records all 8 files/36 tests passing, 126 unselected, duration and exit0; personally inspected complete source assertions and separately retained complete final worker runtime support the criterion-specific evidence. Thus bounded C1–C3 pass, but complete independent stdout/stderr capture is not claimed. No rerun was performed."
+  },
+  "source_review": {
+    "method": "Personally read the admitted task/plan and applicable complete parent requirements, all22 exact frozen before/after deltas and fixtures; reused valid personally read unchanged dependencies. Reconstructed forward and reverse deltas in memory from retained gzip before bytes and compared current bytes. No source changes or additional suite.",
+    "inspection_captures": [
+      "7ae35f",
+      "931a60",
+      "4c19d3",
+      "4a7757",
+      "2f6b72",
+      "a78261",
+      "d8619a",
+      "e03cbe"
+    ],
+    "worker_evidence_reads": [
+      "463b20",
+      "3be9c3",
+      "67081a",
+      "65085e",
+      "bcf51c"
+    ],
+    "before": {
+      "at": "2026-09-13T21:54:04.418Z",
+      "capture": "e99eb4",
+      "contract_capture": "c1ab7f",
+      "artifact_pins": 59,
+      "source_pins": 53,
+      "protected_pins": 31,
+      "bidirectional_deltas": 22,
+      "mismatches": 0,
+      "exit_status": 0
+    },
+    "after": {
+      "at": "2026-09-13T22:00:07.889Z",
+      "capture": "001a83",
+      "contract_capture": "137b78",
+      "artifact_pins": 59,
+      "source_pins": 53,
+      "protected_pins": 31,
+      "bidirectional_deltas": 22,
+      "mismatches": 0,
+      "exit_status": 0
+    },
+    "freeze_reconciliation": {
+      "capture": "d84901",
+      "source_stop": "2026-09-13T21:49:42.845Z",
+      "freeze_at": "2026-09-13T21:52:20Z",
+      "frozen_source_pins": 53,
+      "matched_artifact": true,
+      "journal": 1592
+    },
+    "contract_command": "node - <<'NODE'\nconst fs=require('fs'),crypto=require('crypto'),h=x=>crypto.createHash('sha256').update(x).digest('hex');const t=JSON.parse(fs.readFileSync('docs/remediation/tracker.json')).tasks.find(t=>t.id==='W20.05');const digest=h(JSON.stringify({id:t.id,package_id:t.package_id,kind:t.kind,scope:t.scope,read_paths:t.read_paths,write_paths:t.write_paths,non_goals:t.non_goals,criteria:t.criteria,checks:t.checks.map(({id,required,criterion_ids,command,runtime,workload})=>({id,required,criterion_ids,command,runtime,workload})),dependencies:t.dependencies,assignments:t.assignments}));console.log(JSON.stringify({at:new Date().toISOString(),task:t.id,state:t.state,contract_digest:digest,artifact_digest:t.artifact.digest}));if(digest!=='8e23fb28189276ab6995c8605f38134e7c614f3a89d719e3851705b439b69975'||t.artifact.digest!=='41ee785836fb39d3e234f21fbbd8e391eaf355f12cda89ba98d3db4c767c29f7')process.exit(1);\nNODE",
+    "pin_and_delta_command": "node - <<'NODE'\nconst fs=require('fs'),crypto=require('crypto'),zlib=require('zlib');const h=x=>crypto.createHash('sha256').update(x).digest('hex');const base='docs/remediation/evidence/W20.05/';const a=JSON.parse(fs.readFileSync(base+'artifact.json','utf8'));const b=JSON.parse(fs.readFileSync('docs/remediation/design/W20.05/baseline.json','utf8'));const d=JSON.parse(fs.readFileSync(base+'source-deltas.json','utf8'));const bad=a.files.filter(p=>h(fs.readFileSync(p.path))!==p.sha256);const own=new Set(b.owned.map(p=>p.path));const protectedPins=b.pins.filter(p=>!own.has(p.path));const protectedBad=protectedPins.filter(p=>h(fs.readFileSync(p.path))!==p.sha256);\nfunction patch(input,diff){const lines=input?input.replace(/\\n$/,'').split('\\n'):[],out=[];let pos=0;const ds=diff.split('\\n');for(let i=0;i<ds.length;i++){const m=ds[i].match(/^@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@/);if(!m)continue;const start=Number(m[1])-(Number(m[2]??1)===0?0:1);if(start<pos)throw Error('overlap');out.push(...lines.slice(pos,start));pos=start;let old=0,next=0;for(i++;i<ds.length&&!ds[i].startsWith('@@ ');i++){const line=ds[i];if(line==='')break;if(line.startsWith('\\\\'))throw Error('newline marker');if(line[0]===' '||line[0]==='-'){if(lines[pos]!==line.slice(1))throw Error('context mismatch');pos++;old++;}if(line[0]===' '||line[0]==='+'){out.push(line.slice(1));next++;}}if(old!==Number(m[2]??1)||next!==Number(m[4]??1))throw Error('count');i--;}out.push(...lines.slice(pos));return out.length?out.join('\\n')+'\\n':'';}\nconst deltaResults=d.deltas.map(x=>{const original=b.owned.find(p=>p.path===x.path);const old=!original.existed?'':zlib.gunzipSync(Buffer.from(original.content_gzip_base64,'base64')).toString();const current=fs.readFileSync(x.path,'utf8');return{path:x.path,before:!original.existed?x.original_absent===true&&x.before_sha256===null&&original.sha256===null:h(old)===x.before_sha256,after:h(current)===x.after_sha256,forward:patch(old,x.forward)===current,reverse:patch(current,x.reverse)===old};});const digest=h(JSON.stringify({contract_digest:a.contract_digest,configuration:a.configuration,files:a.files.map(({path,sha256,role})=>({path,sha256,role})).sort((x,y)=>x.path.localeCompare(y.path))}));console.log(JSON.stringify({at:new Date().toISOString(),artifact_digest:digest,manifest_sha256:h(fs.readFileSync(base+'artifact.json')),pins:a.files.length,bad,protected_count:protectedPins.length,protected_bad:protectedBad,deltas:deltaResults,basis:['docs/remediation/design/W20.05/plan.md',base+'artifact.json',base+'worker.json'].map(path=>({path,sha256:h(fs.readFileSync(path))}))},null,2));if(bad.length||protectedBad.length||deltaResults.some(x=>!x.before||!x.after||!x.forward||!x.reverse)||digest!=='41ee785836fb39d3e234f21fbbd8e391eaf355f12cda89ba98d3db4c767c29f7')process.exit(1);\nNODE",
+    "qualification": "W20.04 prior overlapping exact-byte proof was prospectively qualified; its implementation/history is retained and affected controls are selected here. W08.04 and other protected dependencies are unchanged, not newly executed or newly accepted."
+  },
+  "static_reuse": {
+    "basis": "basis.worker_record; command_captures.static5",
+    "session_id": 90117,
+    "captures": [
+      "691528",
+      "120db6",
+      "50b28c"
+    ],
+    "exit_status": 0,
+    "drained": true,
+    "independent_reruns": 0,
+    "result": "Final full compiler, scoped TypeScript/JavaScript lint and declared whitespace passed; six exact inherited warnings, zero errors/new warnings. Frozen source additionally records direct comparison of all22 owned files including inherited untracked files, zero new trailing whitespace.",
+    "inspection_capture": "768f45"
+  },
+  "retained_history": [
+    "Worker static1/session1348 exited2 on four fixture typing diagnostics; later lint/whitespace were not reached. Static2/3/4 passing candidates are retained and explicitly superseded by subsequent scoped source/fixture changes.",
+    "Worker runtime1/session14638 passed33/failed3/126 unselected. The DOM expectation normalized intentional whitespace; phase3/hourly fixtures lacked a rotation-changing learned leader. Final corrections retained positive exact raw-ID checks and used actual 60-exposure snapshots. Final production remained unchanged from runtime1; final static5 and runtime2/session53415 passed36/126 on frozen bytes.",
+    "Read-only metadata capture cb34e7 first used the wrong admission path under design/ and exited1 after reading the complete freeze metadata. Corrected d84901 read evidence/W20.05/admission.json and current criteria/command; no source rework, runtime or static rerun resulted.",
+    "Independent mid-poll truncation is retained and qualified in independent_runtime; no missing text is presented as observed."
+  ],
+  "retained_control_measurement": {
+    "source": "Independent exact selected W38.05 control; complete raw measurements are in ac929e, not a separate benchmark invocation.",
+    "result": "Both actual-source output/callback parity controls passed. Local medians per20 calls: 30 pieces 3.555473→2.906485ms; 1000 pieces 129.151787→87.698794ms. Driver sorts 83→8 and2993→8. These preserve the existing explanation optimization control, not a prefix-placement performance/native/SLO claim."
+  },
+  "limitations": [
+    "Bounded ordered dense prefix positions only, not sparse placement, priority-policy design, customer-selected IDs/default assets, full W20/F28/F26 closure or contractual acceptance.",
+    "Zero pin scoring/learning terms is not zero provider/config/catalog I/O or a learning-ingestion shutdown. Synthetic learning_incomplete logs do not establish successful fan/ring/stats delivery.",
+    "Independent catalog/slot publication remains non-atomic and 30-second cached readers remain possible. Compatible serving/replay/UI/report readers must precede controlled format3 writes; no deployment/rolling-runtime attestation.",
+    "Old stored formats and independent receipt markers preserve meaning; no history rewrite/migration or retroactive metric repair. Malformed current ranking ordinals refuse instead of silently adopting legacy counting.",
+    "Local Node/Vitest/JSDOM and synthetic bindings only; 126 tests unselected. No native capacity, customer walkthrough, scientific validity, package/finding/gate promotion or release claim.",
+    "Independent raw output is incomplete only at the explicitly truncated mid-poll; complete terminal outcome, inspected assertions and separately complete worker evidence remain the bounded acceptance basis. Lead acceptance remains separate."
+  ]
+}

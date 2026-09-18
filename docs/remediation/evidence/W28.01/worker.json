@@ -1,0 +1,370 @@
+{
+  "task_id": "W28.01",
+  "actor_id": "w1405-worker",
+  "run": "/root/w1405_design",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "xhigh",
+  "at": "2026-09-12 16:50:09 UTC",
+  "source_go_at": "2026-09-12T16:34:51.347Z",
+  "contract_digest": "9bde3a24b7f1884ef4ef74c352f852b5a66808ab687248db6c140d713bcbfb5f",
+  "references": {
+    "plan": {
+      "path": "docs/remediation/design/W28.01/plan.md",
+      "sha256": "80546cb03a862cb5babf0ccbf93a39e2e1bd896f92ef49253ee1705ff18c10d7"
+    },
+    "baseline": {
+      "path": "docs/remediation/design/W28.01/baseline.json",
+      "sha256": "21fce18ead206bc2abc0069cdd2f6e96161875fe91b553107ed929d4fe3b232e"
+    },
+    "admission": {
+      "path": "docs/remediation/evidence/W28.01/admission.json",
+      "sha256": "fd736df40001087d62477a06e82344699864cf840fdafb39b794c18f9e50b30c"
+    }
+  },
+  "implementation_summary": [
+    "Strict learn writes reject Thompson; an explicit retained-document validation hook preserves structurally valid historical learn documents without changing other kinds or authorizing legacy writes.",
+    "Default exploration/decide suppress Thompson. A non-serializable internal Symbol capability retains historical sampling; live manifests carry exact exploration:supported-only, and replay accepts legacy absence but refuses invalid-present policy.",
+    "Both UIs remove selectable Thompson and display retained inactive settings without silently rewriting them. Operator exploring/slot summaries distinguish effective off from configured Thompson.",
+    "Reset prevalidates before contacting the statistics object, then re-reads current learn settings after acknowledged reset. A failed revision acknowledgement reports resetCompleted/unknown rather than success or rollback.",
+    "Corrected scoped shipped-off/unsupported/cooldown and evidence-accumulation claims in five documents. Added seven grouped cases and retained the eight admitted exploration/replay cases."
+  ],
+  "criterion_verdicts": {
+    "W28.01-C1": {
+      "worker_result": "pass",
+      "basis": "Actual configuration routes plus patch helper refuse new Thompson without writes; retained revision/current documents preserve unrelated dials; direct and fresh/cached actual service use live-off semantics."
+    },
+    "W28.01-C2": {
+      "worker_result": "pass",
+      "basis": "Old/new coupled replay distinction, invalid policy refusal, two rendered UIs, effective operator status and pre/post-effect reset boundaries including an interleaved current revision."
+    },
+    "W28.01-C3": {
+      "worker_result": "worker_checks_pass_independent_review_pending",
+      "basis": "Fixed15, compiler, scoped lint at four inherited warnings, two JS syntax checks, whitespace and114 protected pins; source/document review and acceptance remain lead/reviewer-owned."
+    }
+  },
+  "final_results": {
+    "runtime": {
+      "passed": 15,
+      "unselected": 117,
+      "files": 7,
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 11793,
+      "chunk_id": "6ce80a",
+      "final_bytes": true
+    },
+    "compiler": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w28_static1"
+    },
+    "lint": {
+      "exit_code": 0,
+      "drained": true,
+      "errors": 0,
+      "inherited_warnings": 4,
+      "new_warnings": 0,
+      "command_capture": "w28_static1"
+    },
+    "javascript_syntax": {
+      "exit_code": 0,
+      "drained": true,
+      "files": [
+        "public/learning.js",
+        "public/console/views.js"
+      ],
+      "command_capture": "w28_static1"
+    },
+    "whitespace": {
+      "exit_code": 0,
+      "drained": true,
+      "command_capture": "w28_static1"
+    },
+    "static": {
+      "exit_code": 0,
+      "drained": true,
+      "session_id": 69470,
+      "chunk_id": "a8efcf",
+      "component_semantics": "The admitted && chain completed with exit0; every component therefore ran and returned0."
+    }
+  },
+  "execution_history": [
+    {
+      "attempt": "w28_runtime1",
+      "result": "13 passed,2 failed,117 unselected; exit1/drained",
+      "failures": [
+        "Historical revision GET fixture expected document; actual unchanged revision route exposes value.",
+        "Operator fixture had only STORAGE.get=null and lacked current catalog publication authority."
+      ],
+      "corrections": [
+        "Adapted revision assertions to the actual value envelope.",
+        "Initialized the real catalog publication with acknowledged synthetic conditional R2 storage.",
+        "Source-confirmed fixture corrections also exercise patch() instead of a nonexistent PATCH route and retain existing rollback404 refusal. No route/API expansion."
+      ]
+    },
+    {
+      "attempt": "w28_runtime2",
+      "result": "15 passed,117 unselected; exit0/drained on final bytes"
+    },
+    {
+      "attempt": "w28_static1",
+      "result": "All admitted static components exit0/drained; four unchanged inherited warnings"
+    },
+    {
+      "attempt": "w28_stop_capture",
+      "result": "21 source/doc hashes frozen;114/114 protected pins match"
+    }
+  ],
+  "command_captures": [
+    {
+      "id": "w28_runtime1",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/phase2.test.ts src/learn/phase3.test.ts src/content/consent.test.ts src/routes/content.test.ts src/ledger/ledger.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts -t 'W28.01|W27.02|W27.03|rotation:|epsilon:|historical Thompson:' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12 16:43:54 UTC",
+      "captures": [
+        {
+          "chunk_id": "ec23e9",
+          "wall_time_seconds": 1.001698653,
+          "session_id": 62929,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "fdb363",
+          "wall_time_seconds": 5.001543084,
+          "session_id": 62929,
+          "original_token_count": 75,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (23 tests | 22 skipped) 65ms\n"
+        },
+        {
+          "chunk_id": "bc01d5",
+          "wall_time_seconds": 5.001346058,
+          "session_id": 62929,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b4bdc9",
+          "wall_time_seconds": 5.001459274,
+          "session_id": 62929,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "704f74",
+          "wall_time_seconds": 5.000827888,
+          "session_id": 62929,
+          "original_token_count": 18,
+          "output": " ✓ src/console/console.render.test.ts  (32 tests | 31 skipped) 1439ms\n"
+        },
+        {
+          "chunk_id": "504b7f",
+          "wall_time_seconds": 3.350416132,
+          "exit_code": 1,
+          "original_token_count": 2061,
+          "output": " ❯ src/routes/content.test.ts  (22 tests | 1 failed | 21 skipped) 43ms\n   ❯ src/routes/content.test.ts > /content routes > W28.01 rejects new Thompson validation writes patches and rollback while preserving complete retained documents\n     → expected { scope: 'coach', kind: 'learn', …(5) } to match object { revision: 3, document: { …(6) } }\n(12 matching properties omitted from actual)\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (21 tests | 19 skipped) 63ms\n ✓ src/learn/phase3.test.ts  (15 tests | 11 skipped) 29ms\n ✓ src/console/learning.render.test.ts  (9 tests | 8 skipped) 1114ms\nstderr | src/learn/phase2.test.ts > the decision with exploration and controls > W28.01 reports retained Thompson as inactive and fences reset before effects or reports its partial revision failure\nPublicationError: Catalog publication authority unavailable\n    at unavailable (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/publication.ts:20:27)\n    at storageOf (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/publication.ts:44:17)\n    at Module.readPublication (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/publication.ts:175:41)\n    at readRevision (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/versionedStore.ts:157:39)\n    at Module.read (/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/versionedStore.ts:179:26)\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/decisions.ts:215:5\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:23)\n    at file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:46\n    at /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/middleware/edgeAccess.ts:158:44\n    at dispatch (file:///mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/node_modules/hono/dist/compose.js:22:23) {\n  status: 503,\n  code: 'publication_unavailable'\n}\n\n ❯ src/learn/phase2.test.ts  (10 tests | 1 failed | 5 skipped) 45ms\n   ❯ src/learn/phase2.test.ts > the decision with exploration and controls > W28.01 reports retained Thompson as inactive and fences reset before effects or reports its partial revision failure\n     → expected 500 to be 200 // Object.is equality\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/learn/phase2.test.ts > the decision with exploration and controls > W28.01 reports retained Thompson as inactive and fences reset before effects or reports its partial revision failure\nAssertionError: expected 500 to be 200 // Object.is equality\n\n- Expected\n+ Received\n\n- 200\n+ 500\n\n ❯ src/learn/phase2.test.ts:122:74\n    120|     for (const published of [false, true]) {\n    121|       if (published) stored.set('lift:coach:coach:hero', JSON.stringif…\n    122|       const r = await ask('learn/exploring?slot=hero'); expect(r.statu…\n       |                                                                          ^\n    123|       expect(await r.json()).toMatchObject({ mode: 'off', share: 0, co…\n    124|     }\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  src/routes/content.test.ts > /content routes > W28.01 rejects new Thompson validation writes patches and rollback while preserving complete retained documents\nAssertionError: expected { scope: 'coach', kind: 'learn', …(5) } to match object { revision: 3, document: { …(6) } }\n(12 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  Object {\n-   \"document\": Object {\n-     \"holdout\": Object {\n-       \"arms\": Array [\n-         \"default\",\n-       ],\n-       \"salt\": \"\",\n-       \"share\": 0.05,\n-     },\n-     \"policy\": Object {\n-       \"credit\": \"last\",\n-       \"match\": \"direct\",\n-       \"scope\": \"session\",\n-       \"windowsMs\": Object {\n-         \"add_to_bag\": 21600000,\n-         \"click\": 1800000,\n-         \"custom\": 1800000,\n-         \"dwell\": 1800000,\n-         \"purchase\": 604800000,\n-         \"video_complete\": 1800000,\n-         \"wishlist\": 21600000,\n-       },\n-     },\n-     \"regional\": Object {\n-       \"enabled\": true,\n-       \"kBlend\": 1,\n-       \"minEvents\": 30,\n-     },\n-     \"slots\": Object {\n-       \"hero\": Object {\n-         \"exploration\": Object {\n-           \"floor\": 50,\n-           \"mode\": \"thompson\",\n-           \"share\": 0,\n-         },\n-         \"gamma\": 0.7,\n-         \"items\": Object {\n-           \"a\": Object {\n-             \"lift\": 1.4,\n-             \"mode\": \"freeze\",\n-           },\n-         },\n-         \"objective\": \"revenue\",\n-         \"reward\": \"purchase\",\n-       },\n-     },\n-     \"stats\": Object {\n-       \"liftMax\": 2,\n-       \"liftMin\": 0.5,\n-       \"n0\": 30,\n-       \"nMin\": 30,\n-       \"tauLearnMs\": 1814400000,\n-     },\n-     \"version\": \"learn-default\",\n-   },\n    \"revision\": 3,\n  }\n\n ❯ src/routes/content.test.ts:68:52\n     66|       { method, headers: auth, ...(body === undefined ? {} : { body: J…\n     67|     for (const suffix of ['', '/revisions/3']) {\n     68|       expect(await (await request(suffix)).json()).toMatchObject({ rev…\n       |                                                    ^\n     69|     }\n     70|     const before = [...kv.store]; kv.calls.length = 0;\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n Test Files  2 failed | 5 passed (7)\n      Tests  2 failed | 13 passed | 117 skipped (132)\n   Start at  12:43:57\n   Duration  83.05s (transform 3.87s, setup 0ms, collect 63.04s, tests 2.80s, environment 1ms, prepare 12.92s)\n\n"
+        }
+      ],
+      "exit_code": 1,
+      "drained": true,
+      "ended_at": "2026-09-12 16:45:20 UTC",
+      "session_id": 62929
+    },
+    {
+      "id": "w28_runtime2",
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/phase2.test.ts src/learn/phase3.test.ts src/content/consent.test.ts src/routes/content.test.ts src/ledger/ledger.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts -t 'W28.01|W27.02|W27.03|rotation:|epsilon:|historical Thompson:' --maxWorkers=1 --minWorkers=1",
+      "started_at": "2026-09-12 16:46:23 UTC",
+      "captures": [
+        {
+          "chunk_id": "72bc99",
+          "wall_time_seconds": 1.001205967,
+          "session_id": 11793,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "76cee0",
+          "wall_time_seconds": 5.001702888,
+          "session_id": 11793,
+          "original_token_count": 75,
+          "output": "\u001b[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.\u001b[39m\n\n RUN  v1.6.1 /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n\n ✓ src/ledger/ledger.test.ts  (23 tests | 22 skipped) 64ms\n"
+        },
+        {
+          "chunk_id": "335866",
+          "wall_time_seconds": 5.000815866,
+          "session_id": 11793,
+          "original_token_count": 18,
+          "output": " ✓ src/console/console.render.test.ts  (32 tests | 31 skipped) 1445ms\n"
+        },
+        {
+          "chunk_id": "ad2ea6",
+          "wall_time_seconds": 5.000710755,
+          "session_id": 11793,
+          "original_token_count": 696,
+          "output": " ✓ src/routes/content.test.ts  (22 tests | 21 skipped) 36ms\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\nstderr | src/content/consent.test.ts > CW31 consent on the content service > W28.01 serves retained Thompson documents as off on fresh and cached reads and replays both live and historical choices\nlearning_incomplete {\n  version: 1,\n  kind: 0,\n  code: 4,\n  received: 2,\n  cutoffSkipped: 0,\n  ringAcknowledged: 0,\n  ringUnknown: 1,\n  ringNotAttempted: 0,\n  exposureProcessed: 0,\n  exposureSkipped: 0,\n  exposureUnknown: 0,\n  exposureNotAttempted: 2,\n  creditPlanKnown: 0,\n  attributed: 0,\n  eligible: 0,\n  weightSkipped: 0,\n  creditProcessed: 0,\n  creditSkipped: 0,\n  creditUnknown: 0,\n  creditNotAttempted: 0,\n  alarmsUnknown: 0\n}\n\n ✓ src/content/consent.test.ts  (21 tests | 19 skipped) 62ms\n ✓ src/learn/phase3.test.ts  (15 tests | 11 skipped) 33ms\n ✓ src/console/learning.render.test.ts  (9 tests | 8 skipped) 1105ms\n"
+        },
+        {
+          "chunk_id": "6ce80a",
+          "wall_time_seconds": 0.000002142,
+          "exit_code": 0,
+          "original_token_count": 66,
+          "output": " ✓ src/learn/phase2.test.ts  (10 tests | 5 skipped) 39ms\n\n Test Files  7 passed (7)\n      Tests  15 passed | 117 skipped (132)\n   Start at  12:46:25\n   Duration  71.36s (transform 4.13s, setup 0ms, collect 51.37s, tests 2.78s, environment 1ms, prepare 12.43s)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "ended_at": "2026-09-12 16:47:41 UTC",
+      "session_id": 11793
+    },
+    {
+      "id": "w28_static1",
+      "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/config/versionedStore.ts src/content/kinds.ts src/content/types.ts src/learn/explore.ts src/content/decide.ts src/learn/replay.ts src/learn/phase2.test.ts src/learn/phase3.test.ts src/content/consent.test.ts src/routes/content.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts src/routes/decisions.ts src/learn/rows.ts --max-warnings 4 && node --check public/learning.js && node --check public/console/views.js && git diff --check -- src/config/versionedStore.ts src/content/kinds.ts src/content/types.ts src/learn/explore.ts src/content/decide.ts src/learn/replay.ts public/learning.js public/console/views.js docs/kit/02-api-reference.md docs/kit/03-payload-schemas.md docs/architecture/22-outcome-learning-design.md docs/content-personalization-design-tapestry.html docs/PS-Implementation-Delivery-Guide.md src/learn/phase2.test.ts src/learn/phase3.test.ts src/content/consent.test.ts src/routes/content.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts src/routes/decisions.ts src/learn/rows.ts",
+      "started_at": "2026-09-12 16:48:01 UTC",
+      "captures": [
+        {
+          "chunk_id": "3557d3",
+          "wall_time_seconds": 1.000530053,
+          "session_id": 69470,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "02171e",
+          "wall_time_seconds": 5.001029555,
+          "session_id": 69470,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "a8efcf",
+          "wall_time_seconds": 0.000002506,
+          "exit_code": 0,
+          "original_token_count": 174,
+          "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/config/versionedStore.ts\n  213:57  warning  'scope' is defined but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/decide.ts\n  210:20  warning  '_share' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  299:62  warning  '_s' is defined but never used               @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  169:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 4 problems (0 errors, 4 warnings)\n\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "ended_at": "2026-09-12 16:48:49 UTC",
+      "session_id": 69470
+    },
+    {
+      "id": "w28_stop_capture",
+      "command": "node --input-type=module -e 'import fs from \"node:fs\";import{createHash}from\"node:crypto\";const hash=path=>createHash(\"sha256\").update(fs.readFileSync(path)).digest(\"hex\");const b=JSON.parse(fs.readFileSync(\"docs/remediation/design/W28.01/baseline.json\",\"utf8\"));const owned=new Set(b.owned.map(x=>x.path));const protectedPins=b.pins.filter(x=>!owned.has(x.path));const mismatches=protectedPins.filter(x=>hash(x.path)!==x.sha256);const references=Object.fromEntries([[\"plan\",\"docs/remediation/design/W28.01/plan.md\"],[\"baseline\",\"docs/remediation/design/W28.01/baseline.json\"],[\"admission\",\"docs/remediation/evidence/W28.01/admission.json\"]].map(([name,path])=>[name,{path,sha256:hash(path)}]));console.log(JSON.stringify({final_source_stop:{at:new Date().toISOString(),files:b.owned.map(x=>({path:x.path,sha256:hash(x.path)}))},protected_source_comparison:{expected:114,matched:protectedPins.length-mismatches.length,mismatches},references},null,2));if(protectedPins.length!==114||mismatches.length)process.exitCode=1;'",
+      "started_at": "2026-09-12 16:49:07 UTC",
+      "captures": [
+        {
+          "chunk_id": "6a80f1",
+          "wall_time_seconds": 0.108268244,
+          "exit_code": 0,
+          "original_token_count": 964,
+          "output": "{\n  \"final_source_stop\": {\n    \"at\": \"2026-09-12T16:49:08.007Z\",\n    \"files\": [\n      {\n        \"path\": \"src/config/versionedStore.ts\",\n        \"sha256\": \"b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff\"\n      },\n      {\n        \"path\": \"src/content/kinds.ts\",\n        \"sha256\": \"7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8\"\n      },\n      {\n        \"path\": \"src/content/types.ts\",\n        \"sha256\": \"26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df\"\n      },\n      {\n        \"path\": \"src/learn/explore.ts\",\n        \"sha256\": \"9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda\"\n      },\n      {\n        \"path\": \"src/content/decide.ts\",\n        \"sha256\": \"a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b\"\n      },\n      {\n        \"path\": \"src/learn/replay.ts\",\n        \"sha256\": \"659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a\"\n      },\n      {\n        \"path\": \"public/learning.js\",\n        \"sha256\": \"1fa9ddf406fee4c4e0060da93b0337eed170f14ed5d6be4977a5d95ddbc9cb0c\"\n      },\n      {\n        \"path\": \"public/console/views.js\",\n        \"sha256\": \"07c8117069971e7b491ca07fa1ec6cefd64b18aa9f16fb27402f60687ce9c70c\"\n      },\n      {\n        \"path\": \"docs/kit/02-api-reference.md\",\n        \"sha256\": \"2b97a9005fd9783a73b54e602f5246dfba846f4671ab7d32d7628a0bc53db510\"\n      },\n      {\n        \"path\": \"docs/kit/03-payload-schemas.md\",\n        \"sha256\": \"32f7ea0f2bce702372d8c75bd120de765355a4cba7a05dfb8ff63c4ddb1391ba\"\n      },\n      {\n        \"path\": \"docs/architecture/22-outcome-learning-design.md\",\n        \"sha256\": \"bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818\"\n      },\n      {\n        \"path\": \"docs/content-personalization-design-tapestry.html\",\n        \"sha256\": \"83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c\"\n      },\n      {\n        \"path\": \"docs/PS-Implementation-Delivery-Guide.md\",\n        \"sha256\": \"b71665cb95a72b95b5f9cf438985561935e59601678b09b48852f11af2d1cc68\"\n      },\n      {\n        \"path\": \"src/learn/phase2.test.ts\",\n        \"sha256\": \"8d9f8d729ae4463875dd17a19201e9720c0fba81b48da44d551c5c9054ffa501\"\n      },\n      {\n        \"path\": \"src/learn/phase3.test.ts\",\n        \"sha256\": \"5bb9d165bca35887b40309015becb7ab2683008799118adf2be6d2192c4051d2\"\n      },\n      {\n        \"path\": \"src/content/consent.test.ts\",\n        \"sha256\": \"118f6420b11b9005fbabe0d9e5d249eb9bed87d4e599d6d5a94eb7d877e32e6c\"\n      },\n      {\n        \"path\": \"src/routes/content.test.ts\",\n        \"sha256\": \"a8440e4e52f8e9dd2b6d10603c06c49537075365a0aa693d0a1db48038edac30\"\n      },\n      {\n        \"path\": \"src/console/learning.render.test.ts\",\n        \"sha256\": \"d0321d414a7c01a1419656207aa7a98917a818bc63f9976a0bdc89c1baecccba\"\n      },\n      {\n        \"path\": \"src/console/console.render.test.ts\",\n        \"sha256\": \"dc1a25eb209372ba8eb8d8bfddf1bc89602e24a4c08ec00ce8a7b5e38706bc86\"\n      },\n      {\n        \"path\": \"src/routes/decisions.ts\",\n        \"sha256\": \"4d890aa841d57e07d8b00eb46f65217b2287274655c02e1c9e0231c20a4128ae\"\n      },\n      {\n        \"path\": \"src/learn/rows.ts\",\n        \"sha256\": \"3446aea726098a9f9bffc86d447e84196ca2e16acd14fc2b99dfd8ed4919119c\"\n      }\n    ]\n  },\n  \"protected_source_comparison\": {\n    \"expected\": 114,\n    \"matched\": 114,\n    \"mismatches\": []\n  },\n  \"references\": {\n    \"plan\": {\n      \"path\": \"docs/remediation/design/W28.01/plan.md\",\n      \"sha256\": \"80546cb03a862cb5babf0ccbf93a39e2e1bd896f92ef49253ee1705ff18c10d7\"\n    },\n    \"baseline\": {\n      \"path\": \"docs/remediation/design/W28.01/baseline.json\",\n      \"sha256\": \"21fce18ead206bc2abc0069cdd2f6e96161875fe91b553107ed929d4fe3b232e\"\n    },\n    \"admission\": {\n      \"path\": \"docs/remediation/evidence/W28.01/admission.json\",\n      \"sha256\": \"fd736df40001087d62477a06e82344699864cf840fdafb39b794c18f9e50b30c\"\n    }\n  }\n}\n"
+        }
+      ],
+      "exit_code": 0,
+      "drained": true,
+      "session_id": null
+    }
+  ],
+  "final_source_stop": {
+    "at": "2026-09-12T16:49:08.007Z",
+    "files": [
+      {
+        "path": "src/config/versionedStore.ts",
+        "sha256": "b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff"
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+      },
+      {
+        "path": "src/content/types.ts",
+        "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+      },
+      {
+        "path": "src/learn/explore.ts",
+        "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+      },
+      {
+        "path": "src/content/decide.ts",
+        "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "sha256": "659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a"
+      },
+      {
+        "path": "public/learning.js",
+        "sha256": "1fa9ddf406fee4c4e0060da93b0337eed170f14ed5d6be4977a5d95ddbc9cb0c"
+      },
+      {
+        "path": "public/console/views.js",
+        "sha256": "07c8117069971e7b491ca07fa1ec6cefd64b18aa9f16fb27402f60687ce9c70c"
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "sha256": "2b97a9005fd9783a73b54e602f5246dfba846f4671ab7d32d7628a0bc53db510"
+      },
+      {
+        "path": "docs/kit/03-payload-schemas.md",
+        "sha256": "32f7ea0f2bce702372d8c75bd120de765355a4cba7a05dfb8ff63c4ddb1391ba"
+      },
+      {
+        "path": "docs/architecture/22-outcome-learning-design.md",
+        "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+      },
+      {
+        "path": "docs/content-personalization-design-tapestry.html",
+        "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+      },
+      {
+        "path": "docs/PS-Implementation-Delivery-Guide.md",
+        "sha256": "b71665cb95a72b95b5f9cf438985561935e59601678b09b48852f11af2d1cc68"
+      },
+      {
+        "path": "src/learn/phase2.test.ts",
+        "sha256": "8d9f8d729ae4463875dd17a19201e9720c0fba81b48da44d551c5c9054ffa501"
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "sha256": "5bb9d165bca35887b40309015becb7ab2683008799118adf2be6d2192c4051d2"
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "sha256": "118f6420b11b9005fbabe0d9e5d249eb9bed87d4e599d6d5a94eb7d877e32e6c"
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "sha256": "a8440e4e52f8e9dd2b6d10603c06c49537075365a0aa693d0a1db48038edac30"
+      },
+      {
+        "path": "src/console/learning.render.test.ts",
+        "sha256": "d0321d414a7c01a1419656207aa7a98917a818bc63f9976a0bdc89c1baecccba"
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "sha256": "dc1a25eb209372ba8eb8d8bfddf1bc89602e24a4c08ec00ce8a7b5e38706bc86"
+      },
+      {
+        "path": "src/routes/decisions.ts",
+        "sha256": "4d890aa841d57e07d8b00eb46f65217b2287274655c02e1c9e0231c20a4128ae"
+      },
+      {
+        "path": "src/learn/rows.ts",
+        "sha256": "3446aea726098a9f9bffc86d447e84196ca2e16acd14fc2b99dfd8ed4919119c"
+      }
+    ]
+  },
+  "protected_source_comparison": {
+    "expected": 114,
+    "matched": 114,
+    "mismatches": []
+  },
+  "limitations": [
+    "Local unsupported-Thompson withdrawal only, not repaired/evaluated exploration, full W28/F23/N25/customer acceptance or release approval. Rotation/epsilon behavior and rate/control/reward/prior/cooldown/propensity quality remain qualified.",
+    "Historical sampler and retained documents are intentionally preserved. The marker is not cryptographic receipt integrity. Older readers may reject it; no mixed-version rollout, history repair, retention or deployed-performance proof.",
+    "Reset/revision is not a transaction. Existing shared-store read fallback and non-CAS write races remain; failure does not imply rollback, and acknowledged reset can precede unknown revision outcome.",
+    "The actual service group uses existing synthetic shopper/ring bindings; its retained learning_incomplete diagnostics are not downstream delivery success. No new serving I/O or performance measurement was introduced.",
+    "Source-confirmed baseline and accepted dependencies were reused; no baseline runtime probe, broad suite, native/deployed test, customer-data/cloud action, policy approval, commit or deployment was performed.",
+    "Seven added groups and eight existing selections passed. The exact-input unselected fixture was adapted to the additive marker but is not counted as selected runtime evidence. Independent frozen review and lead acceptance are pending."
+  ]
+}

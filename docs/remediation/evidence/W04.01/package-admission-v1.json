@@ -1,0 +1,96 @@
+{
+  "before": {
+    "id": "W04",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Require backend account proof, safe provisioning and ownership on all session endpoints; rotate/revoke SDK sessions and forwarding pointers across logout/account change. Regenerate assertions for signed 409 retry. Prove old cookies, stale tabs, in-flight requests and both hosts cannot recover another account.",
+      "finding_refs": "F04/F06; N05",
+      "sizing_owner": "M/L; D + S/P"
+    },
+    "title": "Account proof and session ownership",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F04",
+      "F06",
+      "N05"
+    ],
+    "proposed_owner": "D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W04",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Require backend account proof, safe provisioning and ownership on all session endpoints; rotate/revoke SDK sessions and forwarding pointers across logout/account change. Regenerate assertions for signed 409 retry. Prove old cookies, stale tabs, in-flight requests and both hosts cannot recover another account.",
+      "finding_refs": "F04/F06; N05",
+      "sizing_owner": "M/L; D + S/P"
+    },
+    "title": "Account proof and session ownership",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F04",
+      "F06",
+      "N05"
+    ],
+    "proposed_owner": "D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W04-PROOF-RETRY",
+          "description": "Bounded mandatory public backend proof and fresh signed SDK conflict retry. Full trusted session capabilities/ownership, safe real provisioning, logout/session/forwarding rotation/revocation and old-cookie/stale-tab/in-flight generation protection across both hosts remain uncovered."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W04-PROOF-RETRY",
+          "task_id": "W04.01",
+          "task_criterion_id": "W04.01-C1"
+        },
+        {
+          "criterion_id": "W04-PROOF-RETRY",
+          "task_id": "W04.01",
+          "task_criterion_id": "W04.01-C2"
+        },
+        {
+          "criterion_id": "W04-PROOF-RETRY",
+          "task_id": "W04.01",
+          "task_criterion_id": "W04.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W04.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}
+

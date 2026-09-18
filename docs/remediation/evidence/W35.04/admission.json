@@ -1,0 +1,28 @@
+{
+  "task_id": "W35.04",
+  "at": "2026-09-16T00:39:32.905Z",
+  "plan": {
+    "path": "docs/remediation/design/W35.04/plan.md",
+    "sha256": "0051434f1ed35d953f2610ad5337b930e07cbd64ec9a8fd02179313db8bf05f9"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W35.04/baseline.json",
+    "sha256": "5a601b74ea777d41d03b2d9d3c2c29c8e054740845951b0ea2afc7b691a966ec"
+  },
+  "contract_digest": "09fc0aac8c64c1863b9c8490520136e8ae68f08c09fdd113f32296699512391d",
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-16T00:39:32.905Z",
+    "plan_sha256": "0051434f1ed35d953f2610ad5337b930e07cbd64ec9a8fd02179313db8bf05f9",
+    "rationale": "Complete W35/F04/F05/F06/F13/F14/F29/F32 and actual source read; source-confirmed stale bearer/socket/replay failures; amended exact plan passed distinct Astra/xhigh preflight. D03 local DO direction and accepted W35.03 transfer invariants reused."
+  },
+  "independent_preflight": {
+    "actor_id": "w3503-reviewer",
+    "run_id": "/root/w3503_stale_session_investigation",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "plan_sha256": "0051434f1ed35d953f2610ad5337b930e07cbd64ec9a8fd02179313db8bf05f9",
+    "result": "PASS after bounded rework: barrier-preserving atomic cleanup, exact replacement re-revocation/latest-refusal recovery, fixed focused selection and session-host legacy compatibility were made explicit."
+  },
+  "limitations": "DO-local grant authority only. No current session-host strong revocation, production legacy-token migration, account-wide logout, prepared-transfer erasure race/complete subject discovery, host cutover, migration, deployment, new retention/privacy policy, native/customer/browser/SLO/release acceptance or full W35/F14 closure."
+}

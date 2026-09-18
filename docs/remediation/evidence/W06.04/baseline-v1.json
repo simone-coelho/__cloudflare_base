@@ -1,0 +1,30 @@
+{
+  "task_id": "W06.04",
+  "kind": "source_confirmed",
+  "at": "2026-09-08T16:13:55Z",
+  "head": "e49aef83c9a9843dd21479f1b08d53e7709fac41",
+  "tracker_sha256": "938760167b041995a4908f00eaaccabc60f24e1777b97fb548b9f6fea2912837",
+  "journal_seq": 335,
+  "entry": {
+    "board_check": {
+      "exit_code": 0,
+      "header": "Tracker VALID | mode=local_remediation_authorized"
+    },
+    "board_status": {
+      "exit_code": 0,
+      "header": "Tracker VALID | mode=local_remediation_authorized"
+    }
+  },
+  "source_hashes": {
+    "src/identity/erase.ts": "1706f0087516cb45865a1a04904663e5bc314eabd0f7087e1fe9e75bce33d8f6",
+    "src/routes/identity.test.ts": "0a8899f0f0f126d1736dce96db2ab8e092ca6e1c3ece7d6aa39b0e6fca35a7d4",
+    "src/services/RealtimeSegmentEngine.ts": "9e1d83d968a1d2d970959a053a8b890b23b492bb014f0ac486000a854e9e6ee8",
+    "src/services/FeatureVariableManager.ts": "42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357",
+    "src/services/CDPService.ts": "9a0838646f20beaab753aeaf1ffddcac21b0cb3d7f3a93df01b36667bbb4a033",
+    "src/tenancy/tenant.ts": "2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072"
+  },
+  "source_observation": "The durable erasure job has no CACHE step. Exact discovered subject keys profile:<id>, profile:user:<id>, profile:anon:<id> and paginated override:<id>:* remain tenant-scoped and readable after local completion. Pending version-1 jobs persist a numeric cursor over dynamically derived legacy steps, so inserting new steps into that sequence would silently reinterpret progress.",
+  "reproduction_basis": "Source-confirmed by two independent Astra/xhigh reads of actual writers/readers and job state. Existing identity fixture will seed and inspect actual CACHE keys/read behavior; no extra baseline suite or new harness.",
+  "contract_digest": "17630fb1c8d82ea67a3fb6a0941f78e13ce6dcd413b84615bbcbdf45e15942ff",
+  "limits": "Known discovered subject CACHE keys only; no email aliases, in-memory caches, orphan discovery, concurrency/deletion generation, ring/seen, D1, AE/logs/external, retention, deployed/customer or release acceptance."
+}

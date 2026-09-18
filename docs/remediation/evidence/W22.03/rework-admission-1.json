@@ -1,0 +1,22 @@
+{
+  "task_id": "W22.03",
+  "at": "2026-09-14T14:46:33.073Z",
+  "original_plan": {
+    "path": "docs/remediation/design/W22.03/plan.md",
+    "sha256": "a892559d38e407510f27b4d6a913e5a424b4380bdc6c914db5eb8284a6c7cff3"
+  },
+  "original_contract": "1baad168e386ad5e3e1d4a93a789c89e78bc321ac1c796fa3563235fe0c72787",
+  "plan": {
+    "path": "docs/remediation/design/W22.03/plan-rework-1.md",
+    "sha256": "223fecd6ec0654388708ab041f8190ee85a181d392c774c91aa801cd49142642"
+  },
+  "contract_digest": "5b7a8662e20d87e9771e6090773912524f389e84d7b3785e70525d5ebe88a39e",
+  "approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-14T14:46:33.073Z",
+    "plan_sha256": "223fecd6ec0654388708ab041f8190ee85a181d392c774c91aa801cd49142642",
+    "rationale": "Same acceptance and owned scope; concrete heap OOM requires1536MiB. Correct pre-budget split allocation and diagnose unchanged replay expectations. Retain original failures and superseding final validation."
+  },
+  "first_results": "Worker-reported pending exact evidence inspection: fixed9 eight pass/one replay failure; compiler768MiB heap OOM134; lint/whitespace not reached.",
+  "scope": "No changed criterion, selected test count or dependency authority. Final runtime/static must follow corrected bytes."
+}

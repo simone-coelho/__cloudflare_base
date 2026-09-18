@@ -1,0 +1,78 @@
+{
+  "task_id": "W39.01",
+  "actor_id": "w3901-reviewer",
+  "actor": {
+    "role": "independent_reviewer",
+    "run_id": "/root/w3901_review",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh"
+  },
+  "at": "2026-09-10T11:47:11Z",
+  "verdict": "pass",
+  "basis": {
+    "contract_digest": "0d4c7e0b299ed39d45daf3efda0c4c19e7491f52dd19310d16df17771adbcc12",
+    "plan_path": "docs/remediation/design/W39.01/plan.md",
+    "plan_sha256": "533356fa664d553a826281f36730843d7c4063254abeb73ce7a75a644ee1cebe",
+    "worker_path": "docs/remediation/evidence/W39.01/worker.json",
+    "worker_sha256": "e65330c9084ff063af055a54ddd9d4d3c26df3052105e19b70ed6679c815b937",
+    "reviewed": "Read complete AGENTS/README/doc36/RESUME, canonical W39/F35/F09/N27 and linked evidence/requirements; exact admitted plan/task, retained baseline, source freeze/deltas, complete worker proof and final source/fixture. Root performed entry/admission board checks; no duplicate board invocation."
+  },
+  "artifact": {
+    "path": "docs/remediation/evidence/W39.01/artifact.json",
+    "sha256": "426f710be02a474cb2e922312bda95a59ab6d5055609e1bce5f18851f961e2e0",
+    "digest": "3fea24050b73c365bfaa6d887985aacab9eb5a74feb73e7c0e72d012e253df3b",
+    "files": 17,
+    "identity": "Independently matched manifest hash and every current file hash, four decompressed baseline hashes and seven protected pins. Inspected all five forward deltas against actual source; reused root's exact bidirectional-delta verification. Independently compared wrangler noncomment lines and entire Coach first-party generation suffix to retained baseline. All matched."
+  },
+  "criteria": [
+    {
+      "id": "W39.01-C1",
+      "verdict": "pass",
+      "claim": "source_confirmed",
+      "evidence": "Complete import-free generator body is only a literal stderr refusal and exitCode=2, without generation, filesystem calls or bypass. The focused check verifies exact bytes and syntax-only Node parse; source body was never executed. Exact doc10 Operations/seed011 header/wrangler comment deltas withdraw admitted operative seed instructions. Wrangler configuration lines and unrelated content remain unchanged."
+    },
+    {
+      "id": "W39.01-C2",
+      "verdict": "pass",
+      "claim": "local_runtime",
+      "evidence": "Removed only two unscoped shared-reference DELETEs; five existing INSERTs now use OR IGNORE. Three Coach resets and complete first-party generation remain byte-identical. Independent SQLite memory run used actual0004 schema and extracted0008-to-011 reference statements: NY14 including11215; exact metro35620 income99852/home648800/source Census ACS 2024 1-yr/vintage2024; all7census/29xref existing rows including overlapping CA/90001 and unrelated ZZ/99999 sentinels preserved; missing NC county37067/ZIP27028 added; complete75census/43xref snapshot equal after repeat."
+    },
+    {
+      "id": "W39.01-C3",
+      "verdict": "pass",
+      "claim": "source_confirmed",
+      "evidence": "Independent run and actual frozen-source/fixture/worker-evidence review complete, separate from implementer. Extractor selects all shared-table mentions before enforcing counts/forms, retaining the conditional0008 DELETE and failing on unexpected seed shared statements. Test assertions observe stored rows/provenance and additions, not only command status. Original source failure was inspected, not runtime-reproduced. No concern requires broader testing."
+    }
+  ],
+  "independent_check": {
+    "command": "node --test scripts/seed-d1.test.mjs",
+    "chunk_id": "15df1b",
+    "tool_session_id": null,
+    "exit_status": 0,
+    "session_drained": true,
+    "launch_observed_at": "2026-09-10T11:45:20Z",
+    "completion_observed_at": "2026-09-10T11:45:20Z",
+    "time_precision": "Clock observations are second-resolution; TAP total duration83.811062ms is fixture process timing, not engine latency.",
+    "output": "TAP version 13\n# Subtest: legacy seed emitter is a literal refusal (source and syntax only)\nok 1 - legacy seed emitter is a literal refusal (source and syntax only)\n  ---\n  duration_ms: 26.319864\n  type: 'test'\n  ...\n# Subtest: 0008 then 011 shared references preserve rows/provenance and repeat in memory\nok 2 - 0008 then 011 shared references preserve rows/provenance and repeat in memory\n  ---\n  duration_ms: 12.472727\n  type: 'test'\n  ...\n# Node v22.15.0; SQLite 3.37.2; NY ZIPs 14 retained; NY 99852/648800 Census ACS 2024 1-yr/2024 retained; 7 census/29 xref existing rows unchanged; missing NC added; repeat 75 census/43 xref rows identical. Reference subset only.\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 83.811062\n",
+    "output_sha256": "f9fc5681c9204f7fc09eb36fa09536bde0202878b2348c30e290078789ca4a4b",
+    "result": "2/2 passed;0failed/cancelled/skipped/todo; one independent invocation.",
+    "runtime": "Node v22.15.0 and SQLite3.37.2. Syntax child parsed only with NODE_OPTIONS cleared. SQLite child used /usr/bin/sqlite3 -batch -bail -init /dev/null :memory: with stdin; both child statuses0/signals null/empty stderr asserted. Only public/synthetic reference statements, no first-party SQL or disk database."
+  },
+  "source_inspection": {
+    "chunk_id": "14b2d1",
+    "exit_status": 0,
+    "session_drained": true,
+    "output": "Inspected: manifest and all17 current file hashes match; four retained baseline contents match; seven protected pins unchanged; wrangler noncomment lines and complete first-party seed body unchanged; new fixture has no trailing whitespace.\n",
+    "output_sha256": "5f3a09d3692c15bb3a298dae0a2a0a94d3f920d981fcbc39717aa1db422a6ba3",
+    "whitespace": "Inspected worker scoped git diff --check output: empty, exit0,chunk64b5d7. That command omits the newly untracked fixture; independently inspected its full source and verified zero trailing-whitespace lines."
+  },
+  "findings": [],
+  "failures_or_rework": "No independent product-check failure or rerun. Earlier read-only displays were too large and reread in bounded sections; two path-discovery reads used a nonexistent evidence baseline location and were corrected to design/W39.01/baseline.json. These were not credited checks or implementation failures.",
+  "limitations": "Reference subset only: no full numbered migration or seed001-011 order, first-party reset/generation, workerd/D1, customer data, provisioning or deployed recovery acceptance. Generator refusal is source/syntax assurance only; caller startup hooks/interpreter environment are outside it. Existing incorrect reference rows are also preserved, and missing historical rows are not restored. Reference-only recovery needs reviewed scope and an authorized target; replaying all0008 also resets Meridian first-party rows. Other seed/migration commands, replacement generator/output ownership, product/demo schema/assets, published backups, fresh-clone/index handoff and D01/D08 remain open. Installed Node/SQLite versions identify this local run; manifest is scoped source/configuration evidence, not an exhaustive system-runtime or release attestation. No fullW39/finding/gate/customer/release/SLO or measured relevance/latency acceptance.",
+  "handoff": {
+    "pending_sessions": [],
+    "source_files_edited": false,
+    "owned_output": "docs/remediation/evidence/W39.01/review.json",
+    "next_action": "Lead inspects independent review and exact evidence, records bounded disposition and updates tracker/journal/RESUME. No further source or runtime work required for these criteria."
+  }
+}

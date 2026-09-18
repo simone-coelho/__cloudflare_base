@@ -1,0 +1,30 @@
+{
+  "task_id": "W09.06",
+  "at": "2026-09-14T17:30:47.467Z",
+  "plan": {
+    "path": "docs/remediation/design/W09.06/plan.md",
+    "sha256": "d27fc2343bf2229478081f37bbd96608da9dca7540df0e37f883b262bede3394"
+  },
+  "baseline": {
+    "path": "docs/remediation/design/W09.06/baseline.json",
+    "sha256": "6180e0c2769047d7f7a4096ce666be956f216217f371613250154cd81fd4a24e"
+  },
+  "contract_digest": "2d1760eebb1b6e8dfbd75d53cb65b63c3d374cb4e93e81d086efd6d8c84ffa95",
+  "independent_preflight": {
+    "actor_id": "w0906-reviewer",
+    "run_id": "/root/w0906_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "verdict": "pass",
+    "plan_sha256": "d27fc2343bf2229478081f37bbd96608da9dca7540df0e37f883b262bede3394",
+    "scope": "Exact plan only; no implementation acceptance."
+  },
+  "lead_approval": {
+    "actor_id": "w01-lead",
+    "at": "2026-09-14T17:30:47.467Z",
+    "plan_sha256": "d27fc2343bf2229478081f37bbd96608da9dca7540df0e37f883b262bede3394",
+    "rationale": "Root requirements/source/design-case reads and distinct Astra/xhigh exact-plan PASS. Three configuration lines with one existing-fixture native forwarding case and two controls; no resource creation, automatic recovery or customer retention policy."
+  },
+  "fixed_checks": 3,
+  "limitations": "Isolated local DLQ declarations and installed native broker retry-exhaustion forwarding only. Test-only collector proves full-body forwarding, not consumerless retention, restart durability, deployed retry semantics, native concurrency or operational recovery. Queue existence/activation, access/retention/erasure/alerts/recovery ownership and customer/privacy decisions need separate authority. Producer rejection, intentionally acknowledged non-ledger/handled scene failures, replay/reconciliation, partial/legacy duplication, full W09/W22/F16/N10 and release remain open. Retired scripts remain retired. No commit/push/install/emitted build/deploy/provision/cloud/credentials/customer-data/destructive/external operations."
+}
