@@ -4,7 +4,7 @@
 // visitor's own object; reporting policies run over the ledger in batch.
 
 import type { Cell } from '@/content/types';
-import type { OutcomeRecord, RewardType } from '@/ledger/records';
+import { isDecisionReference, parseId, type OutcomeRecord, type RewardType } from '@/ledger/records';
 
 export type Scope = 'session' | 'visitor';
 export type Match = 'direct' | 'any';
@@ -30,7 +30,15 @@ export const DEFAULT_POLICY: AttributionPolicy = {
 
 /** What the ring keeps per served decision: what attribution and "why did she see this" need. */
 export interface RingEntry {
+  measurementBasis?: import('@/content/types').MeasurementBasis;
+  renderedAt?: number;
+  position?: number;
+  retention?: import('@/retention').CaptureRetention;
   id: string;
+  /** Historical compact entries may lack this; they cannot establish an exact correlated brand. */
+  brand?: string;
+  tenant?: string;
+  visitor_id?: string;
   ts: number;
   page: string;
   slot: string;
@@ -72,13 +80,32 @@ export function creditWeight(objective: 'unit' | 'revenue' | 'margin' | undefine
  * outcome; `match` narrows them to the served item; `credit` picks who is paid.
  */
 export function attribute(outcome: OutcomeRecord, ring: readonly RingEntry[], policy: AttributionPolicy): Credit[] {
+  let candidates = ring;
+  if (Object.prototype.hasOwnProperty.call(outcome, 'decision_id')) {
+    const id = outcome.decision_id;
+    if (!isDecisionReference(id)) return [];
+    const carrier = parseId(id)!;
+    if (carrier.tenant !== outcome.tenant || id.split(':')[2] !== outcome.visitor_id) return [];
+    const matches = ring.filter(e => e.id === id);
+    // Even identical duplicate rows are ambiguous retained evidence, not two selectable receipts.
+    if (matches.length !== 1 || matches[0]!.brand !== outcome.brand || matches[0]!.ts !== carrier.ts
+      || (Object.hasOwn(matches[0]!, 'tenant') && matches[0]!.tenant !== outcome.tenant)
+      || (Object.hasOwn(matches[0]!, 'visitor_id') && matches[0]!.visitor_id !== outcome.visitor_id)) return [];
+    candidates = matches;
+  }
   const window = policy.windowsMs[outcome.type] ?? policy.windowsMs.custom ?? 30 * MIN;
-  const eligible = ring.filter((e) => {
-    if (e.ts > outcome.ts || outcome.ts - e.ts > window) return false;
+  // The SDK's literal `unknown` is an unspecified-placement sentinel. Otherwise
+  // preserve the supplied name exactly; a named miss must not broaden attribution.
+  const namedSlot = typeof outcome.slot === 'string' && outcome.slot.trim().length > 0 && outcome.slot !== 'unknown'
+    ? outcome.slot : null;
+  const eligible = candidates.filter((e) => {
+    const exposureAt = e.measurementBasis === 'rendered-v1' ? e.renderedAt : e.ts;
+    if (exposureAt === undefined || !Number.isSafeInteger(exposureAt) || exposureAt > outcome.ts || outcome.ts - exposureAt > window) return false;
     if (policy.scope === 'session' && (e.session_id === null || outcome.session_id === null || e.session_id !== outcome.session_id)) return false;
     // `direct`: the outcome names the served item, or (CW32) one of the products the served piece features,
     // so a purchase of a bag credits the story that featured the bag under the default policy.
     if (policy.match === 'direct') {
+      if (namedSlot !== null && e.slot !== namedSlot) return false;
       const named = e.item === outcome.item_id;
       const featured = Boolean(e.products?.length) && (outcome.products ?? (outcome.item_id ? [outcome.item_id] : [])).some((p) => e.products!.includes(p));
       if (!named && !featured) return false;
@@ -86,8 +113,8 @@ export function attribute(outcome: OutcomeRecord, ring: readonly RingEntry[], po
     return true;
   });
   if (eligible.length === 0) return [];
-  // Credit goes to one decision per slot, so a click on the hero pays the hero
-  // once even when the same piece was also served in a rail.
+  // Pick once within each eligible slot. Unspecified direct outcomes and `any`
+  // retain their broad legacy behavior; an explicitly named direct outcome does not.
   const bySlot = new Map<string, RingEntry>();
   const ordered = [...eligible].sort((a, b) => (policy.credit === 'last' ? b.ts - a.ts : a.ts - b.ts));
   for (const e of ordered) if (!bySlot.has(e.slot)) bySlot.set(e.slot, e);

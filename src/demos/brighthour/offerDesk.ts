@@ -760,7 +760,7 @@ export async function proposeTags(
     });
     return normalizeProposal(object as RawModelProposal, staged, nowMs, model);
   } catch (err) {
-    console.error('offerDesk proposeTags fell back to the deterministic proposal:', err);
+    console.error('offerDesk proposeTags fell back to the deterministic proposal');
     return mockProposal(staged, nowMs);
   }
 }
@@ -1217,7 +1217,7 @@ export async function readRecord(
   try {
     return await kv.get<OfferDeskRecord>(deskKey(itemNumber), 'json');
   } catch (err) {
-    console.error('offerDesk readRecord failed:', err);
+    console.error('offerDesk readRecord failed');
     return null;
   }
 }
@@ -1252,7 +1252,7 @@ export async function listRecords(kv: KVNamespace | null | undefined): Promise<O
       .filter((r): r is OfferDeskRecord => !!r && typeof r.itemNumber === 'string')
       .sort((a, b) => (order.get(a.itemNumber) ?? 99) - (order.get(b.itemNumber) ?? 99));
   } catch (err) {
-    console.error('offerDesk listRecords failed:', err);
+    console.error('offerDesk listRecords failed');
     return [];
   }
 }
@@ -1278,7 +1278,7 @@ export async function listOverrides(
       if (v && typeof v.itemNumber === 'string' && v.ats) out.set(v.itemNumber, v);
     }
   } catch (err) {
-    console.error('offerDesk listOverrides failed:', err);
+    console.error('offerDesk listOverrides failed');
   }
   return out;
 }
@@ -1348,7 +1348,7 @@ export async function overlayItems(
     const { loadBrighthourProducts } = await import('./catalog');
     return loadBrighthourProducts(epochMs, raws) as unknown as Array<Record<string, unknown>>;
   } catch (err) {
-    console.error('offerDesk overlayItems failed (composition continues without it):', err);
+    console.error('offerDesk overlayItems failed (composition continues without it)');
     return [];
   }
 }

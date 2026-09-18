@@ -1,0 +1,432 @@
+{
+  "before": {
+    "id": "W18.01-E3",
+    "task_id": "W18.01",
+    "check_id": "W18.01-K3",
+    "criterion_ids": [
+      "W18.01-C1",
+      "W18.01-C2",
+      "W18.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W18.01/review.json",
+      "sha256": "15e4048b09cc933b5886d9213fb9eb2c08ba0c6dc3d9344b65f166b3c804d47e"
+    },
+    "at": "2026-09-13 15:12:45 UTC",
+    "limitations": "Bounded W18 operator stage and per-slot numeric weight controls, real-validator local DOM/save/readback and existing History feedback only. Not full W18/F26/F29 customer weight-change walkthrough, actual customer assets/browser/no-reload delivery, deployed revision propagation, CAS/W35 authority, runtime/SLO or release acceptance. Existing /learn/slots grid still lists dimension names; numeric readback lives on Slot rules. Registry failures show unavailable editor; unknown stored weights remain visible/read-only and preserved, not automatically activated or deleted. Cross-page repeated slot-name selection, unsaved navigation loss, server registry cross-validation and full W20 activation/pin UI/exclusions/fallback remain separate. No scoring/model/default-arm/pin policy change, new framework, benchmark, cloud/deploy/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions.",
+    "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W18.01|a slot rule switched on|history shows every document|the interests screen speaks|W03.03 carries named auth context|never leaves a screen|the dials arm the save bar' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct frozen Astra/xhigh actual-source and exact8 once; reuse final static.",
+    "workload": "Inspect real assertions, source/deltas, tenant/registry and stage/weight semantics plus full W18 residuals. No broad/native/customer qualification.",
+    "result": "pass",
+    "artifact_digest": "91208b6918ac8381c0d0d6c8e13bb942df88d40515e5996ca780d956cc38ef71",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "b748849e2213a20e67b729720aa908aa237dcba36a58c8b9b949e2b04c452bbe",
+      "configuration": "Bounded W18 operator stage and per-slot numeric weight controls, real-validator local DOM/save/readback and existing History feedback only. Not full W18/F26/F29 customer weight-change walkthrough, actual customer assets/browser/no-reload delivery, deployed revision propagation, CAS/W35 authority, runtime/SLO or release acceptance. Existing /learn/slots grid still lists dimension names; numeric readback lives on Slot rules. Registry failures show unavailable editor; unknown stored weights remain visible/read-only and preserved, not automatically activated or deleted. Cross-page repeated slot-name selection, unsaved navigation loss, server registry cross-validation and full W20 activation/pin UI/exclusions/fallback remain separate. No scoring/model/default-arm/pin policy change, new framework, benchmark, cloud/deploy/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions.",
+      "files": [
+        {
+          "path": "public/console/views-config.js",
+          "role": "output",
+          "sha256": "2b94f3edc1a159266366f304b01ef12e9c733a8ce2548c0f7d7602ca4d3217f8"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "role": "output",
+          "sha256": "896106b6362c1e06cef16fe6714b15cebf8bef7243f9ef55c57cbe44725d8fd5"
+        },
+        {
+          "path": "public/console/shell.js",
+          "role": "source",
+          "sha256": "6ed7abd4a5d20226109d12910f003645fd22620d116d2caead344b9b85d7916e"
+        },
+        {
+          "path": "public/console/views.js",
+          "role": "source",
+          "sha256": "07c8117069971e7b491ca07fa1ec6cefd64b18aa9f16fb27402f60687ce9c70c"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "role": "source",
+          "sha256": "141186bd9d711522d2188f955000f150c26b297d1d02d06d4b4fc6512b6302b9"
+        },
+        {
+          "path": "public/console/views-accounts.js",
+          "role": "source",
+          "sha256": "4f7a2c72206496ab8900cac6d3a9d19d3d32777ff3bc49662664e2fda22956c0"
+        },
+        {
+          "path": "public/console/views-explore.js",
+          "role": "source",
+          "sha256": "21da13c01ebedc1b75f9922940044f788ceec9c32a476a10ee50bd7a5a1a1efa"
+        },
+        {
+          "path": "public/console/index.html",
+          "role": "source",
+          "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+        },
+        {
+          "path": "public/operator-session.js",
+          "role": "source",
+          "sha256": "b7a943cbc3611f1f7e2b5a96aed19142f8a73df36abece2dd814a2bda0754869"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "1d388ecebfacf8c977d4aefdc6e325736fcb06a708515149a8b76efa4c134564"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "d04666cef4f89021ec1332d398912012727f6367a897fe5dec5c41220af2fc40"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "25cb30a37549a662cd60a5e5dbcdac81ddc26e0c455cbe53f86cf2361a5694ff"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "role": "source",
+          "sha256": "c68b26d85e6ab2b5434f65436f30497f4b9191ea297df49c3a3a9f35adce1355"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F26.md",
+          "role": "source",
+          "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F29.md",
+          "role": "source",
+          "sha256": "152dc5d717c42e1590fae470a52a01cd35860f72ec9d82c669c2843700bdf996"
+        },
+        {
+          "path": "docs/architecture/18-content-affinity-engine.md",
+          "role": "source",
+          "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+        },
+        {
+          "path": "docs/architecture/19-tapestry-delivery-ledger.md",
+          "role": "source",
+          "sha256": "9134fd3e28a025b85b7a29e4d869b55e3cde56f83b6e5fa06cd9cfa8c1c4da62"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.01/acceptance.md",
+          "role": "source",
+          "sha256": "2c090eea0baa3576d25b165969a2f57f287d1e24231c70daf3a8cba4d2b6d18c"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W18.01/worker.json",
+          "role": "output",
+          "sha256": "cfdb10c0ee9b7ed1010e97c69bbde6bfb6b9d24d4a70a37c8a53a2607c7998f4"
+        },
+        {
+          "path": "docs/remediation/design/W18.01/plan.md",
+          "role": "configuration",
+          "sha256": "d51d39967213d70e7e9fdf9ffe3e42200a1dd08584cb68aee5f30f9cabaa804f"
+        },
+        {
+          "path": "docs/remediation/design/W18.01/baseline.json",
+          "role": "configuration",
+          "sha256": "6a0a1ccd5db3eac4c172411557d99a775bf8304074c4d9c4f91c791f23460ab3"
+        },
+        {
+          "path": "docs/remediation/evidence/W18.01/admission.json",
+          "role": "configuration",
+          "sha256": "3a57f543298a18f99bab66720e7a611e5fbe6f49db49928eb9e0ebbd94726b44"
+        },
+        {
+          "path": "docs/remediation/evidence/W18.01/source-freeze.json",
+          "sha256": "d8f1c75a0dc53f294095305d0ebb81e00d76c789d597cd943448c0648082ea14",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W18.01/source-deltas.json",
+          "sha256": "2fd12ad047698c527701db964ef72c9f488e8928a12a65c07e85e2894d18af04",
+          "role": "configuration"
+        }
+      ],
+      "digest": "91208b6918ac8381c0d0d6c8e13bb942df88d40515e5996ca780d956cc38ef71"
+    }
+  },
+  "after": {
+    "id": "W18.01-E3",
+    "task_id": "W18.01",
+    "check_id": "W18.01-K3",
+    "criterion_ids": [
+      "W18.01-C1",
+      "W18.01-C2",
+      "W18.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W18.01/review.json",
+      "sha256": "15e4048b09cc933b5886d9213fb9eb2c08ba0c6dc3d9344b65f166b3c804d47e"
+    },
+    "at": "2026-09-13 15:12:45 UTC",
+    "limitations": "Bounded W18 operator stage and per-slot numeric weight controls, real-validator local DOM/save/readback and existing History feedback only. Not full W18/F26/F29 customer weight-change walkthrough, actual customer assets/browser/no-reload delivery, deployed revision propagation, CAS/W35 authority, runtime/SLO or release acceptance. Existing /learn/slots grid still lists dimension names; numeric readback lives on Slot rules. Registry failures show unavailable editor; unknown stored weights remain visible/read-only and preserved, not automatically activated or deleted. Cross-page repeated slot-name selection, unsaved navigation loss, server registry cross-validation and full W20 activation/pin UI/exclusions/fallback remain separate. No scoring/model/default-arm/pin policy change, new framework, benchmark, cloud/deploy/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions.",
+    "command": "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W18.01|a slot rule switched on|history shows every document|the interests screen speaks|W03.03 carries named auth context|never leaves a screen|the dials arm the save bar' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct frozen Astra/xhigh actual-source and exact8 once; reuse final static.",
+    "workload": "Inspect real assertions, source/deltas, tenant/registry and stage/weight semantics plus full W18 residuals. No broad/native/customer qualification.",
+    "result": "pass",
+    "artifact_digest": "91208b6918ac8381c0d0d6c8e13bb942df88d40515e5996ca780d956cc38ef71",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "b748849e2213a20e67b729720aa908aa237dcba36a58c8b9b949e2b04c452bbe",
+      "configuration": "Bounded W18 operator stage and per-slot numeric weight controls, real-validator local DOM/save/readback and existing History feedback only. Not full W18/F26/F29 customer weight-change walkthrough, actual customer assets/browser/no-reload delivery, deployed revision propagation, CAS/W35 authority, runtime/SLO or release acceptance. Existing /learn/slots grid still lists dimension names; numeric readback lives on Slot rules. Registry failures show unavailable editor; unknown stored weights remain visible/read-only and preserved, not automatically activated or deleted. Cross-page repeated slot-name selection, unsaved navigation loss, server registry cross-validation and full W20 activation/pin UI/exclusions/fallback remain separate. No scoring/model/default-arm/pin policy change, new framework, benchmark, cloud/deploy/install/emitted-build/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions.",
+      "files": [
+        {
+          "path": "public/console/views-config.js",
+          "role": "output",
+          "sha256": "2b94f3edc1a159266366f304b01ef12e9c733a8ce2548c0f7d7602ca4d3217f8"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "role": "output",
+          "sha256": "896106b6362c1e06cef16fe6714b15cebf8bef7243f9ef55c57cbe44725d8fd5"
+        },
+        {
+          "path": "public/console/shell.js",
+          "role": "source",
+          "sha256": "6ed7abd4a5d20226109d12910f003645fd22620d116d2caead344b9b85d7916e"
+        },
+        {
+          "path": "public/console/views.js",
+          "role": "source",
+          "sha256": "07c8117069971e7b491ca07fa1ec6cefd64b18aa9f16fb27402f60687ce9c70c"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "role": "source",
+          "sha256": "141186bd9d711522d2188f955000f150c26b297d1d02d06d4b4fc6512b6302b9"
+        },
+        {
+          "path": "public/console/views-accounts.js",
+          "role": "source",
+          "sha256": "4f7a2c72206496ab8900cac6d3a9d19d3d32777ff3bc49662664e2fda22956c0"
+        },
+        {
+          "path": "public/console/views-explore.js",
+          "role": "source",
+          "sha256": "21da13c01ebedc1b75f9922940044f788ceec9c32a476a10ee50bd7a5a1a1efa"
+        },
+        {
+          "path": "public/console/index.html",
+          "role": "source",
+          "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+        },
+        {
+          "path": "public/operator-session.js",
+          "role": "source",
+          "sha256": "b7a943cbc3611f1f7e2b5a96aed19142f8a73df36abece2dd814a2bda0754869"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "1d388ecebfacf8c977d4aefdc6e325736fcb06a708515149a8b76efa4c134564"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "d04666cef4f89021ec1332d398912012727f6367a897fe5dec5c41220af2fc40"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "25cb30a37549a662cd60a5e5dbcdac81ddc26e0c455cbe53f86cf2361a5694ff"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+        },
+        {
+          "path": "src/routes/config.ts",
+          "role": "source",
+          "sha256": "c68b26d85e6ab2b5434f65436f30497f4b9191ea297df49c3a3a9f35adce1355"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "b2d7aaf92ebc1ae8c777ce80e6fefe02a2d57c9bc27b3132d1a9a82bbd9d2956"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F26.md",
+          "role": "source",
+          "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F29.md",
+          "role": "source",
+          "sha256": "152dc5d717c42e1590fae470a52a01cd35860f72ec9d82c669c2843700bdf996"
+        },
+        {
+          "path": "docs/architecture/18-content-affinity-engine.md",
+          "role": "source",
+          "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+        },
+        {
+          "path": "docs/architecture/19-tapestry-delivery-ledger.md",
+          "role": "source",
+          "sha256": "9134fd3e28a025b85b7a29e4d869b55e3cde56f83b6e5fa06cd9cfa8c1c4da62"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.01/acceptance.md",
+          "role": "source",
+          "sha256": "2c090eea0baa3576d25b165969a2f57f287d1e24231c70daf3a8cba4d2b6d18c"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W18.01/worker.json",
+          "role": "output",
+          "sha256": "cfdb10c0ee9b7ed1010e97c69bbde6bfb6b9d24d4a70a37c8a53a2607c7998f4"
+        },
+        {
+          "path": "docs/remediation/design/W18.01/plan.md",
+          "role": "configuration",
+          "sha256": "d51d39967213d70e7e9fdf9ffe3e42200a1dd08584cb68aee5f30f9cabaa804f"
+        },
+        {
+          "path": "docs/remediation/design/W18.01/baseline.json",
+          "role": "configuration",
+          "sha256": "6a0a1ccd5db3eac4c172411557d99a775bf8304074c4d9c4f91c791f23460ab3"
+        },
+        {
+          "path": "docs/remediation/evidence/W18.01/admission.json",
+          "role": "configuration",
+          "sha256": "3a57f543298a18f99bab66720e7a611e5fbe6f49db49928eb9e0ebbd94726b44"
+        },
+        {
+          "path": "docs/remediation/evidence/W18.01/source-freeze.json",
+          "sha256": "d8f1c75a0dc53f294095305d0ebb81e00d76c789d597cd943448c0648082ea14",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W18.01/source-deltas.json",
+          "sha256": "2fd12ad047698c527701db964ef72c9f488e8928a12a65c07e85e2894d18af04",
+          "role": "configuration"
+        }
+      ],
+      "digest": "91208b6918ac8381c0d0d6c8e13bb942df88d40515e5996ca780d956cc38ef71"
+    }
+  }
+}

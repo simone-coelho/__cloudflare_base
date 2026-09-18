@@ -8,9 +8,12 @@
 
 import type { ItemControl, SlotCatalog, ContentCatalog, LearnConfig } from '@/content/types';
 import { isEligibleAt } from '@/content/lifecycle';
+import { slotPins, rankedCapacity } from '@/content/slotConstraints';
 import { LEVEL_WORDS, type LiftSnapshot, type Level } from './stats';
 
 export interface LiftRow {
+  measurementBasis: 'served-v1' | 'rendered-v1';
+  objective: 'unit' | 'revenue' | 'margin';
   item: string;
   customer_item_id: string | null;
   title: string | null;
@@ -61,6 +64,7 @@ export function rowsOf(snap: LiftSnapshot, names: Names, controls: Record<string
       if (level === 'pooled' ? key !== '*' : key === '*') continue;
       const n0 = st.n0 ?? snap.n0;
       out.push({
+        measurementBasis: snap.measurementBasis ?? 'served-v1', objective: snap.objective ?? 'unit',
         item: id, customer_item_id: nm?.customerContentId ?? null, title: nm?.title ?? null,
         key, level: st.level, level_words: LEVEL_WORDS[st.level as Level] ?? String(st.level),
         n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, n0,
@@ -138,6 +142,9 @@ export interface SlotIndexEntry {
   slot: string;
   take: number;
   pinned: string | null;
+  /** Additive ordered fixed positions and potential ranked remainder. */
+  pinnedPieceIds?: string[];
+  rankedCapacity?: number;
   /** The dimensions the slot weights. */
   dimensions: string[];
   /** The rules set on the slot strategy: merchandising, stage, freshness, fatigue, diversity. */
@@ -146,8 +153,12 @@ export interface SlotIndexEntry {
   pieces: number;
   reward: string;
   objective: string;
+  /** Legacy index inputs omit this and mean served-v1; current writers emit it. */
+  measurementBasis?: 'served-v1' | 'rendered-v1';
   gamma: number;
   exploration: string;
+  /** Retained unsupported configuration, not an active exploration policy. */
+  configuredExploration?: 'thompson';
   autonomy: string;
   controls: number;
   /** Filled by the route when asked: what the slot has learned so far. */
@@ -173,10 +184,14 @@ export function slotsIndex(slots: SlotCatalog, catalog: ContentCatalog, learn: L
       if (s.diversity) rules.push('diversity');
       entries.push({
         page, slot: s.slot, take: s.take, pinned: s.pinnedPieceId ?? null,
+        pinnedPieceIds: [...slotPins(s)], rankedCapacity: rankedCapacity(s),
         dimensions: Object.keys(s.weights).filter((k) => (s.weights[k] ?? 0) > 0),
         rules, pieces: live.filter((p) => p.slotTypes.includes(s.slot)).length,
         reward: d.reward ?? 'click', objective: d.objective ?? 'unit', gamma: d.gamma ?? 0,
-        exploration: d.exploration?.mode ?? 'off', autonomy: d.autonomy?.mode ?? 'configured',
+        measurementBasis: d.measurementBasis ?? 'served-v1',
+        exploration: d.exploration?.mode === 'thompson' ? 'off' : d.exploration?.mode ?? 'off',
+        ...(d.exploration?.mode === 'thompson' ? { configuredExploration: 'thompson' as const } : {}),
+        autonomy: d.autonomy?.mode ?? 'configured',
         controls: Object.keys(d.items ?? {}).length,
       });
       total++;

@@ -6,30 +6,36 @@
 // isolation was real and provably correct, and nothing could reach it. This is
 // the wiring.
 //
-// TWO PROPERTIES IT HAS TO HAVE.
-//
-// It cannot throw. Tenant resolution runs before every request, including the
-// health check, so a malformed TENANTS variable must degrade to "serve the
-// default brand" rather than 500 the whole worker. A stamp with a typo in its
-// configuration should look under-provisioned, not dead.
-//
-// It cannot let a caller pick a brand. `X-Tenant` is caller-controlled, so it is
-// only honoured for a brand this stamp has actually provisioned. An unconfigured
-// stamp is default-only, which is the safe reading rather than the permissive one.
+// An absent manifest retains legacy Coach operation. An explicit manifest is
+// the complete local authority: invalid configuration or disagreeing selectors
+// refuse tenant work. Provisioning is not SDK/operator authorization.
 // ---------------------------------------------------------------------------
 
 import { createMiddleware } from 'hono/factory';
+import { getPath } from 'hono/utils/url';
 import type { Env } from '@/types/env';
-import { DEFAULT_TENANT, isValidTenantId, resolveTenant, type TenantId } from '@/tenancy/tenant';
+import { DEFAULT_TENANT, isValidTenantId, resolveTenant, TenantResolutionError, type TenantId } from '@/tenancy/tenant';
 
 export interface TenantConfig {
-  /** The brands this stamp serves. Always contains the default. */
+  /** The distinct brands this stamp explicitly serves, in declared order. */
   provisioned: TenantId[];
   /** host -> tenant, for brands on their own domain. */
   hosts: Record<string, TenantId>;
 }
 
-const DEFAULT_CONFIG: TenantConfig = { provisioned: [DEFAULT_TENANT], hosts: {} };
+export class TenantConfigurationError extends Error {
+  constructor() { super('Tenant configuration unavailable'); this.name = 'TenantConfigurationError'; }
+}
+
+function validHost(host: string): boolean {
+  try {
+    const url = new URL(`https://${host}`);
+    if (url.hostname !== host || url.port || url.pathname !== '/' || url.search || url.hash || url.username || url.password) return false;
+    if (host.startsWith('[')) return true; // URL validated an IPv6 address.
+    return host.length <= 253 && host.replace(/\.$/, '').split('.').every(label =>
+      /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label));
+  } catch { return false; }
+}
 
 /**
  * Read the stamp's tenant configuration from `TENANTS`, a JSON object:
@@ -37,66 +43,74 @@ const DEFAULT_CONFIG: TenantConfig = { provisioned: [DEFAULT_TENANT], hosts: {} 
  *     { "provisioned": ["coach", "kate-spade"],
  *       "hosts": { "shop.katespade.com": "kate-spade" } }
  *
- * Anything unparseable, malformed, or naming an invalid tenant id degrades to
- * default-only. Entries that are individually invalid are dropped rather than
- * failing the whole config, so one bad host line cannot deprovision a brand.
+ * Reject an invalid explicit manifest as a whole. Never silently add a tenant
+ * or discard a host mapping. Each call owns its arrays and host map.
  */
-export function tenantConfig(env: Env): TenantConfig {
-  const raw = (env as unknown as { TENANTS?: string }).TENANTS;
-  if (typeof raw !== 'string' || raw.trim() === '') return DEFAULT_CONFIG;
-
-  let parsed: unknown;
+export function tenantConfig(env: Pick<Env, 'TENANTS' | 'DEPLOYMENT_PROFILE'>): TenantConfig {
   try {
-    parsed = JSON.parse(raw);
-  } catch {
-    console.warn('[tenancy] TENANTS is not valid JSON; serving the default brand only');
-    return DEFAULT_CONFIG;
-  }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return DEFAULT_CONFIG;
-  const obj = parsed as { provisioned?: unknown; hosts?: unknown };
-
-  const provisioned = Array.isArray(obj.provisioned)
-    ? obj.provisioned.filter(isValidTenantId)
-    : [];
-  if (!provisioned.includes(DEFAULT_TENANT)) provisioned.push(DEFAULT_TENANT);
-
-  const hosts: Record<string, TenantId> = {};
-  if (obj.hosts && typeof obj.hosts === 'object' && !Array.isArray(obj.hosts)) {
-    for (const [host, tenant] of Object.entries(obj.hosts as Record<string, unknown>)) {
-      const h = host.trim().toLowerCase();
-      if (h !== '' && isValidTenantId(tenant)) hosts[h] = tenant;
+    const raw = env.TENANTS;
+    if (raw === undefined) {
+      if (env.DEPLOYMENT_PROFILE === 'customer') throw new TenantConfigurationError();
+      return { provisioned: [DEFAULT_TENANT], hosts: {} };
     }
-  }
-  return { provisioned, hosts };
+    if (typeof raw !== 'string' || raw.trim() === '') throw new TenantConfigurationError();
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new TenantConfigurationError();
+    const obj = parsed as { provisioned?: unknown; hosts?: unknown };
+    if (!Array.isArray(obj.provisioned) || !obj.provisioned.length || !obj.provisioned.every(isValidTenantId)) throw new TenantConfigurationError();
+    const provisioned = [...new Set(obj.provisioned)];
+    const hosts: Record<string, TenantId> = Object.create(null);
+    if (obj.hosts !== undefined) {
+      if (!obj.hosts || typeof obj.hosts !== 'object' || Array.isArray(obj.hosts)) throw new TenantConfigurationError();
+      for (const [host, tenant] of Object.entries(obj.hosts)) {
+        const h = host.trim().toLowerCase();
+        if (!validHost(h) || !isValidTenantId(tenant) || !provisioned.includes(tenant)
+          || (Object.hasOwn(hosts, h) && hosts[h] !== tenant)) throw new TenantConfigurationError();
+        hosts[h] = tenant;
+      }
+    }
+    return { provisioned, hosts };
+  } catch { throw new TenantConfigurationError(); }
 }
 
-/** The tenant for a request, given the stamp's configuration. Never throws. */
+/** Shared by Hono ingress and shopper capability checks, including WebSockets. */
 export function tenantForRequest(env: Env, req: Request): TenantId {
+  const cfg = tenantConfig(env);
   try {
-    const cfg = tenantConfig(env);
-    let host: string | null = null;
-    try {
-      host = new URL(req.url).hostname;
-    } catch {
-      host = null;
+    const url = new URL(req.url);
+    // Match Hono's route decoding, then its parameter decoding. The global
+    // middleware's own route does not carry the downstream :tenant parameter.
+    const path = getPath(req).split('/');
+    let explicit: string | undefined;
+    if (path[1] === 'v1' && path.length > 2) {
+      explicit = decodeURIComponent(path[2]!);
+      // Downstream document handlers retain the decoded spelling as their key.
+      if (!isValidTenantId(explicit)) throw new TenantResolutionError();
+    }
+    if (req.method === 'GET' && path.length === 5 && path[1] === 'auth' && path[2] === 'oidc' && path[3] === 'callback') {
+      explicit = decodeURIComponent(path[4]!);
+      if (!isValidTenantId(explicit)) throw new TenantResolutionError();
     }
     return resolveTenant({
+      explicit,
       header: req.headers.get('X-Tenant'),
-      host,
+      query: req.headers.get('Upgrade')?.toLowerCase() === 'websocket' ? url.searchParams.getAll('tenant') : [],
+      host: url.hostname,
       hostMap: cfg.hosts,
       provisioned: cfg.provisioned,
     });
-  } catch (err) {
-    // Belt and braces. This runs before every request; the worst acceptable
-    // outcome is "you got the default brand", never "the worker is down".
-    console.warn('[tenancy] resolution failed, serving the default brand', err);
-    return DEFAULT_TENANT;
-  }
+  } catch { throw new TenantResolutionError(); }
 }
 
 /** Sets `c.get('tenant')` for every downstream handler. */
 export const tenantMiddleware = () =>
   createMiddleware<{ Bindings: Env; Variables: { tenant: TenantId } }>(async (c, next) => {
-    c.set('tenant', tenantForRequest(c.env, c.req.raw));
+    try { c.set('tenant', tenantForRequest(c.env, c.req.raw)); }
+    catch (error) {
+      c.header('Cache-Control', 'no-store');
+      return error instanceof TenantResolutionError
+        ? c.json({ ok: false, error: 'Tenant unavailable' }, 403)
+        : c.json({ ok: false, error: 'Tenant configuration unavailable' }, 503);
+    }
     await next();
   });

@@ -17,15 +17,23 @@
 // (`new RealtimeSegmentEngine(env)`) keep working while the spec's two-arg form
 // (`new RealtimeSegmentEngine(env, getConnectors(env))`) is also supported.
 
-import { actionOf, contentTouches, isContentAction } from '@/reflex/contentTelemetry';
+import { actionOf, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
+import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import { shopperObjectName } from '@/tenancy/objects';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
-import { visitBucket, type ChannelSignals } from '@/services/visit';
+import type { ReflexConfig } from '@/reflex/core';
+import { projectVisit, validEntry, visitBucket, type ChannelSignals } from '@/services/visit';
 import type { Env } from '@/types/env';
+import { assertOwnerScope, ownerRelay, retainOwnerWork, sessionAuthorityKV, currentOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
+import { externalRetentionBirths, retentionBirth } from '@/retention';
+import { pinProfileRetention } from '@/identity/sessionAuthority';
+import { assertSessionTarget, SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';
 import { SessionManager, type SessionData } from './SessionManager';
+import { enrichmentInputs } from '@/identity/profileEnrichment';
+import { consentOf, consentFromCookies, intersectConsent, refusalHints, personalizes, withConsent, type Consent } from '@/content/consent';
 import { FeatureVariableManager, type FeatureVariableResult } from './FeatureVariableManager';
-import { CatalogService, priceBandOf, type Product } from './CatalogService';
+import { priceBandOf, type CatalogService, type Product } from './CatalogService';
 import { deriveStage } from './JourneyStage';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
 import {
@@ -43,6 +51,7 @@ import {
   extractTouches,
   touchesForEvent,
   snapshot as reflexSnapshot,
+  tick as tickReflex,
   type ReflexResult,
 } from '@/reflex/core';
 import {
@@ -50,14 +59,16 @@ import {
   generateAffinityAudiences,
   regenerateCatalogAudiences,
 } from '@/reflex/audienceGenerator';
-import { odpEnabled, refreshOdpSeedIfDue, updateOdpRing } from '@/services/odpLoop';
+import { projectOdpState, projectedOdpSegments, odpEnabled, refreshOdpSeedIfDue, updateOdpRing } from '@/services/odpLoop';
 import {
   DEFAULT_SURFACE,
   audgenMarkerFor,
   audienceKeyPrefixFor,
-  catalogServiceFor,
+  tenantAudienceKeyPrefix,
+  resolveTenantCatalog,
   reflexConfigFor,
   resolveReflexConfig,
+  resolveTenantReflexConfig,
   resolveSurface,
   type DemoSurface,
 } from '@/demos/registry';
@@ -84,6 +95,9 @@ export interface ActionEvent {
   anonymousId?: string;
   data: Record<string, any>;
   timestamp: number;
+  eventId?: string;
+  processing?: 'buffered';
+  browsingSessionId?: string | null;
   source: string;
   /** Demo surface this event belongs to. Absent ⇒ resolved from `source`, and
       absent there too ⇒ the default surface (coach). See @/demos/registry. */
@@ -92,7 +106,7 @@ export interface ActionEvent {
    * How the shopper arrived: utm tags and referrer, captured once per page load
    * by the client. Only consulted when an event opens a NEW visit, because entry
    * is a property of the visit rather than of every event inside it. Absent on
-   * every pre-existing client, which resolves to `direct`.
+   * every pre-existing client; omitted entry remains unknown.
    */
   entry?: ChannelSignals;
   /** Coarse request geolocation, set by the route from request.cf. Population aggregates only (CW6). */
@@ -100,6 +114,8 @@ export interface ActionEvent {
 }
 
 export interface UserProfile {
+  externalRetention?: SessionData['externalRetention'];
+  retention?: SessionData['retention'];
   userId: string;
   anonymousId?: string;
   segments: string[];
@@ -173,7 +189,7 @@ export const RETAIL_SIGNAL_DEFAULTS: Record<string, number> = {
 export function applyEventToAttributes(
   attributes: Record<string, any>,
   event: ActionEvent,
-  catalog: CatalogService
+  catalog: CatalogService | null
 ): void {
   const data = event.data ?? {};
   // The retail action: explicit data.action wins, else the event type.
@@ -186,7 +202,7 @@ export function applyEventToAttributes(
 
   // Resolve a product (if referenced) so we can enrich line / price band from the catalog.
   const productId: string | undefined = data.productId ?? data.product_id ?? data.sku;
-  const product = productId ? catalog.getProduct(productId) : undefined;
+  const product = productId ? catalog?.getProduct(productId) : undefined;
   const line: string | undefined =
     product?.line ?? (typeof data.line === 'string' ? data.line : undefined);
   const priceUsd: number | undefined =
@@ -303,6 +319,9 @@ export async function ensureAudiencesSeeded(
   surface: DemoSurface = DEFAULT_SURFACE,
   tenant: TenantId = DEFAULT_TENANT
 ): Promise<void> {
+  // Demo catalogs cannot define another tenant's audiences. Customer-owned
+  // generation remains separate; do not even read its store or demo config here.
+  if (tenant !== DEFAULT_TENANT || env.DEPLOYMENT_PROFILE !== 'demo') return;
   const store = new KvAudienceStore(env, tenant);
   if (surface === DEFAULT_SURFACE) await store.seed(SEED_AUDIENCES);
   const generated = generateAffinityAudiences(
@@ -334,10 +353,10 @@ export class RealtimeSegmentEngine {
   private keepAlive?: (p: Promise<unknown>) => void;
 
   private env: Env;
+  private principal?: SessionCapability;
   private connectors: Connectors;
   private sessionManager: SessionManager;
   private featureVariableManager: FeatureVariableManager;
-  private catalogService: CatalogService;
   /** Audiences are seeded once per engine instance PER SURFACE (idempotent on the
       store regardless). */
   private seeded = new Set<DemoSurface>();
@@ -345,37 +364,41 @@ export class RealtimeSegmentEngine {
   constructor(
     env: Env,
     connectors?: Connectors,
-    options?: { domain?: string; secure?: boolean; tenant?: TenantId }
+    options?: { domain?: string; secure?: boolean; tenant?: TenantId; principal?: SessionCapability }
   ) {
     this.env = env;
+    this.principal = options?.principal;
+    if (this.principal) assertOwnerScope(env, this.principal);
     // The brand this engine decides for. Flows straight through to SessionManager
     // via `options`; the audience store and the socket name need it explicitly.
     this.tenant = options?.tenant ?? DEFAULT_TENANT;
-    // Default to getConnectors(env) so existing single-arg route calls keep working
-    // while the spec's two-arg `new RealtimeSegmentEngine(env, getConnectors(env))` is honored.
-    this.connectors = connectors ?? getConnectors(env);
+    // Default connectors share this engine's tenant; custom connectors remain
+    // explicitly owned by the caller supplying them.
+    this.connectors = connectors ?? getConnectors(env, this.tenant);
     this.sessionManager = new SessionManager(env, options);
     this.featureVariableManager = new FeatureVariableManager(env, this.tenant);
     // The two raw stores this class still touched directly, now scoped like
     // everything that goes through SessionManager and the audience store.
     this.cache = new TenantKV(env.CACHE as unknown as KVLike, this.tenant);
-    this.sessions = new TenantKV(env.SESSIONS as unknown as KVLike, this.tenant);
-    this.catalogService = new CatalogService();
+    this.sessions = new TenantKV(sessionAuthorityKV(env, this.principal), this.tenant);
   }
 
   /**
-   * Idempotently load the Coach launch audiences into the shared AudienceStore.
-   * Called at the start of any operation that qualifies segments, so ODP (mock or
-   * live) always has the seed audiences plus any Opal-created ones to evaluate.
-   * Delegates to the exported ensureAudiencesSeeded (shared with the P2 DO).
+   * Idempotently load demo audiences for the default tenant before qualification.
+   * Other tenants retain only their own published records. Delegates to the
+   * exported ensureAudiencesSeeded (shared with the P2 DO).
    */
   private async ensureSeeded(surface: DemoSurface = DEFAULT_SURFACE): Promise<void> {
+    if (this.tenant !== DEFAULT_TENANT || this.env.DEPLOYMENT_PROFILE !== 'demo') return;
     if (this.seeded.has(surface)) return;
     try {
-      await ensureAudiencesSeeded(this.env, await this.catalogFor(surface), surface);
+      const catalog = await this.catalogFor(surface);
+      if (!catalog) return;
+      await ensureAudiencesSeeded(this.env, catalog, surface, this.tenant);
       this.seeded.add(surface);
     } catch (error) {
-      console.error('Error seeding audiences:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error seeding audiences');
     }
   }
 
@@ -387,53 +410,70 @@ export class RealtimeSegmentEngine {
     });
   }
 
-  /**
-   * The catalog this surface scores against. The default surface keeps the
-   * instance built in the constructor — same object, same graph, same order — so
-   * nothing about the retail path moves; other surfaces resolve a memoized
-   * per-surface CatalogService from the registry.
-   */
-  private async catalogFor(surface: DemoSurface): Promise<CatalogService> {
-    return surface === DEFAULT_SURFACE ? this.catalogService : catalogServiceFor(surface);
+  /** Customers have no bundled product catalog; default demos share one per isolate. */
+  private async catalogFor(surface: DemoSurface): Promise<CatalogService | null> {
+    return resolveTenantCatalog(this.tenant, surface);
   }
 
   async processActionEvent(event: ActionEvent, sessionId?: string): Promise<PersonalizationUpdate | null> {
+    return (await this.processAction(event, sessionId)).update;
+  }
+
+  private async processAction(event: ActionEvent, sessionId?: string, cookieHeader?: string | null): Promise<{
+    update: PersonalizationUpdate | null; sessionId: string; sessionData: SessionData; consent: Consent; interestApplied?: boolean; dropped?: string;
+  }> {
+    if (!validEntry(event.entry)) throw new SessionAccessError();
+    if (this.principal) {
+      assertSessionTarget(this.principal, event.userId, sessionId);
+      sessionId = this.principal.sessionId;
+    }
+    if (event.processing === 'buffered') return this.processBufferedAction(event, cookieHeader);
     try {
-      // 0. Resolve the demo surface this event belongs to, then seed THAT surface's
-      // audiences idempotently (cold sessions qualify on first event). Everything
-      // below reads the surface's catalog + reflex config; 'coach' resolves to the
-      // exact objects this method used before the multi-surface split.
+      const currentSessionId = sessionId || this.sessionManager.generateSessionId();
+      const stored = this.principal
+        ? await this.sessionManager.readRaw(currentSessionId, true)
+        : await this.sessionManager.getSession(currentSessionId);
+      const consent = intersectConsent(await currentOwnerConsent() ?? consentOf(stored), consentFromCookies(cookieHeader), refusalHints(event.data?.consent));
+      const now = Date.now();
+      // Cold owned actions cannot import a cookie/profile mirror. Resolve before
+      // any behavioral creation; the one necessary refusal record is separate.
+      const profile = !stored && !this.principal ? await this.getUserProfile(event.userId) : null;
+      let sessionData: SessionData = stored ?? {
+        userId: event.userId, anonymousId: event.anonymousId,
+        segments: profile?.segments ?? ['new_user'], attributes: profile?.attributes ?? {},
+        metadata: { firstSeen: profile?.metadata.firstSeen ?? now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },
+        preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization, cookieConsent: true },
+      };
+      if (!consent.tracking || !consent.personalization) {
+        if (this.principal) await this.sessionManager.restrictConsent(currentSessionId, consent, { sessionId: currentSessionId, data: stored });
+        else if (!stored || consent.tracking !== stored.preferences.trackingConsent || consent.personalization !== stored.preferences.personalizationEnabled) {
+          await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, { preferences: { ...sessionData.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization } });
+        }
+        sessionData = { ...sessionData, preferences: { ...sessionData.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization } };
+      }
+      const answer = (update: PersonalizationUpdate | null) => ({ update, sessionId: currentSessionId, sessionData, consent });
+      if (!consent.tracking) return answer(null);
+      requireConsentPurpose(consent, 'tracking');
+      if (personalizes(consent)) requireConsentPurpose(consent, 'personalization');
+      if (!stored) {
+        const born = Date.now();
+        sessionData.retention = retentionBirth(this.env, this.tenant, 'profile', born, born);
+        sessionData.externalRetention = externalRetentionBirths(this.env, this.tenant, born, born);
+      }
+      pinProfileRetention(this.env, sessionData, this.tenant);
+      // Reuse this request's validated owned snapshot, including a newly stored
+      // refusal. This is not transactional authority across concurrent requests.
+      const ownedSnapshot = this.principal ? { sessionId: currentSessionId, data: stored ? sessionData : null } : undefined;
+      // Demo hints select a catalog only inside the default tenant. Customer
+      // event attributes remain governed by the tenant's authored Reflex config.
       const surface = this.surfaceOf(event);
       const catalogService = await this.catalogFor(surface);
-      const reflexConfig = await resolveReflexConfig(this.env, surface);
-      const audiencePrefix = audienceKeyPrefixFor(surface);
+      const reflexConfig = await resolveTenantReflexConfig(this.env, this.tenant, surface);
+      const audiencePrefix = tenantAudienceKeyPrefix(this.tenant, surface);
+      const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
+      const contentEventTouches = reflexOn && isContentAction(actionOf(event))
+        ? await resolvedContentTouches(this.env, this.tenant, event.data ?? {}, reflexConfig) : null;
       await this.ensureSeeded(surface);
-
-      // 1. Get or create session
-      const currentSessionId = sessionId || this.sessionManager.generateSessionId();
-      let sessionData = await this.sessionManager.getSession(currentSessionId);
-
-      // If no session exists, get user profile data from legacy method
-      if (!sessionData) {
-        const userProfile = await this.getUserProfile(event.userId);
-        sessionData = await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
-          anonymousId: event.anonymousId,
-          segments: userProfile.segments,
-          attributes: userProfile.attributes,
-          metadata: {
-            firstSeen: userProfile.metadata.firstSeen,
-            lastSeen: Date.now(),
-            sessionCount: userProfile.metadata.sessionCount,
-            engagementScore: calculateEngagementScore(userProfile.attributes),
-            lastSegmentUpdate: userProfile.lastUpdated
-          },
-          preferences: {
-            trackingConsent: true,
-            personalizationEnabled: true,
-            cookieConsent: true
-          }
-        }, event.entry);
-      }
 
       // 2. Apply this event's retail signals to a fresh attribute snapshot.
       const newAttributes = { ...sessionData.attributes };
@@ -444,62 +484,78 @@ export class RealtimeSegmentEngine {
       // pure core. State rides the session in P0 (relocates into the DO in P2).
       // The ENGINE clock is authoritative — client timestamps are advisory only.
       const nowMs = Date.now();
-      const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
       let reflex: ReflexResult | null = null;
       if (reflexOn) {
         const data = event.data ?? {};
         const pid = data.productId ?? data.product_id ?? data.sku;
-        const product = pid ? catalogService.getProduct(String(pid)) : undefined;
+        const product = pid ? catalogService?.getProduct(String(pid)) : undefined;
         const action = actionOf(event);
+        // Reuse precisely the personal scorer's touches for population counts.
+        const touches = contentEventTouches ?? touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig);
         reflex = applyReflex(
           sessionData.reflex,
           {
             action,
             // A held product's attributes, or, where the scope allows it, the
             // event's own (CW24): a customer's site scores against their catalog.
-            touches: isContentAction(action)
-              ? contentTouches(data as Record<string, unknown>, reflexConfig)
-              : touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig),
+            touches,
           },
           nowMs,
           reflexConfig
         );
         // CW6: the same touches, fanned into the shopper's region as a population count.
-        (this.keepAlive ?? ((p: Promise<unknown>) => { void p; }))(fanInRegionTrend(this.env, {
-          tenant: surface, geo: event.geo, now: nowMs,
-          touches: touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig),
-          w: reflexConfig.weights[action] ?? 0,
-        }));
+        // Unsigned legacy traffic and the default tenant's BrightHour demo have
+        // no tenant population reader. A real BrightHour tenant owns its counts.
+        if (this.principal && !(this.principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
+          (this.keepAlive ?? (this.principal ? retainOwnerWork : (p: Promise<unknown>) => { void p; }))(fanInRegionTrend(this.env, {
+            tenant: this.principal.tenant, geo: event.geo, now: nowMs, touches,
+            w: reflexConfig.weights[action] ?? 0,
+          }));
+        }
       }
 
+      if (!personalizes(consent)) {
+        sessionData = await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
+          ...sessionData, attributes: newAttributes, surface,
+          reflex: reflex ? reflex.state : sessionData.reflex,
+          metadata: { ...sessionData.metadata, engagementScore: newEngagementScore },
+        }, event.entry, undefined, ownedSnapshot);
+        return answer(null);
+      }
+
+      // Reject obsolete provider contributions before journey/local qualification.
+      const odp = await projectOdpState(this.env, this.tenant, sessionData);
       // 3. Qualify segments through the ODP seam against the live context.
       const ctx = this.buildQualificationContext(
         event.userId,
         event.anonymousId ?? sessionData.anonymousId,
         newAttributes,
-        sessionData.segments
+        sessionData.profileEnrichment === undefined ? projectedOdpSegments(sessionData.segments, sessionData, odp) : []
       );
-      ctx.surface = surface; // qualification evaluates only THIS surface's audiences
+      // Demo surface filtering separates the two demos inside the default store.
+      // Other tenants qualify their own authored audiences regardless of demo hints.
+      if (this.tenant === DEFAULT_TENANT) ctx.surface = surface;
       const journeyStage = deriveStage(ctx);
       ctx.attributes.journey_stage = journeyStage; // stage is itself an audience attribute
       // Reflex scores are computed FRESH into the context (never persisted — they
       // decay by construction), so store-published affinity audiences can gte them.
       if (reflex) Object.assign(ctx.attributes, reflexAttributes(reflex.state, nowMs, reflexConfig));
+      const external = enrichmentInputs(sessionData.profileEnrichment);
+      Object.assign(ctx.attributes, external.attributes);
       const localSegments = await this.connectors.segments.fetchQualifiedSegments(event.userId, ctx);
       // ODP loop (doc 16 §8): seed/refresh the session's LIVE ODP-qualified audiences.
       // Additive + hard-capped (1.5s in fetchOdpAudiences) — ODP can only ever ADD;
       // slow or down degrades to exactly the pre-ODP behavior.
-      let odpSeed = sessionData.odpSeed ?? [];
-      let odpSeedAt = sessionData.odpSeedAt ?? 0;
-      let odpRing = Array.isArray(sessionData.odpRecentEvents) ? sessionData.odpRecentEvents.slice() : [];
-      if (odpEnabled(this.env)) {
+      let { odpSeed, odpSeedAt, odpRecentEvents: odpRing } = odp;
+      if (odpEnabled(this.env, this.tenant)) {
         // Ring maintenance + seed read policy live in odpLoop (updateOdpRing /
         // refreshOdpSeedIfDue) — shared verbatim with the ShopperReflex DO (P2)
         // so the two hosts can never drift.
-        odpRing = updateOdpRing(odpRing, event, nowMs);
+        odpRing = updateOdpRing(odpRing, event, nowMs, this.tenant, this.env);
         const membershipChanged = !!reflex && (reflex.changes.entered.length > 0 || reflex.changes.exited.length > 0);
         ({ seed: odpSeed, seedAt: odpSeedAt } = await refreshOdpSeedIfDue(
           this.env,
+          this.tenant,
           // event.userId is the stable first-party visitor id the client mints
           // and persists; the session id is only the fallback for a client that
           // does not send one.
@@ -524,6 +580,7 @@ export class RealtimeSegmentEngine {
         ...localSegments,
         ...reflexAudiences,
         ...odpSeed,
+        ...external.audiences,
       ]));
 
       // 4. Detect what actually changed (segments OR journey stage) — either is a trigger.
@@ -532,11 +589,12 @@ export class RealtimeSegmentEngine {
 
       if (!segmentsChanged && !stageChanged) {
         // No personalization change — persist the accrued attributes/activity and stop.
-        await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
+        sessionData = await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
           ...sessionData,
           attributes: newAttributes,
           surface,
           reflex: reflex ? reflex.state : sessionData.reflex,
+          odpContext: odp.odpContext,
           odpSeed,
           odpSeedAt,
           odpRecentEvents: odpRing,
@@ -546,16 +604,17 @@ export class RealtimeSegmentEngine {
             engagementScore: newEngagementScore,
             journeyStage
           }
-        }, event.entry);
-        return null;
+        }, event.entry, undefined, ownedSnapshot);
+        return answer(null);
       }
 
       // 5. Persist new attributes, segments, engagement score, and journey stage.
-      await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
+      sessionData = await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
         ...sessionData,
         attributes: newAttributes,
         surface,
         reflex: reflex ? reflex.state : sessionData.reflex,
+        odpContext: odp.odpContext,
         odpSeed,
         odpSeedAt,
         odpRecentEvents: odpRing,
@@ -567,15 +626,10 @@ export class RealtimeSegmentEngine {
           lastSegmentUpdate: Date.now(),
           journeyStage
         }
-      }, event.entry);
-
-      const updatedSessionData = await this.sessionManager.getSession(currentSessionId);
-      if (!updatedSessionData) {
-        throw new Error('Failed to update session data');
-      }
+      }, event.entry, undefined, ownedSnapshot);
 
       // 6. Decide the storefront modules through the Optimizely FX seam.
-      const personalizationConfig = await this.getPersonalizationConfig(updatedSessionData, currentSessionId);
+      const personalizationConfig = await this.getPersonalizationConfig(sessionData, currentSessionId, reflexConfig);
 
       // 7. Create the personalization update with retail payloads.
       const update: PersonalizationUpdate = {
@@ -605,19 +659,32 @@ export class RealtimeSegmentEngine {
       // 8. Broadcast update via WebSocket
       await this.broadcastUpdate(update);
 
-      return update;
+      return answer(update);
 
     } catch (error) {
-      console.error('Error processing action event:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error processing action event');
       throw error;
     }
   }
 
   async getUserProfile(userId: string): Promise<UserProfile> {
+    if (this.principal) {
+      assertSessionTarget(this.principal, userId);
+      const data = await this.sessionManager.getSession(this.principal.sessionId);
+      if (data) pinProfileRetention(this.env, data, this.tenant);
+      return {
+        retention: data?.retention,
+        externalRetention: data?.externalRetention,
+        userId, segments: data ? await this.enrichedSegments(data) : [], attributes: data?.attributes ?? {}, events: [], lastUpdated: data?.metadata.lastSegmentUpdate ?? Date.now(),
+        metadata: { firstSeen: data?.metadata.firstSeen ?? Date.now(), lastSeen: data?.metadata.lastSeen ?? Date.now(), sessionCount: data?.metadata.sessionCount ?? 0, emailOpens: 0, formSubmissions: 0, pageViews: 0 },
+      };
+    }
     const cacheKey = `profile:${userId}`;
     const cached = await this.cache.get(cacheKey, 'json') as UserProfile;
 
     if (cached) {
+      pinProfileRetention(this.env, cached, this.tenant);
       return cached;
     }
 
@@ -640,9 +707,16 @@ export class RealtimeSegmentEngine {
   }
 
   async saveUserProfile(profile: UserProfile): Promise<void> {
+    const retention = pinProfileRetention(this.env, profile, this.tenant);
+    if (this.principal) {
+      assertSessionTarget(this.principal, profile.userId);
+      await this.sessionManager.getSession(this.principal.sessionId);
+    }
     const cacheKey = `profile:${profile.userId}`;
     await this.cache.put(cacheKey, JSON.stringify(profile), {
-      expirationTtl: 7 * 24 * 60 * 60 // 7 days
+      // This derived copy includes external contributions and original policy
+      // metadata; it cannot outlive any of those source dependencies.
+      expiration: Math.floor(Math.min(retention.expiresAt, ...Object.values(profile.externalRetention ?? {}).map(stamp => stamp!.expiresAt), Date.now() + 7 * 24 * 60 * 60 * 1000) / 1000)
     });
   }
 
@@ -669,23 +743,33 @@ export class RealtimeSegmentEngine {
   // lifted verbatim to exported module functions (applyEventToAttributes, …) so
   // the ShopperReflex DO runs the identical pipeline — see the P2 seam block above.
 
-  private async getPersonalizationConfig(sessionData: SessionData, sessionId: string): Promise<PersonalizationConfig> {
+  private async getPersonalizationConfig(sessionData: SessionData, sessionId: string, selectedConfig?: ReflexConfig): Promise<PersonalizationConfig> {
+    if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
+    if (this.principal && !personalizes(consentOf(sessionData))) return {
+      decisions: {}, featureFlags: {}, experiments: {}, featureVariables: {}, enhancedFeatureVariables: {},
+      cookieUpdates: {}, cookieHeaders: [], segments: [], recommendations: [], sortOrder: [], journeyStage: 'early', sessionData,
+    };
+    if (this.principal) requireConsentPurpose(consentOf(sessionData), 'personalization');
     // The session remembers which demo it belongs to (absent ⇒ coach), so the
     // config path resolves the same catalog/config the event path scored with.
     const surface = resolveSurface({ surface: sessionData.surface });
+    const cfg = selectedConfig ?? await resolveTenantReflexConfig(this.env, this.tenant, surface);
     const catalogService = await this.catalogFor(surface);
+    if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
     const attributes = { ...RETAIL_SIGNAL_DEFAULTS, ...sessionData.attributes };
     // Live affinity reads for the decision layer (doc 16 §10 choreography):
     // computed FRESH from the reflex state — they decay by construction, so they
     // are never persisted; the decision sees the score as of THIS moment.
     if ((this.env.REFLEX_ENABLED ?? 'true') !== 'false' && sessionData.reflex) {
+      if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
       Object.assign(
         attributes,
-        reflexAttributes(sessionData.reflex, Date.now(), await resolveReflexConfig(this.env, surface))
+        reflexAttributes(sessionData.reflex, Date.now(), cfg)
       );
     }
 
-    const visitNumber = sessionData.metadata.visitCount ?? 1;
+    const visit = projectVisit(sessionData.metadata, sessionData.metadata.lastSeen, Date.now());
+    const visitNumber = visit.visitNumber;
     const userAttributes = {
       segments: sessionData.segments,
       ...attributes,
@@ -698,8 +782,8 @@ export class RealtimeSegmentEngine {
       // ladder. visit_bucket is the cut the learning statistics pool on; the raw
       // number rides along for anything that wants finer grain.
       visit_number: visitNumber,
-      visit_bucket: visitBucket(visitNumber),
-      entry_channel: sessionData.metadata.entryChannel ?? 'direct',
+      visit_bucket: visitNumber === null ? 'unknown' : visitBucket(visitNumber),
+      entry_channel: visit.entryChannel ?? 'unknown',
       journey_stage: sessionData.metadata.journeyStage,
       days_since_first_seen: Math.floor((Date.now() - sessionData.metadata.firstSeen) / (24 * 60 * 60 * 1000)),
       tracking_consent: sessionData.preferences.trackingConsent,
@@ -709,12 +793,14 @@ export class RealtimeSegmentEngine {
     const journeyStage: 'early' | 'mid' | 'late' = sessionData.metadata.journeyStage ?? 'early';
 
     // Decide the full storefront module set through the Optimizely FX seam.
+    if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
     const decisions = await this.connectors.decisions.decideAll(
       CATALOG_FLAG_KEYS,
       sessionData.userId,
       sessionData.segments,
       userAttributes
     );
+    if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
 
     // Flat views derived from decisions (back-compat with the existing route response shape).
     const featureVariables: Record<string, any> = {};
@@ -731,20 +817,22 @@ export class RealtimeSegmentEngine {
       typeof sessionData.attributes.viewed_product_line === 'string'
         ? sessionData.attributes.viewed_product_line
         : undefined;
-    const recommendations = catalogService.getRecommendations(
+    const recommendations = catalogService?.getRecommendations(
       { line: anchorLine },
       sessionData.segments,
       8
-    );
+    ) ?? [];
     const sortOrder = catalogService
-      .sortForSegments(null, sessionData.segments, sessionData.attributes)
+      ?.sortForSegments(null, sessionData.segments, sessionData.attributes)
       .slice(0, 24)
-      .map((p) => p.id);
+      .map((p) => p.id) ?? [];
 
     // Enhanced feature variables (unchanged — driven by FeatureVariableManager).
+    if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
     const enhancedFeatureVariables = await this.featureVariableManager.getSessionFeatureVariables(sessionData);
 
     // Legacy cookie updates for backward compatibility.
+    if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
     const cookieUpdates = this.generateCookieUpdates(sessionData.segments, attributes, journeyStage);
 
     // Enhanced secure cookies via SessionManager.
@@ -783,6 +871,8 @@ export class RealtimeSegmentEngine {
   }
 
   private async broadcastUpdate(update: PersonalizationUpdate): Promise<void> {
+    if (this.principal) assertSessionTarget(this.principal, update.userId);
+    if (this.principal) { await ownerRelay(this.env, 'broadcast', this.tenant, update.userId, update); return; }
     try {
       const id = this.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(this.tenant, update.userId));
       const websocketObject = this.env.PERSONALIZATION_WEBSOCKET.get(id);
@@ -793,16 +883,26 @@ export class RealtimeSegmentEngine {
         headers: { 'Content-Type': 'application/json' }
       }));
     } catch (error) {
-      console.error('Error broadcasting update:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error broadcasting update');
     }
   }
 
   // Get user segments for external API calls
-  async getUserSegments(userId: string): Promise<string[]> {
+  async getUserSegments(userId: string, cookieHeader?: string | null): Promise<string[]> {
     // Prefer the live session context if one exists, so segments reflect accrued signals.
-    const sessionData = await this.sessionManager.getSessionByUserId(userId);
+    if (this.principal) assertSessionTarget(this.principal, userId);
+    const owned = this.principal ? await this.sessionManager.readOwnedConsent(this.principal.sessionId, cookieHeader) : undefined;
+    if (owned && !personalizes(owned.consent)) return [];
+    if (owned) requireConsentPurpose(owned.consent, 'personalization');
+    const sessionData = owned ? owned.data : await this.sessionManager.getSessionByUserId(userId);
+    if (sessionData && (sessionData.profileEnrichment !== undefined || sessionData.odpSeed !== undefined)) {
+      if (!personalizes(consentOf(sessionData))) return [];
+      return this.enrichedSegments(sessionData);
+    }
     const surface = resolveSurface({ surface: sessionData?.surface });
     await this.ensureSeeded(surface);
+    if (this.principal) assertSessionTarget(this.principal, userId);
 
     const attributes = sessionData?.attributes ?? {};
     const segments = sessionData?.segments ?? [];
@@ -812,16 +912,87 @@ export class RealtimeSegmentEngine {
       attributes,
       segments
     );
-    ctx.surface = surface;
+    if (this.tenant === DEFAULT_TENANT) ctx.surface = surface;
     ctx.attributes.journey_stage = deriveStage(ctx);
     return this.connectors.segments.fetchQualifiedSegments(userId, ctx);
   }
 
+  private async processBufferedAction(event: ActionEvent, cookieHeader?: string | null) {
+    const now = Date.now();
+    if (!validBufferedAction(event, now)) throw new Error('Invalid buffered action');
+    if (!this.principal) throw new SessionAccessError();
+    assertSessionTarget(this.principal, event.userId);
+    const previous = await this.sessionManager.readBufferedSession();
+    const consent = intersectConsent(consentOf(previous), consentFromCookies(cookieHeader), refusalHints(event.data?.consent));
+    const preferences = { ...previous.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization };
+    const restricted = preferences.trackingConsent !== previous.preferences.trackingConsent
+      || preferences.personalizationEnabled !== previous.preferences.personalizationEnabled;
+    const answer = (sessionData: SessionData, interestApplied = false, dropped?: string) => ({ update: null,
+      sessionId: this.principal!.sessionId, sessionData, consent, interestApplied, ...(dropped ? { dropped } : {}) });
+    if (restricted) await this.sessionManager.restrictConsent(this.principal.sessionId, consent, { sessionId: this.principal.sessionId, data: previous });
+    const current = { ...previous, preferences };
+    if (!consent.tracking) return answer(current, false, 'tracking_refused');
+    requireConsentPurpose(consent, 'tracking');
+    if (!await bufferedEventAllowed(this.env, this.tenant, event.userId, event.timestamp)) return answer(current, false, 'erased');
+    if (!consent.personalization) return answer(current);
+    requireConsentPurpose(consent, 'personalization');
+    const interest = await bufferedInterest(this.env, this.tenant, event,
+      { ...current, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...current.attributes } }, this.connectors.segments, now);
+    if (!interest.applied) return answer(current);
+    await this.sessionManager.writeBufferedSession(current, { preferences, reflex: interest.reflex, segments: interest.segments });
+    return answer({ ...current, reflex: interest.reflex, segments: interest.segments }, true);
+  }
+
+  /** Read-time qualification avoids stale derived membership after replacement. */
+  private async enrichedSegments(data: SessionData, selectedConfig?: ReflexConfig): Promise<string[]> {
+    if (!personalizes(consentOf(data))) return [];
+    requireConsentPurpose(consentOf(data), 'personalization');
+    const external = enrichmentInputs(data.profileEnrichment);
+    const surface = resolveSurface({ surface: data.surface });
+    const cfg = selectedConfig ?? await resolveTenantReflexConfig(this.env, this.tenant, surface);
+    const now = Date.now();
+    const currentReflex = (this.env.REFLEX_ENABLED ?? 'true') !== 'false' && data.reflex ? tickReflex(data.reflex, now, cfg).state : undefined;
+    const ctx = this.buildQualificationContext(data.userId, data.anonymousId, data.attributes, []);
+    if (this.tenant === DEFAULT_TENANT) ctx.surface = surface;
+    ctx.attributes.journey_stage = deriveStage(ctx);
+    if (currentReflex) Object.assign(ctx.attributes, reflexAttributes(currentReflex, now, cfg));
+    Object.assign(ctx.attributes, external.attributes);
+    const local = await this.connectors.segments.fetchQualifiedSegments(data.userId, ctx);
+    if (this.principal) assertSessionTarget(this.principal, data.userId);
+    const prefix = tenantAudienceKeyPrefix(this.tenant, surface);
+    const reflex = currentReflex?.audiences ?? [];
+    return [...new Set([...(data.profileEnrichment === undefined ? data.segments.filter(s => !data.odpSeed?.includes(s)) : []), ...local, ...reflex.map(key => prefix + key), ...(await projectOdpState(this.env, this.tenant, data)).odpSeed, ...external.audiences])].sort();
+  }
+
   // Manual segment assignment (operator/admin path) — adds a segment to the profile and broadcasts.
-  async assignSegment(userId: string, segment: string, source: string = 'manual'): Promise<void> {
+  async assignSegment(userId: string, segment: string, source: string = 'manual', cookieHeader?: string | null): Promise<boolean> {
+    if (this.principal) {
+      assertSessionTarget(this.principal, userId);
+      const owned = await this.sessionManager.readOwnedConsent(this.principal.sessionId, cookieHeader);
+      if (!personalizes(owned.consent)) return false;
+      requireConsentPurpose(owned.consent, 'personalization');
+    }
     const profile = await this.getUserProfile(userId);
 
     if (!profile.segments.includes(segment)) {
+      // A signed, explicitly authorized first manual assignment is a new
+      // producer. Existing session/cache profiles were validated above and
+      // cannot arrive here without their original lifetime.
+      if (!profile.retention && this.principal) {
+        // A cache-only record is not owner authority, including a stale copy
+        // from an earlier grant generation. Never overwrite/adopt it as fresh.
+        if (await this.cache.get(`profile:${userId}`) !== null) throw new SessionAccessError();
+        const born = Date.now();
+        profile.retention = retentionBirth(this.env, this.tenant, 'profile', born, born);
+        profile.externalRetention = externalRetentionBirths(this.env, this.tenant, born, born);
+        pinProfileRetention(this.env, profile, this.tenant);
+        // Commit the first manual producer under the same serialized owner.
+        // Later assignments derive CACHE from this original lifetime, not a
+        // new birth inferred from the absence of an ordinary live event.
+        await this.sessionManager.createOrUpdateSession(this.principal.sessionId, userId,
+          { retention: profile.retention, externalRetention: profile.externalRetention, segments: [segment] },
+          undefined, undefined, { sessionId: this.principal.sessionId, data: null }, false);
+      }
       profile.segments.push(segment);
       profile.lastUpdated = Date.now();
       await this.saveUserProfile(profile);
@@ -829,7 +1000,7 @@ export class RealtimeSegmentEngine {
       // Mirror onto the live session if present, so subsequent decisions see it.
       const sessionData = await this.sessionManager.getSessionByUserId(userId);
       if (sessionData) {
-        const merged = Array.from(new Set([...sessionData.segments, segment]));
+        const merged = Array.from(new Set([...await this.enrichedSegments(sessionData), segment]));
         await this.sessionManager.updateUserSegments(
           await this.sessionIdForUser(userId),
           merged,
@@ -850,10 +1021,15 @@ export class RealtimeSegmentEngine {
 
       await this.broadcastUpdate(update);
     }
+    return true;
   }
 
   /** Resolve the active sessionId for a user (used by manual segment assignment). */
   private async sessionIdForUser(userId: string): Promise<string> {
+    if (this.principal) {
+      assertSessionTarget(this.principal, userId);
+      return this.principal.sessionId;
+    }
     const sid = (await this.sessions.get(`user:${userId}`)) as string | null;
     return sid ?? this.sessionManager.generateSessionId();
   }
@@ -882,8 +1058,33 @@ export class RealtimeSegmentEngine {
     sessionId: string;
     sessionData: SessionData;
     isNewSession: boolean;
+    reflexConfig?: ReflexConfig;
   }> {
     const cookies = this.sessionManager.parseSessionCookies(cookieHeader);
+    if (this.principal) {
+      assertSessionTarget(this.principal, userId, clientSessionId);
+      const sessionId = this.principal.sessionId;
+      const { data: existing, consent } = await this.sessionManager.readOwnedConsent(sessionId, cookieHeader);
+      if (existing) return { sessionId, sessionData: existing, isNewSession: false };
+      if (!personalizes(consent)) {
+        // The necessary refusal was already persisted. No behavioral creation or pointer.
+        const now = Date.now();
+        return { sessionId, isNewSession: true, sessionData: { userId, segments: [], attributes: {},
+          metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },
+          preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization, cookieConsent: true } } };
+      }
+      // Fresh anonymous authority never restores a legacy profile or its mirrors.
+      // Explicit cookie refusals may only restrict; they cannot enable tracking.
+      const reflexConfig = this.tenant === DEFAULT_TENANT ? undefined : await resolveTenantReflexConfig(this.env, this.tenant);
+      const now = Date.now();
+      const sessionData: SessionData = { userId,
+        segments: ['new_user'], attributes: {},
+        metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },
+        preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization, cookieConsent: true },
+      };
+      assertSessionTarget(this.principal, userId, sessionId);
+      return { sessionId, sessionData: withConsent(sessionData, consent), isNewSession: true, reflexConfig };
+    }
     let sessionId = cookies.sessionId || (clientSessionId || '').trim();
     let sessionData: SessionData | null = null;
     let isNewSession = false;
@@ -923,6 +1124,8 @@ export class RealtimeSegmentEngine {
       // Get user profile for initial session creation
       const userProfile = await this.getUserProfile(userId);
       sessionData = await this.sessionManager.createOrUpdateSession(sessionId, userId, {
+        retention: userProfile.retention,
+        externalRetention: userProfile.externalRetention,
         anonymousId: cookies.anonymousId,
         segments: cookies.segments ? cookies.segments.split(',').filter(Boolean) : userProfile.segments,
         attributes: userProfile.attributes,
@@ -954,15 +1157,26 @@ export class RealtimeSegmentEngine {
   /**
    * Get personalization configuration for current session
    */
-  async getSessionPersonalizationConfig(sessionId: string): Promise<PersonalizationConfig | null> {
-    const sessionData = await this.sessionManager.getSession(sessionId);
+  async getSessionPersonalizationConfig(sessionId: string, resolvedSession?: SessionData, selectedConfig?: ReflexConfig): Promise<PersonalizationConfig | null> {
+    const sessionData = resolvedSession ?? (this.principal
+      ? (await this.sessionManager.readOwnedConsent(sessionId)).data : await this.sessionManager.getSession(sessionId));
     if (!sessionData) {
-      await this.ensureSeeded();
+      if (!this.principal) await this.ensureSeeded();
       return null;
     }
+    if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
+    if (this.principal && !personalizes(consentOf(sessionData))) return this.getPersonalizationConfig(sessionData, sessionId);
+    pinProfileRetention(this.env, sessionData, this.tenant);
     await this.ensureSeeded(resolveSurface({ surface: sessionData.surface }));
 
-    return this.getPersonalizationConfig(sessionData, sessionId);
+    const odp = await projectOdpState(this.env, this.tenant, sessionData);
+    const rejectedSeed = sessionData.odpSeed?.some(s => !odp.odpSeed.includes(s));
+    const current = sessionData.profileEnrichment === undefined && sessionData.odpSeed === undefined ? sessionData : {
+      ...sessionData, segments: await this.enrichedSegments(sessionData, selectedConfig),
+      metadata: rejectedSeed ? { ...sessionData.metadata, journeyStage: deriveStage(this.buildQualificationContext(
+        sessionData.userId, sessionData.anonymousId, sessionData.attributes, projectedOdpSegments(sessionData.segments, sessionData, odp))) } : sessionData.metadata,
+    };
+    return this.getPersonalizationConfig(withConsent(current, consentOf(sessionData)), sessionId, selectedConfig);
   }
 
   /**
@@ -970,9 +1184,10 @@ export class RealtimeSegmentEngine {
    */
   async updateSessionPreferences(
     sessionId: string,
-    preferences: Partial<SessionData['preferences']>
+    preferences: Partial<SessionData['preferences']>,
+    cookieHeader?: string | null,
   ): Promise<SessionData | null> {
-    return this.sessionManager.updateUserPreferences(sessionId, preferences);
+    return this.sessionManager.updateUserPreferences(sessionId, preferences, cookieHeader);
   }
 
   /**
@@ -998,26 +1213,25 @@ export class RealtimeSegmentEngine {
     update: PersonalizationUpdate | null;
     sessionId: string;
     cookieHeaders: string[];
+    consent: Consent;
+    interestApplied?: boolean;
+    dropped?: string;
   }> {
+    if (!validEntry(event.entry) || (event.processing === 'buffered' && !this.principal)) throw new SessionAccessError();
     this.keepAlive = ctx ? (p) => { try { ctx.waitUntil(p); } catch { /* no execution context */ } } : undefined;
-    const { sessionId } = await this.getOrCreateSessionFromCookies(
-      cookieHeader,
-      event.userId
-    );
-
-    const update = await this.processActionEvent(event, sessionId);
-
-    // Get updated session for cookies
-    const updatedSession = await this.sessionManager.getSession(sessionId);
-    const cookies = updatedSession ?
-      this.sessionManager.generateSessionCookies(updatedSession, sessionId) :
-      [];
-    const cookieHeaders = this.sessionManager.createCookieHeaders(cookies);
+    const sessionId = this.principal?.sessionId ?? (await this.getOrCreateSessionFromCookies(cookieHeader, event.userId)).sessionId;
+    const result = await this.processAction(event, sessionId, cookieHeader);
+    if (event.processing === 'buffered') return { update: null, sessionId, cookieHeaders: [], consent: result.consent,
+      interestApplied: result.interestApplied, ...(result.dropped ? { dropped: result.dropped } : {}) };
+    const cookieHeaders = personalizes(result.consent)
+      ? this.sessionManager.createCookieHeaders(this.sessionManager.generateSessionCookies(result.sessionData, sessionId))
+      : this.sessionManager.generateConsentCookieHeaders(result.sessionData.preferences, result.consent);
 
     return {
-      update,
+      update: result.update,
       sessionId,
-      cookieHeaders
+      cookieHeaders,
+      consent: result.consent,
     };
   }
 

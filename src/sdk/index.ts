@@ -24,6 +24,7 @@ export interface Client {
   /** Open the realtime channel. Optional: everything works over fetch and snapshot without it. */
   connect(): void;
   disconnect(): void;
+  destroy(): void;
   on<K extends keyof CoreEvents>(event: K, fn: CoreEvents[K]): () => void;
 }
 
@@ -38,6 +39,7 @@ export function createClient(config: ClientConfig, host: Host = browserHost(), o
     logout: () => identity.logout(),
     connect: () => core.connect(),
     disconnect: () => core.disconnect(),
+    destroy: () => { listen.destroy(); core.disconnect(); },
     on: (event, fn) => core.on(event, fn),
   };
 }

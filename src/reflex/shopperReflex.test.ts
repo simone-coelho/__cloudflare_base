@@ -26,6 +26,8 @@ import {
   type ReflexState,
 } from '@/reflex/core';
 import type { Env } from '@/types/env';
+import { shopperObjectName } from '@/tenancy/objects';
+import { issueSessionCapability } from '@/identity/sessionCapability';
 
 const CFG = DEFAULT_REFLEX_CONFIG; // τ=60s · K=1.8 · θ 0.6/0.45 · priceBand τ=150s
 const DAY = 24 * 60 * 60 * 1000;
@@ -52,6 +54,9 @@ class FakeStorage {
   }
   async delete(k: string): Promise<boolean> {
     return this.map.delete(k);
+  }
+  async list(): Promise<Map<string, unknown>> {
+    return structuredClone(this.map);
   }
   async deleteAll(): Promise<void> {
     this.map.clear();
@@ -111,7 +116,7 @@ interface Harness {
   env: Env;
 }
 
-function makeDO(envOverrides: Record<string, unknown> = {}, opts: { sharedEnv?: Env; sharedStorage?: FakeStorage; withSocket?: boolean } = {}): Harness {
+function makeDO(envOverrides: Record<string, unknown> = {}, opts: { sharedEnv?: Env; sharedStorage?: FakeStorage; withSocket?: boolean; subject?: string } = {}): Harness {
   const storage = opts.sharedStorage ?? new FakeStorage();
   const sockets: FakeSocket[] = [];
   if (opts.withSocket ?? true) {
@@ -120,6 +125,7 @@ function makeDO(envOverrides: Record<string, unknown> = {}, opts: { sharedEnv?: 
     sockets.push(ws);
   }
   const state = {
+    id: shopperObjectName('coach', opts.subject ?? 'vis-TEST'),
     storage,
     acceptWebSocket: (ws: unknown) => sockets.push(ws as FakeSocket),
     getWebSockets: () => sockets,
@@ -127,6 +133,8 @@ function makeDO(envOverrides: Record<string, unknown> = {}, opts: { sharedEnv?: 
   const env =
     opts.sharedEnv ??
     ({
+      DEPLOYMENT_PROFILE: 'demo',
+      SHOPPER_REFLEX: { idFromName: (name: string) => name },
       CACHE: new FakeKV(),
       SESSIONS: new FakeKV(),
       ENVIRONMENT: 'test',
@@ -147,11 +155,11 @@ function viewEvent(pid: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-async function post(shopper: ShopperReflex, event: unknown): Promise<{ status: number; body: any }> {
+async function post(shopper: ShopperReflex, event: unknown, capability?: string): Promise<{ status: number; body: any }> {
   const res = await shopper.fetch(
     new Request('https://do/ingest', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(capability ? { 'X-Shopper-Session': capability, 'X-Tenant': 'coach' } : {}) },
       body: JSON.stringify(event),
     })
   );
@@ -267,8 +275,20 @@ describe("the 'affinity' record — spec shape + serialization round-trip", () =
 
 describe('ingest — one reducer behind both doors', () => {
   it('three brisk views enter the affinity audiences and push the full envelope over the DO’s own socket', async () => {
-    const h = makeDO();
-    const r3 = await driveToMembership(h);
+    const signing = { JWT_SECRET: 'w0108-synthetic-demo-signing-material', JWT_ISSUER: 'w0108', JWT_AUDIENCE: 'w0108' };
+    const grant = await issueSessionCapability(signing as Env, { tenant: 'coach',
+      subject: 'vis-00000000-0000-4000-8000-000000000108', sessionId: 'w0108-demo-session', kind: 'anonymous' });
+    const h = makeDO(signing, { subject: grant.subject });
+    const { capability, ...principal } = grant;
+    h.sockets[0]!.serializeAttachment({ shopperId: grant.subject, principal });
+    // Current native pushes require the same durable grant as ingest. The
+    // first genuine signed request adopts it; no authority verdict is mocked.
+    const event = () => viewEvent(TABBY_ID, { userId: grant.subject, sessionId: grant.sessionId });
+    expect((await post(h.shopper, event(), capability)).status).toBe(200);
+    vi.setSystemTime(t0 + 5_000);
+    expect((await post(h.shopper, event(), capability)).status).toBe(200);
+    vi.setSystemTime(t0 + 10_000);
+    const r3 = await post(h.shopper, event(), capability);
 
     // Response envelope (what POST /realtime/action returns verbatim in DO mode).
     expect(r3.status).toBe(200);
@@ -277,7 +297,7 @@ describe('ingest — one reducer behind both doors', () => {
     expect(r3.body.cookiesUpdated).toBe(false);
     const update = r3.body.update;
     expect(update.type).toBe('personalization_update');
-    expect(update.userId).toBe('vis-TEST');
+    expect(update.userId).toBe(grant.subject);
 
     // Membership + explain records (the glass box) in the affinity payload.
     const aff = update.data.affinity;

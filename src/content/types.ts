@@ -4,7 +4,7 @@
 // as TypeScript. The seam with Phase 0 is DecisionRecord: CW4 emits it, CW19
 // persists it, and neither side changes it without a row in plan 21 first.
 
-import type { ContentPieceLike, ContentDecision, SlotCandidate } from '@/reflex/contentCompose';
+import type { ContentPieceLike, ContentDecision, SlotCandidate, PinDiagnostic } from '@/reflex/contentCompose';
 import type { ExternalKind, ExternalModelConfig } from '@/learn/external';
 import type { MerchandisingDriver, MerchandisingSignals, MerchandisingWeights } from '@/reflex/merchandising';
 
@@ -47,6 +47,16 @@ export interface SlotStrategy {
   take: number;
   weights: Record<string, number>;
   pinnedPieceId?: string;
+  /** Ordered required first positions; ranking fills the remainder of take. */
+  pinnedPieceIds?: string[];
+  /** Hard handoff to the site's own default on every arm; pin/settings stay dormant. */
+  offLimits?: boolean;
+  /** Exact internal catalog IDs forbidden only in this slot, before pins or ranking. */
+  excludedPieceIds?: string[];
+  /** Any exact dimension/value pair excludes the piece; no normalization or vocabulary. */
+  excludedTags?: Array<{ dimension: string; value: string }>;
+  /** Exact rendering kinds, not format-affinity tags. Absent means unrestricted. */
+  allowedTypes?: string[];
   /** Scope §1.5: the tunable multipliers for this placement. Absent or all zero means off. */
   merchandising?: MerchandisingWeights;
   /**
@@ -75,6 +85,8 @@ export interface StageRule { outOfStage?: number; inStage?: number }
 /** The `slots` document kind: per page, the slots in page order. */
 export interface SlotCatalog {
   version?: string;
+  /** Absent retained documents use legacy parsing, ignoring formerly unknown controls. */
+  governanceVersion?: 1 | 2 | 3;
   pages: Record<string, SlotStrategy[]>;
 }
 
@@ -125,8 +137,11 @@ export interface ItemControl { mode: 'reject' | 'freeze'; lift?: number }
 /** Doc 22 §6.2 and §13: the per-slot dials. γ defaults to 0, shadow mode. */
 /** Doc 22 §13, CW27: what a success is worth. `unit` counts it; `revenue` weighs it by the outcome's value; `margin` by its margin, or its value when the feed gives no margin. */
 export type Objective = 'unit' | 'revenue' | 'margin';
+/** Absent retained metadata means served-v1, never rendered evidence. */
+export type MeasurementBasis = 'served-v1' | 'rendered-v1';
 
 export interface SlotDials {
+  measurementBasis?: MeasurementBasis;
   gamma?: number;
   reward?: 'click' | 'dwell' | 'video_complete' | 'wishlist' | 'add_to_bag' | 'purchase' | 'custom';
   /** CW27: the objective the slot learns against. Absent means `unit`. */
@@ -152,6 +167,7 @@ export interface LearnConfig {
 
 /** Doc 22 §12.1: what the learning layer contributed, on every receipt it touched. */
 export interface LiftApplied {
+  measurementBasis?: MeasurementBasis;
   reward: string;
   /** CW27: what a success was worth when the counts were built. */
   objective?: Objective;
@@ -228,10 +244,26 @@ export type ExternalTerm = { kind: ExternalKind; ref: string; weightOf: (slot: s
  * Doc 22 §12.3: what the decision was computed from, carried on the record so
  * a replay is exact. The interest vector as scored (after any regional blend),
  * the regional shares when a blend applied, and the model's scores when a term
- * applied. About a kilobyte; the documents are named by revision instead.
+ * applied. Page dependencies repeat per record; transport budgets count their
+ * actual serialized bytes. The documents themselves are named by revision.
  */
 export interface DecisionInputs {
   affinity: Record<string, Record<string, number>>;
+  /** Effective page-wide choice inputs; absent only on older records. */
+  replay?: {
+    version: 1;
+    /** Absence identifies retained pre-withdrawal exploration semantics. */
+    exploration?: 'supported-only';
+    /** Absence identifies retained sequential pins, independently of exploration. */
+    pins?: 'reserved-eligible-v1' | 'prefix-reserved-v2';
+    /** Absence retains tags-only scoring, independently of pins/exploration. */
+    contentTypes?: 'catalog-tags-v1';
+    /** Absence retains pre-governance selection independently of the other policies. */
+    governance?: 'slot-gates-v1' | 'slot-gates-v2';
+    learning: boolean;
+    candidateLimit: number;
+    slots: Array<{ slot: string; lift: number; prior: number }>;
+  };
   regional_share?: Record<string, Record<string, number>>;
   external?: { version: string; scores: Record<string, number> };
   /** CW30: slot → item → times served to this visitor inside the slot's fatigue window, as read from the ring at decision time. */
@@ -240,7 +272,12 @@ export interface DecisionInputs {
 
 /** Doc 22 §3.1, one per served slot position. Emitted by CW4, persisted by CW19. */
 export interface DecisionRecord {
+  measurementBasis?: MeasurementBasis;
+  /** Original decision time/identity remain unchanged. This is a client report, not verified visibility. */
+  rendered?: { version: 1; eventId: string; at: number; pageInstance: string };
+  retention?: import('@/retention').CaptureRetention;
   decision_id: string;
+  request_id?: string;
   tenant: string;
   brand: string;
   visitor_id: string;
@@ -250,6 +287,8 @@ export interface DecisionRecord {
   page: string;
   slot: string;
   position: number;
+  /** Current pin policy only: ordinal within the ranked remainder; absent for pins. */
+  ranking_position?: number;
   item_id: string;
   customer_item_id: string;
   candidates: SlotCandidate[];
@@ -311,6 +350,8 @@ export interface ContentDecisionSet {
   config_label: string;
   /** Null when no trend was published for the tenant, the shopper is in the holdout, or the blend is off. */
   regional: RegionalBlend | null;
-  decisions: ContentDecision[];
+  decisions: Array<ContentDecision & { /** Exact receipt; an offer is not a durable render acknowledgment. */ decisionId?: string; renderOffer?: string }>;
   records: DecisionRecord[];
+  /** Refused pins have no delivery decision or ledger row. */
+  pinDiagnostics?: PinDiagnostic[];
 }

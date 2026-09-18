@@ -1,0 +1,81 @@
+{
+  "id": "D06-W30-LATE-EVENT-SCENARIO-CLARIFICATION-2026-09-14",
+  "at": "2026-09-15T03:52:35.797Z",
+  "kind": "user_clarification_and_lead_proposal_not_policy_approval",
+  "user_direction": [
+    "Late delivery is a normal valid scenario, including disconnected browser/app buffering, not necessarily a delivery failure. Delays can be months or years.",
+    "User illustrates lifecycle-based handling with Optimizely experiments: process for an active experiment; do not act on events for an inactive/archived experiment. This is the user-provided example, not an independent assertion about external product behavior or a blanket rule adopted for every engine consumer.",
+    "Determine scenarios in which late events may or may not be processed; do not ask for one universal number of days. User does not yet have the inventory needed to decide every data category."
+  ],
+  "lead_correction": "The earlier request conflated event eligibility, processing purpose/lifecycle, attribution windows and permitted replay retention. Remove the global-cutoff question as the admission prerequisite. Retain the actual technical defect: missing/evicted history cannot be reconstructed by blind refolding.",
+  "source_basis": [
+    {
+      "path": "src/events/actionTypes.ts",
+      "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+      "anchor": "ACTION_EVENT_TYPES",
+      "fact": "Public actions include page/product views, forms/email/buttons, impressions/clicks/dwell/video, wishlist/cart/purchase/custom events."
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b",
+      "anchor": "action route, emitOutcome, live host dispatch",
+      "fact": "One accepted action can feed current shopper state and a separate outcome ledger/learning path under resolved consent."
+    },
+    {
+      "path": "src/learn/policy.ts",
+      "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98",
+      "anchor": "attribute",
+      "fact": "Attribution compares outcome occurrence time to decision occurrence time; time until receipt is not that attribution window."
+    },
+    {
+      "path": "src/services/RealtimeSegmentEngine.ts",
+      "sha256": "9dfec44e96b4bcbaeac12042bebb1d12dbf71614a1d42c31349449baa474b424",
+      "anchor": "452-494",
+      "fact": "Session live reflex/trend uses engine receipt-time clock. This is not evidence that arbitrary old buffered events already get correct historical weighting."
+    },
+    {
+      "path": "src/identity/history.ts",
+      "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7",
+      "anchor": "applyHistory and header",
+      "fact": "Explicit historical import preserves row time, resolves erasure barriers and uses historical weighting rather than replacing the event time with receipt time."
+    },
+    {
+      "path": "src/content/types.ts",
+      "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+      "anchor": "HoldoutConfig, LearnConfig",
+      "fact": "These learning/holdout shapes do not establish a general experiment active/archived lifecycle. User example cannot be implemented by pretending the existing holdout flag supplies one."
+    }
+  ],
+  "initial_proposals_not_approved": [
+    {
+      "use": "Experiment measurement",
+      "rule": "Evaluate original assignment/context, valid occurrence time and whether the identified experiment/version accepts outcomes under its lifecycle. Active/archived example is a requirement case; paused/stopped/finalized behavior remains a specific owner choice."
+    },
+    {
+      "use": "Content outcome attribution and historical reports",
+      "rule": "Use original event/decision times and the applicable policy/version. Late receipt alone does not invalidate credit or move it to the arrival period. Correct affected history only from a verified basis."
+    },
+    {
+      "use": "Current affinity, recency, fatigue and population trends",
+      "rule": "Do not automatically replay an old action as fresh current activity. Determine historical weighting/order and allowed current effects for this consumer separately from historical counting."
+    },
+    {
+      "use": "Explicit historical/profile imports and corrections",
+      "rule": "Use authorized historical semantics, identity/version ordering and erasure barriers; do not silently send imports through fresh live-event semantics."
+    },
+    {
+      "use": "All consumers",
+      "rule": "Reconcile logical retries without duplicate effects; respect tenant, identity, consent and erasure. Missing trustworthy history/context is an explicit inability to attribute/reconstruct, not proof the event was invalid."
+    }
+  ],
+  "unresolved": "Scenario lifecycle and applicable policy/version selection, sufficient retained evidence, and any new personal-history retention/reset still need their respective D04/D06/W24 owners. This clarification approves no indefinite retention, archived-result rewriting, generation reset or automatic multi-year replay.",
+  "execution": {
+    "implementation": "No production edits, task admission, tests or acceptance.",
+    "checks": "Entry existing board check/status VALID1775, both0/drained;559795→31c7b3→10da2e, session37974. Read-only source inspection only; guessed nonexistent source paths were corrected before conclusions."
+  },
+  "previous_preflight": {
+    "path": "docs/remediation/decisions/D06-W30-history-preflight-2026-09-14.json",
+    "sha256": "24cb32ca2ab6d5df7a3a4de4f183cbc0c704a445de890694f031ba0f15e3ce60"
+  },
+  "next_action": "Resume bounded forward interrupted-fold recovery in existing buildHour/foldShard/catchUp: first resolve exact input/config/tombstone identity, cross-shard validation after eviction and concurrent publication invariants; then admit a coherent credit-preserving fix using existing bounded state if safe. Do not ask the user for one global lateness cutoff or use current ring/lookback limits as event-validity policy. Late processing must be evaluated separately for experiment/measurement lifecycle, historical attribution, live personalization/trends and explicit imports, with original occurrence time distinct from receipt time. The lead owns the event/consumer inventory and concrete proposals; ask owners only unresolved scenario-specific choices before new retention, lifecycle or generation changes. Preserve W30.03. Full historical reconstruction and D04/D06/W24 remain open; no unlimited personal retention, reset, deployment or customer-data operation is authorized."
+}

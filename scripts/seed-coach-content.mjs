@@ -9,26 +9,19 @@
 //
 //   node scripts/seed-coach-content.mjs [--base http://localhost:9100] [--scope coach] [--token <jwt>]
 //
-// Without --token, against a localhost base, a token is minted from the dev JWT settings in
-// wrangler.toml. Against anything else, pass a token from POST /auth/login.
+// Use --token or OPERATOR_TOKEN. Local minting requires explicit JWT_SECRET,
+// JWT_ISSUER and JWT_AUDIENCE; remote targets require an existing operator token.
 import { readFileSync } from 'node:fs';
-import * as jose from 'jose';
+import { isLoopbackTarget, resolveToolToken, tokenFromArgs } from './lib/tool-token.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const base = (arg('--base', 'http://localhost:9100')).replace(/\/+$/, '');
 const scope = arg('--scope', 'coach');
-let token = arg('--token', '');
-if (!token) {
-  if (!/localhost|127\.0\.0\.1/.test(base)) { console.error('pass --token <jwt> for a non-local base'); process.exit(1); }
-  const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
-  const v = (k) => (toml.match(new RegExp(`^${k} = "([^"]+)"`, 'm')) || [])[1];
-  token = await new jose.SignJWT({ sub: 'seed-coach-content', roles: ['operator'] })
-    .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setIssuer(v('JWT_ISSUER')).setAudience(v('JWT_AUDIENCE')).setExpirationTime('10m')
-    .sign(new TextEncoder().encode(v('JWT_SECRET')));
-}
-const auth = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+const token = await resolveToolToken({ token: tokenFromArgs(process.argv), payload: { sub: 'seed-coach-content', roles: ['operator'] },
+  expiresIn: '10m', allowMint: isLoopbackTarget(base) });
+const auth = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Tenant': scope };
 const catalog = JSON.parse(readFileSync(new URL('../public/data/coach-content.json', import.meta.url), 'utf8'));
 
-const put = async (kind, document, note) => (await fetch(`${base}/content/${kind}?scope=${scope}`, { method: 'PUT', headers: auth, body: JSON.stringify({ document, note }) })).json();
+const put = async (kind, document, note) => (await fetch(`${base}/content/${kind}?scope=${encodeURIComponent(scope)}`, { method: 'PUT', headers: auth, body: JSON.stringify({ document, note }) })).json();
 
 const cat = await put('catalog', catalog, `Coach content catalog: ${catalog.pieces.length} pieces from public/data/coach-content.json`);
 console.log('catalog:', JSON.stringify({ ok: cat.ok, revision: cat.revision, version: cat.version, errors: cat.errors }));
@@ -51,7 +44,7 @@ if (!sl.ok) process.exit(1);
 // What each slot learns against. The hero learns clicks; the stories learn purchases weighed by the
 // order's value, which is what a story that featured the bag is for. Merged over the learn document in
 // force, so dials an operator has set (trust, exploration, the holdout) are kept.
-const current = await (await fetch(`${base}/content/learn?scope=${scope}`, { headers: auth })).json();
+const current = await (await fetch(`${base}/content/learn?scope=${encodeURIComponent(scope)}`, { headers: auth })).json();
 const learnDoc = current.document || {};
 const learnSlots = { ...(learnDoc.slots || {}) };
 for (const [slot, dials] of Object.entries({ chero: { reward: 'click', objective: 'unit' }, story: { reward: 'purchase', objective: 'revenue' }, carousel: { reward: 'click', objective: 'unit' } })) {

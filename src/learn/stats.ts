@@ -8,7 +8,7 @@
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { priorKey, type PriorIndex } from './priors';
+import type { PriorIndex } from './priors';
 
 export interface StatsConfig {
   n0: number;
@@ -45,28 +45,69 @@ export interface StatsState {
   slot: Record<string, Counter>;
   events: number;
   updatedAt: number;
+  /** Monotone projection: removed fine levels never become partial estimates. */
+  bounded?: { depth: Level; omitted: Counter; omittedEvents: number; closed?: boolean; selection: 'first-seen' | 'lexical-repair' };
 }
 export const emptyStats = (): StatsState => ({ items: {}, slot: {}, events: 0, updatedAt: 0 });
 
 function bump(entry: ReflexEntry | undefined, ts: number, w: number, tau: number): ReflexEntry {
-  const s = (entry ? effectiveScore(entry, ts, tau) : 0) + w;
-  return { s, t: ts };
+  if (!entry) return { s: w, t: ts };
+  // Keep acknowledged mass at a monotonic reference time; late input ages only itself.
+  const t = Math.max(entry.t, ts);
+  return { s: effectiveScore(entry, t, tau) + w * Math.exp(-(t - ts) / tau), t };
 }
 const counter = (): Counter => ({ n: { s: 0, t: 0 }, s: {} });
 
+export const STAT_ITEM_BUDGET = 256;
+export function boundStats(st: StatsState, level: Level): void {
+  st.bounded ??= { depth: 5, omitted: counter(), omittedEvents: 0, selection: 'first-seen' };
+  st.bounded.depth = Math.min(st.bounded.depth, level) as Level;
+  for (const map of [st.slot, ...Object.values(st.items)]) for (const key of Object.keys(map)) {
+    if (depth(key) > st.bounded.depth) delete map[key];
+  }
+}
+
+/** Only disjoint ITEM roots are merged; never add overlapping ladder levels. */
+export function coarsenStats(st: StatsState, cfg: StatsConfig): void {
+  boundStats(st, 0);
+  st.bounded!.selection = 'lexical-repair';
+  for (const item of Object.keys(st.items).sort().slice(STAT_ITEM_BUDGET)) {
+    st.bounded!.closed = true;
+    const root = st.items[item]?.['*'];
+    if (!root) throw new Error('Missing item mass proof');
+    const out = st.bounded!.omitted;
+    out.n = bump(out.n, root.n.t, root.n.s, cfg.tauLearnMs);
+    for (const [reward, entry] of Object.entries(root.s)) if (entry) {
+      out.s[reward as RewardType] = bump(out.s[reward as RewardType], entry.t, entry.s, cfg.tauLearnMs);
+    }
+    delete st.items[item];
+  }
+}
+
+function itemAdmitted(st: StatsState, item: string): boolean {
+  if (!st.bounded || Object.hasOwn(st.items, item) || !st.bounded.closed && Object.keys(st.items).length < STAT_ITEM_BUDGET) return true;
+  // With omitted items, only the complete population's root is retained.
+  boundStats(st, 0);
+  st.bounded!.closed = true;
+  return false;
+}
+
 export function recordExposure(st: StatsState, item: string, cell: Cell, ts: number, cfg: StatsConfig): void {
-  for (const k of levelKeys(cell)) {
-    const ic = ((st.items[item] ??= {})[k] ??= counter());
+  const admitted = itemAdmitted(st, item);
+  for (const k of levelKeys(cell).slice(0, (st.bounded?.depth ?? 5) + 1)) {
+    const ic = admitted ? ((st.items[item] ??= {})[k] ??= counter()) : st.bounded!.omitted;
     ic.n = bump(ic.n, ts, 1, cfg.tauLearnMs);
     const sc = (st.slot[k] ??= counter());
     sc.n = bump(sc.n, ts, 1, cfg.tauLearnMs);
   }
+  if (!admitted) st.bounded!.omittedEvents++;
   st.events += 1; st.updatedAt = Math.max(st.updatedAt, ts);
 }
 
 export function recordSuccess(st: StatsState, item: string, cell: Cell, reward: RewardType, ts: number, weight: number, cfg: StatsConfig): void {
-  for (const k of levelKeys(cell)) {
-    const ic = ((st.items[item] ??= {})[k] ??= counter());
+  const admitted = itemAdmitted(st, item);
+  for (const k of levelKeys(cell).slice(0, (st.bounded?.depth ?? 5) + 1)) {
+    const ic = admitted ? ((st.items[item] ??= {})[k] ??= counter()) : st.bounded!.omitted;
     ic.s[reward] = bump(ic.s[reward], ts, weight, cfg.tauLearnMs);
     const sc = (st.slot[k] ??= counter());
     sc.s[reward] = bump(sc.s[reward], ts, weight, cfg.tauLearnMs);
@@ -74,7 +115,6 @@ export function recordSuccess(st: StatsState, item: string, cell: Cell, reward: 
   st.updatedAt = Math.max(st.updatedAt, ts);
 }
 
-const r3 = (x: number) => Math.round(x * 1000) / 1000;
 const ev = (e: ReflexEntry | undefined, now: number, tau: number) => (e ? effectiveScore(e, now, tau) : 0);
 
 export interface LevelStat {
@@ -86,6 +126,12 @@ export interface LevelStat {
 }
 export interface ItemStats { levels: LevelStat[] }
 export interface LiftSnapshot {
+  measurementBasis?: import('@/content/types').MeasurementBasis;
+  /** Exact committed state/fence identity checked against the authoritative DO. */
+  witness?: string;
+  completeness?: { depth: Level; omittedItems: boolean; selection: 'first-seen' | 'lexical-repair'; reason: 'complete' | 'coarse' | 'item-capacity' };
+  /** Missing on legacy archives; live serving requires an explicit matching horizon. */
+  tauLearnMs?: number;
   tenant: string; brand: string; slot: string; reward: RewardType;
   /** CW27: what a success was worth when these counts were built. Absent on snapshots from before. */
   objective?: 'unit' | 'revenue' | 'margin';
@@ -108,7 +154,7 @@ export interface LiftSnapshot {
  * an item's events at a fine level are the same events at every coarser one,
  * and shrinking toward yourself is not shrinkage. §5.3's example is exact.
  */
-export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null, objective: 'unit' | 'revenue' | 'margin' = 'unit'): LiftSnapshot {
+export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null, objective: 'unit' | 'revenue' | 'margin' = 'unit', measurementBasis: import('@/content/types').MeasurementBasis = 'served-v1'): LiftSnapshot {
   const tau = cfg.tauLearnMs;
   // The slot's rate per level key, shrunk toward the parent key's rate; the root shrinks toward itself.
   const slotRates: LiftSnapshot['slotRates'] = {};
@@ -119,7 +165,8 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
     const parent = parentKey(key);
     const p0 = parent === null ? (n > 0 ? s / n : 0) : slotRate(parent);
     const rate = (s + cfg.n0 * p0) / (n + cfg.n0);
-    slotRates[key] = { n: r3(n), s: r3(s), rate: r3(Number.isFinite(rate) ? rate : 0) };
+    // Snapshots are arithmetic inputs (including nMin), not presentation strings.
+    slotRates[key] = { n, s, rate: Number.isFinite(rate) ? rate : 0 };
     return slotRates[key]!.rate;
   };
   // Doc 22 §8: an imported prior is the shrinkage target and strength for its
@@ -132,24 +179,19 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
   // outweighs a belief worth hundreds; only their weight of evidence does.
   const priorFor = (item: string, key: string): { p: number; n: number } | null => {
     for (let k: string | null = key; k !== null; k = parentKey(k)) {
-      const p = priors?.index.get(priorKey(item, k));
+      const p = priors?.index.get(item)?.get(k);
       if (p) return p;
     }
     return null;
   };
-  const priorItems = new Map<string, string[]>();
-  for (const k of priors?.index.keys() ?? []) {
-    const at = k.lastIndexOf('|');
-    const list = priorItems.get(k.slice(0, at)) ?? [];
-    list.push(k.slice(at + 1));
-    priorItems.set(k.slice(0, at), list);
-  }
   const items: LiftSnapshot['items'] = {};
-  for (const item of new Set([...Object.keys(st.items), ...priorItems.keys()])) {
+  for (const item of new Set([...Object.keys(st.items), ...(priors?.index.keys() ?? [])])) {
+    if (st.bounded?.closed && !Object.hasOwn(st.items, item)) continue;
     const byKey = st.items[item] ?? {};
-    const keys = new Set([...Object.keys(byKey), ...(priorItems.get(item) ?? [])]);
+    const keys = new Set([...Object.keys(byKey), ...(priors?.index.get(item)?.keys() ?? [])]);
     const out: Record<string, LevelStat> = {};
     for (const key of [...keys].sort((a, b) => depth(a) - depth(b))) {
+      if (st.bounded && depth(key) > st.bounded.depth) continue;
       const c = byKey[key];
       const n = c ? ev(c.n, now, tau) : 0, s = c ? ev(c.s[reward], now, tau) : 0;
       const p0slot = slotRate(key);
@@ -157,11 +199,13 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
       const target = prior ? prior.p : p0slot, n0 = prior ? prior.n : cfg.n0;
       const p_hat = (s + n0 * target) / (n + n0);
       const lift = p0slot > 0 ? Math.min(cfg.liftMax, Math.max(cfg.liftMin, p_hat / p0slot)) : 1;
-      out[key] = { level: depth(key) as Level, key, n: r3(n), s: r3(s), p0: r3(p0slot), n0: r3(n0), p_hat: r3(p_hat), lift: r3(lift), ...(prior ? { prior: { p: prior.p, n: prior.n } } : {}) };
+      out[key] = { level: depth(key) as Level, key, n, s, p0: p0slot, n0, p_hat, lift, ...(prior ? { prior: { p: prior.p, n: prior.n } } : {}) };
     }
     items[item] = out;
   }
-  return { ...ids, reward, objective, version: now, publishedAt: now, events: st.events, n0: cfg.n0, nMin: cfg.nMin, liftMin: cfg.liftMin, liftMax: cfg.liftMax, priorVersion: priors?.version ?? 0, items, slotRates };
+  return { tenant: ids.tenant, brand: ids.brand, slot: ids.slot, reward, objective, measurementBasis, tauLearnMs: cfg.tauLearnMs, version: now, publishedAt: now, events: st.events, n0: cfg.n0, nMin: cfg.nMin, liftMin: cfg.liftMin, liftMax: cfg.liftMax, priorVersion: priors?.version ?? 0, items, slotRates,
+    ...(st.bounded ? { completeness: { depth: st.bounded.depth, omittedItems: st.bounded.closed === true,
+      selection: st.bounded.selection, reason: st.bounded.closed ? 'item-capacity' as const : st.bounded.depth < 5 ? 'coarse' as const : 'complete' as const } } : {}) };
 }
 
 export function depth(key: string): number { return key === '*' ? 0 : key.split('|').length; }
@@ -171,7 +215,7 @@ export function parentKey(key: string): string | null {
   return parts.length === 1 ? '*' : parts.slice(0, -1).join('|');
 }
 
-export interface LiftLookup { level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number } }
+export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number } }
 
 /** The finest level with enough exposures for this item in this cell, or null when nothing has been learned yet. */
 export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cell: Cell): LiftLookup | null {
@@ -183,7 +227,7 @@ export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cel
     const st = byKey[keys[i]!];
     // A level with an imported prior counts the prior's strength toward the threshold (doc 22 §8).
     if (st && st.n + (st.prior?.n ?? 0) >= snap.nMin) {
-      return { level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, ...(st.prior ? { prior: st.prior } : {}) };
+      return { measurementBasis: snap.measurementBasis ?? 'served-v1', level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, ...(st.prior ? { prior: st.prior } : {}) };
     }
   }
   return null;

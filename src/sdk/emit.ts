@@ -5,7 +5,7 @@
 // sites that already have a tag layer, and the automatic path, which lives on
 // the listen module because the SDK knows what it delivered.
 
-import type { Core } from './core';
+import { contentInteraction, type Core } from './core';
 import type { Listen } from './listen';
 import type { DomLike, ElementLike, EngineUpdate, SdkEventType } from './types';
 import { WIRE } from './wire';
@@ -76,9 +76,20 @@ export const GA4_MAPPING: DataLayerMapping = {
 
 export function createEmit(core: Core, listen: Listen): Emit {
   const host = core.host;
-  const track = (type: SdkEventType, data: Record<string, unknown> = {}) => core.send(type, data);
-  const withItem = (type: SdkEventType) => (productId: string, attrs: Record<string, unknown> = {}) => track(type, { productId, ...attrs });
-  const withContent = (type: SdkEventType) => (contentId: string, slot: string, attrs: Record<string, unknown> = {}) => track(type, { contentId, slot, ...attrs });
+  const track = async (type: SdkEventType, input: Record<string, unknown> | (() => Record<string, unknown>) = {}): Promise<EngineUpdate | null> => {
+    if (!await core.ready() || !core.trackingAllowed) return null;
+    const data = typeof input === 'function' ? input() : input;
+    // All supported wire aliases share the same painted-receipt gate. Custom
+    // events that do not name content interactions retain their ordinary path.
+    const content = contentInteraction(type, data);
+    if (content) type = content;
+    if (type === 'content_impression') return listen.rendered(String(data.slot ?? ''), String(data.contentId ?? ''), undefined,
+      typeof data.decisionId === 'string' ? data.decisionId : undefined).then(() => null);
+    if (['content_click', 'content_dwell', 'video_complete'].includes(type)) return listen.outcome(type, String(data.contentId ?? ''), String(data.slot ?? ''), data);
+    return core.send(type, data);
+  };
+  const withItem = (type: SdkEventType) => (productId: string, attrs: Record<string, unknown> = {}) => core.send(type, () => ({ productId, ...attrs }));
+  const withContent = (type: SdkEventType) => (contentId: string, slot: string, attrs: Record<string, unknown> = {}) => track(type, () => ({ contentId, slot, ...attrs }));
 
   function declarative(opts: DeclarativeOptions = {}): () => void {
     if (core.config.listenOnly) return () => {};
@@ -87,45 +98,68 @@ export function createEmit(core: Core, listen: Listen): Emit {
     const dwellMinMs = opts.dwellMinMs ?? 1_000;
     const offs: Array<() => void> = [];
     const seen = new Set<string>();
+    let detached = false, installed = false, binding = 0;
+    const stop = () => { binding++; installed = false; seen.clear(); for (const off of offs.splice(0)) off(); };
+    const start = () => core.capture(() => {
+      if (detached || installed) return;
+      installed = true;
+      const current = binding;
+      const permitted = () => core.trackingAllowed && !detached && current === binding;
 
-    for (const el of dom.querySelectorAll('[data-op-content]')) {
-      const contentId = el.getAttribute('data-op-content') ?? '';
-      const slot = el.getAttribute('data-op-slot') ?? 'unknown';
-      if (!contentId) continue;
-      const attrs = { contentId, slot, ...(el.getAttribute('data-op-type') ? { contentType: el.getAttribute('data-op-type') } : {}) };
-      let shownAt: number | null = null;
-      offs.push(dom.observe(el, (visible) => {
-        if (visible) {
-          if (shownAt === null) shownAt = host.now();
-          const key = `${slot}:${contentId}`;
-          if (!seen.has(key)) { seen.add(key); void track('content_impression', attrs); }
-          return;
-        }
-        if (shownAt === null) return;
-        const ms = host.now() - shownAt;
-        shownAt = null;
-        if (ms >= dwellMinMs) void track('content_dwell', { ...attrs, ms });
-      }));
-      el.addEventListener('click', () => { void track('content_click', attrs); });
-    }
+      for (const el of dom.querySelectorAll('[data-op-content]')) {
+        if (!permitted()) return;
+        const contentId = el.getAttribute('data-op-content') ?? '';
+        const slot = el.getAttribute('data-op-slot') ?? 'unknown';
+        if (!contentId) continue;
+        const decisionId = el.getAttribute('data-op-decision-id');
+        const attrs = { contentId, slot, ...(decisionId !== null ? { decisionId } : {}),
+          ...(el.getAttribute('data-op-type') ? { contentType: el.getAttribute('data-op-type') } : {}) };
+        let shownAt: number | null = null;
+        const off = dom.observe(el, (visible) => {
+          if (!permitted()) { shownAt = null; return; }
+          if (visible) {
+            if (shownAt === null) shownAt = host.now();
+            const key = `${slot}:${contentId}`;
+            if (!seen.has(key)) { seen.add(key); void track('content_impression', attrs); }
+            return;
+          }
+          if (shownAt === null) return;
+          const ms = host.now() - shownAt;
+          shownAt = null;
+          if (ms >= dwellMinMs) void track('content_dwell', { ...attrs, ms });
+        });
+        if (!permitted()) { off(); return; }
+        offs.push(off);
+        el.addEventListener('click', () => { if (permitted()) void track('content_click', attrs); });
+      }
 
-    for (const el of dom.querySelectorAll('[data-op-track]')) {
-      const type = el.getAttribute('data-op-track') ?? '';
-      if (!(type in WIRE)) continue;
-      const label = el.getAttribute('data-op-label');
-      const productId = el.getAttribute('data-op-product');
-      el.addEventListener('click', () => {
-        void track(type as SdkEventType, { ...(label ? { label } : {}), ...(productId ? { productId } : {}) });
-      });
-    }
-    return () => { for (const off of offs) off(); };
+      for (const el of dom.querySelectorAll('[data-op-track]')) {
+        if (!permitted()) return;
+        const type = el.getAttribute('data-op-track') ?? '';
+        if (!(type in WIRE)) continue;
+        const label = el.getAttribute('data-op-label');
+        const productId = el.getAttribute('data-op-product');
+        const decisionId = el.getAttribute('data-op-decision-id');
+        el.addEventListener('click', () => {
+          if (!permitted()) return;
+          void track(type as SdkEventType, { ...(label ? { label } : {}), ...(productId ? { productId } : {}),
+            ...(decisionId !== null ? { decisionId } : {}) });
+        });
+      }
+    });
+    const consentOff = core.onConsentChange(() => { if (core.trackingAllowed) start(); else stop(); });
+    const generationOff = core.on('generation', stop);
+    start();
+    return () => { detached = true; consentOff(); generationOff(); stop(); };
   }
 
   function dataLayer(opts: DataLayerOptions = {}): () => void {
     const layer = opts.layer ?? host.dataLayer;
     if (!layer) return () => {};
+    let detached = false;
     const mapping: DataLayerMapping = { ...GA4_MAPPING, ...(opts.mapping ?? {}) };
-    const handle = (entry: unknown) => {
+    const handle = (entry: unknown) => core.capture(() => {
+      if (detached) return;
       if (!entry || typeof entry !== 'object') return;
       const e = entry as Record<string, unknown>;
       const name = typeof e.event === 'string' ? e.event : null;
@@ -135,31 +169,32 @@ export function createEmit(core: Core, listen: Listen): Emit {
       let mapped: ReturnType<DataLayerMapper> = null;
       try { mapped = m(e); } catch { mapped = null; }
       if (mapped) void track(mapped.type, mapped.data);
-    };
-    if (opts.replay !== false) for (const entry of [...layer]) handle(entry);
+    });
+    const replayLength = opts.replay !== false && core.trackingAllowed ? layer.length : 0;
+    if (replayLength) core.capture(() => { if (!detached) for (let i = 0; i < replayLength; i++) handle(layer[i]); });
     const original = layer.push;
     layer.push = function (this: unknown[], ...args: unknown[]) {
       const r = original.apply(layer, args);
       for (const a of args) handle(a);
       return r;
     };
-    return () => { layer.push = original; };
+    return () => { detached = true; layer.push = original; };
   }
 
   return {
     track,
-    pageView: (data = {}) => track('page_view', { path: host.location?.href ?? '', ...data }),
+    pageView: (data = {}) => core.send('page_view', () => ({ path: host.location?.href ?? '', ...data })),
     productView: withItem('product_view'),
     addToCart: withItem('add_to_cart'),
     wishlistAdd: withItem('wishlist_add'),
-    purchase: (input) => core.send('purchase', { ...input }, { keepalive: true }),
+    purchase: (input) => core.send('purchase', () => ({ ...input }), { keepalive: true }),
     contentImpression: withContent('content_impression'),
     contentClick: withContent('content_click'),
-    contentDwell: (contentId, slot, ms, attrs = {}) => track('content_dwell', { contentId, slot, ms, ...attrs }),
+    contentDwell: (contentId, slot, ms, attrs = {}) => track('content_dwell', () => ({ contentId, slot, ms, ...attrs })),
     videoComplete: withContent('video_complete'),
-    custom: (name, data = {}) => track('custom', { event: name, ...data }),
+    custom: (name, data = {}) => track('custom', () => ({ event: name, ...data })),
     declarative,
     dataLayer,
-    rendered: (slot: string, contentId: string, el?: ElementLike) => listen.rendered(slot, contentId, el),
+    rendered: (slot: string, contentId: string, el?: ElementLike, decisionId?: string) => listen.rendered(slot, contentId, el, decisionId),
   };
 }

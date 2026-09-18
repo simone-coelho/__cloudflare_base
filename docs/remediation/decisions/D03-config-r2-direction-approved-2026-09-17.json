@@ -1,0 +1,16 @@
+{
+  "id": "D03-CONFIG-R2-DIRECTION-APPROVED-2026-09-17",
+  "at": "2026-09-17T22:04:15.520Z",
+  "kind": "bounded_user_choice",
+  "approved_by": "User in current conversation",
+  "user_selection": "Extend existing R2 publication (recommended; reuses the working mechanism, no new binding)",
+  "question": "For W11 configuration publication, extend the existing conditional R2 mechanism to all configuration kinds with one coherent published revision set, or add a dedicated Durable Object coordinator? Local implementation only; no deployment or migration of existing data.",
+  "scope": "W11 local implementation toward existing conditional R2 authority extended to all configuration kinds and one coherent published revision set.",
+  "constraints": [
+    "Reuse working content-catalog publication and existing R2 binding; no dedicated new DO/binding chosen.",
+    "Preserve full originalW11 atomic revision/compare-update, immutable history, recoverable publication and bounded propagation requirements plus existing remedies.",
+    "Continue original order: W10 completes independent local review before W11 implementation.",
+    "No deployment, real-resource initialization/cutover, migration of existing data, destructive operation, credential/customer-data/cloud operation or release acceptance."
+  ],
+  "remaining": "D03 full production shopper/configuration acceptance remains pending. Previously approved W35 shopper DO direction unchanged; state/identity/consent/recovery/performance and live parity evidence remain required."
+}

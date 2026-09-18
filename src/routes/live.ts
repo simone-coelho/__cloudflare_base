@@ -448,7 +448,7 @@ liveRoutes.post('/page', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({ ok: false, error: 'Invalid page request', details: error.issues }, 400);
     }
-    console.error('Error composing Bright Hour page:', error);
+    console.error('Error composing Bright Hour page');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'compose failed' },
       500
@@ -511,7 +511,7 @@ liveRoutes.get('/geo', async (c) => {
     const cohort = await resolveBhGeoCohort(c.env, geo, items, realNowMs);
     return c.json({ ok: true, ...cohort });
   } catch (error) {
-    console.error('Error resolving Bright Hour geo cohort:', error);
+    console.error('Error resolving Bright Hour geo cohort');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'geo cohort failed' },
       500
@@ -638,7 +638,7 @@ function acceptEvents(env: Env, inputs: EventInput[]): Promise<void> {
         await ingestOne(env, ctx, input);
       } catch (error) {
         // A single bad signal must never break the queue behind it.
-        console.error('Bright Hour ingestion failed (non-fatal):', error);
+        console.error('Bright Hour ingestion failed (non-fatal)');
       }
 
       // Beat 13: the same click, forwarded to Optimizely as the experiment's
@@ -655,7 +655,7 @@ function acceptEvents(env: Env, inputs: EventInput[]): Promise<void> {
             timestamp: input.timestamp,
           });
         } catch (error) {
-          console.error('Bright Hour conversion forward failed (non-fatal):', error);
+          console.error('Bright Hour conversion forward failed (non-fatal)');
         }
       }
       // Only when something is actually queued behind us — a lone click must
@@ -697,7 +697,7 @@ liveRoutes.post('/event', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({ ok: false, error: 'Invalid event', details: error.issues }, 400);
     }
-    console.error('Error forwarding Bright Hour event:', error);
+    console.error('Error forwarding Bright Hour event');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'event failed' },
       500
@@ -761,7 +761,7 @@ liveRoutes.post('/events', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({ ok: false, error: 'Invalid event batch', details: error.issues }, 400);
     }
-    console.error('Error forwarding Bright Hour event batch:', error);
+    console.error('Error forwarding Bright Hour event batch');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'event batch failed' },
       500
@@ -831,7 +831,7 @@ liveRoutes.post('/experiment/launch', async (c) => {
         : 'Rule created; the datafile has not published yet. Re-POST with ?force=1 in a few seconds to pick up the platform ids.',
     });
   } catch (error) {
-    console.error('Bright Hour experiment launch failed:', error);
+    console.error('Bright Hour experiment launch failed');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'launch failed' },
       500
@@ -865,7 +865,7 @@ liveRoutes.get('/experiment/status', async (c) => {
       writeGate: gateWrite(c.env).reason,
     });
   } catch (error) {
-    console.error('Bright Hour experiment status failed:', error);
+    console.error('Bright Hour experiment status failed');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'status failed' },
       500
@@ -947,7 +947,7 @@ liveRoutes.get('/decisions/export', async (c) => {
       rows,
     });
   } catch (error) {
-    console.error('Error exporting Bright Hour decisions:', error);
+    console.error('Error exporting Bright Hour decisions');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'export failed' },
       500

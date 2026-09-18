@@ -18,6 +18,7 @@
 // ---------------------------------------------------------------------------
 
 import type { TenantId } from '@/tenancy/tenant';
+import { IDENTITY_MATERIAL_UNAVAILABLE, requiresSafeIdentity, safeIdentitySecret } from './material.mjs';
 
 export const SHOPPER_ID_PREFIX = 'sh_';
 const UNSALTED = 'edge-identity-unsalted';
@@ -41,10 +42,11 @@ export function isSalted(env: { IDENTITY_SALT?: string }): boolean {
  * that silently merges two accounts on a site that treats them as distinct.
  */
 export async function shopperIdFor(
-  env: { IDENTITY_SALT?: string },
+  env: { IDENTITY_SALT?: string; AUTH_MODE?: string; DEPLOYMENT_PROFILE?: string },
   tenant: TenantId,
   accountId: string,
 ): Promise<string> {
+  if (requiresSafeIdentity(env) && !safeIdentitySecret(env.IDENTITY_SALT)) throw new Error(IDENTITY_MATERIAL_UNAVAILABLE);
   const salt = isSalted(env) ? env.IDENTITY_SALT!.trim() : UNSALTED;
   const material = `${salt}\n${tenant}\n${accountId.trim()}`;
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(material));

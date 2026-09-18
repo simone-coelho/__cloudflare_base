@@ -1,87 +1,68 @@
-# Deployment (as-built)
+# Explicit customer-stamp workflow
 
-**Status:** verified 2026-07-08. This directory was empty until now; this doc is the deploy source of truth.
+This is a locally implemented operator interface, not deployment approval. Live account ownership, privacy/access/retention decisions, maintenance evidence and customer acceptance remain separate gates in [the remediation checkpoint](../remediation/RESUME.md). No provider operation is authorized by this document.
 
-## The one safe path
+## Entry points and modes
 
-```bash
-npm run deploy        # = wrangler deploy → worker "edge-platform" (the live demo)
-```
+`scripts/provision-stamp.sh` and `scripts/deploy.sh` require the first argument `staging` or `production`; `provision-staging.sh` fixes only that explicit environment. They delegate to `scripts/stamp-workflow.mjs`. No ambient account, default demo target, seed loop or direct Wrangler deployment is used. `setup.sh` remains retired. The default mode is a read-only local plan.
 
-Deploys `src/index.ts` with **all bindings** (KV `CACHE`+`SESSIONS`, R2 `STORAGE`, D1 `coach-demo-db`, Queue `events`, 4 Durable Objects, Browser Rendering, Analytics Engine, assets from `public/`).
+The Node interface accepts `--mode`, `--input`, `--operation` (UUID), `--environment`, `--artifact`, `--state`, `--output` and the explicit `--execute` switch. Unknown/duplicate options fail. Paths to inputs, artifacts and operation state must be absolute, owned, nonsymlinked and private: directories 0700, files 0600. Keep them outside the repository; they contain confidential desired material, bootstrap credentials and recovery snapshots. Use an approved secure mechanism to populate them, never command-line secret values or committed examples.
 
-## Staging (CW10) — the customer-facing lower environment
+- `plan`: validate desired state without reading credentials or contacting the provider.
+- `package`: execute fixed checks, compile the actual Worker once, compare both SDKs and the separate demo engine without writing them, then load the immutable payload in an outbound-denied native runtime and verify exact customer asset bytes plus both SDK exports. The private input is exactly `{"profile":"local-v1"}` (lint, app/SDK noEmit, selected rendered integration) or `{"profile":"ci-v1"}` (lint, app/SDK noEmit, complete Vitest prerequisite). Caller-supplied labels/hashes are refused. No `--execute` or provider token.
+- `create`: inspect the exact account and every supplied/existing resource before any creation, apply product migrations, bootstrap one exact initial owner, and upload an immutable version. Does not activate traffic.
+- `reconcile`: verify the recorded desired state/resources/schema/current version without rotating secrets or resetting an owner.
+- `add-brand`: add registry/host/origin/routes and approved tenant material while retaining every existing brand key, policy and descriptor.
+- `rotate`: change only explicitly named secret sets. SDK/assertion key sets may retain approved overlap. Alert rotation also requires the new URL-bound descriptor/policy while preserving old retention categories. `IDENTITY_SALT` changes always refuse: existing shopper identity requires a separate approved migration.
+- `upload`: ordinary code-only upload; desired material must exactly match the current protected receipt.
+- `promote`: activate a verified candidate of the same immutable artifact, with separate settings, routes, schedules and queue-consumer operations.
+- `rollback`: upload a genuinely older retained code artifact only when its schema/DO and effective security/privacy dependency identity remain compatible; retain the exact current desired secrets/configuration. It is not database rollback.
+- `restore`: separately authorized in-place D1 time-travel restoration under the maintenance conditions below.
 
-`[env.staging]` in `wrangler.toml` is declared **in full**: its own KV, R2, D1, queue, Durable Object
-bindings, Analytics Engine, browser rendering and assets. Named environments inherit nothing in Wrangler,
-so this duplication is what gives staging hard isolation from the demo worker.
+Mutating modes require `--execute`, a protected input authorization record matching operation/mode/account/script and an unexpired evidence digest. The API token is supplied only as bounded noninteractive stdin JSON with the single field `apiToken`. Provider failures emit a fixed redacted error, not values, accounts, response bodies or credentials. Success stdout is status/operation/artifact identity only; detailed confidential receipts stay in protected state.
 
-Provision once, then deploy:
+## Desired state and continuity
 
-```bash
-bash scripts/provision-staging.sh   # creates the resources, fills the ids, applies D1 migrations,
-                                    # prompts for secrets, seeds an operator login
-bash scripts/deploy.sh staging      # builds the Meridian engine and the SDK, then wrangler deploy --env staging
-```
+The input envelope accepts only `desired`, `previous`, `bootstrap`, `rotation`, `authorization`, `maintenance`, `restore`, `verification` and `candidate`. `previous` is the exact current protected operation result, including current material, code and latest-upload proofs; `candidate` is an uploaded result for promotion or the explicitly admitted active result for restore. Copy these intact, never reconstruct a receipt from secret names.
 
-`deploy.sh staging` refuses to run while a `<staging-…>` placeholder remains in `wrangler.toml`.
+Version-1 desired state has exactly: `version, customer, account, environment, script, resources, tenants, origins, owners, vars, secrets, routes, ownership`. Account is an exact account ID; script is `customer-environment`; ownership is the caller-held approved ownership digest. Resource names are exact script-scoped names for `cache, sessions, database, storage, queue, deadLetter`; supply exact IDs (null only for explicitly new API-created resources). Analytics uses the environment-specific `script_with_underscores_ops_v1` dataset binding intent. Same-name resources without an exact prior creation receipt are not adopted. No deletion compensation or approximate search adoption occurs.
 
-**Both workers run `AUTH_MODE = "enforced"`** (the default worker since 2026-09-03; `open` is the one-line
-rollback in `[vars]`). Enforced needs the `SDK_KEYS` secret on the worker or every shopper call answers 401,
-so `deploy.sh` refuses the default deploy while the secret is missing:
+`tenants` contains the complete unique `provisioned` registry and exact `hosts` map. `origins` contains exact HTTPS origins of those hosts. `routes` contains exact `{ zone, pattern: "owned.host/*" }` entries; provider readback must prove the zone belongs to the desired account and covers that host. `owners` contains exact `ops-UUID` identities, never inferred tenant grants.
 
-```bash
-printf '*:demo-site' | wrangler secret put SDK_KEYS     # once per worker; `*` = the key is good for any tenant
-```
+Required secret fields are `JWT_SECRET, SDK_KEYS, IDENTITY_SALT, IDENTITY_SECRETS, ALERT_WEBHOOK_URL`. Tenant key sets must exactly cover the registry, with no wildcard. Required vars are `JWT_ISSUER, JWT_AUDIENCE, REFLEX_HOST, RETENTION, TENANT_CONNECTORS`. Optional protected `OPERATOR_OIDC` references exactly its `OPERATOR_OIDC_SECRET_*` material; absent/disabled means no federation, not inferred issuer activation. The issuer equals the script; host is explicitly `session` or `do`. The workflow supplies the customer/enforced boundary, exact CORS, tenant/owner bindings and disabled persistent observability. Demo bindings/assets are omitted; behavioral external connectors remain disabled.
 
-The demo pages (`storefront.html`, `operator-console.html`) carry that site key in
-`<meta name="edge-sdk-key">` and `public/edge-auth.js` attaches it to every gated call, so the audience
-needs nothing. The presenter signs in once on `/tuning.html` (or the learning console) with the operator email and password; the shared sign-in carries the session and the shim carries it on the
-console's and the dial's writes. Locally the same allow-list lives in `.dev.vars` as `SDK_KEYS=*:demo-site`.
+Recovery defaults off. Explicit recovery intent supplies both `LEDGER_RECOVERY_ENABLED` (literal string `true` or `false`) and `LEDGER_RECOVERY_CONFIG`, version1 JSON with exact `sourceQueue`/`deadLetterQueue` resource names. Enabling requires per-tenant approved `recovery` and `quarantine` retention plus explicit `unknown: {id,revision,durationMs,basis,renewal,disposal:"delete-on-expiry"}` for unassigned intake. No period or disposal authority is supplied by default. Readiness fails closed on missing bindings/policies. All three environment declarations include the actual DLQ consumer; these policy-unset declarations are not activation authority. Promotion, rollback activation and restore resume refuse missing intake policies before mutation, even with the producer flag `false`; a fully configured reader can remain active while producers are off. Uploading staged intent is not promotion. Finite queue retention still requires separately authorized live activation and count reconciliation; retry exhaustion is not retained quarantine.
 
-| Surface | `open` (rollback) | `enforced` (default worker and staging) |
-|---|---|---|
-| `POST /realtime/action`, `GET /realtime/ws`, `GET /realtime/reflex` | no key | `X-SDK-Key` header, or `?sdkKey=` on the socket upgrade |
-| `GET /v1/:tenant/decisions/snapshot` | no key | a key registered for that tenant (or a `*` key) |
-| `/operator/*` writes | no token | `Authorization: Bearer <JWT>` from `POST /auth/login` |
-| `/config/*` writes | JWT, always | JWT, always |
-| CORS | reflects any origin | only `CORS_ORIGINS` and the page's own origin |
+`RETENTION` is the existing version-1 per-tenant policy JSON: approved `id, revision, durationMs, basis, renewal` for profile/identity/ledger/online/hourly and each configured telemetry category. No duration or access policy is invented. `TENANT_CONNECTORS` is version-1 per-tenant JSON containing an `ops-v1` telemetry descriptor: exact environment, Analytics dataset/binding/accessPolicy, monitor CACHE/monitor/accessPolicy, and alert binding/destination/URL-SHA256/accessPolicy. Each descriptor must have its matching SHA256-derived `telemetry.analytics|monitor|alert.<digest>` retention policy. External connector configuration not supported by this strict interface refuses rather than being silently dropped.
 
-The SDK sends the key on every request once `createClient({ sdkKey })` is set. The operator token comes
-from `POST /auth/login` with the email and password `provision-staging.sh` seeded; the tuning page and the learning console sign in on the page with the same email and password (since 2026-09-05; there is no token box). For a script, use the token from the login
-UI's token field.
+For creation, `bootstrap = { owner: { id, email, name }, password }` binds the sole desired owner to an exact canonical identity. Existing matching account IDs are verified and preserved, never password-reset. Conflicting identities or a removal audit barrier refuse. New owners receive the existing temporary-password/change-password semantics and no inferred tenant membership. Existing separately authorized owner-recovery behavior is preserved.
 
-## ⚠️ Production (do not use `--env production` yet)
+## Artifact, schema and partial-operation safety
 
-`[env.production]` still declares **only a name**, so `wrangler deploy --env production` would ship a
-worker with no bindings. `scripts/deploy.sh production` refuses. Declare it the way staging is declared,
-with its own resources, before it is used.
+Product migrations are `migrations/product/0010_operator_accounts.sql`, `0011_operator_audit_tenant.sql`, `0012_operator_authority.sql` (original bytes/history preserved), then forward `0013_operator_oidc.sql`. New artifacts name `schemaContract: operator-oidc-v2`, separately from the asset contract. Older genuine artifacts retain their archived schema validator; that does not authorize activation against an incompatible newer security schema. Demo migrations and seed records are never replayed. The historical default demo declaration remains separate; customer environments use the product migration directory. Unknown migration names/order, unsupported schema or unknown DO migration tags refuse.
 
-## Secrets & vars
+Artifacts bind exact module, SDK, customer-asset, source/dependency, configuration, tool and product migration identities. Source/package inputs are held and checked across the actual build. Upload and environment promotion use those same module/asset bytes: no promotion rebuild and no unsupported secret `version_id` inheritance. Provider module content is read back; assets use the installed provider's content-addressed upload session. Acknowledged asset upload is not live served-byte verification, and an Analytics binding is not verified dataset existence.
 
-- Local: `.dev.vars` (gitignored). Remote: `wrangler secret put <NAME>`.
-- Names (never commit values): `GEMINI_API_KEY` (required for AI surfaces), `ODP_PUBLIC_KEY` (enables the live ODP loop with `ODP_API_HOST`, which is a var), `OPTIMIZELY_API_TOKEN` + `OPTIMIZELY_WRITE_ENABLED` (FX writes), `OPTIMIZELY_WEBHOOK_SECRET` (datafile webhook HMAC), optional `GEMINI_MODEL`/`GEMINI_IMAGE_MODEL`, `SIGNAL_API_HOST/KEY`.
-- Plain vars in `[vars]`: `ENVIRONMENT`, `CONNECTOR_MODE`, `DECISION_SOURCE`, `ODP_API_HOST`, `OPTIMIZELY_SDK_KEY` (deliberately non-secret), JWT settings.
-- CW10 additions: `AUTH_MODE` (var: `open` | `enforced`), `CORS_ORIGINS` (var, comma-separated, `*.example.com` allowed), `SDK_KEYS` (**secret**, `tenant:key[|key2],tenant2:key3`; tenant `*` accepts the key anywhere).
-- CW25 additions (identity stitching, doc 25): `IDENTITY_SALT` (**secret**; salts the shopper id — set it wherever real accounts are linked), `IDENTITY_SECRETS` (**secret**, `tenant:secret[|previous],tenant2:secret`; when a tenant has one, a link must carry the site's signed assertion). Both optional; without them the demo links on the site key alone and every link record says `assurance: site`, `salted: false`.
+Version-2 artifacts retain complete check commands, stdout/stderr, exit/signal/timing, before/after source/config/test/tool pins and Node identity. The payload commitment precedes native verification; the final artifact digest includes that proof, avoiding a circular build hash. CI retains the complete immutable JSON payload, not just a manifest or digest. Validation checks this archived basis against the archived artifact, never today's checkout: a genuinely verified compatible older artifact remains usable for separately authorized recovery. Legacy label-only artifacts and mismatched/failed/tampered receipts refuse before provider access. Protected artifact custody is the local trust boundary; these receipts are not a remote signature or release approval.
 
-## Database
+Vitest runs the application `src` suites; the existing `.mjs` suites run under Node's test runner. CI supplies the already validated package to those Node fixtures, verifies their before/after basis against it and retains the complete separate Node proof keyed to its digest. There is no recursive package build. Failed Node evidence is retained without making the CI job successful. The focused older-asset recovery case reuses checks only for a verified non-executable ASCII comment suffix: original asset bytes/check basis are retained and native served-byte observation is repeated. Executable asset or other source/config changes are not eligible for that reuse.
 
-Apply migrations then seeds (local and remote):
+The Node child must protected-read the parent's expected artifact digest, file hash and byte length; the parent rechecks after execution and again immediately before upload. Only successful package and Node stages publish `verified-package`; failures retain separately named diagnostics, never a verified package. These local custody checks do not authenticate an unrelated remote producer.
 
-```bash
-npx wrangler d1 migrations apply coach-demo-db --remote
-for f in migrations/seed/seed_*.sql; do npx wrangler d1 execute coach-demo-db --remote --file "$f"; done
-```
+`npm run lint` covers `src` TypeScript and exactly the six authored Meridian JavaScript modules (main, surfaces, beats, compare, layout, moments); the generated engine is checked by exact shared-option rebuilding instead. The measured baseline was 50 errors and 582 warnings. Browser context is explicit, useful rules and the control-character sanitizer remain enabled, and the finite warning ceiling has no headroom over the measured debt; warnings are not a warning-free claim. `npm run check:generated` is nonwriting. A dirty generated mismatch requires explicit source-of-truth review, not an automatic overwrite.
 
-## Durable Object migrations
+Every mutating step writes/fsyncs immutable protected intent before making its bounded provider request. Upload, traffic, settings, route, cron and consumer changes are distinct partial operations, not a transaction. After a lost response, the same operation performs read-only reconciliation and refuses to blindly repost. An unresolved intent, drift, stale material/version receipt or shared state lock requires accountable reconciliation; do not delete receipts/locks or choose a new operation ID merely to retry. There is no automated resource deletion or fabricated rollback success.
 
-Tags v1–v3 in `wrangler.toml` (`StateManager`/`RateLimiter` → `PersonalizationWebSocket` → `OpalAgent` as a **SQLite class**). New DO classes (e.g. the planned `ShopperReflex`) require a new migration tag — never edit past tags.
+## Restore and live gates
 
-## Build & dev
+Restore requires current version/material proof, a retained compatible artifact and `restore: {"bookmark":"…"}`. Supply the exact current result as `previous` and the protected pre-maintenance active result as `candidate`; the artifact must match that candidate. Exactly one verified version at 100% is supported. A newer unpromoted upload is never implicitly resumed; its current-material/latest-upload proof remains separate from active code. Missing, split, unknown or stale topology, or active material older than a rotation, refuses before effects. Owner-supplied, target-bound maintenance evidence must be fresh (at most one hour) and explicitly cover all active/previous versions, HTTP/in-flight work, Durable Objects, WebSockets, scheduled work, queue in-flight work and external D1 writers. It must also attest an empty/drained queue and stopped producers. Provider configuration readback cannot prove these facts.
 
-`npm run dev` (port 9100) · `npm run build:island` (esbuild → `public/opal-chat.js` — `npm run build` is a no-op echo) · tests: `npx vitest run src/reflex --environment node`.
+With recovery wiring, maintenance evidence must identify both source and DLQ queues and attest each empty/drained with producers stopped. The workflow pauses both using the real queue-settings API with readback, preserving other settings and each prior pause state; it clears cron schedules and promotes a distinct quarantine artifact. Fresh authorized continuation restores each prior pause state, never blindly unpauses both. Pause does not prove producer/in-flight drain or extend retention; retry exhaustion is not quarantine. Missing/expired evidence refuses snapshot, restore or resume. No external writer may restart during the operation.
 
-## Post-deploy check
+Before actual D1 restore, current operator-oidc-v2 artifacts snapshot eleven security tables and the audit sequence (historical schema: six). After product schema reconciliation, one transactional D1 query restores current account/session/membership/service/recovery/audit barriers with the recovery trigger disabled and recreated, avoiding historical recovery replay. Current restore preserves latest account/link/membership/recovery/audit barriers, changes the federation epoch, removes OIDC sessions and expires/consumes/clears browser transactions/completions; consumed authority is never resurrected. Exact provider-owned `_cf_KV` metadata is neither queried nor copied/deleted. Unknown/demo user tables refuse this restore. Current KV/R2/DO consent/erasure barriers are never rolled back. Oversized snapshots fail before time travel; there is no partial chunk fallback.
 
-`GET /health` (services block), `/storefront.html` loads, `GET /realtime/reflex` returns config, and — with ODP creds — a `product_view` action returns an `odp` receipt.
+Default success remains `restored-quarantined`, with a complete protected result recording successful security restoration, latest quarantine upload and the exact admitted resume-candidate commitment. To continue a completed quarantine, use a fresh authorized `restore` operation with `restore: {"resume":true}`, that complete result as `previous`, the identical original `candidate` and artifact, and fresh target-bound maintenance evidence with `resume:true`. It verifies current quarantine/topology/material and completed restoration before any unpause; it does not repeat D1 time travel or security writes. Ordinary upload/promotion is not a quarantine-resume substitute. Explicit resume prepares schedules/empty queue while HTTP stays quarantined and activates the admitted version last. Its result retains both active-code and latest-upload proofs for subsequent operations. Any failure is a partial operation requiring protected-receipt inspection, not a claim of successful rollback or guaranteed quiescence. Expiry or lost-response recovery requires renewed owner coordination, not automatic retries.
+
+Resume rechecks the exact admitted latest-upload/material/active state immediately before final activation and verifies the resulting topology afterwards. Visible concurrent deployment or material changes refuse instead of overwriting. This transport provides no cross-operation compare-and-swap: the local receipt lock does not serialize other deployers, and a concurrent mutation after the final read remains a partial-operation risk requiring owner coordination, not an atomicity guarantee.
+
+Independent local review, actual account/resource ownership, required provider permission and secret retention, live Analytics/asset behavior, approved retention/access/delivery, real quiescence, forward-compatible deployed rollback/restore, and customer/release acceptance remain separate evidence gates. Local SQLite, injected-provider and outbound-denied native checks do not close them.

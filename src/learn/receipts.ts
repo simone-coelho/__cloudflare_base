@@ -7,6 +7,8 @@ import type { DecisionRecord } from '@/content/types';
 import type { Names } from './rows';
 
 export interface Receipt {
+  measurementBasis: 'served-v1' | 'rendered-v1';
+  renderedAt: number | null;
   decision_id: string;
   at: number;
   page: string;
@@ -38,6 +40,7 @@ export function contextOf(cell: DecisionRecord['cell']): string {
 export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   const why: string[] = [];
   const e = r.explain;
+  why.push(r.measurementBasis === 'rendered-v1' ? 'Client-reported rendering was durably admitted; this is not proof of human visibility.' : 'Legacy served-decision exposure; rendering was not confirmed.');
   if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
   else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
   else {
@@ -62,13 +65,14 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       const applied = l.gamma > 0 ? `applied at trust ${r3(l.gamma)}` : 'shown on the receipt, not applied (trust 0)';
       why.push(e.control === 'freeze'
         ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}, ${applied}.`
-        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} shown, ${r3(l.s)} succeeded${l.objective && l.objective !== 'unit' ? `, weighed by ${l.objective}` : ''}), ${applied}.`);
+        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units), ${applied}.`);
     } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: no lift.');
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned lift held at zero.');
     if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
   }
   const nm = names.get(r.item_id);
   return {
+    measurementBasis: r.measurementBasis ?? 'served-v1', renderedAt: r.rendered?.at ?? null,
     decision_id: r.decision_id, at: r.ts, page: r.page, slot: r.slot, position: r.position,
     item: r.item_id, customer_item_id: nm?.customerContentId ?? r.customer_item_id ?? null, title: nm?.title ?? null,
     arm: r.arm, explored: r.explored, authority: r.authority,

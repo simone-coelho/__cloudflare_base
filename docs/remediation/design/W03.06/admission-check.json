@@ -1,0 +1,19 @@
+{
+  "at": "2026-09-11T19:34:21Z",
+  "task_id": "W03.06",
+  "source_go": true,
+  "entry_reused": "88728 VALID992; both check/status0/drained",
+  "proof": {
+    "command": "node --max-old-space-size=768 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{sha256,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';\nconst d=JSON.parse(fs.readFileSync('\\''docs/remediation/tracker.json'\\'','\\''utf8'\\'')),t=d.tasks.find(t=>t.id==='\\''W03.06'\\''),b=JSON.parse(fs.readFileSync('\\''docs/remediation/design/W03.06/baseline.json'\\'','\\''utf8'\\''));\nif(d.journal.length!==1000||t.state!=='\\''in_progress'\\''||d.tasks.filter(t=>['\\''in_progress'\\'','\\''verification'\\''].includes(t.state)).length!==1)throw Error('\\''state'\\'');\nif(sha256(fs.readFileSync(t.preflight.plan.path))!==t.preflight.plan.sha256||taskContractDigest(t)!==t.preflight.contract_digest)throw Error('\\''contract'\\'');\nconst start=d.journal.findLast(e=>e.task_id===t.id&&e.to==='\\''in_progress'\\'');if(JSON.stringify(start.plan_snapshot)!==JSON.stringify(t.preflight))throw Error('\\''start'\\'');\nif(!d.authority.local_engine_changes||!d.authority.local_authorization.scope_package_ids.includes('\\''W03'\\'')||d.authority.deployment!==false)throw Error('\\''authority'\\'');\nconst auth=d.authority.local_authorization.record;if(sha256(fs.readFileSync(auth.path))!==auth.sha256)throw Error('\\''mandate'\\'');\nfor(const p of b.pins)if(sha256(fs.readFileSync(p.path))!==p.sha256)throw Error('\\''pin '\\''+p.path);\nfor(const prior of d.tasks.filter(t=>t.state==='\\''closed'\\''))for(const p of prior.artifact.files)if(sha256(fs.readFileSync(p.path))!==p.sha256)throw Error('\\''accepted dependency '\\''+p.path);\nconsole.log(JSON.stringify({at:new Date().toISOString(),task:t.id,journal:d.journal.length,plan:t.preflight.plan,contract:t.preflight.contract_digest,start_snapshot:'\\''exact'\\'',authority:'\\''local W03 only'\\'',pins:b.pins.length,protected:b.pins.length-b.owned.length,accepted_dependencies:'\\''unchanged'\\'',result:'\\''pass'\\''}));'",
+    "captures": [
+      {
+        "chunk_id": "16e822",
+        "wall_time_seconds": 0.46782339,
+        "exit_code": 0,
+        "original_token_count": 102,
+        "output": "{\"at\":\"2026-09-11T19:34:08.345Z\",\"task\":\"W03.06\",\"journal\":1000,\"plan\":{\"path\":\"docs/remediation/design/W03.06/plan.md\",\"sha256\":\"5f4cb14d56bec9e7d164683846818585d1c48ba6c920b0881160f5f675d597ba\"},\"contract\":\"a0e5774c6c01839e558075fa0173fbfa76b980c8eca5d07d6d8933721c7574f5\",\"start_snapshot\":\"exact\",\"authority\":\"local W03 only\",\"pins\":71,\"protected\":64,\"accepted_dependencies\":\"unchanged\",\"result\":\"pass\"}\n"
+      }
+    ]
+  },
+  "authority": "Existing local W03 mandate only; no external/customer/credential/deploy/commit or policy authority."
+}

@@ -1,0 +1,159 @@
+{
+  "id": "W07.02",
+  "package_id": "W07",
+  "title": "Withdraw subject-bearing service and WebSocket logs",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Bounded W07 future-write containment in OptimizelyService, EventDispatcher, sceneGen and PersonalizationWebSocket: remove subject/result success logs, replace raw error/body/callback/type/destination logs with fixed labels (numeric scene status permitted), and stop reading unsuccessful model bodies only for logging. Preserve domain delivery, SDK thresholds and callback distinctions, public response/fallback, queue/socket/storage and deterministic decision behavior.",
+  "read_paths": [
+    "src",
+    "scripts/remediation",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/services/OptimizelyService.ts",
+    "src/services/EventDispatcher.ts",
+    "src/services/sceneGen.ts",
+    "src/durable-objects/PersonalizationWebSocket.ts",
+    "src/services/telemetry.boundary.test.ts",
+    "docs/remediation/evidence/W07.02"
+  ],
+  "non_goals": [
+    "No scoring/ledger/auth/consent/business delivery or retry policy changes, socket ownership fix, new telemetry pipeline, package upgrades, new runtime infrastructure or broad matrix.",
+    "Other route/scheduled/service logs, public error response contents, permitted schema/access/retention, datasets and historic data obligations remain open. No full W07/finding/privacy/customer/SLO/deployed/release acceptance; targeted current regression does not reclose prior full W34.01/W07.01 contracts.",
+    "No real network, cloud/deploy/provision/seed/credentials/customer-data operations, operational scripts, staging/commit/push, cleanup or unrelated edits."
+  ],
+  "criteria": [
+    {
+      "id": "W07.02-C1",
+      "description": "Actual four modules do not log raw subject/result/error/body/type/destination content in scoped paths or coerce hostile SDK callback objects. Both Optimizely logger thresholds and missing-datafile distinction survive; ordinary event delivery and fresh no-op remain distinct. Dispatcher results/full payload/retry/normal queue and caught errors, scene cache/model/R2/fallback effects and socket direct callback/send/storage/state effects are preserved.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W07.02-C2",
+      "description": "Unchanged existing telemetry and consent/service controls retain eight-writer withdrawal, route effects and OFF-only deterministic decisions; five selected actual-workerd entry/queue cases preserve log containment and ack/retry behavior. This is bounded current regression, not prior full-contract reclosure or native WebSocket/external acceptance.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W07.02-C3",
+      "description": "Independent actual frozen source/baseline/assertion/evidence review and K1/K2 reruns plus inspected application noEmit, scoped diff and relevant artifact identity confirm bounded production changes and explicit limits; separate lead disposition records handoff.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W07.02-K1",
+      "required": true,
+      "criterion_ids": [
+        "W07.02-C1",
+        "W07.02-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/services/telemetry.boundary.test.ts src/telemetry.boundary.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest, actual service modules with synthetic intercepted SDK/fetch/queue/cache/R2/socket/storage seams; unchanged route and deterministic service fixtures. No external traffic or native WebSocket transport.",
+      "workload": "Compact four-component fixture covers both SDK logger configurations/callback delivery distinctions, public method success/errors, partial dispatch/retry/queue/cache failures, scene cache/generation/non-OK unread body/throw and socket direct callback send/persistence/state outcomes; unchanged 28 telemetry and 10 consent/service cases.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W07.02-K2",
+      "required": true,
+      "criterion_ids": [
+        "W07.02-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t W07.01",
+      "runtime": "Existing Miniflare/workerd actual-entry fixture, synthetic working bindings and outbound blocked; five selected entry/queue cases only.",
+      "workload": "Retain W07.01 entry URL/error/payload containment and API-info/default/scene/ledger/catch ack/retry controls with new service source. Nineteen unrelated historical cases excluded explicitly; no old proof reclosure.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W07.02-K3",
+      "required": true,
+      "criterion_ids": [
+        "W07.02-C3"
+      ],
+      "command": "Independent frozen W07.02 source/baseline/assertion/evidence review and exact K1/K2 reruns; inspect worker application noEmit TypeScript, scoped diff and relevant source/config/lock/proof identity; retain exact results and bounded verdict in review-v1.md.",
+      "runtime": "Independent actual source and declared synthetic Node/workerd review; inspect worker compiler result with task-temporary metadata without duplicate compile or installed-runner inventory.",
+      "workload": "All C1-C3; preserve both SDK logger policies/delivery distinction and domain effects. Validate relevant packages-external local graph and protected prior outputs; retain historical proof qualification and privacy/transport/customer/deployed limits.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W34.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented protections remain in place; their old broad source artifact is qualified historical before these pinned dependencies change. Required bounded current regressions run under W07.02.",
+      "rationale": "Do not block independently reproduced logging fixes on unrelated prior full acceptance or expand their contracts. No automatic prior proof reclosure."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W07.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented protections remain in place; their old broad source artifact is qualified historical before these pinned dependencies change. Required bounded current regressions run under W07.02.",
+      "rationale": "Do not block independently reproduced logging fixes on unrelated prior full acceptance or expand their contracts. No automatic prior proof reclosure."
+    }
+  ],
+  "preflight": {
+    "status": "approved",
+    "plan": null,
+    "contract_digest": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0202-worker",
+    "independent_reviewer": "w0202-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested",
+    "actor_id": null,
+    "artifact_digest": null,
+    "evidence_ids": [],
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "lead_signoff": {
+    "status": "pending",
+    "actor_id": null,
+    "artifact_digest": null,
+    "review_sha256": null,
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement the four owned production changes first, then only declared focused checks; freeze for independent review and separate lead acceptance.",
+    "record": null
+  }
+}

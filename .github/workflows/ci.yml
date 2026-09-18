@@ -1,12 +1,5 @@
-# CI — the evidentiary standard, enforced.
-#
-# The scope appendix says twelve capabilities are "built, tested, and active on
-# signature". Until 2026-09-02 the test harness could not execute; until this
-# file, nothing ran it automatically. A suite nobody runs on every commit is a
-# suite whose green is a memory.
-#
-# Two jobs, on purpose. Typecheck and tests fail independently, so a red run says
-# WHICH standard slipped rather than one bar going red for both.
+# Checks and the exact deployable payload are one retained execution. No
+# credentials, provider calls or automatic promotion are granted by this job.
 name: ci
 
 on:
@@ -14,13 +7,17 @@ on:
     branches: ['**']
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  typecheck:
+  verified-package:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,16 +25,45 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # The existing packager executes real lint, app/SDK noEmit and npm test,
+      # retaining complete primaries and the same held source/config/tool basis.
+      # SDK/Meridian comparison is write:false. Promotion never rebuilds.
+      - name: Check and attest immutable package
+        shell: bash
+        run: |
+          umask 077
+          proof_dir="$(mktemp -d)"
+          chmod 700 "$proof_dir"
+          printf '%s' '{"profile":"ci-v1"}' > "$proof_dir/input.json"
+          chmod 600 "$proof_dir/input.json"
+          echo "PACKAGE_LOG=$proof_dir/package.log" >> "$GITHUB_ENV"
+          echo "PACKAGE_NODE_PROOF=$proof_dir/node-tests.json" >> "$GITHUB_ENV"
+          node scripts/stamp-workflow.mjs --mode package --input "$proof_dir/input.json" --output "$proof_dir/artifact.json" > "$proof_dir/package.log" 2>&1
+          export STAMP_TEST_ARTIFACT_PATH="$proof_dir/artifact.json"
+          # Node's test files are not Vitest suites. Reuse the exact validated
+          # package through this test-only input; never build it recursively.
+          echo "PACKAGE_ARTIFACT=$proof_dir/artifact.json" >> "$GITHUB_ENV"
+          node --input-type=module -e 'import {verifyPackagedNodeTests,canonical} from "./scripts/stamp-workflow.mjs"; const proof=await verifyPackagedNodeTests(process.env.STAMP_TEST_ARTIFACT_PATH); console.log(canonical(proof)); if(proof.exitCode!==0||proof.signal||!proof.unchanged||!proof.artifactUnchanged)process.exitCode=1;' > "$proof_dir/node-tests.json"
+      - name: Verify final upload identity
+        shell: bash
+        run: |
+          node --input-type=module -e 'import {verifyPackagedUpload,canonical} from "./scripts/stamp-workflow.mjs"; console.log(canonical(await verifyPackagedUpload(process.env.PACKAGE_ARTIFACT,process.env.PACKAGE_NODE_PROOF)));'
+          chmod 400 "$PACKAGE_ARTIFACT" "$PACKAGE_NODE_PROOF"
+      - uses: actions/upload-artifact@v4
+        if: success()
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      # `vitest run`, never watch mode; exit code propagates. No `| tail`.
-      - run: npm test
+          name: verified-package-${{ github.sha }}
+          path: |
+            ${{ env.PACKAGE_ARTIFACT }}
+            ${{ env.PACKAGE_NODE_PROOF }}
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: failed-package-diagnostics-${{ github.sha }}
+          path: |
+            ${{ env.PACKAGE_LOG }}
+            ${{ env.PACKAGE_NODE_PROOF }}
+          if-no-files-found: ignore
+          retention-days: 30

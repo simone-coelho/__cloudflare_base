@@ -18,7 +18,8 @@
 //      under an opt-in mode. A content event has no product and should not depend
 //      on that mode. contentTouches() reads the registry off the event's own
 //      attributes through the same sanitizer, so a contentType dimension in the
-//      registry scores from the contentType the SDK sent.
+//      registry scores the compatible event-carried path. Known content IDs now
+//      resolve through resolvedContentTouches to the tenant catalog's format tags.
 //
 // This is stage one, learning the SHOPPER: does she engage with video, with
 // editorial, with on-model imagery. Stage two, learning what WORKS, is doc 22's
@@ -34,6 +35,10 @@
 // ---------------------------------------------------------------------------
 
 import { extractTouches, sanitizeEventAttributes, type ReflexConfig, type Touch } from '@/reflex/core';
+import type { Env } from '@/types/env';
+import { readRevision } from '@/config/versionedStore';
+import { CONTENT_KIND } from '@/content/kinds';
+import { contentTypeValues } from '@/content/typeAffinity';
 
 /** The content actions the SDK emits and the registry can learn from. */
 export const CONTENT_ACTIONS = ['content_impression', 'content_click', 'content_dwell', 'video_complete'] as const;
@@ -89,4 +94,22 @@ export function actionOf(event: { type: string; data?: Record<string, unknown> |
  */
 export function contentTouches(data: Record<string, unknown>, config: ReflexConfig): Touch[] {
   return extractTouches(sanitizeEventAttributes(data, config), config);
+}
+
+/** Held catalog tags are dimension-keyed, not raw source attributes. Read errors
+ * must propagate before callers apply affinity or fan the same touches out. */
+export async function resolvedContentTouches(env: Env, tenant: string, data: Record<string, unknown>, config: ReflexConfig): Promise<Touch[]> {
+  const dimension = config.dimensions.find(spec => spec.key === 'contentType');
+  if (!dimension) return contentTouches(data, config);
+  if (!Object.prototype.hasOwnProperty.call(data, 'contentId')) return contentTouches(data, config);
+  const id = data.contentId;
+  if (typeof id !== 'string' || id.trim() === '') throw new Error('Invalid contentId');
+  if (dimension.derive) return contentTouches(data, config).filter(touch => touch.dim !== 'contentType');
+  const catalog = await readRevision(env, CONTENT_KIND, tenant).catch(() => { throw new Error('Content catalog unavailable'); });
+  if (!catalog) throw new Error('Content catalog unavailable');
+  const piece = catalog.value.pieces.find(candidate => candidate.id === id);
+  if (!piece) return contentTouches(data, config);
+  const touches = contentTouches(data, config).filter(touch => touch.dim !== 'contentType');
+  for (const value of contentTypeValues(piece) ?? []) touches.push({ dim: 'contentType', value });
+  return touches;
 }

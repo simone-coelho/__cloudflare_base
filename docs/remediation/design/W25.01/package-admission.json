@@ -1,0 +1,111 @@
+{
+  "before": {
+    "id": "W25",
+    "canonical": {
+      "gate_scope": "G3, earlier if priors are promised",
+      "full_scope": "Structured per-item priors and canonical/versioned cell grammar; every supported level, no-event publication, zero reference, unit compatibility, prior provenance and no phantom rows. Distinguish effective prior strength from observed exposure. Test the actual import-to-receipt-to-ranking pipeline, not just a key helper.",
+      "finding_refs": "F20; N20/N22",
+      "sizing_owner": "S indexing subset → M complete cold-prior contract; OL + DS"
+    },
+    "title": "Cold-slot priors and provenance",
+    "gates": [
+      "G3"
+    ],
+    "source_findings": [
+      "F20",
+      "N20",
+      "N22"
+    ],
+    "proposed_owner": "OL + DS",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W25",
+    "canonical": {
+      "gate_scope": "G3, earlier if priors are promised",
+      "full_scope": "Structured per-item priors and canonical/versioned cell grammar; every supported level, no-event publication, zero reference, unit compatibility, prior provenance and no phantom rows. Distinguish effective prior strength from observed exposure. Test the actual import-to-receipt-to-ranking pipeline, not just a key helper.",
+      "finding_refs": "F20; N20/N22",
+      "sizing_owner": "S indexing subset → M complete cold-prior contract; OL + DS"
+    },
+    "title": "Cold-slot priors and provenance",
+    "gates": [
+      "G3"
+    ],
+    "source_findings": [
+      "F20",
+      "N20",
+      "N22"
+    ],
+    "proposed_owner": "OL + DS",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W25-IDENTITY",
+          "description": "Structured per-item priors across all current levels; no phantom rows, observed counts separate from strength and actual warm-slot import-to-raw-receipt-to-ranking proof."
+        },
+        {
+          "id": "W25-GRAMMAR",
+          "description": "Canonical/versioned cell grammar and migration/rolling-reader contract; not delivered here."
+        },
+        {
+          "id": "W25-COLD",
+          "description": "No-event slot publication and zero base/reference model contract; not delivered here."
+        },
+        {
+          "id": "W25-UNITS",
+          "description": "Unit/objective and monetary compatibility; not delivered here."
+        },
+        {
+          "id": "W25-PROVENANCE",
+          "description": "Complete prior provenance across formatted receipts/customer surfaces and full cold pipeline acceptance; not delivered here."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W25-IDENTITY",
+          "task_id": "W25.01",
+          "task_criterion_id": "W25.01-C1"
+        },
+        {
+          "criterion_id": "W25-IDENTITY",
+          "task_id": "W25.01",
+          "task_criterion_id": "W25.01-C2"
+        },
+        {
+          "criterion_id": "W25-IDENTITY",
+          "task_id": "W25.01",
+          "task_criterion_id": "W25.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W25.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

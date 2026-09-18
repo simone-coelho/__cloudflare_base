@@ -1,0 +1,117 @@
+{
+  "before": {
+    "id": "W15",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "Supported refresh or genuine push through the exact kit; coalescing/stale-response guards, correct absence/default handoff and server-snapshot/no-flash contract. Distinguish read-only polls from actual correlated exposures. Deliver customer browser/operator acceptance, tag-plan/debug artifacts and feed failure cases. Correct objective/symbol/default/acceptance claims; reconcile SSO with customer authority, not unilateral deletion.",
+      "finding_refs": "F12/F21/F29/F30; N17/N25",
+      "sizing_owner": "S documentation/absence containment → M/L SDK + customer acceptance; D/OL + C"
+    },
+    "title": "Supported SDK refresh and customer acceptance",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F12",
+      "F21",
+      "F29",
+      "F30",
+      "N17",
+      "N25"
+    ],
+    "proposed_owner": "D/OL + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W15",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "Supported refresh or genuine push through the exact kit; coalescing/stale-response guards, correct absence/default handoff and server-snapshot/no-flash contract. Distinguish read-only polls from actual correlated exposures. Deliver customer browser/operator acceptance, tag-plan/debug artifacts and feed failure cases. Correct objective/symbol/default/acceptance claims; reconcile SSO with customer authority, not unilateral deletion.",
+      "finding_refs": "F12/F21/F29/F30; N17/N25",
+      "sizing_owner": "S documentation/absence containment → M/L SDK + customer acceptance; D/OL + C"
+    },
+    "title": "Supported SDK refresh and customer acceptance",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F12",
+      "F21",
+      "F29",
+      "F30",
+      "N17",
+      "N25"
+    ],
+    "proposed_owner": "D/OL + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W15-TRANSPORT",
+          "description": "F12 supported refresh or genuine push, coalescing and stale-response safeguards across scope/identity; this slice is generic-update containment only."
+        },
+        {
+          "id": "W15-DEFAULTS",
+          "description": "F29 correct absence and site-default handoff plus accepted server-snapshot/no-flash integration."
+        },
+        {
+          "id": "W15-EXPOSURES",
+          "description": "F12/F21 distinguish read-only polls from actually displayed correlated/deduplicated exposures and outcome identities."
+        },
+        {
+          "id": "W15-CUSTOMER",
+          "description": "F29 actual customer browser/operator/feed failure acceptance with exact kit, tag-plan and debug deliverables."
+        },
+        {
+          "id": "W15-CLAIMS",
+          "description": "F30/N17/N25 correct runtime model/objective/symbol/default/acceptance claims; reconcile SSO with customer authority, not unilateral deletion."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W15-TRANSPORT",
+          "task_id": "W15.01",
+          "task_criterion_id": "W15.01-C1"
+        },
+        {
+          "criterion_id": "W15-TRANSPORT",
+          "task_id": "W15.01",
+          "task_criterion_id": "W15.01-C2"
+        },
+        {
+          "criterion_id": "W15-TRANSPORT",
+          "task_id": "W15.01",
+          "task_criterion_id": "W15.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W15.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

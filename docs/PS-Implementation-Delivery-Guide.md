@@ -1,5 +1,11 @@
 # Implementation & Delivery Guide — Edge Personalization Platform
 
+## Current accountable handoff qualification
+
+Use the signed-session, explicit-consent, recoverable publication and run-owned cleanup kit. Local engineering checks do not automatically accept a customer milestone. Delivery includes generic model-assisted sample enrichment with per-label human review, dedicated catalog-grounded search, durable behavior/ranking/decision/outcome sources and disabled scheduled Snowflake SQL API delivery with locally supplied receiver SQL.
+
+Provider egress/metering/retention approval, real taxonomy/feed/identity mapping, receiver installation/concurrency/history deletion, sample calibration and actual customer acceptance remain named live work. Product Rec entitlement is commercial evidence, not a new recommendation engine. SFCC D4/candidate-preserving rendering is joint customer integration. Existing SSO and typed CSV/JSON attributes/audience handoffs remain commitments. Optional no-additional-cost widget/template handoff is availability-triggered, not January widget construction.
+
 **Audience:** INTERNAL — Professional Services, solutions/enterprise engineering, monetization & procurement.
 **Purpose:** what it actually takes to implement this platform for a customer: the deployment and isolation model, who does what (RACI), the phase-by-phase playbook with effort ranges, the SDK and instrumentation work, customer prerequisites, and Day-2 operations — so PS can run a repeatable motion and monetization can package it with real units.
 **What this guide is NOT:** pricing (it provides effort units; pricing is monetization's call), the customer-facing solution documents (those exist per engagement), or the platform build plan (internal ledger: `docs/architecture/19-tapestry-delivery-ledger.md`). This guide is customer-generic by design.
@@ -74,14 +80,14 @@ Effort in person-days (pd). Calendar durations are dominated by *customer* sched
 
 One npm package (+ CDN script build), tree-shakeable, browser-first:
 
-- **Core (shared, mandatory):** first-party visitor identity (localStorage + cookie; no fingerprinting), session boundaries, the WebSocket + snapshot transport, SDK-key auth. Shared core is non-negotiable: events and decisions must be keyed to the *same* visitor ID, and one socket serves both directions.
+- **Core (shared, mandatory):** server-issued signed shopper/profile authority (cookie/body hints only restrict; no fingerprinting), session boundaries, the WebSocket + snapshot transport, SDK-key auth. Shared core is non-negotiable: events and decisions must be keyed to the *same* visitor ID, and one socket serves both directions.
 - **Emit module (tracking):** four capture paths, used together —
-  1. *Automatic:* impressions/dwell for content the platform itself pushed (free — the SDK knows what it rendered);
+  1. *Automatic:* renderer callback plus exact durable ACK for the actually painted original receipt; receipt of a choice alone is not capture;
   2. *Declarative:* `data-*` attributes on slots/elements for view/click capture;
   3. *Adapter:* dataLayer/GTM mapping for sites with an existing tag layer (most retail sites — this is the cheap path);
   4. *Explicit API:* commerce events (add-to-cart, purchase/conversion) — the conversion event is non-negotiable for outcome learning.
-- **Listen module (decisions):** subscribe to page-level `content_decisions`, per-slot callbacks, first-paint snapshot hydration (no flash of default), guaranteed graceful absence (no decision → customer default renders; the page never waits on us).
-- **Listen-only mode** is supported for customers who insist on keeping their existing analytics pipeline — events then arrive via the adapter path, and PS must QA that pipeline to the same standard.
+- **Listen module (decisions):** supported coalesced snapshot refresh and per-slot callbacks; local same-grant server-first-paint adoption implements the conditional no-repaint path, while real customer SSR/browser/no-flash acceptance remains open, graceful absence (no decision → customer default renders; the page never waits on us).
+- **Listen-only mode** is supported for customers who insist on keeping their existing analytics pipeline — ordinary commerce/page events can use the adapter; rendered admission is suppressed, so content outcomes need the supported exact ACK and cannot bypass it. PS must QA the actual pipeline.
 - **Native apps:** later port, by design — the contract is transport-level JSON; nothing about it is browser-specific. Do not sell native as available; sell the contract as portable.
 
 ## 6. Instrumentation — the chapter PS lives in
@@ -90,11 +96,11 @@ Nothing works without events. The engine scores what it receives; a silent site 
 
 **The event schema (what the tag plan must produce):** page/product views · product interactions (view/wishlist/add-to-cart with product attributes flattened) · content interactions (impression/click/dwell/video-completion with content tags) · purchase/conversion (order ID, items, value) · context (entry channel from UTM/referrer — captured automatically by the SDK core; coarse geo comes from the edge, zero client work).
 
-**Consent (CW31, 2026-09-04):** the site tells the engine the shopper's two switches, tracking and personalization, and the engine honours them: either off means the site's own defaults; tracking off means nothing is written, forwarded or learned from. On the session host the switches ride the preferences call (`POST /realtime/session/:sessionId/preferences`) and its cookies; on the object host the same call with the `userId` reaches the shopper's object, and an event may carry `data.consent: { tracking, personalization }`. Absent means consenting. Erasure is `POST /v1/:tenant/identity/erase` with the operator token: links, every profile, and the ledger rows, with a receipt that also says what it cannot reach (ODP's copy, erased through ODP's own API).
+**Consent:** both hosts require the server-issued signed shopper capability and an explicit preference choice with original choice ID, expected consent revision and signed grant ID/iat/exp. Missing/legacy choice is OFF; cookies and body hints can only restrict. Personalization off gives customer defaults; independently approved tracking can still produce measurement, while tracking off blocks behavioral capture/forwarding/learning. `POST /v1/:tenant/identity/erase` uses current operator authority and returns bounded, resumable local progress plus frozen destination reconciliation obligations. It is not proof that every provider or historical copy was deleted.
 
 **Method selection:** dataLayer adapter first wherever a tag layer exists; declarative attributes for slot-level capture; explicit API for commerce. The tag plan template (page types × events × method × owner × status) is filled in during P1 and executed in P4.
 
-**QA:** the event-validation debug overlay — PS enables it on the customer's staging site and watches events land, scores move, and decisions change, live. Tagging is DONE when the overlay shows the full schema flowing on every page type in the plan, not when the code is merged.
+**QA:** PS can opt into the redacted SDK debug view for dispatch counts, response counts, closed socket states and RTT; it retains no full schema, score, ID/token or raw payload and is not a consumer receipt. Tagging is DONE only after the accountable tag-plan owner verifies each page/event against approved source/consumer evidence and the actual rendered experience, not after a debug dispatch or code merge.
 
 ## 7. Content pipeline onboarding
 
@@ -114,10 +120,10 @@ translation, so a content team tags once and correctly.*
 | `occasion_tags` (work, evening, weekend, travel, special-event) | `tags: { occasion: [...] }` | A registry dimension like any other | Multi-valued |
 | `featured_product_ids` (`["SKU123", "SKU456"]`) | `featuredProductIds: ["SKU123", "SKU456"]` | Carried on the piece and the receipt, in the customer's product ids, validated, never rewritten | Links content to product decisions |
 | `price_tier` (entry, core, aspirational) | `tags: { priceBand: ["core"] }` | Scored against the shopper's price posture, the same dimension products carry | Our bands are `entry` / `core` / `elevated`; a brand may name its own cuts in the registry |
-| `content_format` (hero-image, carousel, video, editorial, lookbook) | `type`, and `tags: { contentType: [...] }` | The shopper's format affinity is learned from content events (`contentType` dimension) | `type` is the piece's kind; the tag is what affinity scores on |
+| `content_format` (hero-image, carousel, video, editorial, lookbook) | `type`, and `tags: { contentType: [...] }` | Known content events learn the held catalog's format tags, the same keys ranking uses | `type` stays the rendering kind; an absent own format tag uses safe `type` on non-default live input only. Explicit tags win, so film/video and lookbook/on-model need no hard-coded alias |
 | `content_embedding` (64-dim vector) | not stored | An embedding model scores as the external model term (`learn.external`), with a latency budget, itemised on the receipt | We do not learn dense vectors; the profile is a readable vector over the registry. Their model plugs in |
 | `freshness_date` | `freshnessDate` (ISO 8601) | A slot's `freshness` rule gives a bonus that halves per half-life from this date | Absent: ages from `window.from` |
-| `min_impressions` (1000 hero, 500 modules) | the slot's exploration `floor` on the learn document | Under-observed pieces are rotated in until they have `floor` observations | Per slot, not per piece; the default is 50 |
+| `min_impressions` (1000 hero, 500 modules) | the slot's exploration `floor` on the learn document | Explicitly enabled rotation considers eligible under-observed pieces; it does not guarantee a minimum impression count | Per slot, not per piece; shipped exploration is off. The UI initializes a floor of 50 only when enabled |
 | *(implied by A.4)* inventory | `inStock` (`in_stock` / `ats` in a feed) | `false` removes the piece from every decision | Absent means in stock |
 | *(implied by A.3.5)* seen-before | nothing to tag | A slot's `fatigue` rule penalises what this shopper was served inside a window, from the ledger's ring | Automatic |
 
@@ -125,6 +131,13 @@ What a content team therefore supplies per piece, beyond the required id, type, 
 `journeyStageFit`, `freshnessDate`, `featuredProductIds`, `inStock`, and the `merchandising` signals
 (`season`, `promotion`, `margin`, each 0 to 1) when the multipliers are on. Everything else is a slot
 setting a merchandiser makes once.
+
+The bounded format-learning contract is in the kit's **Content format affinity** section: a complete
+safe 1–8-value list, non-derived registered `contentType`, tenant-owned cached lookup and failure
+refusal. Raw-event source/multiplicity does not reduce a held catalog's dimension-keyed list. Catalogs
+and historical profiles are not rewritten; old receipts replay tags-only scoring via the absent
+content-type policy marker. Idless/unknown-ID compatibility is not proof of an authenticated exposure.
+Registry vocabulary, locale, inheritance and end-to-end customer feed acceptance remain separate.
 
 ## 8. Customer prerequisites checklist (the qualification list)
 
@@ -168,7 +181,7 @@ These are **effort units, not prices** — packaging and pricing are monetizatio
 **"Can multiple customers really share this?"** — Each customer gets their own stamp: separate worker, storage, keys, domain. Brands within a customer share their stamp with logical isolation. Nothing is commingled across customers.
 **"What if the customer doesn't have ODP?"** — The CDP connector is additive. The engine is fully functional standalone; ODP joins when they're ready and the memory story gets deeper.
 **"Native apps?"** — Browser-first today. The delivery contract is transport-level JSON; a native SDK is a port on the roadmap, not a redesign.
-**"Does shopper traffic consume AI credits?"** — Never. The decision path is deterministic. Credits apply to authoring/insight and optional shopper-AI features only (see the credit-boundary guide).
+**"Does shopper traffic consume AI credits?"** — Ordinary personalization ranking is deterministic and consumes no runtime-model credits. Separately enabled enrichment/insight/NL-search features have their own provider/metering policy (see the credit-boundary guide).
 **"What's built vs. in build?"** — The behavioral engine, audiences, product recs, and CDP loop are live; the content engine, tuning UI, tenancy, and SDK packaging are in active build. Current truth lives in the internal ledger — check it before making customer commitments.
 
 ---

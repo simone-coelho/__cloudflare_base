@@ -1,0 +1,27 @@
+{
+  "at": "2026-09-12T02:09:49.824Z",
+  "command": "pwd\nnode node_modules/eslint/bin/eslint.js src/durable-objects/LearnStats.ts src/learn/stats.ts src/learn/learn.test.ts",
+  "captures": [
+    {
+      "chunk_id": "e09f76",
+      "session_id": 46413,
+      "output": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base\n"
+    },
+    {
+      "chunk_id": "82a576",
+      "session_id": 46413,
+      "output": ""
+    },
+    {
+      "chunk_id": "025ca9",
+      "wall_time_seconds": 1.058519706,
+      "exit_code": 0,
+      "original_token_count": 150,
+      "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/durable-objects/LearnStats.ts\n  11:88  warning  'StatsConfig' is defined but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  110:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  111:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  111:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 4 problems (0 errors, 4 warnings)\n\n"
+    }
+  ],
+  "exit_code": 0,
+  "drained": true,
+  "errors": 0,
+  "warnings": 4
+}

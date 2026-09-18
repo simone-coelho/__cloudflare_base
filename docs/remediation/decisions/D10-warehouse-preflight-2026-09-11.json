@@ -1,0 +1,116 @@
+{
+  "id": "D10-W14-WAREHOUSE-PREFLIGHT-2026-09-11",
+  "at": "2026-09-11T14:23:59Z",
+  "status": "pending_customer_integration_contract",
+  "scope": "W14 §§1.8/1.12 scheduled outbound Snowflake delivery; no new task admitted or implementation accepted.",
+  "lead": "/root",
+  "consulted_agent": {
+    "run_id": "/root/w1405_design",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "mode": "read_only_no_tests_no_edits_no_subdelegation"
+  },
+  "source_basis": [
+    {
+      "path": "docs/opticon/Tapestry_Scope_of_Services_v8_tracked.docx",
+      "anchor": "Accepted-view direct body paragraphs47–50 and63–66, deletions/moveFrom excluded; scope draft, not executed commercial proof.",
+      "finding": "Outbound behavioral/decision/outcome event-level scheduled share to Tapestry Snowflake; inbound CSV/S3/REST historical/third-party data with stable visitor resolution, field meaning, customer-warranted rights. No unilateral outbound-S3 or customer-operated-pull substitution.",
+      "sha256": "ea44cba968b3d235dda184abbfbfe5e2e396cd8317c787846285623efa44ab47"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "anchor": "W14, F07/F11/F29/F31, N16/N17, §§4/7",
+      "finding": "Scheduled destination/readback/deletion and actual customer integration remain open; do not equate an R2 export seam with delivery.",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "anchor": "writeBatches,53–75",
+      "finding": "Writes tenant/hour decision/outcome/product-sort R2 batches; no complete independent behavioral stream or destination transfer.",
+      "sha256": "da7743fdfec69d2f549fff954435a273b14d90493255efba9f4f74a08c5901e9"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "anchor": "368–445",
+      "finding": "Operator batch-metadata listing, active tombstone listing and singleton suppressed reads; no scheduled receiver receipt/readback.",
+      "sha256": "66693cba2fda80b183804a0f4764c3a3a474500e620538f36ad2931ca399a360"
+    },
+    {
+      "path": "src/index.ts",
+      "anchor": "205–265",
+      "finding": "Provisioned-tenant monitoring/fold/report/local erasure/trend jobs, no warehouse sender or S3 ingestion.",
+      "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "anchor": "300–414",
+      "finding": "Retained subject cutoffs and local rewrite can overwrite/delete existing batch objects. Copy-each-key-once would not propagate later erasures.",
+      "sha256": "e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7"
+    },
+    {
+      "path": "docs/architecture/22-outcome-learning-design.md",
+      "anchor": "§12.4",
+      "finding": "Historical direct-R2-reader design is documented but is not proof of customer transport approval or destination delivery.",
+      "sha256": "37d91e5fdd004e861159efe5306ff065d670ff305f62cadee1513eb5a4ec5dff"
+    }
+  ],
+  "lead_disposition": "Do not admit a speculative NDJSON endpoint or transport framework. No current scheduled consumer requires that interface and chosen destination mechanism may bypass it. Missing customer contract blocks this delivery slice, not all local remediation. Preserve accepted source and evidence; no source fixes claimed this turn.",
+  "required_decisions": [
+    {
+      "owner": "Authorized delivery/customer integration owner; D10/D08",
+      "request": "Agreed Snowflake destination and transfer mechanism, operational ownership and secure credential-binding arrangement. Do not send secrets."
+    },
+    {
+      "owner": "Delivery/customer DS owner; D10",
+      "request": "Cadence, late-arrival/backfill policy, exact event-level datasets and stable identity/join semantics. Existing ledger losses/behavioral coverage remain explicit W09/W22 dependencies."
+    },
+    {
+      "owner": "Customer privacy/security and destination owner; D06/D10",
+      "request": "Destination acknowledgement/readback and remote erasure protocol, including replacements/deletions and retained cutoffs."
+    }
+  ],
+  "consultation_verdict": "Astra/xhigh worker independently inspected code and accepted-view clause; agrees no concrete scheduled delivery remedy is admit-ready absent these choices. No product/runtime acceptance asserted.",
+  "commands": {
+    "entry": {
+      "actual_command": "node --max-old-space-size=768 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>134217728&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+      "captures": [
+        {
+          "chunk_id": "c2735a",
+          "wall_time_seconds": 1.001999546,
+          "session_id": 25265,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "b38130",
+          "wall_time_seconds": 5.001103628,
+          "session_id": 25265,
+          "original_token_count": 0,
+          "output": ""
+        },
+        {
+          "chunk_id": "5416f9",
+          "wall_time_seconds": 5.001175877,
+          "session_id": 25265,
+          "original_token_count": 317,
+          "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=17, unscoped=24\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=66, closed=3; evidence records=195\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W14.06 — Preflight the next remaining W14 §1.12 delivery gap against the accepted-view clause and actual src/routes/decisions.ts ledger export readers, src/ledger/writer.ts, src/ledger/erasure.ts, src/index.ts scheduled dispatcher and src/identity/history.ts input boundary. Reuse accepted typed JSON/CSV ingestion and unchanged downstream assurance; select one coherent already-authorized local implementation only where destination, identity, deletion and cadence can be explicit without inventing customer policy. Surface any required customer destination/credentials/external authority before external work. No new framework, broad validation replay, deployment, provider/customer-data calls, build/install/commit/push/cleanup, full package or release claim.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 11891\n"
+        },
+        {
+          "chunk_id": "2a4720",
+          "wall_time_seconds": 0.000001828,
+          "exit_code": 0,
+          "original_token_count": 317,
+          "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=17, unscoped=24\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=66, closed=3; evidence records=195\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W14.06 — Preflight the next remaining W14 §1.12 delivery gap against the accepted-view clause and actual src/routes/decisions.ts ledger export readers, src/ledger/writer.ts, src/ledger/erasure.ts, src/index.ts scheduled dispatcher and src/identity/history.ts input boundary. Reuse accepted typed JSON/CSV ingestion and unchanged downstream assurance; select one coherent already-authorized local implementation only where destination, identity, deletion and cadence can be explicit without inventing customer policy. Surface any required customer destination/credentials/external authority before external work. No new framework, broad validation replay, deployment, provider/customer-data calls, build/install/commit/push/cleanup, full package or release claim.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 11891\n"
+        }
+      ],
+      "result": "Actual check/status VALID at journal948,11891 notes each, session25265 fully drained exit0. Tracker consistency only."
+    },
+    "product_checks": "None run; source-only admission preflight, no production artifacts changed.",
+    "exceptions": [
+      "Read-only oversized displays were reread bounded; initial docx paragraph selection did not contain §1.12, corrected extraction63–66.",
+      "Root output-capture wrapper attempted .store on text return after polling b38130, TypeError; actual empty session output retained and later pair drained successfully. No check rerun or source mutation.",
+      "Read-only patch builder8fccd5 syntax error before READY; no patch/files changed. Corrected before applying governance record."
+    ]
+  },
+  "next_action": "Obtain the agreed Snowflake transfer interface and accountable delivery owner for W14 §§1.8/1.12 before admitting scheduled delivery. Record destination/mechanism/credential-binding responsibility, cadence/late-arrival and event/identity mapping, destination acknowledgement/readback and remote deletion reconciliation with D10/D06/D08 owners. No credentials in chat/evidence. Then admit one concrete customer-neutral local adapter with minimal synthetic checks; no speculative NDJSON endpoint, default destination/schedule, external operations or scope substitution. W14.06 remains accepted unchanged. Other authorized local remediation is not blocked globally."
+}

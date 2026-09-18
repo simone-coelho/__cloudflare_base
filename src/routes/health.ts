@@ -1,5 +1,9 @@
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
+import { readSigningConfig, SIGNING_CONFIGURATION_UNAVAILABLE } from '@/auth/signingConfig.mjs';
+import { tenantConfig } from '@/tenancy/middleware';
+import { IDENTITY_MATERIAL_UNAVAILABLE, requiresSafeIdentity, validateIdentityMaterial } from '@/identity/material.mjs';
+import { recoveryReady } from '@/ledger/quarantine';
 
 const health = new Hono<{ Bindings: Env }>();
 
@@ -48,23 +52,26 @@ health.get('/', async (c) => {
     checks.status = 'degraded';
   }
 
-  try {
-    await c.env.ANALYTICS.writeDataPoint({
-      blobs: ['health-check'],
-      doubles: [Date.now()],
-      indexes: ['health'],
-    });
-    checks.services.analytics = 'healthy';
-  } catch (error) {
-    checks.services.analytics = 'unhealthy';
-    checks.status = 'degraded';
-  }
+  // This is a stamp-level check, not a tenant event. No tenant may be selected
+  // merely to borrow its optional telemetry policy. Do not touch the binding
+  // or report held capture as a successful dataset write/readback.
+  checks.services.analytics = 'held: no stamp-scoped telemetry authority';
 
   const statusCode = checks.status === 'healthy' ? 200 : 503;
   return c.json(checks, statusCode);
 });
 
 health.get('/ready', (c) => {
+  c.header('Cache-Control', 'no-store');
+  if (!readSigningConfig(c.env)) {
+    return c.json({ status: 'not_ready', error: SIGNING_CONFIGURATION_UNAVAILABLE, timestamp: Date.now() }, 503);
+  }
+  try {
+    if (requiresSafeIdentity(c.env)) validateIdentityMaterial(c.env, tenantConfig(c.env).provisioned);
+  } catch { return c.json({ status: 'not_ready', error: IDENTITY_MATERIAL_UNAVAILABLE, timestamp: Date.now() }, 503); }
+  if (c.env.LEDGER_RECOVERY_ENABLED !== undefined && c.env.LEDGER_RECOVERY_ENABLED !== 'false' && !recoveryReady(c.env)) {
+    return c.json({ status: 'not_ready', error: 'Durable recovery prerequisites unavailable', timestamp: Date.now() }, 503);
+  }
   return c.json({ status: 'ready', timestamp: Date.now() });
 });
 

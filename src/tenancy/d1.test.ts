@@ -33,11 +33,10 @@ class FakeD1 {
   rows: unknown[][] = [];
   queries: Array<{ sql: string; args: unknown[] }> = [];
   prepare(sql: string) {
-    const self = this;
     return {
       bind: (...args: unknown[]) => ({
         sql, args,
-        all: async () => { self.queries.push({ sql, args }); return { results: [] }; },
+        all: async () => { this.queries.push({ sql, args }); return { results: [] }; },
       }),
     } as never;
   }

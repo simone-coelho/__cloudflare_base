@@ -1,0 +1,209 @@
+{
+  "at": "2026-09-10T12:33:41Z",
+  "entry_board": {
+    "check": {
+      "session_id": 57647,
+      "exit_status": 0,
+      "drained": true
+    },
+    "status": {
+      "session_id": 14747,
+      "exit_status": 0,
+      "drained": true
+    },
+    "journal": 766,
+    "notes": 9031
+  },
+  "case": "Source-confirmed five whole-table DELETEs,245INSERTs including metadataREPLACE and ten operative headers. No baseline SQL execution.",
+  "owned": [
+    {
+      "path": "migrations/seed/seed_001.sql",
+      "absent": false,
+      "sha256": "366dcaf50e42d6be2bc0f141506355839472b1a8cbc638311c862b3e0d94567d",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "migrations/seed/seed_002.sql",
+      "absent": false,
+      "sha256": "d5e7ced1230fbf8e66976769e876f2562845f8af998b3348952a4090b86e54f8",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "migrations/seed/seed_003.sql",
+      "absent": false,
+      "sha256": "8f7a8851f481305ea2d38fc9d80aa4b658a6fa127696003ab0f5bafd46e8c582",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "migrations/seed/seed_004.sql",
+      "absent": false,
+      "sha256": "803cde299a2c9a17d698ae7c64398007823f0de7e831168fed33557cb1fb3886",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "migrations/seed/seed_005.sql",
+      "absent": false,
+      "sha256": "bad78d7790dc2c327c97e1850787c850c11a7a7f4d96c0662290aa6cd276ce89",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "migrations/seed/seed_006.sql",
+      "absent": false,
+      "sha256": "f69306f0b1de1f93323f0322d20bfd86146e1963f43b45cb78f8e86b6a659820",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "migrations/seed/seed_007.sql",
+      "absent": false,
+      "sha256": "3fb807653670d9485c073ed2c77ab668c7903fceec2494f68a33f3e370d51e0f",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "migrations/seed/seed_008.sql",
+      "absent": false,
+      "sha256": "968b301c67b390c8de8b88093964c7ed425066f7cdcae7379a901d2c75bb1daa",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "migrations/seed/seed_009.sql",
+      "absent": false,
+      "sha256": "8158d479e6867b874fdf8f1a7e4fc04eaa95f3398e43bd3dbfd7af8b3466e00e",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "migrations/seed/seed_010.sql",
+      "absent": false,
+      "sha256": "5c636b303ad4fde6aef6468d06551eb2037ea8fd2b296df043ae507926928010",
+      "content_retention": "Hash only; tuple data omitted. Worker safe reversible string edits must reconstruct exactly this admitted hash."
+    },
+    {
+      "path": "docs/architecture/10-d1-schema.md",
+      "absent": false,
+      "sha256": "73d19bfa9c50de9ca090dc5f690a8e6ee4274d74a72580e52013f8e76d69f8f2",
+      "content_gzip_base64": "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"
+    },
+    {
+      "path": "scripts/seed-d1.test.mjs",
+      "absent": false,
+      "sha256": "06cdd34819846bafdebffe82f13e2d1624f9ee9dbba8dff1d8133f086e1d2f1a",
+      "content_gzip_base64": "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"
+    }
+  ],
+  "pins": [
+    {
+      "path": "migrations/seed/seed_001.sql",
+      "sha256": "366dcaf50e42d6be2bc0f141506355839472b1a8cbc638311c862b3e0d94567d",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_002.sql",
+      "sha256": "d5e7ced1230fbf8e66976769e876f2562845f8af998b3348952a4090b86e54f8",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_003.sql",
+      "sha256": "8f7a8851f481305ea2d38fc9d80aa4b658a6fa127696003ab0f5bafd46e8c582",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_004.sql",
+      "sha256": "803cde299a2c9a17d698ae7c64398007823f0de7e831168fed33557cb1fb3886",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_005.sql",
+      "sha256": "bad78d7790dc2c327c97e1850787c850c11a7a7f4d96c0662290aa6cd276ce89",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_006.sql",
+      "sha256": "f69306f0b1de1f93323f0322d20bfd86146e1963f43b45cb78f8e86b6a659820",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_007.sql",
+      "sha256": "3fb807653670d9485c073ed2c77ab668c7903fceec2494f68a33f3e370d51e0f",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_008.sql",
+      "sha256": "968b301c67b390c8de8b88093964c7ed425066f7cdcae7379a901d2c75bb1daa",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_009.sql",
+      "sha256": "8158d479e6867b874fdf8f1a7e4fc04eaa95f3398e43bd3dbfd7af8b3466e00e",
+      "role": "output"
+    },
+    {
+      "path": "migrations/seed/seed_010.sql",
+      "sha256": "5c636b303ad4fde6aef6468d06551eb2037ea8fd2b296df043ae507926928010",
+      "role": "output"
+    },
+    {
+      "path": "docs/architecture/10-d1-schema.md",
+      "sha256": "73d19bfa9c50de9ca090dc5f690a8e6ee4274d74a72580e52013f8e76d69f8f2",
+      "role": "output"
+    },
+    {
+      "path": "scripts/seed-d1.test.mjs",
+      "sha256": "06cdd34819846bafdebffe82f13e2d1624f9ee9dbba8dff1d8133f086e1d2f1a",
+      "role": "output"
+    },
+    {
+      "path": "migrations/0001_d1_init.sql",
+      "sha256": "30933bc17aa9cbfccf1a59a398ba03cce038b96bd08b7d7add4e7084f9af3531",
+      "role": "source"
+    },
+    {
+      "path": "scripts/seed-d1.mjs",
+      "sha256": "6bf4d92126b432c0b5eef8fe6146c0db75e8a50a0540fabef903ef2a69e2a074",
+      "role": "source"
+    },
+    {
+      "path": "migrations/seed/seed_011_geo.sql",
+      "sha256": "d1195dcc499fab227873e1445996930f0cf971cb3c25729bafdb1e927c09dd98",
+      "role": "source"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+      "role": "source"
+    },
+    {
+      "path": "migrations/0004_geo_census.sql",
+      "sha256": "579117f14a6fb392b630fb7e383ab86ad7ce50e2589bc6c7f6b2248ebfb20c7b",
+      "role": "source"
+    },
+    {
+      "path": "migrations/0008_meridian_geo_cohort.sql",
+      "sha256": "6031d7d362ec7a8c9157740d875fa9651ad7a771f66ace51ae52833931059d86",
+      "role": "source"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+      "role": "source"
+    },
+    {
+      "path": "scripts/provision-stamp.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/provision-staging.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/deploy.sh",
+      "sha256": "14ad032bf8e7f3a9398a7e703def34e62fd41689be085449a8a710e5deb633c2",
+      "role": "source"
+    },
+    {
+      "path": "docs/deployment/01-deploy.md",
+      "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee",
+      "role": "source"
+    }
+  ]
+}

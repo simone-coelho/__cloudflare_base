@@ -1,0 +1,590 @@
+{
+  "at": "2026-09-10T22:57:51Z",
+  "entry_board": {
+    "check": {
+      "session_id": 56689,
+      "exit_status": 0,
+      "drained": true
+    },
+    "status": {
+      "session_id": 75355,
+      "exit_status": 0,
+      "drained": true
+    },
+    "journal": 839,
+    "notes": 9227
+  },
+  "case": "Source-confirmed missing generic structured-intent/availability leg, Coach-only search and caller affinity. No baseline route/model call.",
+  "owned": [
+    {
+      "path": "src/reflex/searchCandidates.ts",
+      "absent": true,
+      "sha256": null
+    },
+    {
+      "path": "src/routes/sort.ts",
+      "absent": false,
+      "sha256": "9c987f4edb3486214707844d3f9f4132c70958d4e876ff586e8748b3a70a0e94",
+      "content_gzip_base64": "H4sIAAAAAAAAA61YUY/bNhJ+96+YAodaDhRpU/QeTq7rbpMNEiBNFrvbokAQbGlqZLErkQpJ2et4/Xvuf9wvOwxJyZJ3m7uH7svCIvlxOPxm5humKRjNU61aiyY1StvEmkmawvO/74/gLj9c34DDz4C3xqoaGq3yllugj6A2qIEBZzIXObMIBm0C7zBfo4bvzkCrLfwrJiTDVYPAmgZlLu7hP/9+kbx4kUzSlAZvSgSu6ho1R2gqZgula+CsqgwIa8Ag07wEvGfcVjtg9BVyhQasytkuBoMyN9AasCUS4NEgkRvYClvSCDBrtViRz9xPjWthrN6BRpabGJjMYY3WDxpWu9UEt2L8DoQEBg3q56ZUTYMalM5RJ/DWGii0khZQ5qBR5qhNAjclsyA81rZUlbdLSasZt34v0U9wmymJ7gdNQmkhRy6MUNIAq8jCHbQGs+NnZ9kORB77e3A7CY2xR3HXhXpqwOyMxRoaJqQ1Q59rJu+EXJOPsSqgEhs0dM6fUo1Fhffu5l92vjTeaANNq5EOKAwUwh9Mo1HVxvlVIx1DyLWfXzK6GltiDVaBsBlsS8FLWGkm8zj8CC4lpA1yq7R3kB/srimBD5JuX4LaSsxjcpRBaekEjVZkCpi2aSqBPRE8WgLXSrt5EslTXKM7zwpLthFKswqMJbYoDSzfMMnpsLARRtjk7w6riagbip09vFFSwYHIU8O0VFJN58fBL/3IF5UfB+yuQdjDhdz04z+l9NGkKDdDgGs0RJNfmGQUjcfZBvVGcDTpeMZwbfDsh6J38mut6pdK3Qk0MWgsWsOqN8SnGIS0qA1y+9JPjcFYpTHvfzaojZKsEl9osTtBGBtYFVifhv2G1gRy3aBk0l45Zr5UshDruBu6bnXBOA7gcqyVSTvqDNGMZI0plQ2WDPEG60MAcKVxtHgUEAHivCiEFHb3StT9+foE9AhyDDEC91HwYfUn8qFrLB2c71LlBkZLXl28Pv/13c3tzcX78/c3YXPvqN+YFmxVoXkCyf0/8fHnVmi89ibEnS2XWkguGlbFwIxBbQNnbpheI12tFhtmu2VvkFHyizvunXOOxlxorYb8EzkFrd2lxs96yRq2EpWwdE0TvHcWEQ18kblyRQ4WIHHrQuaHPfwsZE4ZJqNAmEN/1Ozx2X+MZvPJJH32DH5Wrcwpb6yQs9bgaeGi1MagYWsEVRCz2sr6HCaVdZMtq9Q6gWfpxJv3y/nvty/P3796++r85uIaFvDPs7P5JAyuVL675iXWDBbwJfGXF+0nQGlcv80z+JIYq4VcR7PEalFHs6QWMnoxS2p2H313djaLJwDBSSfzVWMFhVTk53j6f2VGiKpsYAhQJaL0Tx9XSlXI5HjdIHAZffyriXB4tF3Pb1rDtGa7aLCzGB2GljfMGFtq1a7LaOYdMHaug92iWJfWZGN3ArAQgDQg23qF+pEDAHJRu5UaudJ5dNw/Hqw6XXZyskPg0gSewRWyHPBeGFdYXEnqqoisdglc1I3d9aYBcU8DClui7hIosMoowtJYK6qeIZwg12KD2syBwRfUqi/U3gHAKtIKW9VWtKWoKqCoMU4+1MmECMrMTnIoWsnJ+t6M10pHdD8Z7AHlJsTPGm0G0V0G05AYZrD4Ebx/5pQaaLpm2wyu8HOLxs6hdKGeQSSzMHGwBh7ccQtBPjnAIR6Q3s8YsJaqSPbEQppSUoXJumoRT2YZXGpVC4M/7MOFDpPvHHixzk5S+o+wDwFACm0DC+AJys18ApCmcHHfVIILCwWrKtJ5CbwtSL8YcOpaU1ZwoqFWrbSYOzWpWutEVsinHqoWeV7hlpECoxU7KLEiobjCSm3DdeVYsLaypIUIoPvp1BAoSVLMo6mthOfPYdVaMKJCaaudF0VeuZqGfBJAkZfq6LgErtnOyzpQkqPHK1Ej1OwuaN/uuE7krCrSqDRBWIpdWFFCRJn0jvO8cL5bo42OPFkuT2rQfDIBEAVEEcpNcnXx+t3F77dvqI9YLmEashkRbLGAaa6mM/AxHBK+bVewGFdCB3T95sPl5cXVrQeMA53iYNhsPsDw1KSK8WR1inii8XOi2TasSlO4wtZHDxixJtLmSpFy7sO7YJXB5xTYwJ0KouwpDZWqBH5W+c5TtcPjTFLNQElFCBiYrbC8JHmpsalIqdBeSou1kKxyxReNnRrgfS1MHBY58hsHnXTpGh4eIHw6yc+z7uiJV2qwgI8OBSBJkkc4S/g4VY297T7chiKxcIedfoIMPn4KyXOEcLJtD3Ty/dYfP38K71PypxIyms5hOrq7zy3Fja/1v169u3aN3yXTrDbRnlQ+EcKVoilpg2ns7BpkEliSkOrq4XDgABnsD1RthhtqJy3YlglPvqRAy8voj9LaxmRpGpj4vBNvQTwu/7F3ph7+iGHfM66Ddrem0STqbkYdkdq6Az1WRdHIFlIMsIDIW0Pr/zRKRrMZdbz7cA/qbplBqMLzrq4vM2jlnVRbOQ/TuoS/pNRNmXI5TpVwgAeQbVV1C4KrlhlMuWK8nMIDTFea6k2pWuoOaNZhcEBn7sODMztRd/DNYgFWt9h/C8a5UO+z09Ah3gfT607w0eRWsg0TFTFnTI0e7VHDEY36jWi49yz2gTlGKtb9nf9lb0FZp0svp31GNKCY2y38ohQ3otws7KvRtlpCV7OGDVHUWQpLj9XfXEKTCXLvqRs7w90NHCZ9Zm46hX5Mm71oP0l1fkEdGsLFkJOhB/SH3vfHPoIfBgghib9ilvV+DKgJPVRcsW3Ur0x6ARs7dgxwvnKjfQMaDTYbXaajYJg2zo3dx0fZ8dRS0hzHLZ+0mHc97H4oxJ+cmjPLspFvhj77Wzk3ynfL4Z7LnoqBe353x6TFX/Du22/HCD7VwbLvlId3EEZjeMUsJlJtST/zYj3zbCWe0rYjwvfEPUwmx44uaZSx0TSdxifNJyF6+RpxJyqP+q1h2mAOi0FzlRhW4CV9D3nTc95nzoQzyuaRg6FsNztyx2MlpnXpuJMhwXDuAfag7jJf/GNAylYZTN/KDatE7l9Au9IdQ46WiYqi2wO76YkwpqU2NIbvz85mPna70+x7FRMuLR40TnHX7cCBbs5jEscI44lePPpK8B/l0gDnyN2Z02z0EDqUYi7UvhKbgxehsJUvg9HUf53OZuOXomi4ece+UWIe0aUPl2HvwuPHPnuc4H3vTglx9NYS8cFTpjm+0Xz8FB837v0+Tt0dIfoqnLls1qkjH7PZ/5bH3QLuAv431MapGV6sk43/MRBc/hz+g08mB3CMhsixqyMt8dl9ACGNpedLVTyhNrrS66b22vfcv3PSYmoumAWW5xqNcQ++yvWrrj2ZGpCsRtNQeqncs67rGehdpwMbC/fZPLxxOxrQ04t/f6UXSMyTwY3VaAw9vCzg0Tn889HSDyTdxCAAoWCiwnw6vH1qwltiblqznXu7MZZp6xq3NLFobBRQqOZ+f3YGmX+4+f/iv7PgEIedQlTTBf0XrvGBcpgZAAA="
+    },
+    {
+      "path": "src/routes/sort.test.ts",
+      "absent": false,
+      "sha256": "2d4fcefc97fba13bd1e2e6446b4238c38dcd1c0c7323c142dda9a771c9210cc6",
+      "content_gzip_base64": "H4sIAAAAAAAAA8VYe2/juBH/359iChQnCVBk7wu9KudNt1lvk+ttEsS53QJpmqOlscWzTOpIyolP8HcvhpRk+ZHs7qFAgySWyeFwnr+ZUb8PWiV9JUuDuq+lMpFBbSKje/1+r9+HmwyhKBUC7aECriGRS1SYAhd28ZSJlKfMoG6ORnCTcQ2FkkvUYDIEyz8mfvRNZ6xAYJDIxQJVglDkzEylWsAMjYYJS+YhFExxswKTKVnOMnvugSsMgYnUfjMPkhgqnJaa5Trq9fiikMpABSnqRPEJhsBNCPhYYGJgDVMlF+AtOYnpHW/ISYtra4GW6G9dk3RpBT68E1KsFrLUY9SaSxHC+Ozy6mp0fX82evd+dN1hwlMUhptVXzvSU1awCc+5WW14mlWBUMFILDsHaVH3USy9414vyZnW8IHN8Z+foOoBaCMVwpCEgY+s+EEbxcUsBPf51g+OewBMr0RCFvXnuIqhoSHOJ83XACpIpNAGFAzBZFxHlndUHwuOQaEplaD94RBKkeKUC0zhBESZ5xCDb+WnTe9XLYUHJ/Dj+PIiKpjS6KsAYlDBMaxbiYpyR6Ily0vsStSRQzs5aqItPinmaLDLaufshmDrXM618eVJDBUUCqf8sbUGrDf2KGAI8iRyFHByAp7X2qKCOa50DLdRFHXuo0U/uIumPDeofH8ewPAtzCNtmDL6MzeZXwRBtGCF7wu2QLvtV0DPsA4CWJOY615vWorEcCkAxdKnZFM8RR3DNSZSpa23SzEX8kG8hSFUJHkPWgF7AACn707PRrENEhc7fhDCeDQen19ejHfW7YHRxafz68uLj6OLmxg8myUhnF5eXIxOby6v7z9evh/F4C1kMvfcgR8/39yPR6fXI6J/GLwevDzSK2EyNDw50nwmuJgdLZhBxVl+JEW+8kJ76Hw8/nl0HYPH64V3P78/H12cEn9WM4+iqNWdVtbAdKMzPT5hjWOyoPPhh9HoPQzhtgdQAU9j8K5eeCHkXGAM3rWcleiFUCie4H2p0xj+8tc3sA475C835DdsMlltk7/6frBN/up58jeW/O6413OR2Pq5kNr4E5mu4kaNECi/yf+B86zTqIYRGAJ7YNwcQiMfd+w0EssQvESyJPMsMDhWXBSlgSHQtURWQalRnaedbNgQG6ZmSNT2VOQo4bvv4E/dhW6keyb2AjiBivxoicL6grjRItLl5FeHzLFjvLlQoW6V3MBzpPC3ErXxvb4X1lG+QJNJa/3L8Y0XQoYsRaUpvb1TKQwKc3SzKtCj0CqKnCeMbN63YBXC7TZ2322kS1qshnUIzjsW2Zx5+HTlO7PY7FmHgNa6LUZow0ypY1Ilcs8NF9/pRRskBbn46XgmN6x7vaak+VZPcHUpBN+CCFmCG99zd7uSy1NNFZoJkCpFFUKRl3UxxgR5YboF2CBbQMIEKGSpF9ZIuWHeuKXRymkC69ZHNoKr1sPekusjgQ9eSFzr9iB2Cbm2ZoK6LPuOYRAZ+Xf0Xw4G27t0TSTn9bZRJR7aJwWJZPRbyXL/1qW5y15KyrvgGNxPvw9CQsYJsFextUbTe3jaGYo0FKneu8SgYMLUgnTTqSWjQiin1jJRIsWUzz6holBqDjnX7px6pxRbRVzbT3cVN7jQwa7OZLfWz4WSaZnU3dUUMa2FZwbYdMoFRe0g3OuennXtH3ZpCA/IZ5mxSddcH8MA1rvO/lp37Z1puH62F9WmGezbZVpq1MBgwXJyKqZOqwduMng9GIQgpIE3g8FBQ9QX+lv6H4jfINoK2te7Qes/YcAd03lCFuj97/jdVk3xefRgffcc46lU4Du/038UBuQUbqmlC2HKco0h3N6F1E8plsy5mMXg2XWPkK6CApWWguX8d4um1tl3QW3HbxXcxVAjyDNir7fd/XnwJhq8otbQcbJh/v6y5YRiibksECY4pYbZwSOVNgaKiTmmDRYeDIeOkRQW+cqaqFZwA+9vBq8aXK9AzmNnPgr9sEP1kmLvMNUexz1agoAvMiSi1oix686/nn3nZLX+1rsOREm4HyGNFo1MnXBxRm46ngquRx9+Gv3r/uxyTI1lKr3NiOW2YttyfVByccEWGIMvNjPA8C2IkOaeuPamX8EUTZLFWz6+Rl2QAq4EWwdHpGO4Vbpp1X2j4YB+W0hrxJa2jfr6SN+0Cp1MkaXZCvp/KKS2+SZj4lI5nLRp0KUnaYNISBMZecaWeKVkgcqsfM8WEO9rqS0ee8+mmEVVyi585NpQBlF3jylowQqdSUPDPvVy1JzSgC5wiQpyGucZ/I5KQspZDrqcaMNNadBmFxOAi8Ks3BCPKSwxMVI9U6WYnmMagy2WP1RQqrxx/PGm8ztzD7Cm0ej27rj3f4ixjmQhUOmi8c02r+eCm45e4HSKilJnvtWo08PSjFZr4xOTqN4JOlFYN5zb8fzFPK1B/oksDTtlvIKUL2xpd9WlAjvbxDCIvnf53Aqz3s6QDoC2TQlh6CCE13vZ//Wt5W7Zi6LIVZB6DIOrl7A75jlAc9tUHLessmeEGpwP9jUOHPcSeL+N/eYWtUufKlkUmDb8dnYPdkPN4q5knZ6SxgwmVrd3QUT5ufJplUKRPiOd2LdKwyEMaLSza6niS1Q6ylHMTOY29zpThxrthTaegxpmfrIHSYP9mmrTgSLCndjtHmqCqFR500FnxhQ67vd1RuZRRwqnOT72GxQ62aDQ0A5Iu7ZoWNZpZF9zbQ+AVrmPzCSZ3/+P1i/+HfW/hon3eOQGBC84OCI8fziRcs5xc1QW5n4nKO9RsEmO6dDV18NoPZGlSB1QtxkCGk0IE0xYqemla8FmSDZXqMvcaHqhSz0xg4QZlsvZM+CblTPCTzex0JtKvwIXGNQGvaC88O9D4A0iUrr9cvXniq9/oa7uj/S09sonO8KDrf+Sa26kAk6viWkeSlOF2u4JaTJUMFFMpCFI0TSMmdSHW8CtouPQ/Pbu6aJSu3q/tNQbewWmXofnCk3VLRBi80ZWHG+6O/hyv0OlpKkR/s57jOoQ3Dtgp0rT3FJf18D7Nm4/g9gmnjODR7pgKcY0Ri55YvjiC73RIWB9PXixvdtiTY2rd21c0N9/AfPUznLeGAAA"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "absent": false,
+      "sha256": "a1c6abdd96eebaddeec22a9fdcc8f6f473a374858376e41c8eb4c15dce828068",
+      "content_gzip_base64": "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"
+    }
+  ],
+  "pins": [
+    {
+      "path": "src/routes/sort.ts",
+      "role": "output",
+      "sha256": "9c987f4edb3486214707844d3f9f4132c70958d4e876ff586e8748b3a70a0e94"
+    },
+    {
+      "path": "src/routes/sort.test.ts",
+      "role": "output",
+      "sha256": "2d4fcefc97fba13bd1e2e6446b4238c38dcd1c0c7323c142dda9a771c9210cc6"
+    },
+    {
+      "path": "docs/kit/02-api-reference.md",
+      "role": "output",
+      "sha256": "a1c6abdd96eebaddeec22a9fdcc8f6f473a374858376e41c8eb4c15dce828068"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "src/auth/signingConfig.mjs",
+      "role": "source",
+      "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+    },
+    {
+      "path": "src/config/versionedStore.ts",
+      "role": "source",
+      "sha256": "c37fa5ce480109fc80f13e98de48c446a33664a7e3321e9c2cd7393e693311b3"
+    },
+    {
+      "path": "src/connectors/AudienceAuthoring.ts",
+      "role": "source",
+      "sha256": "58757744a3bfbb5d7d9f64ed15a1c0837aac97be57bb7e1906742fa09087ce42"
+    },
+    {
+      "path": "src/connectors/AudienceStore.ts",
+      "role": "source",
+      "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf"
+    },
+    {
+      "path": "src/connectors/DecisionProvider.ts",
+      "role": "source",
+      "sha256": "5c68db4acc8b669f3bbf9eaef7029772429eacf4bf798917e3e2c2e1633bb14f"
+    },
+    {
+      "path": "src/connectors/evaluateCondition.ts",
+      "role": "source",
+      "sha256": "55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59"
+    },
+    {
+      "path": "src/connectors/index.ts",
+      "role": "source",
+      "sha256": "656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67"
+    },
+    {
+      "path": "src/connectors/SegmentProvider.ts",
+      "role": "source",
+      "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359"
+    },
+    {
+      "path": "src/connectors/SignalProvider.ts",
+      "role": "source",
+      "sha256": "81936e5cf88c48ad7e31fddbb631ae24717c1e3d2ef9dab3fd921616a47e2965"
+    },
+    {
+      "path": "src/connectors/types.ts",
+      "role": "source",
+      "sha256": "b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3"
+    },
+    {
+      "path": "src/content/cell.ts",
+      "role": "source",
+      "sha256": "b3fc57930c43d36681edda47d040f46691c4a442c5d84d816102dc906a203b6c"
+    },
+    {
+      "path": "src/content/consent.ts",
+      "role": "source",
+      "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "role": "source",
+      "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+    },
+    {
+      "path": "src/content/holdout.ts",
+      "role": "source",
+      "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc"
+    },
+    {
+      "path": "src/content/import.ts",
+      "role": "source",
+      "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b"
+    },
+    {
+      "path": "src/content/lifecycle.ts",
+      "role": "source",
+      "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+    },
+    {
+      "path": "src/content/service.ts",
+      "role": "source",
+      "sha256": "c0bde992d99f32395456ad1aab9fc69044aaf6e25770e255f61aadcf7cd1d0c1"
+    },
+    {
+      "path": "src/data/coach-catalog.json",
+      "role": "source",
+      "sha256": "43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e"
+    },
+    {
+      "path": "src/data/insights.json",
+      "role": "source",
+      "sha256": "e6b29448440dd4e4712feb38c99ce485e6badee2aaee1f14401f40211caf3bf9"
+    },
+    {
+      "path": "src/data/seed-audiences.ts",
+      "role": "source",
+      "sha256": "3e8e23f7cf778e27c76b67025d3c734624bf801627a6a864830725e6cd449f78"
+    },
+    {
+      "path": "src/data/signals.json",
+      "role": "source",
+      "sha256": "3dfc6d73e161483092232fadecfc66ed5747daeb8aa57147b118a6a5529877c3"
+    },
+    {
+      "path": "src/demos/brighthour/catalog.data.json",
+      "role": "source",
+      "sha256": "a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6"
+    },
+    {
+      "path": "src/demos/brighthour/catalog.ts",
+      "role": "source",
+      "sha256": "c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd"
+    },
+    {
+      "path": "src/demos/brighthour/demoClock.ts",
+      "role": "source",
+      "sha256": "a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce"
+    },
+    {
+      "path": "src/demos/brighthour/offerLifecycle.ts",
+      "role": "source",
+      "sha256": "7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82"
+    },
+    {
+      "path": "src/demos/brighthour/reflexConfig.ts",
+      "role": "source",
+      "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf"
+    },
+    {
+      "path": "src/demos/registry.ts",
+      "role": "source",
+      "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "role": "source",
+      "sha256": "a92ae2369b5565a7208709b9ae6eb31e84c085760569bff5927d815243eb6abf"
+    },
+    {
+      "path": "src/events/actionTypes.ts",
+      "role": "source",
+      "sha256": "865d11512ca0af01c6104789b2e2155cb5272deeafd12bd890ccff6e9064712a"
+    },
+    {
+      "path": "src/identity/assertion.ts",
+      "role": "source",
+      "sha256": "46301022a818aa8b5ec8d0b9f87e4e78013e949107af49550a898363c1e7964d"
+    },
+    {
+      "path": "src/identity/consentContinuity.ts",
+      "role": "source",
+      "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af"
+    },
+    {
+      "path": "src/identity/erase.ts",
+      "role": "source",
+      "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+    },
+    {
+      "path": "src/identity/history.ts",
+      "role": "source",
+      "sha256": "3a4fdc7de909d22ebfadf1da5d6bdc2d2d0083a8757bb20cc2c1e1368e926181"
+    },
+    {
+      "path": "src/identity/link.ts",
+      "role": "source",
+      "sha256": "c9502bc68028351005a5744161f73adb8b2589b76fbcfd7c3fd8709d03f9804a"
+    },
+    {
+      "path": "src/identity/sessionCapability.ts",
+      "role": "source",
+      "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+    },
+    {
+      "path": "src/identity/shopperId.ts",
+      "role": "source",
+      "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+    },
+    {
+      "path": "src/identity/store.ts",
+      "role": "source",
+      "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+    },
+    {
+      "path": "src/learn/autonomy.ts",
+      "role": "source",
+      "sha256": "667a6083d145ab6f4f35944a8b290738396b6fdac006abcc7baaf919903ebc60"
+    },
+    {
+      "path": "src/learn/cycle.ts",
+      "role": "source",
+      "sha256": "ee724cfdbc5ca267bf6bf5270ceebba4a78e5fdf54870c0680254c937792069c"
+    },
+    {
+      "path": "src/learn/explore.ts",
+      "role": "source",
+      "sha256": "90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c"
+    },
+    {
+      "path": "src/learn/external.ts",
+      "role": "source",
+      "sha256": "af5bb4cb5ec6a4080d3aeec190bdf9c1fe67c69b4f1a2a9905618ad330efda0d"
+    },
+    {
+      "path": "src/learn/fan.ts",
+      "role": "source",
+      "sha256": "110192a195b7d18d001e17ba657ddd54adb96d30823262ee74ef9ddeabaf3273"
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "role": "source",
+      "sha256": "f61c713749ae8bdca40f808f8f56fd6624721436ea80b4ce802e6998bcafc29d"
+    },
+    {
+      "path": "src/learn/policy.ts",
+      "role": "source",
+      "sha256": "6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73"
+    },
+    {
+      "path": "src/learn/priors.ts",
+      "role": "source",
+      "sha256": "bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f"
+    },
+    {
+      "path": "src/learn/queue.ts",
+      "role": "source",
+      "sha256": "47411c4358b60caac52a36c0e8bacc8a678334bac7d3cedc2555af33ccc6246c"
+    },
+    {
+      "path": "src/learn/receipts.ts",
+      "role": "source",
+      "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c"
+    },
+    {
+      "path": "src/learn/replay.ts",
+      "role": "source",
+      "sha256": "2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5"
+    },
+    {
+      "path": "src/learn/report.ts",
+      "role": "source",
+      "sha256": "e860831b27a713191fc8ae4605ab2a4c96b854a677427850671edc3c50396333"
+    },
+    {
+      "path": "src/learn/route.ts",
+      "role": "source",
+      "sha256": "fb7ba5e29cc20de154510626f7250632adf62e568cb353a9174d2f8bf1eb592e"
+    },
+    {
+      "path": "src/learn/rows.ts",
+      "role": "source",
+      "sha256": "3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "role": "source",
+      "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a"
+    },
+    {
+      "path": "src/ledger/enqueue.ts",
+      "role": "source",
+      "sha256": "1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "role": "source",
+      "sha256": "e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7"
+    },
+    {
+      "path": "src/ledger/records.ts",
+      "role": "source",
+      "sha256": "73f8fbd34413425c34c3ac64a9ef853e302a18278f84b5df8bfb58073235f11e"
+    },
+    {
+      "path": "src/ledger/writer.ts",
+      "role": "source",
+      "sha256": "4b6c25ead40c75908aa683c0c49c3a8f1945861f40cda598925f18e74c850e5b"
+    },
+    {
+      "path": "src/measure/holdout.ts",
+      "role": "source",
+      "sha256": "cd421bae32093f09b37c2d36e3253d85ce9c4cfad9cb8d5913730e92098ace9b"
+    },
+    {
+      "path": "src/measure/window.ts",
+      "role": "source",
+      "sha256": "67b69a6cb128d06c8e89c495060b89ca86eb778826ff60d0b5483053896c7ade"
+    },
+    {
+      "path": "src/middleware/auth.ts",
+      "role": "source",
+      "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+    },
+    {
+      "path": "src/ops/monitor.ts",
+      "role": "source",
+      "sha256": "ebda4505fbb10ebda0d26e4bb5de1f77ae039361f1d59d70e95ac590f11e095a"
+    },
+    {
+      "path": "src/reflex/audienceGenerator.ts",
+      "role": "source",
+      "sha256": "663c87b162c7373c138d0c40ce50c16051c0d31ce5e34d2a8e3aa366f2bd8940"
+    },
+    {
+      "path": "src/reflex/configStore.ts",
+      "role": "source",
+      "sha256": "a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53"
+    },
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "role": "source",
+      "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+    },
+    {
+      "path": "src/reflex/contentTelemetry.ts",
+      "role": "source",
+      "sha256": "ec6ef52dd9800f7488bcb03d6def18f2fe084208dca0b0f48ca604d9a74c5e41"
+    },
+    {
+      "path": "src/reflex/core.ts",
+      "role": "source",
+      "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+    },
+    {
+      "path": "src/reflex/identityMerge.ts",
+      "role": "source",
+      "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+    },
+    {
+      "path": "src/reflex/merchandising.ts",
+      "role": "source",
+      "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+    },
+    {
+      "path": "src/reflex/regionTrend.ts",
+      "role": "source",
+      "sha256": "e32bf1887ad7c9d7eb4a5fbdf6a78639f76a5927fefc9b88a327875385434f16"
+    },
+    {
+      "path": "src/reflex/shopperReflex.consent.test.ts",
+      "role": "source",
+      "sha256": "26994b1ec8001ab744b5e22f0a5a228e5400e582a7490d19c5dae18929ef9be9"
+    },
+    {
+      "path": "src/reflex/sortCandidates.test.ts",
+      "role": "source",
+      "sha256": "dfcca85d06c9cc571e0ee35648eee7c0b6fe7cea9f6aa6c37878314a05306493"
+    },
+    {
+      "path": "src/reflex/sortCandidates.ts",
+      "role": "source",
+      "sha256": "e7e195583c7e96452a646108e6eca583b2d59a88f77f95721a2607cecf900bbe"
+    },
+    {
+      "path": "src/routes/decisions.ts",
+      "role": "source",
+      "sha256": "fca0b292dbbde7b7ff66ccaf626c56ba4e0e21e5de78f40d39ad9f8e3b3158af"
+    },
+    {
+      "path": "src/routes/identity.ts",
+      "role": "source",
+      "sha256": "7c367e606c65e4216cb7b64a576218b314b1dd804abb80df700579b4b3385572"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "role": "source",
+      "sha256": "3399c8243e48a6d3c91d05e352b1c2b0c7d0ec2fd9be59c351e3fc69771f2b76"
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "role": "source",
+      "sha256": "f049dcac8b6bf8d702bdfd20d6589bca2801876af55746737ccf7e9f8f0b104a"
+    },
+    {
+      "path": "src/sdk/core.ts",
+      "role": "source",
+      "sha256": "cbec796e90326440092176914cc3d7d0f80014b29debeaecf6a37de5eea8ce55"
+    },
+    {
+      "path": "src/sdk/identify.ts",
+      "role": "source",
+      "sha256": "c53adfc6296aa4db980851df5b8fe09d84e02c17fa40c521ff113dc2c85178a1"
+    },
+    {
+      "path": "src/sdk/identity.ts",
+      "role": "source",
+      "sha256": "a9eb9129835fd066fc806b13ba628f3785b8a1c092843fc32acca5df4cc3747f"
+    },
+    {
+      "path": "src/sdk/memoryHost.ts",
+      "role": "source",
+      "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+    },
+    {
+      "path": "src/sdk/wire.ts",
+      "role": "source",
+      "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+    },
+    {
+      "path": "src/services/CatalogService.ts",
+      "role": "source",
+      "sha256": "da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff"
+    },
+    {
+      "path": "src/services/FeatureVariableManager.ts",
+      "role": "source",
+      "sha256": "42eb70d023a04576efa3cc0934c6622237adba6a4bf11d63faf15ffb3c1bc357"
+    },
+    {
+      "path": "src/services/JourneyStage.ts",
+      "role": "source",
+      "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+    },
+    {
+      "path": "src/services/odpLoop.ts",
+      "role": "source",
+      "sha256": "52348b653a209e56384568f0e73f87690ef68316d3f8b4d9b7f7a7d3c72e029e"
+    },
+    {
+      "path": "src/services/OptimizelyService.ts",
+      "role": "source",
+      "sha256": "97b7e40f98e2775e3e2b6d7caed0f32e5d0fe1c30a96d4ac5041a62dd4f01951"
+    },
+    {
+      "path": "src/services/RealtimeSegmentEngine.ts",
+      "role": "source",
+      "sha256": "43a043ac41d5b8ae27cc10c78b2cb6f2469dcce959e1cc7222daedd54badb34f"
+    },
+    {
+      "path": "src/services/SessionManager.ts",
+      "role": "source",
+      "sha256": "08eb6d87d89c6336d6b2cc5827cb79648beddb94ee71069fbdb518231803f9ec"
+    },
+    {
+      "path": "src/services/visit.ts",
+      "role": "source",
+      "sha256": "27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d"
+    },
+    {
+      "path": "src/tenancy/middleware.ts",
+      "role": "source",
+      "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+    },
+    {
+      "path": "src/tenancy/objects.ts",
+      "role": "source",
+      "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "role": "source",
+      "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+    },
+    {
+      "path": "src/types/env.ts",
+      "role": "source",
+      "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": "src/index.ts",
+      "role": "source",
+      "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+    },
+    {
+      "path": "src/routes/ai.ts",
+      "role": "source",
+      "sha256": "1ea7f73d384130794d43fb034a02eae4351a4295e5b394412882f0f2630e7fda"
+    },
+    {
+      "path": "src/services/CatalogIntent.ts",
+      "role": "source",
+      "sha256": "6bbb93b6fbfb2528c4d2864787a0dd85820ce755b4ff68e05176bdb1c70d8bdc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    },
+    {
+      "path": "node_modules/vitest/package.json",
+      "role": "source",
+      "sha256": "aaa91be32a0d38415701d67a1538b02840ece42218a68fc9a2a28ae69b9e31a5"
+    },
+    {
+      "path": "node_modules/typescript/package.json",
+      "role": "source",
+      "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3"
+    },
+    {
+      "path": "node_modules/eslint/package.json",
+      "role": "source",
+      "sha256": "cb3eb0b9246ff4cf36d7f00b76358dc6b1ccab18773ab89c25b9e390041ae9d3"
+    },
+    {
+      "path": "node_modules/hono/package.json",
+      "role": "source",
+      "sha256": "0190ed73085e7509f652e5877691ea52063628ad633add49e7ffef4a375389cd"
+    },
+    {
+      "path": "node_modules/zod/package.json",
+      "role": "source",
+      "sha256": "c630bd10b52dcf71c112a2bf78dbf2734b9db58d62de663b8d86c2ec2c8cda2e"
+    }
+  ]
+}

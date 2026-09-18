@@ -61,7 +61,7 @@ export class CDPService {
         this.destinations = JSON.parse(destinationsConfig);
       }
     } catch (error) {
-      console.error('Failed to load CDP destinations:', error);
+      console.error('Failed to load CDP destinations');
     }
 
     if (this.destinations.length === 0) {
@@ -136,7 +136,7 @@ export class CDPService {
         segments: await this.getSegments(identifier.userId || '', profile.traits || {}),
       };
     } catch (error) {
-      console.error('Error getting profile:', error);
+      console.error('Error getting profile');
       return null;
     }
   }
@@ -203,7 +203,7 @@ export class CDPService {
       });
 
     } catch (error) {
-      console.error('Error in identify:', error);
+      console.error('Error in identify');
       throw error;
     }
   }
@@ -238,7 +238,7 @@ export class CDPService {
       await this.forwardToDestinations('track', eventData);
 
     } catch (error) {
-      console.error('Error in track:', error);
+      console.error('Error in track');
       throw error;
     }
   }
@@ -287,7 +287,7 @@ export class CDPService {
 
       return segments;
     } catch (error) {
-      console.error('Error getting segments:', error);
+      console.error('Error getting segments');
       return [];
     }
   }
@@ -319,7 +319,7 @@ export class CDPService {
 
       return await response.json();
     } catch (error) {
-      console.error(`Error forwarding to ${destination}:`, error);
+      console.error('Error forwarding to destination');
       throw error;
     }
   }
@@ -371,7 +371,7 @@ export class CDPService {
           ...data,
         });
       } catch (error) {
-        console.error(`Failed to forward to ${destination.name}:`, error);
+        console.error('Failed to forward to destination');
       }
     });
 
@@ -383,7 +383,7 @@ export class CDPService {
       const key = 'cdp-destinations';
       await this.kv.put(key, JSON.stringify(this.destinations));
     } catch (error) {
-      console.error('Failed to save CDP destinations:', error);
+      console.error('Failed to save CDP destinations');
     }
   }
 }

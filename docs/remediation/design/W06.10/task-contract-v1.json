@@ -1,0 +1,148 @@
+{
+  "id": "W06.10",
+  "package_id": "W06",
+  "title": "Contain unscoped legacy D1 action and checkout capture",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Fail closed both request-driven demo_events writers outside explicit open/development/true/default-tenant demo; preserve realtime authentication, host-resolved consent and core outcomes/learning.",
+  "read_paths": [
+    "src",
+    "migrations",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/routes/realtime.ts",
+    "src/routes/funnel.ts",
+    "src/services/demoEventCapture.ts",
+    "src/routes/demoEventCapture.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/types/env.ts",
+    "docs/remediation/evidence/W06.10/worker.json"
+  ],
+  "non_goals": [
+    "No historical D1 deletion or inferred ownership, migration, customer topology/retention approval, demo funnel subject-auth/consent redesign, all-store erasure or full W06/finding/gate/customer/release/SLO acceptance.",
+    "No unrelated sources, broad suite/new harness/framework, scoring change, deploy/cloud/credentials/customer-data/commit/push/destructive operations or subdelegation. Env file COMMENT only."
+  ],
+  "criteria": [
+    {
+      "id": "W06.10-C1",
+      "description": "Shared policy permits capture only exact AUTH_MODE open, normalized development and true, canonical resolved DEFAULT_TENANT without helper fallback. Both writers deny before capture D1/enrichment; absent/invalid/enforced/staging/production/nondefault inputs fail closed even flag true.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.10-C2",
+      "description": "Existing actual fixtures exercise both realtime hosts, two provisioned nondefault tenants, Coach opt-in capture and tracking refusal, capture-free valid actions retaining outcomes/learning, real funnel positive/denied writes. Allowed absent/rejecting D1 remains nonfatal. Meridian consent positives retain ODP/outcome/learning proof while capture=0.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.10-C3",
+      "description": "Independent final source/admission-diff/pin/worker-proof review; exact K1 once; inspect compiler/whitespace without rerun. Confirm both writers, tenant provenance and historic/demo-policy/deployed limitations.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.10-K1",
+      "required": true,
+      "criterion_ids": [
+        "W06.10-C1",
+        "W06.10-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/demoEventCapture.test.ts src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual Hono routes, existing synthetic KV/DO/D1/queue seams; no network.",
+      "workload": "Two existing fixtures: shared capture gate, action both hosts and funnel; worker app noEmit --incremental false --composite false and scoped whitespace.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.10-K2",
+      "required": true,
+      "criterion_ids": [
+        "W06.10-C3"
+      ],
+      "command": "Independent frozen W06.10 actual source/admission-diff/pins and complete worker evidence review; exact K1 once; write review.json.",
+      "runtime": "Independent actual-source review and same bounded synthetic fixtures.",
+      "workload": "C1-C3 boundary/residual review; inspect worker compiler/whitespace without rerun or broad tests.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "decision",
+      "target_id": "D01",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved demo topology.",
+      "rationale": "Restriction does not approve customer demo surfaces or enabling open mode."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future historic destination ownership/retention/privacy policy.",
+      "rationale": "No global vuid/session deletion or historic-row ownership assumption."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W05.02",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing host-resolved tracking consent controls.",
+      "rationale": "Preserve actual guard and positive effects; closed capture gate is not consent proof."
+    }
+  ],
+  "preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W06.10/plan-v1.md",
+      "sha256": "b54da239f3854a1dba2903336224c23945f341c91c1895ad80c5ae7f3e76d614"
+    },
+    "contract_digest": "a9f0d2ff83e820f9a7d18c89dfa0a496e3e88665daaf7b4532b738fb591f55ce",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-08T22:44:12.070Z",
+      "plan_sha256": "b54da239f3854a1dba2903336224c23945f341c91c1895ad80c5ae7f3e76d614",
+      "rationale": "Standing local mandate, visible two-writer defect, independent policy challenge and minimal existing-fixture checks."
+    }
+  },
+  "assignments": {
+    "implementer": "w0610-worker",
+    "independent_reviewer": "w0610-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement bounded shared capture restriction, freeze proof and obtain independent review."
+  }
+}

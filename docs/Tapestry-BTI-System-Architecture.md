@@ -62,11 +62,11 @@ graph TB
       OE["Event ingest - REST"]
       OS["Real-time segments + profile<br/>GraphQL read, REST upsert"]
     end
-    FE -->|"events: WebSocket or beacon"| W
+    FE -->|"events: authenticated keepalive fetch"| W
     W --> DO
     KV1 --> DO
     KV2 --> DO
-    DO -->|"content_decisions push - ordered, your IDs"| FE
+    DO -->|"snapshot refresh response - ordered, your IDs"| FE
     CMS -->|"feeds via source adapter"| Q
     Q -->|"build - validate - activate"| KV2
     W -->|"capture via waitUntil"| D1
@@ -154,7 +154,7 @@ Stage by stage, at decision time, against the active product snapshot:
 | Context terms | Secondary | First-class: visit number, entry channel, content-type affinity |
 | Outcome learning | Direct per-item attribution | Aggregated content × context × outcome statistics |
 | Eligibility | Inventory, price validity | Lifecycle windows, embargo, **per-slot type eligibility** |
-| Delivery | Ranked list into a widget/sort | Page-level ordered `content_decisions`, one push per page |
+| Delivery | Ranked list into a widget/sort | Page-level ordered `content_decisions`, one set per supported refresh |
 | Per-visitor state | O(dimensions) | O(dimensions) — identical, by design |
 
 The sentence that keeps them straight: **products are ranked things; content is the ranked presentation of things.** One engine, one vector, two disciplines.
@@ -207,13 +207,15 @@ sequenceDiagram
     participant W as Worker isolate
     participant A as Visitor actor
     participant K as KV config + snapshots
-    B->>W: behavioral event - WebSocket or beacon
+    B->>W: behavioral event - signed authenticated fetch
     W->>A: route to this visitor's actor
     Note over A: decay then accumulate - in-actor, milliseconds<br/>hysteresis check per audience<br/>membership change writes an explain record
     A->>K: read active snapshot version + config version
     K-->>A: candidates, weights, strategies - edge-replicated, ms
     Note over A: gates, then pins, then weighted rank per slot
-    A-->>B: push content_decisions with explain references
+    A-->>B: event acknowledgement
+    B->>W: coalesced signed snapshot refresh
+    W-->>B: ordered read-only choices with render offers
     Note over B: listen module maps IDs to your components<br/>a slot absent from the set renders your default
 ```
 
@@ -248,9 +250,9 @@ Three facts about this loop worth an architect's attention:
 
 | Path | Budget | On breach |
 |---|---|---|
-| First paint | Snapshot hydration in the initial response — no flicker, no round trip | Defaults render; personalization joins on the socket |
+| First paint | Conditional first-party server bridge and private same-grant DOM adoption; customer no-flash/latency acceptance open | Client-only refresh can paint defaults first; failed authority uses defaults |
 | Event → score update | Milliseconds, in-actor, in-request | Not applicable — local arithmetic |
-| Score → decision push | Same actor, same socket — one hop | Next interaction carries the updated state |
+| Score → decision refresh | Event ACK then supported coalesced snapshot; no production content push promised | Explicit route/publication refresh or reconnect |
 | Config / catalog read | Edge-replicated KV, milliseconds | Last replicated version serves |
 | ODP loop | 85–200 ms measured | 1.5 s hard cap *(default)*; decisions never waited on it |
 | Snapshot activation | Atomic version flip | A failed build never activates; the previous snapshot keeps serving |
@@ -264,13 +266,15 @@ Three facts about this loop worth an architect's attention:
 
 - **Core (mandatory):** first-party identity, session boundaries, transport (WebSocket + snapshot), key auth. Non-negotiable because events and decisions must share one visitor ID and one socket.
 - **Emit — four capture paths, used together:** (1) *automatic*: impressions and qualified dwell for content the platform itself pushed — free, the SDK knows what it rendered; (2) *declarative*: `data-*` attributes on slots and elements; (3) *adapter*: dataLayer/tag-manager mapping — the cheap path wherever a tag layer exists; (4) *explicit API*: commerce events — add-to-cart, and the conversion event, which is non-negotiable for outcome learning.
-- **Listen:** subscribe to decision sets, per-slot callbacks, first-paint hydration from the snapshot (no flash of defaults), **guaranteed graceful absence** — no decision means your default renders; the page never waits and never shows a hole.
+- **Listen:** subscribe to decision sets, per-slot callbacks, conditional same-grant server-first-paint adoption (real customer no-flash acceptance open), host-integrated graceful absence — no decision means your default renders; the page never waits and never shows a hole.
 
-**Protocol summary (WebSocket, JSON messages):** client→server: event envelopes, subscription/resume. Server→client: `content_decisions` (the decision set), state updates (affinity/audience changes, for any surface you choose to build on them), and delivery receipts (capture and CDP acknowledgments). Beacon fallback covers events when the socket is absent; snapshot covers decisions at first paint. The contract is transport-level JSON — nothing browser-specific; native clients are a port, not a redesign.
+**Current protocol:** signed authenticated keepalive fetch carries events; sockets carry generic updates/receipts and reconnect triggers refresh. Supported coalesced snapshot requests carry ordered read-only offers; actual renderer signals receive exact durable ACKs before correlated content outcomes. No production content_decisions push or unauthenticated beacon fallback is promised. The local first-party server bridge resolves the same current grant before HTML; safely embedded private bootstrap plus matching SDK/DOM adoption avoids repaint. Client-only hydration/refresh can show defaults first. Real customer SSR/browser/no-flash and latency acceptance remain open.
 
-**The customer-visible interface, as a surface inventory:** event ingest (socket + beacon) · realtime channel upgrade · first-paint snapshot · visitor erasure · decision & outcome exports · health. Concrete paths and schemas ship with the SDK package and API reference.
+**The customer-visible interface, as a surface inventory:** signed event ingest (authenticated fetch) · realtime channel upgrade · first-paint snapshot · visitor erasure · decision & outcome exports · health. Concrete paths and schemas ship with the SDK package and API reference.
 
 **The decision payload** (field semantics per the agreed contract — your ID, type, metadata, score, page-level order):
+
+Historical conceptual/client-compatible frame below; current flat snapshot wire is in kit03, not a production push promise.
 
 ```json
 {

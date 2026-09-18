@@ -1,0 +1,152 @@
+{
+  "id": "W06.08",
+  "package_id": "W06",
+  "title": "Discover capped current identity links through resumable erasure pages",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Extend local erasure to currently linked visitors omitted from the capped shopper inverse list, with scan-first bounded saved discovery, remembered session/cache cleanup and truthful continuation.",
+  "read_paths": [
+    "src/identity",
+    "src/routes/identity.ts",
+    "src/routes/identity.test.ts",
+    "src/tenancy",
+    "src/services",
+    "src/ledger",
+    "src/durable-objects",
+    "src/types/env.ts",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/identity/erase.ts",
+    "src/routes/identity.test.ts",
+    "docs/remediation/evidence/W06.08/worker.json"
+  ],
+  "non_goals": [
+    "No linkless orphan-session sweep, previous-account history deletion, transactionally complete KV snapshot, D03 concurrency fencing, D06 retention/re-entry decision, full W06/finding/customer/gate/release or SLO acceptance.",
+    "No identity-store cap removal, new service/index/infrastructure or serving path changes. Preserve legacy v1/v2 jobs, dirty worktree and all original proof. No broad suite, cloud/customer-data/credentials, deploy, commit/push or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W06.08-C1",
+      "description": "A recognized erasure discovers current tenant-scoped links omitted from the inverse cap, including remembered sessions, caches and retained tombstones; all discovery pages are saved before cleanup. Pages32 and bounded capsules replace a whole-subject array. Current ownership, base-known deduplication and two non-default tenant boundaries hold; previous-account history alone never authorizes deletion.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.08-C2",
+      "description": "Frozen page/next-cursor and root CAS recover after ambiguous writes without relisting accepted pages or skipping cleanup; malformed/foreign/nonprogressing pages, corrupt stored plans and ownership changes fail safely. Empty incomplete pages remain pending. Extra capsules exclude canonical shopper cleanup, base runs last, one shared32-step budget holds, raw child discovery data compacts before root completion. Preserve exact v1/v2 nonzero cursors and honest batch/cumulative receipts.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.08-C3",
+      "description": "Independent actual final source/diff/pins and complete worker-proof review, exact K1 once; inspect compiler/scoped diff without rerun and confirm actual persisted effects, bounded phases, compatible old plans and explicit KV/concurrency/retention/destination/performance limits.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.08-K1",
+      "required": true,
+      "criterion_ids": [
+        "W06.08-C1",
+        "W06.08-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest with actual identity route, erasure and reset modules plus existing synthetic KV/R2/DO seams; no network.",
+      "workload": "One existing identity route fixture, including >50 current links/retained selector, forced pages, two non-default tenants, ownership, recovery and malformed state, exact legacy cursor compatibility; worker app noEmit/scoped diff.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.08-K2",
+      "required": true,
+      "criterion_ids": [
+        "W06.08-C3"
+      ],
+      "command": "Independent frozen W06.08 actual-source and complete worker-proof review; verify relevant pins, run exact K1 once and write review.json.",
+      "runtime": "Independent local source review and the same synthetic route/storage fixture.",
+      "workload": "C1-C3 final-source/diff review, page/execution/compaction effects and scope limits; inspect worker noEmit/scoped diff without a broader suite or compiler rerun.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W06.04",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing versioned pending plans, strict scoped cache discovery and per-step compatibility/CAS behavior.",
+      "rationale": "Reuse current implementation without renewing historical whole-task proof."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved transactional cross-store authority.",
+      "rationale": "Paging and root CAS are not a KV snapshot or concurrent erasure fence."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved retention/re-entry and destination policy.",
+      "rationale": "Keep current local progress and cutoff semantics without deciding new privacy policy."
+    }
+  ],
+  "preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W06.08/plan-v1.md",
+      "sha256": "c110660d95c106905dd67f8120362d1d0fb3ed7b6b34e2a0e3681d58fb3b4021"
+    },
+    "contract_digest": "ff39940ff95b6513feefab8e371e2bee5d2a3ae8dc6c35e4ffff61e709ca186d",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-08T21:04:34.354Z",
+      "plan_sha256": "c110660d95c106905dd67f8120362d1d0fb3ed7b6b34e2a0e3681d58fb3b4021",
+      "rationale": "Standing bounded G0 mandate; root entry VALID393 and independent Astra source challenge. One production module and existing fixture; explicit scan-first/capsule/CAS/legacy/budget limits."
+    }
+  },
+  "assignments": {
+    "implementer": "w0608-worker",
+    "independent_reviewer": "w0608-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "files": [],
+    "configuration": null,
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Worker implements approved bounded v3 discovery/capsule continuation, runs exact route K1/app noEmit/scoped diff, saves worker.json and freezes; independent Astra then reviews source/proof and exact K1 once."
+  }
+}

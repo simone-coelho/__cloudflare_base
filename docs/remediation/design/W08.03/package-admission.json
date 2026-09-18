@@ -1,0 +1,194 @@
+{
+  "before": {
+    "id": "W08",
+    "canonical": {
+      "gate_scope": "G0/G4",
+      "full_scope": "Distinguish creation/reconcile/add-brand/rotation using secure desired state; validate account/resources, preserve existing secrets, seed idempotently and fail visibly. Link schema migrations and artifact promotion; separate product/demo schema; provision required alert/config/identity material. Test rerun, partial failure, second brand and tested forward-compatible rollback/restore without exposing secret values.",
+      "finding_refs": "F09/F10/F33/F35; N02/N18/N19/N27/N28/N29",
+      "sizing_owner": "S dangerous-script containment → M/L proven release/stamp workflow; D/OL + S/P"
+    },
+    "title": "Safe provisioning and release workflow",
+    "gates": [
+      "G0",
+      "G4"
+    ],
+    "source_findings": [
+      "F09",
+      "F10",
+      "F33",
+      "F35",
+      "N02",
+      "N18",
+      "N19",
+      "N27",
+      "N28",
+      "N29"
+    ],
+    "proposed_owner": "D/OL + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W08-LEGACY-SCRIPT-RETIREMENT",
+          "description": "Retire three unsafe provisioning entrypoints without bypass and withdraw operative recovery guidance; source-only containment, not a working secure provisioning/release workflow or deployed recovery."
+        },
+        {
+          "id": "W08-EXPLICIT-OPERATOR-BOOTSTRAP",
+          "description": "Bounded explicit configured target, caller-held stdin credential and create-only repeat-safe operator bootstrap with truthful failure; complete secure provisioning/release/ownership/handoff remains open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W08-LEGACY-SCRIPT-RETIREMENT",
+          "task_id": "W08.01",
+          "task_criterion_id": "W08.01-C1"
+        },
+        {
+          "criterion_id": "W08-LEGACY-SCRIPT-RETIREMENT",
+          "task_id": "W08.01",
+          "task_criterion_id": "W08.01-C2"
+        },
+        {
+          "criterion_id": "W08-LEGACY-SCRIPT-RETIREMENT",
+          "task_id": "W08.01",
+          "task_criterion_id": "W08.01-C3"
+        },
+        {
+          "criterion_id": "W08-EXPLICIT-OPERATOR-BOOTSTRAP",
+          "task_id": "W08.02",
+          "task_criterion_id": "W08.02-C1"
+        },
+        {
+          "criterion_id": "W08-EXPLICIT-OPERATOR-BOOTSTRAP",
+          "task_id": "W08.02",
+          "task_criterion_id": "W08.02-C2"
+        },
+        {
+          "criterion_id": "W08-EXPLICIT-OPERATOR-BOOTSTRAP",
+          "task_id": "W08.02",
+          "task_criterion_id": "W08.02-C3"
+        }
+      ],
+      "task_ids": [
+        "W08.01",
+        "W08.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W08",
+    "canonical": {
+      "gate_scope": "G0/G4",
+      "full_scope": "Distinguish creation/reconcile/add-brand/rotation using secure desired state; validate account/resources, preserve existing secrets, seed idempotently and fail visibly. Link schema migrations and artifact promotion; separate product/demo schema; provision required alert/config/identity material. Test rerun, partial failure, second brand and tested forward-compatible rollback/restore without exposing secret values.",
+      "finding_refs": "F09/F10/F33/F35; N02/N18/N19/N27/N28/N29",
+      "sizing_owner": "S dangerous-script containment → M/L proven release/stamp workflow; D/OL + S/P"
+    },
+    "title": "Safe provisioning and release workflow",
+    "gates": [
+      "G0",
+      "G4"
+    ],
+    "source_findings": [
+      "F09",
+      "F10",
+      "F33",
+      "F35",
+      "N02",
+      "N18",
+      "N19",
+      "N27",
+      "N28",
+      "N29"
+    ],
+    "proposed_owner": "D/OL + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W08-LEGACY-SCRIPT-RETIREMENT",
+          "description": "Retire three unsafe provisioning entrypoints without bypass and withdraw operative recovery guidance; source-only containment, not a working secure provisioning/release workflow or deployed recovery."
+        },
+        {
+          "id": "W08-EXPLICIT-OPERATOR-BOOTSTRAP",
+          "description": "Bounded explicit configured target, caller-held stdin credential and create-only repeat-safe operator bootstrap with truthful failure; complete secure provisioning/release/ownership/handoff remains open."
+        },
+        {
+          "id": "W08-EXPLICIT-DEPLOY-TARGET",
+          "description": "Reject implicit/invalid deploy targets before work and pin explicit default CLI environment; partial local intent guard only."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W08-LEGACY-SCRIPT-RETIREMENT",
+          "task_id": "W08.01",
+          "task_criterion_id": "W08.01-C1"
+        },
+        {
+          "criterion_id": "W08-LEGACY-SCRIPT-RETIREMENT",
+          "task_id": "W08.01",
+          "task_criterion_id": "W08.01-C2"
+        },
+        {
+          "criterion_id": "W08-LEGACY-SCRIPT-RETIREMENT",
+          "task_id": "W08.01",
+          "task_criterion_id": "W08.01-C3"
+        },
+        {
+          "criterion_id": "W08-EXPLICIT-OPERATOR-BOOTSTRAP",
+          "task_id": "W08.02",
+          "task_criterion_id": "W08.02-C1"
+        },
+        {
+          "criterion_id": "W08-EXPLICIT-OPERATOR-BOOTSTRAP",
+          "task_id": "W08.02",
+          "task_criterion_id": "W08.02-C2"
+        },
+        {
+          "criterion_id": "W08-EXPLICIT-OPERATOR-BOOTSTRAP",
+          "task_id": "W08.02",
+          "task_criterion_id": "W08.02-C3"
+        },
+        {
+          "criterion_id": "W08-EXPLICIT-DEPLOY-TARGET",
+          "task_id": "W08.03",
+          "task_criterion_id": "W08.03-C1"
+        },
+        {
+          "criterion_id": "W08-EXPLICIT-DEPLOY-TARGET",
+          "task_id": "W08.03",
+          "task_criterion_id": "W08.03-C2"
+        },
+        {
+          "criterion_id": "W08-EXPLICIT-DEPLOY-TARGET",
+          "task_id": "W08.03",
+          "task_criterion_id": "W08.03-C3"
+        }
+      ],
+      "task_ids": [
+        "W08.01",
+        "W08.02",
+        "W08.03"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

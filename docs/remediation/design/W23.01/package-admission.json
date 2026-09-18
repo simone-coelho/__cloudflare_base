@@ -1,0 +1,101 @@
+{
+  "before": {
+    "id": "W23",
+    "canonical": {
+      "gate_scope": "G1 accumulation / G3 serving",
+      "full_scope": "Order-invariant counters, exact internal rates and bounded validated event time. Rebuild or explicitly reset damaged item and slot state under W22/W24/W30. Test chronological/permuted/replayed sequences, rare concentrated cells, zero rates and timestamp abuse. A local merge patch alone cannot repair historical evidence.",
+      "finding_refs": "F18",
+      "sizing_owner": "S arithmetic containment → M recovery/proof; OL"
+    },
+    "title": "Order-invariant counters and event time",
+    "gates": [
+      "G1",
+      "G3"
+    ],
+    "source_findings": [
+      "F18"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W23",
+    "canonical": {
+      "gate_scope": "G1 accumulation / G3 serving",
+      "full_scope": "Order-invariant counters, exact internal rates and bounded validated event time. Rebuild or explicitly reset damaged item and slot state under W22/W24/W30. Test chronological/permuted/replayed sequences, rare concentrated cells, zero rates and timestamp abuse. A local merge patch alone cannot repair historical evidence.",
+      "finding_refs": "F18",
+      "sizing_owner": "S arithmetic containment → M recovery/proof; OL"
+    },
+    "title": "Order-invariant counters and event time",
+    "gates": [
+      "G1",
+      "G3"
+    ],
+    "source_findings": [
+      "F18"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W23-FORWARD",
+          "description": "Order-invariant forward counters and full-precision estimates/serving gates; clean sequence and actual consumer proof."
+        },
+        {
+          "id": "W23-TIME",
+          "description": "Defined customer event-time/lateness/skew policy with bounded validated ingestion and timestamp-abuse proof; not delivered here."
+        },
+        {
+          "id": "W23-RECOVERY",
+          "description": "Authorized repair or explicit reset of damaged item/slot history with W22/W24/W30 generations/reconstruction and replay proof; not delivered here."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W23-FORWARD",
+          "task_id": "W23.01",
+          "task_criterion_id": "W23.01-C1"
+        },
+        {
+          "criterion_id": "W23-FORWARD",
+          "task_id": "W23.01",
+          "task_criterion_id": "W23.01-C2"
+        },
+        {
+          "criterion_id": "W23-FORWARD",
+          "task_id": "W23.01",
+          "task_criterion_id": "W23.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W23.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

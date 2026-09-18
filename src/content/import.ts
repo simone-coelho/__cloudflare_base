@@ -6,11 +6,15 @@
 // the route does that, so the same functions serve a file, a paste, or a pull.
 
 import type { ContentCatalog, ContentPiece } from './types';
+import { inputLimit, inputRecords, inputTextBytes, INPUT_MAX_RECORDS, readInputText } from '@/config/input';
 
 // ── Normalization: many export shapes, one catalog shape ────────────────────
 
-const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+// Format provenance only: preserve the shared CSV parser's string rows (including
+// blanks, used by priors). JSON empty strings/null are not CSV omissions.
+const csvRows = new WeakSet<object>();
+const trimmed = (v: unknown): unknown => typeof v === 'string' ? v.trim() : v;
 
 /** `line:Drover;occasion:evening|everyday` or an object of arrays, or an object of strings. */
 export function normalizeTags(v: unknown): Record<string, string[]> {
@@ -32,7 +36,7 @@ export function normalizeTags(v: unknown): Record<string, string[]> {
 /** A stock flag in any of the feed's spellings: booleans, 0/1, Y/N, 'true'/'false', in_stock/sold_out. Undefined when it says nothing. */
 export function stockOf(v: unknown): boolean | undefined {
   if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v !== 0;
+  if (typeof v === 'number') return v === 0 ? false : v === 1 ? true : undefined;
   if (typeof v !== 'string') return undefined;
   const t = v.trim().toLowerCase();
   if (['y', 'yes', 'true', '1', 'in_stock', 'in stock', 'available'].includes(t)) return true;
@@ -53,44 +57,53 @@ export function normalizeList(v: unknown): string[] {
  */
 export function normalizePiece(raw: unknown): Record<string, unknown> | null {
   if (!isRecord(raw)) return null;
-  const id = str(raw.id) ?? str(raw.systemId) ?? str(raw.contentId);
-  const customerContentId = str(raw.customerContentId) ?? str(raw.cmsId) ?? str(raw.customerId) ?? id;
-  const type = str(raw.type) ?? str(raw.contentType) ?? str(raw.kind);
-  const status = isRecord(raw.lifecycle) ? str(raw.lifecycle.status) : str(raw.status);
-  const windowFrom = (isRecord(raw.window) ? str(raw.window.from) : undefined) ?? str(raw.windowFrom) ?? str(raw.publishAt);
-  const windowTo = (isRecord(raw.window) ? str(raw.window.to) : undefined) ?? str(raw.windowTo) ?? str(raw.expireAt);
-  const art = raw.art === null ? null : str(raw.art);
-  return {
-    ...(id ? { id } : {}),
-    ...(customerContentId ? { customerContentId } : {}),
-    ...(type ? { type } : {}),
-    ...(str(raw.title) ? { title: str(raw.title) } : {}),
-    ...(str(raw.subtitle) ? { subtitle: str(raw.subtitle) } : {}),
-    tags: normalizeTags(raw.tags),
-    slotTypes: normalizeList(raw.slotTypes ?? raw.slots),
-    lifecycle: { status: status ?? 'live' },
-    ...(art !== undefined ? { art } : {}),
-    ...(str(raw.renderUrl) ?? str(raw.url) ? { renderUrl: str(raw.renderUrl) ?? str(raw.url) } : {}),
-    ...(str(raw.excerpt) ? { excerpt: str(raw.excerpt) } : {}),
-    ...(str(raw.runtime) ? { runtime: str(raw.runtime) } : {}),
-    ...(windowFrom || windowTo ? { window: { ...(windowFrom ? { from: windowFrom } : {}), ...(windowTo ? { to: windowTo } : {}) } } : {}),
-    // BTIE A.3.6 names (CW29, CW30): the stages a piece is made for, and when it became current.
-    ...(raw.journeyStageFit !== undefined || raw.journey_stage_fit !== undefined || raw.stageFit !== undefined ? { journeyStageFit: normalizeList(raw.journeyStageFit ?? raw.journey_stage_fit ?? raw.stageFit) } : {}),
-    ...(str(raw.freshnessDate) ?? str(raw.freshness_date) ?? str(raw.publishedAt) ? { freshnessDate: str(raw.freshnessDate) ?? str(raw.freshness_date) ?? str(raw.publishedAt) } : {}),
-    ...(raw.featuredProductIds !== undefined || raw.featured_product_ids !== undefined || raw.products !== undefined ? { featuredProductIds: normalizeList(raw.featuredProductIds ?? raw.featured_product_ids ?? raw.products) } : {}),
-    ...(stockOf(raw.inStock ?? raw.in_stock ?? raw.ats) !== undefined ? { inStock: stockOf(raw.inStock ?? raw.in_stock ?? raw.ats) } : {}),
+  const csv = csvRows.has(raw), out: Record<string, unknown> = {};
+  const supplied = (key: string) => Object.hasOwn(raw, key) && !(csv && raw[key] === '');
+  const copy = (key: string, aliases: string[] = [], normalize: (v: unknown) => unknown = trimmed) => {
+    const source = [key, ...aliases].find(supplied);
+    if (source !== undefined) out[key] = normalize(raw[source]);
   };
+  const list = (v: unknown) => typeof v === 'string' || (Array.isArray(v) && v.every(x => typeof x === 'string')) ? normalizeList(v) : v;
+  copy('id', ['systemId', 'contentId']);
+  copy('customerContentId', ['cmsId', 'customerId']);
+  copy('type', ['contentType', 'kind']);
+  for (const key of ['title', 'subtitle', 'art', 'excerpt', 'runtime']) copy(key);
+  copy('renderUrl', ['url']);
+  copy('tags', [], v => typeof v === 'string' || (isRecord(v) && Object.values(v).every(x => typeof x === 'string'
+    || (Array.isArray(x) && x.every(value => typeof value === 'string')))) ? normalizeTags(v) : v);
+  copy('slotTypes', ['slots'], list);
+  copy('journeyStageFit', ['journey_stage_fit', 'stageFit'], list);
+  copy('freshnessDate', ['freshness_date', 'publishedAt']);
+  copy('featuredProductIds', ['featured_product_ids', 'products'], list);
+  copy('inStock', ['in_stock', 'ats'], v => stockOf(v) ?? v);
+  copy('merchandising', [], v => {
+    if (csv && typeof v === 'string') { try { return JSON.parse(v); } catch { return v; } }
+    return v;
+  });
+  // An explicitly supplied canonical field always wins, even when invalid.
+  if (supplied('lifecycle')) out.lifecycle = raw.lifecycle;
+  else if (supplied('status')) out.lifecycle = { status: trimmed(raw.status) };
+  if (supplied('window')) out.window = raw.window;
+  else {
+    const window: Record<string, unknown> = {};
+    for (const [bound, names] of [['from', ['windowFrom', 'publishAt']], ['to', ['windowTo', 'expireAt']]] as const) {
+      const name = names.find(supplied); if (name !== undefined) window[bound] = trimmed(raw[name]);
+    }
+    if (Object.keys(window).length) out.window = window;
+  }
+  return out;
 }
 
 /** The array of records inside a JSON export: the body itself, `pieces`, `content`, `items`, or a dotted path. */
 export function recordsFromJson(body: unknown, path?: string): unknown[] {
+  const selected = (value: unknown): unknown[] => { inputRecords(value); return Array.isArray(value) ? value : []; };
   if (path) {
     let cur: unknown = body;
     for (const seg of path.split('.').filter(Boolean)) cur = isRecord(cur) ? cur[seg] : undefined;
-    return Array.isArray(cur) ? cur : [];
+    return selected(cur);
   }
-  if (Array.isArray(body)) return body;
-  if (isRecord(body)) for (const k of ['pieces', 'content', 'items', 'data']) if (Array.isArray(body[k])) return body[k] as unknown[];
+  if (Array.isArray(body)) return selected(body);
+  if (isRecord(body)) for (const k of ['pieces', 'content', 'items', 'data']) if (Array.isArray(body[k])) return selected(body[k]);
   return [];
 }
 
@@ -98,8 +111,23 @@ export function recordsFromJson(body: unknown, path?: string): unknown[] {
 
 /** RFC 4180-style: quoted fields may hold commas, newlines and doubled quotes. */
 export function parseCsv(text: string): Record<string, string>[] {
+  inputTextBytes(text);
   const rows: string[][] = [];
   let row: string[] = [], field = '', quoted = false;
+  let cells = 0;
+  const pushField = () => {
+    inputLimit('csv_fields', row.length + 1, 256);
+    inputLimit('csv_cells', ++cells, 100_000);
+    row.push(field); field = '';
+  };
+  const pushRow = () => {
+    if (row.some(f => f !== '')) {
+      inputLimit('records', rows.length, INPUT_MAX_RECORDS); // First nonblank row is the header.
+      inputLimit('csv_materialized_cells', (rows[0]?.length ?? 0) * rows.length, 100_000);
+      rows.push(row);
+    }
+    row = [];
+  };
   const src = text.replace(/^\uFEFF/, '');
   for (let i = 0; i < src.length; i++) {
     const ch = src[i]!;
@@ -109,27 +137,27 @@ export function parseCsv(text: string): Record<string, string>[] {
       continue;
     }
     if (ch === '"') { quoted = true; continue; }
-    if (ch === ',') { row.push(field); field = ''; continue; }
+    if (ch === ',') { pushField(); continue; }
     if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && src[i + 1] === '\n') i++;
-      row.push(field); field = '';
-      if (row.some((f) => f !== '')) rows.push(row);
-      row = [];
+      pushField(); pushRow();
       continue;
     }
     field += ch;
   }
-  row.push(field);
-  if (row.some((f) => f !== '')) rows.push(row);
+  pushField(); pushRow();
   const [header, ...body] = rows;
   if (!header) return [];
   const names = header.map((h) => h.trim());
-  return body.map((r) => Object.fromEntries(names.map((n, i) => [n, (r[i] ?? '').trim()])));
+  return body.map((r) => {
+    const record = Object.fromEntries(names.map((n, i) => [n, (r[i] ?? '').trim()]));
+    csvRows.add(record); return record;
+  });
 }
 
 export const CSV_COLUMNS = [
   'id', 'customerContentId', 'type', 'title', 'subtitle', 'tags', 'slotTypes', 'status', 'art', 'renderUrl', 'excerpt', 'runtime', 'windowFrom', 'windowTo',
-  'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'inStock',
+  'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'inStock', 'merchandising',
 ] as const;
 
 // ── Assembly ────────────────────────────────────────────────────────────────
@@ -138,15 +166,27 @@ export type ImportMode = 'replace' | 'merge';
 
 /** Candidate pieces from raw records; nulls dropped, order kept. */
 export function candidatesFrom(records: unknown[]): Record<string, unknown>[] {
+  inputRecords(records);
   return records.map(normalizePiece).filter((p): p is Record<string, unknown> => p !== null);
 }
 
-/** Replace the catalog, or upsert by id into the current one, keeping the current order for known ids. */
+/** Replace, or partial upsert by id. Omission preserves known fields; defaults belong only to inserts. */
 export function assemble(current: ContentCatalog, incoming: Record<string, unknown>[], mode: ImportMode): { pieces: unknown[] } {
-  if (mode === 'replace') return { pieces: incoming };
+  const inserted = (p: Record<string, unknown>) => ({ customerContentId: p.id, tags: {}, lifecycle: { status: 'live' }, ...p });
+  if (mode === 'replace') return { pieces: incoming.map(inserted) };
   const byId = new Map<string, unknown>(current.pieces.map((p: ContentPiece) => [p.id, p]));
-  for (const p of incoming) { const id = typeof p.id === 'string' ? p.id : ''; if (id) byId.set(id, p); }
-  return { pieces: [...byId.values()] };
+  const invalid: unknown[] = [];
+  for (const p of incoming) {
+    const id = typeof p.id === 'string' ? p.id : '';
+    if (!id) { invalid.push(p); continue; } // Required insert IDs must reach validation, not disappear.
+    const previous = byId.get(id);
+    const next: Record<string, unknown> = isRecord(previous) ? { ...previous, ...p } : inserted(p);
+    if (isRecord(previous) && isRecord(p.window) && Object.keys(p.window).length) {
+      next.window = { ...(isRecord(previous.window) ? previous.window : {}), ...p.window };
+    }
+    byId.set(id, next);
+  }
+  return { pieces: [...byId.values(), ...invalid] };
 }
 
 // ── The provider seam ───────────────────────────────────────────────────────
@@ -171,6 +211,6 @@ export class HttpJsonSource implements ContentSource {
   async pull(): Promise<unknown[]> {
     const res = await this.fetchImpl(this.url, { headers: { Accept: 'application/json' } });
     if (!res.ok) throw new Error(`source responded ${res.status}`);
-    return recordsFromJson(await res.json(), this.path);
+    return recordsFromJson(JSON.parse(await readInputText(res.body)), this.path);
   }
 }

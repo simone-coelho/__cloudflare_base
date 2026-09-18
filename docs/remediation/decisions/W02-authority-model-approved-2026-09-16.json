@@ -1,0 +1,19 @@
+{
+  "at": "2026-09-16T22:01:07.895Z",
+  "actor_id": "g0-user",
+  "task_scope": "W02 local implementation; actual migration/credential operations remain outside local authority.",
+  "customer_accounts": {
+    "user_selection": "Shared identities; tenant membership administration plus separate stamp-owner recovery",
+    "contract": "Keep shared human identities. Tenant administrators control only membership/authority in their own tenant. Global password reset and account deletion require separately authorized stamp-owner authority; do not infer it from tenant membership or a global JWT admin claim."
+  },
+  "services": {
+    "user_selection": "Individually revocable registered service credentials",
+    "contract": "Registered credential identity and current revocation/grants are enforced; issuance, replacement and revocation are explicit. Machines remain independent of human login sessions. Do not authorize actual legacy credential migration or live credential operations by this local design choice."
+  },
+  "preserve": "Existing W02.01–.07 protections, W01 strict customer boundary and original full W02 requirements.",
+  "not_authorized": [
+    "deployment/cloud/resource mutation",
+    "actual credential rotation or customer-data migration",
+    "commit/push/merge"
+  ]
+}

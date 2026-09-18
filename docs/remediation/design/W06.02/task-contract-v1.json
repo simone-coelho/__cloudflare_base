@@ -1,0 +1,91 @@
+{
+  "id": "W06.02",
+  "package_id": "W06",
+  "title": "Persistent ledger erasure barrier and delayed-delivery suppression",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Keep a strict tenant/visitor ledger erasure predicate active after physical rewrite and suppress delayed pre-erasure decision/outcome records at queue ingestion before R2 persistence.",
+  "read_paths": ["src/ledger", "src/content/types.ts", "src/index.ts", "src/identity/erase.ts", "docs/architecture", "docs/remediation", "scripts/remediation", "package.json", "package-lock.json", "tsconfig.json", "vitest.config.ts", "node_modules"],
+  "write_paths": ["src/ledger/erasure.ts", "src/ledger/consume.ts", "src/ledger/writer.ts", "src/ledger/erasure.test.ts", "src/ledger/ledger.test.ts", "docs/remediation/evidence/W06.02/worker.md", "docs/remediation/evidence/W06.02/worker-checks.json"],
+  "non_goals": [
+    "Partial W06/F06/F18 delayed ledger replay containment only. No shopper capability/deletion generation, stale-cookie/session or socket revocation, strict concurrent cross-store fencing, ring/online learning/D1/AE/log/external suppression, physical-retention SLA, customer, gate or release acceptance.",
+    "No automatic barrier expiry or claim that the current/default retention number is approved. D03 transactional authority and D06 retention/re-entry policy remain pending; barriers stay active until a later authorized compatible lifecycle exists.",
+    "Three production files and two existing ledger suites only. No hot-path scorer/SDK/session/DO/route changes, new infrastructure, broad suite/build, deployment, cloud, credentials, customer data, commit/push, destructive cleanup or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W06.02-C1",
+      "description": "A strict tenant/visitor tombstone remains an active read predicate after its physical rewrite reaches the configured scan floor. Completion is marked durably without deleting or lowering visitor_id/erased_at; repeated rewrite is idempotent, a crash between audit and completion can finalize on retry, and a later explicit erasure restarts physical progress at a monotonic cutoff. Listed missing/corrupt/mismatched barrier state fails closed. Legacy valid tombstones remain readable.",
+      "required_evidence_kinds": ["integration_test"],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.02-C2",
+      "description": "Ledger queue consumption validates that record tenant and integer timestamp equal the parsed decision/outcome ID carrier and that visitor_id is a bounded subject. It loads active barriers once per represented tenant, drops only matching records at or before erased_at before any batch put, retains other visitors and post-cutoff records, reports suppressed count, and returns ok:false on barrier read/parse failure so the caller retries rather than acknowledging an unsafe persistence. Tenant separation holds for two non-default tenants.",
+      "required_evidence_kinds": ["integration_test"],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.02-C3",
+      "description": "Existing ledger and erasure suites only, inspecting actual synthetic R2 keys/rows for delayed decisions and outcomes before and after rewrite completion, failure and compatible positive paths. Worker exact K1 plus app noEmit/scoped diff; independent exact K1 once and frozen source/proof/import pins. W06.01 overlap is qualified before edits. No concurrent-ingestion, deployed R2, SLO or full W06 claim.",
+      "required_evidence_kinds": ["design_review"],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.02-K1",
+      "required": true,
+      "criterion_ids": ["W06.02-C1", "W06.02-C2"],
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual ledger consumer/writer/erasure modules with existing synthetic R2 seams. No external network.",
+      "workload": "Two existing ledger suites only; grouped delayed decision/outcome, persistent barrier, strict carrier/failure/tenant and ordinary batching cases. Worker app noEmit and scoped diff; no engine latency claim.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.02-K2",
+      "required": true,
+      "criterion_ids": ["W06.02-C3"],
+      "command": "Independent frozen W06.02 actual source and complete worker proof review; exact K1 once; relevant local import graph and physical pins; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review; actual modules with synthetic R2 only.",
+      "workload": "C1-C3 persistent suppression and delayed-delivery state, negative carrier/barrier failures and compatibility; inspect compiler/scoped diff evidence without rerun. No broad/deployed qualification.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W06.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing strict tombstone establishment and durable local erasure retry; overlapping erasure source/test proof is retained historically and qualified before edits.",
+      "rationale": "This task changes physical-completion semantics without reopening identity discovery/receipt scope merely to add coverage."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future choice of serialized/transactional cross-store authority.",
+      "rationale": "Persistent ledger suppression does not claim strict prevention of an already in-flight cross-store write."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved replay horizon, barrier retention/removal and re-entry policy.",
+      "rationale": "Safety containment keeps the barrier active and does not invent a customer retention duration."
+    }
+  ],
+  "preflight": {"status": "pending", "plan": null, "contract_digest": null, "approval": null},
+  "assignments": {"implementer": "w0602-worker", "independent_reviewer": "w0602-reviewer", "lead": "w01-lead"},
+  "artifact": {"status": "not_recorded", "contract_digest": null, "configuration": null, "files": [], "digest": null},
+  "acceptance_history": [],
+  "independent_review": {"status": "pending"},
+  "lead_signoff": {"status": "pending"},
+  "blocked": null,
+  "handoff": {"status": "pending", "resume_path": "docs/remediation/RESUME.md", "next_action": "Implement persistent ledger replay suppression in the three admitted modules and two existing suites; freeze for independent review."}
+}

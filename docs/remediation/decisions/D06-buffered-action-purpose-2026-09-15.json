@@ -1,0 +1,52 @@
+{
+  "id": "D06-BUFFERED-ACTION-PURPOSE-2026-09-15",
+  "at": "2026-09-15T17:14:42.069Z",
+  "kind": "owner_choice_requested_not_approved",
+  "scope": "Explicit buffered browser/app actions only; not existing internal server-stamped regional ordering.",
+  "question": "For explicitly buffered actions, should current personalization receive occurrence-time-discounted interest alongside eligible historical measurement, or should these actions serve measurement only?",
+  "recommended": "Age-decayed current interest plus eligible original-time measurement; do not manufacture fresh visits/last_activity/ODP recent activity or today-region attribution from delayed receipt.",
+  "alternative": "Eligible original-time measurement only; no current personalization effects.",
+  "constraints": [
+    "No blanket event-age cutoff; ordinary network delay is not buffering classification. Existing action schema lacks a processing-purpose marker; classification must be explicit, or owners must explicitly choose occurrence-time treatment for all actions.",
+    "Server time remains authoritative for evaluating now and preventing clock-driven amplification. Current receipt geography does not prove historical event location.",
+    "Consent/erasure, logical identity, policy/config version and experiment lifecycle eligibility remain separate. This question grants no retention, historical reconstruction, generation reset or deployment authority."
+  ],
+  "source": [
+    {
+      "path": "docs/architecture/16-edge-affinity-reflex.md",
+      "sha256": "b30b96e1edb2ee468742b180c0dba544d3f21ddb30cb2404f62e12509605de43"
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b"
+    },
+    {
+      "path": "src/services/RealtimeSegmentEngine.ts",
+      "sha256": "9dfec44e96b4bcbaeac12042bebb1d12dbf71614a1d42c31349449baa474b424"
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db"
+    },
+    {
+      "path": "src/identity/history.ts",
+      "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7"
+    },
+    {
+      "path": "src/reflex/identityMerge.ts",
+      "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+    },
+    {
+      "path": "src/reflex/regionTrend.ts",
+      "sha256": "e32bf1887ad7c9d7eb4a5fbdf6a78639f76a5927fefc9b88a327875385434f16"
+    }
+  ],
+  "independent_review": {
+    "actor_id": "w2205-reviewer",
+    "run_id": "/root/late_hour_next_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "result": "Source review confirms explicit clock-policy distinction and need for a purpose choice. This is not customer approval."
+  },
+  "execution": "Question sent asynchronously while independent W23.02 regional arithmetic implementation proceeds. No changed buffered-event semantics or tests for this question."
+}

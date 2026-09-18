@@ -7,13 +7,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import type { Env } from '@/types/env';
+import { issueSessionCapability, verifySessionCapability, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
+import { storedConsent } from '@/content/consent';
+import { setTimeout as settle } from 'node:timers/promises';
 
 const TABBY_ID = 'COA-CH857';
 const t0 = 1_750_000_000_000;
+const subject = 'vis-00000000-0000-4000-8000-000000000050';
 
 class FakeStorage {
   map = new Map<string, unknown>();
   puts = 0;
+  alarm: number | null = null;
   async get(keys: string | string[]): Promise<any> {
     if (Array.isArray(keys)) { const out = new Map<string, unknown>(); for (const k of keys) if (this.map.has(k)) out.set(k, structuredClone(this.map.get(k))); return out; }
     return structuredClone(this.map.get(keys));
@@ -23,9 +28,19 @@ class FakeStorage {
     if (typeof a === 'string') this.map.set(a, structuredClone(b)); else for (const [k, v] of Object.entries(a)) this.map.set(k, structuredClone(v));
   }
   async delete(k: string) { return this.map.delete(k); }
-  async deleteAll() { this.map.clear(); }
-  async setAlarm() { /* not exercised here */ }
-  async getAlarm() { return null; }
+  async deleteAll() { this.map.clear(); this.alarm = null; }
+  async setAlarm(at: number) { this.alarm = at; }
+  async getAlarm() { return this.alarm; }
+  async list(options?: { prefix?: string; limit?: number }) { return structuredClone(new Map([...this.map].filter(([k]) => k.startsWith(options?.prefix ?? '')).sort(([a], [b]) => a.localeCompare(b)).slice(0, options?.limit))); }
+  async transaction(run: (tx: unknown) => Promise<unknown>) {
+    const next = structuredClone(this.map); let alarm = this.alarm;
+    const result = await run({ list: async () => structuredClone(next),
+      put: async (values: Record<string, unknown>) => { for (const [k, v] of Object.entries(values)) next.set(k, structuredClone(v)); },
+      delete: async (keys: string[]) => { for (const key of keys) next.delete(key); return keys.length; },
+      deleteAlarm: async () => { alarm = null; }, setAlarm: async (at: number) => { alarm = at; },
+    });
+    this.map = next; this.alarm = alarm; return result;
+  }
 }
 class FakeKV {
   store = new Map<string, string>();
@@ -37,42 +52,144 @@ class FakeKV {
 
 let storage: FakeStorage;
 let shopper: ShopperReflex;
+let env: Env;
+let sockets: WebSocket[];
+let pending: Promise<unknown>[];
+let principal: SessionCapability;
+let capability: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.useFakeTimers(); vi.setSystemTime(t0);
   storage = new FakeStorage();
-  const state = { storage, acceptWebSocket: () => undefined, getWebSockets: () => [] } as unknown as DurableObjectState;
-  const env = { CACHE: new FakeKV(), SESSIONS: new FakeKV(), ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock' } as unknown as Env;
+  sockets = []; pending = [];
+  const state = { id: subject, storage, acceptWebSocket: () => undefined, getWebSockets: () => sockets, waitUntil: (p: Promise<unknown>) => pending.push(p) } as unknown as DurableObjectState;
+  env = { DEPLOYMENT_PROFILE: 'demo', REFLEX_HOST: 'do', CACHE: new FakeKV(), SESSIONS: new FakeKV(), ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock', JWT_SECRET: 'w0502-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
+    SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: (request: Request) => shopper.fetch(request) }) },
+  } as unknown as Env;
   shopper = new ShopperReflex(state, env);
+  await register();
 });
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 const post = async (path: string, body: unknown) => {
-  const res = await shopper.fetch(new Request(`https://do${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
-  return { status: res.status, body: (await res.json()) as any };
+  if (path === '/consent') body = { ...(body as object), choice: { id: crypto.randomUUID(), expectedRevision: storedConsent(storage.map.get('consent')).instruction?.revision ?? null,
+    grantId: principal.grantId, iat: principal.iat, exp: principal.exp } };
+  const res = await shopper.fetch(new Request(`https://do${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: capability, 'X-Tenant': 'coach' }, body: JSON.stringify(body) }));
+  const result = { status: res.status, body: (await res.json()) as any };
+  if (path === '/reset' && res.ok) await register();
+  return result;
 };
-const get = async (path: string) => { const res = await shopper.fetch(new Request(`https://do${path}`)); return (await res.json()) as any; };
-const view = (extra: Record<string, unknown> = {}) => ({ type: 'product_view', userId: 'vis-c', data: { productId: TABBY_ID, action: 'product_view', ...extra }, source: 'test' });
+async function register() {
+  const authority = storage.map.get('grantAuthority') as { epoch: string } | undefined;
+  const issued = await issueSessionCapability(env, { tenant: 'coach', subject, sessionId: crypto.randomUUID(), kind: 'anonymous', ...(authority ? { authorityEpoch: authority.epoch } : {}) });
+  capability = issued.capability; principal = await verifySessionCapability(env, capability, 'coach');
+  storage.map.set('grantAuthority', { version: 1, epoch: principal.authorityEpoch, grants: { [principal.grantId!]: principal } });
+}
+const get = async (path: string) => { const res = await shopper.fetch(new Request(`https://do${path}`, { headers: { [SHOPPER_HEADER]: capability, 'X-Tenant': 'coach' } })); return (await res.json()) as any; };
+const view = (extra: Record<string, unknown> = {}) => ({ type: 'product_view', userId: subject, sessionId: principal.sessionId, data: { productId: TABBY_ID, action: 'product_view', ...extra }, source: 'test' });
+
+describe('W05.02 shared reducer and timer boundaries', () => {
+  function destinations() {
+    const calls: string[] = [];
+    Object.assign(env, { ODP_API_HOST: 'https://odp.synthetic.invalid', ODP_PUBLIC_KEY: 'synthetic-only',
+      REGION_TREND: { idFromName: (n: string) => n, get: () => ({ fetch: async () => { calls.push('region'); return Response.json({ ok: true }); } }) },
+    });
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname; calls.push(path);
+      return path.endsWith('/graphql') ? Response.json({ data: { customer: { audiences: { edges: [] } } } }) : new Response('{}', { status: 202 });
+    }));
+    return calls;
+  }
+  async function drain() {
+    while (pending.length) await Promise.all(pending.splice(0));
+    // Settle the actual fire-and-forget hash/fetch/receipt continuations without
+    // moving the fake engine clock or reaching external network.
+    await settle(10);
+  }
+  it('gates actual reducer geo fan and configured ODP, preserving tracking-only storage and measurements', async () => {
+    const calls = destinations();
+    for (const tracking of [false, true]) for (const personalization of [false, true]) {
+      await post('/reset', {}); await post('/consent', { tracking, personalization });
+      calls.length = 0; const before = storage.puts;
+      // normalizeEvent intentionally still drops geo; this is explicitly the
+      // actual shared reducer, not a claim that the HTTP route supplies geo.
+      const out = await (shopper as any).serialize(async () => {
+        await (shopper as any).assertOwned(principal);
+        return (shopper as any).ingest({ ...view({ consent: { tracking: true, personalization: true } }), timestamp: t0, geo: { country: 'US', regionCode: 'NY' } }, principal);
+      });
+      await drain();
+      expect(out.body.consent).toMatchObject({ tracking, personalization });
+      expect(calls.includes('region')).toBe(tracking);
+      expect(calls.includes('/v3/events')).toBe(tracking);
+      expect(calls.includes('/v3/graphql')).toBe(tracking && personalization);
+      expect(!!out.body.update).toBe(tracking && personalization);
+      expect(storage.map.has('affinity')).toBe(tracking);
+      if (!tracking) { expect(storage.puts).toBe(before); expect(calls).toEqual([]); }
+    }
+  });
+
+  it('honors withdrawal in serialized socket actions and pending alarms without skipping retention cleanup', async () => {
+    const calls = destinations();
+    await post('/consent', { tracking: true, personalization: true });
+    for (let i = 0; i < 4; i++) { vi.setSystemTime(t0 + i * 5000); await post('/ingest', { ...view(), userId: subject }); }
+    await drain();
+    const frames: any[] = [];
+    const ws = { deserializeAttachment: () => ({ shopperId: subject, principal }), send: (raw: string) => frames.push(JSON.parse(raw)), close: () => frames.push({ type: 'closed' }) } as unknown as WebSocket;
+    sockets.push(ws);
+    // A consenting alarm really performs the continuation, not just a no-op stub.
+    calls.length = 0;
+    vi.setSystemTime(t0 + 300_000); storage.alarm = null; await shopper.alarm(); await drain();
+    expect(calls).toContain('/v3/graphql'); expect(frames.some(v => v.type === 'personalization_update')).toBe(true);
+    for (const consent of [{ tracking: false, personalization: true }, { tracking: true, personalization: false }]) {
+      await post('/consent', consent); const before = structuredClone([...storage.map]);
+      const puts = storage.puts; calls.length = 0; frames.length = 0;
+      if (!consent.tracking) await shopper.webSocketMessage(ws, JSON.stringify({ type: 'action', event: { ...view({ consent: { tracking: true, personalization: true } }), userId: subject } }));
+      storage.alarm = null; await shopper.alarm(); await drain();
+      expect([...storage.map]).toEqual(before); expect(storage.puts).toBe(puts);
+      expect(calls).toEqual([]); expect(frames).toEqual([]);
+      const aff = storage.map.get('affinity') as { lastSeen: number };
+      expect(storage.alarm).toBe(aff.lastSeen + 30 * 86_400_000);
+    }
+    // The refusal guard does not precede or extend the unchanged idle expiry.
+    vi.setSystemTime(t0 + 31 * 86_400_000); sockets.length = 0;
+    storage.alarm = null; await shopper.alarm(); expect(storage.map.has('affinity')).toBe(false); expect(storage.map.has('pipeline')).toBe(false);
+    expect(storage.map.get('grantAuthority')).toMatchObject({ grants: {} }); expect(storage.alarm).toBeNull();
+  });
+});
 
 describe('the switches', () => {
-  it('are consenting when nothing was ever said, on the snapshot and the envelope', async () => {
-    expect((await get('/snapshot')).consent).toEqual({ tracking: true, personalization: true });
+  it('W05.01 publishes consent memory only after a successful write, including retry', async () => {
+    for (const current of [false, true]) {
+      await post('/consent', { tracking: current, personalization: current });
+      const writer = vi.spyOn(storage, 'put').mockRejectedValueOnce(new Error('synthetic storage failure'));
+      await expect(post('/consent', { tracking: !current, personalization: !current })).rejects.toThrow('synthetic storage failure');
+      expect((await get('/snapshot')).consent).toMatchObject({ tracking: current, personalization: current });
+      expect(storedConsent(storage.map.get('consent'))).toMatchObject({ tracking: current, personalization: current });
+      await post('/consent', { tracking: !current, personalization: !current });
+      expect(writer).toHaveBeenCalledTimes(2);
+      expect((await get('/snapshot')).consent).toMatchObject({ tracking: !current, personalization: !current });
+      writer.mockRestore();
+    }
+  });
+  it('are off when nothing was ever said, on the snapshot and the envelope', async () => {
+    expect((await get('/snapshot')).consent).toEqual({ tracking: false, personalization: false });
     const r = await post('/ingest', view());
-    expect(r.body.consent).toEqual({ tracking: true, personalization: true });
-    expect(storage.map.has('affinity')).toBe(true);
+    expect(r.body.consent).toEqual({ tracking: false, personalization: false });
+    expect(storage.map.has('affinity')).toBe(false);
   });
 
   it('are set through the door, only by an explicit boolean, and remembered', async () => {
     const r = await post('/consent', { personalization: false, tracking: 'no' as never });
-    expect(r.body.consent).toEqual({ tracking: true, personalization: false });
-    expect(storage.map.get('consent')).toEqual({ tracking: true, personalization: false });
-    expect((await get('/snapshot')).consent).toEqual({ tracking: true, personalization: false });
+    expect(r.status).toBe(400); expect(storage.map.has('consent')).toBe(false);
+    expect((await post('/consent', { personalization: false })).body.consent).toMatchObject({ tracking: false, personalization: false });
+    expect(storedConsent(storage.map.get('consent'))).toMatchObject({ tracking: false, personalization: false });
   });
 
   it('can arrive on an event, under data.consent', async () => {
+    await post('/consent', { tracking: true, personalization: true });
     const r = await post('/ingest', view({ consent: { tracking: false } }));
-    expect(r.body.consent).toEqual({ tracking: false, personalization: true });
-    expect(storage.map.get('consent')).toEqual({ tracking: false, personalization: true });
+    expect(r.body.consent).toMatchObject({ tracking: false, personalization: true });
+    expect(storedConsent(storage.map.get('consent'))).toMatchObject({ tracking: false, personalization: true });
   });
 });
 
@@ -97,9 +214,9 @@ describe('tracking off', () => {
     expect(storage.map.has('affinity')).toBe(true);
   });
 
-  it('does not survive an erasure: a reset shopper starts consenting', async () => {
+  it('does not survive an erasure: a reset shopper starts off', async () => {
     await post('/consent', { tracking: false });
     await post('/reset', {});
-    expect((await get('/snapshot')).consent).toEqual({ tracking: true, personalization: true });
+    expect((await get('/snapshot')).consent).toEqual({ tracking: false, personalization: false });
   });
 });

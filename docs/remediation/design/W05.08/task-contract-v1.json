@@ -1,0 +1,167 @@
+{
+  "id": "W05.08",
+  "package_id": "W05",
+  "title": "Consent-safe owned preference and snapshot paths",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Make owned preference changes necessary-only, and resolve consent before owned personalization/segment/reflex reads or manual segment assignment on both hosts; preserve consented behavior and headerless internal/analytics contracts.",
+  "read_paths": [
+    "src",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/routes/realtime.ts",
+    "src/services/RealtimeSegmentEngine.ts",
+    "src/services/SessionManager.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "docs/remediation/evidence/W05.08/worker.md",
+    "docs/remediation/evidence/W05.08/worker-checks.json"
+  ],
+  "non_goals": [
+    "Partial W05/F05/F10/N06/N11/N12, customer first-party profiling and D10 consent only. No full W05/finding/gate/customer/release acceptance or changes to deterministic scorer, learning, external webhook/operator trust, headerless internal/live snapshot/identity paths or analytics historical self-access.",
+    "Preserve absent-state compatibility; recognized missing/malformed/error is not anonymous absence. Necessary refusal records remain bounded local containment, not D01/D03/D06 policy, retention or atomic copied-grant revocation approval. No native browser/UI reset/workerd/deployed/SLO claim.",
+    "No SDK/build/API-documentation/new suite/harness/infrastructure work. Existing boundary suite plus app noEmit/scoped diff only, expand solely for a concrete affected defect with lead approval. No stage/commit/push/deploy/cloud/credentials/customer-data/destructive/unrelated actions or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W05.08-C1",
+      "description": "Owned personalization/segments/reflex reads resolve strict exact state and restrictive cookies before creation, seeding, qualification, FX/enhanced-variable evaluation, affinity/stage projection or profile-cookie generation. Either false returns existing safe empty personalization maps/segments, segments [], affinity:null/journeyStage:null and safe IDs/config/consent metadata; persist necessary refusal before success. Cold refused reads create no behavioral profile/pointer/visit state. Reuse resolved or newly created state where applicable, preserving consenting cold/returning behavior without a stale reread. Malformed/null/unknown/read/write/forward/wrong ownership/recognized-missing/expiry fail closed. Apply same owned consent gate to manual segment POST before profile/pointer/broadcast, both hosts deny refusal403. Headerless internal snapshot/identity and historical analytics remain unchanged.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.08-C2",
+      "description": "Owned preference update uses strict one-read, preference-only persistence; preserve all existing behavioral data, counters/timestamps and user pointer. Merge false cookies for omitted switches; explicit current body boolean true remains deliberate enable. Cold anonymous refusal stores minimal necessary zero-counter instruction without pointer; cold all-consenting preference retains404, recognized-missing/errors deny. Response generates consent-only cookies directly, never personalization/profile mirrors; stable response shape with boolean cookiesUpdated and effective preferences. Necessary write failure is not acknowledged; recheck current target after awaits. Existing non-owned/internal preference behavior unchanged.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.08-C3",
+      "description": "Only four production files plus existing realtime.sdkContract fixture. Group both-host populated/cold/refusal/cookie/error/re-enable cases; assert no seed/evaluate/egress/profile writes, exact preference-only mutation and no pointer/counter changes, positive actual qualification/decision and unchanged analytics/action/SDK behavior. Worker exact K1, app noEmit and scoped diff; independent exact K1 once and actual before/final source/full available proof/relevant local import graph/pins review. Preserve W05.07 acceptance historically and qualify changed shared-input proof before edits, without removing old fixes or whole-task reacceptance. No broad new suites or runtime/infra programme.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W05.08-K1",
+      "required": true,
+      "criterion_ids": [
+        "W05.08-C1",
+        "W05.08-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; existing actual Hono/capability/SessionManager/ShopperReflex both-host boundary with synthetic stores/destinations. No external network.",
+      "workload": "One existing integration suite only; grouped owned read/preference/segment refusal and positive cases plus its existing SDK/action/identity/content/sort/Optimizely regressions. Worker app noEmit and scoped diff; no SDK rebuild, browser smoke or extra suites.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W05.08-K2",
+      "required": true,
+      "criterion_ids": [
+        "W05.08-C3"
+      ],
+      "command": "Independent frozen W05.08 actual before/final source and complete available worker evidence review, exact K1 once, relevant local import graph and physical pins; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review; source-confirmed and local synthetic only.",
+      "workload": "C1-C3, correct refusal before effects, necessary-only preference mutation, current ownership and positive compatibility. Inspect app noEmit/scoped diff and historical qualifications; no native/deployed/SLO/customer or broad validation expansion.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W05.07",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing implemented strict owned consent, SDK capture/acknowledgment and action boundaries, with assurance scoped to unchanged interfaces.",
+      "rationale": "Actual affected existing boundary cases rerun; accepted whole-task history remains historical after shared inputs change."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W05.06",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing implemented strict owned consent, SDK capture/acknowledgment and action boundaries, with assurance scoped to unchanged interfaces.",
+      "rationale": "Actual affected existing boundary cases rerun; accepted whole-task history remains historical after shared inputs change."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W05.02",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing implemented strict owned consent, SDK capture/acknowledgment and action boundaries, with assurance scoped to unchanged interfaces.",
+      "rationale": "Actual affected existing boundary cases rerun; accepted whole-task history remains historical after shared inputs change."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D01",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Pending customer topology, transactional authority and privacy/necessary-record lifecycle decisions.",
+      "rationale": "Explicit owned refusal remediation does not invent these policies or authorize release."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Pending customer topology, transactional authority and privacy/necessary-record lifecycle decisions.",
+      "rationale": "Explicit owned refusal remediation does not invent these policies or authorize release."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Pending customer topology, transactional authority and privacy/necessary-record lifecycle decisions.",
+      "rationale": "Explicit owned refusal remediation does not invent these policies or authorize release."
+    }
+  ],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "contract_digest": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0508-worker",
+    "independent_reviewer": "w0508-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement admitted owned read/preference/segment consent remedy; freeze source and worker proof for independent review."
+  }
+}

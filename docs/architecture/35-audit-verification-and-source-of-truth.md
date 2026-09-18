@@ -1,772 +1,580 @@
-# 35 · The audit, verified: one source of truth for what is wrong and what to do
+# 35 · Reconciled audit and delivery source of truth
 
-Internal. 2026-09-06 and 07. Verifies docs/architecture/34-independent-adversarial-audit.md against the
-code at commit `c10ccff`, which is HEAD and the commit the audit names, so no line drifted and nothing
-has been fixed since. Written for the delivery decision: what stands, what the audit got wrong, what
-both the audit and the builders' brief (doc 33) missed, and one ranked remediation list.
+Internal delivery-team document. Reconciled 2026-09-06. Do not circulate externally without review.
 
-**How it was verified.** Forty-six independent verifiers, one per audit finding (F01 to F35), one per
-audit section (performance, the thirteen decisions, the two traceability tables, gates and the earlier
-34-item audit, the not-verified list), and five sweeps for what neither document names (security and
-tenancy, data privacy and lifecycle, learning and statistics, operations and delivery, customer-facing
-promises). Each ran on Opus at maximum reasoning effort, read-only on the tree, and reproduced the
-audit's probes in scratch harnesses against the repository's own modules, Miniflare and workerd where
-the question was a runtime limit. Every verifier's full report is committed under
-`docs/architecture/35-verification-reports/`; this document carries their verdicts.
+This is the canonical register for the findings, their qualifications, required remedies, and acceptance gates. It reconciles the [independent audit](34-independent-adversarial-audit.md), the engineering verification committed at c68562d, **all 47 committed reports**, including the [synthesis verdict and ranking](35-verification-reports/synthesis.md), and a subsequent independent Astra review. The synthesis is available and incorporated; it is not an outstanding dependency.
 
----
+The product is a reusable, customer-neutral content and personalization engine. Tapestry is a customer implementation, Coach its launch brand. Neither hard-coded Coach behavior nor a demo-only workflow establishes the generic product capability.
 
-## 1 · The verdict
+## 1 · Authority, evidence, and verdict
 
-**Every one of the thirty-five findings is confirmed, at high confidence.** None is refuted. Most are
-understated: the verifiers found the failure reaches further than the audit said, or a second path to
-the same failure, or a test that passes for the wrong reason, in 33 of 35. The audit's own verdict
-stands: retain the deterministic scoring core; do not accept the current implementation as
-customer-pilot-ready, enterprise-isolated, or evidence of incremental business lift.
+### What is authoritative
 
-Severity moved in eight places, always upward:
+- This document governs current audit disposition, severity, dependencies, and closure. F01–F35 retain the original finding IDs; N01–N30 preserve the verification document's numbered sweep entries; W01–W41 preserve its work-package numbers.
+- Documents 33 and 34 remain historical brief/audit evidence. The 47 files in [35-verification-reports](35-verification-reports/) remain unchanged raw evidence, including disagreements and proposed remedies that this reconciliation rejects. A raw verifier's “confirmed” does not validate every sentence or suggested patch in that report.
+- [Document 20](20-scope-truth-ledger.md) remains the source-clause history. Its historical “closed” rows are not acceptance authority where this register reopens them. Customer source documents establish commitments; an internal audit cannot amend them.
+- A finding is **open**, **contained**, **remediated pending acceptance**, or **closed with evidence**. Removing a claim or disabling a feature may contain risk; it does not deliver the missing capability. Closure requires the relevant production-path tests, recorded configuration/artifact, and acceptance owner. No finding has been closed by this documentation reconciliation.
 
-| Finding | Audit | Verified | Why |
+Execution uses [the governance protocol](36-remediation-governance-and-execution.md) and [the remediation entry point](../remediation/README.md). The [execution tracker](../remediation/tracker.json) records task/package progress, evidence and decisions; it does not supersede this document's scope, finding dispositions or acceptance obligations. Establishing that framework does not complete a W package or authorize engine changes or release.
+
+The audited source baseline is c10ccff7303d06492e4acdf932fc70273d7159ac. Verification commit c68562d0a60b3b8c799e17992278900fc278439a adds documentation/reports only; it does not fix the engine. The checkout also contains pre-existing local changes, including a modified Meridian bundle and the original untracked audit. Those are not a release or a remediation claim.
+
+Engineering reports 46 independent verifier assignments and one synthesis. Their committed artifacts are present. The reconciliation used three Astra reviewers at extra-high reasoning plus lead review, source checks, and bounded local probes. It did **not** rerun every historical probe, test deployed credentials, inspect customer accounts, or attest cloud-side configuration. Evidence is identified as source-confirmed, locally reproduced, verifier-reported, or still unverified rather than promoted wholesale to production proof.
+
+### The delivery verdict
+
+**Retain the deterministic core. Do not accept this checkout as customer-pilot-ready, enterprise-isolated, or evidence of incremental business lift.** No original finding is wholly refuted; the underlying defects in F01–F35 remain open. Verification adds serious failure paths and useful implementation detail, but also contains overclaims and unsafe closure recipes.
+
+The most consequential accepted additions are the generic raw-store API, confidential document reads, cookie-based profile restoration after erasure, previously missed subject-bearing telemetry, oversized ledger envelopes, unrecoverable ledger losses, inadequate fold capacity, and reporting overlays overwriting canonical results. Two important qualifications:
+
+- The committed default JWT placeholder is unsafe **if used**. The verifier's own workerd result rejects a missing/zero-length HMAC key; the claimed absent-secret authentication forgery is not supported in the shipping runtime.
+- The manifests do not explicitly name separate Analytics Engine datasets. That is an isolation/provisioning gap, not proof that the deployed datasets were inspected and found shared.
+
+The original “33 understated,” “eight severity increases,” “19 distinct new defects,” and “27 small fixes close the blockers” totals are not retained as decision metrics. They mix extensions, unchanged/conditional severities, duplicates, documentation corrections, and incomplete remedies. The registers below replace those totals with inspectable dispositions.
+
+There are **30 stable N entries: 26 issue/extension entries, one model-validation question, two duplicate aliases, and one clean check**. These are not 30 additional unique root causes, nor 65 independent defects when added to F01–F35. N06 already consolidates two raw sweep headings; N04 and N28 are further explicit aliases. N21 is the model question; N30 is not a defect.
+
+### Severity and sizing
+
+“Blocks launch” includes live-data safety and production correctness, and therefore also blocks an affected real-data pilot. “Blocks the pilot” means the promised integration or enabled capability cannot pass acceptance. “Before next customer” is a minimum portability gate, not permission to leave a Tapestry-wide isolation promise false. “Improvement” alone does not block a constrained pilot.
+
+Sizing remains indicative: S approximately 1–3 engineer-days, M approximately 1–2 engineer-weeks, L multiple weeks/cross-component work. These are not approved estimates or additive schedule commitments. Section 5 separates a potentially small containment from complete capability closure; widened work packages must be re-estimated with owners and dependencies. No January feasibility or “8–12 weeks at today's staffing” conclusion is established by counting reports or lines of code.
+
+## 2 · Original finding register: reconciled, still open
+
+Each linked F report contains the verifier's detailed probes. The qualifications here supersede conflicting wording in that report and in the original version of document 35. Work-package references identify remedies, not completed work.
+
+### F01 · Public/demo surfaces inside the customer boundary
+
+**Blocks launch.** Actual mounted-route probes extend the original exposure to legacy tracking/CDP/webhooks, operator reads, live operations, and generic agent upgrades despite enforced mode. The agent SQL guard is not a least-privilege boundary; verifier-local probes reached protected D1 account tables. N01 and N03 add separate ingress paths. Precise anchors: [index.ts](../../src/index.ts), lines 85–86 and 185; [F01 evidence](35-verification-reports/F01.md).
+
+An enforced-mode deny-by-default route/binding policy can be a small containment. It must cover middleware order, all methods, document validation/readback, and WebSocket upgrades. Keeping a broad route prefix is not authorization for every operation beneath it. Separate or omit demo surfaces and storage from customer stamps; test actual mounted routes. **W01, W03, W08, W37.**
+
+### F02 · Refresh tokens accepted as access tokens
+
+**Blocks launch.** Revoked refresh credentials still authorize protected APIs; temporary-password state is not enforced across privileged routes. Verification adds configuration writes after logout and incomplete disable/delete/role/password revocation. A refresh-type rejection addresses one bypass, not full session policy. Existing script-issued tokens must be migrated deliberately; immediately requiring a claim they do not emit breaks tooling. Algorithm pinning is defense in depth, not a demonstrated jose “alg:none” bypass. [F02 evidence](35-verification-reports/F02.md); [auth middleware](../../src/middleware/auth.ts), line 49.
+
+Closure includes typed access/service credentials, required identity/authority claims, account/session revocation semantics, restricted onboarding, and tenant-scoped privileges. N02 and N14 add configuration and abuse-control work. **W02, W03, W08.**
+
+### F03 · Tenant selection not bound to caller authority
+
+**Blocks launch.** A brand-A site key and brand-B context can reach the wrong brand through the actual generic route. Operator authentication does not establish tenant membership. Path, header, host, document scope, SDK context, connectors, and storage can disagree. Namespace helpers passing tests do not close ingress authorization. [F03 evidence](35-verification-reports/F03.md); [edgeAccess.ts](../../src/middleware/edgeAccess.ts), lines 119–122.
+
+Authorize the single resolved tenant before side effects; reject conflicting identities and unsafe wildcard keys. Include SDK/CORS/WebSocket changes, scoped operator roles, connector/background paths, and two non-default-brand tests that inspect the destination namespace. Repository absence of TENANTS is not attestation that no other brand is configured live. **W03, W08, W37; N01, N03, N29.**
+
+### F04 · Optional account proof and stale-session identity restoration
+
+**Blocks launch.** Missing identity-verification material permits site-assured linkage. Logout can retain the SDK session or browser-to-person pointer and resolve the previous shopper; fixing only one pointer leaves another path. Direct session analytics/preferences endpoints also require ownership checks. The signed 409 retry needs a fresh visitor-bound assertion. [F04 evidence](35-verification-reports/F04.md); [assertion.ts](../../src/identity/assertion.ts), line 98; [SessionManager.ts](../../src/services/SessionManager.ts), lines 324 and 434.
+
+The verifier's 24-bit observation concerns the SDK-generated session component, not UUID-based server IDs. Forwarding retention is renewed by activity, not literally unconditionally eternal. Require account proof, server-enforced ownership/generation changes, SDK rotation, and stale-tab/in-flight/multi-account tests. Cross-tab visibility during authorized sign-in alone is not the demonstrated logout violation. **W04, W06, W35.**
+
+### F05 · Consent enforcement differs by route and host
+
+**Blocks launch.** Explicit state-read failures return CONSENTING; object-host cookie refusal, sort, demo capture, some configured ODP/regional work, tracking, telemetry, and logs do not share one decision. Existing stored refusal can be honored on some paths; “no cookie always overrides refusal” is too broad. [F05 evidence](35-verification-reports/F05.md); [content service](../../src/content/service.ts), lines 107–121; [realtime routes](../../src/routes/realtime.ts), lines 112 and 778.
+
+Resolve authorization for behavioral capture, storage, personalization, learning, and egress before those operations. Define unknown/error states and necessary consent-state storage with the customer's privacy owner. Test both hosts, SDK and server calls, withdrawals, logout, blocked cookies, failures, and configured destinations. **W05, W07, W12, W35; N06, N11, N12.**
+
+### F06 · Incomplete erasure and replay resurrection
+
+**Blocks launch.** Existing gaps include both-host coverage, orphaned/capped identity discovery, caches, rings/seen indexes, failed-stage retries, recent-record reads, and retirement of the active tombstone before old deliveries cease. Verification adds stale-cookie reconstruction, D1 capture, telemetry/log inventory, and missing durable access accountability. [F06 evidence](35-verification-reports/F06.md); [erase.ts](../../src/identity/erase.ts); [ledger erasure](../../src/ledger/erasure.ts), lines 175–217.
+
+Retain a protected deletion barrier across the actual replay/backfill horizon, preserve discovery before deleting links, checkpoint per object, and reconcile every destination. Test concurrent ingestion and erasure, not just sequential redelivery. An operator response cannot clear another person's browser cookies; prevent stale cookie/session authority server-side. The asserted 259-night/statutory conclusion is not established; 90 days is an application scan horizon, not proof of physical retention. Ledger AE writers omit explicit visitor/session IDs; other writers do not. **W04, W06, W07, W08; N05, N06, N11–N13.**
+
+### F07 · Attribution comparison is not customer incrementality
+
+**Blocks launch of a lift claim and any scientific-acceptance pilot.** Visitor hashing changes across identity transitions; consent-ineligible defaults mix with randomized controls; catalog-order defaults are not the customer's existing production segment rules. Pins are merchandising authority within arms, not a third experimental population. Multiple legitimate outcomes per item exposure can produce s greater than n; Bernoulli clamping does not repair that estimand. [F07 evidence](35-verification-reports/F07.md); [report.ts](../../src/learn/report.ts), lines 106–136.
+
+Renaming an attribution diagnostic contains misrepresentation; it does not deliver permanent enrollment, production control, visitor-level CVR/RPV/returns, allocation-aware inference, or six-month acceptance. Establish enrollment, eligibility, production control, outcome capture, provenance and the analysis protocol **before collecting experiment evidence**; mature-window acceptance follows collection. A later gamma switch cannot reconstruct missing enrollment or outcomes. Preserve repeat-event counts where they are a deliberately labeled intensity metric; remove invalid confidence/target claims rather than conceal them with a clamp. **W14, W21, W22, W30, W31, W33.**
+
+### F08 · Learning storage exceeds a real runtime limit
+
+**Blocks launch when affected statistics ingestion remains enabled.** The actual workerd storage failure stands. Personalized tracked decisions continue accumulating at gamma zero; raising nMin or turning exploration off is not an ingestion kill switch. Complete raw object state is also spread into snapshots. [F08 evidence](35-verification-reports/F08.md); [fan.ts](../../src/learn/fan.ts), line 77; [LearnStats.ts](../../src/durable-objects/LearnStats.ts), lines 56 and 110; [stats.ts](../../src/learn/stats.ts), line 164.
+
+The original 2,618,613-byte workerd fixture and a verifier's 2,468,636-byte fixture are not interchangeable capacity measurements. Synthetic 1,203-cell/0.75% estimates do not establish ordinary traffic capacity, and assume visit cardinality not currently reached by the service. The verifier itself reports successful publication after a failed save: poisoned in-memory counts can be published uncommitted; “permanently dead publication” overstates it. Bound total items, keys and serialized bytes, snapshot contents, and ring indexes; prove recovery and coherent fallback under runtime limits, and characterize its estimation/selection bias. **W10, W24, W38.**
+
+### F09 · Re-provisioning replaces identity/authentication/site-key material
+
+**Blocks launch.** A rerun replaces the key map and identity salt; a subsequent duplicate operator-seed failure can terminate the script before key handoff. Broadly swallowed create failures compound recovery risk. [F09 evidence](35-verification-reports/F09.md); [provision-stamp.sh](../../scripts/provision-stamp.sh), lines 23–60.
+
+Separate initial creation, reconciliation, add-brand and explicit rotation. Secret listing cannot recover existing values, but an authoritative secure desired-state manifest can preserve/merge them. Skipping names alone does not verify correct material; unconditional printing is not secure handoff. Validate account/resource targets, partial failures, repeated seeds, and identity continuity. Rotation/history cleanup or credential actions require separate authorization. **W08, W39.**
+
+### F10 · Release gates and monitoring do not establish readiness
+
+**Blocks launch.** The original lint configuration fails before analysis. A corrected scratch configuration exposes five errors and 324 warnings, independently rerun during reconciliation. The monitor can generate real statistics, mutate KV, accept empty decisions, and discard alert delivery failures; object-host consent handling changes its behavior. [F10 evidence](35-verification-reports/F10.md).
+
+Synthetic exposure/day and KV-growth figures are projections from schedules, not observed daily telemetry. Repository CI excludes lint; a health SELECT 1 is not schema/queue/tenant continuity evidence. Verifier evidence finds SDK bundles reproducible, but the committed Meridian bundle stale; the user's dirty bundle is not an approved fix. Closure includes accurate consent-safe monitoring, deployed artifact provenance, migrations, rollback/restore, required alert delivery, and both-host/runtime tests—not just correcting lint. **W08, W09, W12, W13, W35; N18, N19.**
+
+### F11 · The capability register omits committed work
+
+**Blocks launch of the full-capability representation; blocks the affected pilot deliverables.** The v8 scope's twelve clauses are not document 20's thirteen assurance/working rows. §1.9 entitlement and §1.10 AI Search lack proper rows; §1.3 enrichment/approval and §1.12 typed historical attributes/audiences plus scheduled warehouse landing are not delivered by catalog import and an R2 export seam. [F11 evidence](35-verification-reports/F11.md); [S5a](35-verification-reports/S5a.md).
+
+These rows were omitted, not shown to have been deleted. Product entitlement is commercial/provisioning evidence, not necessarily a missing product-engine build. Correcting the register is small; implementing/accepting the missing workflows is not. Section 4 and W14 explicitly retain that work, including product-sort persistence and ancillary kit deliverables. Scope amendments require the authorized parties. **W14, W15, W19, W22, W37, W40, W41.**
+
+### F12 · The published SDK integration lacks the live-update contract
+
+**Blocks the pilot.** The server does not send the documented content_decisions frame; the published integration does not refresh content after meaningful events. The SDK can repaint with another hydrate call, as the original audit already allowed; that is not a refutation. Verification adds private demo refresh orchestration, out-of-order response overwrite and exposure/impression duplication. [F12 evidence](35-verification-reports/F12.md); [SDK listener](../../src/sdk/listen.ts), lines 57 and 93; [service.ts](../../src/content/service.ts), line 242.
+
+Deliver supported coalesced refresh or actual push, stale-response protection across identity/page/tenant changes, and exact-kit browser tests. A preview/poll must not manufacture an exposure, but a refreshed decision actually displayed needs its own defined, correlated and deduplicated exposure. “Refresh never writes an exposure” is not safe universal closure. **W15, W17, W21, W26.**
+
+### F13 · Context, journey and return-memory behavior fall short
+
+**Blocks the pilot.** Optional request channel exists; stored visit/channel metadata is not consistently carried into content decisions. Hydrate-first can preserve an incorrect direct entry channel, the read path misses visit rollover, and the object host lacks equivalent context. Current context fields alone do not guarantee seeded influence at gamma zero. Journey counters/thresholds and short decay do not establish the customer's sparse-interaction and days/weeks-memory behavior. [F13 evidence](35-verification-reports/F13.md); [SessionManager.ts](../../src/services/SessionManager.ts), lines 212–218.
+
+Carry and validate the context, then test the behavior: first-page channel, returning visits, sparse signals, cross-category taste, post-purchase/new-visit reset, and production memory calibration. Activity can renew state retention, so “latched for exactly a month” is not an exact bound. **W16, W19, W35, W37, W41.**
+
+### F14 · Eventually consistent shopper state is not a safe authority
+
+**Raised to blocks launch/real-data pilot.** Verifier-local actual-module races lose concurrent updates, orphan profiles after a pointer miss, allow a deferred empty create to overwrite later state, and return failure on read-after-write lag. Identity merge shares the hazard. The eight-event result is a controlled concurrent-burst probe, not measured live page loss. [F14 evidence](35-verification-reports/F14.md); [SessionManager.ts](../../src/services/SessionManager.ts), lines 200–324; [RealtimeSegmentEngine.ts](../../src/services/RealtimeSegmentEngine.ts), lines 419 and 535–606.
+
+Threading the client session, using a successful write's result, making sort read-only, and memoizing catalog work are useful containment. They do **not** make KV read-modify-write atomic. Select and prove a transactional/serialized authority before a real-data pilot; a Durable Object transition is one candidate, not an already accepted toggle. SameSite restrictions concern cross-site deployments, not every possible first-party customer domain. **W35, W36**, with W03–W06/W16. This work cannot be placed after January while the finding remains launch-blocking.
+
+### F15 · Configuration publication is neither atomic nor conflict-safe
+
+**Raised to blocks launch.** Concurrency and the write path's stale isolate cache can reuse revisions and discard edits. A read failure can be treated as absence and cause a patch to publish compiled defaults with an apparently valid history. [F15 evidence](35-verification-reports/F15.md); [versionedStore.ts](../../src/config/versionedStore.ts).
+
+Failing closed on read/write errors and bypassing write-side caches are containment. Reading an index, choosing N+1, and checking that a key is absent is still a race, not compare-and-swap. Require transactional revision/precondition authority, immutable versions, recoverable publication, and a measured propagation/rollback contract. “Effective immediately” is actually promised in document 20 and the Implementation Plan; the verifier's contrary source claim is rejected. **W11, W29, W38.**
+
+### F16 · Delivery and identity semantics diverge across evidence sinks
+
+**Launch-blocking loss paths; pilot-blocking duplicate/measurement paths.** Queue producer failures are swallowed; partial invalid records can disappear without accurate accounting; retries can leave duplicate R2 rows; online fan-out does not establish durable success. Existing IDs survive redelivery, but same-type/same-visitor/same-millisecond outcomes can collide and retries with new timestamps can get new IDs. [F16 evidence](35-verification-reports/F16.md); [enqueue.ts](../../src/ledger/enqueue.ts), line 19; [records.ts](../../src/ledger/records.ts), line 134.
+
+A duplicate ring append alone does not double per-slot credit, but can inflate fatigue. Read-time deduplication does not fix live counters, producer rejection, or divergent fan-out; duplicates can exhaust caps before filtering. A dead-letter queue only helps accepted, retried messages—not messages never enqueued or explicitly discarded. Define logical event IDs, durable delivery/reconciliation, sink idempotency and completeness across online, R2, reports, exports and replay. **W09, W22, W26, W30; N07, N10.**
+
+### F17 · Folding, repair, horizons and coverage disagree
+
+**Blocks the pilot's reporting/attribution; collection capacity also gates real data.** Late and out-of-order arrivals, finite rings, repair of truncated hours and cross-date visitor accounting can lose evidence. Some day-report missing/truncated flags already exist; not every loss is wholly silent. Window/UI propagation and unfolded/late-data cases remain deficient. The online, aggregate and records-report paths use different available histories and bounds. [F17 evidence](35-verification-reports/F17.md); [hourly.ts](../../src/learn/hourly.ts), lines 35, 231 and 350.
+
+A 200-record ring holds roughly 22–28 complete 7–9-record pages, or 6–10 complete 20–30-record pages; the original “about 7–10” referred to the latter hypothetical. A candidate pool is not a rendered-position count. Object-count growth checks miss same-count changes; a folded-hours set cannot recover evicted history. Require event-time correction/checkpoints, stable IDs, maturity/retention policy, aligned attribution contracts and visible incompleteness. **W22, W30, W31; N08, N23.**
+
+### F18 · Order-dependent decay, early rounding and unbounded timestamps
+
+**Pilot-blocking arithmetic; launch-blocking ingestion-integrity path where enabled.** Controlled sequences reproduce order-dependent counters and rounded-away rare rates; client-supplied backdated timestamps add an input-manipulation path. Jitter and 82% loss figures are fixture results, not observed production error rates. A zero-rounded root reference does not force every concentrated child to zero. [F18 evidence](35-verification-reports/F18.md); [stats.ts](../../src/learn/stats.ts); [hourly merge](../../src/learn/hourly.ts), line 143.
+
+Use order-invariant accumulation and exact internal rates, validate event time against a defined lateness policy, then rebuild or explicitly reset invalid state. An existing merge helper is not an operational refold pipeline; trustworthy reconstruction depends on ledger/history repair. **W06, W23, W24, W30.**
+
+### F19 · Objective/policy changes relabel incompatible accumulated history
+
+**Blocks the pilot's affected learning features.** Reward/objective/horizon changes can serve incompatible counts under new labels; money units, margin fallback, mixed currencies and refunds need explicit semantics. Purchases banked while clicks are selected are latent incompatible purchase history, not necessarily contamination of the current click numerator. [F19 evidence](35-verification-reports/F19.md).
+
+Generation resets are containment, not historical recomputation. Separate accumulation semantics from estimator settings such as nMin/n0/clamps, which need not discard raw counts. Prevent stale callers from oscillating generations or serving cached old lifts under new settings; cover slot denominators as well as item counters. A one-day reporting recomputation does not establish a whole-history online rebuild/promote pipeline or an M upper bound. **W24, W22, W30.**
+
+### F20 · Prior materialization and provenance are wrong
+
+**Blocks the pilot where imported priors are promised, as current scope closure claims do.** Ambiguously concatenated prior keys are split incorrectly, creating phantom item entries; fine-level prior-only materialization fails; live evidence may still materialize a key that prior lookup can use. New slots without events can fail to publish, and grammar/version/objective mismatches undermine cold-start behavior. [F20 evidence](35-verification-reports/F20.md).
+
+The verifier's assertion that the original example used n_equiv=20 is unsupported. Fix structured indexing and canonical/versioned grammar, then prove no-event publication, every supported level, money compatibility, zero-reference behavior and honest receipt provenance. Prior strength contributing to a gate is an intentional model choice; it must not be presented as observed exposures. Six lines fixing an index do not close all these cases. **W25, W24, W32; N22.**
+
+### F21 · Attribution and exposure lack correct placement identity
+
+**Blocks the pilot.** When the same item or matching product appears in multiple slots, a direct outcome naming one slot can credit another. Repeated slot names across pages share statistics identity. Fatigue counts appearances across the visitor's ring within the evaluating slot's window, consistent with document 22 §6.4; global-item fatigue is not by itself a demonstrated bug. Served, rendered and viewable exposures are not equivalent, and position effects are not causal item lift. [F21 evidence](35-verification-reports/F21.md); [fan.ts](../../src/learn/fan.ts); [DecisionRing.ts](../../src/durable-objects/DecisionRing.ts).
+
+A named-slot guard can contain a direct-credit defect, but requiring a new policy axis is not inherently necessary. Define legacy unknown placement, page/brand/position identity, correlated decision/outcome IDs and viewability semantics end to end. Agree and test global-item versus placement-specific fatigue separately from named-slot attribution. The current SDK outcome lacks a decision ID; adding one is wire/SDK work. **W15, W17, W26, W21.**
+
+### F22 · Replay omits coupled page dependencies and has an archive gap
+
+**Blocks the pilot's replay/DS promise.** Cross-slot deduplication and earlier-slot exploration require all relevant slot snapshots, not only the recorded item's snapshot. Gamma zero does not disable exploration. Publication can expose a snapshot before its durable archive; a pinned receipt can be rejected for a dependency it never used. [F22 evidence](35-verification-reports/F22.md).
+
+Archive immutable dependencies before publishing, record the page-wide version manifest and required choice metadata, and identify missing dependencies explicitly. Test coupled pages, pins, exploration, gamma zero, archive failures, retained versions and exact output parity. A timestamp alone is not a proven collision-safe immutable version. **W27, W11, W22, W24.**
+
+### F23 · Thompson violates its offered contract
+
+**Blocks the pilot if exposed/enabled; withdrawal is containment.** Share zero can reorder, contextual/prior/control behavior diverges, propensity/exploration metadata is incomplete, and the reward model is unsuitable for money. It is also not automatically valid for “unit” rewards: several legitimate clicks per exposure can make s greater than n, contradicting the raw verifier's clean assertion. [F23 evidence](35-verification-reports/F23.md).
+
+Moving a share gate or returning only the first position does not close reward-model, context, prior, freeze/reject and propensity defects. Withdraw schema/UI/document offers until those contracts and tests are met, or implement an agreed valid exploration design. Fixture percentages are not general operating rates. **W28, W21, W24, W26.**
+
+### F24 · Stale, unscoped and weakly justified autonomy proposals
+
+**Blocks the pilot if proposal application is offered.** Current policy/age/pin/step checks can be bypassed; proposals lack page identity; failed writes can leave “applied” receipts. Read-time equality with an expected weight is not atomic CAS and does not disambiguate pages sharing a starting value. [F24 evidence](35-verification-reports/F24.md); [autonomy.ts](../../src/learn/autonomy.ts), lines 62–68.
+
+The evidence statistic is the range of exposure-weighted tag-group mean lifts, not simply a count of tag values; high-cardinality/noisy partitions can still win the verifier's synthetic comparison. Require scoped role gates, current policy and transactional revision preconditions, idempotent write/receipt recovery, adequate evidence and validated harm controls. **W29, W11, W21, W32.**
+
+### F25 · Window reports misstate coverage, inference and readiness
+
+**Blocks the pilot's measurement promise and any business-lift claim.** Requests beyond 92 days can return a shorter series under the requested label. Monthly/quarterly reports can also have missing/immature/incompatible days. Relative intervals, allocation/confidence/sample planning and hard-coded customer targets require repair. Stored day reports can support long windows without retaining all raw events; the erasure scan horizon is not their storage lifetime. [F25 evidence](35-verification-reports/F25.md).
+
+Coverage flags and an undecided state are small containment. A log/Katz interval is not an automatic fix for clustered, repeated-event, sparse or revenue outcomes. First establish the metric and analysis unit through F07; validate zero cases, unequal arms, target versions, maturity and six-month reporting. Authenticate both report GETs. **W01, W21, W30, W31, W33.**
+
+### F26 · The merchandiser cannot perform the promised tuning workflow
+
+**Blocks the pilot.** The stage form submits an invalid default; empty fields can choose maximum effects, and tests stub the real validator. Numeric per-slot dimension weights are missing from the promised editor/readback workflow. Stage outOfStage zero reduces a score term; it does not necessarily remove eligibility because other terms may add score. [F26 evidence](35-verification-reports/F26.md).
+
+Fix arithmetic/defaults and use real validation in UI tests; separately implement the dimension-weight editor and customer walkthrough. A four-line form correction is not full closure. Exclusions/off-limits are another promised capability, retained under F28, not dismissed because they lack a form. **W18, W20, W15.**
+
+### F27 · Import and direct-write contracts lose or distort metadata
+
+**Blocks the pilot.** Import drops merchandising, fails the customer's stage vocabulary, and merge replacement can reactivate expired items when fields are omitted. Direct PUT, unlike the import adapter, permits duplicate-tag inflation. Empty taxonomy can silently reduce ranking to order. [F27 evidence](35-verification-reports/F27.md); [import.ts](../../src/content/import.ts), lines 69–145; [kinds.ts](../../src/content/kinds.ts).
+
+The original remedy called for a lossless canonical normalizer, not routing good data through today's lossy one. Preserve merge/lifecycle/window semantics and supported fields; validate registry/locale/slot aliases and round trips. Decide and test product-attribute inheritance separately from product linkage for attribution. Locale is also promised in the customer solution document. N15 requires one canonical content-type vocabulary, not only filling a missing tag. **W19, W14, W37.**
+
+### F28 · Pin precedence, uniqueness and broader governance are incomplete
+
+**Blocks the pilot.** Later pins can duplicate already selected content; two pins can contradict inside one slot document; pins can bypass slotTypes, ignore take, or fail silently. Lifecycle/window/stock eligibility checks exist, so slotTypes is not the engine's only eligibility control. [F28 evidence](35-verification-reports/F28.md).
+
+Reserve valid pins and reject document-local contradictions at write time; validate catalog-dependent references at activation and runtime. Define take, precedence, dead-pin diagnostics, customer fallback and the promised exclusions/off-limits contract. A local reservation patch does not deliver all governance. The absence of triggering seeds is not a defense for accepted operator configurations. **W20, W19, W26.**
+
+### F29 · Engineering proofs are not exact customer acceptance
+
+**Blocks the pilot; false full-acceptance representations must stop before handoff.** The acceptance script is not the customer's browser/feed/operator walkthrough. A rehearsal and recorded builder walkthrough exist and should be reused, but neither establishes actual customer acceptance. notifyAbsence misses slot subscribers; no-flash behavior needs a tested default/server-snapshot contract. [F29 evidence](35-verification-reports/F29.md); [kit staging guide](../kit/04-staging-connection.md), line 86.
+
+The Implementation Plan really does state an SSO baseline; reconcile that with document 30 and the customer's account choice rather than silently deleting a commitment. Deliver exact-kit three-interaction rendering, real dimension tuning, tag-plan/debug artifacts, customer feed/SFCC proof, host parity and failure/no-flash tests. Coach-first remains settled. **W14, W15, W18, W35, W40.**
+
+### F30 · No-runtime-model North Star is not enforced
+
+**Blocks the pilot when the prohibited surface can be enabled.** Configuration can send shopper context and an unfiltered catalog to a runtime URL/model, with a budget up to five seconds. Ordinary failure omits the term, but that does not remove latency, egress, resource or availability risk. Controlled offline-table publication is absent. [F30 evidence](35-verification-reports/F30.md); [service.ts](../../src/content/service.ts), line 201; [external.ts](../../src/learn/external.ts), lines 73–85.
+
+A deployment-enforced off switch, tested to make zero calls, is containment. Restricting a name to “service” does not prove no runtime inference; a service may itself call a model. Preserve the agreed deterministic decision-path invariant, allow only explicitly authorized dependencies, and deliver versioned offline-table publication if that seam is promised. **W34, W01, W05, W15.**
+
+### F31 · Customer context splits across registries, connectors and jobs
+
+**Before next customer at minimum; blocks current multi-brand acceptance claims.** The live session engine, not only the alternate host, uses inconsistent registries and default-scoped connectors/audiences/regional/history paths. Operator-authored non-default audiences can be ignored. [F31 evidence](35-verification-reports/F31.md); [RealtimeSegmentEngine.ts](../../src/services/RealtimeSegmentEngine.ts), lines 375, 408 and 469; [connectors](../../src/connectors/index.ts), line 27.
+
+Reopen document 20's hard-isolation claim now. Thread a canonical customer/brand registry into every production path and cron; four call-site edits are useful but not complete arbitrary-customer support. Prove two non-default brands across event, decision, identity, sort, egress and erasure. **W03, W14, W16, W37; N29.**
+
+### F32 · Whole-catalog documents, caches and full sorts lack a qualified envelope
+
+**Before next customer/larger corpus; bounds and claimed pilot envelope must be established before pilot.** Duplicated value/config documents, unbounded isolate cache/revision bodies, whole-catalog parsing/validation and per-slot ranking create size/CPU/memory limits. The bounded product-sort route is a separate candidate-list contract, not a full 300,000-product retrieval engine. [F32 evidence](35-verification-reports/F32.md); [S3](35-verification-reports/S3.md).
+
+The original thin synthetic envelope and verifier's Coach-shaped roughly 24,700-piece wall describe different fixtures; neither is a universal supported limit. Verify old deployed readers before removing compatibility fields. Enforce byte/count/cache/retention budgets and measure realistic misses/hits. Exact top-k over final adjusted scores may be possible; the verifier's base-score-only prototype does not prove parity under adjustments, diversity, exploration and cross-slot coupling. No automatic need for ANN/vector infrastructure follows. **W38, W32, W35.**
+
+### F33 · Customer stamp boundary is not proven
+
+**Raised to pilot-blocking for the promised isolated deployment; F03 safety remains launch-blocking.** Per-environment resources and scoped primitives do not prove per-customer isolation, tenant-authorized operators or complete jobs. The key/header exploit corroborates F03, not a second independent root cause. [F33 evidence](35-verification-reports/F33.md).
+
+The ten-brand/300,000-product/five-region scenario is explicitly in brief 33 §7; it is not unsourced, nor proof of a residency contract or live five-region deployment. Define customer/brand/environment/region boundaries, resource ownership, provisioning and isolation evidence. A separate cloud account was not established as the only remedy. **W01, W03, W08, W37.**
+
+### F34 · SDK lifecycle duplicates events; reporting scales before browser paging
+
+**Raised to blocks the pilot.** Real-DOM verification reproduces duplicate click/commerce capture after correct attach/detach/remount. Fake listener maps concealed it. DataLayer/observer cleanup can also retain or lose capture; full server report construction and payloads precede browser-cardinality limits. [F34 evidence](35-verification-reports/F34.md).
+
+The proposed module-global WeakMap bind-once guard is **not safe closure**: it retains old listeners/client/content after detach. Independent execution of that guard still emitted old-client/old-piece after detach and remount. Require actual ownership-aware unbind, changed attributes, new-client tests, either-order wrapper teardown and zero events after detach. Separately bound report construction/payloads, implement lightweight summaries and useful paging. **W17, W26, W32; N24.**
+
+### F35 · Unsafe setup/seed instructions and residual repository debt
+
+**Raised to before next customer; applicable unsafe provisioning commands must be quarantined before real-data use.** Scratch SQLite verification of the published seed order reduced New York crosswalk rows from 14 to 1 and the demo cohort from 640 to 44 while replacing census provenance with a proxy. The seed hazard occurs on the first documented run; “first-time only” alone is not a remedy. Old setup commands can target resources/secrets, and a backup under public is a served artifact. [F35 evidence](35-verification-reports/F35.md).
+
+This does not show the Tapestry content scorer reads those demo tables. Correct scoped/idempotent seeds, add a fresh-run/re-run regression and reviewed recovery, and separate product/demo migrations. Preserve user work during cleanup. A non-secret npm backup is clutter, not evidence of credential leakage; ignoring tracked files does not untrack them. Full clean-clone handoff is broader than the small seed patch. **W08, W13, W39.**
+
+## 3 · Sweep register, with duplicates and evidence limits exposed
+
+Raw report keys below: [Security](35-verification-reports/sweep-security-and-tenancy.md), [Privacy](35-verification-reports/sweep-data-privacy-and-lifecycle.md), [Learning](35-verification-reports/sweep-learning-and-statistics.md), [Operations](35-verification-reports/sweep-operations-and-delivery.md), and [Customer promises](35-verification-reports/sweep-customer-facing-promises.md). Their 30 raw issue headings do not map one-to-one to the original document 35's 30 numbered entries. The mapping here preserves that document's IDs without double-counting corroboration.
+
+| ID | Reconciled issue or disposition | Gate/severity and canonical relationship | Raw evidence / work |
 |---|---|---|---|
-| F14 KV as authority | blocks the pilot | **blocks launch** | Reproducible state destruction: 7 of 8 page-paint signals lost, a missed pointer read permanently orphans a shopper's profile, KV lag returns 500 and drops the outcome from the ledger |
-| F15 configuration not atomic | blocks the pilot | **blocks launch** | One transient KV read failure silently reverts every tuned weight to the compiled default, returns 200, and leaves a clean audit trail |
-| F33 stamp boundary | fix before next customer | **blocks the pilot** | Ledger 20 reports brand isolation closed; a Coach site key plus one header reaches Kate Spade's shopper object with a 200 |
-| F34 SDK lifecycle | fix before next customer | **blocks the pilot** | A correct SPA mount/detach/mount fires two clicks per human click, silently, and moves the learned lift 1.256 against 0.744 for identical pieces |
-| F31 two registries | fix before next customer | fix before next customer, but **doc 20 row 3 must reopen today** | Multi-brand isolation is recorded closed and is false |
-| F35 repository debt | improvement | **fix before the next customer** | The published deploy runbook, run once on a fresh database, silently degrades the Meridian NYC cohort from 640 shoppers to 44 and falsifies a census-provenance claim |
-| F16 ledger duplicates | blocks the pilot | blocks the pilot, loss half **near blocks launch** | No dead-letter queue anywhere; a thrice-failed batch is deleted with one console line |
-| F18 order-dependent decay | blocks the pilot | blocks the pilot, one path **blocks launch** | Client-supplied outcome timestamps are unbounded; ten crafted back-dated purchases destroy 82% of an item's evidence slot-wide |
-
-**Sizes moved in the other direction.** In 27 of 35 findings the launch- or pilot-blocking part is S,
-one to three engineer-days, while the audit's single size label covered the full remedy programme.
-The audit's estimates are right for the programmes; presenting each as one unit is what would cause
-the sharp, hours-long fixes to be scheduled behind multi-week builds. Section 4 separates them.
-
-**Thirty new findings** neither document had, from the five sweeps; nineteen distinct defects once the
-same defect seen through two lenses is counted once (the store proxy, and the Analytics Engine rows,
-each surfaced twice). Nine block launch. The three sharpest: an authenticated generic store route that lets any operator token read, overwrite and
-delete any tenant's KV keys and ledger objects; the default environment enforcing authentication
-against a JWT secret published in the repository; and erasure that the browser undoes on the next
-page view because the profile is mirrored into cookies. Section 3 lists all thirty.
-
----
-
-## 2 · The thirty-five findings, verified
-
-Columns: verdict; severity as verified; size of the part that closes the blocking severity, then the
-audit's full remedy; what the audit got wrong; what it missed; the smallest safe fix. Line numbers are
-at c10ccff. Sizes: S one to three engineer-days, M one to two weeks, L multiple weeks.
-
-### F01 · Public and demo surfaces inside the customer boundary
-Confirmed. **Blocks launch.** S closes it; M for the audit's containment; L for deployable separation.
-Reproduced in workerd with AUTH_MODE=enforced and no credentials: `/v1` and `/realtime` answer 401,
-while `/sort`, `/track/*`, `/pixel`, `/cdp/*`, `/optimizely/*`, `/webhook/*`, `/operator` reads,
-`/live/ops-api` writes, `/ai/scene` and `/experiment/launch` answer 200, and `/agents/*` returns 101
-upgrades to the Opal agent, the shopper object and the push relay. An anonymous caller wrote a PII
-profile; a second anonymous caller read it back. Five lexical bypasses of the agent's SQL guard reach
-D1 and return operator password and session hashes, because migration 0010 put the credential tables
-in the same database the agent queries. **Audit wrong:** `index.ts:85` gates `/realtime/*` only, `/v1`
-is line 86; the agent exposure is an application choice at `index.ts:185` (no auth hook), not a
-dependency finding; the remedy leads with an allowlist that is 25 lines. **Missed:** the credential
-tables in the agent's D1; the SQL guard fails open when its regex does not match; `/agents/rate-limiter/<ip>`
-is a targeted denial of that caller's budget; `operatorWrites()` passes every GET so `/operator/insights`
-is anonymous; `/webhook/segment` and `/webhook/custom` verify nothing; the demo pages carrying the site
-key in a meta tag ship in both customer stamps' assets. **Smallest fix:** two edits in `src/index.ts`,
-inert in open mode: a deny-by-default middleware in enforced mode, and agent dispatch only in open mode.
-
-### F02 · Refresh tokens as access tokens
-Confirmed. **Blocks launch.** S closes it; M for the full remedy. Reproduced first try: after logout
-the refresh token gets 401 at `/auth/refresh` and 200 on `/v1/coach/monitor`; it also retuned live
-decisioning via `PATCH /config/reflex`, logged against the signed-out operator. Revocation is missing in
-five directions: logout, disable, delete, role demotion, and password change never calls
-`revokeSessions`. In enforced mode `sdkKey()` hands any bearer to `jwt()`, so the refresh token also
-opens `/realtime/*` and `/operator/*` for any tenant with no site key. Eleven green auth tests assert
-revocation only through `/auth/refresh`. `wrangler.toml:159` commits `JWT_SECRET` in the default
-`[vars]`; a forged admin token from that value passed. **Audit wrong:** the algorithm allowlist is
-hygiene (jose already rejects `alg:none`); the typed-claim remedy as written breaks eight tooling
-scripts including the acceptance run. **Smallest fix:** one line after `jwtVerify` in
-`src/middleware/auth.ts`: reject `type === 'refresh'`; then add `revokeSessions` to `/auth/password`.
-
-### F03 · Tenant not bound to caller authority
-Confirmed. **Blocks launch** for a Tapestry-wide launch; latent today because `TENANTS` is unset
-everywhere, so only Coach is provisioned. M to L overall, S core. Reproduced through the real
-`/realtime` handler: a Coach key plus `X-Tenant: kate-spade` opens `t:kate-spade:vis-1` with 200; a
-Kate Spade key on a shared host silently writes Coach's unprefixed namespace. **Missed:** the
-operator-token branch at `edgeAccess.ts:119` bypasses the one gate that binds; path and context tenants
-disagree inside a single `/v1` request, so brand B's ledger is built from brand A's behaviour; 24 of 37
-`/v1/:tenant/*` routes authorize by path segment alone, including ledger export and erasure; the shipped
-default `SDK_KEYS='*:demo-site'` voids the binding; `X-Tenant` is absent from CORS `allowHeaders`, so
-the remedy's SDK change fails every preflight until that list changes; `provision-stamp.sh:50`
-replaces the secret, deleting brand one's key when brand two is added. **Smallest fix:** in `sdkKey()`
-authorize against the resolved tenant not the path param, 409 on disagreement, refuse `*` in enforced
-multi-brand mode, ship with the SDK sending its brand and the CORS header.
-
-### F04 · Account proof optional; logout resurrects the previous shopper
-Confirmed. **Blocks launch.** M. On an env shaped exactly like `provision-stamp.sh` output with
-AUTH_MODE=enforced, an unsigned link to any account id returns 200 and hands back that person's live
-profile: the script never sets `IDENTITY_SECRETS`, and `assertion.ts:99` falls open without them.
-After link then detach, a fresh anonymous visitor carrying the unrotated SDK session resolves to the
-previous shopper and is personalized on that shopper's affinity. **Missed, and these defeat the audit's
-remedy:** a second resurrection path with no cookie and no session id, the `user:{visitorId}` pointer
-written at `SessionManager.ts:434` and followed at `RealtimeSegmentEngine.ts:897`; a live cross-tab leak
-before any logout; the pointer never lapses (re-put every 24 hours on read); a session id is a bearer
-credential for a person's record (`GET /realtime/session/{id}/analytics` returned the person's segment
-history on the site key alone); session ids carry 24 bits of randomness. **Smallest fix:** refuse
-`assurance:'site'` in enforced mode and add `IDENTITY_SECRETS` to provisioning; one ownership guard in
-`getOrCreateSessionFromCookies` refusing a record whose shopper id is set and is not the requester.
-
-### F05 · Consent not one enforced decision
-Confirmed. **Blocks launch.** M to L. Reproduced: the object host ignores an explicit cookie refusal;
-a state-read failure reads as consenting; a server-to-server call with no cookie reads as consenting;
-`/sort` re-ranks for a shopper who refused both switches; with tracking refused the event still reaches
-ODP on both hosts with a stable id and product ids (`ShopperReflex.ts:614` comments "nothing left the
-edge" four lines after the send). **Missed:** the personalization switch is enforced in one file only;
-the contracted API has no consent parameter; logout erases the refusal; `/track` and `/pixel` store the
-IP outside the consent model; the self-monitor's consent check passes only on the session host and would
-alarm permanently on the other; consent cookies are not httpOnly so page script can set consent to true.
-**Smallest fix:** resolve consent once in `readShopper` as the intersection of stored switches and the
-cookie, explicit false winning, on both catch paths; a consent field on the decision and sort bodies;
-ODP, region fan-in and demo capture behind that value.
-
-### F06 · Erasure incomplete and undone by delayed delivery
-Confirmed. **Blocks launch.** M for the core; L for the audit's full remedy. The headline replay
-reproduced: erase, let the nightly rewrite retire the tombstone, redeliver the queue message, the row
-is back permanently and visible. Worse: the rewrite never revisits a cleaned day, so a late row is
-permanent from the first nightly run; at the repo's own volume constant one erasure needs about 259
-nightly runs against a one-month statutory deadline. **Missed:** the ordinary event endpoint accepts an
-unbounded client timestamp, so it is a back-dating endpoint that re-creates pre-erasure rows; D1
-`demo_events` is uncovered on staging; earlier session records are orphaned for 30 days; the 50-visitor
-cap leaves identity keys resolving to the erased person for 400 days; the export's only erasure signal
-disappears in 3 to 27 hours. **Smallest fix:** stop deleting the pending tombstone at `erasure.ts:214`,
-mark it rewritten and keep hiding for the replay horizon; in `consumeLedger` drop tombstoned records
-before the write, from a cached watermark.
-
-### F07 · The holdout is not a test of incrementality
-Confirmed. **Blocks launch** of any incrementality claim. L. Both audit numbers reproduce. Under a true
-null the shipped comparison calls a winner 23.5% of the time at nominal 95%; on a real null day it
-declares control better; a genuine 59% clicks-per-visitor win reports as undecided. Login moves 94% of
-anonymous controls out of the control and orphans the decision ring (`link.ts` never migrates it).
-**Missed:** the identical construction in `hourly.ts:307` (the production path) and `window.ts:78`;
-`neededPerArm` returns NaN when a rate exceeds 1 and the NaN reaches the operator; the holdout is
-per-brand with no Tapestry-wide population and nothing records which salt a result was measured under;
-`TAPESTRY_TARGETS` is a CVR target applied to a clicks-per-decision ratio, and nothing computes CVR,
-revenue per visitor or return rate. **Smallest fix:** stop publishing it as incrementality (rename,
-drop the target reading, clamp, guard NaN, about a day); then persist arm and salt version on first
-decision and carry it through link and detach (M, the prerequisite for any statistical work).
-
-### F08 · Learning storage hits the Durable Object limit
-Confirmed. **Blocks launch**, and the audit's qualifier "of enabled learning" is wrong: exposures fan
-at gamma 0, gated only on tracking consent, so shipping with learning off does not avoid it. S closes
-it; L for the full remedy. The real `LearnStats` class in workerd fails at 14,810 cells with
-`SQLITE_TOOBIG`; `DecisionRing` fails at 20,300 decisions for one visitor. The stored value is items
-times cells: the seeded chero slot dies at 1,203 cells, 0.75% of the cell space its own config can
-produce from US traffic. **Audit wrong:** the byte figure 2,618,613 is unreproducible (2,468,636 at
-15,000 cells); nothing returns 500, the call throws and every layer swallows it. **Missed:** the failure
-is silent and permanent (the poisoned map fails even no-new-key writes, the alarm never re-arms);
-`publish()` spreads the whole raw state into every KV snapshot the decision path parses; `channel` is an
-unvalidated query parameter in five of six level keys, so a site-key holder can kill a slot object in a
-few thousand requests; the 90-day index that kills `DecisionRing` is dead weight nothing reads.
-**Smallest fix:** cap distinct keys per item and per slot with least-recently-touched eviction at the
-fine levels, allow-list channel, catch the save and make the failure loud, delete or cap the ring index.
-
-### F09 · Re-provisioning rotates identity, authentication and all site keys
-Confirmed. **Blocks launch.** S closes it; M for the programme. Reproduced with a fake wrangler: a
-second run swallows the create failures, prints a message saying nothing was done, then rotates
-`JWT_SECRET`, `IDENTITY_SALT` and `SDK_KEYS` on the live worker, because the stop-guard is inert once the
-ids are filled, which is the committed state of both environments. Then the seed hits the email UNIQUE
-constraint, `set -e` kills the script before the key is printed, and the environment enforces a site key
-nobody holds. **Audit wrong:** "merge site-key entries" is not implementable in the script; secret values
-cannot be read back. **Missed:** nothing else can add a brand's key; it is a regression from the older
-script that prompted a human; `IDENTITY_SECRETS` supports a previous value but `IDENTITY_SALT`, whose
-change renames people, does not. **Smallest fix:** gate secret generation behind `--rotate-secrets`,
-skip when `wrangler secret list` names them, print the site key at generation, drop the blanket `|| true`,
-make the seed `ON CONFLICT DO NOTHING`.
-
-### F10 · Release gates and monitoring
-Confirmed. **Blocks launch.** S for the sliver; L for the remedy as written. Lint exits 2 before
-analysis; with the one-word config repair it is 5 errors and 324 warnings, all trivial. `deploy.sh`
-aborts at line 15 and has never reached its tests. **Worst, missed:** on the object host the monitor's
-synthetic decision writes exposures into live learning statistics before its consent check throws, about
-2,000 per tenant per day at every pooling level; on the session host it writes two KV keys per run at
-30-day TTL. No dead-letter queue on any consumer with `max_retries=2`. The monitor is green on an empty
-tenant. **Smallest fix:** the ESLint prefix, four trivial errors, lint in CI; fold cookie consent into the
-object-host read (also F05's fix); fail the monitor on zero decisions where slots exist; a dead-letter queue.
-
-### F11 · The twelve-capabilities register omits scope
-Confirmed. **Blocks launch** as a representation. S for the register; L for the missing workflows.
-Doc 20 has no row at all for §1.9 (Product Recommendations entitlement) or §1.10 (AI Search on the
-customer catalog); §1.3 closes on an importer with no label-approval step; §1.12 closes on a pull API
-with no Snowflake destination anywhere. **Audit wrong:** "restore" describes a regression that never
-happened, those rows were never entered. **Missed:** the enrichment commitment lives in three more
-customer-facing documents including the PS guide's onboarding step P3 with person-days; AI Search's
-"live affinity" is two caller-supplied fields; history ingest applies rows the tenant's own registry
-weights at zero. **Smallest fix:** documentary, add and split the rows, qualify the same claims in the
-four documents.
-
-### F12 · The documented SDK integration never repaints
-Confirmed. **Blocks the pilot.** S for the gate; M only if a genuine push is in scope. Reproduced
-exactly: three events, one paint, one snapshot, the original hero. **Audit wrong:** the SDK is not
-incapable, one added `hydrate()` repaints; the defect is a kit promising a `content_decisions` frame
-(`01-integration-guide.md:156` and four other documents) that no server sends. **Missed:** the
-storefront rehearsal passes on the demo's private rehydrate, not the published contract; an exposure is
-written per snapshot call, so a naive refresh loop corrupts the lift denominator; overlapping hydrates
-land in completion order and the older wins; every repaint re-fires impressions. **Smallest fix:**
-correct the five documents; a documented coalescing `refresh()`; make refresh not write an exposure.
-
-### F13 · Visit, channel, journey and memory not as claimed
-Confirmed. **Blocks the pilot.** M. A shopper with visit 4 and paid social in KV gets cell
-`{channel: unknown, visit_bucket: unknown}`; buckets 2-3 and 4+ are unreachable though published; at
-gamma 0 the two fields move no score; two product views are labelled considering where the customer's
-paper says exploring; the launch brand runs a 60-second decay, so return memory is zero after an hour.
-**Missed:** the stored entry channel is itself wrong for the kit's own hydrate-first integration (written
-`direct`, never corrected); the decision path never advances the visit boundary; the object host has no
-visit or channel state at all, so flipping `REFLEX_HOST` regresses the one value that works; the journey
-stage latches for a month. **Smallest fix:** about a day, carry visit number and channel into
-`ShopperRead`, apply the visit boundary at read time, stop writing `direct` for unknown.
-
-### F14 · KV as the authority for shopper state
-Confirmed. **Raised to blocks launch.** L for the transition; S subset now. Ten reproductions: two
-concurrent views record one; eight page-paint impressions record one of eight at seven writes to one
-key; KV lag returns 500 and drops the outcome from the ledger while D1 already holds the event.
-**Missed:** `createOrUpdateSession` unconditionally rewrites the `user:<visitor>` pointer, so one missed
-read permanently orphans a shopper's profile; CW37's deferred create, dispatched with an empty body,
-erased two views and six dimensions committed after it; the identity link has the same shape;
-`SameSite=Lax` means an SDK on the customer's domain never sends the session cookie, so the pointer path
-is the normal case; `/sort` mutates state on the session host. **Smallest subset:** thread the client
-session through the event route, use the create's return value instead of re-reading, make `/sort`
-read-only, use the memoized catalog. Record these as buying time, never as closing F14.
-
-### F15 · Configuration neither atomic nor conflict-safe
-Confirmed. **Raised to blocks launch.** M overall; S for the blocking subset. The audit's probe
-reproduced verbatim, and through the real `PATCH /config/reflex` both operators get 200, revision 2 and
-the same label while one slider is discarded. **Missed, worse than what was found:** publishes 28
-seconds apart collide with no concurrency at all (30-second isolate cache); a single transient KV read
-failure makes `patch` merge onto the compiled default, silently reverting every tuned value with a
-clean monotonic audit trail; `write` cannot distinguish read-failed from nothing-stored, so the counter
-rewinds and rollback restores the wrong document; the audit index is itself an unguarded
-read-modify-write. **Audit wrong:** "immediately effective" is its paraphrase, doc 22 says "without a
-deployment". **Smallest fix:** about 30 lines in `versionedStore.ts`: distinguish read failure from
-empty and fail closed, compute the next number from the index and check the key before writing, bypass
-the isolate cache inside write, wrap the puts.
-
-### F16 · Ledger and online learning disagree about the same event
-Confirmed. **Blocks the pilot**; the loss half near blocks launch. M. A redelivered decision set plus
-a redelivered outcome move the learned lift from 1.418 to 1.471 and, at a true 5.00 versus 5.64 split, a
-10% duplicated share flips the holdout verdict to treatment better. **Audit wrong:** stable ids already
-exist and are byte-identical across redelivery, the work is to use them; content-addressed object naming
-will not survive a Queues regroup; a duplicated ring append cannot double a credit (attribution caps
-per slot), it inflates fatigue instead. **Missed:** no dead-letter queue in any of three consumer blocks;
-`enqueue.ts:19` is an empty catch; `post()` in `fan.ts` never checks `res.ok`; duplicates push legitimate
-hours past the fold's object cap. **Smallest fix:** deduplicate on read in `loadDay` and
-`loadHourRecords` on the ids that exist, plus a dead-letter queue and a logged enqueue failure.
-
-### F17 · Hourly folding loses late data
-Confirmed. **Blocks the pilot.** S for the silent-failure part; L for the full remedy. All four
-scenarios reproduce. **Audit wrong:** configured pages emit 7 to 9 records, not 20 to 30, so 200
-receipts is about 22 page views, not 7 to 10; failed hours are listed in `hours.missing` and truncation
-in `counts.truncated`, so only four cases are genuinely silent: late data, `ringsFolded=false`, the
-visitor-count freeze, and a truncated hour rebuilt at a higher cap. **Missed:** the day's distinct
-visitor count freezes after an out-of-order repair across a date boundary (4 reported where 8 served);
-truncation drops the end of the hour, time-biased; `ringsFolded` is written and never read; the window
-report carries no truncated, unfolded or horizon field and is the artefact a lift claim would be made
-from. **Smallest fix:** a maturity window that rebuilds an hour when its object count grew; a set of
-folded hour-starts instead of `through`; key `seen` by date; carry the flags into the day and window
-reports and render them.
-
-### F18 · Decay depends on arrival order; rare rates round away
-Confirmed. **Blocks the pilot**; the timestamp path blocks launch. S. Both audit numbers reproduce
-exactly. Below a 0.0005 rate the slot rate rounds to 0 and lift is forced to exactly 1 at every level:
-an item with true lift 1.994 serves at 1.000. **Audit wrong:** steady-state online jitter is 0.00% at one
-second, so "queue reordering" is not the live vector; replay and catch-up shapes are (-46%), and
-unbounded client timestamps are (ten crafted back-dated purchases destroy 82% of an item's evidence).
-**Missed:** the fix already exists 90 lines away as `mergeEntry` in `hourly.ts:143`; the remedy has no
-migration step for counters already skewed. **Smallest fix:** make `bump` the shape of `mergeEntry`,
-memoize the exact slot rate and round only for publication, reset and refold each object once, clamp
-the event timestamp.
-
-### F19 · Changing objective or policy relabels history
-Confirmed. **Blocks the pilot.** M, not M to L, since the report and fold already rebuild statistics
-from the ledger; S for the guard. The 401 probe reproduces through the real object; a mixed snapshot
-serves the piece that earned $1,100 over the one that earned $10,000. **Missed:** contamination needs
-no objective change, because the online path banks purchase credits at unit weight while the slot learns
-clicks; `margin ?? value` makes the counter's unit depend on feed completeness; currencies sum into one
-scalar and a refund can never subtract; `learn.stats` is tenant-wide so tuning tau for one slot re-bases
-every slot; the autonomy cycle propagates mixed units into configuration with a justifying note; doc 22
-claims the ladder order is a dial and it is hardcoded. **Smallest fix:** stamp a generation hash on the
-counters and restart on mismatch, keeping the superseded snapshot in the archive.
-
-### F20 · Priors attached to a nonexistent item
-Confirmed. **Blocks the pilot**, unconditionally, since doc 20 records priors import as closed. S.
-Reproduces verbatim including the phantom id. Four of six ladder levels of the priors feature are dead;
-coarse plus fine priors serve the wrong value, not none; a valid prior on a revenue slot clamps the item
-to lift 0.5. **Audit wrong:** its example uses `n_equiv=20` below `nMin=30`, so a retest with its own
-numbers will look like the fix failed. **Missed:** the operator surfaces publish the phantom; a new slot
-with priors and no events publishes no snapshot at all; the prior cell grammar accepts any order, and
-CW29's ladder reordering silently invalidated older DS exports; the day report ignores priors at every
-depth. **Smallest fix:** six lines, index priors by item from the structured rows; a seven-case
-regression test fails 5 of 7 at HEAD.
-
-### F21 · Direct attribution ignores the slot; served is not seen
-Confirmed. **Blocks the pilot.** M; the slot half S. A click naming hero credits hero and rail;
-position alone gives a 3.80x lift spread between rank 1 and 5 with identical content, nearly
-saturating the clamp. **Missed:** `servedCounts` ignores the slot too, and fatigue is a live scoring term,
-not shadow; the learning identity has no page, so home hero and PDP hero share one statistics object;
-`learn.test.ts:25` titled "one credit per slot" asserts two slots credited for one click; the receipt
-reports 3,991 exposures at the finest level for a slot nobody painted. **Audit wrong:** "use decision ID"
-is a wire and SDK change, the click carries no decision id. **Smallest fix:** a fifth policy axis,
-`placement: named | any`, default named, treating the literal `unknown` as absent; one pure function
-fixes online and batch together.
-
-### F22 · Replay lacks the page state
-Confirmed. **Blocks the pilot.** S; the audit's M fits its broader list. The two-slot example
-reproduces verbatim. **Missed:** it fires at gamma 0 through rotation or Thompson on an earlier slot,
-so shadow mode is not a mitigation; on Coach's own seeded four-slot page 7 of 9 valid receipts report
-unequal, 31.7% across 200 shoppers; the archive gap is permanent (version is `Date.now()`); a pinned
-decision is refused for a lift it never used. **Smallest fix:** carry the page's per-slot snapshot
-versions on every record, fetch every slot's archive on replay and fail naming the missing slot, write
-R2 before KV.
-
-### F23 · Thompson ignores the budget; wrong model for money
-Confirmed. **Blocks the pilot**, condition already met since the mode is offered in two operator UIs.
-S to withdraw; M to repair. 48 of 100 leader changes at share 0 and identical at share 1. Under revenue
-the failure inverts: s exceeds n, the Beta collapses, and exploration silently stops while preferring
-total revenue over revenue per exposure. **Missed:** 71% of Thompson's reordering is logged as
-un-explored; the recorded candidate support is truncated after the reorder; merchandiser freeze and
-reject are bypassed; doc 22 §7's cooldown dial does not exist. **Smallest fix:** withdraw `thompson`
-from the schema, the two selects and the two documents; or two lines moving the share gate above the
-Thompson block and returning only a first-position pick.
-
-### F24 · Autonomy applies stale proposals
-Confirmed. **Blocks the pilot.** M. Every probe reproduces: a 0.10 to 0.15 proposal applied 30 days
-later onto 0.90 wrote 0.15, on a slot whose autonomy was off and whose dimension was pinned; a failed
-write left a durable "applied" receipt; one observation out-scored 9,999. **Missed:** a proposal has no
-page, so it applies to every page with that slot name; duplicate proposal ids per cycle; the spread
-statistic is a count of tag values and favours high-cardinality dimensions 400 of 400 under noise; no
-role gate on the apply route; the monitor never references proposals. **Smallest fix:** about 25 lines
-in `decideProposal`: refuse when mode is configured, the dimension is pinned, the proposal is old, the
-step is exceeded, or the current value differs from `p.from`; write the receipt after the slot write.
-
-### F25 · Long-window reports truncate and overstate readiness
-Confirmed. **Blocks the pilot.** M with an S core. A January-to-June request returns 92 days ending
-April 2 under a June 30 label, 51% of the period, with `missing` empty. `neededPerArm` is fixed at 95%
-and equal arms: 5.2x optimistic on traffic, 1.9x conservative on the control gate. Scaling the absolute
-interval by a point rate awarded a too-generous target rung in 83 of 756 realistic shapes and a shipped
-test locks that in. **Audit wrong:** retention names the wrong mechanism, the window reads stored day
-reports that nothing deletes. **Missed:** both report GETs are unauthenticated; targets are hardcoded to
-Tapestry for every tenant; the window pools days built under different policies with no signal.
-**Smallest fix:** 400 or a truncation field on an oversized request, force undecided when any pooled
-day is incomplete, a log relative interval, pass the confidence into the sample size.
-
-### F26 · The merchandiser's control is missing; the stage form is invalid
-Confirmed. **Blocks the pilot.** S plus S. The shipped default `inStage: 1.2` is rejected by the real
-validator; one click on the journey-stage switch leaves a merchandiser with a raw JSON-path error and a
-disabled save. Of the form's 1 to 3 range only the value 1 validates, and at that value a piece with
-affinity 0.05 outranks one with 0.9. **Missed, worse:** clearing the box saves the maximum-effect value
-silently, exactly inverted from the engine's off defaults; the slots grid strips weight values
-server-side so the merchandiser cannot even read them; the console test stubs the validator. **Audit
-wrong:** "exclusions" is a capability that does not exist anywhere, not a missing form. **Smallest fix:**
-four lines in `views-config.js`, and wire the real validator into the console test.
-
-### F27 · Feed normalization drops merchandising
-Confirmed. **Blocks the pilot.** S core; M as written. All three behaviours reproduce; a merge refresh
-destroys a stored merchandising block even when the feed still supplies it; the customer's own
-explore/consider/decide words 422 the whole catalog. **Audit wrong:** the import adapter already dedupes
-tags, so inflation is a direct-PUT defect; routing direct PUT through the normalizer, as the remedy
-instructs, would break the only path that works. **Missed:** a refresh omitting status resurrects
-expired content; a tag-less feed validates and silently zeroes the catalog; no console can set the field
-at all. **Smallest fix:** carry merchandising in the normalizer, stop defaulting lifecycle to live on
-merge, accept the customer's stage words, dedupe tags in the validator.
-
-### F28 · Later pins duplicate earlier selections
-Confirmed. **Blocks the pilot.** S for reservation; M for the contract. Reproduces in the real
-composer on both arms. **Missed:** two slots pinning one piece duplicate it with no ranking involved
-and the validator accepts the document; a pin overrides `slotTypes`, the only eligibility control; a
-pinned slot ignores `take`; a dead pin silently deletes the slot; the duplicate double-credits the
-pinned slot in attribution. **Audit wrong:** no shipped configuration triggers it, all seeds pin first;
-"reject contradictory pins" cannot be a write-time guarantee because the catalog is a separate document.
-**Smallest fix:** four lines reserving every resolved pin before the slot loop.
-
-### F29 · Engineering proofs are not the customer acceptance
-Confirmed. **Blocks the pilot.** M. **Missed, and blocks-launch grade:** the kit already tells the
-customer the script transcript "is the acceptance evidence" (`04-staging-connection.md:86`); doc 21
-contradicts itself ten lines apart; `notifyAbsence()` in `listen.ts:53` notifies only `onDecisions`
-subscribers, never slot subscribers, so the kit's headline ten lines render an empty hero when the
-snapshot fails, contradicting "never shows a hole" in three documents. **Audit wrong:** it omits
-`rehearse-storefront.sh`, which already drives the SDK headlessly; doc 19 still names Kate Spade as the
-pilot brand against the settled Coach. **Smallest fix:** correct the kit's tense, fix `notifyAbsence`
-(five lines and a test), document the server-injected snapshot pattern or correct the no-flash claims,
-delete the SSO baseline from the Implementation Plan.
-
-### F30 · The no-runtime-model North Star is conditional
-Confirmed. **Blocks the pilot.** S for the gate; M for the table seam. With `learn.external` configured,
-the decision path POSTs the shopper's interest vector, cell and the entire unfiltered catalog to an
-arbitrary URL; the timeout returns at the budget while the upstream call runs on. **Missed:** the
-operator UI ships the control with `workers_ai` in a dropdown and a free-text URL; no scheme or host
-validation, so any operator can redirect every shopper profile to any host with no allow-list or alert;
-the budget validates up to 5,000 ms against a 200 ms target; the table kind has no writer; the M3 kit
-documents `workers_ai` to a customer whose scope forbids it. **Audit wrong:** availability is not at risk,
-fallback omit is honoured. **Smallest fix:** an environment switch unset on every stamp, restrict the
-validator to table and service, clamp the budget, filter candidates, a test that off makes no call.
-
-### F31 · Two customer registries
-Confirmed. **Fix before the next customer**, and doc 20 row 3 must reopen today. L. Nine probes
-reproduce every divergence. **Audit wrong:** its title names the event engine and never cites
-`RealtimeSegmentEngine.ts`, the live host, pinning the defects on the dormant object host; "two
-registries" undercounts, there are four axes. **Missed:** `getConnectors(env)` builds a Coach audience
-store on every path, so a second brand's operator-authored audience is never evaluated;
-`ensureAudiencesSeeded`'s tenant parameter has no production caller; the operator console is
-tenant-scoped while the engine is not, so a merchandiser can author a second brand's audience and no
-decision evaluates it. **Smallest fix:** two days, pass the tenant at four call sites and reopen the row.
-
-### F32 · Whole-catalog documents at scale
-Confirmed. **Fix before the next customer.** S to M for the real risk; L as written. **Audit wrong,
-in the direction of worse:** with pieces shaped like the shipped Coach catalog the 25 MiB wall arrives
-at about 24,700 pieces, not 67,000; the 300,000-piece ranker takes 1.6 to 3.3 seconds, not 502 ms.
-**Missed:** the dominant cost is the read path, every 30-second cache miss re-parses and re-validates
-the whole catalog (92 ms at 10,000 pieces, against the 200 ms target); the `config` duplicate costs 58
-to 174 ms per miss for a field nothing reads; every revision body is retained forever; the isolate cache
-is an unbounded map. **Smallest fix:** delete the `config` duplicate and invert the one test that pins
-it; a 20 MiB size guard; bound the cache.
-
-### F33 · No per-customer stamp boundary
-Confirmed. **Raised to blocks the pilot.** M to L. `X-Tenant` is a credential-free brand selector on
-`/realtime/*`; `/sort` is behind no gate and uses the resolved tenant; operator tokens carry no tenant
-claim and the audit table has no tenant column; a typo in `TENANTS` degrades to coach-only with a
-warning and every other brand silently stops being erased. **Audit wrong:** "five customer regions" is
-unsourced; slots are per-tenant objects, the shared hot resources are the queue, KV, R2 and D1.
-**Smallest fix:** bind the resolved tenant to the credential in `sdkKey()`, mount it on `/sort`, a
-tenant claim on operator tokens.
-
-### F34 · SDK lifecycle and measurement cardinality
-Confirmed. **Raised to blocks the pilot.** M. A correct mount/detach/mount produces two clicks and two
-add-to-carts per human click; the existing test cannot see it because its fake element stores listeners
-in a map. **Audit wrong:** the second anonymous listener at `emit.ts:117` for commerce events is the
-worse half; the measurement consequence is on the server first, `buildReport` takes 5.5 seconds and 112
-MB at its own cap, 160 seconds when outcomes approach decisions, from a linear `find` inside a double
-loop. **Smallest fix:** a `WeakMap` attach guard in `emit.ts`; a slot projection on the report route
-and a one-line id map in `buildReport`.
-
-### F35 · Repository and setup debt
-Confirmed. **Raised to fix before the next customer.** S. The audit declined to execute the geo seed;
-the verifier did: the published deploy runbook, run once on a fresh database, drops NY crosswalk ZIPs
-from 14 to 1, cuts the Meridian NYC cohort from 640 to 44 (still above the 30 gate, so it clears
-silently), and replaces a Census row with a proxy row. **Missed:** `scripts/setup.sh` is broken against
-wrangler 4 and overwrites secrets; a superseded engine build under `public/` is uploaded and served by
-both customer stamps; two more live copies of the dead `wrangler.toml.example` instruction. **Smallest
-fix:** seven lines in the geo seed (`INSERT OR IGNORE`, drop the deletes), the runbook, a regression test.
-
----
-
-## 3 · What both documents missed: thirty new findings
-
-From the five sweeps, each with a reproduction against the repository's modules. Grouped by severity.
-The lens is in brackets.
-
-### Blocks launch (nine)
-
-1. **`/api/*` is a generic cross-tenant read, write and delete door onto every store, behind any
-   operator token** [security]. `src/routes/api.ts:7` guards with `jwt()` alone; lines 63, 79, 99 read,
-   overwrite and delete raw KV keys; 9, 28, 51 do the same for R2 ledger objects; 111 sends arbitrary
-   queue messages. Mounted at `index.ts:93`. A read-only token performed all six. Nothing in the console,
-   SDK, scripts or kit calls it. **Remedy:** delete the mount and the file. S.
-2. **The default environment enforces authentication against a JWT secret published in the
-   repository, and verification fails open when the secret is absent** [security]. `wrangler.toml:151`
-   sets enforced beside `:159` plaintext `JWT_SECRET`; `auth.ts:49` encodes an absent secret to zero
-   bytes. A forged admin cleared the site-key gate for a foreign tenant. **Remedy:** secret binding,
-   refuse to mint or verify on absent, short or placeholder values, extend the deploy guard. S.
-3. **Every brand's catalogue, learning dials, reflex configuration and revision history are
-   world-readable via `?scope=`** [security]. `content.ts:42` takes the scope from a query parameter,
-   `:52` leaves GET open, `/config` and `/content` are mounted behind no gate. **Remedy:** derive scope
-   from the verified key or operator membership, gate with `/v1`. S.
-4. **`/api/storage` is an unscoped read and write proxy over the ledger bucket** [customer promises].
-   The same file as item 1, called out because a Coach operator token read and overwrote a Kate Spade
-   decision object. Same remedy.
-5. **Erasure is undone by the browser on the next page view** [privacy]. `SessionManager.ts:566`
-   mirrors segments, engagement score and user id into non-httpOnly cookies; `RealtimeSegmentEngine.ts:927`
-   rebuilds the profile from them when no record is found; erase sends no `Set-Cookie`. After erasure KV
-   is empty; the next request restores the exact segment list. F04 and F06 both miss the cookie mirror.
-   **Remedy:** clear cookies on erase, stop treating cookie-borne profile fields as inputs, mark them
-   HttpOnly. S to M.
-6. **Analytics Engine holds subject-level rows with IP, user agent, email and traits, unerasable, in
-   one dataset shared by all environments** [privacy, security]. Seven `writeDataPoint` sites beyond the
-   ledger points (`tracking.ts:33,89`, `pixel.ts:48`, `webhook.ts:39,112,151`, `optimizely.ts:154`)
-   serialise the whole event indexed by the person. F06 concluded no individual rows exist there and did
-   not look further. No dataset name in any environment, so dev, staging and production share one.
-   **Remedy:** fixed low-cardinality blobs indexed by tenant; gate or remove the routes; name the dataset
-   per environment. S to M.
-7. **One page's ledger message exceeds the 128 KB Queues limit at the contracted homepage scale, and
-   the send failure is swallowed** [operations]. `decide.ts:238,277` copies the affinity vector onto every
-   record; measured at 30 assets with 8 dimensions: 135 KB, with 6 plus regional: 188 KB. The loss is
-   biased toward the best-personalized sessions. **Remedy:** hoist `inputs` into the envelope, split
-   oversized sets, count failures. S.
-8. **The hourly fold reads at most 600 objects; the queue's three-second batch timeout produces far
-   more at any real traffic** [operations]. A non-idle queue closes up to 1,200 batches an hour, each an
-   object per stream; break-even is about 600 pages an hour; at 40 messages a second the fold reads 21%.
-   Doc 31 §3 extrapolated a sixty-second run to "dozens of objects" an hour. **Remedy:** raise the batch
-   timeout to 30 to 60 seconds or read the hour whole; treat a truncated hour as unbuilt. M.
-9. **A reporting overlay silently overwrites the canonical day report** [learning]. `POST /learn/report`
-   with custom policies skips the aggregates branch and `runReport` writes the same `reportKey` the fold
-   writes and the window pools. The window verdict moved from -47% to -40% relative. **Remedy:** persist
-   only when `reporting === null`. S.
-
-### Blocks the pilot (fourteen)
-
-10. **Four uncounted loss paths in the ledger pipeline and no dead-letter queue** [operations].
-    Producer errors swallowed, bad records filtered with `skipped = 0`, unplaceable messages acked with
-    a warn, `max_retries=2` with no dead letter. During an R2 or Queues incident the system of record
-    loses rows with no artefact. M. (Named by F16 as a mechanism; the absence of the queue and the
-    per-record filter are new.)
-11. **Identifiers are written to the log store on every request, including refused consent**
-    [privacy]. Hono `logger()` on `*` logs path plus query; the SDK's decision call carries visitor and
-    session id in the query; `index.ts:275` logs whole queued event bodies; logs retained. S.
-12. **D1 is a personal-data store the erasure design never enumerated** [privacy]. `demo_events` on
-    staging holds a row per action with the visitor id and raw payload; `erase.ts` never references D1.
-    M.
-13. **No audit trail for privileged access to, or erasure of, an individual's data** [privacy].
-    `audit()` is called only for account lifecycle; receipts, identity lookups, ledger export and erase
-    leave no row; the rewrite drops the actor from the retired tombstone. S.
-14. **Ten anonymous requests lock any named operator out of the console indefinitely, and flood the
-    audit table** [security]. Failures counted by caller-supplied email with no IP dimension and no
-    unlock route. S.
-15. **Content-type affinity never closes: the engine learns on `type` and scores on
-    `tags.contentType`** [customer promises]. Three video completions gave affinity `contentType:film`
-    and left every hero candidate at score 0; the shipped Coach catalog already disagrees for its four
-    films. M.
-16. **ODP does not re-seed the interest vector; the documented recovery path is absent**
-    [customer promises]. The design document promises re-seeding from ODP on the first event; the code
-    restores five audience labels. M.
-17. **The published learn schema omits the money objective and mis-defines its lift symbols**
-    [customer promises]. The kit's table lists no `objective` though the seed sets the story slot to
-    revenue, the slot the acceptance walk sends operators to. S.
-18. **The release path has no migration step** [operations]. `deploy.sh` never runs
-    `d1 migrations apply`; the first schema change after provisioning ships as code against an old
-    database, a 500 on sign-in found by the customer. S.
-19. **Alerting is inert on the stamps as provisioned, and the alert's own delivery failures are
-    discarded** [operations]. `ALERT_WEBHOOK_URL` is set by no script and required by no gate;
-    `alert()`'s result is thrown away. S.
-20. **The learned lift is a multiplier on a base score that is zero for a shopper with no matching
-    affinity** [learning]. At gamma 1 a cold shopper gets score 0 and catalogue order while the receipt
-    says "applied at trust 1"; learning cannot influence the first interaction, the customer's own
-    click-one scenario. M.
-21. **The lift's reference is the slot rate the item is inside, so a winner's measured lift decays
-    toward 1 as it wins** [learning]. An item at a true 0.10 against 0.02: lift 2.00 at 10% share, 1.02
-    at 98%. Doc 33 §7 asks exactly this question and doc 34 never answers it. S (leave-one-out reference).
-22. **Imported priors cannot move a cold slot, and the receipt attributes their estimate to evidence
-    that does not exist** [learning]. Lift is 1 whenever the slot rate is 0, which it is until any
-    success; then one unrelated success flips it to the clamp. Distinct from F20. S.
-23. **The two recomputations of one day disagree** [learning]. Three attribution readers with three
-    bounds (ring 200 and 7 days, fold 200 and 48 hours, records uncapped); one settled day gives 6
-    credits from records and 5 from aggregates. M.
-
-### Fix before the next customer (seven)
-
-24. **The day report from records is quadratic** [learning]. 20,000 records take 1.2 to 2 seconds
-    locally; at the code's own 50,000 cap it is tens of seconds of CPU with no partial answer. S.
-25. **Exploration is documented at 10% by default and ships off in every document** [customer
-    promises]. `DEFAULT_LEARN` ships no exploration, so new content never crosses `nMin` and cold
-    traffic sees the first-listed piece indefinitely; two customer documents state opposite defaults. S.
-26. **The "one npm package, tree-shakeable" SDK does not exist** [customer promises]. The PS guide
-    records it as decided; the build emits two whole bundles with no manifest, exports or types. S.
-27. **Provisioning a customer stamp installs four other demos' schema and seed data into that
-    customer's production database** [operations]. The migrations directory is nine demo migrations
-    then the operator accounts. S.
-28. **All three environments write to the same unnamed Analytics Engine dataset** [operations]. S.
-29. **No runtime tenant registry: `TENANTS` is unset everywhere, so onboarding a brand is a code
-    deploy**, and until that deploy a second brand serves decisions while invisible to the monitor, the
-    fold, the report and the erasure sweep [operations]. M.
-30. **Every stage form and console default was checked against its real validator**: only
-    `stage.inStage` fails (F26). Recorded here as a bound, so the absence of other findings is evidence.
-
-The sweeps also recorded 73 things checked and found clean, among them: SQL construction on D1,
-the namespacing primitives, the SDK's DOM handling, cookie attributes on the session cookie, the
-screenshot route's token comparison, password and session primitives, JWT algorithm pinning, CORS
-failing closed, secret generation in provisioning, the Wilson and Newcombe intervals, the holdout hash's
-realized share and stickiness, `mergeStats` order-independence, the ladder's key algebra, attribution's
-four axes, holdout isolation from learning, the `no_learning` arm, every route and default the kit
-documents, the thirteen event types, and every socket frame the kit names having a server-side sender.
-
----
-
-## 4 · Corrections to the audit's sections
-
-**§3 performance (mostly accurate).** Figures quoted correctly; the synthetic scale check reproduced
-within 9% on bytes. Corrections: the latency script's default is 60 calls per row and the audit's forty
-is doc 32's flag, 240 measured calls in all; the object-host row is unlabeled wall time; `decide: 0 ms`
-is a rounding to whole milliseconds and a Worker clock that does not advance across CPU-only work, not a
-resolution artefact; the composer-time column varies 2 to 4x across repeats and should be a range.
-Additions: `/sort`'s fix is two arguments at one call site; the value/config duplication costs exactly
-half the KV headroom; no piece-count cap exists; the latency script sends no session id so the CW39
-path has never been measured; at n=40 the P95 rests on two observations.
-
-**§4 the thirteen decisions (mostly accurate).** 22 of 22 mechanics confirmed. Three cells rebut claims
-no delivery document makes (48 to 72 hour convergence, "confidence guarantees", "an SSO claim"); row 2
-misnames a wiring gap as a missing input, the dimensions are built and persisted and simply not carried
-into the content contract; row 3 under-credits the existing reporting-policy recomputation. Additions:
-host choice disables learning (the object host returns null session ids and credit refuses on null);
-cell cardinality is integrator-controlled through the free-text channel; the arm called `default`
-blends randomized controls, consent refusers and pinned merchandising.
-
-**§5a the twelve capabilities and doc 20 rows (accurate).** All twelve rows and thirteen dispositions
-hold against the accepted view of the v8 scope document. Corrections: the 1,092-test count is exact but
-a loaded run exited 1 with two timeouts; "every doc 20 row" disposes Section A only. Additions: the
-holdout sentence prints "about NaN decisions"; `/sort` persists nothing; doc 20 row 9's "never drops a
-candidate" is false as written; v8 materially narrowed §1.1; §1.11's SFCC commitment is a joint
-integration during the Section 3.1 window, not a signature-available adapter; no cron performs any export.
-
-**§5b D1 to D13 and the customer's sections (accurate).** Every disposition holds; twelve probes
-reproduced, three to the audit's exact figure. Corrections: the section concedes no code-level
-strengths in D1 to D5 (the stage rule correctly suppresses itself on the default arm; a value objective
-on a valueless reward is rejected; the sort parity proof is kept in code); D12's measurement deliverable
-was met, the budgets it revealed are unmet; D11 drops the sharper half, that pins bypass slot-type
-matching. Additions: ninety days is a search bound, not a retention policy, raw events are retained
-indefinitely; fatigue is page-wide; only one of the customer's three target families exists.
-
-**§6 and §7 gates, verification, the earlier audit (accurate).** All seven gates check out; every
-re-executable method claim reproduced exactly; 138 citations resolve; all 34 baseline dispositions hold.
-Corrections: item 9 conceals that the committed JWT placeholder ships under enforced auth in the default
-environment; gate 3's "end October" names no source while doc 21 re-keys to Kickoff+60; the owner roles
-are generic while the plan records two engineering owners. Additions: the `.dev.vars.example`
-deliverable is blocked by a `.gitignore` line; 23 of 35 documentation-index links are missing, unchanged
-from the baseline; `ONBOARDING.md:160` still tells a new engineer the operator routes are unauthenticated.
-
-**§8 not verified (mostly accurate).** Right on contract, customer integration, the operator walkthrough
-and scale. Corrections of kind: the binding manifest is complete in-repo; host mapping is not unverified
-but absent; CORS is empty so the customer's site is refused today; non-rotating reconcile, down-migrations
-and configured retention are verifiably absent, not unverified; late-backfill suppression is a reproduced
-defect; Analytics Engine does carry identifiers, contradicting the erase receipt's basis. Additions: the
-suite never runs the shipping runtime (a zero-length HMAC key verifies under Node and throws under
-workerd); the compute half of the latency budget is certifiable locally (0.1 ms at the Coach catalog,
-31.6 ms at 10,000 pieces under workerd); a doc-22-only reimplementation matches the lift table exactly
-once the undocumented per-level rounding is applied; `GEMINI_API_KEY` is typed required and set nowhere.
-
----
-
-## 5 · The remediation list, ranked
-
-Work items, not findings. Overlapping findings share work. Severity is the highest the item carries;
-size is for the item as scoped here. Owner: D delivery track, OL outcome-learning track, B both, C
-customer, L leadership.
-
-### Before any real customer data or account reaches a stamp
-
-| # | Item | Findings | Size | Owner |
-|---|---|---|---|---|
-| 1 | Deny-by-default routing in enforced mode; agent dispatch only in open mode; delete `/api/*`; gate `/sort`, `/track`, `/content`, `/config` reads; require every webhook signature | F01, F33, new 1, 3, 4 | S | D |
-| 2 | Reject a refresh token as a bearer; revoke on password change; `JWT_SECRET` as a secret binding with refuse-on-absent; require `sub` | F02, new 2 | S | OL |
-| 3 | Bind the resolved tenant to the credential in `sdkKey()`, 409 on disagreement, refuse `*` in enforced multi-brand mode; SDK sends its brand; CORS allows the header; tenant claim on operator tokens and a tenant column on the audit | F03, F33 | S then M | B |
-| 4 | Refuse site-assured identity links in enforced mode; provision `IDENTITY_SECRETS`; session ownership guard; rotate the browsing session and revoke the browser-to-person pointer on detach | F04 | M | D |
-| 5 | Resolve consent once, explicit false winning, on both hosts and both catch paths; consent field on the decision and sort bodies; ODP, region fan-in, demo capture, `/track` and `/pixel` behind it; keep the refusal across logout | F05, F10, new 11 | M | B |
-| 6 | Erasure: keep the tombstone as a watermark for the replay horizon; drop tombstoned records in the consumer; clear cookies on erase and stop rebuilding the profile from them; cover D1 `demo_events`, orphaned sessions, both hosts; audit every privileged read and erase; bound the event timestamp | F06, F18 path, new 5, 12, 13 | M | OL |
-| 7 | Analytics Engine: fixed low-cardinality blobs indexed by tenant, never IP, agent, email or traits; dataset named per environment; correct the erase receipt | new 6, 28 | S to M | B |
-| 8 | Provisioning: no secret rotation without `--rotate-secrets`, skip existing, print the key at generation, fail on create errors, idempotent seed; an add-a-brand path that merges keys from a manifest; `ALERT_WEBHOOK_URL` set and required; migrations in the deploy path; product migrations separated from demo ones | F09, F10, new 19, 18, 27 | S then M | OL |
-| 9 | Ledger integrity: dead-letter queue in every environment; count and log every producer, filter and ack drop; hoist `inputs` into the message envelope and split oversized sets; a continuity check in the monitor | F16, new 7, 10 | S | OL |
-| 10 | Learning storage: cap distinct keys per item and slot with eviction at the fine levels; allow-list the channel; loud failure with a degraded flag; cap or delete the ring index; stop spreading raw state into snapshots | F08 | S | OL |
-| 11 | Configuration store: fail closed on read failure, next revision from the index with a key check, bypass the cache inside write, visible 5xx on a failed put | F15 | S | OL |
-| 12 | Monitor: no synthetic exposures on the object host (item 5 closes it); no KV writes per run; fail on zero decisions where slots exist; a threshold from the stated envelope; the alert result logged | F10, new 19 | S | OL |
-| 13 | Lint gate: the plugin prefix, four trivial errors, a pinned warning baseline, lint in CI, so `deploy.sh` runs end to end | F10, F35 | S | OL |
-| 14 | The register: rows for §1.9 and §1.10, split §1.3 and §1.12, reopen row 3 (isolation) and row 12 (holdout), qualify the same claims in the four customer documents | F11, F31, F07 | S | L with B |
-
-### Before the SDK and kit are handed to the customer's engineers
-
-| # | Item | Findings | Size | Owner |
-|---|---|---|---|---|
-| 15 | Kit corrections: strike the `content_decisions` frame from five documents; a documented coalescing `refresh()` that does not write an exposure; fix `notifyAbsence` for slot subscribers; document the server-injected snapshot pattern or correct the no-flash claims; stop calling the script the acceptance; delete the SSO baseline; add `objective` to the learn schema and define `s` and lift for money; state the true exploration default; state log retention | F12, F29, new 17, 25 | S | OL |
-| 16 | Visit and channel into the content contract; apply the visit boundary at read time; stop writing `direct` for unknown; validate the channel; carry both into the object host | F13, F14 regression | M | D |
-| 17 | SDK attach guard for declarative capture and the dataLayer adapter; the click-listener leak; a real-DOM remount test | F34 | S | OL |
-| 18 | The merchandiser's controls: valid stage form with correct arithmetic and no inverted fallbacks; weight readback in the slots grid; the real validator in the console test; the per-slot dimension-weight editor doc 19's acceptance sentence requires | F26, F29 | S then M | D |
-| 19 | Feed normalizer: carry merchandising, accept the customer's stage words, preserve lifecycle on merge, dedupe tags, warn on empty tags, mirror `type` into `tags.contentType` | F27, new 15 | S | OL |
-| 20 | Pin reservation before ranking; reject two slots pinning one piece; a signal for a dead pin; honour `slotTypes` and `take` on pinned slots | F28 | S | OL |
-
-### Before learned lift, exploration, autonomy or any lift claim is enabled
-
-| # | Item | Findings | Size | Owner |
-|---|---|---|---|---|
-| 21 | Stop publishing the holdout as incrementality: rename, drop the target reading, clamp, guard NaN, across report, fold, window and the console. Then persist arm and salt version per visitor and carry them through link and detach with the decision ring | F07, F25 | S then M | OL |
-| 22 | Deduplicate on read in the day and hour loaders; one attribution reader with one cap and one horizon stamped onto every report | F16, new 23 | S then M | OL |
-| 23 | Order-invariant decay (`bump` as `mergeEntry`), exact slot rates rounded only for display, a one-time counter refold, a clamped event timestamp | F18 | S | OL |
-| 24 | A generation stamp on the counters that restarts learning on objective, reward, horizon or policy change; filter the online credit path to the slot's reward; currency and refunds as an explicit decision | F19 | S then M | OL |
-| 25 | Priors indexed by item; a canonical cell grammar at import; a reference at cold start instead of lift 1 on a zero denominator; the prior named on the receipt | F20, new 22 | S | OL |
-| 26 | Attribution `placement` axis; fatigue by slot; page in the statistics identity; brand and position on the ring entry | F21 | S then M | OL |
-| 27 | Replay with every slot's snapshot version on the record; R2 before KV; fail naming the missing slot | F22 | S | OL |
-| 28 | Withdraw Thompson from the schema, selects and documents until it honours the share, the context and the objective; log propensity honestly | F23 | S | OL |
-| 29 | Proposal preconditions in `decideProposal` (mode, pin, age, step, current value per slot entry); receipt after the write; a page on the proposal; a role gate on apply; an evidence statistic that is not a count of tag values | F24 | S then M | OL |
-| 30 | The fold: rebuild an hour whose object count grew within a maturity window; folded-hours set instead of `through`; `seen` keyed by date; flags carried into the day and window reports and rendered; raise the queue batch timeout so a quiet queue stops manufacturing objects | F17, new 8 | S then M | OL |
-| 31 | Window report: refuse or flag oversized windows, undecided on incomplete days, a log relative interval, confidence into the sample size, per-tenant targets, authenticate both GETs | F25 | S | OL |
-| 32 | Lift's base and reference: a base the learned term can act on at cold start; a leave-one-out slot reference; a linear id map in `buildReport` | new 20, 21, 24 | M | OL |
-| 33 | Overlay reports never overwrite the stored day report | new 9 | S | OL |
-| 34 | The external model: an environment switch unset everywhere, validator restricted to table and service, budget clamped, candidates filtered, a test that off makes no call, the kit line corrected | F30 | S | OL |
-
-### Before the object host becomes the production path (recommended, not before January)
-
-| # | Item | Findings | Size | Owner |
-|---|---|---|---|---|
-| 35 | The authoritative-host transition: `ShopperReflex` carries session identity, visit, channel and consent; the identity link moves with it; parity across SDK, identity, consent, sort, fatigue, erasure, rollback, then the acceptance run on both hosts | F14, F13, F05 | L | D |
-| 36 | The interim KV subset: thread the client session through the event route, use the create's return value, `/sort` read-only, memoized catalog; recorded as buying time | F14 | S | D |
-
-### Before the next customer
-
-| # | Item | Findings | Size | Owner |
-|---|---|---|---|---|
-| 37 | One tenant on every path: `getConnectors(env, tenant)`, the seeded audiences, the region trend, history and link ingest, `/sort`, ODP; a runtime tenant registry; one tenant list for every cron; two non-default brands as the isolation test | F31, F33, new 29 | L | B |
-| 38 | Catalog scale: drop the `config` duplicate, a size guard, a bounded isolate cache, revision retention, top-k with a parity test | F32 | S then M | OL |
-| 39 | Repository: the geo seed and runbook, `setup.sh`, the served backup under `public/`, the three dead instructions, the documentation index | F35 | S | D |
-| 40 | The npm package, or amend the PS guide | new 26 | S | OL |
-| 41 | ODP re-seeding, or amend the design document and the plan | new 16 | M | D |
-
----
-
-## 6 · Decisions only a person can make
-
-The synthesis agent, given every verdict, sized the first gate (items 1 to 14 of section 5) at roughly
-8 to 12 engineer-weeks with verification across two tracks. That does not all fit before the customer's
-November code freeze at today's staffing, which makes the first two rows below the ones that decide
-everything else.
-
-| Decision | Who | Options |
+| N01 | JWT-only generic API exposes raw CACHE/STORAGE read/write/delete, queue submission and StateManager. It does not directly expose the separate SESSIONS namespace, D1 or every DO. No production caller was identified. | Launch; additional F01/F03 exposure. Removing the mount can close this specific path, not the whole perimeter. | Security S1; W01/W03 |
+| N02 | Enforced default manifest contains a published JWT placeholder. Unsafe if actually used; live secret state unverified. Absent/zero-length key forgery is refuted by the verifier's workerd test, which fails closed. | Launch configuration/readiness gate; F02/F09 extension. | Security S2; S8 §3.4; W02/W08 |
+| N03 | Anonymous caller-selected scope reads disclose catalog/config/dials/history. Config validation can also return merged private state; gating GET alone leaves it open. | Launch; F01/F03 extension. | Security S3; content.ts:42–73, config.ts:45–117; W01/W03 |
+| N04 | Generic storage route seen from the customer API lens. | **Alias of N01**, not a second finding. | Customer P02; W01 |
+| N05 | Returning stale profile cookies can restore erased profile fields, including segments and engagement score, on the session-host path. This does not demonstrate multidimensional affinity-vector restoration and requires the affected old cookie jar. | Launch; F06 extension, related F04. | Privacy P1; W04/W06 |
+| N06 | Eight subject-bearing AE route writers are outside the reviewed ledger schema; subject deletion is not implemented for their historical rows. Explicit per-environment dataset naming/attestation is absent. | Launch privacy gate for retained/enabled paths; F05/F06 extension. Deployed sharing is unverified. | Security S4 + Privacy P2; W05/W07 |
+| N07 | A whole decision set repeats large inputs per record and can exceed the queue message limit; producer failure is swallowed. The 30-rendered-position fixture is not proof that a 30-candidate pilot page emits 30 records. | Launch evidence-integrity gate; F16 expansion. See §6 measured envelope. | Operations OD-1; W09/W38 |
+| N08 | Fold reads at most 600 objects/hour; timeout/batch/stream fan-out can exceed that long before advertised scale. There is no universal 600-pages/hour break-even. | Launch integrity/capacity gate when collecting affected evidence; F17 extension. | Operations OD-2; W09/W30 |
+| N09 | Custom report overlays can overwrite the canonical stored day result subsequently pooled by the window report. | Launch report-integrity gate where available; related F17/F25. | Learning L1; hourly.ts:486–499, report.ts:221; W33 |
+| N10 | Producer rejection, partial filtering, whole-message discard/ack, and exhausted consumer retries are not comprehensively reconciled; no DLQ is declared in the three consumer configurations. | **Launch**, restoring the operations verifier's classification. This is F16's loss half, not merely a later reporting fix. | Operations OD-3; W09/W22 |
+| N11 | Request URL/query and non-ledger queue bodies can put identifiers into logs, including refused-tracking flows. Not every request necessarily contains identifiers. | Pilot-blocking refusal/lifecycle promise; constrain before real data. F05/F06 extension. | Privacy P3; index.ts:64,275; W05/W07 |
+| N12 | Enabled demo capture writes subject-level D1 demo_events not covered by erasure. Named non-production environments default capture on; actual populated customer data unverified. | Pilot/privacy gate; disable or cover before real data. F05/F06 extension. | Privacy P4; realtime.ts:778–831; W05/W06/W08 |
+| N13 | No comprehensive durable audit of privileged subject reads, exports and erasure. An initial erase actor exists, but retirement loses it; “no record anywhere” overstates the gap. | Pilot/accountability gate; F02/F03/F06 adjacency. | Privacy P5; W03/W06 |
+| N14 | Account-keyed failed-login windows enable externally induced lockout and audit growth. Sustained interference needs continuing traffic; one burst is not an indefinite lock. | Pilot availability/abuse gate. Previously missing from the work list, now explicit in W02. | Security S5; auth.ts:66–76, auth/store.ts:88–94; W02 |
+| N15 | Signals accumulate on piece type while scoring uses tags.contentType. Existing film/video disagreement defeats mirror-if-missing normalization. | Pilot relevance/contract gate; related F13/F27. | Customer P01; W16/W19 |
+| N16 | ODP restore supplies audience labels rather than the promised interest-vector recovery. | Pilot gate if that documented dependency/recovery promise applies; not silently deferred to “next customer.” | Customer P03; W14/W41 |
+| N17 | Published learn schema omits objective; money meanings of s, p and lift are incompletely documented. | Pilot kit/measurement gate; related F19/F23. | Customer P04; W15/W24 |
+| N18 | Release and schema changes are not linked by a verified migration step. A health SELECT 1 cannot establish required tables. | Pilot/release gate; before real-data promotion. F09/F10 extension. | Operations OD-5; W08/W13 |
+| N19 | Provisioning does not establish required alert destination/delivery; failures can be discarded. A manually configured live webhook was not inspected. | Pilot/on-call gate; before real-data promotion. F10 extension. | Operations OD-6; W08/W12 |
+| N20 | A multiplicative learned term cannot change an exactly zero final pre-lift base; cold-start receipts can imply influence absent from ranking. Other additive terms or exploration can change this condition. | Conditional product/model behavior requiring acceptance, not proof that learning never affects any first interaction. | Learning L2; related F13/F20; W16/W25/W32 |
+| N21 | Self-inclusive slot reference makes reported lift depend on serving mixture. Lift approaching one alone does not prove winner-ranking collapse. | **Model-validation question**, not a proved defect with mandatory leave-one-out repair. | Learning L3; related F24 and architectural decisions; W32 |
+| N22 | Cold-slot prior publication/materialization, zero-reference handling and receipt provenance have distinct failures. Prior-only information must not be described as observed exposures. | F20 expansion; not another independent prior system. | Learning L4; W25/W32 |
+| N23 | Online, hourly and direct-record recomputation use different histories/caps; the direct-record path is still bounded by the attribution policy's time window. | F17 expansion with F19/F22 links. One cap everywhere alone is not seven-day reconstruction. | Learning L5; W22/W30 |
+| N24 | Report builder includes a quadratic lookup pattern and unbounded intermediate work relative to useful output. | Performance issue adjacent to F34; gate before the enabled reporting envelope is claimed. Node timing is not a reproduced Worker CPU-limit failure. | Learning L6; report.ts:113; W32 |
+| N25 | Documentation describes exploration on by default; shipped documents configure it off. | Correct before kit handoff; enabling a defective mode is not the correction. | Customer P05; W15/W28 |
+| N26 | Promised npm/type-distribution artifact is absent; two JS bundles exist. Unminified ESM alone does not prove inability to tree-shake or pin a frontend dependency. | Gate before the promised SDK artifact is handed off, or obtain an authorized delivery-format amendment. | Customer P06; W40 |
+| N27 | Product/customer provisioning applies demo schema and seeds. | F33/F35 boundary extension; separate before customer data. No inference that all such tables already hold live customer records. | Operations OD-4; W08/W39 |
+| N28 | Unnamed AE binding in each environment. | **Alias of N06's isolation subpart**. Wrangler's displayed default name is not deployed binding attestation. | Operations OD-7; W07/W08 |
+| N29 | Runtime tenant/registry/job discovery and provisioning do not form one managed authority. TENANTS is not provisioned in-repo. | F31/F33 extension; before non-default-brand acceptance. An environment setting can change without changing application source; “every onboarding requires code” is too absolute. | Operations OD-8; W03/W08/W37 |
+| N30 | Remaining form-default checks were clean in the checked fixture; the stage exception belongs to F26. | **Assurance only, not a new defect.** | Customer clean-check section; retain regression coverage in W18 |
+
+### Model-reference interpretation (N21)
+
+For two items in the same slot with the same positive reference and unclamped lifts, the direct reference factor cancels: `scoreA/scoreB = (baseA/baseB) × (pHatA/pHatB)^gamma`. A reported lift approaching one therefore does not by itself prove the winner stops benefiting in rank. Shrinkage can still change pHat, and clamps or different selected reference levels can change the conclusion. Leave-one-out changes the estimator, remains serving-mixture-dependent and needs a defined single-item case; it is neither an automatic bug fix nor a causal effect estimate. Validate the intended objective and receipts through W32 before changing the model.
+
+### Telemetry inventory correction
+
+The eight subject-bearing route writers are [tracking.ts](../../src/routes/tracking.ts) lines 33/89, [pixel.ts](../../src/routes/pixel.ts) line 48, [webhook.ts](../../src/routes/webhook.ts) lines 39/112/151, and [optimizely.ts](../../src/routes/optimizely.ts) lines 77/154. The Optimizely decision writer at 77 was missed by the sweeps' “seven” inventory. Track/pixel enrich request context with IP/UA/referrer; webhook/Optimizely payloads differ and do not automatically add those fields. Pixel's index is generated anonymousId after spread-order overwrite; recipient information can remain in its payload.
+
+The decision/outcome writers in [enqueue.ts](../../src/ledger/enqueue.ts) and the aggregate health writer are separate bounded checks. This does not establish that their combined outputs can never identify a small group.
+
+Pre-remediation monitor telemetry was not uniformly aggregate-only: `runMonitor` appended up to three `result.problems` strings, including raw caught error text, to Analytics Engine blobs and also logged those problems. The [W07.04 actual-module baseline](../remediation/evidence/W07.04/baseline.json) confirms this separate path while retaining returned/KV/alert diagnostics. This extends F05/F06 and N06/N11's inventory, not the eight route-writer count, and establishes no deployed-data claim. Future-write minimization is tracked in W07.04; historical points and retained diagnostics still need the applicable privacy/access/retention treatment.
+
+All three [Wrangler manifests](../../wrangler.toml), lines 126/296/391, omit explicit AE dataset names. The cited installed Wrangler line formats display output; upload metadata forwards an unspecified dataset. Establish actual deployed resource IDs, schemas, retention, historic subject data and destination controls before claiming environment isolation or completed erasure. Minimizing future writes does not resolve existing records. No secret values or customer records were read to make this determination.
+
+## 4 · Customer requirements and North Star reconciliation
+
+### Twelve signature clauses, kept distinct from assurance rows
+
+Numbering follows the accepted-view text of the repository's v8 scope draft. It is not proof of executed commercial terms. The detailed customer-paper trace in document 34 §5 remains supporting evidence, with the qualifications here controlling disposition.
+
+| Clause | Reconciled status / acceptance still required | Work packages |
 |---|---|---|
-| What ships in January, given the first gate's size against the November freeze | Simone with leadership and the customer's capability owner | (a) Hold January with one page, learning in shadow, no incrementality claim, a corrected register: the smallest honest move, and deliverable. (b) Hold January and formally defer the measurement claims to a dated later milestone. (c) Move January. |
-| Staffing for the remediation | Leadership | (a) Two tracks, the list as ranked, a later date. (b) Add a platform and security engineer for items 1 to 4 and a data-science engineer for items 21 to 32. (c) Contract the January scope down to what two tracks can close. |
-| Whether the demo storefront and its routes ship in customer stamps at all | Simone, leadership | Item 1 removes them from enforced mode; full deployable separation (L) is the alternative |
-| The staging site key, and whether the demo pages on staging get a real key | Simone | One command; the demo pages break there unless re-keyed |
-| The holdout's representation to the customer | Simone with the customer's data science | Attribution diagnostic now; a real incrementality design (unit, control, metrics, window) is item 21 plus a customer-owned production control |
-| Whether Thompson, autonomy and the external model hook stay in the product surface for the pilot | Simone | Withdraw (S) or repair (M each) |
-| The per-customer stamp versus shared-environment model, and regional obligations | Leadership with the customer | The recorded contract says a stamp per customer; the provisioning today is per environment |
-| Consent semantics for unknown and error states | Customer's privacy owner | Fail closed is the safe default and changes behaviour for cookie-blocked shoppers |
-| The account path: handed password, invitation, or SSO | Customer | Doc 30 |
-| Currency, refunds and margin semantics for the money objective | Customer with data science | Until agreed, the objective should read revenue-per-exposure and refuse mixed currencies |
-| Whether §1.9 Product Recommendations and §1.10 AI Search are in the January scope | Leadership | They are signature clauses with no register row and no generic build |
-| The kickoff date, which the Implementation Plan's every date depends on | Leadership with the customer | |
+| §1.1 First-party profiling | Foundation exists; prove agreed signals, same shopper/tenant, consent, return memory and actual rendered response. v8 narrowed the earlier wording; do not re-expand it silently. | W03–W06, W15–W16, W35, W37 |
+| §1.2 Self-building audiences; rename/pin/prune | Core generation/verbs exist. Prove authorized arbitrary-brand workflow and remove needless per-event regeneration from the critical path. | W03, W35–W37 |
+| §1.3 Catalog plus AI enrichment | Import/lifecycle are partial; generic proposed enrichment, review/approval and publication remain delivery work. Demo OfferDesk is not that workflow. | W14, W19 |
+| §1.4 Dimensions, tuning, per-slot weights/autonomy | APIs exist; atomic revision/propagation, usable numeric controls, context and safe autonomy remain open. | W11, W16, W18, W29 |
+| §1.5 Governance/merchandising/overrides | Terms and hard lifecycle/stock gates exist; metadata fidelity, precedence, pins, exclusions/off-limits and fallback acceptance remain. | W19–W20 |
+| §1.6 Every decision persisted/exportable | Content pipeline has loss/duplication/replay defects. Product-sort persistence is not delivered; section/experience grain must retain its agreed milestone. | W09, W14, W22, W26–W27 |
+| §1.7 Multi-brand hard isolation | Namespace primitives are useful; caller, operator, connector, registry, deployment and job boundaries not accepted. | W01, W03, W08, W37 |
+| §1.8 DS exports, priors, debug and scheduled egress | Substantial APIs exist; prior/replay/coverage/retention and destination evidence remain incomplete. | W06–W07, W14–W15, W22–W27, W30–W32 |
+| §1.9 Product Recommendations entitlement | Separate entitlement/provisioning evidence required; not a mandate to replace the customer's product recommendation platform. | W14 |
+| §1.10 AI Search over customer catalog/live affinity | Coach demo is not generic customer catalog + live-shopper integration. Preserve this clause and implement/accept it or obtain an authorized amendment. | W14, W37 |
+| §1.11 Custom sort including SFCC | Candidate-preserving bounded ranker exists. Actual external/SFCC feed/attribute parity, consent, auth and session continuity require customer acceptance. Joint integration timing follows the agreed window. | W03, W05, W14–W15, W35–W37 |
+| §1.12 Scheduled warehouse share + historical enrichment | R2 partitions/history components do not deliver scheduled destination readback, typed first-/third-party attributes/audiences or deletion reconciliation. | W06, W14, W22, W37 |
 
----
+Additional conditional entitlement, outside the twelve signature clauses: [v8 scope §2.3](../opticon/Tapestry_Scope_of_Services_v8_tracked.docx) provides separately developed rendering widgets/templates to Tapestry at no additional cost **as they become available**, with adoption optional. W14 must track a product/delivery owner, availability trigger and optional handoff; this is not a missing mandatory January widget build.
 
-## 7 · Fitness, answered plainly
+Document 20 dispositions remain: **reopen rows 1, 2, 3, 9, 10 and 12** for their broad closure claims; **partial rows 4, 6, 8 and 13**; **row 5 remains open**; **row 7's implemented verbs are credited, with authorization/acceptance outstanding**; **row 11's test-harness delivery is credited, not generalized to product readiness**. Its thirteen rows do not replace the missing twelve-clause trace above. This reconciliation changes internal acceptance status, not customer terms.
 
-**For Tapestry.** The core the audit says to keep is the core the verifiers found clean: the ladder's
-algebra, the intervals, the holdout hash, the merge arithmetic, attribution's axes, the arms' isolation,
-the kit's routes and defaults. What is wrong is the perimeter and the plumbing around that core:
-authentication and tenant binding, consent and erasure completeness, the KV authority, the configuration
-store, the ledger's delivery guarantees, and a set of learning defects that each turn a correct
-statistic into a wrong number. Twenty-seven of thirty-five findings, and most of the new ones, close in
-one to three days each. The January content page is reachable on this architecture if items 1 to 20 land
-before the customer's engineers connect, and if the lift, holdout and autonomy surfaces are held back or
-relabelled until items 21 to 34 land. It is not reachable by dates alone: items 4, 5, 6 and 35 are weeks.
+### D1–D13 and the customer paper
 
-**For the next customer.** The engine is portable; the deployment is not. Four registries, a
-per-environment provisioning script that rotates secrets, no runtime tenant list, a shared Analytics
-Engine dataset, demo schema in every customer database, and whole-catalog documents in KV. Items 37 to
-41 are the portability gate, and item 37 is the one that must be proven with two non-default brands
-before the word "any customer" is used again. Nothing found asks for a model, a vector store or a
-rewrite; everything found asks for the tenant to be carried, the write to be safe, and the number to
-be honest.
+| Area | Consolidated interpretation |
+|---|---|
+| D1 journey / D2 freshness-fatigue | Terms and metadata exist; classifier calibration, visits/post-purchase, form/import, placement/viewability/history/replay still require W15–W20/W26–W27/W30/W35. |
+| D3 value / D4 confidence-targets-windows | Value mechanisms exist; objective/currency/refund units and causal CVR/RPV/returns acceptance do not. W21/W24/W31 retain the full scientific work. |
+| D5 schema / D11 governance-inventory-diversity | Existing stock/lifecycle gates deserve credit. Metadata fidelity, customer taxonomy/locale/product inheritance, exclusions, pin/slot/take behavior and live inventory integration remain W19/W20/W14. |
+| D6 scroll-hover / D7 anonymous cross-device | Generic scroll/hover capture is absent. Deterministic recognized linking is not anonymous matching. Explicitly accepted scope boundaries are needed; do not add fingerprinting implicitly. |
+| D8 embeddings/lookalikes | Readable affinity and pooled priors are an intentional alternative, not literal semantic embeddings/nearest-neighbor transfer. Customer-approved substitution plus comparative quality evidence is required; no automatic vector-database rewrite. |
+| D9 erasure / D10 consent | Reopened through F04–F06 and N05/N06/N11–N13, including retries, browser restoration, telemetry and external destinations. |
+| D12 latency | Measurement artifacts delivered. Runtime/server/browser SLO and exact customer acceptance remain unmet; see §6. |
+| D13 later DRL/NLG/multiobjective/orchestration | Preserve the phased roadmap. Do not force later platform work into January, or use it to defer present signature clauses such as §1.9. |
 
----
+Keep three acceptance layers distinct. The accepted-view [v8 scope §3.2](../opticon/Tapestry_Scope_of_Services_v8_tracked.docx) defines separate observable Content/Experience integration states, demonstrated in the customer's lower environment by a scripted repeatable run; it expressly excludes performance or revenue outcomes from that milestone-acceptance definition. Engineering readiness/SLO gates still require proof, and customer scientific/business targets still require valid measurement. Neither this audit nor the customer paper converts those targets into a contractual revenue/performance guarantee.
 
-## 8 · What this verification did not do
+Customer §3's one-to-three-interaction relevance, cross-category/style/price behavior, journey continuity, return memory and contextual first page require **behavioral acceptance**, not just fields in a request. Customer §5's sub-10 ms signal processing, low-latency feature serving, millions-concurrent ambition, historical ranking comparison and phase exits need separately scoped qualification and agreed precedence against the delivery scope. Customer §6's persistent 5–10% production-control comparison, six-plus-month reporting, CVR/RPV/returns targets and business-action review require the experiment/delivery work in W21/W31/W14, not attribution diagnostics or a guaranteed business result.
 
-It did not call either stamp, deploy, or run the acceptance or load scripts, which need a live worker.
-It did not read the executed contract, only the repository's tracked draft. It did not walk the console
-in a browser. It reproduced every probe that can run locally, and for each finding it says which
-reproduction was not possible and why. The full report of every verifier, with its probes, numbers and
-line-level evidence, is committed beside this document under `docs/architecture/35-verification-reports/`,
-one file per finding (F01 to F35), per section (S3 to S8) and per sweep. A remediating engineer should
-read the finding's report before opening the ticket.
+Preserve Coach-first, the agreed SFCC integration, the distinction between January content selection and later experience composition, the customer-owned account onboarding choice, and the recorded per-customer stamp intent. End-October access/November freeze, Kickoff+60 and later milestones remain separate source dates until kickoff and precedence are agreed. This review does not approve a new date or silently waive a capability.
+
+### Corrections to claims about the original audit
+
+| Verification assertion | Reconciled ruling |
+|---|---|
+| The audit said the SDK cannot repaint / channel input does not exist. | Incorrect reading. F12 concerned the documented integration and already allowed refresh or push; F13 explicitly identified the optional request field and disconnected stored context. |
+| “Immediately effective” was invented by the audit. | Incorrect. Document 20 row 1 and [Implementation Plan](../Tapestry-Implementation-Plan.md), line 39, make that claim. Bound and test propagation; do not erase the source. |
+| Nobody promised SSO or discussed 48–72-hour learning. | Incorrect. Implementation Plan line 74 states SSO baseline; the customer paper near line 298 and document 26 name the learning target. The latter is a customer target, not a demonstrated vendor guarantee. |
+| Five regions are unsourced. | Incorrect. [Brief 33](33-adversarial-audit-brief.md), lines 223–225, supplies the future-customer workload scenario. It does not establish residency obligations. |
+| 7–10 pages and the original storage/composer figures are disproved by other fixtures. | Different rendered-record counts, metadata/tag shape, slot overlap and machines require separate measurements. Also distinguish candidate pool from displayed positions. See §6. |
+| The audit prescribed using today's lossy importer and a separate cloud account. | Neither is the required remedy. It prescribed lossless normalization and a proven stamp boundary. |
+| All socket frames have senders; holdout/DOM/interval/tenant helpers prove those subsystems clean. | Overgeneralization. Customer sweep explicitly excepts content_decisions; fixed-ID hash stability, helper mathematics and namespacing do not establish enrollment, lifecycle, inference or authorization. |
+| Config absent from repository proves live CORS/keys/TENANTS/retention absent. | It proves missing provisioning/evidence in the tree. Deployment-side values and account policies remain to attest. Local-development CORS exceptions also exist. |
+| Missing down-migrations proves no valid rollback is possible. | A compatible forward migration plus tested restore/recovery may be an acceptable design. The missing item is a verified release/recovery contract, not mandatory destructive SQL rollback. |
+| Small report relabels/feature switches complete the contracted capability. | They can contain risk. The capability remains open unless implemented/accepted or formally amended by the authorized parties. |
+
+The [section-performance verifier](35-verification-reports/S3.md), [architecture-decisions verifier](35-verification-reports/S4.md), [scope verifier](35-verification-reports/S5a.md), [customer-delta verifier](35-verification-reports/S5b.md), [gates/baseline verifier](35-verification-reports/S6S7.md), and [evidence-boundary verifier](35-verification-reports/S8.md) are all incorporated subject to these rulings. In particular, S4's broad “object host disables learning” conclusion is conditional on missing/mismatched session identity, not every SDK call.
+
+## 5 · One remediation register, with containment separated from closure
+
+These are **proposed work packages for discussion, not authorization to implement or deploy**. W01–W41 retain the original verification list's numbers so references remain usable. Some packages now explicitly contain work omitted by that list; their full scope must be estimated again. Owners below are proposed functions, not accepted assignments or staffing evidence.
+
+### Five gates, defined by the outcome they permit
+
+| Gate | What it permits only after closure |
+|---|---|
+| G0 · Safe boundary and truthful delivery | Real customer accounts/data may enter only an authorized, consent-correct, scoped, auditable and recoverable stamp. Includes safe provisioning, telemetry/log treatment, erasure, and accurate claims. |
+| G1 · Correct authoritative state and evidence | Real-data pilot operation requires safe shopper/configuration authority and durable, identifiable, complete evidence for every enabled collection/reporting path. **G0 and G1 both precede real-data operation.** |
+| G2 · Actual customer integration and promised capability | Engineering pilot sign-off requires the exact customer browser, feeds, control/merchandiser tasks, supported corpus and performance evidence. Contractual milestone acceptance remains the separate observable Content/Experience state defined in v8 §3.2, not a performance or revenue outcome. |
+| G3 · Learning and scientific claims | Enable learned influence/exploration/autonomy only after their mechanics, recovery and replay gates; claim incremental business impact only after valid experiment design/data/analysis. Collection prerequisites already belong to G1, even in shadow mode. |
+| G4 · Repeatable customer/brand and scale expansion | Prove portable registries, stamps, jobs, provisioning and supported scale before adding customers/brands or expanding the envelope. Current Tapestry-wide promises bring the relevant checks forward; G4 is not a waiver. |
+
+Gates are dependencies, not a calendar prediction. Safe authority is not deferred until “the object host becomes production after January.” Gamma zero is not an off boundary for statistics ingestion or all exploration. Any proposed reduced-scope pilot must explicitly disable the unsafe data paths and still satisfy G0/G1; disclosure does not authorize unsafe processing.
+
+Legend for sizing: **containment → full closure**; dash means no credible narrow containment for the promised function. D = delivery/SDK/platform function, OL = learning/ledger/measurement function, S/P = security/privacy function, DS = data-science function, C = authorized customer/commercial owner. All estimates remain provisional.
+
+### W01–W14 · Boundary, operations and source-clause delivery
+
+| ID / earliest gate | Work and required closure evidence | Findings | Indicative size / proposed owner |
+|---|---|---|---|
+| W01 · G0 | Enforce route/binding policy before dispatch; remove the unused generic API exposure and prohibited demo/agent/activation surfaces from customer reach. Authorize retained shopper/operator routes, scoped reads/history/validation, report GETs and webhooks. Negative tests enumerate the actual mounted methods/upgrades and inspect destination state. | F01/F03/F25/F33; N01/N03/N04 | S containment → M/L boundary/separation; D + S/P |
+| W02 · G0 | Reject refresh-as-access, migrate access/service claims and tool tokens, enforce temporary-password/account/session revocation policy, and reject unsafe/missing configured signing material at readiness. Add abuse budgets and bounded account lockout/audit growth for N14. Prove logout/disable/delete/demotion/password/rotation transitions and recovery without locking legitimate operators out. | F02/F09; N02/N14 | S narrow guard → M full auth/abuse contract; D/OL + S/P |
+| W03 · G0/G4 | Bind canonical customer/brand to credentials and every route/store; scoped operator membership/roles/audit context; conflicting path/header/host/scope rejected. SDK/CORS/socket propagation must match. Test non-default versus non-default brands across reads/writes/exports/erasure, connectors and jobs, including platform-admin exceptions. | F03/F31/F33; N01/N03/N13/N29 | S ingress subset → M/L end-to-end authority; D + S/P |
+| W04 · G0 | Require backend account proof, safe provisioning and ownership on all session endpoints; rotate/revoke SDK sessions and forwarding pointers across logout/account change. Regenerate assertions for signed 409 retry. Prove old cookies, stale tabs, in-flight requests and both hosts cannot recover another account. | F04/F06; N05 | M/L; D + S/P |
+| W05 · G0 | One explicit consent policy across SDK/server calls, hosts, state creation, capture, sort, learning, telemetry/logs and configured ODP/regional egress. Preserve withdrawal through logout and failures. Test all switch combinations and unknown/error states before writes; define necessary consent records separately. | F05/F10; N06/N11/N12 | S withdrawal/route containment → M/L complete enforcement; D/OL + S/P/C |
+| W06 · G0 | Durable erasure job with preserved discovery, per-object checkpoints and honest destination status; both hosts, orphans, caches/rings/seen, D1, telemetry/logs and external reconciliation. Server-enforced deletion epoch/replay barrier prevents stale-cookie and delayed/concurrent ingestion resurrection. Retention and physical progress must be tested; operator Set-Cookie alone is not a subject-browser remedy. | F04/F06/F18; N05/N12/N13 | M/L; OL/D + S/P |
+| W07 · G0 | Inventory and minimize all eight subject-bearing AE route writers and every request/body log path; define permitted aggregate schema, access and retention. Explicitly provision/attest environment datasets. Resolve historic data disposition and correct receipts. Do not substitute a notice for applicable processing/deletion obligations or assume future minimization erases history. | F05/F06; N06/N11/N28 | S future-write containment → M/L inventory/historic controls; D/OL + S/P/C |
+| W08 · G0/G4 | Distinguish creation/reconcile/add-brand/rotation using secure desired state; validate account/resources, preserve existing secrets, seed idempotently and fail visibly. Link schema migrations and artifact promotion; separate product/demo schema; provision required alert/config/identity material. Test rerun, partial failure, second brand and tested forward-compatible rollback/restore without exposing secret values. | F09/F10/F33/F35; N02/N18/N19/N27/N28/N29 | S dangerous-script containment → M/L proven release/stamp workflow; D/OL + S/P |
+| W09 · G1 | Version/chunk queue envelopes by serialized byte and batch budgets, including shared inputs without breaking readers. Define durable recovery for producer rejection, invalid/quarantined records and partial writes; DLQ in each environment; validate fan-out responses and reconcile counts to sinks. Fault tests cover oversize, outage, malformed records, retry/regroup, duplicate sends and recovery. Logging/DLQ alone is not closure. | F16; N07/N08/N10 | S envelope/visibility containment → M/L delivery guarantees; OL |
+| W10 · G1 | Bound total item/key/byte state, fine-level cardinality, channel vocabulary, snapshots and ring indexes. Define degraded/fallback statistics and recover already oversized/inconsistent objects without publishing uncommitted counts. Prove with runtime limits, restart and sustained high-cardinality traffic. Remove raw-state snapshot spread separately. Gamma zero is not containment. | F08 | S genuine ingestion disable/guard → M/L bounded recoverable storage; OL |
+| W11 · G1 | Fail closed on read/write errors; use transactional/serialized revision and compare-and-update authority, immutable versions, recoverable publication and explicit propagation bound. Test same-isolate, cross-isolate, concurrent and stale writes, partial puts, rollback and readers across versions. An index read plus key-existence check remains insufficient. | F15/F24 | S error containment → M/L atomic publication; OL/D |
+| W12 · G0/G1 | Consent-safe, non-polluting monitor with zero-decision detection, delivery/schema/tenant continuity, justified thresholds and visible alert result. Isolate synthetic receipts/state from customer measurement. Verify disabled/failed/empty queues, destination failure, both hosts and each configured tenant. An alert URL merely being present is not on-call acceptance. | F10; N19 | S isolated checks → M operational proof; OL/D |
+| W13 · G0 | Correct lint config and actual errors with justified warning policy; include gate in CI. Tie source, SDK/assets, migrations and deployment to an attested build, retaining recovery evidence. Do not disable a useful sanitizer merely to silence a lint error. A green lint command alone does not close release readiness. | F10/F35; N18 | S lint → M release integration with W08; D/OL |
+| W14 · G0/G2 | Register and deliver every applicable source clause: generic enrichment/review/publication (§1.3), product-sort persistence (§1.6), entitlement evidence (§1.9), generic AI Search (§1.10), external/SFCC acceptance (§1.11), typed attributes/audiences and scheduled warehouse destination/readback/deletion (§1.12). Track §2.3's optional, no-additional-cost widget/template handoff as availability is triggered, not a January widget build; retain tag-plan deliverables and approved mechanism substitutions. The internal register portion is updated here; implementation, customer documents, evidence and authorized amendments remain open. | F07/F11/F29/F31; N16/N17 | S register/claim containment → L/externally dependent capability packages, re-estimate separately; D/OL + C |
+
+### W15–W20 · Customer integration, behavior and control
+
+| ID / earliest gate | Work and required closure evidence | Findings | Indicative size / proposed owner |
+|---|---|---|---|
+| W15 · G2 | Supported refresh or genuine push through the exact kit; coalescing/stale-response guards, correct absence/default handoff and server-snapshot/no-flash contract. Distinguish read-only polls from actual correlated exposures. Deliver customer browser/operator acceptance, tag-plan/debug artifacts and feed failure cases. Correct objective/symbol/default/acceptance claims; reconcile SSO with customer authority, not unilateral deletion. | F12/F21/F29/F30; N17/N25 | S documentation/absence containment → M/L SDK + customer acceptance; D/OL + C |
+| W16 · G2 | Carry validated visit/channel through both hosts, read-time visit boundaries and SDK; no invented direct source. Then implement/accept seeded behavior at gamma zero, journey/new-visit/post-purchase reset, days/weeks memory and contextual cold-start behavior. Tests use actual customer taxonomy/events and unknown cases, not just fields present in a record. | F13/F14; N15/N20 | S wiring subset → M/L behavioral contract; D + C |
+| W17 · G2 | Real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers. Test detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser. Do not close on the proposed bind-once WeakMap guard. | F12/F34 | S localized containment → M lifecycle proof; D |
+| W18 · G2 | Valid stage defaults/ranges/empty-value semantics and real validator in console tests. Numeric per-slot dimension editor/readback with version/rollback feedback; customer weight-change walkthrough without reload. Test safe off values and interactions with later score terms. | F26/F29; N30 assurance | S stage fix → M full control/acceptance; D |
+| W19 · G2 | One lossless, versioned import/direct-PUT/merge contract for merchandising, lifecycle/windows, stage aliases, registry tags and locale/slot vocabulary. Canonical content type drives accumulated signals and ranking, including existing film/video mismatch. Decide product-attribute inheritance, warn/reject unusable taxonomy and prove idempotent round trips. | F27; N15 | S field repair → M/L full schema/feed contract; OL/D + C |
+| W20 · G2 | Reserve pins, reject document-local contradictions and check catalog references at activation/runtime. Define slotTypes/take/eligibility/priority, duplicate prevention, dead-pin diagnostics, exclusions/off-limits and default fallback without arbitrary forbidden fill. Test both arms and actual operator workflows. | F28/F26 | S reservation → M promised governance; D/OL + C |
+
+### W21–W34 · Learning, reconstruction and measurement
+
+Parts governing **collection, safe storage or already available reports belong to G1**, regardless of the table's scientific/feature gate. An actually disabled capability remains undelivered until accepted.
+
+| ID / earliest gate | Work and required closure evidence | Findings | Indicative size / proposed owner |
+|---|---|---|---|
+| W21 · G0 claims / G1 enrollment / G3 inference | Contain invalid incrementality/confidence/target claims. Separately deliver persistent enrollment/salt/identity policy, consent eligibility, actual production control, all eligible visitor business outcomes and experiment provenance. Pre-register CVR/RPV/returns units, allocation, windows, maturity, stopping and cluster-aware analysis. Renaming or clamping an attribution ratio is not causal acceptance. | F07/F25; N09 | S representation containment → L science/data/control integration; OL + DS/C |
+| W22 · G1 | Shared logical event identity/dedup before caps; durable online/R2/fold/export reconciliation and explicit completeness. Define one attribution contract with versioned histories/horizons, not blindly identical caps. Wire persisted product-sort evidence via W14. Fault tests include ID collision/retry, late arrivals, partial writes and sink mismatch. | F16/F17/F19/F22; N10/N23 | S read-dedup containment → M/L complete pipeline; OL |
+| W23 · G1 accumulation / G3 serving | Order-invariant counters, exact internal rates and bounded validated event time. Rebuild or explicitly reset damaged item and slot state under W22/W24/W30. Test chronological/permuted/replayed sequences, rare concentrated cells, zero rates and timestamp abuse. A local merge patch alone cannot repair historical evidence. | F18 | S arithmetic containment → M recovery/proof; OL |
+| W24 · G1 collection / G3 serving | Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment. | F19/F08; N17 | S safe incompatibility rejection/reset → M/L rebuild/units contract; OL + DS/C |
+| W25 · G3, earlier if priors are promised | Structured per-item priors and canonical/versioned cell grammar; every supported level, no-event publication, zero reference, unit compatibility, prior provenance and no phantom rows. Distinguish effective prior strength from observed exposure. Test the actual import-to-receipt-to-ranking pipeline, not just a key helper. | F20; N20/N22 | S indexing subset → M complete cold-prior contract; OL + DS |
+| W26 · G1 exposure / G2 SDK / G3 attribution | Correlated decision/outcome identity and defined served/rendered/viewable unit; page/brand/slot/position identity and named-placement credit. Agree and test global-item versus placement-specific fatigue, unknown legacy outcomes and position effects; prove repeated item/product across slots/pages, replay and SDK refresh produce correct counts. | F21/F16/F34 | S named-slot containment → M/L end-to-end exposure; OL/D + DS |
+| W27 · G3, earlier for promised replay | Archive dependencies before visibility; immutable page-wide snapshot manifest, choice metadata and dependency-aware pins. Prove replay parity under coupled slots, exploration, gamma zero, archive/write failure, rollout and retention. Missing dependencies fail explicitly rather than silently guessing. | F22 | S manifest/archive subset → M full replay contract; OL |
+| W28 · G2 surface / G3 enablement | Withdraw unsupported Thompson offers across validator/UI/kit, or repair share/context/prior/reward/control/cooldown/propensity semantics and validate policy quality. Share zero means no exploration-induced reorder. Unit rewards with repeated successes require valid modeling too. Document true defaults. | F23; N25 | S withdrawal → M/L evaluated exploration; OL + DS/C |
+| W29 · G0 privilege / G3 enablement | Scoped role checks and page identity; current policy/age/pin/step/evidence gates applied transactionally with expected revision. Idempotent proposal/write/receipt recovery and no false “applied” state. Validate noisy/high-cardinality selection and harmful action controls; a current-value read is not CAS. | F24/F15 | S disable/guard → M/L full autonomy; OL + DS/S/P |
+| W30 · G1 capacity / G3 reconstruction | Correct late/mutable hours with event-time checkpoints/manifests and retained history; handle higher-cap repairs, date-scoped visitors and maturity explicitly. Propagate all missing/truncated/unfolded/horizon flags. Prove the real queue-to-object rate, multi-hour catch-up and seven-day policy at a signed-off workload. Timeout tuning/count comparisons alone are not closure. | F17/F18/F25; N08/N23 | S visible incompleteness/batch containment → L reliable bounded reconstruction; OL |
+| W31 · G2 report contract / G3 claims | Refuse or explicitly mark incomplete/oversized windows and incompatible policies; no favorable standing on incomplete evidence. Full monthly/quarterly/biannual coverage, per-tenant metric/target versions and correct zero/sparse/unequal-arm/cluster/revenue analysis under W21. Separate lightweight report summaries from full payloads. | F25/F07/F34 | S coverage/claim containment → M/L valid long-window measurement; OL + DS/C |
+| W32 · G2 report envelope / G3 model validation | Remove quadratic ID lookup and bound remaining attribution construction, scans/sorts, payloads and summaries. Separately evaluate zero-base influence/receipt honesty and serving-mixture references against an agreed objective. Do **not** mandate leave-one-out as a proved fix; compare alternatives under clamps, shrinkage, context and single-item cases. | F34/F32; N20/N21/N24 | S lookup containment → M/L report/model validation; OL + DS |
+| W33 · G1 | Custom overlays never overwrite canonical day reports. Use separate policy/version identity or non-persistent results, verify subsequent canonical GET/window unchanged, and define safe repair/provenance for any historical canonical results affected. Protect against concurrent overlay/canonical writes. | N09; F17/F25 | S forward fix → M if historical repair required; OL |
+| W34 · G0 egress / G2 promise / G3 enablement | Deployment-enforced external-model policy with off making zero calls. A service name does not waive no-runtime-inference. Restrict authorized destinations/data/candidates/budgets where any external seam is accepted, and deliver controlled immutable offline-table publication if promised. Verify fallback, cancellation where supported, replay and privacy. | F30 | S disable → M approved table/seam delivery; OL/D + S/P/C |
+
+### W35–W41 · Authority, performance and portable delivery
+
+| ID / earliest gate | Work and required closure evidence | Findings | Indicative size / proposed owner |
+|---|---|---|---|
+| W35 · **G1 before real-data pilot**, G2 performance | Choose and prove transactional shopper authority. If using ShopperReflex, first carry session/identity/visit/channel/consent and complete link/erase/SDK/sort/fatigue parity. Test concurrent writes, stale pointers, delayed creates, restart, ownership and rollback. Then qualify exact browser/server/runtime tails on the selected release and customer workload. Neither a host toggle nor January deferral closes this. | F14/F13/F05/F29/F32 | L; D + OL/S/P/C |
+| W36 · G1 containment | Thread client session through event routes, use successful create/update results without stale rereads, make sort a real read-only path and reuse catalog work. Test delayed writes and fresh/returning SDK flows. Explicitly retain the unresolved KV race and profile-authority finding until W35 passes. | F14/F10 | S subset; **does not close F14**; D |
+| W37 · G0 scope / G4 portability | One tenant/customer registry for live engine, connector audiences/seeding, regional trend, history/link, sort, ODP and all crons. Managed runtime discovery and per-customer stamp manifest with environment/resource ownership. Prove two non-default brands, add-brand without rebinding another, shared-load isolation and complete export/erasure. | F31/F33/F03; N29 | S thread-through subset → L portable platform contract; D/OL + S/P |
+| W38 · G1 bounds / G4 larger corpus | Byte/count guards and bounded cache; verify old readers before removing duplicated envelope field, retain needed immutable revisions and purge by policy. Measure whole read/validate/compose path on realistic shapes and concurrency. Use final-score/candidate-preserving optimization with full parity; retrieval/sharding only if required by the accepted workload. | F32/F08; N07 | S bounds → M/L qualified scale; OL/D |
+| W39 · G0 unsafe runbook / G4 handoff | Quarantine/fix unsafe setup and unscoped seed commands; separate demo/customer assets/schema, review published backups, repair fresh-clone instructions and index. Test the actual seed order and repeat runs, scoped recovery and provenance. Untrack/remove user-owned or historical artifacts only under a reviewed authorized cleanup; this reconciliation deletes none. | F35/F09; N27 | S dangerous subset → M reproducible handoff; D |
+| W40 · G2 promised artifact | Deliver versioned npm/package/types/exports and supported build/browser consumption if promised, or obtain authorized format amendment. Preserve reproducible JS bundles, SDK size/caching/compatibility evidence and kit acceptance. ESM can be consumable without npm; do not claim capability absence beyond the missing artifact. | F29/F34; N26 | S packaging subset → M distribution/integration proof; D/OL + C |
+| W41 · G2 if ODP recovery is promised | Implement scoped, consent/erasure-safe interest-vector restoration with provenance, mapping and decay semantics; prove cold/missing-state and returning recognized flows against the actual ODP contract. Audience-label restore alone is not vector recovery. A scope amendment requires customer authority; do not silently move the promise to the next customer. | F13/F31; N16 | M/L plus external acceptance; D + C/S/P |
+
+### The synthesis's 20 packages are a roll-up, not a second backlog
+
+This mapping incorporates the committed synthesis while keeping one set of work IDs. Its unqualified small-fix estimates, fixed staffing/date forecast and disputed remedies do not override the work above.
+
+| Synthesis package | Canonical W packages |
+|---|---|
+| 1 Perimeter | W01/W03/W29/W31 |
+| 2 Operator token | W02/W03/W08 |
+| 3 Ledger delivery | W09/W22 |
+| 4 Claims/canonical report | W14/W21/W31/W33 |
+| 5 Register/customer promises | W14/W15/W40/W41 |
+| 6 Tenant binding | W03/W37 |
+| 7 Consent | W05/W07 |
+| 8 Identity | W04/W06 |
+| 9 Erasure | W06/W07 |
+| 10 Configuration | W11/W29 |
+| 11 Bounded learning/catalog | W10/W38 |
+| 12 Shopper authority | W35/W36 |
+| 13 Release engineering | W08/W12/W13/W39 |
+| 14 Arms/ledger reads | W21/W22/W30/W31/W32 |
+| 15 Learning arithmetic | W23–W26/W32 |
+| 16 Feature withdrawal | W28/W29/W34 |
+| 17 Controls/feed | W16/W18/W19/W20 |
+| 18 SDK contract | W15/W17/W40 |
+| 19 Replay | W27 |
+| 20 Portability | W37–W41 |
+
+## 6 · Performance and evidence: what the numbers actually establish
+
+### Recorded route latency is not a passed North Star
+
+| Evidence | What is established | Limit on interpretation |
+|---|---|---|
+| Document 32, post-CW37 fresh snapshot | Recorded P50 caller wall 285.3 ms; Worker total 235 ms. | The observed median already exceeds the team's 200 ms server P95 budget. No updated representative tail/acceptance proof is supplied. |
+| Document 32, fresh action / sort | Recorded P50 wall 1,731 ms / 464.4 ms. | Caller wall is not CPU. The latency script omits the SDK session ID; it does not qualify the newer client-session path or actual browser paint. |
+| Document 32, returning snapshot | Recorded P50 wall 35.2 ms / Worker 5 ms; wall P99 365.1 ms. | New visitor, returning visitor, cold isolate and cold document cache are different populations. |
+| Document 31, object-host run 2 | Recorded decision P50/P95/P99 **caller wall** 192/665/795 ms; content events failed in that run. | CW38 later fixes that event-list mismatch, but no new full customer acceptance/tail result establishes readiness. Do not subtract an average network delay from a wall percentile to manufacture a server percentile. |
+| Local pure-function and local workerd timings | Useful compute diagnostics on named fixture/runtime/machine. | Not deployed request latency, browser latency, sustained hot-object capacity or millions-concurrent qualification. |
+| Customer paper versus interim targets | Sub-10 ms signal processing and <100 ms P99 infrastructure/feature serving differ from the team's <200 ms server P95 decision / <300 ms event targets. | Define the measurement boundary and workload for each; one weaker/differently scoped target cannot silently replace another. |
+
+Sources: [latency record](32-latency-numbers.md), [load record](31-load-test-2026-09-05.md), [latency script](../../scripts/latency.mjs), and [S3 verification](35-verification-reports/S3.md). These are recorded historical results, not new staging measurements from this reconciliation.
+
+The doc-32 invocation used 40 measurements per route/population after five warmups: six rows, **240 measured calls and 30 warmups**. The script default is 60: **360 measured calls**, not 240. At n=40, nearest-rank P95 is the 38th ordered sample and P99 the maximum; that is weak tail evidence, not stable production assurance. latency.mjs excludes failed calls from its reported percentiles; load-test.mjs already includes failures in its timing arrays and reports error counts.
+
+A deployed Worker clock advances with I/O, not synchronous CPU work; a pure scoring stage can report zero without being free. Whole-millisecond rounding adds another limitation. Local workerd timers advance normally, so local compute profiling is useful but must be labeled separately. [Cloudflare performance/timer documentation](https://developers.cloudflare.com/workers/runtime-apis/performance/)
+
+Qualification still needs an identified release/configuration, customer event/SDK shapes, actual candidate metadata, fresh/returning/recognized/consent-off populations, cold/warm state, declared regions, concurrent hot keys/slots, sustained traffic and catch-up, errors/timeouts, queue age/loss, costs, and event-commit-to-render measurements. Preserve eligibility, candidate-set and explain/replay parity while optimizing.
+
+### Queue envelope: independently rerun and strengthened
+
+The raw operations fixture was rerun against the actual decide/enqueue/consume/writer modules. Its message-size test asserted only that five cases existed; passing that test is not a payload-bound regression. It also used 128 × 1024 as its threshold and cast malformed optional regional/fatigue shapes past types.
+
+The documented platform message limit is **128,000 bytes**, with internal metadata counting toward it; sendBatch also has a total-byte bound. The replacement evidence probe validates catalog and slot documents, uses a complete regional input shape, measures the real generated ledger envelope and asserts the relevant safe/oversize cases. It does not contact Cloudflare or assert successful queue delivery. [Cloudflare Queues limits](https://developers.cloudflare.com/queues/platform/limits/)
+
+Run the preserved read-only evidence probe from the repository:
+
+```bash
+node docs/architecture/35-reconciliation-evidence/queue-envelope.mjs
+```
+
+| Synthetic fixture: 400 catalog items, one selected record per configured position | Serialized envelope bytes, excluding platform-added metadata |
+|---|---:|
+| 8 rendered positions, 8 dimensions × 24 values, affinity only | 36,032 |
+| 30 rendered positions, 8 dimensions × 24 values, affinity only | 135,062 |
+| 30 rendered positions, 6 dimensions × 24 values, complete regional input | 188,672 |
+| 8 rendered positions, 8 dimensions × 128 values, complete regional input | 291,941 |
+
+These prove a reachable unbounded-envelope defect, not that every customer page fails. In particular, the Implementation Plan's 20–30-asset **candidate pool** does not require 30 displayed items. Required position count, vector cardinality, optional inputs and headroom must be part of the supported envelope. Hoisting shared inputs reduces duplication but still needs schema versioning, worst-case bounds, splitting, reader compatibility and recovery.
+
+The rerun ledger-loss harness passed four tests: a four-record message with two invalid IDs wrote two and counted zero skipped records; invalid whole messages resolved successfully with no objects; an injected R2 failure returned the retry signal; and queue-producer throws were swallowed while analytics points had already been emitted. The R2 test did not execute Cloudflare's retry exhaustion itself. Platform deletion after exhausted retries without a DLQ is a documented behavior, not a locally observed cloud deletion. [Cloudflare batching/retry documentation](https://developers.cloudflare.com/queues/configuration/batching-retries/)
+
+### Fold capacity: correct the unit before changing a timeout
+
+Source-confirmed: all three consumer blocks set batch size 100, timeout three seconds, max retries two and no declared DLQ; [writer.ts](../../src/ledger/writer.ts), lines 45–63, writes one object per tenant/hour/stream group per batch; [hourly.ts](../../src/learn/hourly.ts), line 350, reads at most 600 hour objects across streams.
+
+Batching uses the first reached size/time limit and does not send empty batches. Thus “a quiet queue manufactures 1,200 objects/hour” and “600 pages/hour is always the threshold” are too absolute. Traffic pattern, decision/outcome message count, stream/tenant/hour mix, retries and partial batches matter. [Cloudflare batching semantics](https://developers.cloudflare.com/queues/configuration/batching-retries/)
+
+An illustrative **calculation, not a load measurement**: 40 ledger messages/second for one tenant and event hour means 144,000 messages/hour. At at most 100 per batch, that requires at least 1,440 batches and corresponding objects even with one stream per batch—above the 600-object read cap. Increasing timeout to 60 seconds cannot overcome the batch-size limit in that example. Multiple streams and retries can increase object counts further. Measure actual accepted message/record/object rates and compaction/checkpoint recovery; do not divide a page-rate target by an assumed full batch and call that capacity.
+
+### Catalog/storage fixtures are not interchangeable
+
+The original audit's 300,000-piece thin synthetic ranker run (~502 ms) and the S3 repeats (~588–780 ms excluding heavier outliers) differ from the F32 verifier's richer three-slot workloads (~1.6–3.3 seconds). The roughly 24,700-piece Coach-shaped envelope wall is not a correction to an asserted universal 67,000-piece product limit; no such supported universal limit was established. Payload shape, overlap, adjusted scoring, parse/validation and cache misses change the result.
+
+KV's per-value bound and Workers' isolate memory bound make whole-document growth material; local Node heap/time figures do not by themselves attest a particular deployed crash point. Enforce serialized limits and retained-memory budgets, then certify a supported corpus rather than quote one synthetic count. [Cloudflare KV limits](https://developers.cloudflare.com/kv/platform/limits/), [Workers limits](https://developers.cloudflare.com/workers/platform/limits/)
+
+Removing value/config compatibility duplication approximately halves that body for these fixtures, but requires checking active readers. Trimming a revision index does not delete its bodies; an unbounded isolate Map and multiple scopes require an eviction/retention design. Top-k parity must cover the final adjusted score, tie order, diversity, pins, exploration and cross-slot exclusions—not only a base-score prototype.
+
+### Verification performed and boundaries
+
+| Check | Result / provenance |
+|---|---|
+| Commit/report inventory | c68562d adds doc35 plus 47 raw reports: 35 findings, six section reports, five sweeps and one synthesis. No source fix in that commit. |
+| Original audit and engineering tests | Original independent audit: 92 files / 1,092 tests and root/SDK typechecks passed; engineering reports reproduce broad passes, with a loaded concurrent run also reporting timeouts. This reconciliation did not rerun the full suite, because it makes no engine changes. |
+| Focused ledger rerun | Two existing verifier files, five tests passed against current source; four loss-path tests plus the weak size-count assertion described above. |
+| Strengthened envelope evidence | Four validated synthetic cases above, using actual modules under Node v22.15.0; preserved script asserts outcomes and writes no product/cloud state. |
+| Scratch-corrected lint | Actual eslint rerun: five errors, 324 warnings, exit 1. Repository lint config remains unchanged and still has the missing plugin prefix. |
+| Additional independent review | Astra source/evidence reconciliation across security/privacy/tenancy, requirements/SDK/product and learning/measurement, plus lead operations/performance/source checks. The unsafe WeakMap proposal was exercised with synthetic callbacks. |
+| Not performed | No deployed exploit probes, credential tests/rotation, cloud provisioning, customer messages, product fixes, customer browser acceptance or new SLO certification. |
+
+Errors in the scratch lint run occur in Meridian receipts test, identity/link, reflex/core, SessionManager and tenancy/d1 test. One is a deliberate control-character regex that needs a justified lint treatment; “four trivial fixes” is not a substitute for reviewing all five errors.
+
+## 7 · Decisions to make with the delivery and customer owners
+
+These questions prepare the remedy discussion; this document does not answer them on the user's behalf or reopen already settled scope.
+
+| Decision | Needed from whom / boundary |
+|---|---|
+| Demo versus customer surface | Leadership/security/delivery: choose separate deployables or rigorously omitted/disabled surfaces and resources. Either choice must prove G0; leaving demo ingress public with real data is not an option created by disclosure. |
+| January scope, milestones and staffing | Delivery leadership plus authorized customer owners: reconcile kickoff, end-October access, November freeze and later milestones with measured dependencies/estimates. A one-page or shadow proposal still needs G0/G1 and an approved capability mapping. No date is certified here. |
+| Production shopper/configuration authority | Architecture/delivery/security: choose a transactional design and prove state, identity, consent, recovery and performance parity. W35/W11 cannot be deferred merely because they are larger. |
+| Experiment representation and control | Customer DS/business owner with OL: attribution diagnostic versus actual production-control experiment; fixed enrollment, units, business metrics, allocation, windows and stopping rules. Diagnostic relabeling is not acceptance of incremental lift. |
+| Learning/exploration/autonomy/external-model product surface | Product/architecture/DS with customer scope owner: withdraw until proven or implement the offered contract. Preserve no-runtime-model intent; “service” alone does not authorize inference. |
+| Consent, retention, erasure and historic destinations | Customer privacy/security owners: define permitted states, necessary records, store/destination inventory, progress/retention requirements and historic-data handling. An internal notice or contract wording change does not automatically waive applicable duties. |
+| Identity onboarding and SSO | Customer identity owner with delivery: reconcile Implementation Plan baseline and document 30's password/invitation/SSO choices; require account proof and ownership in all cases. |
+| Customer/brand/environment/region topology | Architecture and authorized customer owners: retain per-customer stamp intent, identify actual deployed resources/keys/jobs and regional obligations. The five-region scale question is not a residency agreement. |
+| Money/cold-start/reference semantics | Customer business/DS with OL: revenue versus margin/profit, currencies/refunds/returns; exact-zero base influence, prior reference and interpretable lift. Validate alternatives; no mandated leave-one-out patch. |
+| Missing signature workflows and architectural substitutions | Authorized commercial/customer/delivery owners: establish entitlement/feed evidence, deliver missing workflows, and explicitly approve any change to enrichment/search/warehouse/ODP/package or embedding/anonymous-linkage commitments. No internal relabeling closes them. |
+
+The next planning step is to select the intended safe pilot boundary, assign owners, and estimate the **closure packages and their tests**. Small containment work can be prioritized immediately in that discussion; it must remain labeled containment. Scheduling implementation or cloud changes requires the separate remedy decision the user requested.
+
+## 8 · Remaining unknowns and final fitness answer
+
+Still unverified: executed commercial terms and amendment precedence; actual customer kickoff/content/feed readiness; live Worker versions, routes, secrets, account-side CORS/tenant registry and datasets; historical personal-data contents and destination retention/lifecycle policies; recovery/erasure across external systems; customer SSO/ODP/SFCC/warehouse integration; exact-kit merchandiser/browser acceptance; supported multi-region/concurrency/cost envelope; and valid experimental lift over the customer's production control.
+
+Some defects are positively known from source—missing provisioning steps, unsafe read/modify/write, absent sender, discarded errors—not merely “unknown.” Actual deployments or customer acceptance are separate evidence and cannot be inferred either present or absent from a manifest.
+
+**For Tapestry:** retain the core, but no real-data pilot sign-off on this checkout. Correctness, safety, the published SDK experience and missing committed workflows remain open. A narrower delivery may be possible after explicit scope agreement and demonstrated G0/G1/G2 closure; neither a January guarantee nor a blanket rewrite follows from this audit.
+
+**For additional customers:** the engine concept is reusable; the current host/registry/provisioning/resource/reporting assumptions have not demonstrated reusable isolated delivery. Prove non-default brands and a repeatable customer stamp, plus explicit supported capacity, before making that claim. Tapestry's requirements inform the platform; they must not become hard-coded product identity.
+
+**Reconciliation status:** document 35 now incorporates the committed synthesis and reconciles findings, aliases, disputed evidence, requirement coverage and work-package dependencies. The raw reports are preserved. No engine remedy, credential change, deployment, customer-scope amendment or acceptance approval is represented as completed.

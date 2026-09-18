@@ -32,7 +32,7 @@ export class StateManager {
           return new Response('Not Found', { status: 404 });
       }
     } catch (error) {
-      console.error('StateManager error:', error);
+      console.error('StateManager error');
       return new Response('Internal Server Error', { status: 500 });
     }
   }

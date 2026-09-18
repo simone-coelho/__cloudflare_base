@@ -8,11 +8,12 @@
 
 import type { Env } from '@/types/env';
 import { d1Store, type AccountStore, type Role, type UserRecord } from './store';
+import { assertFederationSession } from './oidc';
 export type { AccountStore, AuditEntry, AuditRow, Role, UserRecord } from './store';
 
 export const ROLES: readonly Role[] = ['operator', 'admin'];
 
-export interface PublicUser { id: string; email: string; name: string; roles: Role[]; disabled: boolean; mustChangePassword: boolean; createdAt: number | null; lastSignInAt: number | null }
+export interface PublicUser { id: string; email: string; name: string; roles: Role[]; disabled: boolean; mustChangePassword: boolean; authMode: 'password' | 'oidc' | 'dual'; createdAt: number | null; lastSignInAt: number | null }
 
 const ITERATIONS = 100_000;
 const enc = new TextEncoder();
@@ -39,6 +40,7 @@ const same = (a: Uint8Array, b: Uint8Array): boolean => { if (a.length !== b.len
 
 /** Does the password fit the record? `upgrade` is the record rewritten with a hash when it still carried the password in the clear. */
 export async function verifyPassword(password: string, user: UserRecord): Promise<{ ok: boolean; upgrade?: UserRecord }> {
+  if (user.authMode === 'oidc') return { ok: false };
   if (user.password_hash) {
     const [scheme, iter, salt, hash] = user.password_hash.split('$');
     if (scheme !== 'pbkdf2' || !iter || !salt || !hash) return { ok: false };
@@ -74,7 +76,7 @@ export const rolesOf = (roles: unknown): Role[] => { const out = (Array.isArray(
 export const isAdmin = (roles: readonly string[] | undefined): boolean => Boolean(roles?.includes('admin'));
 
 export function publicUser(u: UserRecord): PublicUser {
-  return { id: u.id, email: u.email, name: u.name, roles: rolesOf(u.roles), disabled: Boolean(u.disabled), mustChangePassword: Boolean(u.must_change_password), createdAt: u.createdAt ?? null, lastSignInAt: u.lastSignInAt ?? null };
+  return { id: u.id, email: u.email, name: u.name, roles: rolesOf(u.roles), disabled: Boolean(u.disabled), mustChangePassword: Boolean(u.must_change_password), authMode: u.authMode ?? 'password', createdAt: u.createdAt ?? null, lastSignInAt: u.lastSignInAt ?? null };
 }
 
 export function newUser(input: { email: string; name: string; roles?: unknown }, passwordHash: string, now = Date.now()): UserRecord {
@@ -89,9 +91,14 @@ export function newUser(input: { email: string; name: string; roles?: unknown },
 // ── The store, and the records still in KV ───────────────────────────────────
 
 /** D1 on the worker; a test hands in its own store on the environment. */
-export function storeFor(env: Pick<Env, 'DB' | 'ACCOUNTS'>): AccountStore {
+export function storeFor(env: Pick<Env, 'DB' | 'ACCOUNTS'> & Partial<Env>): AccountStore {
   if (env.ACCOUNTS) return env.ACCOUNTS;
-  return d1Store(env.DB as unknown as Parameters<typeof d1Store>[0]);
+  return d1Store(env.DB as unknown as Parameters<typeof d1Store>[0], async actor => {
+    if (!actor.sid.startsWith('oidc.')) return;
+    const store = storeFor(env), user = await store.getById(actor.id), session = await store.getSession(actor.sid);
+    if (!user || !session || (user.updatedAt ?? 0) !== actor.accountRevision) throw new Error('Current human authority unavailable');
+    await assertFederationSession(env as Env, user, session, 'oidc');
+  });
 }
 
 type KVLike = { get(key: string, type: 'json'): Promise<unknown>; delete(key: string): Promise<void> };

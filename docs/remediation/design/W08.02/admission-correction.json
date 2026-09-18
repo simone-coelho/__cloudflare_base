@@ -1,0 +1,40 @@
+{
+  "at": "2026-09-10T16:13:47Z",
+  "before": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W08.02/plan.md",
+      "sha256": "c35e86050a4f1d83df8e84d1f7e53f2d62f08917806cfe2545c09e54700388ed"
+    },
+    "contract_digest": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-10T16:11:08Z",
+      "plan_sha256": "c35e86050a4f1d83df8e84d1f7e53f2d62f08917806cfe2545c09e54700388ed",
+      "rationale": "Existing local G0 authority; actual-source independent Astra/xhigh challenge informed explicit ID/account/config checks, RETURNING outcome and disabled disk logs. Bounded working bootstrap, not new provisioning programme."
+    }
+  },
+  "after": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W08.02/plan.md",
+      "sha256": "4c2a8174d6e2c7187ee6cce488643fe8dac744bfb9212703fe7b39a8da2cb18d"
+    },
+    "contract_digest": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-10T16:13:47Z",
+      "plan_sha256": "4c2a8174d6e2c7187ee6cce488643fe8dac744bfb9212703fe7b39a8da2cb18d",
+      "rationale": "Reapprove unchanged plan meaning using exact on-disk trailing-newline bytes after admission99296 failure; no source edits or expanded scope."
+    }
+  },
+  "failed_check": {
+    "session_id": 99296,
+    "exit_status": 1,
+    "drained": true,
+    "error": "stale_proof W08.02 preflight plan hash mismatch",
+    "notes": 9073
+  },
+  "cause": "Plan author string omitted final newline added by apply_patch; semantic plan and implementation contract unchanged. Root reread exact bytes. No worker GO or product checks/source writes occurred.",
+  "actual_plan_sha256": "4c2a8174d6e2c7187ee6cce488643fe8dac744bfb9212703fe7b39a8da2cb18d"
+}

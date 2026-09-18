@@ -275,17 +275,19 @@ class CoachStorefront {
         this.sdk.on('audience', (a) => this.logEvent('push', 'audience_published', a ? (a.name || a.key) : 'new audience live'));
         this.sdk.on('identity', (c) => { this.visitorId = c.visitorId; this.logEvent('push', 'identity', `${c.reason}: ${c.visitorId}`); this.renderIdentity(); });
         // The hero and the story are the engine's decisions, rendered by id from the demo's own content
-        // catalog (the CMS export a production page would hold itself). The page never chooses.
+        // public CMS snapshot, not private administrative documents. Later private catalog edits
+        // are not published by this demo mapping. The page never chooses or holds an operator token.
         this.contentById = null;
-        fetch('/content/catalog?scope=coach').then((r) => r.json()).then((j) => {
+        fetch('/data/coach-content.json').then((r) => r.json()).then((j) => {
             const map = new Map();
-            for (const p of ((j.document || {}).pieces || [])) { map.set(p.id, p); map.set(p.customerContentId, p); }
+            for (const p of (j.pieces || [])) { map.set(p.id, p); map.set(p.customerContentId, p); }
             this.contentById = map;
             this._renderEngineSlots();
         }).catch(() => { this.contentById = new Map(); this._renderEngineSlots(); });
         this._engineHero = null; this._engineStory = null;
-        this.sdk.listen.subscribe('chero', (list, set) => { this._engineHero = list[0] || null; this._engineSet = set; this._renderEngineSlots(); });
-        this.sdk.listen.subscribe('story', (list) => { this._engineStory = list[0] || null; this._renderEngineSlots(); });
+        this._sdkHeroOwned = false; this._sdkStoryOwned = false; this._paintedEngineHero = null;
+        this.sdk.listen.subscribe('chero', (list, set) => { this._engineHero = list[0] || null; this._engineSet = set; this._renderEngineSlots('chero'); });
+        this.sdk.listen.subscribe('story', (list) => { this._engineStory = list[0] || null; this._renderEngineSlots('story'); });
         this._sdkDecisions = null;
         this.sdk.listen.onDecisions((set) => {
             this._sdkDecisions = set;
@@ -293,8 +295,6 @@ class CoachStorefront {
                 // Graceful absence, the SDK's own rule: the page never waits and never shows a hole.
                 // The engine's slots fall back to the page's defaults the moment absence is declared.
                 this.logEvent('push', 'decisions', 'none for this page (defaults stand)');
-                if (!document.getElementById('hero-content').innerHTML.trim()) this.renderHero(this.heroFallback());
-                if (!document.getElementById('story-card').innerHTML.trim()) this.renderStory(this.storyForStage('early'));
                 return;
             }
             const first = Object.values((set.decisions || []).reduce((acc, d) => { if (!acc[d.slot] || d.order < acc[d.slot].order) acc[d.slot] = d; return acc; }, {}));
@@ -308,23 +308,47 @@ class CoachStorefront {
     }
     /* What the engine decided for the hero and the story, painted by id. Nothing here chooses:
        the eyebrow is the receipt's top driver in words, the title and art are the piece's own. */
-    _renderEngineSlots() {
-        if (!this.sdk || !this.contentById) return;
-        const hero = this._engineHero, heroPiece = hero ? this.contentById.get(hero.contentId) : null;
-        if (heroPiece) {
+    _renderEngineSlots(slot) {
+        if (!this.sdk) return;
+        const hero = this._engineHero, heroPiece = hero && this.contentById ? this.contentById.get(hero.contentId) : null;
+        if ((!slot || slot === 'chero') && heroPiece) {
             const line = (heroPiece.tags && heroPiece.tags.line || [])[0] || null;
             this.renderHero({ eyebrow: this.whyOf(hero), title: heroPiece.title, sub: heroPiece.subtitle || heroPiece.excerpt || '',
-                cta: line ? `Shop the ${line}` : 'Shop New Arrivals', line, art: heroPiece.art || this.lineImage(line || 'Tabby') });
-            this.sdk.listen.rendered('chero', hero.contentId, document.getElementById('hero'));
-        } else if (!document.getElementById('hero-content').innerHTML.trim()) {
-            this.renderHero(this.heroFallback());   // no decision at all: the page's default, painted once
+                cta: line ? `Shop the ${line}` : 'Shop New Arrivals', line, art: heroPiece.art || this.lineImage(line || 'Tabby') }, () => {
+                if (this._engineHero !== hero) return;
+                this._sdkHeroOwned = true;
+                this._paintedEngineHero = hero;
+                this.sdk.listen.rendered('chero', hero.contentId, document.getElementById('hero'));
+            }, hero.contentId);
+        } else if ((!slot || slot === 'chero') && (!hero || this.contentById)) {
+            const el = document.getElementById('hero-content');
+            this._paintedEngineHero = null;
+            if (this._sdkHeroOwned || !el.innerHTML.trim()) {
+                this.renderHero(this.heroFallback());   // restore only content the SDK actually replaced
+            } else if (this._heroOnPaint) {
+                this._heroPaintRevision = (this._heroPaintRevision || 0) + 1;
+                this._heroOnPaint = undefined;
+                if (this._heroPaintedKey === undefined) delete el.dataset.title; else el.dataset.title = this._heroPaintedKey;
+                el.classList.remove('fading');
+            }
         }
-        const story = this._engineStory, storyPiece = story ? this.contentById.get(story.contentId) : null;
-        if (storyPiece) {
-            this.renderStory({ eyebrow: this.whyOf(story), title: storyPiece.title, text: storyPiece.excerpt || storyPiece.subtitle || '', art: storyPiece.art });
-            this.sdk.listen.rendered('story', story.contentId, document.getElementById('story'));
-        } else if (!document.getElementById('story-card').innerHTML.trim()) {
-            this.renderStory(this.storyForStage('early'));
+        const story = this._engineStory, storyPiece = story && this.contentById ? this.contentById.get(story.contentId) : null;
+        if ((!slot || slot === 'story') && storyPiece) {
+            this.renderStory({ eyebrow: this.whyOf(story), title: storyPiece.title, text: storyPiece.excerpt || storyPiece.subtitle || '', art: storyPiece.art }, () => {
+                if (this._engineStory !== story) return;
+                this._sdkStoryOwned = true;
+                this.sdk.listen.rendered('story', story.contentId, document.getElementById('story'));
+            }, story.contentId);
+        } else if ((!slot || slot === 'story') && (!story || this.contentById)) {
+            const card = document.getElementById('story-card');
+            if (this._sdkStoryOwned || !card.innerHTML.trim()) {
+                this.renderStory(this.storyForStage('early'));
+            } else if (this._storyOnPaint) {
+                this._storyPaintRevision = (this._storyPaintRevision || 0) + 1;
+                this._storyOnPaint = undefined;
+                if (this._storyPaintedKey === undefined) delete card.dataset.title; else card.dataset.title = this._storyPaintedKey;
+                card.classList.remove('fading');
+            }
         }
     }
     /* The receipt's top driver, in words, stable per piece so a repeat pick does not re-animate. */
@@ -342,7 +366,7 @@ class CoachStorefront {
     /* The hero's button: a content click on the piece the engine served (the reward the slot learns
        against), then the page. In the page's own transport there is no served piece, only the page. */
     heroCta() {
-        const d = this._engineHero;
+        const d = this._paintedEngineHero;
         if (this.sdk && d) {
             this.eventCount++;
             const t0 = performance.now();
@@ -1224,10 +1248,37 @@ class CoachStorefront {
 
     /* Fire an experiment event to BOTH our demo stream (Engine) and Optimizely's metric collector. */
     trackXsurf(eventKey) {
-        const exp = this._activeExperiment || {};
-        const tags = { experiment: exp.experimentKey || (this._xsurfActive && this._xsurfActive.experimentKey) || '', variant: (this._xsurfActive && this._xsurfActive.creative && this._xsurfActive.creative.key) || '' };
-        try { this.sendAction(eventKey, tags); } catch (e) {}
-        try { fetch('/optimizely/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: this.anonId, eventKey, userAttributes: {}, eventTags: tags }) }); } catch (e) {}
+        const core = this.sdk && this.sdk.core;
+        // Temporary containment: the legacy transport has no owned metric lane.
+        this._xsurfMetric = { tracked: false, status: core ? 'skipped' : 'unavailable', reason: core ? 'capture_not_admitted' : 'owned_metric_unavailable' };
+        if (!core) {
+            // Keep the separate legacy engine operation, without collecting metric tags.
+            try { void Promise.resolve(this.sendAction(eventKey, {})).catch(() => {}); } catch (e) {}
+            return this._xsurfMetric;
+        }
+        core.capture(() => {
+            const generation = core.generation;
+            if (!this.sdk || this.sdk.core !== core || !core.isCurrent(generation) || !core.trackingAllowed) return;
+            const exp = this._activeExperiment || {};
+            const tags = { experiment: exp.experimentKey || (this._xsurfActive && this._xsurfActive.experimentKey) || '', variant: (this._xsurfActive && this._xsurfActive.creative && this._xsurfActive.creative.key) || '' };
+            const url = core.url('/optimizely/track');
+            const headers = core.headers({ 'Content-Type': 'application/json' });
+            const body = JSON.stringify({ userId: core.visitorId, eventKey, userAttributes: {}, eventTags: tags });
+            if (!this.sdk || this.sdk.core !== core || !core.isCurrent(generation) || !core.trackingAllowed) return;
+            // Initiate transport in this synchronous capture callback; no second readiness await.
+            try {
+                this._xsurfMetric = { tracked: false, status: 'pending' };
+                void core.host.fetch(url, { method: 'POST', headers, credentials: 'include', body }).then(async (response) => {
+                    const result = await response.json();
+                    if (this.sdk && this.sdk.core === core && core.isCurrent(generation) && core.trackingAllowed) {
+                        this._xsurfMetric = response.ok ? result : { tracked: false, status: 'unavailable', reason: 'metric_request_failed' };
+                    }
+                }).catch(() => { if (this.sdk && this.sdk.core === core && core.isCurrent(generation) && core.trackingAllowed) this._xsurfMetric = { tracked: false, status: 'unavailable', reason: 'metric_request_failed' }; });
+            } catch (e) { if (this.sdk && this.sdk.core === core && core.isCurrent(generation) && core.trackingAllowed) this._xsurfMetric = { tracked: false, status: 'unavailable', reason: 'metric_request_failed' }; }
+            if (!this.sdk || this.sdk.core !== core || !core.isCurrent(generation) || !core.trackingAllowed) return;
+            try { void Promise.resolve(this.sendAction(eventKey, tags)).catch(() => {}); } catch (e) {}
+        });
+        return this._xsurfMetric;
     }
 
     clearForcedExperiment() {
@@ -1345,22 +1396,34 @@ class CoachStorefront {
         return p ? p.image_url : null;
     }
 
-    renderHero(content) {
+    renderHero(content, onPaint, pieceId) {
         const el = document.getElementById('hero-content');
         const art = document.getElementById('hero-art');
+        const _hkey = pieceId === undefined ? (content.title || '') + '||' + (content.eyebrow || '') : JSON.stringify([pieceId, content]);
+        this._heroOnPaint = onPaint;
+        if (el.dataset.title === _hkey) {
+            if (this._heroPaintedKey === _hkey && onPaint) onPaint();
+            return;
+        }
+        if (this._heroPaintRevision === undefined) this._heroPaintedKey = el.dataset.title;
+        const revision = this._heroPaintRevision = (this._heroPaintRevision || 0) + 1;
         const fill = () => {
+            if (revision !== this._heroPaintRevision) return;
             el.innerHTML = `
                 <div class="hero-eyebrow">${content.eyebrow}</div>
                 <h1 class="hero-title">${content.title}</h1>
                 <p class="hero-sub">${content.sub}</p>
                 <button class="hero-cta" onclick="store.heroCta()">${content.cta}</button>`;
             if (art) art.style.backgroundImage = content.art ? `url("${content.art}")` : 'none';
+            el.classList.remove('fading');
+            this._heroPaintedKey = _hkey;
+            this._sdkHeroOwned = false;
+            this._paintedEngineHero = null;
             this.renderMarkers();   // re-assert hero marker after content swap
+            if (revision === this._heroPaintRevision && this._heroOnPaint) this._heroOnPaint();
         };
         // Key the no-op short-circuit on title AND eyebrow — the eyebrow carries the geo-cohort grain + N,
         // so a force-geo switch with the same headline but a different cohort still re-renders (no stale grain).
-        const _hkey = (content.title || '') + '||' + (content.eyebrow || '');
-        if (el.dataset.title === _hkey) return;
         const first = !el.innerHTML.trim();
         el.dataset.title = _hkey;
         if (first) { fill(); return; }
@@ -1370,7 +1433,7 @@ class CoachStorefront {
             try { document.startViewTransition(() => fill()); return; } catch (e) { /* fall through to fade */ }
         }
         el.classList.add('fading');
-        setTimeout(() => { fill(); el.classList.remove('fading'); }, 320);
+        setTimeout(() => { if (revision !== this._heroPaintRevision) return; fill(); if (revision === this._heroPaintRevision) el.classList.remove('fading'); }, 320);
     }
 
     /* ════════════════════════════════════════════════════════════════════════
@@ -1694,9 +1757,18 @@ class CoachStorefront {
         if (stage === 'mid') return { eyebrow: 'Coachtopia', title: 'Crafted to last, designed to circle back', text: 'Our circular sub-brand, made with recycled and repurposed materials.', art: this.lineImage('Brooklyn') };
         return { eyebrow: 'Heritage', title: 'Since 1941', text: 'Six generations of leather craft, from a Manhattan loft to your shoulder.', art: this.lineImage('Tabby') };
     }
-    renderStory(s) {
+    renderStory(s, onPaint, pieceId) {
         const card = document.getElementById('story-card');
+        const key = pieceId === undefined ? s.title : JSON.stringify([pieceId, s]);
+        this._storyOnPaint = onPaint;
+        if (card.dataset.title === key) {
+            if (this._storyPaintedKey === key && onPaint) onPaint();
+            return;
+        }
+        if (this._storyPaintRevision === undefined) this._storyPaintedKey = card.dataset.title;
+        const revision = this._storyPaintRevision = (this._storyPaintRevision || 0) + 1;
         const fill = () => {
+            if (revision !== this._storyPaintRevision) return;
             card.innerHTML = `
                 <div class="story-art" style="${s.art ? `background-image:url('${s.art}')` : ''}"></div>
                 <div class="story-body">
@@ -1704,12 +1776,15 @@ class CoachStorefront {
                     <h3 class="story-title">${s.title}</h3>
                     <p class="story-text">${s.text}</p>
                 </div>`;
+            this._storyPaintedKey = key;
+            card.classList.remove('fading');
+            this._sdkStoryOwned = false;
+            if (this._storyOnPaint) this._storyOnPaint();
         };
-        if (card.dataset.title === s.title) return;
-        card.dataset.title = s.title;
+        card.dataset.title = key;
         if (!card.innerHTML.trim()) { fill(); return; }
         card.classList.add('fading');
-        setTimeout(() => { fill(); card.classList.remove('fading'); }, 280);
+        setTimeout(() => { if (revision !== this._storyPaintRevision) return; fill(); if (revision === this._storyPaintRevision) card.classList.remove('fading'); }, 280);
     }
     renderCategoryRail() {
         const rail = document.getElementById('category-rail');

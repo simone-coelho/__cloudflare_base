@@ -1,3 +1,4 @@
+/* eslint-env browser */
 // Meridian — the Opticon surface.
 //
 // RULE ONE, inherited from the First National Bank demo: no visual beat ever
@@ -1017,11 +1018,11 @@ $('btn-pinmerch').onclick = () => {
 TIPS['btn-pinmerch'] = ['Pins the merchandiser banner at position 3 — tenant config is slot → position, and the engine ranks around the pin. Press again to send it back to #1.', 'the sections re-order around the pinned strip, one at a time'];
 
 function connect() {
-  if (S.ws) try { S.ws.close(); } catch {}
+  if (S.ws) try { S.ws.close(); } catch { /* Already closed: replace this demo wire. */ }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}${API}/ws?visitorId=${VID}&vertical=${S.vertical}`);
   const epoch = RESET_EPOCH;
-  ws.onmessage = (e) => { if (epoch !== RESET_EPOCH) return; try { onFrame(JSON.parse(e.data)); } catch {} };
+  ws.onmessage = (e) => { if (epoch !== RESET_EPOCH) return; try { onFrame(JSON.parse(e.data)); } catch { /* Ignore malformed demo frames; presenter time remains authoritative. */ } };
   ws.onclose = () => setTimeout(connect, 2500);
   S.ws = ws;
 }
@@ -1361,24 +1362,8 @@ function onFrame(f) {
   // re-introduced exactly the "changing shit while I talk" this clock removes.
   // The wire stays real (actions, receipts, the returning-visitor snapshot);
   // what the room WATCHES is composed here, on presenter time.
-  return;
-  if (f.seq <= S.seq && f.source !== 'snapshot') return;
-  S.seq = f.seq;
-  // The server is authoritative, with one exception that is a race rather than
-  // a disagreement: a snapshot frame composed before our just-posted events
-  // reached the object carries an EMPTY vector. Adopting it erases signal the
-  // visitor genuinely produced — on the vertical flip it wiped the cold-start
-  // prior and dropped the hero back to the generic welcome. An empty state is
-  // never more informed than a populated one, so it does not get to win.
-  const incomingDims = Object.keys(f.state?.dims ?? {}).length;
-  const localDims = Object.keys(S.reflex?.dims ?? {}).length;
-  if (f.state && !(incomingDims === 0 && localDims > 0)) S.reflex = f.state;
-  const before = new Set(S.audiences);
-  S.audiences = new Set(f.affinity.audiences);
-  renderChips(f.changes.entered.filter((a) => !before.has(a)),
-              f.changes.exited.filter((a) => before.has(a)));
-  if (f.explain?.length) say(f.explain[0]);
-  recompose();
+  // No server-frame adoption: retaining unreachable adoption code obscured
+  // this existing presenter-time contract.
 }
 
 // ── Audience priority — the merchandiser's order ────────────────────────────
@@ -1488,7 +1473,8 @@ function forecast(action, record, touchesOverride) {
     }
   }
   moves.sort((x, y) => (y.to - y.from) - (x.to - x.from));
-  return { entered: res.changes.entered, exited: res.changes.exited, moves,
+  return { entered: res.changes.entered, exited: res.changes.exited, moves, nextDecisions,
+           picksNow: rowNow, picksNext: rowNext, heroNextTitle: heroNext && byId(heroNext)?.name,
            heroChanges: heroNow !== heroNext, heroNext: heroNext && byId(heroNext)?.name,
            climbs, blockChanges: blockNow !== blockNext, blockNext: blockNext && byId(blockNext)?.title,
            completion: nextDecisions.some((d) => d.strategy === 'completion') && !S.decisions.some((d) => d.strategy === 'completion') };
@@ -1522,6 +1508,9 @@ function predictThenProve(action, record, touchesOverride, label) {
   $('pd-will').innerHTML = will.map((w) => `<li>${w}</li>`).join('');
   // EVERY decision, every beat — not only the beats that rearrange. This is the
   // answer to "why did that happen", and it must be there when it is asked.
+  const rows = decisionRows(f);
+  // A single-act forecast computes item decisions, not a layout simulation.
+  const map = '';
   $('pd-decisions').innerHTML = decisionsHtml(rows);
   $('pd-why-map').innerHTML = map;
   $('pd-why').hidden = !rows.length && !map;
@@ -1911,7 +1900,7 @@ async function scrollTargetIntoView(el) {
   const r = el.getBoundingClientRect();
   const inView = r.top >= 70 && r.bottom <= innerHeight - 12;
   if (inView) return;
-  try { el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); } catch (_) {}
+  try { el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); } catch (_) { /* Optional scrolling cannot prevent the presenter action. */ }
   await sleep(560);
 }
 
@@ -2113,6 +2102,12 @@ const DIM_SHAPE = Object.fromEntries(Object.entries(SHAPE_DIM).map(([sh, d]) => 
 const SLOTS_SCOPE = 'meridian';           // the demo tunes its own scope, never Coach's live slots
 const SLOTS_URL = `/content/slots?scope=${SLOTS_SCOPE}`;
 let SLOTS_DOC = null;                     // the stored SlotCatalog, once read
+let SLOTS_PUBLICATION = null, SLOTS_PENDING = JSON.parse(sessionStorage.getItem('meridian-slots-pending-v1') || 'null');
+function storeSlotsPending(next) {
+  const raw = JSON.stringify(next);
+  if (new TextEncoder().encode(raw).length > 2 * 1024 * 1024) throw new Error('Pending publication exceeds local capacity');
+  sessionStorage.setItem('meridian-slots-pending-v1', raw); SLOTS_PENDING = next;
+}
 let SLOTS_REV = 0;                        // its revision; 0 = compiled default
 // The write is the product's own authenticated path, so the dial tunes AS THE
 // MERCHANDISER: the same operator token the tuning page (/tuning.html) keeps in
@@ -2128,10 +2123,13 @@ const baseVersion = (v) => String(v || '').replace(/\+(tuned|r\d+)$/, '');
 /** Read the demo scope's stored slot weights, if any, and overlay the hero. */
 async function loadSlotsFromStore() {
   try {
-    const r = await fetch(SLOTS_URL, { credentials: 'omit' }).then((x) => x.json());
+    const tok = operatorToken();
+    if (!tok) return; // No operator session: keep this demo's local defaults.
+    const r = await fetch(SLOTS_URL, { credentials: 'omit', headers: { Authorization: `Bearer ${tok}`, 'X-Tenant': SLOTS_SCOPE } }).then(async x => x.ok ? x.json() : null);
     if (!r || !r.document) return;
     SLOTS_DOC = r.document;
     SLOTS_REV = r.revision || 0;
+    SLOTS_PUBLICATION = r.publication && /^[0-9a-f]{64}$/.test(r.publication.digest) ? { ...r.publication } : null;
     const hero = (r.document.pages?.home || []).find((sl) => sl.slot === 'hero');
     if (r.source === 'stored' && hero?.weights) {
       for (const [dim, w] of Object.entries(hero.weights)) {
@@ -2152,40 +2150,64 @@ async function loadSlotsFromStore() {
  * stamp the version the receipts carry with THAT revision. One write per
  * settled slider, not per pixel of drag.
  */
+function publicationFoot(message) {
+  const foot = $('dial-foot'); if (!foot) return;
+  foot.textContent = message;
+  if (!SLOTS_PENDING) return;
+  for (const [label, action] of [['Check original status', 'status'], ['Recover original', 'recover'], ['Retry exact original', 'retry']]) {
+    const button = document.createElement('button'); button.textContent = label;
+    button.addEventListener('click', () => continueSlotsPublication(action)); foot.appendChild(button);
+  }
+  if (SLOTS_PENDING.conflicted) {
+    const button = document.createElement('button'); button.textContent = 'Discard conflicted draft';
+    button.addEventListener('click', () => {
+      if (confirm('Discard this definitively conflicted local draft? Reload the authoritative document before publishing again.')) {
+        try { storeSlotsPending(null); SLOTS_PUBLICATION = null; publicationFoot('Conflicted draft discarded; reload before publishing.'); }
+        catch { publicationFoot('Local completion unavailable; original draft retained.'); }
+      }
+    }); foot.appendChild(button);
+  }
+}
+async function continueSlotsPublication(action = 'retry') {
+  const pending = SLOTS_PENDING; if (!pending) return;
+  const tok = operatorToken();
+  if (!tok) { publicationFoot('Sign in to continue the retained publication. Local tuning is unchanged.'); return; }
+  const headers = { ...pending.headers, Authorization: 'Bearer ' + tok, 'X-Tenant': SLOTS_SCOPE };
+  const statusUrl = '/content/catalog/publication' + (action === 'recover' ? '/recover' : '') + '?scope=' + SLOTS_SCOPE + '&kind=slots';
+  try {
+    const response = await fetch(action === 'retry' ? SLOTS_URL : statusUrl, { credentials: 'omit',
+      method: action === 'status' ? 'GET' : action === 'retry' ? 'PUT' : 'POST', headers,
+      ...(action === 'status' ? {} : { body: action === 'retry' ? pending.body : '{}' }) });
+    const receipt = await response.json();
+    if (action === 'status') {
+      if (response.status === 409 && receipt.code === 'publication_conflict') storeSlotsPending({ ...pending, conflicted: true });
+      publicationFoot('Original publication ' + (receipt.state || response.status) + '. Local tuning is not a publication receipt.'); return;
+    }
+    if (!response.ok || receipt.ok !== true || !receipt.document || !receipt.publication) {
+      publicationFoot('Publication ' + response.status + ': ' + (receipt.error || 'acknowledgement unknown') + '. Exact original intent retained.'); return;
+    }
+    storeSlotsPending(null);
+    SLOTS_DOC = receipt.document; SLOTS_REV = receipt.revision; SLOTS_PUBLICATION = receipt.publication;
+    S.config = { ...S.config, version: baseVersion(S.config.version) + '+r' + SLOTS_REV };
+    const badge = $('cfgv'); if (badge) badge.textContent = S.config.version;
+    publicationFoot('Stored as revision ' + SLOTS_REV + '; serving refreshes within the documented 30-second bound.');
+  } catch { publicationFoot('Publication acknowledgement unknown; exact original intent retained. Local tuning is not remotely committed.'); }
+}
 function persistHeroToStore(note) {
   clearTimeout(tuneTimer);
   tuneTimer = setTimeout(async () => {
-    const doc = JSON.parse(JSON.stringify(SLOTS_DOC || { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } }));
+    if (SLOTS_PENDING) { publicationFoot('Resolve the earlier original publication before publishing another slider change.'); return; }
+    if (!SLOTS_DOC || !SLOTS_REV || !SLOTS_PUBLICATION) { publicationFoot('No authoritative loaded slot document. Tuning remains local; reload after signing in before publishing.'); return; }
+    const doc = JSON.parse(JSON.stringify(SLOTS_DOC));
     doc.pages = doc.pages || {}; doc.pages.home = doc.pages.home || [];
-    let hero = doc.pages.home.find((sl) => sl.slot === 'hero');
+    let hero = doc.pages.home.find(sl => sl.slot === 'hero');
     if (!hero) { hero = { slot: 'hero', take: 1, weights: {} }; doc.pages.home.unshift(hero); }
-    hero.weights = Object.fromEntries(
-      Object.entries(SLOT_STRATEGIES.hero).filter(([sh]) => SHAPE_DIM[sh]).map(([sh, w]) => [SHAPE_DIM[sh], w]),
-    );
-    try {
-      const tok = operatorToken();
-      const r = await fetch(SLOTS_URL, {
-        method: 'PUT', credentials: 'omit',
-        headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
-        body: JSON.stringify({ document: doc, note }),
-      }).then((x) => x.json());
-      if (r && r.ok) {
-        SLOTS_DOC = r.document; SLOTS_REV = r.revision;
-        S.config = { ...S.config, version: `${baseVersion(S.config.version)}+r${r.revision}` };
-        const badge = $('cfgv'); if (badge) badge.textContent = S.config.version;
-        const foot = $('dial-foot');
-        if (foot && !/ENFORCED|Nothing to weigh/.test(foot.textContent)) {
-          foot.textContent = foot.textContent.replace(/·\s*[^·]*$/, `· stored as revision ${r.revision} · ${S.config.version}`);
-        }
-      } else {
-        const foot = $('dial-foot');
-        if (foot) foot.textContent += operatorToken()
-          ? ' · (store refused the write; tuning is local for this run)'
-          : ' · (no operator token in this browser; tuning is local for this run)';
-      }
-    } catch {
-      const foot = $('dial-foot'); if (foot) foot.textContent += ' · (store unreachable; tuning is local for this run)';
-    }
+    hero.weights = Object.fromEntries(Object.entries(SLOT_STRATEGIES.hero).filter(([sh]) => SHAPE_DIM[sh]).map(([sh, w]) => [SHAPE_DIM[sh], w]));
+    try { storeSlotsPending({ body: JSON.stringify({ document: doc, note }), headers: { 'Content-Type': 'application/json',
+      'If-Match': '"' + SLOTS_REV + '/' + SLOTS_PUBLICATION.revision + '/' + SLOTS_PUBLICATION.digest + '"',
+      'Idempotency-Key': SLOTS_REV + ':' + crypto.randomUUID() } }); }
+    catch { publicationFoot('Could not retain publication intent; no remote write sent.'); return; }
+    await continueSlotsPublication();
   }, 350);
 }
 // SLOT_STRATEGIES is a module-level table the dial MUTATES, so a new visitor
@@ -4013,7 +4035,7 @@ const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) =>
 // the line it was hiding behind. Only the failing step is allowed the alarm
 // colour, because if everything is highlighted nothing is.
 
-let RAD = { cohort: 'all', data: null, baseline: null, launched: null, recovered: null };
+const RAD = { cohort: 'all', data: null, baseline: null, launched: null, recovered: null };
 
 const cohortParam = (c) => (Array.isArray(c) ? c.map((k) => `${k.dim}:${k.value}`).join(',') : String(c || 'all'));
 const usd = (n) => '$' + Math.round(n).toLocaleString('en-US');

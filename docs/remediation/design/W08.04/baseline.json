@@ -1,0 +1,109 @@
+{
+  "at": "2026-09-10T22:33:57Z",
+  "entry_board": {
+    "check": {
+      "session_id": 87088,
+      "exit_status": 0,
+      "drained": true
+    },
+    "status": {
+      "session_id": 80804,
+      "exit_status": 0,
+      "drained": true
+    },
+    "journal": 820,
+    "notes": 9092
+  },
+  "case": "Source-confirmed npm script directly builds/deploys, bypassing existing explicit target guard/checks. No deployment executed.",
+  "owned": [
+    {
+      "path": "package.json",
+      "absent": false,
+      "sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c",
+      "content_gzip_base64": "H4sIAAAAAAAAA6VVTY/bNhC9+1cQe0guS1ry1zo+BUh76KG9NEAPRQSw1NjimiJZkvLHBvnvBUlRlBwHBtKTJM57j8MZat7XGUJPkrbwtENPTKiu3gtqAEN9AKwFdXtl2qdnjzqBsVxJDyxJQYq4WoNlhmvXRz6pVhtoQFp+AvRpEER/KXMEY1HSRGfuGuQMZUcuD89Ig7FKUsHfqNd6RlTWCC4aDG9BurAYd2wpD1tZw+Zc1nAhzsZIzMQ+7dDXGUIhuZNHSt0i00n0T8dFvWvB8JpTid69Q9OIrY9+8WyoPAgwyNOfk5IW6vr/xIJCrxcwXg5Yo9D7P1RkIQP/dtxAjfbKoM9XDX+GM8VqfV/O9xO9HbeCyiArVQ2or8c8BHEMkvbVTkm2Pv6AYevjGO4oFx45HCks9EHfU+p8WBtwjoNBGJ8Nd4BIwgguAwKsf0PWMIQxXBwiziKMW3rBZ2oklweL1sVy2PeqgTXAQprOepJUv7bc+fqGb+215v4giQI27HTi/s13ZRzZnaljTY6nGOPjBoccR20d0pgsjuhKO3EdShm+sNQXvOcXwl5tXJmAcQNCP2IgHGET4uhnfMBNyJt9qXDNQ3YPm1AtuO5xzgGFa8XsDfsq2WPyVTJkHXXdHTY2sDdgHycfVBJ4IkMlFVfHmX2oMSCRg9aPLrjJCKTj7or3gh4eq0VwlkKedlcvD76fUM3ku9q0qzlIBj+hnKjTAZJm4A+mSAqPR4m3CGosfEdJYNwjqPC08MfdhXGrRPCGoD5D6FtwgiNcz8rU/oh/9/929rZznJ0pl2B1TLW6c1yO28Fb/gb5j01elb5vHMtv/iVsTjvXKOOPFm1JcAYynvX33z4n2zz9AhpkDZJxGFnWx5zovE8U+8kTulWtyKJYrIptsen91zNCeO7rEzCLgpQrUq5u4gYoCzOxKj+QBSlf7sVxrdqMWU4hofY4Du95fGAtukO04+qFlNvbrCYU7Ttu7mDBDnZYFWSxJWWOJM+otmT9kimvNmW6WJEyZ5rMJ4SWZEkmLhLzCbE1WZOhRL0NhIOTUWmT0/W1L4s1KfIlq+83kHJvnPODUgcBfR4F2eZ+9IDcEB9flLnaoytAOWZN9NWqIFuyuQfSndbgoM+zJOWoDfkez/Mr7j2/WpNlrgI9pHlTFaTckMUQCL5YbUKaQ28aJVVfmDVZD41R8aZXa7LJxb+5fC+T9emlG2Jvqu7lV2QZqj77NvsPc6Eo3rAKAAA="
+    }
+  ],
+  "pins": [
+    {
+      "path": "package-lock.json",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+      "role": "source"
+    },
+    {
+      "path": "scripts/deploy.sh",
+      "sha256": "d5f6bd176028afa02ce4da8661ec2a289d3257eed63dce9a955606cc8d74b21f",
+      "role": "source"
+    },
+    {
+      "path": "scripts/provision-stamp.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/provision-staging.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+      "role": "source"
+    },
+    {
+      "path": "docs/deployment/01-deploy.md",
+      "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee",
+      "role": "source"
+    },
+    {
+      "path": "package.json",
+      "sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c",
+      "role": "output"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+      "role": "source"
+    },
+    {
+      "path": "node_modules/wrangler/package.json",
+      "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+      "role": "source"
+    },
+    {
+      "path": "node_modules/wrangler/wrangler-dist/cli.js",
+      "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889",
+      "role": "source"
+    }
+  ],
+  "npm_source_inspection": {
+    "at": "2026-09-10T22:33:57Z",
+    "version": "11.5.2",
+    "meaning": "Observed standard npm main-event argument forwarding and shell escaping source, read only; external installed paths are selected observations, not exhaustive deployment runtime dependencies.",
+    "files": [
+      {
+        "path": "/home/simonecoelho/.nvm/versions/node/v22.15.0/lib/node_modules/npm/package.json",
+        "sha256": "7f30d982d82e238f762915c86a33d462cb3a7c947732ba584b995cecb182bf3c"
+      },
+      {
+        "path": "/home/simonecoelho/.nvm/versions/node/v22.15.0/lib/node_modules/npm/lib/commands/run.js",
+        "sha256": "b136729fb57362985b6ebf7e5474a712555bbb7a64127841ccd14f4e1a51d6d5"
+      },
+      {
+        "path": "/home/simonecoelho/.nvm/versions/node/v22.15.0/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/run-script-pkg.js",
+        "sha256": "94dea9ff50028869f4f88c4ec5e520d56fa7c2f6cc03422a9f06c44d291a0c34"
+      },
+      {
+        "path": "/home/simonecoelho/.nvm/versions/node/v22.15.0/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/make-spawn-args.js",
+        "sha256": "d1647624f0ce227e5cff1c4570f3e754e0eaaf08041db354102ec2bdbbd721df"
+      },
+      {
+        "path": "/home/simonecoelho/.nvm/versions/node/v22.15.0/lib/node_modules/npm/node_modules/@npmcli/promise-spawn/lib/index.js",
+        "sha256": "2dbfa0dcaae6f1d787008c53b8dbac18bec098f6977a88a7d415816a77fc7678"
+      },
+      {
+        "path": "/home/simonecoelho/.nvm/versions/node/v22.15.0/lib/node_modules/npm/node_modules/@npmcli/promise-spawn/lib/escape.js",
+        "sha256": "51a4d9dd16035bb7167ade5a8c636465ac168e3cd74b528f0257cc26c679766d"
+      }
+    ]
+  }
+}

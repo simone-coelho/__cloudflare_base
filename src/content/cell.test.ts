@@ -30,6 +30,8 @@ describe('cell', () => {
   it('never guesses a channel', () => {
     const c = cellFor({ cfg, cf: { country: 'GB' }, snap: null });
     expect(c).toEqual({ channel: 'unknown', visit_bucket: 'unknown', region: 'GB', affinity: null, stage: 'unknown' });   // stage: CW29
-    expect(cellFor({ cfg, channel: ' Paid Social ' }).channel).toBe('paid social');
+    expect(cellFor({ cfg, channel: ' Paid Social ' }).channel).toBe('unknown');
+    expect(cellFor({ cfg, channel: ' Paid_Social ' }).channel).toBe('paid_social');
+    expect(cellFor({ cfg, channel: [] as unknown as string }).channel).toBe('unknown');
   });
 });

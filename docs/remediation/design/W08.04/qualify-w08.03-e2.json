@@ -1,0 +1,208 @@
+{
+  "before": {
+    "id": "W08.03-E2",
+    "task_id": "W08.03",
+    "check_id": "W08.03-K2",
+    "criterion_ids": [
+      "W08.03-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0803-reviewer",
+    "run_id": "/root/w0803_review",
+    "file": {
+      "path": "docs/remediation/evidence/W08.03/review.json",
+      "sha256": "47c5a4d1fbccdf342a3e80337475d676a9cb2f3e890c922a32b4eda65fcc556e"
+    },
+    "at": "2026-09-10T18:21:50.941Z",
+    "limitations": "Bounded source/syntax and isolated builtin-guard proof only: deployment body, npm and Wrangler never executed. Exact selected token and explicit empty env establish local script intent under inspected installed Wrangler semantics, not account/resource/config ownership or deployed target attestation. Caller shell startup/cwd/PATH/toolchain, configuration redirection, readiness/secret values, real URL, other deploy entrypoints and full artifact/migration/release/rollback workflow remain outside scope. Existing retirements/bootstrap/auth preserved; no engine/scoring/learning/latency/lift change or full W08/finding/gate/customer/release acceptance. D01/D07/D08 and external authority remain pending; no deploy/cloud/credentials/customer-data/commit/push/cleanup operations.",
+    "command": "Independent frozen W08.03 exact source/deltas/pins/full worker outputs and exact K1 once; record review.json.",
+    "runtime": "Separate Astra/xhigh actual-artifact inspection and same source/syntax/builtin-fragment check.",
+    "workload": "All C1-C3; reuse worker scoped whitespace, no target body/CLI or broader suite.",
+    "result": "pass",
+    "artifact_digest": "3c328928c605b586ee03abc42169f3df960d61bbcc0471475a364cdcae1e7117",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "3c02b427f334928af227ad95e1abdd438a7ced6e383556047281706af085e01b",
+      "configuration": "W08.03 exact early deployment argument guard and two explicit empty default env arguments. Whole script syntax/source suffix checked; only verified builtin guard executed in isolated shell. One source file, selected protected/tool pins and exact baseline/deltas; no deployment body, Wrangler or npm execution. No complete release/readiness/customer/engine-performance claim.",
+      "files": [
+        {
+          "path": "scripts/deploy.sh",
+          "sha256": "d5f6bd176028afa02ce4da8661ec2a289d3257eed63dce9a955606cc8d74b21f",
+          "role": "output"
+        },
+        {
+          "path": "scripts/provision-stamp.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-staging.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/setup.sh",
+          "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+          "role": "source"
+        },
+        {
+          "path": "docs/deployment/01-deploy.md",
+          "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/package.json",
+          "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/wrangler-dist/cli.js",
+          "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.03/worker.json",
+          "sha256": "ec26c30ca2434f3c8090692448382409fce221eb2ab9b5ad390de16af714a581",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W08.03/plan.md",
+          "sha256": "1102b968d8e247a1eb06813bc673dcca8fa92be7592c12d6f30150482bc8400b",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.03/baseline.json",
+          "sha256": "8e5888113a220e52d889d9d0bea7acb0d4ae05939914184221668b27d4963474",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.03/source-freeze.json",
+          "sha256": "1159d9b3abd925a42d4832d59b187d12d5a9668eb4869ab9e86d3b999d14f868",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.03/source-deltas.json",
+          "sha256": "675ebd1a44f151eb51a027766f1bfdbc94882ca27d85e8ee3b4bec693343b22e",
+          "role": "configuration"
+        }
+      ],
+      "digest": "3c328928c605b586ee03abc42169f3df960d61bbcc0471475a364cdcae1e7117"
+    }
+  },
+  "after": {
+    "id": "W08.03-E2",
+    "task_id": "W08.03",
+    "check_id": "W08.03-K2",
+    "criterion_ids": [
+      "W08.03-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0803-reviewer",
+    "run_id": "/root/w0803_review",
+    "file": {
+      "path": "docs/remediation/evidence/W08.03/review.json",
+      "sha256": "47c5a4d1fbccdf342a3e80337475d676a9cb2f3e890c922a32b4eda65fcc556e"
+    },
+    "at": "2026-09-10T18:21:50.941Z",
+    "limitations": "Bounded source/syntax and isolated builtin-guard proof only: deployment body, npm and Wrangler never executed. Exact selected token and explicit empty env establish local script intent under inspected installed Wrangler semantics, not account/resource/config ownership or deployed target attestation. Caller shell startup/cwd/PATH/toolchain, configuration redirection, readiness/secret values, real URL, other deploy entrypoints and full artifact/migration/release/rollback workflow remain outside scope. Existing retirements/bootstrap/auth preserved; no engine/scoring/learning/latency/lift change or full W08/finding/gate/customer/release acceptance. D01/D07/D08 and external authority remain pending; no deploy/cloud/credentials/customer-data/commit/push/cleanup operations.",
+    "command": "Independent frozen W08.03 exact source/deltas/pins/full worker outputs and exact K1 once; record review.json.",
+    "runtime": "Separate Astra/xhigh actual-artifact inspection and same source/syntax/builtin-fragment check.",
+    "workload": "All C1-C3; reuse worker scoped whitespace, no target body/CLI or broader suite.",
+    "result": "pass",
+    "artifact_digest": "3c328928c605b586ee03abc42169f3df960d61bbcc0471475a364cdcae1e7117",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "3c02b427f334928af227ad95e1abdd438a7ced6e383556047281706af085e01b",
+      "configuration": "W08.03 exact early deployment argument guard and two explicit empty default env arguments. Whole script syntax/source suffix checked; only verified builtin guard executed in isolated shell. One source file, selected protected/tool pins and exact baseline/deltas; no deployment body, Wrangler or npm execution. No complete release/readiness/customer/engine-performance claim.",
+      "files": [
+        {
+          "path": "scripts/deploy.sh",
+          "sha256": "d5f6bd176028afa02ce4da8661ec2a289d3257eed63dce9a955606cc8d74b21f",
+          "role": "output"
+        },
+        {
+          "path": "scripts/provision-stamp.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-staging.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/setup.sh",
+          "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+          "role": "source"
+        },
+        {
+          "path": "docs/deployment/01-deploy.md",
+          "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/package.json",
+          "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/wrangler-dist/cli.js",
+          "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.03/worker.json",
+          "sha256": "ec26c30ca2434f3c8090692448382409fce221eb2ab9b5ad390de16af714a581",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W08.03/plan.md",
+          "sha256": "1102b968d8e247a1eb06813bc673dcca8fa92be7592c12d6f30150482bc8400b",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.03/baseline.json",
+          "sha256": "8e5888113a220e52d889d9d0bea7acb0d4ae05939914184221668b27d4963474",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.03/source-freeze.json",
+          "sha256": "1159d9b3abd925a42d4832d59b187d12d5a9668eb4869ab9e86d3b999d14f868",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.03/source-deltas.json",
+          "sha256": "675ebd1a44f151eb51a027766f1bfdbc94882ca27d85e8ee3b4bec693343b22e",
+          "role": "configuration"
+        }
+      ],
+      "digest": "3c328928c605b586ee03abc42169f3df960d61bbcc0471475a364cdcae1e7117"
+    }
+  }
+}

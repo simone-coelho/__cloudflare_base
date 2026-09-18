@@ -1,0 +1,16 @@
+{
+  "id": "D03-SHOPPER-AUTHORITY-DIRECTION-APPROVED-2026-09-15",
+  "at": "2026-09-15T20:47:53.155Z",
+  "kind": "bounded_user_choice",
+  "approved_by": "User in current conversation",
+  "user_selection": "Proceed with Durable Object authority",
+  "question": "Make the existing per-shopper Durable Object the single authority for shopper state, with identity, consent and session parity completed before any cutover. Proceed with this local implementation direction, without deployment or migration of existing data?",
+  "scope": "W35 local implementation toward existing per-shopper Durable Object as single shopper-state authority.",
+  "constraints": [
+    "Complete identity, consent, session/visit/channel and link/erase/SDK/sort/fatigue parity before any cutover.",
+    "Preserve customer-neutral deterministic relevance/explainability and qualify required performance on the selected artifact.",
+    "No deployment, production host toggle, existing-data migration, destructive operation, credential/customer-data/cloud operation or release acceptance.",
+    "Configuration authority/W11 and privacy/retention/scientific/customer-scope choices are not approved by this shopper-state direction."
+  ],
+  "remaining": "D03 whole production shopper/configuration authority remains pending acceptance; local shopper target direction is answered. Parity, fencing/rollback and native/customer performance evidence remain required."
+}

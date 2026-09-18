@@ -1,0 +1,117 @@
+{
+  "before": {
+    "id": "W22",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Shared logical event identity/dedup before caps; durable online/R2/fold/export reconciliation and explicit completeness. Define one attribution contract with versioned histories/horizons, not blindly identical caps. Wire persisted product-sort evidence via W14. Fault tests include ID collision/retry, late arrivals, partial writes and sink mismatch.",
+      "finding_refs": "F16/F17/F19/F22; N10/N23",
+      "sizing_owner": "S read-dedup containment → M/L complete pipeline; OL"
+    },
+    "title": "Event identity and sink reconciliation",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F16",
+      "F17",
+      "F19",
+      "F22",
+      "N10",
+      "N23"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W22",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Shared logical event identity/dedup before caps; durable online/R2/fold/export reconciliation and explicit completeness. Define one attribution contract with versioned histories/horizons, not blindly identical caps. Wire persisted product-sort evidence via W14. Fault tests include ID collision/retry, late arrivals, partial writes and sink mismatch.",
+      "finding_refs": "F16/F17/F19/F22; N10/N23",
+      "sizing_owner": "S read-dedup containment → M/L complete pipeline; OL"
+    },
+    "title": "Event identity and sink reconciliation",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F16",
+      "F17",
+      "F19",
+      "F22",
+      "N10",
+      "N23"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W22-IDENTITY",
+          "description": "Shared logical event identity/dedup before caps; this task covers loaded report inputs only."
+        },
+        {
+          "id": "W22-RECONCILIATION",
+          "description": "Durable online/R2/fold/export reconciliation and explicit completeness; open."
+        },
+        {
+          "id": "W22-ATTRIBUTION",
+          "description": "One attribution contract with versioned histories/horizons, not blindly identical caps; basis3 only partial forward compatibility."
+        },
+        {
+          "id": "W22-PRODUCT",
+          "description": "Wire persisted product-sort evidence via W14; open."
+        },
+        {
+          "id": "W22-FAULTS",
+          "description": "ID collision/retry, late arrivals, partial writes and sink mismatch fault evidence; selected read-input subset only."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W22-IDENTITY",
+          "task_id": "W22.01",
+          "task_criterion_id": "W22.01-C1"
+        },
+        {
+          "criterion_id": "W22-ATTRIBUTION",
+          "task_id": "W22.01",
+          "task_criterion_id": "W22.01-C2"
+        },
+        {
+          "criterion_id": "W22-FAULTS",
+          "task_id": "W22.01",
+          "task_criterion_id": "W22.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W22.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

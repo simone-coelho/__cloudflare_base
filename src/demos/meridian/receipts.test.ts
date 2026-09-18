@@ -12,8 +12,7 @@ import type { SectionDecision, SectionStrategy } from './types';
 class FakeD1 {
   batched: unknown[][] = [];
   prepare(sql: string) {
-    const self = this;
-    return { bind: (...args: unknown[]) => ({ sql, args, _self: self }) } as never;
+    return { bind: (...args: unknown[]) => ({ sql, args, _self: this }) } as never;
   }
   async batch(stmts: Array<{ args: unknown[] }>): Promise<unknown[]> {
     this.batched.push(...stmts.map((s) => s.args));

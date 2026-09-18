@@ -1,0 +1,142 @@
+{
+  "id": "W06.03",
+  "package_id": "W06",
+  "title": "Bounded resumable physical ledger rewrite",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Enforce the existing ledger rewrite object budget within dense days and durably resume each physical object mutation/checkpoint without skipping work or overstating progress.",
+  "read_paths": [
+    "src/ledger",
+    "src/index.ts",
+    "src/identity/erase.ts",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/ledger/erasure.ts",
+    "src/ledger/erasure.test.ts",
+    "docs/remediation/evidence/W06.03/worker.md",
+    "docs/remediation/evidence/W06.03/worker-checks.json"
+  ],
+  "non_goals": [
+    "Partial W06/F06/F18 physical-progress repair only. No shopper capability/deletion generation, stale-cookie/session/socket revocation, concurrent cross-store serialization, orphan/cache/ring/seen/D1/AE/log/external erasure, approved retention or physical SLA, customer, gate or release acceptance.",
+    "Preserve the existing configured scan horizon, inclusive erasure cutoff and active barrier. Do not invent D03 transactional authority, D06 retention/re-entry policy, automatic barrier expiry or an exhaustive-deletion claim.",
+    "One production module and one existing fixture only; the unchanged existing ledger suite is compatibility coverage. No new harness, broad suite/build, request-time scorer/SDK changes, deployment, cloud, credentials, customer data, commit/push, destructive cleanup or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W06.03-C1",
+      "description": "rewriteErasures validates a positive integer object budget, opens no more ledger objects than that budget in one invocation even when one day contains more objects, persists validated tenant/tombstone-bound within-day progress, and advances done_through only after every listed object for that day is durably accounted for.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.03-C2",
+      "description": "Each mutating object has a durable pre-mutation intent and restartable checkpoint. Definite or ambiguous mutation/checkpoint failures either reconcile exact before/after object state and apply per-visitor counters once, or fail closed on conflicting state. Missing listed objects are checkpointed honestly; retries neither skip remaining objects nor repeat credited removals.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.03-C3",
+      "description": "Existing erasure fixture proves a dense-day cap, mid-day restart, before/after ambiguous writes, accurate durable counters, tenant/visitor separation and unchanged post-cutoff rows; existing ledger suite preserves W06.02 barrier/consumer behavior. Worker exact K1 plus app noEmit/scoped diff; independent exact K1 once and frozen source/proof/import pins. No new suite or deployed/SLO claim.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.03-K1",
+      "required": true,
+      "criterion_ids": [
+        "W06.03-C1",
+        "W06.03-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual ledger erasure and unchanged consumer/writer modules with existing synthetic R2 seams. No external network.",
+      "workload": "Two existing ledger suites only; grouped dense-day cap, restart/ambiguous mutation/checkpoint, counters and barrier compatibility cases. Worker app noEmit and scoped diff; no engine latency claim.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.03-K2",
+      "required": true,
+      "criterion_ids": [
+        "W06.03-C3"
+      ],
+      "command": "Independent frozen W06.03 actual source and complete worker proof review; exact K1 once; relevant local import graph and physical pins; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review; actual module with synthetic R2 only.",
+      "workload": "C1-C3 bounded physical progress, mutation reconciliation/counters, tenant/visitor/cutoff and W06.02 compatibility; inspect compiler/scoped diff evidence without rerun. No broad/deployed qualification.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W06.02",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing persistent barrier and delayed-ingestion suppression; overlapping source/fixture proof is retained historically and qualified before edits.",
+      "rationale": "Physical progress extends the same erasure module without reaccepting or weakening the prior replay contract."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future serialized/transactional authority for concurrent cross-store erasure and ingestion.",
+      "rationale": "Bounded per-object R2 recovery does not claim to fence a writer that began before an erasure."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved retention, barrier lifecycle and shopper re-entry policy.",
+      "rationale": "This repair preserves the existing configured horizon and active cutoff without choosing expiry or re-entry semantics."
+    }
+  ],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "contract_digest": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0602-worker",
+    "independent_reviewer": "w0602-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement bounded restartable within-day ledger rewriting in one production module and its existing fixture; freeze for independent review."
+  }
+}

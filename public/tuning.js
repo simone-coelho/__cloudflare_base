@@ -29,10 +29,14 @@
   'use strict';
 
   const $ = (id) => document.getElementById(id);
-  const api = (path) => `/config${path}${path.includes('?') ? '&' : '?'}scope=${encodeURIComponent(S.scope)}`;
+  const qs = new URLSearchParams(location.search);
+  const scope = qs.get('scope') || qs.get('tenant') || 'coach';
+  // Old scope=brighthour bookmarks name Coach's demo. A real tenant is explicit.
+  const tenant = qs.has('tenant') ? qs.get('tenant') : (scope === 'brighthour' ? 'coach' : scope);
+  const api = (path) => `/config${path}${path.includes('?') ? '&' : '?'}scope=${encodeURIComponent(S.scope)}${qs.has('tenant') ? `&tenant=${encodeURIComponent(tenant)}` : ''}`;
 
   const S = {
-    scope: new URLSearchParams(location.search).get('scope') || 'coach',
+    scope: tenant === 'brighthour' && scope === 'brighthour' ? 'tenant:brighthour' : scope,
     meta: null,   // { source, revision, actor, note, at }
     base: null,   // config as loaded
     draft: null,  // config as edited
@@ -41,6 +45,16 @@
     token: '',    // from the shared sign-in (OperatorSession); it mirrors the token into sessionStorage for the dial and the auth shim
     checking: false,
   };
+  if (window.OperatorSession) OperatorSession.setTenantProvider(() => tenant);
+  async function request(url, init) {
+    if (new URL(url, location.href).origin !== location.origin) throw new Error('Operator requests must stay on this origin.');
+    const headers = new Headers(init && init.headers);
+    if (headers.has('X-Tenant') && headers.get('X-Tenant') !== tenant) throw new Error('Conflicting operator tenant.');
+    headers.set('X-Tenant', tenant);
+    const token = window.OperatorSession ? await OperatorSession.token() : S.token;
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return fetch(url, { ...(init || {}), headers: Object.fromEntries(headers) });
+  }
 
   // ── Behaviour groups ───────────────────────────────────────────────────────
   // The engine keys actions by raw event name, and several names mean the same
@@ -475,7 +489,7 @@
     const patch = buildPatch();
     if (!Object.keys(patch).length) { S.errors = []; render(); return; }
     try {
-      const res = await fetch(api('/reflex/validate'), {
+      const res = await request(api('/reflex/validate'), {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ patch }),
       });
@@ -498,8 +512,8 @@
 
   async function load() {
     const [cfgRes, histRes] = await Promise.all([
-      fetch(api('/reflex')).then((r) => r.json()),
-      fetch(api('/reflex/history')).then((r) => r.json()).catch(() => ({ revisions: [] })),
+      request(api('/reflex')).then((r) => r.json()),
+      request(api('/reflex/history')).then((r) => r.json()).catch(() => ({ revisions: [] })),
     ]);
     S.meta = cfgRes;
     S.base = cfgRes.config;
@@ -513,9 +527,9 @@
     const patch = buildPatch();
     if (!Object.keys(patch).length) return;
     await freshToken();
-    const res = await fetch(api('/reflex'), {
+    const res = await request(api('/reflex'), {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${S.token}` },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ patch, note: $('note').value }),
     });
     const data = await res.json().catch(() => ({}));
@@ -533,9 +547,9 @@
 
   async function rollback(n) {
     await freshToken();
-    const res = await fetch(api(`/reflex/rollback/${n}`), {
+    const res = await request(api(`/reflex/rollback/${n}`), {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${S.token}` },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({}),
     });
     const data = await res.json().catch(() => ({}));
@@ -709,7 +723,7 @@
     try {
       await OperatorSession.signIn($('si-email').value, $('si-password').value);
       $('si-password').value = ''; $('sign-in-form').hidden = true;
-      await freshToken(); renderSession(); render();
+      await freshToken(); renderSession(); await load();
     } catch (err) { $('si-error').textContent = err && err.message ? err.message : 'Sign-in did not go through.'; }
     finally { $('si-submit').disabled = false; }
   });

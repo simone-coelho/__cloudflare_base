@@ -1,0 +1,138 @@
+{
+  "before": {
+    "id": "W32",
+    "canonical": {
+      "gate_scope": "G2 report envelope / G3 model validation",
+      "full_scope": "Remove quadratic ID lookup and bound remaining attribution construction, scans/sorts, payloads and summaries. Separately evaluate zero-base influence/receipt honesty and serving-mixture references against an agreed objective. Do **not** mandate leave-one-out as a proved fix; compare alternatives under clamps, shrinkage, context and single-item cases.",
+      "finding_refs": "F34/F32; N20/N21/N24",
+      "sizing_owner": "S lookup containment → M/L report/model validation; OL + DS"
+    },
+    "title": "Bounded reports and model validation",
+    "gates": [
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F34",
+      "F32",
+      "N20",
+      "N21",
+      "N24"
+    ],
+    "proposed_owner": "OL + DS",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W32-LOOKUP",
+          "description": "Remove quadratic report decision-ID lookup without changing attribution results (N24)."
+        },
+        {
+          "id": "W32-ENVELOPE",
+          "description": "Bound remaining attribution construction, scans/sorts, report payloads/grids and window summaries; validate the declared report workload envelope (F34/N24). Remains open."
+        },
+        {
+          "id": "W32-ZERO-BASE",
+          "description": "Evaluate zero-base influence and receipt honesty against an agreed objective, including clamps/shrinkage/context/single-item cases (F32/N20). Remains open."
+        },
+        {
+          "id": "W32-REFERENCE",
+          "description": "Validate serving-mixture references under agreed model objectives (N21); compare alternatives under clamps, shrinkage, context and single-item cases, do not assume leave-one-out proved. Remains open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W32-LOOKUP",
+          "task_id": "W32.01",
+          "task_criterion_id": "W32.01-C1"
+        }
+      ],
+      "task_ids": [
+        "W32.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W32",
+    "canonical": {
+      "gate_scope": "G2 report envelope / G3 model validation",
+      "full_scope": "Remove quadratic ID lookup and bound remaining attribution construction, scans/sorts, payloads and summaries. Separately evaluate zero-base influence/receipt honesty and serving-mixture references against an agreed objective. Do **not** mandate leave-one-out as a proved fix; compare alternatives under clamps, shrinkage, context and single-item cases.",
+      "finding_refs": "F34/F32; N20/N21/N24",
+      "sizing_owner": "S lookup containment → M/L report/model validation; OL + DS"
+    },
+    "title": "Bounded reports and model validation",
+    "gates": [
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F34",
+      "F32",
+      "N20",
+      "N21",
+      "N24"
+    ],
+    "proposed_owner": "OL + DS",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W32-LOOKUP",
+          "description": "Remove quadratic report decision-ID lookup without changing attribution results (N24)."
+        },
+        {
+          "id": "W32-ENVELOPE",
+          "description": "Bound remaining attribution construction, scans/sorts, report payloads/grids and window summaries; validate the declared report workload envelope (F34/N24). Remains open."
+        },
+        {
+          "id": "W32-ZERO-BASE",
+          "description": "Evaluate zero-base influence and receipt honesty against an agreed objective, including clamps/shrinkage/context/single-item cases (F32/N20). Remains open."
+        },
+        {
+          "id": "W32-REFERENCE",
+          "description": "Validate serving-mixture references under agreed model objectives (N21); compare alternatives under clamps, shrinkage, context and single-item cases, do not assume leave-one-out proved. Remains open."
+        },
+        {
+          "id": "W32-RAW-BOUNDS",
+          "description": "Bound raw-report request/records/bytes/policies/estimated attribution/materialized cells/final JSON and share policy-independent scans, preserving admitted results. Application containment only; existing W32-ENVELOPE still requires aggregate/saved/summary/native qualification."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W32-LOOKUP",
+          "task_id": "W32.01",
+          "task_criterion_id": "W32.01-C1"
+        },
+        {
+          "criterion_id": "W32-RAW-BOUNDS",
+          "task_id": "W32.02",
+          "task_criterion_id": "W32.02-C2"
+        }
+      ],
+      "task_ids": [
+        "W32.01",
+        "W32.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

@@ -1,0 +1,212 @@
+{
+  "at": "2026-09-13T13:33:34.755Z",
+  "prior_tracker_sha256": "539a7e3ff91438a95c7795470f62fb3854c7541a25244d07eafca7e599b33c41",
+  "prior_journal_length": 1438,
+  "prior_journal_sha256": "7cca0989d08c8d249c143be2f86ba335c048d0e6c61ae410702bfd04d92da04b",
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "captures": [
+      {
+        "chunk_id": "4f1205",
+        "wall_time_seconds": 1.000714555,
+        "session_id": 3480,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "d10ee6",
+        "wall_time_seconds": 0.000002528,
+        "exit_code": 0,
+        "original_token_count": 627,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=30, unscoped=11\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=100, closed=2; evidence records=297\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W38.04 — Inspect and admit the remaining W38 serving-path work in src/reflex/contentCompose.ts: every eligible candidate currently builds and sorts explanation drivers before only selected decisions use them. Establish the smallest source-confirmed optimization that removes unused work while preserving final scores, complete candidate sets, ties, pins, diversity, exploration, cross-slot ordering and receipt drivers. Reuse focused existing parity cases and a bounded before/after workload; do not introduce retrieval/sharding, a broad benchmark programme or a customer-capacity claim. Retention/compatibility cutover, realistic whole-path/native SLO qualification, W35 transactional authority and human/customer/release decisions remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 20806\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=30, unscoped=11\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=100, closed=2; evidence records=297\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W38.04 — Inspect and admit the remaining W38 serving-path work in src/reflex/contentCompose.ts: every eligible candidate currently builds and sorts explanation drivers before only selected decisions use them. Establish the smallest source-confirmed optimization that removes unused work while preserving final scores, complete candidate sets, ties, pins, diversity, exploration, cross-slot ordering and receipt drivers. Reuse focused existing parity cases and a bounded before/after workload; do not introduce retrieval/sharding, a broad benchmark programme or a customer-capacity claim. Retention/compatibility cutover, realistic whole-path/native SLO qualification, W35 transactional authority and human/customer/release decisions remain separate.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 20806\n"
+      }
+    ],
+    "session_id": 3480,
+    "drained": true,
+    "exit_code": 0
+  },
+  "baseline_static": {
+    "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/contentCompose.ts src/reflex/contentCompose.test.ts --max-warnings 0",
+    "captures": [
+      {
+        "chunk_id": "7f953d",
+        "wall_time_seconds": 1.000464742,
+        "session_id": 56823,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "5956fd",
+        "wall_time_seconds": 0.000001359,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    ],
+    "session_id": 56823,
+    "drained": true,
+    "exit_code": 0
+  },
+  "baseline_assurance": {
+    "closed_pins_verified": 51,
+    "closed_tasks": [
+      {
+        "id": "W08.04",
+        "artifact_digest": "8242bc1a57c43def04c5733a62e529ad7ff215299556d0f90c647a970ee8b17e",
+        "planned_overlap": []
+      },
+      {
+        "id": "W38.04",
+        "artifact_digest": "c7663a4fd16b5f4f61ec6463da487525279f9f1f206cd5a84c22cdc797034f46",
+        "planned_overlap": [
+          "src/reflex/contentCompose.ts"
+        ]
+      }
+    ],
+    "qualification": "W38.04 broad byte-specific composer dependency proof qualified prospectively; actual request/import remedy/history preserved. W08.04 unchanged."
+  },
+  "reproduction": {
+    "kind": "source_confirmed_design_case",
+    "description": "Every eligible candidate currently materializes/sorts driver objects; only served candidates use them. Retained original composer supplies real before parity and paired diagnostic timing."
+  },
+  "owned": [
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe",
+      "content_gzip_base64": "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"
+    },
+    {
+      "path": "src/reflex/contentCompose.test.ts",
+      "sha256": "7a0588c2feeedc29912eaf4f0db162f5fe0f31473b73ac065e1acf70d5b3a836",
+      "content_gzip_base64": "H4sIAAAAAAAAA6VVy4ojNxTd11ecRUDlGaXcM8OQUI57IJ1AArMImd4ZQ6ula5dwWapIcruNMeQj8oX5koxU5fKjbaYhC2Mk3XPuPfdVwyG8k0NHs5qeh9KaQCbc2WVjPRWBfCiCz4ZD3FcEKYzSSgSCp+ARKkJNak4OjqR1ypdYVyJgLTykNV4rcqQ4tIETZgHrFDke2dY6VAkvK+vJoNEkyUMbWa8UKfz79z8QRiUTRVJ7bY3HyshKmPnX98cNhF9oM8fMumi1LLJMLxvrArZQ5KXTj8ShAwc9NyQDdpg5uwR70lEVGx3MZav2rtXOz86/UBC6jjLCpiF0t3/EgD/rBZ1ef6lt+NKQ7L0VZylloyyLqQmtZIyRa1XCB6fNnCOIuS/xZ8rmT/vL9n8yveXwtQ2+7G8G5Yt4ML7NgHwLrTjkyge7JNcZ/a5KPMil//67rVa7hzb0EoyUDtZpUTOOoENNZULHYFqX95uGotvoHbvBqQaPMSYZ2kPOBOPYwkopYtFKTBg9kdFmzqYctTYUr5SzT+TYFDuOCavIWcbBfLBuw6YDfmB7fMG2JlqQUa/AyoS97PKCeRPN0+OSnKzS43TUKe0Sf1bmybTTvk0GJTpozN2CSrzjWJOeVxEaqRttDKlUq1gL1jDs+DG8U3MBfZSDm+LDx30qb4r3H7E7Y2nF7WneX6d5ydILFrOZNjpsMI4DpZdn4C26qkbwjzGnLdMWbZ7j9Q+RErtRlu0HMmeXZ4tx5AOMb7HNAB1y5iisnPGgZyFDvTnbA6ck6IxPSNCNfX7ZYd52Lu9ldqM1KHovgyLYX/9aifqM4ip0MMrQDsdeQ9qJKfa4/kgdFqhHQy7h+H4F7ncfhyK1akhBSGe9b9nPxLU12h5ywo+5dxhfWWJXgx+d5KynKlI/H1Ixiduy3yVpZLy0LrYQdtOrLLGtPxVL0eS5TCpk0dMMjtjT8mCP7FtMk5vppyI5juCf6a62nu5tHlvxTZoPvE0N+Ca1NseHjnA4xIN4wDq2TbCpNJGRw7eHdnL86ZcOhp7IJeFCGw8diivRJfirhMqLQvtyFjNdB3J5rhKLKmKVMB6P98M9aJ3sn1/h5KgzK2vsyrWdeVBa66UOV/rsfzUXx7ur9UxqYsy/iSf6TGYeqvwb1l35D5JTC8R13+uMv/8AKb4n9NkIAAA="
+    }
+  ],
+  "pins": [
+    {
+      "path": "src/reflex/contentCompose.ts",
+      "role": "output",
+      "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+    },
+    {
+      "path": "src/reflex/contentCompose.test.ts",
+      "role": "output",
+      "sha256": "7a0588c2feeedc29912eaf4f0db162f5fe0f31473b73ac065e1acf70d5b3a836"
+    },
+    {
+      "path": "src/content/decide.ts",
+      "role": "source",
+      "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+    },
+    {
+      "path": "src/content/decide.test.ts",
+      "role": "source",
+      "sha256": "56946e6ad16abec73520f0dfe79003ec280cc272a062d744b8c766489cb6af6f"
+    },
+    {
+      "path": "src/content/merchandisingSeam.test.ts",
+      "role": "source",
+      "sha256": "083968330562f2249ba7fcea1b06fb920a7af431b9354220598e68201cd67b73"
+    },
+    {
+      "path": "src/content/inventoryDiversity.test.ts",
+      "role": "source",
+      "sha256": "7fc426419ee9eed15b41f47ab0758e70eb420f4fc019dcdce1dc140431124c74"
+    },
+    {
+      "path": "src/learn/phase3.test.ts",
+      "role": "source",
+      "sha256": "5bb9d165bca35887b40309015becb7ab2683008799118adf2be6d2192c4051d2"
+    },
+    {
+      "path": "src/learn/replay.ts",
+      "role": "source",
+      "sha256": "659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a"
+    },
+    {
+      "path": "src/learn/explore.ts",
+      "role": "source",
+      "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "role": "source",
+      "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+    },
+    {
+      "path": "src/learn/priors.ts",
+      "role": "source",
+      "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+    },
+    {
+      "path": "src/content/kinds.ts",
+      "role": "source",
+      "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+    },
+    {
+      "path": "src/content/types.ts",
+      "role": "source",
+      "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+    },
+    {
+      "path": "src/content/lifecycle.ts",
+      "role": "source",
+      "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+    },
+    {
+      "path": "src/reflex/merchandising.ts",
+      "role": "source",
+      "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+    },
+    {
+      "path": "src/services/JourneyStage.ts",
+      "role": "source",
+      "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "role": "source",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+    },
+    {
+      "path": "docs/architecture/33-adversarial-audit-brief.md",
+      "role": "source",
+      "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.04/acceptance.md",
+      "role": "source",
+      "sha256": "7cf05b7ce159d355eb8da48757eb5919bf62a8da6ae70568a7eeb98896086cf3"
+    },
+    {
+      "path": "docs/remediation/evidence/W38.04/worker.json",
+      "role": "source",
+      "sha256": "beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757"
+    },
+    {
+      "path": "package.json",
+      "role": "source",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+    },
+    {
+      "path": "package-lock.json",
+      "role": "source",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "path": "tsconfig.json",
+      "role": "source",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+    },
+    {
+      "path": "vitest.config.ts",
+      "role": "source",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+    },
+    {
+      "path": ".eslintrc.json",
+      "role": "source",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+    }
+  ],
+  "qualifications": "Composer explanation-work optimization only; full W38/F32/F08/N07, whole-catalog/scoring/candidate-sort costs, concurrent/native/request/browser SLOs and customer capacity remain open. Packed primitive snapshots still scale with admitted scoring input; reduced driver objects/sorts are not heap-byte measurements. Preserve final scoring, candidates, ties, callbacks, pins, exploration, diversity, receipts/replay and existing unusual numeric behavior. No top-k pruning, model/retrieval/sharding, envelope/retention cutover or customer-policy change. Input guards remain implemented; W38.04 broad prior-byte proof is prospectively qualified for its composer dependency with history retained. No deploy/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external authority."
+}

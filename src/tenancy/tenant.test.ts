@@ -14,6 +14,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   DEFAULT_TENANT,
   TenantKV,
+  TenantResolutionError,
   isValidTenantId,
   logicalKey,
   resolveTenant,
@@ -62,23 +63,27 @@ describe('resolution', () => {
   // own. See "the tenant header is not an open brand selector" below.
   const PROVISIONED = ['coach', 'kate-spade', 'other'] as const;
 
-  it('prefers explicit, then header, then host', () => {
-    expect(resolveTenant({ explicit: 'kate-spade', header: 'other', host: 'b.com', provisioned: PROVISIONED })).toBe('kate-spade');
-    expect(resolveTenant({ header: 'kate-spade', host: 'b.com', hostMap: { 'b.com': 'other' }, provisioned: PROVISIONED })).toBe('kate-spade');
+  it('requires explicit, header and mapped host to agree', () => {
+    expect(() => resolveTenant({ explicit: 'kate-spade', header: 'other', host: 'b.com', provisioned: PROVISIONED })).toThrow(TenantResolutionError);
+    expect(() => resolveTenant({ header: 'kate-spade', host: 'b.com', hostMap: { 'b.com': 'other' }, provisioned: PROVISIONED })).toThrow(TenantResolutionError);
+    expect(resolveTenant({ explicit: 'kate-spade', header: 'kate-spade', host: 'b.com', hostMap: { 'b.com': 'kate-spade' }, provisioned: PROVISIONED })).toBe('kate-spade');
     expect(resolveTenant({ host: 'shop.katespade.com', hostMap: { 'shop.katespade.com': 'kate-spade' }, provisioned: PROVISIONED })).toBe('kate-spade');
   });
 
-  it('falls back to the default rather than throwing or inventing one', () => {
-    // The failure mode of a bad tenant id must be "you got Coach", never "you got
-    // another brand's data" and never a 500 on the decision path.
+  it('uses the default only without a selector and when provisioned', () => {
     expect(resolveTenant({})).toBe(DEFAULT_TENANT);
-    expect(resolveTenant({ explicit: 'not a tenant!' })).toBe(DEFAULT_TENANT);
+    expect(() => resolveTenant({ explicit: 'not a tenant!' })).toThrow(TenantResolutionError);
     expect(resolveTenant({ host: 'unknown.com', hostMap: { 'other.com': 'x' } })).toBe(DEFAULT_TENANT);
     expect(resolveTenant({ explicit: null, header: null, host: null })).toBe(DEFAULT_TENANT);
   });
 
   it('is case and whitespace insensitive', () => {
     expect(resolveTenant({ explicit: '  Kate-Spade ', provisioned: PROVISIONED })).toBe('kate-spade');
+    expect(resolveTenant({ header: ' KATE-SPADE ', query: ['kate-spade', 'Kate-Spade'], provisioned: PROVISIONED })).toBe('kate-spade');
+    expect(() => resolveTenant({ query: ['kate-spade', 'other'], provisioned: PROVISIONED })).toThrow(TenantResolutionError);
+    for (const explicit of ['', ' ', 'unknown', 't:kate-spade:x']) {
+      expect(() => resolveTenant({ explicit, header: 'kate-spade', provisioned: PROVISIONED })).toThrow(TenantResolutionError);
+    }
   });
 });
 
@@ -229,11 +234,11 @@ describe('the namespace cannot be addressed directly', () => {
 });
 
 describe('the tenant header is not an open brand selector', () => {
-  it('ignores a well-formed brand this stamp has not provisioned', () => {
+  it('refuses a well-formed brand this stamp has not provisioned', () => {
     // X-Tenant is caller-controlled. Without the allow-list, anyone could name
     // any namespace they liked.
-    expect(resolveTenant({ header: 'kate-spade', provisioned: ['coach'] })).toBe(DEFAULT_TENANT);
-    expect(resolveTenant({ explicit: 'kate-spade', provisioned: ['coach'] })).toBe(DEFAULT_TENANT);
+    expect(() => resolveTenant({ header: 'kate-spade', provisioned: ['coach'] })).toThrow(TenantResolutionError);
+    expect(() => resolveTenant({ explicit: 'kate-spade', provisioned: ['coach'] })).toThrow(TenantResolutionError);
   });
 
   it('honours a brand the stamp HAS provisioned', () => {
@@ -241,23 +246,23 @@ describe('the tenant header is not an open brand selector', () => {
   });
 
   it('treats an unconfigured stamp as default-only, which is the safe reading', () => {
-    expect(resolveTenant({ header: 'kate-spade' })).toBe(DEFAULT_TENANT);
-    expect(resolveTenant({ header: 'kate-spade', provisioned: null })).toBe(DEFAULT_TENANT);
+    expect(() => resolveTenant({ header: 'kate-spade' })).toThrow(TenantResolutionError);
+    expect(() => resolveTenant({ header: 'kate-spade', provisioned: null })).toThrow(TenantResolutionError);
   });
 
-  it('treats an EMPTY list as default-only, not as "serve nobody"', () => {
-    // A stamp that serves no one is never what an operator meant to configure.
-    expect(resolveTenant({ provisioned: [] })).toBe(DEFAULT_TENANT);
-    expect(resolveTenant({ header: DEFAULT_TENANT, provisioned: [] })).toBe(DEFAULT_TENANT);
+  it('refuses an empty explicit list', () => {
+    expect(() => resolveTenant({ provisioned: [] })).toThrow(TenantResolutionError);
+    expect(() => resolveTenant({ header: DEFAULT_TENANT, provisioned: [] })).toThrow(TenantResolutionError);
   });
 
-  it('always allows the default, even if a list forgets to name it', () => {
-    expect(resolveTenant({ header: DEFAULT_TENANT, provisioned: ['kate-spade'] })).toBe(DEFAULT_TENANT);
+  it('does not add the default or choose the first customer', () => {
+    expect(() => resolveTenant({ header: DEFAULT_TENANT, provisioned: ['kate-spade'] })).toThrow(TenantResolutionError);
+    expect(() => resolveTenant({ provisioned: ['kate-spade', 'other'] })).toThrow(TenantResolutionError);
   });
 
   it('applies the list to host mapping too, so a stale DNS entry cannot outlive deprovisioning', () => {
     const hostMap = { 'shop.katespade.com': 'kate-spade' };
-    expect(resolveTenant({ host: 'shop.katespade.com', hostMap, provisioned: ['coach'] })).toBe(DEFAULT_TENANT);
+    expect(() => resolveTenant({ host: 'shop.katespade.com', hostMap, provisioned: ['coach'] })).toThrow(TenantResolutionError);
     expect(resolveTenant({ host: 'shop.katespade.com', hostMap, provisioned: ['coach', 'kate-spade'] })).toBe('kate-spade');
   });
 });

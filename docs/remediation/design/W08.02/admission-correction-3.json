@@ -1,0 +1,32 @@
+{
+  "before": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+  "after": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+  "at": "2026-09-10T16:18:05Z",
+  "prior_malformed_event": {
+    "seq": 800,
+    "kind": "record_change",
+    "subject_type": "task_contract",
+    "subject_id": "W08.02",
+    "before_sha256": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+    "after_sha256": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+    "record": {
+      "path": "docs/remediation/design/W08.02/admission-correction-2.json",
+      "sha256": "253c7deba08bd04bc226fc05b95bf59ed3053e6053dcc587bca4db4b82a00dd1"
+    },
+    "reason": "Unchanged W08.02 contract re-attested after explicit correction of missing blocked-event797 fields; exact malformed event and failed46237 preserved in record.",
+    "actor_id": "w01-lead",
+    "at": "2026-09-10T16:16:27Z"
+  },
+  "prior_malformed_record": {
+    "path": "docs/remediation/design/W08.02/admission-correction-2.json",
+    "sha256": "253c7deba08bd04bc226fc05b95bf59ed3053e6053dcc587bca4db4b82a00dd1"
+  },
+  "failed_check": {
+    "session_id": 13206,
+    "exit_status": 1,
+    "drained": true,
+    "error": "Journal800 latest task_contract digest differs from current record",
+    "notes": 9073
+  },
+  "qualification": "Checker task_contract record values are the contract digest string, whose JSON encoding is then hashed. Root had recorded contract object instead. Correct metadata representation only; previous exact record/event retained, no source/criteria/assignments/approval changed and no worker GO. This repairs newly malformed event800, not an append-only claim."
+}

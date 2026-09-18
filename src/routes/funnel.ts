@@ -9,13 +9,15 @@
  */
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
+import type { TenantVariables } from '@/tenancy/tenant';
+import { demoEventCaptureEnabled } from '@/services/demoEventCapture';
 import { BRANDS, COHORTS, CHECKOUT_EVENT_TYPES, type Brand, type Cohort } from '@/services/funnel/contract';
 import { computeFunnel } from '@/services/funnel/compute';
 import { buildFunnelDiagnosis } from '@/services/funnel/diagnose';
 import { fxConfig, gateWrite } from '@/services/fxEnv';
 import { createAudienceLive } from '@/services/optimizelyFx';
 
-const funnel = new Hono<{ Bindings: Env }>();
+const funnel = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
 funnel.get('/', async (c) => {
   const brand = c.req.query('brand') ?? 'Coach';
@@ -32,7 +34,7 @@ funnel.get('/', async (c) => {
     const result = await computeFunnel(c.env, { brand: brand as Brand, cohort: cohort as Cohort });
     return c.json(result);
   } catch (error) {
-    console.error('Funnel compute error:', error);
+    console.error('Funnel compute error');
     return c.json(
       { error: 'Failed to compute funnel', details: error instanceof Error ? error.message : String(error) },
       500
@@ -42,8 +44,11 @@ funnel.get('/', async (c) => {
 
 // POST /funnel/event — record a REAL checkout-funnel event from the storefront checkout into
 // demo_events (the /realtime/action schema enum doesn't allow the checkout event types, so the
-// checkout flow posts here). Best-effort: never throws, never blocks checkout. Counts as Coach.
+// checkout flow posts here). Restricted to explicit default-tenant development demos;
+// this legacy demo endpoint does not establish subject authentication or consent.
+// Best-effort: never throws, never blocks checkout. Counts as Coach.
 funnel.post('/event', async (c) => {
+  if (!demoEventCaptureEnabled(c.env, c.get('tenant'))) return c.json({ ok: true });
   const body = await c.req.json().catch(() => ({} as any));
   const et = String(body?.event_type ?? '');
   const allowed = ['add_to_cart', ...CHECKOUT_EVENT_TYPES];

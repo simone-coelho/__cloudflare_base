@@ -64,12 +64,12 @@ scene.post('/', async (c) => {
       return c.json({ ok: true, status: 'queued', url });
     } catch (e) {
       // Queue unavailable → fall back to inline generation so the scene still caches.
-      console.error('ai/scene enqueue failed, generating inline:', e);
+      console.error('ai/scene enqueue failed, generating inline');
       const res = await generateSceneToR2(c.env, job);
       return c.json(res.ok ? { ok: true, status: 'ready', url: res.url, cached: res.cached } : { ok: false, error: res.error });
     }
   } catch (e) {
-    console.error('ai/scene error:', e);
+    console.error('ai/scene error');
     return c.json({ ok: false, error: e instanceof Error ? e.message : String(e) });
   }
 });

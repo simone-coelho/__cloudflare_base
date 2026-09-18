@@ -1,0 +1,98 @@
+{
+  "before": {
+    "id": "W18",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "Valid stage defaults/ranges/empty-value semantics and real validator in console tests. Numeric per-slot dimension editor/readback with version/rollback feedback; customer weight-change walkthrough without reload. Test safe off values and interactions with later score terms.",
+      "finding_refs": "F26/F29; N30 assurance",
+      "sizing_owner": "S stage fix → M full control/acceptance; D"
+    },
+    "title": "Merchandiser dimension and stage controls",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F26",
+      "F29",
+      "N30"
+    ],
+    "proposed_owner": "D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W18",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "Valid stage defaults/ranges/empty-value semantics and real validator in console tests. Numeric per-slot dimension editor/readback with version/rollback feedback; customer weight-change walkthrough without reload. Test safe off values and interactions with later score terms.",
+      "finding_refs": "F26/F29; N30 assurance",
+      "sizing_owner": "S stage fix → M full control/acceptance; D"
+    },
+    "title": "Merchandiser dimension and stage controls",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F26",
+      "F29",
+      "N30"
+    ],
+    "proposed_owner": "D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W18-STAGE",
+          "description": "Valid stage defaults, ranges and neutral empty semantics through real validator console tests; safe off values and later scoring interactions (W18/F26/N30)."
+        },
+        {
+          "id": "W18-WEIGHTS",
+          "description": "Numeric per-slot dimension editor and actual value readback with version/rollback feedback (W18/F26/F29)."
+        },
+        {
+          "id": "W18-CUSTOMER",
+          "description": "Actual customer weight-change walkthrough without reload, supported assets and rendered behavior, separate from engineering checks (W18/F29)."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W18-STAGE",
+          "task_id": "W18.01",
+          "task_criterion_id": "W18.01-C1"
+        },
+        {
+          "criterion_id": "W18-WEIGHTS",
+          "task_id": "W18.01",
+          "task_criterion_id": "W18.01-C2"
+        }
+      ],
+      "task_ids": [
+        "W18.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

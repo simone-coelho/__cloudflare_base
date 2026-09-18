@@ -1,3 +1,5 @@
+/* eslint-env browser */
+/* global OperatorSession:readonly */
 // public/learning.js
 // The learning console (CW22, doc 22 §12.2). A client of the routes the engine
 // already exposes and never a second path into KV: the learn document through
@@ -15,14 +17,81 @@
     learn: null, draft: null, learnRevision: 0, learnSource: 'loading', learnHistory: [],
     slots: [], pieces: new Map(),
     snapshot: null, archived: null, liftHistory: [], priorHistory: [], proposals: null, proposalsError: '',
-    report: null, reportError: '',
+    report: null, reportError: '', reportPage: null, reportLoading: false, reportKey: '', reportGeneration: 0, customReport: null, customKey: '',
     errors: [], flash: '', checking: false,
     sort: { col: 'lift', dir: -1 }, filter: '', level: '0',
     diffs: {},
   };
+  if (window.OperatorSession) OperatorSession.setTenantProvider(() => S.scope);
   const api = (path) => `/content${path}${path.includes('?') ? '&' : '?'}scope=${encodeURIComponent(S.scope)}`;
   const v1 = (path) => `/v1/${encodeURIComponent(S.scope)}${path}`;
-  const auth = () => (S.token ? { authorization: `Bearer ${S.token}` } : {});
+  const pendingPublications = new Map(JSON.parse(sessionStorage.getItem('learning-pending-v1') || '[]'));
+  const persistPending = () => {
+    const raw = JSON.stringify([...pendingPublications]);
+    if (pendingPublications.size > 16 || new TextEncoder().encode(raw).length > 2 * 1024 * 1024) throw new Error('Pending configuration capacity exceeded; resolve the original intent.');
+    sessionStorage.setItem('learning-pending-v1', raw);
+  };
+  const removePending = key => {
+    const previous = pendingPublications.get(key); pendingPublications.delete(key);
+    try { persistPending(); } catch (error) { if (previous) pendingPublications.set(key, previous); throw error; }
+  };
+  function authored(data) {
+    return data && Number.isSafeInteger(data.revision) && data.revision > 0 && data.publication
+      && Number.isSafeInteger(data.publication.revision) && /^[0-9a-f]{64}$/.test(data.publication.digest)
+      ? { scope: S.scope, revision: data.revision, publication: { ...data.publication } } : null;
+  }
+  const localRefusal = (status, error) => ({ ok: false, status, json: async () => ({ ok: false, error }) });
+  async function publicationStatus(key, recover) {
+    const p = pendingPublications.get(key); if (!p || p.scope !== S.scope) return;
+    const result = await request(api('/catalog/publication' + (recover ? '/recover' : '') + '?kind=learn'), {
+      method: recover ? 'POST' : 'GET', headers: p.headers, ...(recover ? { body: '{}' } : {}),
+    });
+    const data = await result.json();
+    if (!recover && result.status === 409 && data.code === 'publication_conflict') { p.conflicted = true; persistPending(); }
+    S.errors = [result.ok ? 'Original publication ' + (data.state || 'committed') + '. Retry the exact original intent to finish any reset continuation; reload before a new edit.' : data.error || 'Original publication status unavailable.'];
+    render();
+  }
+  async function request(url, init) {
+    const tenant = S.scope;
+    if (new URL(url, location.href).origin !== location.origin) throw new Error('Operator requests must stay on this origin.');
+    const headers = new Headers(init && init.headers);
+    if (headers.has('X-Tenant') && headers.get('X-Tenant') !== tenant) throw new Error('Conflicting operator tenant.');
+    headers.set('X-Tenant', tenant);
+    const token = window.OperatorSession ? await OperatorSession.token() : S.token;
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    const protectedWrite = init && (init.method === 'PUT' && new URL(url, location.href).pathname === '/content/learn'
+      || init.method === 'POST' && (/\/content\/learn\/rollback\//.test(url) || url.includes('/learn/items/reset')));
+    let key, pending;
+    if (protectedWrite) {
+      key = tenant + '|' + url; pending = pendingPublications.get(key);
+      if (pending && (pending.body !== init.body || pending.method !== init.method)) return localRefusal(409, 'Resolve the retained original publication before changing its draft.');
+      if (!pending) {
+        const base = S.authority;
+        if (!base || base.scope !== tenant || pendingPublications.size >= 16) return localRefusal(428, 'Authoritative loaded document required; no fresh base is inferred.');
+        headers.set('If-Match', '"' + base.revision + '/' + base.publication.revision + '/' + base.publication.digest + '"');
+        headers.set('Idempotency-Key', base.revision + ':' + crypto.randomUUID());
+        pending = { url, scope: tenant, method: init.method, body: init.body,
+          headers: { 'If-Match': headers.get('If-Match'), 'Idempotency-Key': headers.get('Idempotency-Key'), 'content-type': 'application/json' } };
+        pendingPublications.set(key, pending);
+        try { persistPending(); } catch { pendingPublications.delete(key); return localRefusal(503, 'Could not retain the original publication intent; no write sent.'); }
+      } else for (const [name, value] of Object.entries(pending.headers)) headers.set(name, value);
+    }
+    try {
+      const response = await fetch(url, { ...(init || {}), headers: Object.fromEntries(headers) });
+      if (response.ok && key) {
+        const receipt = await response.clone().json().catch(() => null);
+        if (receipt && receipt.ok === true && url.includes('/items/reset') && receipt.publicationOutcome !== 'acknowledged') {
+          return { ok: false, status: 503, json: async () => ({ ...receipt, ok: false,
+            error: 'Reset completed; snapshot publication acknowledgement is unknown. Retry the exact retained original operation, not another reset.' }) };
+        }
+        if (receipt && receipt.ok === true) removePending(key);
+      }
+      return response;
+    } catch (error) {
+      if (!protectedWrite) throw error;
+      return localRefusal(503, 'Publication acknowledgement unknown; exact original intent retained.');
+    }
+  }
   const canEdit = () => Boolean(S.token);
   const copy = (v) => JSON.parse(JSON.stringify(v));
   const r3 = (x) => Math.round(x * 1000) / 1000;
@@ -79,7 +148,7 @@
     if (!changes().length) { S.errors = []; render(); return; }
     S.checking = true;
     try {
-      const res = await fetch(api('/learn/validate'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ document: S.draft }) });
+      const res = await request(api('/learn/validate'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ document: S.draft }) });
       const data = await res.json();
       S.errors = data.valid ? [] : data.errors || ['The document did not validate.'];
     } catch { S.errors = ['Could not reach the validator.']; }
@@ -87,12 +156,13 @@
   }
   async function save() {
     const note = $('note').value.trim();
-    const res = await fetch(api('/learn'), { method: 'PUT', headers: { 'content-type': 'application/json', ...auth() }, body: JSON.stringify({ document: S.draft, note }) });
+    const res = await request(api('/learn'), { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ document: S.draft, note }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) {
       S.errors = res.status === 401 || res.status === 403 ? ['Your sign-in was not accepted. Sign in again to change the dials.'] : data.errors || ['The save was refused.'];
       render(); return;
     }
+    S.authority = authored(data);
     S.learn = data.document; S.draft = copy(S.learn); S.learnRevision = data.revision; S.learnSource = 'stored';
     $('note').value = ''; S.errors = []; flash(`Saved as revision ${data.revision}.`);
     await Promise.all([loadLearnHistory(), loadLift()]); render();
@@ -101,9 +171,10 @@
 
   // ---------- loading ----------
   // Every /v1 read carries the operator token when there is one: under enforced access a verified token passes the SDK gate.
-  const json = async (url, init) => { const r = await fetch(url, { ...(init || {}), headers: { ...auth(), ...((init && init.headers) || {}) } }); const d = await r.json().catch(() => ({})); return { ok: r.ok, status: r.status, data: d }; };
+  const json = async (url, init) => { const r = await request(url, init); const d = await r.json().catch(() => ({})); return { ok: r.ok, status: r.status, data: d }; };
   async function loadLearn() {
-    const { data } = await json(api('/learn'));
+    const { data, ok } = await json(api('/learn'));
+    S.authority = ok ? authored(data) : null;
     S.learn = data.document || { holdout: { share: 0.05, salt: '', arms: ['default'] } };
     S.draft = copy(S.learn); S.learnRevision = data.revision || 0; S.learnSource = data.source || 'compiled-default';
   }
@@ -124,13 +195,42 @@
     S.snapshot = cur.snapshot || null; S.liftHistory = hist.versions || [];
   }
   async function loadProposals() {
-    const { ok, status, data } = await json(v1('/learn/proposals'), { headers: auth() });
+    const { ok, status, data } = await json(v1('/learn/proposals'));
     if (ok) { S.proposals = data.proposals || []; S.proposalsError = ''; }
     else { S.proposals = null; S.proposalsError = status === 401 || status === 403 ? 'Sign in to read the proposals.' : 'Could not read the proposals.'; }
   }
-  async function loadReport(date) {
-    const { ok, data } = await json(v1(`/learn/report?date=${date}&brand=${encodeURIComponent(S.brand)}`));
-    S.report = ok ? data.report : null;
+  const reportUser = () => { const a = window.OperatorSession, u = a && a.user(); return JSON.stringify([Boolean(a && a.signedIn()), u && u.id, u && u.roles, u && u.tenants, Boolean(a && a.mustChangePassword())]); };
+  const customKey = () => JSON.stringify([S.scope, S.brand, $('report-date').value, reportUser()]);
+  const reportKey = () => JSON.stringify([customKey(), S.slot]);
+  function reportContext() {
+    if (S.customKey !== customKey()) { S.customKey = customKey(); S.customReport = null; }
+    if (S.reportKey !== reportKey()) { S.reportKey = reportKey(); S.reportGeneration++; S.report = null; S.reportPage = null; S.reportError = ''; S.reportLoading = false; $('report-run').disabled = false; $('report-run').textContent = 'Build the report'; }
+  }
+  const reportOwner = (r) => r && r.tenant === S.scope && r.brand === S.brand && r.date === $('report-date').value;
+  function customPage(offset = 0) {
+    const r = S.customReport, grid = r.grids[S.slot], names = r.policies.map(p => p.name);
+    const items = [...new Set(names.flatMap(n => Object.keys(grid && grid[n] && grid[n].items || {})))].sort(), chosen = items.slice(offset, offset + 50), projected = {};
+    if (grid) for (const n of names) if (grid[n]) {
+      const snap = grid[n], entries = {};
+      for (const item of chosen) if (snap.items[item]) entries[item] = snap.items[item]['*'] ? { '*': snap.items[item]['*'] } : {};
+      projected[n] = { ...snap, items: entries, slotRates: snap.slotRates && snap.slotRates['*'] ? { '*': snap.slotRates['*'] } : {} };
+    }
+    S.report = { ...r, grids: grid ? { [S.slot]: projected } : {} };
+    S.reportPage = { slot: S.slot, total: items.length, offset, limit: 50, next: offset + 50 < items.length ? offset + 50 : null, previous: offset > 0 ? Math.max(0, offset - 50) : null };
+  }
+  async function loadReport(date, cursor) {
+    reportContext(); const key = S.reportKey, generation = ++S.reportGeneration;
+    $('report-run').disabled = false; $('report-run').textContent = 'Build the report';
+    S.report = null; S.reportPage = null; S.reportError = ''; S.reportLoading = true; renderReport();
+    if (S.customReport) { customPage(typeof cursor === 'number' ? cursor : 0); S.reportLoading = false; renderReport(); return; }
+    if (!S.slot) { S.reportLoading = false; return; }
+    const { ok, status, data } = await json(v1(`/learn/report?date=${encodeURIComponent(date)}&brand=${encodeURIComponent(S.brand)}&slot=${encodeURIComponent(S.slot)}&limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)).catch(() => ({ ok: false, status: 0, data: {} }));
+    if (key !== reportKey() || generation !== S.reportGeneration) return;
+    const p = data.page;
+    const valid = ok && data.ok === true && reportOwner(data.report) && p && p.slot === S.slot && typeof p.revision === 'string' && /^[a-f0-9]{64}$/.test(p.revision) && p.limit === 50 && Number.isSafeInteger(p.offset) && p.offset >= 0 && Number.isSafeInteger(p.total) && p.total >= 0;
+    S.report = valid ? data.report : null; S.reportPage = valid ? p : null; S.reportLoading = false;
+    S.reportError = valid || status === 404 ? '' : status === 409 ? 'Report changed. Reload the first page.' : data.error || 'Could not read this report page.';
+    renderReport();
   }
   async function load() {
     // The session hands over the current token, renewed first when it is about to run out.
@@ -142,7 +242,7 @@
 
   // ---------- actions ----------
   async function rollback(n) {
-    const res = await fetch(api(`/learn/rollback/${n}`), { method: 'POST', headers: { 'content-type': 'application/json', ...auth() }, body: '{}' });
+    const res = await request(api(`/learn/rollback/${n}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) { S.errors = data.errors || ['The rollback was refused.']; render(); return; }
     flash(`Rolled revision ${n} forward as revision ${data.revision}.`);
@@ -150,21 +250,14 @@
   }
   async function resetItem(item) {
     if (!confirm(`Discard the evidence for ${nameOf(item)} in ${S.slot} and start again from the prior?`)) return;
-    const res = await fetch(v1('/learn/items/reset'), { method: 'POST', headers: { 'content-type': 'application/json', ...auth() }, body: JSON.stringify({ slot: S.slot, item, brand: S.brand }) });
+    const res = await request(v1('/learn/items/reset'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slot: S.slot, item, brand: S.brand }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) { S.errors = [data.error || 'The reset was refused.']; render(); return; }
-    flash(data.had ? `Evidence for ${nameOf(item)} discarded; the snapshot republished, recorded as revision ${data.revision}.` : `${nameOf(item)} had no evidence in this slot; recorded as revision ${data.revision}.`);
+    flash(data.had ? `Evidence for ${nameOf(item)} discarded; snapshot publication status is separate, recorded as revision ${data.revision}.` : `${nameOf(item)} had no evidence in this slot; recorded as revision ${data.revision}.`);
     await Promise.all([loadLift(), loadLearnHistory()]); render();
   }
-  async function decideProposal(id, decision) {
-    const res = await fetch(v1(`/learn/proposals/${encodeURIComponent(id)}/${decision}`), { method: 'POST', headers: auth() });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.ok) { S.errors = [data.error || `The proposal could not be ${decision === 'apply' ? 'applied' : 'rejected'}.`]; render(); return; }
-    flash(decision === 'apply' ? `Proposal applied as slots revision ${data.revision}.` : 'Proposal rejected.');
-    await loadProposals(); render();
-  }
   function presets() {
-    const base = { scope: 'session', match: 'direct', credit: 'last', ...(S.learn.policy || {}) };
+    const base = { scope: 'session', match: 'direct', credit: 'last', ...((S.learn || {}).policy || {}) };
     base.windowsMs = { ...DEFAULT_WINDOWS, ...(base.windowsMs || {}) };
     return [
       { name: 'first-touch', ...base, credit: 'first' },
@@ -174,16 +267,20 @@
     ];
   }
   async function runReport() {
+    reportContext(); const key = S.reportKey, generation = ++S.reportGeneration;
+    S.reportLoading = false;
     const date = $('report-date').value;
     const chosen = presets().filter((p) => { const box = document.querySelector(`#report-presets input[data-name="${p.name}"]`); return !box || box.checked; });
     const customName = $('custom-name').value.trim();
     if (customName) chosen.push({ name: customName, scope: $('custom-scope').value, match: $('custom-match').value, credit: $('custom-credit').value, windowsMs: presets()[0].windowsMs });
     $('report-run').disabled = true; $('report-run').textContent = 'Building…';
-    const res = await fetch(v1('/learn/report'), { method: 'POST', headers: { 'content-type': 'application/json', ...auth() }, body: JSON.stringify({ date, brand: S.brand, policies: chosen }) });
-    const data = await res.json().catch(() => ({}));
+    const res = await json(v1('/learn/report'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ date, brand: S.brand, policies: chosen }) }).catch(() => ({ ok: false, status: 0, data: {} }));
+    const data = res.data;
+    if (key !== reportKey() || generation !== S.reportGeneration) return;
     $('report-run').disabled = false; $('report-run').textContent = 'Build the report';
     if (!res.ok || !data.ok) { S.reportError = res.status === 401 || res.status === 403 ? 'Sign in to build a report.' : data.error || 'The report could not be built.'; S.report = null; render(); return; }
-    S.reportError = ''; S.report = data.report; render();
+    if (!reportOwner(data.report)) { S.report = null; S.reportError = 'The report context did not match.'; render(); return; }
+    S.reportError = ''; S.customReport = data.report; customPage(); render();
   }
 
   // ---------- rendering ----------
@@ -219,15 +316,16 @@
   function renderGrid() {
     const host = clear($('grid'));
     const banner = clear($('grid-banner'));
+    banner.append(h('div', { class: 'msg' }, 'The learning multiplier adjusts ranking scores; it is not measured business lift.'));
     if (S.archived) banner.append(h('div', { class: 'banner' }, `Viewing the archived snapshot published ${when(S.archived)}, not the one in force.`, h('button', { class: 'small', onclick: async () => { S.archived = null; await loadLift(); render(); } }, 'Back to the current snapshot')));
     const rows = gridRows();
     const snap = S.snapshot;
-    $('grid-count').textContent = snap ? `${rows.length} row${rows.length === 1 ? '' : 's'} · reward ${snap.reward}${snap.objective && snap.objective !== 'unit' ? ` weighed by ${snap.objective}` : ''} · n₀ ${snap.n0}, n_min ${snap.nMin} · published ${when(snap.publishedAt)}${snap.priorVersion ? ` · prior revision ${snap.priorVersion}` : ''}` : '';
+    $('grid-count').textContent = snap ? `${rows.length} row${rows.length === 1 ? '' : 's'} · basis ${snap.measurementBasis || 'served-v1'} (rendered is client-reported) · reward ${snap.reward}${snap.objective && snap.objective !== 'unit' ? ` weighed by ${snap.objective}` : ''} · n₀ ${snap.n0}, n_min ${snap.nMin} · published ${when(snap.publishedAt)}${snap.priorVersion ? ` · prior revision ${snap.priorVersion}` : ''}` : '';
     if (!snap) { host.append(h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes thirty seconds after the first decision it serves.')); return; }
     if (!rows.length) { host.append(h('div', { class: 'empty' }, 'No rows match.')); return; }
     // Headings are words a merchandiser reads; the design's symbol sits under each for whoever reads doc 22.
-    const cols = [['name', 'Item', ''], ['key', 'Cell', ''], ['n', 'Shown', 'n'], ['s', 'Succeeded', 's'], ['p_hat', 'Rate', 'p̂'], ['p0', 'Baseline', 'p₀'], ['lift', 'Lift', 'p̂ / p₀'], ['evidence', 'Evidence', 'n / (n + n₀)']];
-    const thead = h('tr', {}, ...cols.map(([col, label, sym]) => h('th', { class: `sortable${['n', 's', 'p_hat', 'p0', 'lift', 'evidence'].includes(col) ? ' num' : ''}${S.sort.col === col ? ` on${S.sort.dir > 0 ? ' asc' : ''}` : ''}`, title: { n: 'How many times this piece was shown in this cell, decayed', s: 'How many times showing it paid off on the reward this slot learns against, weighed by the objective', p_hat: 'Succeeded over shown, smoothed toward the baseline', p0: 'The slot\'s own rate in this cell', lift: 'The rate over the baseline, clamped', evidence: 'How much of the rate is live observation rather than the prior' }[col] || '', onclick: () => { S.sort = { col, dir: S.sort.col === col ? -S.sort.dir : (col === 'name' || col === 'key' ? 1 : -1) }; render(); } }, label, sym ? h('span', { class: 'sym' }, sym) : null)), h('th', {}, 'Controls'));
+    const cols = [['name', 'Item', ''], ['key', 'Cell', ''], ['n', 'Exposures', 'n'], ['s', 'Weighted credit', 's'], ['p_hat', 'Credit / exposure', 'p̂'], ['p0', 'Baseline', 'p₀'], ['lift', 'Lift', 'p̂ / p₀'], ['evidence', 'Evidence', 'n / (n + n₀)']];
+    const thead = h('tr', {}, ...cols.map(([col, label, sym]) => h('th', { class: `sortable${['n', 's', 'p_hat', 'p0', 'lift', 'evidence'].includes(col) ? ' num' : ''}${S.sort.col === col ? ` on${S.sort.dir > 0 ? ' asc' : ''}` : ''}`, title: { n: 'Decayed admitted exposures on the snapshot measurement basis; not visibility proof', s: 'How many times showing it paid off on the reward this slot learns against, weighed by the objective', p_hat: 'Weighted credit per exposure, smoothed toward the compatible prior target; not always a probability', p0: 'The slot\'s own rate in this cell', lift: 'The rate over the baseline, clamped', evidence: 'How much of the rate is live observation rather than the prior' }[col] || '', onclick: () => { S.sort = { col, dir: S.sort.col === col ? -S.sort.dir : (col === 'name' || col === 'key' ? 1 : -1) }; render(); } }, label, sym ? h('span', { class: 'sym' }, sym) : null)), h('th', {}, 'Controls'));
     const body = rows.map((r) => {
       const { cur, next, pending } = controlOf(r.item);
       const chips = [];
@@ -250,8 +348,8 @@
     host.append(h('table', {}, h('thead', {}, thead), h('tbody', {}, ...body)));
   }
   function gridCsv() {
-    const rows = [['item', 'customer_id', 'cell', 'level', 'n', 's', 'p_hat', 'p0', 'lift', 'n0', 'evidence', 'prior_p', 'prior_n']];
-    for (const r of gridRows()) rows.push([r.item, r.name, r.key, LEVEL_WORDS[r.level], r.n, r.s, r.p_hat, r.p0, r.lift, r.n0, r.evidence, r.prior ? r.prior.p : '', r.prior ? r.prior.n : '']);
+    const rows = [['item', 'customer_id', 'cell', 'level', 'measurement_basis', 'objective', 'n', 's', 'p_hat', 'p0', 'lift', 'n0', 'evidence', 'prior_p', 'prior_n']];
+    for (const r of gridRows()) rows.push([r.item, r.name, r.key, LEVEL_WORDS[r.level], S.snapshot.measurementBasis || 'served-v1', S.snapshot.objective || 'unit', r.n, r.s, r.p_hat, r.p0, r.lift, r.n0, r.evidence, r.prior ? r.prior.p : '', r.prior ? r.prior.n : '']);
     download(`lift-${S.scope}-${S.slot}-${S.snapshot ? S.snapshot.version : 'none'}.csv`, csv(rows));
   }
   function renderExploring() {
@@ -265,58 +363,97 @@
       h('span', { class: 'k' }, 'Realized share'), h('span', { class: 'v' }, rep ? `${pct(rep.realized)} of ${rep.decisions} first-position decisions on ${S.report.date}${rep.configured !== null ? ` (configured ${pct(rep.configured)})` : ''}` : 'build the day report below to measure it'),
       h('span', { class: 'k' }, 'Under the floor'), h('span', { class: 'v' }, rows.length ? `${rows.length} item${rows.length === 1 ? '' : 's'}` : 'none: every served item has reached the floor'),
     ));
-    if (rows.length) host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Item'), h('th', { class: 'num' }, 'Shown', h('span', { class: 'sym' }, 'n')), h('th', { class: 'num' }, 'To the floor'))), h('tbody', {}, ...rows.map((r) => h('tr', {}, h('td', {}, h('div', { class: 'itemname' }, nameOf(r.item)), h('div', { class: 'itemid' }, r.item)), h('td', { class: 'num' }, r.n), h('td', { class: 'num' }, r3(floor - r.n)))))));
+    if (rows.length) host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Item'), h('th', { class: 'num' }, `${S.snapshot.measurementBasis || 'served-v1'} exposures`, h('span', { class: 'sym' }, 'n')), h('th', { class: 'num' }, 'To the floor'))), h('tbody', {}, ...rows.map((r) => h('tr', {}, h('td', {}, h('div', { class: 'itemname' }, nameOf(r.item)), h('div', { class: 'itemid' }, r.item)), h('td', { class: 'num' }, r.n), h('td', { class: 'num' }, r3(floor - r.n)))))));
   }
   function renderReport() {
+    reportContext();
+    if (S.draft) renderExploring();
     const host = clear($('report'));
     const pre = clear($('report-presets'));
     pre.append(h('span', { style: 'color:var(--ink-soft)' }, 'Overlays:'), ...presets().map((p) => h('label', {}, h('input', { type: 'checkbox', 'data-name': p.name, checked: true }), p.name)));
     $('report-csv').disabled = !S.report;
+    host.append(h('div', { class: 'msg' }, 'Attribution diagnostics: credited outcomes per content-item decision. Repeated outcomes can produce more than one credit per decision. Experimental inference is unavailable; these counts do not establish business lift. Source coverage, outcome maturity and policy compatibility are not established by a report.'));
     if (S.reportError) host.append(h('div', { class: 'msg err' }, S.reportError));
+    host.append(h('button', { disabled: S.reportLoading, onclick: () => loadReport($('report-date').value) }, 'Reload first page'));
     if (!S.report) { host.append(h('div', { class: 'empty' }, 'No report for this day yet.')); return; }
     const R = S.report;
     host.append(h('div', { class: 'kv' },
       h('span', { class: 'k' }, 'Day'), h('span', { class: 'v' }, `${R.date}, built ${when(R.builtAt)}`),
-      h('span', { class: 'k' }, 'Read'), h('span', { class: 'v' }, `${R.counts.decisions} decisions, ${R.counts.outcomes} outcomes, ${R.counts.visitors} visitors${R.counts.truncated ? ' (capped: the day was larger than one pass reads)' : ''}`),
+      h('span', { class: 'k' }, 'Read'), h('span', { class: 'v' }, `${R.counts.decisions} decisions, ${R.counts.outcomes} outcomes, ${R.counts.visitors} visitors${R.counts.truncated ? ' (incomplete coverage)' : ''}`),
       h('span', { class: 'k' }, 'Credits'), h('span', { class: 'v' }, R.policies.map((p) => `${p.name} ${p.credits}`).join(' · ')),
     ));
+    if (R.hours && R.hours.missing.length) host.append(h('div', { class: 'msg' }, `Incomplete coverage: ${R.hours.missing.length} missing hours (${R.hours.missing.join(', ')}).`));
+    const coverage = R.coverage && R.coverage.version === 1 ? R.coverage : null;
+    host.append(h('div', { class: 'msg' }, 'Outcome maturity: unknown. Source completeness is not established.'));
+    if (!coverage || coverage.metadata !== 'recorded') host.append(h('div', { class: 'msg' }, 'Coverage metadata absent or invalid; historical last-hour horizon is not a minimum.'));
+    if (coverage) {
+      for (const [key, label] of [['missingHours', 'Missing hours'], ['truncatedHours', 'Truncated hours'], ['unadvancedHours', 'Ring progress not advanced for hours'], ['unknownHours', 'Unknown hour metadata']]) {
+        if (Array.isArray(coverage[key]) && coverage[key].length) host.append(h('div', { class: 'msg' }, `${label}: ${coverage[key].join(', ')}.`));
+      }
+      if (coverage.truncated) host.append(h('div', { class: 'msg' }, 'Source or visitor coverage is incomplete.'));
+      if (coverage.visitorsIncomplete === true) host.append(h('div', { class: 'msg' }, 'Visitor coverage is incomplete.'));
+      if (Array.isArray(coverage.horizons) && coverage.horizons.length) host.append(h('div', { class: 'msg' }, `Reported hourly horizons: ${Array.from(coverage.horizons, x => x && Number.isInteger(x.hour) && x.hour >= 0 && x.hour < 24 ? `${x.hour}: ${Number.isFinite(x.horizonMs) && x.horizonMs >= 0 ? x.horizonMs / 3600000 + 'h' : 'unknown'}` : 'unknown').join(', ')}.`));
+    }
+    const horizons = coverage && coverage.horizons;
+    const known = coverage && coverage.source === 'aggregates' && coverage.metadata === 'recorded' &&
+      Array.isArray(coverage.missingHours) && !coverage.missingHours.length && Array.isArray(coverage.unknownHours) && !coverage.unknownHours.length &&
+      Array.isArray(horizons) && horizons.length > 0 && horizons.length <= 24 && Array.from(horizons).every(x => x && Number.isInteger(x.hour) && x.hour >= 0 && x.hour < 24 && Number.isFinite(x.horizonMs) && x.horizonMs >= 0) && new Set(horizons.map(x => x.hour)).size === horizons.length &&
+      (!R.hours || (Array.isArray(R.hours.missing) && !R.hours.missing.length && Array.isArray(R.hours.built) && R.hours.built.length === horizons.length && R.hours.built.every(hour => horizons.some(x => x.hour === hour))));
+    host.append(h('div', { class: 'msg' }, known
+      ? `Minimum reported contributing horizon: ${Math.min(...horizons.map(x => x.horizonMs)) / 3600000}h; not a completeness guarantee.` : 'Minimum contributing horizon: unknown.'));
+    if (coverage && Array.isArray(coverage.unadvancedHours) && coverage.unadvancedHours.length) host.append(h('div', { class: 'msg' }, 'Unadvanced ring progress does not mean every reported credit is wrong.'));
     const grid = R.grids[S.slot];
     if (!grid) { host.append(h('div', { class: 'empty' }, `No decisions for ${S.slot} on that day.`)); return; }
     const names = R.policies.map((p) => p.name);
     const items = [...new Set(names.flatMap((n) => Object.keys((grid[n] || {}).items || {})))].sort();
     const cell = (n, item, f) => { const st = (((grid[n] || {}).items || {})[item] || {})['*']; return st ? st[f] : ''; };
+    const page = S.reportPage;
+    host.append(h('div', { class: 'pager', 'data-report-pager': true }, `${page.total} items, showing ${page.total ? page.offset + 1 : 0} to ${Math.min(page.total, page.offset + page.limit)}${S.customReport ? ' · response-only custom report' : ' · saved canonical report'}`,
+      h('button', { disabled: page.previous === null || S.reportLoading, onclick: () => loadReport($('report-date').value, page.previous) }, 'Previous'),
+      h('button', { disabled: page.next === null || S.reportLoading, onclick: () => loadReport($('report-date').value, page.next) }, 'Next')));
     host.append(h('div', { class: 'subhead' }, 'Items under each policy, the pooled row'));
+    host.append(h('div', { class: 'msg' }, 'The learning multiplier adjusts ranking scores; it is not measured business lift.'));
     host.append(h('div', { class: 'table-wrap' }, h('table', {},
-      h('thead', {}, h('tr', {}, h('th', {}, 'Item'), ...names.flatMap((n) => [h('th', { class: 'num' }, `${n}: shown`, h('span', { class: 'sym' }, 'n')), h('th', { class: 'num' }, 'Succeeded', h('span', { class: 'sym' }, 's')), h('th', { class: 'num' }, 'Rate', h('span', { class: 'sym' }, 'p̂')), h('th', { class: 'num' }, 'Lift')]))),
+      h('thead', {}, h('tr', {}, h('th', {}, 'Item'), ...names.flatMap((n) => [h('th', { class: 'num' }, `${n}: ${(grid[n] || {}).measurementBasis || 'served-v1'} exposures`, h('span', { class: 'sym' }, 'n')), h('th', { class: 'num' }, `Weighted credits (${(grid[n] || {}).objective || 'unit'})`, h('span', { class: 'sym' }, 's')), h('th', { class: 'num' }, `Per exposure (${(grid[n] || {}).objective || 'unit'})`, h('span', { class: 'sym' }, 'p̂')), h('th', { class: 'num' }, 'Learning multiplier')]))),
       h('tbody', {}, ...items.map((item) => h('tr', {}, h('td', {}, h('div', { class: 'itemname' }, nameOf(item)), h('div', { class: 'itemid' }, item)), ...names.flatMap((n) => [h('td', { class: 'num' }, cell(n, item, 'n')), h('td', { class: 'num' }, cell(n, item, 's')), h('td', { class: 'num' }, cell(n, item, 'p_hat')), h('td', { class: 'num' }, h('strong', {}, cell(n, item, 'lift')))])))),
     )));
     const arms = R.holdout[S.slot] || [];
     if (arms.length) {
-      host.append(h('div', { class: 'subhead' }, 'The holdout arms, under the learning policy'));
-      host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Arm'), h('th', { class: 'num' }, 'decisions'), h('th', { class: 'num' }, 'credited'), h('th', { class: 'num' }, 'rate'))), h('tbody', {}, ...arms.map((a) => h('tr', {}, h('td', {}, a.arm), h('td', { class: 'num' }, a.decisions), h('td', { class: 'num' }, a.credited), h('td', { class: 'num' }, a.rate))))));
-      // The number a person can read: each holdout arm against personalized, with its interval and what it would take to call it.
-      for (const cmp of ((R.holdoutComparison || {})[S.slot] || [])) host.append(h('div', { class: 'kv' }, h('span', { class: 'k' }, `${cmp.treatment.arm} vs ${cmp.control.arm}`), h('span', { class: 'v' }, cmp.words)));
+      host.append(h('div', { class: 'subhead' }, 'Recorded arms, under the learning policy'));
+      // Recompute from raw counts even when an older server sends rates or comparisons.
+      host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Arm'), h('th', { class: 'num' }, 'Decisions'), h('th', { class: 'num' }, 'Credited outcomes'), h('th', { class: 'num' }, 'Credits per decision'))), h('tbody', {}, ...arms.map((a) => h('tr', {}, h('td', {}, a.arm), h('td', { class: 'num' }, a.decisions), h('td', { class: 'num' }, a.credited), h('td', { class: 'num' }, a.decisions > 0 ? r3(a.credited / a.decisions) : '—'))))));
     }
   }
-  function reportCsv() {
-    const R = S.report; if (!R) return;
+  async function reportCsv() {
+    reportContext(); if (!S.report) return;
+    const key = S.reportKey, generation = S.reportGeneration, slot = S.slot;
+    let R = S.customReport;
+    if (!R) {
+      const { ok, status, data } = await json(v1(`/learn/report?date=${encodeURIComponent($('report-date').value)}&brand=${encodeURIComponent(S.brand)}&revision=${encodeURIComponent(S.reportPage.revision)}`)).catch(() => ({ ok: false, status: 0, data: {} }));
+      if (key !== reportKey() || generation !== S.reportGeneration) return;
+      if (!ok || data.ok !== true || !reportOwner(data.report)) {
+        S.reportError = status === 409 ? 'Report changed. Reload the first page before exporting.' : 'Could not export the full report.';
+        if (status === 409) { S.report = null; S.reportPage = null; } renderReport(); return;
+      }
+      R = data.report;
+    }
     const grid = R.grids[S.slot] || {};
     const names = R.policies.map((p) => p.name);
-    const rows = [['item', 'customer_id', 'policy', 'cell', 'n', 's', 'p_hat', 'p0', 'lift']];
-    for (const n of names) for (const [item, byKey] of Object.entries((grid[n] || {}).items || {})) for (const [key, st] of Object.entries(byKey)) rows.push([item, nameOf(item), n, key, st.n, st.s, st.p_hat, st.p0, st.lift]);
-    download(`report-${S.scope}-${S.slot}-${R.date}.csv`, csv(rows));
+    const rows = [['item', 'customer_id', 'policy', 'cell', 'measurement_basis', 'objective', 'n', 's', 'p_hat', 'p0', 'lift']];
+    for (const n of names) for (const [item, byKey] of Object.entries((grid[n] || {}).items || {})) for (const [key, st] of Object.entries(byKey)) rows.push([item, nameOf(item), n, key, grid[n].measurementBasis || 'served-v1', grid[n].objective || 'unit', st.n, st.s, st.p_hat, st.p0, st.lift]);
+    if (key === reportKey() && generation === S.reportGeneration) download(`report-${S.scope}-${slot}-${R.date}.csv`, csv(rows));
   }
   function renderHistory() {
     const ph = clear($('proposals'));
+    ph.append(h('div', { class: 'msg' }, 'Autonomy is unavailable. Historical proposals are read-only and unverified; this bounded listing is not a complete audit trail.'));
     if (S.proposalsError) ph.append(h('div', { class: 'empty' }, S.proposalsError));
-    else if (!S.proposals || !S.proposals.length) ph.append(h('div', { class: 'empty' }, 'No proposals yet. A slot in assisted mode gets one from the daily cycle once it has seen enough exposures.'));
+    else if (!S.proposals || !S.proposals.length) ph.append(h('div', { class: 'empty' }, 'No historical proposals returned.'));
     else for (const p of [...S.proposals].reverse().slice(0, 12)) {
       const ev = (p.evidence || [])[0];
       ph.append(h('div', { class: 'prop' },
-        h('div', { class: 'top' }, h('span', { class: 'n' }, p.slot), h('span', { class: 'st', style: `color:${p.status === 'applied' ? 'var(--ok)' : p.status === 'rejected' ? 'var(--warn)' : 'var(--ai)'}` }, p.status), h('span', { class: 'meta' }, when(p.at))),
-        h('div', {}, `${p.dimension}: ${p.from} → ${p.to}`, ev ? ` · ${ev.dimension} separates outcomes by ${ev.spread}` : '', ` · ${Math.round(p.exposures)} exposures · ${p.mode}`),
+        h('div', { class: 'top' }, h('span', { class: 'n' }, p.slot), h('span', { class: 'st' }, `stored status (unverified): ${p.status}`), h('span', { class: 'meta' }, when(p.at))),
+        h('div', {}, `${p.dimension}: ${p.from} → ${p.to}`, ev ? ` · stored ${ev.dimension} spread ${ev.spread}` : '', ` · ${Math.round(p.exposures)} exposures recorded · ${p.mode}`),
         p.note ? h('div', { class: 'ev' }, p.note) : null,
-        p.status === 'proposed' ? h('div', { style: 'margin-top:5px' }, h('button', { class: 'small', disabled: !canEdit(), onclick: () => decideProposal(p.id, 'apply') }, 'Apply'), ' ', h('button', { class: 'small warn', disabled: !canEdit(), onclick: () => decideProposal(p.id, 'reject') }, 'Reject')) : null,
       ));
     }
     const lh = clear($('learn-history'));
@@ -362,7 +499,7 @@
     return el;
   }
   function sel(value, options, onChange, path) {
-    const el = h('select', { class: changedClass(path), disabled: !canEdit() }, ...options.map(([v, label]) => h('option', { value: v, selected: String(v) === String(value) }, label)));
+    const el = h('select', { class: changedClass(path), disabled: !canEdit() }, ...options.map(([v, label, disabled]) => h('option', { value: v, disabled: !!disabled, selected: String(v) === String(value) }, label)));
     el.addEventListener('change', () => onChange(el.value));
     return el;
   }
@@ -380,16 +517,15 @@
       dial('γ, the trust dial', 'How much the learned lift moves the score: score_final = score_base × lift^γ. At 0 the lift is computed and shown on every receipt and changes nothing; at 1 it applies in full.', num(d.gamma, (v) => { if (v === undefined) delete d.gamma; else d.gamma = v; scheduleCheck(); }, `${base}.gamma`, { min: 0, max: 1, step: 0.05 }), gamma === 0 ? 'Shadow: learning is visible and inert.' : `A lift of 1.4 becomes ×${r3(Math.pow(1.4, gamma))} on the score.`),
       dial('Reward', 'The outcome this slot learns against. One reward per slot; the others still land in the ledger.', sel(d.reward || 'click', REWARDS.map((r) => [r, r.replace('_', ' ')]), (v) => { d.reward = v; scheduleCheck(); }, `${base}.reward`)),
       dial('Objective', 'What a success is worth. Unit counts it; revenue weighs it by the order value; margin by the margin the feed gives, or the value when it gives none. Revenue and margin need a reward that carries a value: purchase or add to bag.', sel(d.objective || 'unit', [['unit', 'unit'], ['revenue', 'revenue'], ['margin', 'margin']], (v) => { if (v === 'unit') delete d.objective; else d.objective = v; scheduleCheck(); }, `${base}.objective`)),
+      dial('Measurement basis', 'Legacy served-v1 and client-reported rendered-v1 are separate counters and prior bases. A populated change requires the reviewed reset/publication flow; render ACK is not visibility proof.', sel(d.measurementBasis || 'served-v1', [['served-v1', 'legacy served'], ['rendered-v1', 'client-reported rendered']], (v) => { d.measurementBasis = v; scheduleCheck(); }, `${base}.measurementBasis`)),
       h('div', { class: 'subhead' }, 'Exploration'),
-      dial('Mode', 'Rotation serves the least-observed item on a hashed share of decisions; Thompson samples each item’s rate and ranks by the sample; epsilon is uniform. Every pick is flagged on the receipt.', sel((d.exploration || {}).mode || 'off', [['off', 'off'], ['rotation', 'rotation'], ['thompson', 'thompson'], ['epsilon', 'epsilon']], (v) => { if (v === 'off') delete d.exploration; else d.exploration = { mode: v, share: (d.exploration || {}).share ?? 0.1, floor: (d.exploration || {}).floor ?? 50 }; scheduleCheck(); }, `${base}.exploration.mode`)),
-      d.exploration ? dial('Share', 'The fraction of this slot’s decisions reserved for exploration.', num(d.exploration.share, (v) => { d.exploration.share = v ?? 0; scheduleCheck(); }, `${base}.exploration.share`, { min: 0, max: 1, step: 0.01 }), `${pct(d.exploration.share)} of decisions`) : null,
-      d.exploration ? dial('Floor', 'Observations below which an item counts as under-observed and is worth exploring.', num(d.exploration.floor, (v) => { d.exploration.floor = v ?? 0; scheduleCheck(); }, `${base}.exploration.floor`, { min: 0, step: 1 })) : null,
-      h('div', { class: 'subhead' }, 'Autonomy'),
-      dial('Mode', 'Configured: the weights are what a person set. Assisted: the daily cycle proposes one bounded move with its evidence and a person applies or rejects it. Autonomous: the same move is applied, within the bounds, as a new revision.', sel((d.autonomy || {}).mode || 'configured', [['configured', 'configured'], ['assisted', 'assisted'], ['autonomous', 'autonomous']], (v) => { if (v === 'configured') delete d.autonomy; else d.autonomy = { mode: v, step: (d.autonomy || {}).step ?? 0.05, min: (d.autonomy || {}).min ?? 0, max: (d.autonomy || {}).max ?? 1, pinned: (d.autonomy || {}).pinned ?? [], minN: (d.autonomy || {}).minN ?? 500 }; scheduleCheck(); }, `${base}.autonomy.mode`)),
-      d.autonomy ? dial('Step', 'The most any weight may move per cycle.', num(d.autonomy.step, (v) => { d.autonomy.step = v ?? 0.05; scheduleCheck(); }, `${base}.autonomy.step`, { min: 0.01, max: 1, step: 0.01 })) : null,
-      d.autonomy ? dial('Bounds', 'The hard range for any weight, min and max.', h('div', {}, num(d.autonomy.min, (v) => { d.autonomy.min = v ?? 0; scheduleCheck(); }, `${base}.autonomy.min`, { min: 0, max: 1, step: 0.05 }), num(d.autonomy.max, (v) => { d.autonomy.max = v ?? 1; scheduleCheck(); }, `${base}.autonomy.max`, { min: 0, max: 1, step: 0.05 }))) : null,
-      d.autonomy ? dial('Minimum exposures', 'The slot must have seen this many exposures before a cycle may act.', num(d.autonomy.minN, (v) => { d.autonomy.minN = v ?? 500; scheduleCheck(); }, `${base}.autonomy.minN`, { min: 1, step: 1 })) : null,
-      d.autonomy ? dial('Pinned dimensions', 'Weights the cycle may never touch, comma separated.', txt((d.autonomy.pinned || []).join(', '), (v) => { d.autonomy.pinned = v.split(',').map((x) => x.trim()).filter(Boolean); scheduleCheck(); }, `${base}.autonomy.pinned`, 'occasion, line')) : null,
+      dial('Mode', 'Exploration is off by default. Rotation serves the least-observed item on a hashed share; epsilon is uniform. Thompson is unsupported and stored settings are dormant.', sel(d.exploration?.mode === 'thompson' ? '' : d.exploration?.mode || 'off', [...(d.exploration?.mode === 'thompson' ? [['', 'Stored Thompson — inactive; choose a replacement', true]] : []), ['off', 'off'], ['rotation', 'rotation'], ['epsilon', 'epsilon']], (v) => { if (v === 'off') delete d.exploration; else d.exploration = { mode: v, share: (d.exploration || {}).share ?? 0.1, floor: (d.exploration || {}).floor ?? 50 }; scheduleCheck(); }, `${base}.exploration.mode`)),
+      d.exploration?.mode === 'thompson' ? h('pre', { class: 'dormant-exploration' }, JSON.stringify(d.exploration, null, 2)) : null,
+      d.exploration && d.exploration.mode !== 'thompson' ? dial('Share', 'The configured share used by the existing exploration rule; not a measured exposure guarantee.', num(d.exploration.share, (v) => { d.exploration.share = v ?? 0; scheduleCheck(); }, `${base}.exploration.share`, { min: 0, max: 1, step: 0.01 }), `${pct(d.exploration.share)} configured share`) : null,
+      d.exploration && d.exploration.mode !== 'thompson' ? dial('Floor', 'Observations below which an item counts as under-observed and is worth exploring.', num(d.exploration.floor, (v) => { d.exploration.floor = v ?? 0; scheduleCheck(); }, `${base}.exploration.floor`, { min: 0, step: 1 })) : null,
+      h('div', { class: 'subhead' }, 'Autonomy unavailable'),
+      h('div', { class: 'msg' }, 'Stored settings are dormant. Cycles and proposal changes are disabled.'),
+      h('pre', { class: 'dormant-autonomy' }, JSON.stringify(d.autonomy || { mode: 'configured' }, null, 2)),
       h('div', { class: 'subhead' }, 'Their model'),
       dial('Weight, w_ext', 'How much this slot trusts their model: w_ext × score joins the base score as a driver named external. 0 means the term is off for this slot. The model itself is configured below, for every slot.', num((d.external || {}).weight, (v) => { if (v === undefined || v === 0) delete d.external; else d.external = { weight: v }; scheduleCheck(); }, `${base}.external.weight`, { min: 0, max: 1, step: 0.05 }), S.draft.external ? `${S.draft.external.kind} · ${S.draft.external.ref}` : 'No model configured for this scope.'),
     );
@@ -429,8 +565,20 @@
   function renderMessages() {
     const host = clear($('messages'));
     if (S.flash) host.append(h('div', { class: 'msg ok' }, S.flash));
+    for (const [key, p] of pendingPublications) if (p.scope === S.scope) host.append(h('div', { class: 'msg err' },
+      'Original intent retained: ' + p.headers['Idempotency-Key'] + '. ',
+      h('button', { onclick: () => publicationStatus(key, false) }, 'Check status'), ' ',
+      h('button', { onclick: () => publicationStatus(key, true) }, 'Recover original'), ' ',
+      h('button', { onclick: async () => { const r = await request(p.url, { method: p.method, headers: p.headers, body: p.body });
+        S.errors = [r.ok ? 'Original operation acknowledged; reload before a new edit.' : 'Original acknowledgement remains unresolved.']; render(); } }, 'Retry exact original'),
+      p.conflicted ? h('button', { onclick: () => {
+        if (confirm('Discard this definitively conflicted local draft? Reload the authoritative document before authoring a replacement.')) {
+          try { removePending(key); S.errors = ['Conflicted draft discarded. Reload before authoring a replacement.']; } catch { S.errors = ['Local completion unavailable; original draft retained.']; }
+          render();
+        }
+      } }, 'Discard conflicted draft') : null));
     if (S.errors.length) host.append(h('div', { class: 'msg err' }, 'The document as drafted was refused:', h('ul', {}, ...S.errors.map((e) => h('li', {}, e)))));
-    if (!canEdit()) host.append(h('div', { class: 'msg', style: 'background:var(--tan-wash);border:1px solid var(--line-strong)' }, 'Read-only. Sign in at the top right to change the dials, the controls and the proposals, or to build a report.'));
+    if (!canEdit()) host.append(h('div', { class: 'msg', style: 'background:var(--tan-wash);border:1px solid var(--line-strong)' }, 'Read-only. Sign in at the top right to change the dials and item controls, or to build a report.'));
   }
   function renderBar() {
     const sl = $('slot');
@@ -444,7 +592,7 @@
     $('changecount').textContent = n ? `${n} change${n === 1 ? '' : 's'}${S.checking ? ', checking…' : ''}` : 'No changes';
     $('save').disabled = !n || !canEdit() || S.errors.length > 0 || S.checking;
   }
-  function render() { renderBar(); renderMessages(); renderGrid(); renderExploring(); renderReport(); renderHistory(); renderSlotDials(); renderGlobalDials(); renderSession(); renderAccounts(); renderAudit(); }
+  function render() { reportContext(); renderBar(); renderMessages(); renderGrid(); renderReport(); renderHistory(); renderSlotDials(); renderGlobalDials(); renderSession(); renderAccounts(); renderAudit(); }
 
   // ---------- wiring ----------
   $('report-date').value = new Date().toISOString().slice(0, 10);
@@ -548,9 +696,10 @@
     finally { $('si-submit').disabled = false; }
   });
   $('sign-out').addEventListener('click', async () => { await OperatorSession.signOut(); S.token = ''; renderSession(); await load().catch(() => render()); });
-  if (window.OperatorSession) OperatorSession.onChange(() => { S.token = sessionStorage.getItem('tuning-token') || ''; renderSession(); });
+  let reportSession = reportUser();
+  if (window.OperatorSession) OperatorSession.onChange(() => { S.token = sessionStorage.getItem('tuning-token') || ''; renderSession(); const next = reportUser(); if (next !== reportSession) { reportSession = next; reportContext(); renderReport(); } });
   renderSession();
-  $('slot').addEventListener('change', async (e) => { S.slot = e.target.value; S.archived = null; S.diffs = {}; await loadLift(); render(); });
+  $('slot').addEventListener('change', async (e) => { S.slot = e.target.value; S.archived = null; S.diffs = {}; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
   $('brand').addEventListener('change', async (e) => { S.brand = e.target.value.trim() || S.scope; S.archived = null; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
   $('grid-filter').addEventListener('input', (e) => { S.filter = e.target.value; renderGrid(); });
   $('grid-level').addEventListener('change', (e) => { S.level = e.target.value; renderGrid(); });

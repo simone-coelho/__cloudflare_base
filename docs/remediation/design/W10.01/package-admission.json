@@ -1,0 +1,91 @@
+{
+  "before": {
+    "id": "W10",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Bound total item/key/byte state, fine-level cardinality, channel vocabulary, snapshots and ring indexes. Define degraded/fallback statistics and recover already oversized/inconsistent objects without publishing uncommitted counts. Prove with runtime limits, restart and sustained high-cardinality traffic. Remove raw-state snapshot spread separately. Gamma zero is not containment.",
+      "finding_refs": "F08",
+      "sizing_owner": "S genuine ingestion disable/guard → M/L bounded recoverable storage; OL"
+    },
+    "title": "Bounded recoverable learning storage",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F08"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W10",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Bound total item/key/byte state, fine-level cardinality, channel vocabulary, snapshots and ring indexes. Define degraded/fallback statistics and recover already oversized/inconsistent objects without publishing uncommitted counts. Prove with runtime limits, restart and sustained high-cardinality traffic. Remove raw-state snapshot spread separately. Gamma zero is not containment.",
+      "finding_refs": "F08",
+      "sizing_owner": "S genuine ingestion disable/guard → M/L bounded recoverable storage; OL"
+    },
+    "title": "Bounded recoverable learning storage",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F08"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W10-INGESTION-GUARD",
+          "description": "Whole-batch application-budget ingestion and snapshot containment only; native sustained capacity, oversized recovery, ring/vocabulary/fallback remain open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W10-INGESTION-GUARD",
+          "task_id": "W10.01",
+          "task_criterion_id": "W10.01-C1"
+        },
+        {
+          "criterion_id": "W10-INGESTION-GUARD",
+          "task_id": "W10.01",
+          "task_criterion_id": "W10.01-C2"
+        },
+        {
+          "criterion_id": "W10-INGESTION-GUARD",
+          "task_id": "W10.01",
+          "task_criterion_id": "W10.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W10.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

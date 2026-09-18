@@ -1,0 +1,183 @@
+{
+  "before": {
+    "id": "W38",
+    "canonical": {
+      "gate_scope": "G1 bounds / G4 larger corpus",
+      "full_scope": "Byte/count guards and bounded cache; verify old readers before removing duplicated envelope field, retain needed immutable revisions and purge by policy. Measure whole read/validate/compose path on realistic shapes and concurrency. Use final-score/candidate-preserving optimization with full parity; retrieval/sharding only if required by the accepted workload.",
+      "finding_refs": "F32/F08; N07",
+      "sizing_owner": "S bounds → M/L qualified scale; OL/D"
+    },
+    "title": "Qualified catalog and cache envelope",
+    "gates": [
+      "G1",
+      "G4"
+    ],
+    "source_findings": [
+      "F32",
+      "F08",
+      "N07"
+    ],
+    "proposed_owner": "OL/D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W38-CACHE",
+          "description": "Bound content and legacy configuration cache entries/charged bytes/expiry and invalidation with binding/validator identity, without altering catalog authority or ranking; whole-path scale remains separate."
+        },
+        {
+          "id": "W38-ENVELOPE",
+          "description": "Complete byte/count guards for catalog, snapshots and ledger-related shapes with qualified admission/recovery; F08/N07 cross-package scope retained."
+        },
+        {
+          "id": "W38-COMPATIBILITY",
+          "description": "Verify old readers before removing duplicated envelopes; preserve needed immutable revision/rollback/replay compatibility."
+        },
+        {
+          "id": "W38-RETENTION",
+          "description": "Retain required immutable revisions and purge only under approved retention/history policy and authority."
+        },
+        {
+          "id": "W38-SCALE",
+          "description": "Measure complete read/validate/compose path on realistic workload/shapes/concurrency against customer latency/capacity contract."
+        },
+        {
+          "id": "W38-PARITY",
+          "description": "Final-score/candidate-preserving optimization with full parity; retrieval/sharding only if required by accepted workload."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W38-CACHE",
+          "task_id": "W38.01",
+          "task_criterion_id": "W38.01-C1"
+        },
+        {
+          "criterion_id": "W38-CACHE",
+          "task_id": "W38.01",
+          "task_criterion_id": "W38.01-C2"
+        },
+        {
+          "criterion_id": "W38-CACHE",
+          "task_id": "W38.02",
+          "task_criterion_id": "W38.02-C1"
+        },
+        {
+          "criterion_id": "W38-CACHE",
+          "task_id": "W38.02",
+          "task_criterion_id": "W38.02-C2"
+        }
+      ],
+      "task_ids": [
+        "W38.01",
+        "W38.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W38",
+    "canonical": {
+      "gate_scope": "G1 bounds / G4 larger corpus",
+      "full_scope": "Byte/count guards and bounded cache; verify old readers before removing duplicated envelope field, retain needed immutable revisions and purge by policy. Measure whole read/validate/compose path on realistic shapes and concurrency. Use final-score/candidate-preserving optimization with full parity; retrieval/sharding only if required by the accepted workload.",
+      "finding_refs": "F32/F08; N07",
+      "sizing_owner": "S bounds → M/L qualified scale; OL/D"
+    },
+    "title": "Qualified catalog and cache envelope",
+    "gates": [
+      "G1",
+      "G4"
+    ],
+    "source_findings": [
+      "F32",
+      "F08",
+      "N07"
+    ],
+    "proposed_owner": "OL/D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W38-CACHE",
+          "description": "Bound content and legacy configuration cache entries/charged bytes/expiry and invalidation with binding/validator identity, without altering catalog authority or ranking; whole-path scale remains separate."
+        },
+        {
+          "id": "W38-ENVELOPE",
+          "description": "Complete byte/count guards for catalog, snapshots and ledger-related shapes with qualified admission/recovery; F08/N07 cross-package scope retained."
+        },
+        {
+          "id": "W38-COMPATIBILITY",
+          "description": "Verify old readers before removing duplicated envelopes; preserve needed immutable revision/rollback/replay compatibility."
+        },
+        {
+          "id": "W38-RETENTION",
+          "description": "Retain required immutable revisions and purge only under approved retention/history policy and authority."
+        },
+        {
+          "id": "W38-SCALE",
+          "description": "Measure complete read/validate/compose path on realistic workload/shapes/concurrency against customer latency/capacity contract."
+        },
+        {
+          "id": "W38-PARITY",
+          "description": "Final-score/candidate-preserving optimization with full parity; retrieval/sharding only if required by accepted workload."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W38-CACHE",
+          "task_id": "W38.01",
+          "task_criterion_id": "W38.01-C1"
+        },
+        {
+          "criterion_id": "W38-CACHE",
+          "task_id": "W38.01",
+          "task_criterion_id": "W38.01-C2"
+        },
+        {
+          "criterion_id": "W38-CACHE",
+          "task_id": "W38.02",
+          "task_criterion_id": "W38.02-C1"
+        },
+        {
+          "criterion_id": "W38-CACHE",
+          "task_id": "W38.02",
+          "task_criterion_id": "W38.02-C2"
+        },
+        {
+          "criterion_id": "W38-ENVELOPE",
+          "task_id": "W38.03",
+          "task_criterion_id": "W38.03-C1"
+        },
+        {
+          "criterion_id": "W38-COMPATIBILITY",
+          "task_id": "W38.03",
+          "task_criterion_id": "W38.03-C2"
+        }
+      ],
+      "task_ids": [
+        "W38.01",
+        "W38.02",
+        "W38.03"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

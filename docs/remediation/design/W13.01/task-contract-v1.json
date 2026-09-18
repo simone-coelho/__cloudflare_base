@@ -1,0 +1,159 @@
+{
+  "id": "W13.01",
+  "package_id": "W13",
+  "title": "Restore existing lint gate and repair six current errors",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Correct lint configuration and six actual source errors with semantics preserved, cap existing warnings at503 and wire lint into existing local and CI checks.",
+  "read_paths": [
+    "AGENTS.md",
+    ".eslintrc.json",
+    ".github",
+    "src",
+    "migrations",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    ".eslintrc.json",
+    "package.json",
+    ".github/workflows/ci.yml",
+    "src/demos/meridian/receipts.test.ts",
+    "src/identity/link.ts",
+    "src/ledger/erasure.ts",
+    "src/reflex/core.ts",
+    "src/services/SessionManager.ts",
+    "src/tenancy/d1.test.ts",
+    "docs/remediation/evidence/W13.01/worker.json"
+  ],
+  "non_goals": [
+    "No warning cleanup project, weakened global rules, new test/framework/CI job, scoring/identity/erasure semantic change, sanitizer removal, full W13/F10/F35/N18/customer/gate/release acceptance.",
+    "No npm ci dependency installation, full npm run ci/suite, deploy/migration/seed/bundle-build execution, network/cloud/credential/customer-data/commit/push/cleanup or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W13.01-C1",
+      "description": "Actual npm run lint analyzes current .ts scope with zero errors and no more than503 warnings. Prefix corrected; existing warning rules unchanged. Existing local scripts.ci and GitHub typecheck job invoke lint before typecheck/tests; workflow wiring source-confirmed only.",
+      "required_evidence_kinds": [
+        "source_inventory"
+      ],
+      "minimum_claim": "source_confirmed"
+    },
+    {
+      "id": "W13.01-C2",
+      "description": "Exactly six narrow lint-source repairs preserve lexical FakeD1 this, visitor-id accepted characters, SessionManager base semantics, erasure loop/body/exit behavior and byte-identical sanitizer expression. Existing two FakeD1 fixture suites pass; worker compiler/whitespace pass. No new tests or unrelated source edits.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W13.01-C3",
+      "description": "Independent frozen actual-source/admission-patch/config/CI/pin/full worker-proof review and actual K1 once. Inspect K2/compiler/whitespace without rerun; keep aggregate-warning, operational deployment/provenance/recovery and full W13 limits explicit.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W13.01-K1",
+      "required": true,
+      "criterion_ids": [
+        "W13.01-C1"
+      ],
+      "command": "npm run lint",
+      "runtime": "Installed Node/npm/ESLint8 with current TypeScript plugin/parser; actual repository configuration and .ts scope, no fix/cache/network.",
+      "workload": "Whole existing lint target only; zero errors and aggregate warnings<=503; review actual package/workflow wiring, no CI execution.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W13.01-K2",
+      "required": true,
+      "criterion_ids": [
+        "W13.01-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/demos/meridian/receipts.test.ts src/tenancy/d1.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest, two existing actual receipt/tenant fixtures with synthetic D1; no network.",
+      "workload": "Existing fixtures only for changed lexical closures; worker app noEmit --incremental false --composite false and scoped whitespace; source-equivalent other fixes reviewed, no broader runtime claim.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W13.01-K3",
+      "required": true,
+      "criterion_ids": [
+        "W13.01-C3"
+      ],
+      "command": "Independent frozen W13.01 actual source/config/workflow/admission-patch/pin/full worker-proof review and exact K1 once; record review.json.",
+      "runtime": "Independent source and actual installed lint verification.",
+      "workload": "C1-C3/full W13 residuals; inspect worker fixture/compiler/whitespace results without rerun.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W08.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Retired unsafe provisioning entrypoints and retained full release residuals.",
+      "rationale": "Lint repair cannot attest deployment/migration/recovery or authorize script execution."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W12.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Monitor truthfulness implementation remains unchanged.",
+      "rationale": "Shared lint-only dependency mutation qualifies old whole-artifact proof, not a monitor regression or full-task rerun."
+    }
+  ],
+  "preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W13.01/plan-v1.md",
+      "sha256": "778c37b9d8f710a4f54d25e6a79e8f649e6f3c1c21c0cdf559d7f44059a00b2b"
+    },
+    "contract_digest": "53ab89e770796bcc1ac431c3189304e24da8c5d887f4e7fdcbb27cce2845ed2d",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-09T01:26:42.160Z",
+      "plan_sha256": "778c37b9d8f710a4f54d25e6a79e8f649e6f3c1c21c0cdf559d7f44059a00b2b",
+      "rationale": "Fresh failing lint baseline, independently challenged equivalent fixes and bounded existing checks under standing local mandate."
+    }
+  },
+  "assignments": {
+    "implementer": "w1301-worker",
+    "independent_reviewer": "w1301-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement only nine-path lint repair; run admitted checks and freeze worker source/proof for independent review."
+  },
+  "blocked": null,
+  "acceptance_history": []
+}

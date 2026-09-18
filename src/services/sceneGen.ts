@@ -102,7 +102,7 @@ export async function generateSceneToR2(env: Env, job: SceneJob): Promise<SceneR
         generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: aspect } },
       }),
     });
-    if (!r.ok) { console.error('sceneGen HTTP', r.status, (await r.text().catch(() => '')).slice(0, 160)); return { ok: false, error: `image model ${r.status}` }; }
+    if (!r.ok) { console.error('sceneGen HTTP', r.status); return { ok: false, error: `image model ${r.status}` }; }
     const j: any = await r.json();
     const part = (j?.candidates?.[0]?.content?.parts || []).map((x: any) => x.inlineData || x.inline_data).find((x: any) => x?.data);
     if (!part?.data) return { ok: false, error: `no image (finish=${j?.candidates?.[0]?.finishReason})` };
@@ -113,7 +113,7 @@ export async function generateSceneToR2(env: Env, job: SceneJob): Promise<SceneR
     });
     return { ok: true, url: sceneUrl(productId, sceneId), cached: false, tookMs: Date.now() - t0 };
   } catch (e) {
-    console.error('generateSceneToR2 error:', e);
+    console.error('generateSceneToR2 error');
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }

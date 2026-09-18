@@ -17,36 +17,38 @@
 // per tenant, in IDENTITY_SECRETS as `tenant:secret[|previous],tenant2:secret`,
 // with `|` allowing two to be valid during a rotation.
 //
-// When a tenant has NO secret configured, a link is accepted on the site key
-// alone and the record says so (`assurance: 'site'`). That is the demo setting.
-// A deployment that handles real accounts sets the secret, at which point an
-// unsigned link is refused; the assurance level is on every link record so a
-// reader of the warehouse can tell the two apart.
+// Every link requires configured backend proof, including demo/open modes.
+// Historical `assurance: 'site'` records remain readable; no new link receives
+// that assurance merely because verification material is missing.
 // ---------------------------------------------------------------------------
 
 import type { TenantId } from '@/tenancy/tenant';
+import type { Env } from '@/types/env';
+import { tenantConfig } from '@/tenancy/middleware';
+import { parseIdentitySecrets, requiresSafeIdentity, validateIdentityMaterial } from './material.mjs';
+
+type AssertionEnvironment = Pick<Env, 'IDENTITY_SECRETS' | 'IDENTITY_SALT' | 'AUTH_MODE' | 'TENANTS' | 'DEPLOYMENT_PROFILE'>;
 
 export const ASSERTION_MAX_TTL_S = 24 * 3600;
 
 export type Assurance = 'signed' | 'site';
 
 export function secretTable(env: { IDENTITY_SECRETS?: string }): Map<string, string[]> {
-  const table = new Map<string, string[]>();
-  for (const entry of (env.IDENTITY_SECRETS ?? '').split(',')) {
-    const i = entry.indexOf(':');
-    if (i < 0) continue;
-    const tenant = entry.slice(0, i).trim();
-    const secrets = entry.slice(i + 1).split('|').map((s) => s.trim()).filter(Boolean);
-    if (!tenant || secrets.length === 0) continue;
-    table.set(tenant, [...(table.get(tenant) ?? []), ...secrets]);
-  }
-  return table;
+  try { return parseIdentitySecrets(env.IDENTITY_SECRETS); } catch { return new Map(); }
 }
 
 /** The secrets that may sign for a tenant: its own, plus any under `*`. */
-export function secretsFor(env: { IDENTITY_SECRETS?: string }, tenant: TenantId): string[] {
-  const table = secretTable(env);
-  return [...(table.get(tenant) ?? []), ...(table.get('*') ?? [])];
+export function secretsFor(env: AssertionEnvironment, tenant: TenantId): string[] {
+  let table: Map<string, string[]>;
+  try {
+    table = requiresSafeIdentity(env) ? validateIdentityMaterial(env, tenantConfig(env).provisioned) : secretTable(env);
+  } catch { return []; }
+  let wildcard = env.AUTH_MODE !== 'enforced';
+  if (!wildcard) {
+    try { const configured = tenantConfig(env); wildcard = configured.provisioned.length === 1 && configured.provisioned.includes(tenant); }
+    catch { wildcard = false; }
+  }
+  return [...(table.get(tenant) ?? []), ...(wildcard ? table.get('*') ?? [] : [])];
 }
 
 export function assertionMaterial(tenant: TenantId, visitorId: string, accountId: string, exp: number): string {
@@ -85,18 +87,16 @@ export type AssertionVerdict =
   | { ok: false; reason: string };
 
 /**
- * Decide whether a link may proceed. Signed when the tenant has a secret and
- * the signature checks; site-assured when the tenant has no secret at all;
- * refused otherwise.
+ * Decide whether a link may proceed: configured backend signature or refusal.
  */
 export async function verifyAssertion(
-  env: { IDENTITY_SECRETS?: string },
+  env: AssertionEnvironment,
   tenant: TenantId,
   claim: { visitorId: string; accountId: string; exp?: number; assertion?: string },
   nowMs = Date.now(),
 ): Promise<AssertionVerdict> {
   const secrets = secretsFor(env, tenant);
-  if (secrets.length === 0) return { ok: true, assurance: 'site' };
+  if (secrets.length === 0) return { ok: false, reason: 'identity verification not configured' };
 
   if (!claim.assertion) return { ok: false, reason: 'identity assertion required for this tenant' };
   const exp = claim.exp;

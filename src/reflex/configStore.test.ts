@@ -1,64 +1,21 @@
-// src/reflex/configStore.test.ts
-// CW0's proof. The store's job is to make tuning safe without a deploy, so the
-// tests are weighted toward the two ways that goes wrong: an invalid config
-// reaching the decision path, and a config read failure taking the engine down.
-
+// Pure validation/merge assertions are retained. Mutable-KV/fallback oracles
+// are superseded by explicit coherent R2 authority and authored-base mutations.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DEFAULT_REFLEX_CONFIG, type ReflexConfig } from '@/reflex/core';
+import { Hono } from 'hono';
+import { SignJWT } from 'jose';
 import type { Env } from '@/types/env';
-import {
-  CACHE_TTL_MS,
-  applyPatch,
-  invalidateConfigCache,
-  patchReflexConfig,
-  readConfigIndex,
-  readReflexConfig,
-  readReflexConfigRevision,
-  readReflexConfigVersion,
-  rollbackReflexConfig,
-  stampVersion,
-  validateReflexConfig,
-  writeReflexConfig,
-} from '@/reflex/configStore';
-
-// ── A KV stand-in with the two behaviours the store depends on ───────────────
-
-class FakeKV {
-  store = new Map<string, string>();
-  reads = 0;
-  failReads = false;
-  async get(key: string, _type?: string): Promise<unknown> {
-    this.reads++;
-    if (this.failReads) throw new Error('KV unavailable');
-    const raw = this.store.get(key);
-    return raw === undefined ? null : JSON.parse(raw);
-  }
-  async put(key: string, value: string): Promise<void> {
-    this.store.set(key, value);
-  }
-}
-
-function envWith(kv: FakeKV): Env {
-  return { CACHE: kv } as unknown as Env;
-}
-
-/** A valid config that is not the compiled default, so identity is meaningful. */
+import { DEFAULT_REFLEX_CONFIG, type ReflexConfig } from '@/reflex/core';
+import { resolveTenantReflexConfig, resolveReflexConfig } from '@/demos/registry';
+import { tenantMiddleware } from '@/tenancy/middleware';
+import configRoutes from '@/routes/config';
+import { initializePublicationSet, readPublication, type PublicationBaseline } from '@/config/publication';
+import { REFLEX_KIND, reflexScopeForTenant, applyPatch, invalidateConfigCache, patchReflexConfig,
+  readConfigIndex, readReflexConfig, readReflexConfigRevision, readReflexConfigVersion, rollbackReflexConfig,
+  stampVersion, validateReflexConfig, writeReflexConfig } from '@/reflex/configStore';
 function sampleConfig(over: Partial<ReflexConfig> = {}): ReflexConfig {
   return JSON.parse(JSON.stringify({ ...DEFAULT_REFLEX_CONFIG, version: 'tuned-v1', ...over }));
 }
-
-const SCOPE = 'coach';
-let kv: FakeKV;
-let env: Env;
-
-beforeEach(() => {
-  kv = new FakeKV();
-  env = envWith(kv);
-  invalidateConfigCache();
-});
-
-// ── Validation ───────────────────────────────────────────────────────────────
-
+beforeEach(() => invalidateConfigCache());
 describe('validateReflexConfig', () => {
   it('accepts the compiled default — the validator must never reject what ships', () => {
     const r = validateReflexConfig(JSON.parse(JSON.stringify(DEFAULT_REFLEX_CONFIG)));
@@ -164,115 +121,8 @@ describe('stampVersion', () => {
   });
 });
 
-// ── Read path ────────────────────────────────────────────────────────────────
 
-describe('readReflexConfig', () => {
-  it('returns the compiled default BY IDENTITY when nothing is stored', async () => {
-    expect(await readReflexConfig(env, SCOPE)).toBe(DEFAULT_REFLEX_CONFIG);
-  });
-
-  it('returns the compiled default when KV throws, and does not propagate the error', async () => {
-    kv.failReads = true;
-    expect(await readReflexConfig(env, SCOPE)).toBe(DEFAULT_REFLEX_CONFIG);
-  });
-
-  it('ignores a stored config that no longer validates, rather than scoring with it', async () => {
-    // Written by an older build, or by hand. thetaOut above thetaIn would flap.
-    kv.store.set('reflex:config:coach:current', JSON.stringify({
-      revision: 1, at: 1, actor: 'legacy', note: '',
-      config: { ...DEFAULT_REFLEX_CONFIG, thetaIn: 0.5, thetaOut: 0.9 },
-    }));
-    expect(await readReflexConfig(env, SCOPE)).toBe(DEFAULT_REFLEX_CONFIG);
-  });
-
-  it('ignores malformed stored JSON', async () => {
-    kv.store.set('reflex:config:coach:current', JSON.stringify({ revision: 1, config: 'not-a-config' }));
-    expect(await readReflexConfig(env, SCOPE)).toBe(DEFAULT_REFLEX_CONFIG);
-  });
-
-  it('serves repeat reads from the isolate cache — the hot path pays no KV read', async () => {
-    await writeReflexConfig(env, SCOPE, sampleConfig(), { actor: 'test' });
-    const before = kv.reads;
-    for (let i = 0; i < 20; i++) await readReflexConfig(env, SCOPE, 1_000);
-    expect(kv.reads - before).toBe(1);
-  });
-
-  it('re-reads once the TTL has passed', async () => {
-    await writeReflexConfig(env, SCOPE, sampleConfig(), { actor: 'test' });
-    await readReflexConfig(env, SCOPE, 1_000);
-    const before = kv.reads;
-    await readReflexConfig(env, SCOPE, 1_000 + CACHE_TTL_MS + 1);
-    expect(kv.reads - before).toBe(1);
-  });
-});
-
-// ── Write path ───────────────────────────────────────────────────────────────
-
-describe('writeReflexConfig', () => {
-  it('stores, stamps the version with the revision, and serves it on the next read', async () => {
-    const res = await writeReflexConfig(env, SCOPE, sampleConfig(), { actor: 'simone', note: 'raise cart weight' });
-    expect(res.ok).toBe(true);
-    if (!res.ok) return;
-    expect(res.revision.revision).toBe(1);
-    expect(res.revision.config.version).toBe('tuned-v1+r1');
-
-    const live = await readReflexConfig(env, SCOPE);
-    expect(live).not.toBe(DEFAULT_REFLEX_CONFIG);
-    expect(live.version).toBe('tuned-v1+r1');
-  });
-
-  it('increments the revision and re-stamps rather than accreting suffixes', async () => {
-    await writeReflexConfig(env, SCOPE, sampleConfig(), { actor: 'a' });
-    const second = await writeReflexConfig(env, SCOPE, sampleConfig(), { actor: 'b' });
-    expect(second.ok).toBe(true);
-    if (second.ok) {
-      expect(second.revision.revision).toBe(2);
-      expect(second.revision.config.version).toBe('tuned-v1+r2');
-    }
-  });
-
-  it('changes the version stamp on every tune, so two explain records cannot claim the same provenance', async () => {
-    const a = await writeReflexConfig(env, SCOPE, sampleConfig({ K: 1.8 }), { actor: 'a' });
-    const b = await writeReflexConfig(env, SCOPE, sampleConfig({ K: 2.4 }), { actor: 'a' });
-    expect(a.ok && b.ok).toBe(true);
-    if (a.ok && b.ok) expect(a.revision.config.version).not.toBe(b.revision.config.version);
-  });
-
-  it('refuses an invalid config and leaves what is live untouched', async () => {
-    await writeReflexConfig(env, SCOPE, sampleConfig(), { actor: 'a' });
-    const bad = await writeReflexConfig(env, SCOPE, sampleConfig({ thetaOut: 0.99 }), { actor: 'b' });
-    expect(bad.ok).toBe(false);
-    const live = await readReflexConfig(env, SCOPE);
-    expect(live.version).toBe('tuned-v1+r1');
-  });
-
-  it('records an audit entry per revision, newest first', async () => {
-    await writeReflexConfig(env, SCOPE, sampleConfig(), { actor: 'simone', note: 'first' });
-    await writeReflexConfig(env, SCOPE, sampleConfig(), { actor: 'mark', note: 'second' });
-    const index = await readConfigIndex(env, SCOPE);
-    expect(index.map((e) => e.revision)).toEqual([2, 1]);
-    expect(index[0].actor).toBe('mark');
-    expect(index[1].note).toBe('first');
-  });
-
-  it('keeps every revision body addressable for diffing', async () => {
-    await writeReflexConfig(env, SCOPE, sampleConfig({ K: 1.8 }), { actor: 'a' });
-    await writeReflexConfig(env, SCOPE, sampleConfig({ K: 2.4 }), { actor: 'a' });
-    expect((await readReflexConfigVersion(env, SCOPE, 1))?.config.K).toBe(1.8);
-    expect((await readReflexConfigVersion(env, SCOPE, 2))?.config.K).toBe(2.4);
-  });
-
-  it('scopes are isolated from each other', async () => {
-    await writeReflexConfig(env, 'coach', sampleConfig({ K: 1.1 }), { actor: 'a' });
-    await writeReflexConfig(env, 'brighthour', sampleConfig({ K: 9.9 }), { actor: 'a' });
-    expect((await readReflexConfig(env, 'coach')).K).toBe(1.1);
-    expect((await readReflexConfig(env, 'brighthour')).K).toBe(9.9);
-  });
-});
-
-// ── Patch path — what the tuning surface actually calls ──────────────────────
-
-describe('applyPatch and patchReflexConfig', () => {
+describe('applyPatch pure invariants', () => {
   it('merges weights without dropping the ones it did not mention', () => {
     const next = applyPatch(DEFAULT_REFLEX_CONFIG, { weights: { add_to_cart: 4 } });
     expect(next.weights.add_to_cart).toBe(4);
@@ -293,63 +143,8 @@ describe('applyPatch and patchReflexConfig', () => {
     expect(JSON.stringify(DEFAULT_REFLEX_CONFIG)).toBe(before);
   });
 
-  it('validates the MERGED result, so a one-sided patch cannot slip past the band', async () => {
-    // thetaOut alone looks like a single number. Against the live thetaIn it inverts.
-    const res = await patchReflexConfig(env, SCOPE, { thetaOut: 0.95 }, { actor: 'merch' });
-    expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.errors.join(' ')).toMatch(/strictly below/);
-    expect(await readReflexConfig(env, SCOPE)).toBe(DEFAULT_REFLEX_CONFIG);
-  });
 
-  it('tunes one weight off the compiled default and stamps a revision', async () => {
-    const res = await patchReflexConfig(env, SCOPE, { weights: { add_to_cart: 4 } }, { actor: 'merch', note: 'cart up' });
-    expect(res.ok).toBe(true);
-    const live = await readReflexConfig(env, SCOPE);
-    expect(live.weights.add_to_cart).toBe(4);
-    expect(live.weights.purchase).toBe(DEFAULT_REFLEX_CONFIG.weights.purchase);
-    expect(live.version).toBe(`${DEFAULT_REFLEX_CONFIG.version}+r1`);
-  });
 });
-
-// ── Rollback ─────────────────────────────────────────────────────────────────
-
-describe('rollbackReflexConfig', () => {
-  it('rolls forward: the old body returns as a NEW revision, the counter never rewinds', async () => {
-    await writeReflexConfig(env, SCOPE, sampleConfig({ K: 1.1 }), { actor: 'a' });
-    await writeReflexConfig(env, SCOPE, sampleConfig({ K: 9.9 }), { actor: 'b' });
-    const res = await rollbackReflexConfig(env, SCOPE, 1, { actor: 'c' });
-    expect(res.ok).toBe(true);
-    if (!res.ok) return;
-
-    expect(res.revision.revision).toBe(3);
-    expect(res.revision.config.K).toBe(1.1);
-    expect(res.revision.config.version).toBe('tuned-v1+r3');
-    expect(res.revision.note).toMatch(/rollback to revision 1/);
-
-    const index = await readConfigIndex(env, SCOPE);
-    expect(index.map((e) => e.revision)).toEqual([3, 2, 1]);
-  });
-
-  it('refuses a revision that does not exist', async () => {
-    const res = await rollbackReflexConfig(env, SCOPE, 7, { actor: 'c' });
-    expect(res.ok).toBe(false);
-  });
-});
-
-// ── The envelope the API reads ───────────────────────────────────────────────
-
-describe('readReflexConfigRevision', () => {
-  it('carries actor, note and timestamp so a change can be attributed', async () => {
-    await writeReflexConfig(env, SCOPE, sampleConfig(), { actor: 'simone', note: 'why', nowMs: 1234 });
-    const rev = await readReflexConfigRevision(env, SCOPE);
-    expect(rev).toMatchObject({ revision: 1, actor: 'simone', note: 'why', at: 1234 });
-  });
-
-  it('is null when nothing is stored, which is how the API reports compiled-default', async () => {
-    expect(await readReflexConfigRevision(env, SCOPE)).toBeNull();
-  });
-});
-
 describe('error list quality', () => {
   it('reports a broken global band once, not once per dimension', () => {
     const r = validateReflexConfig(sampleConfig({ thetaIn: 0.5, thetaOut: 0.9 }));
@@ -374,68 +169,6 @@ describe('error list quality', () => {
 
 // ── The seam the decision path actually calls ────────────────────────────────
 
-describe('resolveReflexConfig — the wiring, not just the store', () => {
-  it('falls back to the compiled default BY IDENTITY when nothing is stored', async () => {
-    const { resolveReflexConfig } = await import('@/demos/registry');
-    const { DEFAULT_REFLEX_CONFIG: D } = await import('@/reflex/core');
-    expect(await resolveReflexConfig(env, 'coach')).toBe(D);
-  });
-
-  it('serves stored tuning to the decision path once a config has been written', async () => {
-    const { resolveReflexConfig } = await import('@/demos/registry');
-    await writeReflexConfig(env, 'coach', sampleConfig({ K: 3.3 }), { actor: 'merch' });
-    const cfg = await resolveReflexConfig(env, 'coach');
-    expect(cfg.K).toBe(3.3);
-    expect(cfg.version).toBe('tuned-v1+r1');
-  });
-
-  it('keeps surfaces on their own tuning', async () => {
-    const { resolveReflexConfig } = await import('@/demos/registry');
-    await writeReflexConfig(env, 'coach', sampleConfig({ K: 1.1 }), { actor: 'a' });
-    expect((await resolveReflexConfig(env, 'coach')).K).toBe(1.1);
-    // brighthour has no stored config, so it still resolves to its own compiled one.
-    const bh = await resolveReflexConfig(env, 'brighthour');
-    expect(bh.K).not.toBe(1.1);
-  });
-
-  it('survives a KV outage by serving the compiled default rather than throwing', async () => {
-    const { resolveReflexConfig } = await import('@/demos/registry');
-    const { DEFAULT_REFLEX_CONFIG: D } = await import('@/reflex/core');
-    kv.failReads = true;
-    await expect(resolveReflexConfig(env, 'coach')).resolves.toBe(D);
-  });
-});
-
-// ── The integer doc 22 records as versions.config ────────────────────────────
-
-describe('resolveReflexConfigRevision — the join key, not the display string', () => {
-  it('reports revision 0 for the compiled default, with the config by identity', async () => {
-    const { resolveReflexConfigRevision } = await import('@/demos/registry');
-    const { DEFAULT_REFLEX_CONFIG: D } = await import('@/reflex/core');
-    const r = await resolveReflexConfigRevision(env, 'coach');
-    expect(r.revision).toBe(0);
-    expect(r.config).toBe(D);
-  });
-
-  it('reports the integer and the string together, and they agree', async () => {
-    const { resolveReflexConfigRevision } = await import('@/demos/registry');
-    await writeReflexConfig(env, 'coach', sampleConfig(), { actor: 'a' });
-    await writeReflexConfig(env, 'coach', sampleConfig({ K: 2.2 }), { actor: 'a' });
-    const r = await resolveReflexConfigRevision(env, 'coach');
-    expect(r.revision).toBe(2);
-    expect(r.config.version).toBe('tuned-v1+r2');
-    // The ledger writer records the integer. Nothing should ever need to parse
-    // '+r2' back out of the display string to get it.
-    expect(r.config.version.endsWith(`+r${r.revision}`)).toBe(true);
-  });
-});
-
-// ── Inheritance from the compiled default (2026-09-04) ───────────────────────
-//
-// The gap this closes: coach at revision 14 was written before CW3, so it had
-// no content weights and every content event scored zero there until a person
-// wrote revision 15 by hand. Absent means inherit; explicit zero means off;
-// dimensions are never added silently, only named.
 
 describe('inheritWeights: absent means inherit, zero means off', () => {
   /** A document written before the content weights existed. */
@@ -488,37 +221,84 @@ describe('inheritWeights: absent means inherit, zero means off', () => {
     expect(configWarnings(sampleConfig(), DEFAULT_REFLEX_CONFIG)).toEqual([]);
   });
 
-  it('reaches every reader: the stored revision, the plain read, a historical version, and the decision path', async () => {
-    const { resolveReflexConfig } = await import('@/demos/registry');
-    await writeReflexConfig(env, SCOPE, preContentConfig(), { actor: 'before-cw3' });
-    const rev = await readReflexConfigRevision(env, SCOPE);
-    expect(rev?.inherited).toContain('content_click');
-    expect(rev?.config.weights.content_click).toBe(1);
-    expect((await readReflexConfig(env, SCOPE)).weights.video_complete).toBe(2);
-    expect((await readReflexConfigVersion(env, SCOPE, 1))?.config.weights.content_dwell).toBe(0.5);
-    expect((await resolveReflexConfig(env, 'coach')).weights.content_click).toBe(1);
-    // The STORED document is untouched: the fill is a read-time rule, not a rewrite.
-    const key = [...kv.store.keys()].find((k) => k.includes('reflex') && k.includes('current'));
-    const raw = JSON.parse(kv.store.get(key!) as string) as { value: ReflexConfig };
-    expect(raw.value.weights.product_view).toBe(1);          // the stored document is real
-    expect('content_click' in raw.value.weights).toBe(false); // and was not rewritten
-  });
 
-  it('a patch that switches an inherited weight off stores the zero, and the read honours it', async () => {
-    await writeReflexConfig(env, SCOPE, preContentConfig(), { actor: 'before-cw3' });
-    const r = await patchReflexConfig(env, SCOPE, { weights: { content_click: 0 } }, { actor: 'merch' });
-    expect(r.ok).toBe(true);
-    const rev = await readReflexConfigRevision(env, SCOPE);
-    expect(rev?.config.weights.content_click).toBe(0);
-    expect(rev?.inherited).not.toContain('content_click');
-    expect(rev?.inherited).toContain('video_complete');
-  });
+});
 
-  it('brighthour inherits from its own compiled default, not the engine’s', async () => {
-    const { compiledDefaultFor } = await import('@/reflex/configStore');
-    const bh = await compiledDefaultFor('brighthour');
-    expect(bh).not.toBe(DEFAULT_REFLEX_CONFIG);
-    expect(await compiledDefaultFor('coach')).toBe(DEFAULT_REFLEX_CONFIG);
-    expect(await compiledDefaultFor('kate-spade')).toBe(DEFAULT_REFLEX_CONFIG);
+class Authority {
+  map = new Map<string, string>(); etags = new Map<string, string>(); reads = 0; puts = 0; fail = false;
+  async get(key: string) { this.reads++; if (this.fail) throw new Error('Synthetic outage'); const raw = this.map.get(key);
+    return raw === undefined ? null : { key, etag: this.etags.get(key), size: new TextEncoder().encode(raw).length, body: new Response(raw).body }; }
+  async put(key: string, raw: string, options: R2PutOptions) { this.puts++; const cond = options.onlyIf;
+    if (cond instanceof Headers ? this.map.has(key) : cond?.etagMatches !== this.etags.get(key)) return null;
+    this.map.set(key, raw); this.etags.set(key, String(this.puts)); return { key, etag: String(this.puts), size: new TextEncoder().encode(raw).length }; }
+}
+async function fixture(entries: Array<[string, ReflexConfig]> = [['coach', sampleConfig()]]) {
+  const storage = new Authority(), env = { STORAGE: storage, CACHE: { get() { throw new Error('Not config authority'); }, put() { throw new Error('Forbidden'); } } } as unknown as Env;
+  const groups = new Map<string, PublicationBaseline[]>();
+  for (const [scope, value] of entries) {
+    const owner = scope === 'brighthour' ? 'coach' : scope.replace(/^tenant:/, '');
+    const list = groups.get(owner) ?? []; list.push({ kind: REFLEX_KIND, scope, revision: { revision: 1, value, actor: 'initializer', note: '', at: 1 } }); groups.set(owner, list);
+  }
+  for (const group of groups.values()) await initializePublicationSet(env, group, '0:' + crypto.randomUUID());
+  return { storage, env };
+}
+async function meta(env: Env, scope = 'coach', actor = 'writer') {
+  const base = await readPublication(env, REFLEX_KIND, scope);
+  return { actor, expectedRevision: base.revision, expectedPublication: base.publication, operationId: base.revision + ':' + crypto.randomUUID() };
+}
+describe('W11.02 strict Reflex authority and authored operator bases', () => {
+  it('W11.02 refuses missing or failed authority for demos and tenants rather than substituting a default', async () => {
+    const env = { CACHE: { get: async () => JSON.stringify({ config: DEFAULT_REFLEX_CONFIG }) } } as unknown as Env;
+    for (const scope of ['coach', 'brighthour', 'meridian', 'tenant:brighthour']) await expect(readReflexConfig(env, scope)).rejects.toMatchObject({ status: 503 });
+    const f = await fixture(); f.storage.fail = true;
+    await expect(readReflexConfig(f.env, 'coach')).rejects.toMatchObject({ status: 503 });
+    expect(f.storage.puts).toBeGreaterThan(0);
+  });
+  it('W11.02 preserves stamping attribution exact authored weights history and forward-only rollback', async () => {
+    const f = await fixture(), base = await meta(f.env);
+    const first = await writeReflexConfig(f.env, 'coach', sampleConfig({ K: 1.8 }), { ...base, actor: 'simone', note: 'first', nowMs: 20 });
+    expect(first).toMatchObject({ ok: true, revision: { revision: 2, actor: 'simone', note: 'first', at: 20, config: { version: 'tuned-v1+r2', K: 1.8 } } });
+    const second = await patchReflexConfig(f.env, 'coach', { K: 2.4 }, await meta(f.env));
+    expect(second).toMatchObject({ ok: true, revision: { revision: 3, config: { version: 'tuned-v1+r3', K: 2.4 } } });
+    expect(await patchReflexConfig(f.env, 'coach', { thetaOut: 0.99 }, await meta(f.env))).toMatchObject({ ok: false });
+    expect((await readReflexConfigVersion(f.env, 'coach', 2))?.config.K).toBe(1.8);
+    expect(await rollbackReflexConfig(f.env, 'coach', 2, await meta(f.env))).toMatchObject({ ok: true, revision: { revision: 4, config: { K: 1.8 } } });
+    expect((await readConfigIndex(f.env, 'coach')).map(r => r.revision)).toEqual([4, 3, 2, 1]);
+    await expect(writeReflexConfig(f.env, 'coach', sampleConfig(), base)).rejects.toMatchObject({ status: 409 });
+  });
+  it('W11.02 retains demo-only inheritance without rewriting authored bytes and isolates real BrightHour', async () => {
+    const old = sampleConfig(); delete old.weights.content_click; delete old.weights.video_complete;
+    const tenant = sampleConfig({ weights: { purchase: 4 }, dimensions: [{ key: 'taste', source: 'taste' }] });
+    const f = await fixture([['coach', old], ['brighthour', sampleConfig({ K: 1.1 })], ['tenant:brighthour', tenant], ['meridian', tenant]]);
+    const before = new Map(f.storage.map), revision = await readReflexConfigRevision(f.env, 'coach');
+    expect(revision?.inherited).toContain('content_click'); expect(revision?.config.weights.content_click).toBe(1);
+    expect(revision?.authored.weights).not.toHaveProperty('content_click');
+    expect((await readReflexConfigVersion(f.env, 'coach', 1))?.config.weights.video_complete).toBe(2);
+    expect((await resolveReflexConfig(f.env, 'coach')).weights.content_click).toBe(1);
+    expect(f.storage.map).toEqual(before);
+    expect((await resolveTenantReflexConfig(f.env, 'brighthour')).weights).toEqual({ purchase: 4 });
+    expect((await resolveTenantReflexConfig(f.env, 'coach', 'brighthour')).K).toBe(1.1);
+    expect(await patchReflexConfig(f.env, 'coach', { weights: { content_click: 0 } }, await meta(f.env))).toMatchObject({ ok: true });
+    expect((await readReflexConfig(f.env, 'coach')).weights.content_click).toBe(0);
+    expect(reflexScopeForTenant('brighthour')).toBe('tenant:brighthour');
+  });
+  it('W11.02 authenticates canonical typed scope before I/O and compares the loaded authored set on actual routes', async () => {
+    const f = await fixture([['coach', sampleConfig()], ['brighthour', sampleConfig({ K: 2 })], ['tenant:brighthour', sampleConfig({ K: 3 })]]);
+    Object.assign(f.env, { JWT_SECRET: 'synthetic-w1102-config-only-signing-material', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
+      TENANTS: JSON.stringify({ provisioned: ['coach', 'brighthour'], operatorGrants: { ops: ['coach', 'brighthour'] } }) });
+    const app = new Hono(); app.use('*', tenantMiddleware()); app.route('/config', configRoutes);
+    const token = await new SignJWT({ sub: 'ops', type: 'service' }).setProtectedHeader({ alg: 'HS256' }).setIssuer('i').setAudience('a').setExpirationTime('5m').sign(new TextEncoder().encode(f.env.JWT_SECRET));
+    const call = (query: string, method = 'GET', body?: unknown, headers: Record<string, string> = {}) => app.request('https://synthetic.invalid/config/reflex' + query,
+      { method, headers: { Authorization: 'Bearer ' + token, 'X-Tenant': 'coach', 'content-type': 'application/json', ...headers }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }, f.env);
+    for (const query of ['?scope=coach&scope=coach', '?tenant=brighthour', '?scope=tenant:brighthour', '?scope=bad%2Fscope']) {
+      const reads = f.storage.reads; expect((await call(query)).status).toBeGreaterThanOrEqual(400); expect(f.storage.reads).toBe(reads);
+    }
+    const loaded = await (await call('?scope=coach')).json() as { revision: number; publication: { revision: number; digest: string }; authored: ReflexConfig };
+    const headers = { 'If-Match': '"' + loaded.revision + '/' + loaded.publication.revision + '/' + loaded.publication.digest + '"', 'Idempotency-Key': loaded.revision + ':' + crypto.randomUUID() };
+    expect((await call('?scope=coach', 'PATCH', { patch: { K: 5 } })).status).toBe(428);
+    expect((await call('?scope=coach', 'PATCH', { patch: { K: 5 } }, headers)).status).toBe(200);
+    expect((await call('?scope=coach', 'PATCH', { patch: { K: 6 } }, headers)).status).toBe(409);
+    expect((await call('?scope=brighthour')).status).toBe(200);
+    expect((await call('?scope=tenant:brighthour', 'GET', undefined, { 'X-Tenant': 'brighthour' })).status).toBe(200);
   });
 });

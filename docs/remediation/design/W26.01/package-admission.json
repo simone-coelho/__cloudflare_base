@@ -1,0 +1,115 @@
+{
+  "before": {
+    "id": "W26",
+    "canonical": {
+      "gate_scope": "G1 exposure / G2 SDK / G3 attribution",
+      "full_scope": "Correlated decision/outcome identity and defined served/rendered/viewable unit; page/brand/slot/position identity and named-placement credit. Agree and test global-item versus placement-specific fatigue, unknown legacy outcomes and position effects; prove repeated item/product across slots/pages, replay and SDK refresh produce correct counts.",
+      "finding_refs": "F21/F16/F34",
+      "sizing_owner": "S named-slot containment → M/L end-to-end exposure; OL/D + DS"
+    },
+    "title": "Correlated placement and exposure identity",
+    "gates": [
+      "G1",
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F21",
+      "F16",
+      "F34"
+    ],
+    "proposed_owner": "OL/D + DS",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W26",
+    "canonical": {
+      "gate_scope": "G1 exposure / G2 SDK / G3 attribution",
+      "full_scope": "Correlated decision/outcome identity and defined served/rendered/viewable unit; page/brand/slot/position identity and named-placement credit. Agree and test global-item versus placement-specific fatigue, unknown legacy outcomes and position effects; prove repeated item/product across slots/pages, replay and SDK refresh produce correct counts.",
+      "finding_refs": "F21/F16/F34",
+      "sizing_owner": "S named-slot containment → M/L end-to-end exposure; OL/D + DS"
+    },
+    "title": "Correlated placement and exposure identity",
+    "gates": [
+      "G1",
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F21",
+      "F16",
+      "F34"
+    ],
+    "proposed_owner": "OL/D + DS",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W26-NAMED",
+          "description": "Explicitly named direct item/product slot credit across current online/hourly/raw reports; legacy unspecified preserved."
+        },
+        {
+          "id": "W26-IDENTITY",
+          "description": "Correlated decision/outcome identity and page/brand/slot/position boundaries; not delivered here."
+        },
+        {
+          "id": "W26-EXPOSURE",
+          "description": "Defined served/rendered/viewable unit and position effects; not delivered here."
+        },
+        {
+          "id": "W26-POLICY",
+          "description": "Agreed global-item versus placement fatigue and explicit unknown-legacy model/identity semantics; not delivered here."
+        },
+        {
+          "id": "W26-ENDTOEND",
+          "description": "Repeated item/product across pages/slots, replay and SDK refresh correct counts/dedup and full integration proof; named-slot local subset is insufficient."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W26-NAMED",
+          "task_id": "W26.01",
+          "task_criterion_id": "W26.01-C1"
+        },
+        {
+          "criterion_id": "W26-NAMED",
+          "task_id": "W26.01",
+          "task_criterion_id": "W26.01-C2"
+        },
+        {
+          "criterion_id": "W26-NAMED",
+          "task_id": "W26.01",
+          "task_criterion_id": "W26.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W26.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

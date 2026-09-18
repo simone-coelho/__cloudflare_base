@@ -14,6 +14,9 @@ import { MockDecisionProvider, LiveDecisionProvider } from './DecisionProvider';
 import { MockSignalProvider, LiveSignalProvider } from './SignalProvider';
 import { KvAudienceStore } from './AudienceStore';
 import { OptimizelyService } from '@/services/OptimizelyService';
+import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
+import { isLegacyOdpTenant } from '@/services/odpLoop';
+import { connectorConfiguration, legacyConnectors } from './config';
 
 export interface Connectors {
   segments: SegmentProvider;
@@ -22,15 +25,26 @@ export interface Connectors {
   signals: SignalProvider; // DETECT layer for the Signal-Led Moment (mocked partner social-listening)
 }
 
-export function getConnectors(env: Env): Connectors {
+export function getConnectors(env: Env, tenant: TenantId = DEFAULT_TENANT): Connectors {
+  if (!legacyConnectors(env, tenant)) {
+    connectorConfiguration(env, tenant); // validate the registry before touching a store or any secret
+    const store = new KvAudienceStore(env, tenant);
+    return {
+      // Customer authored audiences are local; a buffered qualification never adds ODP I/O.
+      segments: new MockSegmentProvider(store), audiences: new MockAudienceAuthoring(store),
+      decisions: new LiveDecisionProvider(new OptimizelyService(env, tenant)),
+      signals: new LiveSignalProvider({}), // deliberately unwired, not a global demo credential
+    };
+  }
   const mode = env.CONNECTOR_MODE ?? 'mock'; // 'mock' | 'live' — the triad switch
-  const store = new KvAudienceStore(env); // shared by SegmentProvider + AudienceAuthoring
+  const store = new KvAudienceStore(env, tenant); // shared by SegmentProvider + AudienceAuthoring
 
   if (mode === 'live') {
     return {
-      segments: new LiveSegmentProvider({ odpApiHost: env.ODP_API_HOST, odpPublicKey: env.ODP_PUBLIC_KEY }),
+      segments: new LiveSegmentProvider(isLegacyOdpTenant(tenant)
+        ? { odpApiHost: env.ODP_API_HOST, odpPublicKey: env.ODP_PUBLIC_KEY } : {}),
       audiences: new LiveAudienceAuthoring({ mcpEndpoint: env.OPAL_MCP_ENDPOINT, optiIdToken: env.OPTI_ID_TOKEN }),
-      decisions: new LiveDecisionProvider(new OptimizelyService(env)),
+      decisions: new LiveDecisionProvider(new OptimizelyService(env, tenant)),
       signals: new LiveSignalProvider({ signalApiHost: env.SIGNAL_API_HOST, signalApiKey: env.SIGNAL_API_KEY }),
     };
   }
@@ -41,7 +55,7 @@ export function getConnectors(env: Env): Connectors {
   // Default 'mock' keeps the current demo unaffected.
   const decisions =
     env.DECISION_SOURCE === 'optimizely'
-      ? new LiveDecisionProvider(new OptimizelyService(env))
+      ? new LiveDecisionProvider(new OptimizelyService(env, tenant))
       : new MockDecisionProvider();
 
   return {

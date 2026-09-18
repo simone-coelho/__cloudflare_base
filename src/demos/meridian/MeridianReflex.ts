@@ -179,7 +179,7 @@ export class MeridianReflex {
   }
 
   async webSocketError(_ws: WebSocket, error: unknown): Promise<void> {
-    console.error('MeridianReflex socket error:', error);
+    console.error('MeridianReflex socket error');
   }
 
   // ── The reducer — one path behind both doors ───────────────────────────────
@@ -227,7 +227,7 @@ export class MeridianReflex {
       // does it silently — which is exactly how a beat ends up looking dead on
       // stage while every endpoint returns 200. Say so.
       if (!(ev.action in cfg.weights)) {
-        console.warn(`[meridian] action "${ev.action}" has no weight in ${cfg.version} — it will accumulate nothing`);
+        console.warn('[meridian] action has no configured weight; it will accumulate nothing');
       }
       // Weight comes from the config's action table, not from the caller — a
       // client cannot inflate its own signal.

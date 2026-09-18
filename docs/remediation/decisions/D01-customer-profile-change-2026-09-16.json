@@ -1,0 +1,27 @@
+{
+  "before": {
+    "id": "D01",
+    "canonical": {
+      "title": "Demo versus customer surface",
+      "boundary": "Leadership/security/delivery: choose separate deployables or rigorously omitted/disabled surfaces and resources. Either choice must prove G0; leaving demo ingress public with real data is not an option created by disclosure."
+    },
+    "state": "pending",
+    "record": null
+  },
+  "after": {
+    "id": "D01",
+    "canonical": {
+      "title": "Demo versus customer surface",
+      "boundary": "Leadership/security/delivery: choose separate deployables or rigorously omitted/disabled surfaces and resources. Either choice must prove G0; leaving demo ingress public with real data is not an option created by disclosure."
+    },
+    "state": "approved",
+    "record": {
+      "path": "docs/remediation/decisions/D01-customer-profile-approved-2026-09-16.json",
+      "sha256": "20b7f1f20a78bdce686ac6812e65c9de8684d29bd7b53a80cd72ef0cbf0164e3"
+    },
+    "actor_id": "g0-user",
+    "at": "2026-09-16T20:50:09.046Z",
+    "scope": "Local W01 customer/demo boundary design: strict customer profile in the existing entry point. External resources, deployment and historical data remain separately governed.",
+    "outcome": "Rigorous customer route/asset/binding policy in the existing entry, preserving customer APIs and SDK/console assets while omitting demo/agent resources and rejecting demo queue work."
+  }
+}

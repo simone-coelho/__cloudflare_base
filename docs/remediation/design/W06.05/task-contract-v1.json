@@ -1,0 +1,94 @@
+{
+  "id": "W06.05",
+  "package_id": "W06",
+  "title": "Retained-cutoff replay suppression outside the ledger",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Use the retained tenant/subject erasure cutoff to suppress pre-cutoff operator history replay and online learning fan-out before either path can recreate erased state or measurement effects.",
+  "read_paths": [
+    "src/ledger", "src/identity", "src/learn", "src/content", "src/routes/identity.ts",
+    "src/routes/identity.test.ts", "src/durable-objects/ShopperReflex.ts", "src/durable-objects/DecisionRing.ts",
+    "src/durable-objects/LearnStats.ts", "src/types/env.ts", "docs/architecture", "docs/remediation",
+    "scripts/remediation", "package.json", "package-lock.json", "tsconfig.json", "vitest.config.ts", "node_modules"
+  ],
+  "write_paths": [
+    "src/ledger/erasure.ts", "src/identity/history.ts", "src/learn/fan.ts",
+    "src/routes/identity.test.ts", "src/learn/holdoutArms.test.ts", "src/content/consent.test.ts",
+    "docs/remediation/evidence/W06.05/worker.md", "docs/remediation/evidence/W06.05/worker-checks.json"
+  ],
+  "non_goals": [
+    "Partial W06/F06 replay repair only: no capability/socket generation, concurrent/deferred writer serialization, existing-ring reader filtering, seen-state migration, orphan discovery, D1, telemetry/log/external deletion, retention or accountability decision.",
+    "Preserve point-in-time semantics: records after the retained cutoff may be new evidence. Do not infer D03 transactional authority or D06 retention/re-entry policy and do not claim complete erasure.",
+    "Three production modules and three existing fixtures only. No new suite/harness, broad build or benchmark, deployment/cloud/credentials/customer data, commit/push, destructive cleanup or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W06.05-C1",
+      "description": "A strict exact tenant/subject tombstone point read validates the same retained active record as ledger readers. History rows at or before any supplied-visitor or resolved-target cutoff are skipped before session/DO/history writes; post-cutoff and unrelated rows remain eligible on both hosts, and DO success is reported only from a successful ok:true acknowledgment.",
+      "required_evidence_kinds": ["integration_test"],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.05-C2",
+      "description": "Online decision fan-out removes records at or before the visitor cutoff before both ring append and personalized exposure posts, and pre-cutoff outcomes never reach ring attribution. Missing, unreadable or corrupt barrier state produces zero fan effects; post-cutoff, unrelated, holdout and consent-authorized behavior remains intact without adding response-path latency.",
+      "required_evidence_kinds": ["integration_test"],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.05-C3",
+      "description": "The three existing fixtures prove mixed inclusive cutoffs, both history hosts, truthful counts/no empty creation, strict failure containment, tenant/subject isolation, decision/exposure/outcome effects and unchanged consent/holdout positives. Worker exact K1 plus app noEmit/scoped diff; independent exact K1 once and frozen source/proof/import pins.",
+      "required_evidence_kinds": ["design_review"],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.05-K1",
+      "required": true,
+      "criterion_ids": ["W06.05-C1", "W06.05-C2"],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual history session/DO paths and online fan-out with existing synthetic KV/R2/DO seams. No external network.",
+      "workload": "Three existing directly affected fixtures only; retained-cutoff history and learning effects plus existing consent/holdout regressions. Worker app noEmit and scoped diff; no latency or deployed claim.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.05-K2",
+      "required": true,
+      "criterion_ids": ["W06.05-C3"],
+      "command": "Independent frozen W06.05 actual source and complete worker proof review; exact K1 once; relevant local import graph and physical pins; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review; actual history and learning fan-out with synthetic storage only.",
+      "workload": "C1-C3 cutoff validation, both-host history, fan effects/failure behavior, isolation and truthful limits; inspect compiler/scoped diff evidence without rerun. No broad/deployed qualification.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task", "target_id": "W06.02", "kind": "informs", "origin": "proposed",
+      "consumed_output": "Retained strict tenant/visitor point-in-time tombstones and inclusive pre-cutoff suppression semantics.",
+      "rationale": "This task reuses the established durable barrier for two non-ledger ingress paths without changing its lifecycle."
+    },
+    {
+      "target_type": "decision", "target_id": "D03", "kind": "informs", "origin": "source_explicit",
+      "consumed_output": "Future serialized authority for genuinely concurrent cross-store erasure and ingestion.",
+      "rationale": "Sequential entry checks do not claim a transaction spanning the barrier and downstream writes."
+    },
+    {
+      "target_type": "decision", "target_id": "D06", "kind": "informs", "origin": "source_explicit",
+      "consumed_output": "Future approved retention, deletion-generation and shopper re-entry policy.",
+      "rationale": "The task preserves the existing point-in-time rule and active barrier without choosing lifecycle or re-entry policy."
+    }
+  ],
+  "preflight": {"status": "pending", "plan": null, "contract_digest": null, "approval": null},
+  "assignments": {"implementer": "w0602-worker", "independent_reviewer": "w0602-reviewer", "lead": "w01-lead"},
+  "artifact": {"status": "not_recorded", "contract_digest": null, "configuration": null, "files": [], "digest": null},
+  "acceptance_history": [],
+  "independent_review": {"status": "pending"},
+  "lead_signoff": {"status": "pending"},
+  "blocked": null,
+  "handoff": {
+    "status": "pending", "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement exact retained-cutoff suppression in history and online learning fan-out, run the three focused existing fixtures, then freeze for independent review."
+  }
+}

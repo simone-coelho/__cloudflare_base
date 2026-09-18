@@ -1,50 +1,17 @@
-// src/config/versionedStore.ts
-// ---------------------------------------------------------------------------
-// One versioned-document store, for every kind of configuration.
-//
-// WHY THIS IS GENERIC. CW0 built versioning, validation, an audit index, rollback
-// and an isolate cache for exactly one document: ReflexConfig. The outcome-learning
-// design (doc 22) then specified four version counters on every decision record,
-// `versions: { config, lift, prior, policy }`, and a configuration catalog (its
-// section 13) of eighteen parameter groups that are not ReflexConfig fields:
-// reward definitions, attribution policies, the gamma trust dial per slot,
-// exploration, holdout, autonomy bounds, and item freeze/reset/reject.
-//
-// Doc 22 says of all of them that "every entry is versioned with change history
-// and applies without a deployment" (13), that each item control "is a versioned
-// configuration change" (12.2), and that "a rollback is a version pointer" (11).
-// It never names a mechanism, because it was written before this store existed.
-//
-// So either this store becomes generic, or phases 0 to 3 build a second one and
-// the programme ends up with two answers to "what changed, when, by whom, and how
-// do I put it back". This is the cheap moment to decide that. A document kind
-// supplies a name, a validator, and optionally a stamp and a merge; it inherits
-// versioning, attribution, audit, rollback, failure-safety and caching.
-//
-// KEYS ARE UNCHANGED for the reflex kind: reflex:config:{scope}:current,
-// :rev:{n}, :index. Nothing already written needs migrating. Doc 22's lift
-// snapshots take their own prefix, reserved below.
-//
-// THE FAILURE POSTURE IS INHERITED TOO: every read resolves to the caller's
-// fallback rather than throwing, and every stored value is re-validated on the way
-// out, because a document written by an older build is untrusted input like any
-// other.
-// ---------------------------------------------------------------------------
-
+// Every active configuration kind uses the same strict conditional R2 authority.
+// Legacy KV keys are retained history only, never fallback or mutation authority.
 import type { Env } from '@/types/env';
-
-/** How long a resolved document is trusted inside one isolate before re-reading. */
+import { invalidatePublicationCache, publicationVersion, publicationHistory, publish, readPublication } from './publication';
 export const CACHE_TTL_MS = 30_000;
-
-/** Revisions kept in the browsable index. Every revision body is kept regardless. */
 export const INDEX_LIMIT = 50;
-
-/**
- * KV prefixes this store owns, so nothing else claims them. Doc 22 section 6.1
- * publishes lift snapshots to KV under versioned keys with a version marker, and
- * its section 14 adds prior and policy documents. Those are separate kinds here,
- * or separate prefixes there, but never the same key space by accident.
- */
+export const LEGACY_DOCUMENT_MAX_BYTES = 2 * 1024 * 1024;
+export class LegacyDocumentError extends Error {
+  readonly status: 413 | 503;
+  constructor(readonly code: 'document_too_large' | 'document_unavailable') {
+    super(code === 'document_too_large' ? 'Configuration document exceeds the application size limit' : 'Stored configuration is unavailable; operation refused');
+    this.name = 'LegacyDocumentError'; this.status = code === 'document_too_large' ? 413 : 503;
+  }
+}
 export const RESERVED_PREFIXES = [
   'reflex:config:', 'learn:config:', 'lift:', 'prior:', 'policy:',
   // CW4 (plan 21, the seam): the content catalog and per-page slot strategies.
@@ -66,6 +33,8 @@ export interface Revision<T> {
   actor: string;
   note: string;
   at: number;
+  /** Coherent authority identity actually read, never synthesized at save time. */
+  publication?: { revision: number; digest: string };
 }
 
 export interface IndexEntry {
@@ -85,6 +54,12 @@ export interface WriteMeta {
   actor: string;
   note?: string;
   nowMs?: number;
+  /** Required by the coherent conditional publication authority. */
+  expectedRevision?: number;
+  operationId?: string;
+  expectedPublication?: { revision: number; digest: string };
+  /** Current authority recheck supplied by authenticated ingress, not serialized intent. */
+  authorize?: () => Promise<void>;
 }
 
 /**
@@ -94,8 +69,12 @@ export interface WriteMeta {
 export interface DocumentKind<T> {
   /** KV namespace segment. Its prefix must be listed in RESERVED_PREFIXES. */
   name: string;
+  /** Explicit authority marker; all active kinds use the coherent authority. */
+  publication?: 'r2';
   /** Total validation of untrusted input. Returns EVERY error, not the first. */
   validate(candidate: unknown): ValidationResult<T>;
+  /** Explicit historical read compatibility; never used to authorize a write. */
+  validateStored?(candidate: unknown): ValidationResult<T>;
   /**
    * Write the revision number into the document's own identity, when it has one.
    * ReflexConfig needs this: config.version is stamped into decision IDs and
@@ -108,185 +87,35 @@ export interface DocumentKind<T> {
   applyPatch?(base: T, patch: unknown): T;
 }
 
-// -- Keys -------------------------------------------------------------------
 
-const keyCurrent = (kind: string, scope: Scope) => `${kind}:config:${scope}:current`;
-const keyRevision = (kind: string, scope: Scope, n: number) => `${kind}:config:${scope}:rev:${n}`;
-const keyIndex = (kind: string, scope: Scope) => `${kind}:config:${scope}:index`;
-
-// -- Isolate cache ----------------------------------------------------------
-
-interface CacheEntry { at: number; revision: Revision<unknown> | null }
-const isolateCache = new Map<string, CacheEntry>();
-const cacheKey = (kind: string, scope: Scope) => `${kind} ${scope}`;
-
-/** Drop cached documents. Called on every write; exported for tests. */
-export function invalidateCache(kind?: string, scope?: Scope): void {
-  if (kind === undefined) { isolateCache.clear(); return; }
-  if (scope === undefined) {
-    for (const k of [...isolateCache.keys()]) if (k.startsWith(`${kind} `)) isolateCache.delete(k);
-    return;
-  }
-  isolateCache.delete(cacheKey(kind, scope));
+export function invalidateCache(_kind?: string, _scope?: Scope): void { void _kind; void _scope; invalidatePublicationCache(); }
+export async function readRevision<T>(env: Env, kind: DocumentKind<T>, scope: Scope, _nowMs = Date.now()): Promise<Revision<T>> {
+  void _nowMs;
+  return readPublication(env, kind, scope, true);
 }
-
-// -- Read -------------------------------------------------------------------
-
-/**
- * The stored revision, or null when nothing is stored or what is stored cannot be
- * trusted. Never throws: a KV failure must not become a decision failure.
- */
-export async function readRevision<T>(
-  env: Env, kind: DocumentKind<T>, scope: Scope, nowMs: number = Date.now(),
-): Promise<Revision<T> | null> {
-  const ck = cacheKey(kind.name, scope);
-  const cached = isolateCache.get(ck);
-  if (cached && nowMs - cached.at < CACHE_TTL_MS) return cached.revision as Revision<T> | null;
-
-  let revision: Revision<T> | null = null;
-  try {
-    revision = coerce(await env.CACHE.get(keyCurrent(kind.name, scope), 'json'), kind, scope);
-  } catch (err) {
-    // Do not cache a failure: the next call retries, and until then the caller's
-    // fallback serves.
-    console.warn(`[config:${kind.name}] read failed for scope "${scope}", serving fallback`, err);
-    return null;
-  }
-  isolateCache.set(ck, { at: nowMs, revision: revision as Revision<unknown> | null });
-  return revision;
+export async function read<T>(env: Env, kind: DocumentKind<T>, scope: Scope, _fallback: T, nowMs = Date.now()): Promise<T> {
+  return (await readRevision(env, kind, scope, nowMs)).value;
 }
-
-/** The document to use, falling back to a compiled default the caller supplies. */
-export async function read<T>(
-  env: Env, kind: DocumentKind<T>, scope: Scope, fallback: T, nowMs: number = Date.now(),
-): Promise<T> {
-  const revision = await readRevision(env, kind, scope, nowMs);
-  return revision ? revision.value : fallback;
+export async function readVersion<T>(env: Env, kind: DocumentKind<T>, scope: Scope, revision: number): Promise<Revision<T> | null> {
+  return publicationVersion(env, kind, scope, revision);
 }
-
-/** A specific historical revision, for diffing, replay and rollback. */
-export async function readVersion<T>(
-  env: Env, kind: DocumentKind<T>, scope: Scope, revision: number,
-): Promise<Revision<T> | null> {
-  try {
-    return coerce(await env.CACHE.get(keyRevision(kind.name, scope, revision), 'json'), kind, scope);
-  } catch {
-    return null;
-  }
+export async function readIndex<T>(env: Env, kind: DocumentKind<T>, scope: Scope): Promise<IndexEntry[]> {
+  return publicationHistory(env, kind, scope);
 }
-
-export async function readIndex<T>(
-  env: Env, kind: DocumentKind<T>, scope: Scope,
-): Promise<IndexEntry[]> {
-  try {
-    const raw = await env.CACHE.get(keyIndex(kind.name, scope), 'json');
-    return Array.isArray(raw) ? (raw as IndexEntry[]) : [];
-  } catch {
-    return [];
-  }
+export async function readRevisionForMutation<T>(env: Env, kind: DocumentKind<T>, scope: Scope, revision?: number): Promise<Revision<T> | null> {
+  return revision === undefined ? readPublication(env, kind, scope) : publicationVersion(env, kind, scope, revision);
 }
-
-/**
- * A stored envelope is untrusted input too: it may predate a validation rule, or
- * have been written by an older build. Re-validate on read, and refuse rather than
- * serve something we would not accept on write.
- */
-function coerce<T>(raw: unknown, kind: DocumentKind<T>, scope: Scope): Revision<T> | null {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const envelope = raw as Record<string, unknown>;
-  // `config` is the field name from when this store held only ReflexConfig. Read
-  // both, so nothing already written has to be migrated.
-  const body = 'value' in envelope ? envelope.value : envelope.config;
-  const result = kind.validate(body);
-  if (!result.ok) {
-    console.warn(
-      `[config:${kind.name}] stored document for scope "${scope}" is invalid and was ignored: ` +
-      result.errors.join('; '),
-    );
-    return null;
-  }
-  const num = (v: unknown, fallback: number) =>
-    typeof v === 'number' && Number.isFinite(v) ? v : fallback;
-  return {
-    revision: num(envelope.revision, 0),
-    value: result.value,
-    actor: typeof envelope.actor === 'string' ? envelope.actor : 'unknown',
-    note: typeof envelope.note === 'string' ? envelope.note : '',
-    at: num(envelope.at, 0),
-  };
+export async function write<T>(env: Env, kind: DocumentKind<T>, scope: Scope, candidate: unknown, meta: WriteMeta): Promise<WriteResult<T>> {
+  return publish(env, kind, scope, { type: 'replace', candidate }, meta, () => candidate);
 }
-
-// -- Write ------------------------------------------------------------------
-
-/**
- * Validate, version, store, audit. The immutable revision body is written BEFORE
- * the current pointer moves, so a failure between the two leaves the pointer on a
- * revision that is known to exist.
- */
-export async function write<T>(
-  env: Env, kind: DocumentKind<T>, scope: Scope, candidate: unknown, meta: WriteMeta,
-): Promise<WriteResult<T>> {
-  const result = kind.validate(candidate);
-  if (!result.ok) return result;
-
-  const nowMs = meta.nowMs ?? Date.now();
-  const previous = await readRevision(env, kind, scope, nowMs);
-  const revisionNumber = (previous?.revision ?? 0) + 1;
-  const value = kind.stamp ? kind.stamp(result.value, revisionNumber) : result.value;
-
-  const revision: Revision<T> = {
-    revision: revisionNumber, value,
-    actor: meta.actor, note: meta.note ?? '', at: nowMs,
-  };
-  // `config` is written alongside `value` so a build that predates this
-  // generalization can still read what a newer build wrote.
-  const body = JSON.stringify({ ...revision, config: value });
-
-  await env.CACHE.put(keyRevision(kind.name, scope, revisionNumber), body);
-  await env.CACHE.put(keyCurrent(kind.name, scope), body);
-
-  const index = await readIndex(env, kind, scope);
-  const entry: IndexEntry = {
-    revision: revisionNumber,
-    version: kind.versionOf ? kind.versionOf(value) : String(revisionNumber),
-    actor: revision.actor, note: revision.note, at: nowMs,
-  };
-  await env.CACHE.put(keyIndex(kind.name, scope), JSON.stringify([entry, ...index].slice(0, INDEX_LIMIT)));
-
-  invalidateCache(kind.name, scope);
-  return { ok: true, revision };
+export async function patch<T>(env: Env, kind: DocumentKind<T>, scope: Scope, _fallback: T, p: unknown, meta: WriteMeta): Promise<WriteResult<T>> {
+  return publish(env, kind, scope, { type: 'patch', patch: p }, meta, base => kind.applyPatch ? kind.applyPatch(base, p) : deepMerge(base, p));
 }
-
-/** Read current, merge the patch, write. One slider, one call. */
-export async function patch<T>(
-  env: Env, kind: DocumentKind<T>, scope: Scope, fallback: T, p: unknown, meta: WriteMeta,
-): Promise<WriteResult<T>> {
-  const current = await read(env, kind, scope, fallback, meta.nowMs ?? Date.now());
-  const merged = kind.applyPatch ? kind.applyPatch(current, p) : deepMerge(current, p);
-  return write(env, kind, scope, merged, meta);
-}
-
-/**
- * Roll back by writing the old body forward as a NEW revision. The counter never
- * rewinds, so the audit records that a rollback happened rather than erasing the
- * revisions it undid. Doc 22 section 11 calls a rollback "a version pointer", and
- * it is one: the pointer moves to a new revision whose body equals the old one.
- * Nothing anywhere should implement a rewinding counter, because an autonomy job
- * that rewinds loses the record of what it tried.
- */
-export async function rollback<T>(
-  env: Env, kind: DocumentKind<T>, scope: Scope, toRevision: number, meta: WriteMeta,
-): Promise<WriteResult<T>> {
-  const target = await readVersion(env, kind, scope, toRevision);
-  if (!target) return { ok: false, errors: [`revision ${toRevision} not found for scope "${scope}"`] };
-  return write(env, kind, scope, target.value, {
-    ...meta,
-    note: meta.note ?? `rollback to revision ${toRevision}`,
+export async function rollback<T>(env: Env, kind: DocumentKind<T>, scope: Scope, toRevision: number, meta: WriteMeta): Promise<WriteResult<T>> {
+  return publish(env, kind, scope, { type: 'rollback', toRevision }, { ...meta, note: meta.note ?? `rollback to revision ${toRevision}` }, async () => {
+    const target = await publicationVersion(env, kind, scope, toRevision); return target?.value ?? null;
   });
 }
-
-// -- Helpers shared by every kind -------------------------------------------
-
 const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 /**

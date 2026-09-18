@@ -1,0 +1,31 @@
+{
+  "before": {
+    "id": "D06",
+    "canonical": {
+      "title": "Consent, retention, erasure and historic destinations",
+      "boundary": "Customer privacy/security owners: define permitted states, necessary records, store/destination inventory, progress/retention requirements and historic-data handling. An internal notice or contract wording change does not automatically waive applicable duties."
+    },
+    "state": "pending",
+    "record": null
+  },
+  "after": {
+    "id": "D06",
+    "canonical": {
+      "title": "Consent, retention, erasure and historic destinations",
+      "boundary": "Customer privacy/security owners: define permitted states, necessary records, store/destination inventory, progress/retention requirements and historic-data handling. An internal notice or contract wording change does not automatically waive applicable duties."
+    },
+    "state": "pending",
+    "record": null,
+    "pending_request": {
+      "at": "2026-09-15T03:33:37.069Z",
+      "scope": "W30 late/mutable and higher-cap historical reconstruction only; no implementation admitted.",
+      "owner": "Customer privacy/security and delivery/DS owners with architecture; D06/W24",
+      "question": "What maximum late-arrival/correction window should the engine support, and may it retain the corresponding erasure-covered replay history?",
+      "next_action": "Obtain the D06/W24 owner decision for W30 historical recovery: maximum late-arrival/correction age, permitted replay-history/checkpoint retention and erasure lifecycle, and handling of already-unrecoverable history. Supporting a seven-day attribution policy requires its carry-in history as well as the chosen correction window; a 48-hour/200-entry live ring or erasure scan horizon does not establish that basis. Do not implement blind refolding, retain extra subject history or reset a generation by assumption. W30.03 remains accepted unchanged. Other authorized local remediation is not globally blocked; forward interrupted-fold recovery is a separate possible technical task, requiring an admitted design for exact input/config/tombstone identity, cross-shard validation, concurrent progress and guarded publication before coding. No customer-data recovery, cloud/deploy or release authority is supplied.",
+      "preflight": {
+        "path": "docs/remediation/decisions/D06-W30-history-preflight-2026-09-14.json",
+        "sha256": "24cb32ca2ab6d5df7a3a4de4f183cbc0c704a445de890694f031ba0f15e3ce60"
+      }
+    }
+  }
+}

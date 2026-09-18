@@ -1,0 +1,220 @@
+{
+  "at": "2026-09-11T23:55:00.053Z",
+  "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/ledger/writer.ts src/ledger/consume.ts src/index.ts src/ledger/ledger.test.ts src/index.api-boundary.test.ts --format json",
+  "session_id": 8147,
+  "exit_code": 0,
+  "drained": true,
+  "capture": {
+    "chunk_id": "540f62",
+    "wall_time_seconds": 0.000002214,
+    "exit_code": 0,
+    "original_token_count": 4712,
+    "output": "[{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.api-boundary.test.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts\",\"messages\":[{\"ruleId\":\"@typescript-eslint/no-unused-vars\",\"severity\":1,\"message\":\"'e' is defined but never used.\",\"line\":219,\"column\":14,\"nodeType\":null,\"messageId\":\"unusedVar\",\"endLine\":219,\"endColumn\":15},{\"ruleId\":\"@typescript-eslint/no-unused-vars\",\"severity\":1,\"message\":\"'e' is defined but never used.\",\"line\":230,\"column\":23,\"nodeType\":null,\"messageId\":\"unusedVar\",\"endLine\":230,\"endColumn\":24},{\"ruleId\":\"@typescript-eslint/no-unused-vars\",\"severity\":1,\"message\":\"'e' is defined but never used.\",\"line\":242,\"column\":23,\"nodeType\":null,\"messageId\":\"unusedVar\",\"endLine\":242,\"endColumn\":24},{\"ruleId\":\"@typescript-eslint/no-unused-vars\",\"severity\":1,\"message\":\"'e' is defined but never used.\",\"line\":248,\"column\":14,\"nodeType\":null,\"messageId\":\"unusedVar\",\"endLine\":248,\"endColumn\":15},{\"ruleId\":\"@typescript-eslint/no-unused-vars\",\"severity\":1,\"message\":\"'e' is defined but never used.\",\"line\":258,\"column\":14,\"nodeType\":null,\"messageId\":\"unusedVar\",\"endLine\":258,\"endColumn\":15},{\"ruleId\":\"@typescript-eslint/no-unused-vars\",\"severity\":1,\"message\":\"'ctx' is defined but never used.\",\"line\":265,\"column\":48,\"nodeType\":null,\"messageId\":\"unusedVar\",\"endLine\":265,\"endColumn\":51},{\"ruleId\":\"@typescript-eslint/no-explicit-any\",\"severity\":1,\"message\":\"Unexpected any. Specify a different type.\",\"line\":280,\"column\":39,\"nodeType\":\"TSAnyKeyword\",\"messageId\":\"unexpectedAny\",\"endLine\":280,\"endColumn\":42,\"suggestions\":[{\"messageId\":\"suggestUnknown\",\"fix\":{\"range\":[14305,14308],\"text\":\"unknown\"},\"desc\":\"Use `unknown` instead, this will force you to explicitly, and safely assert the type is correct.\"},{\"messageId\":\"suggestNever\",\"fix\":{\"range\":[14305,14308],\"text\":\"never\"},\"desc\":\"Use `never` instead, this is useful when instantiating generic type parameters that you don't need to know the type of.\"}]}],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":7,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"source\":\"import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';\\nimport { retentionDays, rewriteErasures, type R2Erasable } from '@/ledger/erasure';\\nimport { catchUp, runDayReport } from '@/learn/hourly';\\nimport { runMonitor } from '@/ops/monitor';\\nimport { read } from '@/config/versionedStore';\\nimport { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';\\nimport type { LearnConfig } from '@/content/types';\\nimport type { TenantId } from '@/tenancy/tenant';\\nimport { Hono } from 'hono';\\nimport { cors } from 'hono/cors';\\nimport { timing } from 'hono/timing';\\nimport { secureHeaders } from 'hono/secure-headers';\\nimport { getPath } from 'hono/utils/url';\\n\\nimport type { Env } from '@/types/env';\\nimport { errorHandler } from '@/middleware/error';\\nimport { requestId } from '@/middleware/request-id';\\nimport { corsOrigin, sdkKey, operatorWrites } from '@/middleware/edgeAccess';\\n\\nimport { authRoutes } from '@/routes/auth';\\nimport { trackingRoutes } from '@/routes/tracking';\\nimport { pixelRoutes } from '@/routes/pixel';\\nimport { webhookRoutes } from '@/routes/webhook';\\nimport { healthRoutes } from '@/routes/health';\\nimport { optimizelyRoutes } from '@/routes/optimizely';\\nimport { cdpRoutes } from '@/routes/cdp';\\nimport { operatorRoutes } from '@/routes/operator';\\nimport { configRoutes } from '@/routes/config';\\nimport { sortRoutes } from '@/routes/sort';\\nimport { contentRoutes } from '@/routes/content';\\nimport { identityRoutes } from '@/routes/identity';\\nimport realtimeRoutes from '@/routes/realtime';\\nimport { aiRoutes } from '@/routes/ai';\\nimport { aiSceneRoutes } from '@/routes/aiScene';\\nimport { generateSceneToR2 } from '@/services/sceneGen';\\nimport { shotRoutes } from '@/routes/shot';\\nimport { geoRoutes } from '@/routes/geo';\\nimport { funnelRoutes } from '@/routes/funnel';\\nimport { funnelSimRoutes } from '@/routes/funnelSim';\\nimport { experimentRoutes } from '@/routes/experiment'; // A/B + CMAB workstream (owner: ab-cmab)\\nimport { signalRoutes } from '@/routes/signals'; // Signal-Led Moment DETECT layer (owner: ab-cmab)\\nimport { liveRoutes } from '@/routes/live'; // The Bright Hour storefront API (docs/qvc)\\nimport { liveOpsRoutes } from '@/routes/liveOps'; // The Bright Hour Offer Desk (Beat 2)\\n\\nimport { routeAgentRequest } from 'agents';\\n\\nimport { StateManager } from '@/durable-objects/StateManager';\\nimport { RateLimiter } from '@/durable-objects/RateLimiter';\\nimport { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSocket';\\nimport { ShopperReflex } from '@/durable-objects/ShopperReflex';\\nimport { OpalAgent } from '@/agents/OpalAgent';\\n\\nconst app = new Hono<{ Bindings: Env; Variables: { tenant: TenantId } }>();\\n\\napp.use('*', timing());\\napp.use('*', requestId());\\napp.use('*', secureHeaders());\\n\\napp.use(\\n  '*',\\n  cors({\\n    // CW10: policy-driven. Open mode with nothing configured reflects, as before;\\n    // a configured allow-list or enforced mode answers only what is listed.\\n    origin: corsOrigin,\\n    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],\\n    allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-SDK-Key', 'X-Shopper-Session', 'X-Tenant'],\\n    exposeHeaders: ['X-Request-Id', 'X-Response-Time'],\\n    credentials: true,\\n    maxAge: 86400,\\n  })\\n);\\n\\n// Preflights carry header names, not the tenant selector's value. CORS answers\\n// that metadata first; actual requests resolve one tenant before route work.\\napp.use('*', tenantMiddleware());\\n\\n// CW10 — the access gates. All three are pass-through while AUTH_MODE is\\n// 'open' (the default), so the shared demo worker is unchanged; the staging\\n// stamp sets 'enforced'. See src/middleware/edgeAccess.ts.\\napp.use('/realtime/*', sdkKey());\\napp.use('/v1/:tenant/*', sdkKey());\\napp.use('/operator/*', operatorWrites());\\n\\napp.onError(errorHandler);\\n\\napp.route('/health', healthRoutes);\\napp.route('/auth', authRoutes);\\napp.route('/track', trackingRoutes);\\napp.route('/pixel', pixelRoutes);\\napp.route('/webhook', webhookRoutes);\\napp.route('/optimizely', optimizelyRoutes);\\napp.route('/cdp', cdpRoutes);\\napp.route('/operator', operatorRoutes);\\n// CW0 — versioned reflex config (scope appendix §1.4). Reads open, writes\\n// authenticated and fail closed; the tuning UI is a client of these routes.\\napp.route('/config', configRoutes);\\n// §1.11 custom product sort: a candidate set in, the same ids out in a\\n// per-shopper order. The commerce platform stays authoritative for everything\\n// else. Ledger 20 row 9.\\napp.route('/sort', sortRoutes);\\n// CW2 — the content catalog, slot strategies and learning settings: reads open,\\n// writes authenticated, every write validated, versioned and attributed.\\napp.route('/content', contentRoutes);\\napp.route('/realtime', realtimeRoutes);\\napp.route('/meridian/api', meridianRoutes);\\n// CW4 — the content decision surface (scope appendix §2.3). Reads only; the\\n// ledger writer (Phase 0) and SDK-key auth (CW10) attach here, not elsewhere.\\napp.route('/v1', decisionRoutes);\\n// CW25 — identity stitching (§1.12): link, detach, resolve, history. Same gate as /v1.\\napp.route('/v1', identityRoutes);\\napp.route('/ai', aiRoutes);\\napp.route('/ai/scene', aiSceneRoutes);\\napp.route('/__shot', shotRoutes);\\napp.route('/geo', geoRoutes);\\napp.route('/funnel', funnelRoutes);\\napp.route('/funnel/sim', funnelSimRoutes);\\napp.route('/experiment', experimentRoutes); // A/B + CMAB (owner: ab-cmab)\\napp.route('/signals', signalRoutes); // Signal-Led Moment DETECT layer (owner: ab-cmab)\\n// The Bright Hour demo surface. The PAGE is static assets at /live (same\\n// mechanism as every other demo); this is only its data plane, so the mount is\\n// namespaced under /live/api and touches no existing route.\\napp.route('/live/api', liveRoutes);\\n// The Offer Desk (Beat 2) — the operator surface at /live/ops.html. Its own\\n// mount so the storefront's data plane and the desk's never share a handler;\\n// every write it makes lands under the `bh:offerdesk:` KV prefix.\\napp.route('/live/ops-api', liveOpsRoutes);\\n\\n// API info endpoint - moved to /api-info so root can serve static files\\napp.get('/api-info', (c) => {\\n  return c.json({\\n    name: 'Edge Platform API',\\n    version: '2.0.0',\\n    environment: c.env.ENVIRONMENT,\\n    endpoints: {\\n      storefront: '/storefront',\\n      health: c.env.AUTH_MODE === 'enforced' ? '/health/ready' : '/health',\\n      auth: '/auth',\\n      pixel: '/pixel',\\n      ...(c.env.AUTH_MODE === 'enforced' ? {} : {\\n        tracking: '/track', webhook: '/webhook',\\n        optimizely: '/optimizely', cdp: '/cdp', opalAgent: '/agents/opal-agent/:session',\\n        ai: '/ai', aiScene: '/ai/scene', funnel: '/funnel', experiment: '/experiment', signals: '/signals',\\n      }),\\n      realtime: '/realtime',\\n      operator: '/operator',\\n      geo: '/geo',\\n    },\\n    docs: 'docs/api/01-rest-endpoints.md',\\n  });\\n});\\n\\napp.notFound((c) => {\\n  return c.json({ error: 'Not Found' }, 404);\\n});\\n\\nimport { meridianRoutes } from '@/demos/meridian/routes';\\nimport { decisionRoutes } from '@/routes/decisions';\\nimport { MeridianReflex } from '@/demos/meridian/MeridianReflex';\\n\\nimport { RegionTrend } from '@/durable-objects/RegionTrend';\\nimport { DecisionRing } from '@/durable-objects/DecisionRing';\\nimport { LearnStats } from '@/durable-objects/LearnStats';\\nimport { rollupTenant } from '@/reflex/regionTrend';\\nimport { consumeLedger } from '@/ledger/consume';\\n\\nexport { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex, RegionTrend, DecisionRing, LearnStats };\\n\\nexport default {\\n  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {\\n    // The obsolete raw-store API is unavailable before binding discovery,\\n    // logging or CORS. Use Hono's decoding so encoded aliases are covered too.\\n    const path = getPath(request);\\n    if (path === '/api' || path.startsWith('/api/')) {\\n      return new Response(request.method === 'HEAD' ? null : '{\\\"error\\\":\\\"Not Found\\\"}', {\\n        status: 404,\\n        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },\\n      });\\n    }\\n    if (env.AUTH_MODE === 'enforced') {\\n      // Demo, model and legacy activation routes use stamp-global resources or\\n      // shopper paths without owned principals. Named grants do not authorize them.\\n      // Match decoded segments, including the Agents SDK's empty-segment aliases.\\n      const [root, child] = path.split('/').filter(Boolean);\\n      if (root === 'agents' || root === 'cdp' || root === 'optimizely'\\n        || root === 'track' || root === 'webhook'\\n        || root === 'ai' || root === '__shot' || root === 'funnel' || root === 'experiment' || root === 'signals'\\n        || (root === 'live' && (child === 'api' || child === 'ops-api'))\\n        || (root === 'meridian' && child === 'api')\\n        || (root === 'realtime' && child === 'demo')\\n        || (root === 'geo' && child === 'cohort')\\n        || (root === 'health' && child === undefined)) {\\n        return new Response(request.method === 'HEAD' ? null : '{\\\"error\\\":\\\"Not Found\\\"}', {\\n          status: 404,\\n          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },\\n        });\\n      }\\n      // Do not call the SDK even for other paths: it discovers all DO bindings\\n      // before checking its route. Retained Hono routes resolve their own scope.\\n    } else {\\n      const agentResponse = await routeAgentRequest(request, env);\\n      if (agentResponse) return agentResponse;\\n    }\\n    return app.fetch(request, env, ctx);\\n  },\\n  scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {\\n    if (!['*/5 * * * *', '0 3 * * *', '0 * * * *'].includes(event.cron)) {\\n      console.log('Unknown scheduled event');\\n      return;\\n    }\\n    let tenants: TenantId[];\\n    try { tenants = tenantConfig(env).provisioned; }\\n    catch { console.error('Scheduled tenant configuration unavailable'); return; }\\n    switch (event.cron) {\\n      case '*/5 * * * *': {\\n        // The platform watching itself (src/ops/monitor.ts): every store, and a real decision, per tenant.\\n        for (const tenant of tenants) {\\n          ctx.waitUntil(runMonitor(env, tenant).then(\\n            (r) => { if (!r.ok) console.error('monitor check failed; problems', r.problems.length); },\\n            (e) => console.error('monitor failed to run'),\\n          ));\\n        }\\n        // Doc 31 §3: the closed hours the ledger holds, folded into their aggregates, oldest first, two per run;\\n        // then the day report of each date touched, so GET learn/report answers for today through the last closed hour.\\n        for (const tenant of tenants) {\\n          ctx.waitUntil((async () => {\\n            const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);\\n            const r = await catchUp(env.STORAGE as unknown as Parameters<typeof catchUp>[0], tenant, learn);\\n            if (r.built.length) console.log('hourly fold completed; hours/objects/decisions/outcomes/truncated/pending', r.built.length, r.built.reduce((n, b) => n + b.objects, 0), r.built.reduce((n, b) => n + b.decisions, 0), r.built.reduce((n, b) => n + b.outcomes, 0), r.built.filter((b) => b.truncated).length, r.pending);\\n            if (r.failed.length) console.error('hourly fold hours failed and skipped', r.failed.length);\\n          })().catch((e) => console.error('hourly fold failed')));\\n        }\\n        break;\\n      }\\n      case '0 3 * * *': {\\n        // Doc 31: yesterday's day report, built once by the platform and read by the console with GET.\\n        const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);\\n        for (const tenant of tenants) {\\n          ctx.waitUntil((async () => {\\n            const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);\\n            const r = await runDayReport(env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand: tenant, date: yesterday }, learn, null);\\n            console.log('day report; decisions/outcomes/unfolded/truncated', Number.isFinite(r.counts.decisions) ? r.counts.decisions : -1, Number.isFinite(r.counts.outcomes) ? r.counts.outcomes : -1, r.hours?.missing.length ?? 0, r.counts.truncated ? 1 : 0);\\n          })().catch((e) => console.error('day report failed')));\\n        }\\n        // CW28 (doc 22 §15): the erasure rewrite. Newest day first over the retention window, capped per run, resumes tomorrow.\\n        for (const tenant of tenants) {\\n          ctx.waitUntil(rewriteErasures(env.STORAGE as unknown as R2Erasable, tenant, { retentionDays: retentionDays(env) }).then(\\n            (r) => { if (r.tombstones) console.log('erasure rewrite; rows/objects/days/retired/pending/more', r.rows_removed, r.objects_opened, r.days.length, r.retired, r.remaining, r.more ? 1 : 0); },\\n            (e) => console.error('erasure rewrite failed'),\\n          ));\\n        }\\n        break;\\n      }\\n      case '0 * * * *': {\\n        // CW6: sum each tenant's published regions into its countries and into everyone.\\n        for (const tenant of tenants) {\\n          ctx.waitUntil(rollupTenant(env, tenant).then(\\n            (r) => console.log('trend rollup; regions/countries', r.regions, r.countries.length),\\n            (e) => console.error('trend rollup failed'),\\n          ));\\n        }\\n        break;\\n      }\\n    }\\n  },\\n  queue: async (batch: MessageBatch, env: Env, ctx: ExecutionContext) => {\\n    // Phase 0 of the outcome-learning design: every ledger message in the batch is\\n    // written to R2 in one pass, as range-named objects under the brand and hour.\\n    // Only an R2 failure retries; anything the writer cannot place is acknowledged\\n    // and counted, so a poison message can never stall the ledger behind it.\\n    const ledger = batch.messages.filter((m) => (m.body as { kind?: unknown } | null)?.kind === 'ledger');\\n    if (ledger.length) {\\n      const res = await consumeLedger(env, ledger.map((m) => m.body));\\n      if (res.ok) { for (const m of ledger) m.ack(); }\\n      else { console.error('ledger batch failed'); for (const m of ledger) m.retry(); }\\n      if (res.skipped) console.warn(`ledger: ${res.skipped} unplaceable message(s) acknowledged and dropped`);\\n    }\\n    for (const message of batch.messages) {\\n      if ((message.body as { kind?: unknown } | null)?.kind === 'ledger') continue;\\n      try {\\n        const event = message.body as any;\\n        if (event && event.kind === 'scene') {\\n          // Background styled-scene generation → R2 (so the request path never blocks on ~8s gen).\\n          const res = await generateSceneToR2(env, event);\\n          if (!res.ok) console.error('queue scene failed');\\n          message.ack(); // ack even on a handled failure — no poison loop; client falls back to the grid\\n        } else {\\n          message.ack();\\n        }\\n      } catch (error) {\\n        console.error('Error processing message');\\n        message.retry(); // transient/unexpected → retry\\n      }\\n    }\\n  },\\n};\\n\",\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/consume.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/ledger.test.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]},{\"filePath\":\"/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/writer.ts\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[{\"ruleId\":\"no-extra-semi\",\"replacedBy\":[]},{\"ruleId\":\"no-mixed-spaces-and-tabs\",\"replacedBy\":[]}]}]\n"
+  },
+  "rows": [
+    {
+      "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.api-boundary.test.ts",
+      "messages": [],
+      "suppressedMessages": [],
+      "errorCount": 0,
+      "fatalErrorCount": 0,
+      "warningCount": 0,
+      "fixableErrorCount": 0,
+      "fixableWarningCount": 0,
+      "usedDeprecatedRules": [
+        {
+          "ruleId": "no-extra-semi",
+          "replacedBy": []
+        },
+        {
+          "ruleId": "no-mixed-spaces-and-tabs",
+          "replacedBy": []
+        }
+      ]
+    },
+    {
+      "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/index.ts",
+      "messages": [
+        {
+          "ruleId": "@typescript-eslint/no-unused-vars",
+          "severity": 1,
+          "message": "'e' is defined but never used.",
+          "line": 219,
+          "column": 14,
+          "nodeType": null,
+          "messageId": "unusedVar",
+          "endLine": 219,
+          "endColumn": 15
+        },
+        {
+          "ruleId": "@typescript-eslint/no-unused-vars",
+          "severity": 1,
+          "message": "'e' is defined but never used.",
+          "line": 230,
+          "column": 23,
+          "nodeType": null,
+          "messageId": "unusedVar",
+          "endLine": 230,
+          "endColumn": 24
+        },
+        {
+          "ruleId": "@typescript-eslint/no-unused-vars",
+          "severity": 1,
+          "message": "'e' is defined but never used.",
+          "line": 242,
+          "column": 23,
+          "nodeType": null,
+          "messageId": "unusedVar",
+          "endLine": 242,
+          "endColumn": 24
+        },
+        {
+          "ruleId": "@typescript-eslint/no-unused-vars",
+          "severity": 1,
+          "message": "'e' is defined but never used.",
+          "line": 248,
+          "column": 14,
+          "nodeType": null,
+          "messageId": "unusedVar",
+          "endLine": 248,
+          "endColumn": 15
+        },
+        {
+          "ruleId": "@typescript-eslint/no-unused-vars",
+          "severity": 1,
+          "message": "'e' is defined but never used.",
+          "line": 258,
+          "column": 14,
+          "nodeType": null,
+          "messageId": "unusedVar",
+          "endLine": 258,
+          "endColumn": 15
+        },
+        {
+          "ruleId": "@typescript-eslint/no-unused-vars",
+          "severity": 1,
+          "message": "'ctx' is defined but never used.",
+          "line": 265,
+          "column": 48,
+          "nodeType": null,
+          "messageId": "unusedVar",
+          "endLine": 265,
+          "endColumn": 51
+        },
+        {
+          "ruleId": "@typescript-eslint/no-explicit-any",
+          "severity": 1,
+          "message": "Unexpected any. Specify a different type.",
+          "line": 280,
+          "column": 39,
+          "nodeType": "TSAnyKeyword",
+          "messageId": "unexpectedAny",
+          "endLine": 280,
+          "endColumn": 42,
+          "suggestions": [
+            {
+              "messageId": "suggestUnknown",
+              "fix": {
+                "range": [
+                  14305,
+                  14308
+                ],
+                "text": "unknown"
+              },
+              "desc": "Use `unknown` instead, this will force you to explicitly, and safely assert the type is correct."
+            },
+            {
+              "messageId": "suggestNever",
+              "fix": {
+                "range": [
+                  14305,
+                  14308
+                ],
+                "text": "never"
+              },
+              "desc": "Use `never` instead, this is useful when instantiating generic type parameters that you don't need to know the type of."
+            }
+          ]
+        }
+      ],
+      "suppressedMessages": [],
+      "errorCount": 0,
+      "fatalErrorCount": 0,
+      "warningCount": 7,
+      "fixableErrorCount": 0,
+      "fixableWarningCount": 0,
+      "usedDeprecatedRules": [
+        {
+          "ruleId": "no-extra-semi",
+          "replacedBy": []
+        },
+        {
+          "ruleId": "no-mixed-spaces-and-tabs",
+          "replacedBy": []
+        }
+      ]
+    },
+    {
+      "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/consume.ts",
+      "messages": [],
+      "suppressedMessages": [],
+      "errorCount": 0,
+      "fatalErrorCount": 0,
+      "warningCount": 0,
+      "fixableErrorCount": 0,
+      "fixableWarningCount": 0,
+      "usedDeprecatedRules": [
+        {
+          "ruleId": "no-extra-semi",
+          "replacedBy": []
+        },
+        {
+          "ruleId": "no-mixed-spaces-and-tabs",
+          "replacedBy": []
+        }
+      ]
+    },
+    {
+      "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/ledger.test.ts",
+      "messages": [],
+      "suppressedMessages": [],
+      "errorCount": 0,
+      "fatalErrorCount": 0,
+      "warningCount": 0,
+      "fixableErrorCount": 0,
+      "fixableWarningCount": 0,
+      "usedDeprecatedRules": [
+        {
+          "ruleId": "no-extra-semi",
+          "replacedBy": []
+        },
+        {
+          "ruleId": "no-mixed-spaces-and-tabs",
+          "replacedBy": []
+        }
+      ]
+    },
+    {
+      "filePath": "/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/ledger/writer.ts",
+      "messages": [],
+      "suppressedMessages": [],
+      "errorCount": 0,
+      "fatalErrorCount": 0,
+      "warningCount": 0,
+      "fixableErrorCount": 0,
+      "fixableWarningCount": 0,
+      "usedDeprecatedRules": [
+        {
+          "ruleId": "no-extra-semi",
+          "replacedBy": []
+        },
+        {
+          "ruleId": "no-mixed-spaces-and-tabs",
+          "replacedBy": []
+        }
+      ]
+    }
+  ],
+  "errors": 0,
+  "warnings": 7
+}

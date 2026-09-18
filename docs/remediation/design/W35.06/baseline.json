@@ -1,0 +1,15 @@
+{
+  "task_id": "W35.06",
+  "at": "2026-09-16T02:29:15.485Z",
+  "basis": "Actual-module design case source-confirmed by an independent Astra/xhigh scout; no runtime reproduction is claimed.",
+  "defect": "Target admission records no source identity. A source may retain a full prepared or completed transfer while target publication is missing or later erased, and eraseSubject can enumerate only KV links/sessions, not that authoritative source object.",
+  "files": {
+    "src/durable-objects/ShopperReflex.ts": "32e3104125e5974c51d5d1a94172a0e245c921c49bb1b03f0e66dae75f098105",
+    "src/identity/erase.ts": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5",
+    "src/routes/realtime.sdkContract.test.ts": "734da3bd0a304a0a4bfa5d54ebeaa75410c7bd5045a6809c968f785c641ce91e",
+    "src/routes/identity.test.ts": "eeb3723223f22bf36db5f644692e0feceb995d5834fed60cc3e1fef592d8b933"
+  },
+  "performance_budget": "One bounded source-intent write and serialized target registration/sequence write per new link admission; erasure-only target barrier/page reads, exact source calls, registration acknowledgements and existing R2 checkpoints. Record operation counts; make no serving-latency or capacity claim.",
+  "rollback": "Reviewed inverse only on the four pinned source/test files; preserve prior remediation and unrelated dirty changes. New durable registration, source-intent and v5 job records require compatibility review before rollback.",
+  "limitations": "Prospective registrations only; historical unregistered source discovery/migration, external and physical erasure, session-host parity, cutover/deployment, customer data, native/browser/customer/SLO/release acceptance and full W35/F06/F14 remain open."
+}

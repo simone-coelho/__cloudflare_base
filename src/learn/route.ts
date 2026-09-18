@@ -11,7 +11,8 @@ import type { LearnConfig } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import { DEFAULT_POLICY, type AttributionPolicy } from './policy';
 import { DEFAULT_STATS } from './stats';
-import { fanOutcome, type SlotLearnConfig } from './fan';
+import { fanOutcome, reportLearningIncomplete, type SlotLearnConfig } from './fan';
+import { admitOwnedRecovery } from '@/identity/sessionAuthority';
 
 export function policyOf(learn: LearnConfig): AttributionPolicy {
   const p = learn.policy;
@@ -21,7 +22,7 @@ export function policyOf(learn: LearnConfig): AttributionPolicy {
 export function slotConfigsOf(learn: LearnConfig): Record<string, SlotLearnConfig> {
   const stats = learn.stats ?? DEFAULT_STATS;
   const out: Record<string, SlotLearnConfig> = {};
-  for (const [slot, d] of Object.entries(learn.slots ?? {})) out[slot] = { reward: d.reward ?? 'click', stats, objective: d.objective ?? 'unit' };
+  for (const [slot, d] of Object.entries(learn.slots ?? {})) out[slot] = { reward: d.reward ?? 'click', stats, objective: d.objective ?? 'unit', measurementBasis: d.measurementBasis ?? 'served-v1' };
   return out;
 }
 
@@ -30,6 +31,14 @@ export async function outcomeToLearning(env: Env, scope: string, outcome: Outcom
   try {
     const rev = await readRevision(env, LEARN_KIND, scope);
     const learn = rev?.value ?? DEFAULT_LEARN;
-    await fanOutcome(env, scope, outcome, policyOf(learn), outcome.brand, slotConfigsOf(learn));
-  } catch { /* the learning loop must never surface to the shopper */ }
+    if (env.LEDGER_RECOVERY_ENABLED === 'true') {
+      const result = await admitOwnedRecovery({ kind: 'outcome', tenant: scope, subject: outcome.visitor_id, brand: outcome.brand, outcome,
+        policy: policyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS } });
+      if (result.source.state !== 'recovered') reportLearningIncomplete('outcome', result.learning ?? null);
+      return;
+    }
+    const result = await fanOutcome(env, scope, outcome, policyOf(learn), outcome.brand, slotConfigsOf(learn),
+      { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS });
+    reportLearningIncomplete('outcome', result);
+  } catch { reportLearningIncomplete('outcome', null); }
 }

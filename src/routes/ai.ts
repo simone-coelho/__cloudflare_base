@@ -48,7 +48,7 @@ ai.post('/search', async (c) => {
       source: 'gemini',
     });
   } catch (e) {
-    console.error('ai/search error:', e);
+    console.error('ai/search error');
     return c.json({ ok: false, error: e instanceof Error ? e.message : String(e), source: 'fallback' });
   }
 });
@@ -87,7 +87,7 @@ ai.post('/concierge', async (c) => {
     const result = streamText({ model: google(c.env.GEMINI_MODEL || 'gemini-2.5-flash'), system, messages });
     return result.toTextStreamResponse();
   } catch (e) {
-    console.error('ai/concierge error:', e);
+    console.error('ai/concierge error');
     return c.json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
 });

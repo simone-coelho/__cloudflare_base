@@ -1,0 +1,35 @@
+{
+  "at": "2026-09-17T22:04:15.520Z",
+  "before": {
+    "id": "D03",
+    "canonical": {
+      "title": "Production shopper/configuration authority",
+      "boundary": "Architecture/delivery/security: choose a transactional design and prove state, identity, consent, recovery and performance parity. W35/W11 cannot be deferred merely because they are larger."
+    },
+    "state": "pending",
+    "record": null,
+    "approved_shopper_direction": {
+      "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+      "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c"
+    },
+    "remaining": "Local shopper target chosen: existing per-shopper Durable Object. Configuration authority, parity/correctness/performance acceptance, migration and cutover remain unapproved."
+  },
+  "after": {
+    "id": "D03",
+    "canonical": {
+      "title": "Production shopper/configuration authority",
+      "boundary": "Architecture/delivery/security: choose a transactional design and prove state, identity, consent, recovery and performance parity. W35/W11 cannot be deferred merely because they are larger."
+    },
+    "state": "pending",
+    "record": null,
+    "approved_shopper_direction": {
+      "path": "docs/remediation/decisions/D03-shopper-authority-direction-approved-2026-09-15.json",
+      "sha256": "6d87583669e1a83f5fa68abfc12f67ad560ed3040bd2bdcccda257141a24d60c"
+    },
+    "remaining": "Local directions chosen: existing per-shopper Durable Object for W35; extend existing conditional R2 authority with coherent published revision set for W11. Parity/correctness/performance acceptance, migration and cutover remain unapproved.",
+    "approved_configuration_direction": {
+      "path": "docs/remediation/decisions/D03-config-r2-direction-approved-2026-09-17.json",
+      "sha256": "373b42ccd0171fdd54a903d3a04fac06cfeb91314c53d646e99095da9106e5f3"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 {
   "extends": [
     "eslint:recommended",
-    "@typescript-eslint/recommended"
+    "plugin:@typescript-eslint/recommended"
   ],
   "parser": "@typescript-eslint/parser",
   "plugins": ["@typescript-eslint"],
@@ -21,5 +21,11 @@
     "prefer-const": "error",
     "no-var": "error"
   },
+  "overrides": [
+    {
+      "files": ["public/meridian/meridian.js", "public/meridian/surfaces.js", "public/meridian/beats.js", "public/meridian/compare.js", "public/meridian/layout.js", "public/meridian/moments.js", "public/sdk/debug.js"],
+      "env": { "browser": true }
+    }
+  ],
   "ignorePatterns": ["dist", ".wrangler", "node_modules"]
 }

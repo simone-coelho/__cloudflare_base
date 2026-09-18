@@ -1,8 +1,8 @@
 // src/content/kinds.ts
 // Three document kinds for the versioned store (src/config/versionedStore.ts):
-// no second versioning system. Each validator returns EVERY error, and each
-// kind has a compiled fallback so a missing or corrupt document can never take
-// the decision path down (doc 22 §18.1's failure posture, inherited).
+// no second versioning system. Each validator returns EVERY error;
+// slots/learn retain compiled fallbacks. Content has an explicit conditional R2
+// authority: missing initialization or corrupt publication fails closed.
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import type { ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
@@ -23,6 +23,12 @@ function stampLabel(base: string | undefined, fallback: string, revision: number
 
 /** A stage in either vocabulary, as Tapestry's word; null when it is neither. */
 export function stageWordOf(v: unknown): StageWord | null {
+  if (v === 'explore') return 'exploring';
+  if (v === 'consider') return 'considering';
+  if (v === 'decide') return 'deciding';
+  return storedStageWordOf(v);
+}
+function storedStageWordOf(v: unknown): StageWord | null {
   if (v === 'exploring' || v === 'considering' || v === 'deciding') return v;
   if (v === 'early') return 'exploring';
   if (v === 'mid') return 'considering';
@@ -30,7 +36,7 @@ export function stageWordOf(v: unknown): StageWord | null {
   return null;
 }
 
-function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[]): ContentPiece | null {
+function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[], stored: boolean): ContentPiece | null {
   const at = `pieces[${i}]`;
   if (!isRecord(p)) { errors.push(`${at}: must be an object`); return null; }
   const id = p.id, cid = p.customerContentId, type = p.type, title = p.title;
@@ -44,6 +50,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
   if (!isRecord(p.tags)) errors.push(`${at}.tags: required object of dimension → string[]`);
   else for (const [dim, vals] of Object.entries(p.tags)) {
     if (!Array.isArray(vals) || !vals.every(isStr)) { errors.push(`${at}.tags.${dim}: must be a non-empty string array`); continue; }
+    if (!stored && new Set(vals).size !== vals.length) errors.push(`${at}.tags.${dim}: duplicate values are not allowed`);
     tags[dim] = [...vals];
   }
   const slotTypes = Array.isArray(p.slotTypes) && p.slotTypes.length && p.slotTypes.every(isStr) ? [...p.slotTypes] as string[] : null;
@@ -57,6 +64,9 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
   if (p.art !== undefined && p.art !== null && typeof p.art !== 'string') errors.push(`${at}.art: string or null`);
   if (p.renderUrl !== undefined && !(isStr(p.renderUrl) && /^(https?:\/\/|\/)/i.test(p.renderUrl))) errors.push(`${at}.renderUrl: http(s) URL or site-relative path`);
   if (p.excerpt !== undefined && typeof p.excerpt !== 'string') errors.push(`${at}.excerpt: string when present`);
+  if (!stored) for (const key of ['subtitle', 'runtime']) {
+    if (p[key] !== undefined && typeof p[key] !== 'string') errors.push(`${at}.${key}: string when present`);
+  }
   let window: { from?: string; to?: string } | undefined;
   if (p.window !== undefined) {
     if (!isRecord(p.window)) errors.push(`${at}.window: object with from and/or to`);
@@ -85,8 +95,8 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
   let journeyStageFit: StageWord[] | undefined;
   if (p.journeyStageFit !== undefined) {
     const raw = Array.isArray(p.journeyStageFit) ? p.journeyStageFit : null;
-    const words = raw?.map(stageWordOf);
-    if (!raw || !raw.length || !words || words.some((w) => w === null)) errors.push(`${at}.journeyStageFit: non-empty array of exploring | considering | deciding (early | mid | late also accepted)`);
+    const words = raw?.map(stored ? storedStageWordOf : stageWordOf);
+    if (!raw || !raw.length || !words || words.some((w) => w === null)) errors.push(`${at}.journeyStageFit: non-empty array of exploring | considering | deciding (early | mid | late${stored ? '' : ' | explore | consider | decide'} also accepted)`);
     else journeyStageFit = [...new Set(words as StageWord[])];
   }
   if (p.freshnessDate !== undefined && !(isStr(p.freshnessDate) && Number.isFinite(Date.parse(p.freshnessDate)))) errors.push(`${at}.freshnessDate: ISO 8601 date-time`);
@@ -115,13 +125,19 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
 }
 
 export function validateContentCatalog(candidate: unknown): ValidationResult<ContentCatalog> {
+  return contentCatalog(candidate, false);
+}
+function validateStoredContentCatalog(candidate: unknown): ValidationResult<ContentCatalog> {
+  return contentCatalog(candidate, true);
+}
+function contentCatalog(candidate: unknown, stored: boolean): ValidationResult<ContentCatalog> {
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['catalog: must be an object'] };
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
   if (!Array.isArray(candidate.pieces)) return { ok: false, errors: [...errors, 'pieces: required array'] };
   const seen = new Set<string>();
   const pieces: ContentPiece[] = [];
-  candidate.pieces.forEach((p, i) => { const v = validatePiece(p, i, seen, errors); if (v) pieces.push(v); });
+  candidate.pieces.forEach((p, i) => { const v = validatePiece(p, i, seen, errors, stored); if (v) pieces.push(v); });
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}), pieces } };
 }
@@ -130,14 +146,16 @@ export const EMPTY_CATALOG: ContentCatalog = { version: 'content-empty', pieces:
 
 export const CONTENT_KIND: DocumentKind<ContentCatalog> = {
   name: 'content',
+  publication: 'r2',
   validate: validateContentCatalog,
+  validateStored: validateStoredContentCatalog,
   stamp: (v, r) => ({ ...v, version: stampLabel(v.version, 'content', r) }),
   versionOf: (v) => v.version ?? '',
 };
 
 // ── slots ───────────────────────────────────────────────────────────────────
 
-function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, errors: string[]): SlotStrategy | null {
+function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, errors: string[], governance: 0 | 1 | 2 | 3): SlotStrategy | null {
   const at = `pages.${page}[${i}]`;
   if (!isRecord(s)) { errors.push(`${at}: must be an object`); return null; }
   const slot = s.slot;
@@ -153,6 +171,50 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     weights[dim] = w;
   }
   if (s.pinnedPieceId !== undefined && !isStr(s.pinnedPieceId)) errors.push(`${at}.pinnedPieceId: string when present`);
+  let pinnedPieceIds: string[] | undefined;
+  if (governance === 3 && Object.hasOwn(s, 'pinnedPieceIds')) {
+    const ids = s.pinnedPieceIds;
+    if (!Array.isArray(ids) || ids.length > 50 || !Array.from(ids).every(isStr) || new Set(ids).size !== ids.length) errors.push(`${at}.pinnedPieceIds: at most 50 distinct exact nonempty strings`);
+    else pinnedPieceIds = [...ids];
+    if (Object.hasOwn(s, 'pinnedPieceId')) errors.push(`${at}: scalar and prefix pins are mutually exclusive`);
+  }
+  let excludedPieceIds: string[] | undefined;
+  if (governance) {
+    if (Object.hasOwn(s, 'offLimits') && typeof s.offLimits !== 'boolean') errors.push(`${at}.offLimits: boolean when present`);
+    if (Object.hasOwn(s, 'excludedPieceIds')) {
+      const ids = s.excludedPieceIds;
+      if (!Array.isArray(ids) || ids.length > 1000 || Array.from(ids).some(id => typeof id !== 'string' || id.length < 1 || id.length > 1024)
+        || new Set(ids).size !== ids.length) errors.push(`${at}.excludedPieceIds: at most 1000 distinct exact IDs, each 1..1024 UTF-16 units`);
+      else excludedPieceIds = [...ids] as string[];
+    }
+  }
+  let allowedTypes: string[] | undefined, excludedTags: SlotStrategy['excludedTags'];
+  if (governance >= 2) {
+    const exactString = (v: unknown): v is string => typeof v === 'string' && v.length >= 1 && v.length <= 1024;
+    if (Object.hasOwn(s, 'allowedTypes')) {
+      const values = s.allowedTypes;
+      if (!Array.isArray(values) || values.length < 1 || values.length > 1000 || Array.from(values).some(v => !exactString(v))
+        || new Set(values).size !== values.length) errors.push(`${at}.allowedTypes: 1..1000 distinct exact rendering types, each 1..1024 UTF-16 units`);
+      else allowedTypes = [...values] as string[];
+    }
+    if (Object.hasOwn(s, 'excludedTags')) {
+      const pairs = s.excludedTags, tuples = new Map<string, Set<string>>();
+      if (!Array.isArray(pairs) || pairs.length > 1000) errors.push(`${at}.excludedTags: at most 1000 exact dimension/value pairs`);
+      else {
+        excludedTags = [];
+        for (const pair of Array.from(pairs)) {
+          if (!isRecord(pair) || Reflect.ownKeys(pair).length !== 2 || !Object.hasOwn(pair, 'dimension') || !Object.hasOwn(pair, 'value')
+            || !exactString(pair.dimension) || !exactString(pair.value)) {
+            errors.push(`${at}.excludedTags: each pair must have only dimension and value, strings of 1..1024 UTF-16 units`); continue;
+          }
+          let values = tuples.get(pair.dimension);
+          if (!values) { values = new Set(); tuples.set(pair.dimension, values); }
+          if (values.has(pair.value)) errors.push(`${at}.excludedTags: duplicate exact pair`);
+          else { values.add(pair.value); excludedTags.push({ dimension: pair.dimension, value: pair.value }); }
+        }
+      }
+    }
+  }
   let merchandising: Record<string, number> | undefined;
   if (s.merchandising !== undefined) {
     if (!isRecord(s.merchandising)) errors.push(`${at}.merchandising: object of season | promotion | margin → weight -1..1, maxBoost ≥ 1, minBoost 0..1`);
@@ -199,13 +261,18 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
+    ...(governance && typeof s.offLimits === 'boolean' ? { offLimits: s.offLimits } : {}), ...(excludedPieceIds ? { excludedPieceIds } : {}),
+    ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
   };
 }
 
-export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCatalog> {
+function parseSlotCatalog(candidate: unknown, current = false): ValidationResult<SlotCatalog> {
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['slots: must be an object'] };
+  const marked = Object.hasOwn(candidate, 'governanceVersion');
+  if (marked && candidate.governanceVersion !== 1 && candidate.governanceVersion !== 2 && candidate.governanceVersion !== 3) errors.push('governanceVersion: only versions 1, 2 and 3 are supported');
+  const governance = current || candidate.governanceVersion === 3 ? 3 : candidate.governanceVersion === 2 ? 2 : marked ? 1 : 0;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
   if (!isRecord(candidate.pages)) return { ok: false, errors: [...errors, 'pages: required object of page → slot[]'] };
   const pages: Record<string, SlotStrategy[]> = {};
@@ -214,11 +281,33 @@ export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCa
     if (!Array.isArray(list)) { errors.push(`pages.${page}: must be an array`); continue; }
     const seen = new Set<string>();
     const slots: SlotStrategy[] = [];
-    list.forEach((s, i) => { const v = validateSlot(s, page, i, seen, errors); if (v) slots.push(v); });
+    list.forEach((s, i) => { const v = validateSlot(s, page, i, seen, errors, governance); if (v) slots.push(v); });
     pages[page] = slots;
   }
   if (errors.length) return { ok: false, errors };
-  return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}), pages } };
+  return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}), ...(governance ? { governanceVersion: governance } : {}), pages } };
+}
+
+/** Publication rejects local contradictions without reinterpreting retained revisions. */
+export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCatalog> {
+  const checked = parseSlotCatalog(candidate, true);
+  if (!checked.ok) return checked;
+  const errors: string[] = [];
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    const owners = new Map<string, string>();
+    for (const slot of slots) {
+      if (slot.offLimits) continue;
+      if (slot.pinnedPieceId && slot.take !== 1) errors.push(`pages.${page}.${slot.slot}: pinned slots must take exactly 1`);
+      if (slot.pinnedPieceIds && slot.pinnedPieceIds.length > slot.take) errors.push(`pages.${page}.${slot.slot}: pin prefix cannot exceed take`);
+      for (const id of slot.pinnedPieceIds ?? (slot.pinnedPieceId ? [slot.pinnedPieceId] : [])) {
+        if (slot.excludedPieceIds?.includes(id)) errors.push(`pages.${page}.${slot.slot}: pinnedPieceId is explicitly excluded`);
+        const owner = owners.get(id);
+        if (owner !== undefined) errors.push(`pages.${page}.${slot.slot}: pinnedPieceId duplicates pin in ${owner}`);
+        else owners.set(id, slot.slot);
+      }
+    }
+  }
+  return errors.length ? { ok: false, errors } : checked;
 }
 
 /**
@@ -239,7 +328,9 @@ export const DEFAULT_SLOTS: SlotCatalog = {
 
 export const SLOTS_KIND: DocumentKind<SlotCatalog> = {
   name: 'slots',
+  publication: 'r2',
   validate: validateSlotCatalog,
+  validateStored: (candidate) => parseSlotCatalog(candidate),
   stamp: (v, r) => ({ ...v, version: stampLabel(v.version, 'slots', r) }),
   versionOf: (v) => v.version ?? '',
 };
@@ -249,6 +340,10 @@ export const SLOTS_KIND: DocumentKind<SlotCatalog> = {
 const ARMS = new Set(['default', 'no_learning']);
 
 export function validateLearnConfig(candidate: unknown): ValidationResult<LearnConfig> {
+  return validateRetainedLearn(candidate, false);
+}
+
+function validateRetainedLearn(candidate: unknown, historical = true): ValidationResult<LearnConfig> {
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['learn: must be an object'] };
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
@@ -318,6 +413,10 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
       for (const [slot, d] of Object.entries(candidate.slots)) {
         if (!SLUG.test(slot) || !isRecord(d)) { errors.push(`slots.${slot}: slug → object`); continue; }
         const dials: NonNullable<LearnConfig['slots']>[string] = {};
+        if (d.measurementBasis !== undefined) {
+          if (d.measurementBasis !== 'served-v1' && d.measurementBasis !== 'rendered-v1') errors.push(`slots.${slot}.measurementBasis: served-v1 | rendered-v1`);
+          else dials.measurementBasis = d.measurementBasis;
+        }
         if (d.gamma !== undefined) { if (!isNum(d.gamma) || d.gamma < 0 || d.gamma > 1) errors.push(`slots.${slot}.gamma: number 0..1`); else dials.gamma = d.gamma; }
         if (d.reward !== undefined) { if (!isStr(d.reward) || !REWARDS.has(d.reward)) errors.push(`slots.${slot}.reward: known reward`); else dials.reward = d.reward as NonNullable<typeof dials.reward>; }
         if (d.objective !== undefined) {
@@ -327,7 +426,8 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
         }
         if (d.exploration !== undefined) {
           const e = d.exploration;
-          if (!isRecord(e) || !['rotation', 'thompson', 'epsilon', 'off'].includes(String(e.mode)) || !isNum(e.share) || e.share < 0 || e.share > 1 || !isNum(e.floor) || !Number.isInteger(e.floor) || e.floor < 0) errors.push(`slots.${slot}.exploration: mode rotation|thompson|epsilon|off, share 0..1, floor integer ≥ 0`);
+          if (!isRecord(e) || typeof e.mode !== 'string' || !['rotation', 'thompson', 'epsilon', 'off'].includes(e.mode) || !isNum(e.share) || e.share < 0 || e.share > 1 || !isNum(e.floor) || !Number.isInteger(e.floor) || e.floor < 0) errors.push(`slots.${slot}.exploration: mode ${historical ? 'rotation|thompson|epsilon|off' : 'rotation|epsilon|off'}, share 0..1, floor integer ≥ 0`);
+          else if (e.mode === 'thompson' && !historical) errors.push(`slots.${slot}.exploration: Thompson is unsupported; choose off, rotation or epsilon`);
           else dials.exploration = { mode: e.mode as 'rotation' | 'thompson' | 'epsilon' | 'off', share: e.share, floor: e.floor };
         }
         if (d.autonomy !== undefined) {
@@ -386,7 +486,9 @@ export const DEFAULT_LEARN: LearnConfig = {
 
 export const LEARN_KIND: DocumentKind<LearnConfig> = {
   name: 'learn',
+  publication: 'r2',
   validate: validateLearnConfig,
+  validateStored: validateRetainedLearn,
   stamp: (v, r) => ({ ...v, version: stampLabel(v.version, 'learn', r) }),
   versionOf: (v) => v.version ?? '',
 };

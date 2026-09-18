@@ -1,0 +1,157 @@
+{
+  "id": "W05.02",
+  "package_id": "W05",
+  "title": "Gate action and timer side effects with resolved consent",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Carry exact owned stored consent plus restrictive cookie/event hints through shared action processing on session/DO hosts before behavioral storage, capture, outcome/learning, regional fan and configured ODP egress. Event hints cannot enable consent; explicit preference changes can. Use existing personalizes semantics for action/alarm private updates and ODP qualification/profile work, preserving tracking-authorized measurement. Guard the existing DO alarm continuation without altering necessary retention cleanup/expiry policy; reuse loaded session state and successful writes rather than adding a resolver RPC.",
+  "read_paths": [
+    "src",
+    "scripts/remediation",
+    "scripts/build-sdk.mjs",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/routes/realtime.ts",
+    "src/services/RealtimeSegmentEngine.ts",
+    "src/services/SessionManager.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/reflex/shopperReflex.consent.test.ts",
+    "docs/remediation/evidence/W05.02"
+  ],
+  "non_goals": [
+    "Not full W05/F05/F10/N06/N11/N12 closure: other ingress/sort/telemetry/logs/snapshot disclosure/SDK automatic collection, global absent-policy, consent epoch/cross-tab/revocation, historical erasure and human D03/D06 remain open. Existing necessary retention cleanup/expiry/defaults are not changed or accepted here.",
+    "Do not repair the DO normalizeEvent geo-drop as incidental work or claim a route no-op proves regional consent. Direct actual-reducer controls may exercise that guard. Tracking-only permitted measurement remains distinct from personalization.",
+    "No scoring, registry/tenant redesign, new store/binding/consent RPC, SDK/source/build/native socket/harness/framework/whole-tree retest, deployment/cloud/credential/customer-data/staging/commit/push/destructive/unrelated changes. Root alone owns governance."
+  ],
+  "criteria": [
+    {
+      "id": "W05.02-C1",
+      "description": "Actual owned action routes and shared DO reducer resolve strict stored state and false-only hints before effects. Tracking false (either personalization value), blocked/absent/true cookies, event true over stored false and malformed/read/persist errors cannot produce behavioral/profile/visit/ring state, private update, capture, outcome/learning, configured ODP seed/event/profile or region work. Necessary refusal writes are separate; error/malformed or dropped DO envelopes cannot silently authorize capture.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.02-C2",
+      "description": "All four switch combinations have configured-destination positive/negative controls: tracking-on measurement is preserved when personalization alone is off; action/alarm private updates and ODP qualification/profile work require both switches. Explicit successful preference enablement still works. Serialized DO WS ingress and pending alarm honor withdrawal; necessary retention branch is preserved separately. Region proof uses actual reducer geo input rather than the unchanged route geo-drop. Observe scoped session I/O reuse without claiming latency/SLO or atomic authority.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.02-C3",
+      "description": "Independent frozen actual before/current source, fixture assertions, baseline and full worker outputs reviewed with exact K1 rerun; app noEmit and scoped diff pass inspected. Exact relevant source/configuration/evidence pins verified; no blanket SDK/native/historical reruns. Root separately accepts only bounded consent-effect containment and records residual/next action.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W05.02-K1",
+      "required": true,
+      "criterion_ids": [
+        "W05.02-C1",
+        "W05.02-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/reflex/shopperReflex.consent.test.ts src/services/sessionConsent.test.ts src/services/sessionDefer.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual routers/crypto/SessionManager/RealtimeSegmentEngine/ShopperReflex with synthetic stores/connectors/browser transport; outbound fetch intercepted, no network.",
+      "workload": "Extend two existing fixtures only, grouped four-switch/two-host stored/cookie/event/error controls; capture-on D1, configured ODP, ledger/learning and regional destinations with working positives and drained asynchronous effects. Actual serialized WS callback/alarm and reducer geo control; reuse identity/defer/consent regressions, no new harness.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W05.02-K2",
+      "required": true,
+      "criterion_ids": [
+        "W05.02-C3"
+      ],
+      "command": "Independent frozen W05.02 actual source/baseline/fixtures/worker evidence review and exact K1 rerun; inspect passing app noEmit and scoped diff; verify relevant artifact hashes; retain review-v1.md.",
+      "runtime": "Independent local source and exact frozen artifact review; no SDK/native/deployed/infrastructure programme.",
+      "workload": "C1-C3; inspect configured positive/negative effect oracles, owned read reuse, strict errors/enable distinction, unchanged necessary retention and honest DO geo-drop limitations; preserve original source and history.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W05.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented owned refusal continuity, strict transition helpers, commit-aware DO cache; exact accepted artifact preserved historically before overlap.",
+      "rationale": "Current action-effect evidence does not reclose prior broader transition/static contract."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Human transactional consent/deletion or privacy/retention/unknown-state policy remains pending.",
+      "rationale": "Preserving explicit refusal and restricting unknown transition recovery is bounded technical containment, not customer policy acceptance."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Human transactional consent/deletion or privacy/retention/unknown-state policy remains pending.",
+      "rationale": "Preserving explicit refusal and restricting unknown transition recovery is bounded technical containment, not customer policy acceptance."
+    }
+  ],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "contract_digest": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0202-worker",
+    "independent_reviewer": "w0202-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested",
+    "actor_id": null,
+    "artifact_digest": null,
+    "evidence_ids": [],
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "lead_signoff": {
+    "status": "pending",
+    "actor_id": null,
+    "artifact_digest": null,
+    "review_sha256": null,
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement admitted four production files and two fixtures; smallest fixed checks, freeze for independent K1 rerun/source review, root separate acceptance.",
+    "record": null
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "at": "2026-09-13T20:30:41Z",
+  "task_id": "W20.04",
+  "original_plan": {
+    "path": "docs/remediation/design/W20.04/plan.md",
+    "sha256": "fcd438b3f6da7f33648af0e1c61adc411a0314158f10507569f414463d7b5583"
+  },
+  "source_pause": {
+    "at": "2026-09-13T20:29:25.844Z",
+    "capture": "c7d048",
+    "checks_run": 0,
+    "ownedPins": [
+      {
+        "path": "src/content/types.ts",
+        "existed": true,
+        "sha256": "1d86a3ec4d09e7478892b644cef6dbecc7f86f7546a2ad1c22023d08eba3347d",
+        "changed": true
+      },
+      {
+        "path": "src/content/kinds.ts",
+        "existed": true,
+        "sha256": "2f606e546811ef9322cc523e96c8830dd22e42849dd2a2e93cb1c4d748db47d3",
+        "changed": true
+      },
+      {
+        "path": "src/reflex/contentCompose.ts",
+        "existed": true,
+        "sha256": "ea4f75a1a75178ee0ab6d931437b247cd58bc573ecbb62ade1d5fb411fb5cd7f",
+        "changed": true
+      },
+      {
+        "path": "src/content/decide.ts",
+        "existed": true,
+        "sha256": "efba476d6c62cacd08ab45c0dfb49b7e1db93cdec997aeb24481b12a279fa26e",
+        "changed": true
+      },
+      {
+        "path": "src/learn/replay.ts",
+        "existed": true,
+        "sha256": "6cf65684c6682823108eb5aceb43f1da6315b01936ce0d23bc028e832f45f977",
+        "changed": true
+      },
+      {
+        "path": "src/content/slotDiagnostics.ts",
+        "existed": true,
+        "sha256": "832d402b6cc563fd5386bd2b9c32110a850cd97ed5f5d56d70603dbeb1a3d838",
+        "changed": true
+      },
+      {
+        "path": "src/content/slotConstraints.ts",
+        "existed": true,
+        "sha256": "0780a8822fc28db35bcd4e5b113ce499c42003234e82e15d8c2e6def5d5b364f",
+        "changed": true
+      },
+      {
+        "path": "public/console/views-config.js",
+        "existed": true,
+        "sha256": "4228d25359aae7a408f64dd5214630ac532f347bc92764bcb269634e79543fb5",
+        "changed": false
+      },
+      {
+        "path": "src/reflex/contentCompose.test.ts",
+        "existed": true,
+        "sha256": "41fbde1c5cce4bf55fa585c9574b57ce6eee5378fbb4209adc34b033e1366519",
+        "changed": false
+      },
+      {
+        "path": "src/learn/phase3.test.ts",
+        "existed": true,
+        "sha256": "6756b2645313a4d25fe7f27f9826090069bb2819306351793b98229d71b32b55",
+        "changed": false
+      },
+      {
+        "path": "src/routes/content.test.ts",
+        "existed": true,
+        "sha256": "d07af1de8b2d0b5ca2e76410e05f0f7740ce59ea56f5c048c8e93ee0ed10b7d6",
+        "changed": false
+      },
+      {
+        "path": "src/console/console.render.test.ts",
+        "existed": true,
+        "sha256": "369dcc634e2a029f23d3ab940b15d86ef4a96f32929fdb8245409f90881d5888",
+        "changed": false
+      },
+      {
+        "path": "src/content/consent.test.ts",
+        "existed": true,
+        "sha256": "b21f676fafec30cdf21387be0daebded0ecb7ea0af36f6f449261726ccaa3f9b",
+        "changed": false
+      },
+      {
+        "path": "docs/kit/02-api-reference.md",
+        "existed": true,
+        "sha256": "2afcb90850951e6062e46ea61683457b89429325d5cbf435ece0c47d7c2960ff",
+        "changed": false
+      },
+      {
+        "path": "docs/kit/03-payload-schemas.md",
+        "existed": true,
+        "sha256": "d7d656ca6d8f074c5fb6b16d7b2e31de4422935dd4ee49955eed5fdc6831ec33",
+        "changed": false
+      }
+    ]
+  },
+  "pins": [
+    {
+      "path": "docs/remediation/design/W38.05/baseline.json",
+      "role": "source",
+      "sha256": "bcc7f9d575cdbb8167ddd6f52e186d0c67c7246b5dcb1f6f1dbb4c6b0a2bcbdd"
+    }
+  ],
+  "qualification": "New input pinned at supplemental admission, not falsely backdated to original GO. Original baseline/before bytes and prior63-pin assurance retained; original43 protected/output input manifest remains."
+}

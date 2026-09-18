@@ -8,13 +8,13 @@ note that says what is built, what is not, and the decision a customer will make
 
 | What | Where | Shape | Lifetime |
 |---|---|---|---|
-| An account | D1, the environment's database (staging: `coach-demo-db-staging`; production: its own), table `operator_accounts` (migration 0010). *Moved from KV the same day after Simone's review: KV had no backup, no restore, no record of who changed a key, and eventual consistency.* | One row: `id`, `email` (unique), `name`, `roles` (`operator`, `admin`), `permissions`, `password_hash`, `must_change_password`, `disabled`, `created_at`, `updated_at`, `last_sign_in_at` | Until an admin removes it; thirty days of point-in-time restore behind that |
+| An account | D1, the environment's database (staging: `coach-demo-db-staging`; production: its own), table `operator_accounts` (original migration0010; forward0013 adds auth_mode and nullable password). *Moved from KV the same day after Simone's review: KV had no backup, no restore, no record of who changed a key, and eventual consistency.* | One row: `id`, `email` (unique), `name`, `roles` (`operator`, `admin`), `permissions`, `password_hash` (absent in oidc mode), `auth_mode` (password/dual/oidc), `must_change_password`, `disabled`, `created_at`, `updated_at`, `last_sign_in_at` | Until an admin removes it; thirty days of point-in-time restore behind that |
 | The password | inside the record, as `password_hash` | PBKDF2 with SHA-256, 100,000 rounds, a random 16-byte salt, base64url: `pbkdf2$100000$<salt>$<hash>`. Nothing in the platform can turn it back into the password | Until changed |
 | A record provisioning wrote to KV before the move | KV, `user:<email>`, with `password` in the clear | Verified once at its owner's next sign-in, written to D1 as a hash in the same request, and the KV keys deleted; the audit records the move | Until that sign-in |
-| A session's refresh token | D1, table `operator_sessions` | one row per session: the token's random id, the account, the SHA-256 of the token (never the token), created and expiry times | Seven days; deleted by sign-out, reset, disable, removal |
+| A session's refresh token | D1, table `operator_sessions` | one row per session: the token's random id, the account, the SHA-256 of the token (never the token), created and expiry times | Password sessions: seven days; OIDC additionally bounded by provider token/auth_time and explicit configured lifetime; original expiry never renews |
 | Who did what | D1, table `operator_audit` | sign-ins and failed sign-ins, lockouts, sign-outs, passwords changed, accounts created, reset, disabled, enabled, changed, removed, moved; the actor, the account, the time, a detail. Read by an admin at `GET /auth/audit` and in the console's Accounts section | Kept |
-| A lockout | derived from the audit | ten failed sign-ins against an email inside ten minutes refuse the eleventh for ten minutes, and are recorded | Ten minutes |
-| An access token | nowhere | A JWT signed with `JWT_SECRET` (a worker secret), HS256, fifteen minutes; carries `sub`, `email`, `name`, `roles` | Fifteen minutes |
+| Sign-in admission | Fixed bounded stamp/source authority |100 requests per stamp and10 per source per60s before credentials/stores; historical email-lockout audit remains history | Original fixed window |
+| An access token | nowhere | A JWT signed with `JWT_SECRET` (a worker secret), HS256, fifteen minutes; bound to a live `sub`/`sid` and immutable method/provenance; current account and selected membership remain authoritative | Fifteen minutes |
 | In the browser | the page's `localStorage` under `operator-session` (and a mirror of the access token in `sessionStorage` under `tuning-token` for the tuning page) | the two tokens, the expiry, the person's name and roles | Until sign-out, or seven days without renewal |
 
 One thing a security team will ask about. The account records are per environment, so staging and
@@ -45,13 +45,9 @@ their domain). The account record and the sign-in flow do not change: the invita
 `must_change_password` flag the temporary password sets today, so the two ways coexist, and an admin can
 choose per account. About one working day once the provider and the sending domain are named.
 
-**Single sign-on.** Enterprise customers usually ask for it: their people sign in with the company's
-identity provider (Okta, Entra, Google Workspace) and there is no password in our platform at all. What it
-needs: OIDC against their provider (a client id and secret as worker secrets, a redirect route, a session
-minted from the provider's identity), a rule for which of their users get which role (a group claim, or
-an allow-list an admin keeps), and the email-and-password path kept for the people outside their directory.
-About two working days plus their identity team's time. The account record stays the same shape with the
-password absent.
+**Single sign-on (locally implemented, disabled by default).** The configured OIDC authorization-code adapter uses PKCE/nonce and exact issuer+subject links to existing shared identities. Current tenant memberships alone grant roles: no JIT account, email/group linking or IdP-role import. Password, dual and true password-absent oidc modes coexist. Browser completion is same-origin and one-use; original transaction/session/config/link/restore-epoch authority is rechecked. Local logout is not IdP-wide deprovision.
+
+An owner must approve the real provider/application, protected material, exact links/memberships, modes, lifetimes/reauth/deprovision and activation. No issuer/customer SSO acceptance is implied by local fixtures. Ordinary password UI cannot resurrect OIDC-only access; separate exact stamp-owner recovery deliberately changes mode and revokes sessions. The transaction cookie is not a migration of browser access/refresh tokens out of localStorage. Email invitations above remain unbuilt/separately configured.
 
 ## 4 · The decisions, and who makes them
 
@@ -59,11 +55,8 @@ password absent.
 |---|---|---|
 | Temporary password handed over, or email invitation, or both | the customer's, per account | handed over (built) |
 | Which email provider and sending domain | the customer's | none; invitations are off |
-| Single sign-on, and which provider | the customer's | none; email and password |
+| Single sign-on, exact links/account modes and provider/security policy | customer and accountable owner | adapter off until explicit configuration and activation; password mode available |
 | Tokens in local storage or in a cookie the page cannot read | ours, after their security review | local storage |
 | Password rules beyond ten characters (length, rotation, lockout after failed attempts) | theirs, from their policy | ten characters, not the email, not one character repeated; no lockout yet |
 
-The lockout is built (ten failures in ten minutes). The cookie option is the one small thing still worth
-doing before any customer asks. The email
-path is built when a customer names a provider; single sign-on when a customer names theirs. Nothing built
-today has to be undone for either.
+Current source/stamp admission replaces the historical per-email lockout. Browser token-storage policy and email invitations remain separate decisions; local configurable OIDC does not approve a customer issuer or activation.

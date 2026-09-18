@@ -1,5 +1,11 @@
 # Behavioral Targeting and Intelligence — Implementation Plan
 
+## Current delivery qualification
+
+Preserve the accepted customer clauses and approved substitutions; historical calendar proposals below are not new committed dates. Coach-first handoff includes the signed SDK tag/debug kit, design-time model generation with per-label human approval, actual catalog-grounded search, typed profile/audience import and scheduled Snowflake delivery.
+
+Local SQL/engineering evidence does not establish installed provider/warehouse/customer acceptance. M4 requires the customer-observable staging demonstration and joint sign-off, distinct from engineering checks and scientific/business outcomes. Product Rec entitlement, SFCC D4, SSO setup and optional no-additional-cost widgets/templates when available retain accountable commercial/customer ownership. No January widget-construction obligation is invented.
+
 **Prepared for:** Tapestry (Mandeep, Nitin, platform & data science teams)
 **Status:** DRAFT FOR YOUR RESPONSE — as agreed on our call: this is the plan as we would hand it to our own engineering team, with our fastest realistic sequence. Nothing here is a hard commitment yet; you adjust dates against your side's calendar and send it back, and the agreed result becomes the milestone set we commit to contractually.
 **Companion document:** *Behavioral Targeting and Intelligence — Solution & Algorithm* (the what and the how; this document is the when and the who).
@@ -71,7 +77,7 @@ Dates assume kickoff within two weeks of this document and the dependency dates 
 | D5 | Staging origins list + network review: confirm your environments can reach our staging endpoints incl. WebSockets, or tell us early if a custom domain is required (DNS lead time) | Before M3 |
 | D6 | Conversion/order event (order ID, items, value) — one integration point, needed for outcome learning | With M5 integration |
 | D7 | ODP instance decision for the pilot brand (durable memory + audience sharing); the engine runs standalone if this lands later — the profile memory story simply joins when it does | Before M4 (flexible) |
-| D8 | Security review inputs (auth expectations for operator access), if your security team wants more than API-key + SSO-backed operator auth | Before M3 |
+| D8 | Customer IdP/application, exact subject links/memberships/account modes and security policy; configurable OIDC is locally implemented but disabled pending approved activation and customer SSO acceptance | Before M3 |
 | D9 | Front-end integration capacity between M3 and your freeze | M3→M5 |
 
 **What we own:** everything in §4; the working-session materials arriving *before* each session (nobody workshops a blank page); staging operations; integration support through M5; the acceptance run at M4 as a scripted, repeatable demonstration — not a hand-wave.
@@ -83,7 +89,7 @@ Your team asked where the data comes from, how it's aggregated, who can access i
 - **Where it comes from.** First-party only: behavioral events from your site via the SDK; your content and product feeds; coarse request geolocation from the edge network (country/region/metro — no device permissions, no PII, no third-party data); your ODP profiles; optionally, priors your data scientists derive in Snowflake and push to us.
 - **How it's aggregated.** Three layers, deliberately separate: per-shopper interest vectors (bounded, decaying, held at the edge keyed to a first-party visitor ID); population-level regional aggregates for trending (anonymous counts only — no per-shopper location history is ever stored); and aggregate outcome statistics (content × context × outcome) for learning stage 2.
 - **Who can access it.** Your team — via the tuning surface, the operator APIs, and full export of decision/explain/outcome records; durable profile facts live in *your* ODP instance. Shopper erasure is a single API call. Nothing is locked in a place you can't see.
-- **At what latency.** In-session decisions are computed at the edge in milliseconds; first paint is served from a snapshot endpoint so there is no flash of default content; cross-session memory re-seeds at session start in under a second; regional trends publish continuously on a minutes-scale cadence; exports are on demand.
+- **At what latency.** In-session decisions are computed at the edge in milliseconds; first-paint/no-flash snapshot hydration remains the customer requirement, supported refresh and conditional same-grant SSR now locally implemented, with real customer/browser/latency acceptance still open; cross-session memory re-seeds at session start in under a second; regional trends publish continuously on a minutes-scale cadence; exports are on demand.
 
 ## 8. Learning logic in this plan
 

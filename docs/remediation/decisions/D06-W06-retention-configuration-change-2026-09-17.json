@@ -1,0 +1,104 @@
+{
+  "before": {
+    "id": "D06",
+    "canonical": {
+      "title": "Consent, retention, erasure and historic destinations",
+      "boundary": "Customer privacy/security owners: define permitted states, necessary records, store/destination inventory, progress/retention requirements and historic-data handling. An internal notice or contract wording change does not automatically waive applicable duties."
+    },
+    "state": "pending",
+    "record": null,
+    "pending_request": {
+      "at": "2026-09-15T17:14:42.069Z",
+      "scope": "Scenario-specific buffered browser/app processing-purpose choice; no universal day cutoff.",
+      "owner": "User/customer product and DS owner; privacy owner retains separate D06 retention/erasure authority.",
+      "question": "Buffered-action purpose answered. Remaining: concrete retention/erasure and historical reconstruction/lifecycle choices as separately scoped.",
+      "next_action": "Implement one explicit buffered-action path using approved age-decayed interest plus eligible original-time measurement; no fresh recency/regional attribution. Keep full D06 pending.",
+      "original_preflight": {
+        "path": "docs/remediation/decisions/D06-W30-history-preflight-2026-09-14.json",
+        "sha256": "24cb32ca2ab6d5df7a3a4de4f183cbc0c704a445de890694f031ba0f15e3ce60"
+      },
+      "clarification": {
+        "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+        "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72"
+      },
+      "purpose_choice": {
+        "path": "docs/remediation/decisions/D06-buffered-action-purpose-2026-09-15.json",
+        "sha256": "764f707e5c6696036dbd0550949878eac1358ec02cff855bce33f0e9792fd1ea"
+      }
+    },
+    "approved_buffered_purpose": {
+      "path": "docs/remediation/decisions/D06-buffered-action-purpose-approved-2026-09-15.json",
+      "sha256": "469cc9e3c566c9430b855e01d200120e5c5f075ef9b595b0ca99db22e64923db"
+    },
+    "approved_consent_instruction": {
+      "path": "docs/remediation/decisions/D06-W05-explicit-choice-approved-2026-09-16.json",
+      "sha256": "75a6fd046e649364b8f355f27809922f0a3410656faf69e140c4cf28bbd9a3ae"
+    },
+    "pending_w06_retention": {
+      "at": "2026-09-17T04:07:16.134Z",
+      "state": "unanswered",
+      "record": {
+        "path": "docs/remediation/decisions/D06-W06-retention-question-2026-09-17.json",
+        "sha256": "d958f1400190ae1d25a51c9a1aba8f8bfaf25f82d2c881373d4d964003d23b58"
+      },
+      "question": "For W06 retention, should agents build explicit per-category settings and block new policy-dependent capture/replay until approved values are configured? Existing data and erasure/recovery barriers would not be automatically deleted. Your 30-day consent choice would remain separate. Alternatively, provide the approved retention periods you want enforced.",
+      "next_action": "Await explicit user choice while W05 implementation continues; no inferred answer or W06 policy-dependent implementation."
+    }
+  },
+  "after": {
+    "id": "D06",
+    "canonical": {
+      "title": "Consent, retention, erasure and historic destinations",
+      "boundary": "Customer privacy/security owners: define permitted states, necessary records, store/destination inventory, progress/retention requirements and historic-data handling. An internal notice or contract wording change does not automatically waive applicable duties."
+    },
+    "state": "pending",
+    "record": null,
+    "pending_request": {
+      "at": "2026-09-15T17:14:42.069Z",
+      "scope": "Scenario-specific buffered browser/app processing-purpose choice; no universal day cutoff.",
+      "owner": "User/customer product and DS owner; privacy owner retains separate D06 retention/erasure authority.",
+      "question": "Buffered-action purpose answered. Remaining: concrete retention/erasure and historical reconstruction/lifecycle choices as separately scoped.",
+      "next_action": "Implement one explicit buffered-action path using approved age-decayed interest plus eligible original-time measurement; no fresh recency/regional attribution. Keep full D06 pending.",
+      "original_preflight": {
+        "path": "docs/remediation/decisions/D06-W30-history-preflight-2026-09-14.json",
+        "sha256": "24cb32ca2ab6d5df7a3a4de4f183cbc0c704a445de890694f031ba0f15e3ce60"
+      },
+      "clarification": {
+        "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+        "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72"
+      },
+      "purpose_choice": {
+        "path": "docs/remediation/decisions/D06-buffered-action-purpose-2026-09-15.json",
+        "sha256": "764f707e5c6696036dbd0550949878eac1358ec02cff855bce33f0e9792fd1ea"
+      }
+    },
+    "approved_buffered_purpose": {
+      "path": "docs/remediation/decisions/D06-buffered-action-purpose-approved-2026-09-15.json",
+      "sha256": "469cc9e3c566c9430b855e01d200120e5c5f075ef9b595b0ca99db22e64923db"
+    },
+    "approved_consent_instruction": {
+      "path": "docs/remediation/decisions/D06-W05-explicit-choice-approved-2026-09-16.json",
+      "sha256": "75a6fd046e649364b8f355f27809922f0a3410656faf69e140c4cf28bbd9a3ae"
+    },
+    "pending_w06_retention": {
+      "at": "2026-09-17T04:07:16.134Z",
+      "state": "answered",
+      "record": {
+        "path": "docs/remediation/decisions/D06-W06-retention-question-2026-09-17.json",
+        "sha256": "d958f1400190ae1d25a51c9a1aba8f8bfaf25f82d2c881373d4d964003d23b58"
+      },
+      "question": "For W06 retention, should agents build explicit per-category settings and block new policy-dependent capture/replay until approved values are configured? Existing data and erasure/recovery barriers would not be automatically deleted. Your 30-day consent choice would remain separate. Alternatively, provide the approved retention periods you want enforced.",
+      "next_action": "After W05 independent local disposition, admit original W06 local implementation including per-category fail-closed retention configuration. No invented periods, automatic historical deletion or expired erasure/recovery barriers.",
+      "answered_at": "2026-09-17T05:19:23.049Z",
+      "answer": "Explicit per-category settings; fail closed when unset",
+      "approval": {
+        "path": "docs/remediation/decisions/D06-W06-retention-configuration-approved-2026-09-17.json",
+        "sha256": "8e8a2d8f219bf837236860c10fdf06e7157d0ee2834d02fccad7e634e113c9c8"
+      }
+    },
+    "approved_retention_configuration": {
+      "path": "docs/remediation/decisions/D06-W06-retention-configuration-approved-2026-09-17.json",
+      "sha256": "8e8a2d8f219bf837236860c10fdf06e7157d0ee2834d02fccad7e634e113c9c8"
+    }
+  }
+}

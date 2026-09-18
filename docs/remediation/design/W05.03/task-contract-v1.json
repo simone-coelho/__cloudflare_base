@@ -1,0 +1,153 @@
+{
+  "id": "W05.03",
+  "package_id": "W05",
+  "title": "Honor consent in product sorting without cold behavioral creation",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Resolve strict owned consent before product ranking on session and DO hosts. Intersect stored switches with false-only cookies and optional strict-boolean sort-body hints; necessary refusal persistence must succeed. Use empty affinity when either switch is off, preserving existing candidate normalization/feed order and returning zero scores/no private drivers. Read existing session without creating behavior/visit/user-pointer state; use one existing signed serialized DO snapshot request with a narrow sort-only projection that gates private computation. Preserve consenting deterministic scoring and ownership/error boundaries.",
+  "read_paths": [
+    "src",
+    "scripts/remediation",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/routes/sort.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/routes/sort.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "docs/remediation/evidence/W05.03"
+  ],
+  "non_goals": [
+    "Not full W05/F05/F10/N06/N11/N12 closure: other ingress/telemetry/logging/general snapshot disclosure, SDK collection, global absent-state/necessary-record lifecycle policy, transactional consent/revocation and human D03/D06 remain open. Existing absent-state default is unchanged; malformed stored state or DO envelopes are not consent.",
+    "No scoring-core or registry/surface/config-version mismatch redesign, commerce eligibility/filtering, new store/binding/RPC/header protocol, SDK/build/native/harness/framework/whole-tree retest, deployment/cloud/credentials/customer-data/staging/commit/push/destructive/unrelated changes. Root alone owns governance."
+  ],
+  "criteria": [
+    {
+      "id": "W05.03-C1",
+      "description": "Actual owned /sort on both hosts honors all four stored switch combinations without cookies and with true hints. Any refused switch yields existing normalized feed order, scores zero and no private drivers including nonzero or zero affinity dials; consenting warm profiles genuinely reorder with drivers. Cookie and body false-only hints persist before acknowledgment and remain refused on a later hint-free request; true hints never upgrade, explicit successful preferences can. Invalid body consent is 400.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.03-C2",
+      "description": "Cold owned anonymous sort is neutral without behavioral/profile/visit/user-pointer writes; refusal may persist only necessary consent. Reuse one strict session read and one signed serialized DO snapshot request; DO sort projection gates private computation. Malformed/read/persist failures and failed/missing/malformed-consent DO envelopes are terminal without private receipt. Exact principal/SID/subject/recognized/forward checks remain enforced, including false-cookie requests.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.03-C3",
+      "description": "Independent frozen before/current source, existing fixture assertions, actual baseline and full worker results reviewed with exact K1 rerun; app noEmit and scoped diff pass inspected. Relevant source/configuration/evidence pins verified. Lead accepts only local bounded sort containment, preserves overlapping historical proof and records residuals/next action.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W05.03-K1",
+      "required": true,
+      "criterion_ids": [
+        "W05.03-C1",
+        "W05.03-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/sort.test.ts src/reflex/sortCandidates.test.ts src/routes/realtime.sdkContract.test.ts src/reflex/shopperReflex.consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual Hono/crypto/SessionManager/ShopperReflex with synthetic stores and existing fixtures. No network or deployed-runtime claim.",
+      "workload": "Extend two existing fixtures only: grouped both-host warm switch/hint/persistence/error controls, real consenting ranking positives, cold I/O/DO projection and ownership controls, candidate receipt parity. Existing pure sorter and affected DO consent/action regressions remain unchanged.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W05.03-K2",
+      "required": true,
+      "criterion_ids": [
+        "W05.03-C3"
+      ],
+      "command": "Independent frozen W05.03 actual source/baseline/fixtures/full worker evidence review and exact K1 rerun; inspect passing app noEmit/scoped diff; verify relevant artifact hashes; retain review-v1.md.",
+      "runtime": "Independent local source and frozen artifact review; no SDK/native/deployed/infrastructure programme.",
+      "workload": "C1-C3; inspect real both-host ranking controls, false-only durable attenuation, strict owned/error boundaries and no cold behavioral creation/private projection; preserve original source, failures and historical acceptance limits.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W05.02",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented strict owned session snapshot/restrictConsent and commit-aware DO consent, with actual action/timer regressions; exact prior artifact retained historically before overlap.",
+      "rationale": "Current sort containment uses these helpers without treating focused regressions as reclosure of the prior full action/timer contract."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Human transactional consent/deletion or privacy/retention/unknown-state policy remains pending.",
+      "rationale": "Preserving explicit refusal and restricting unknown transition recovery is bounded technical containment, not customer policy acceptance."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Human transactional consent/deletion or privacy/retention/unknown-state policy remains pending.",
+      "rationale": "Preserving explicit refusal and restricting unknown transition recovery is bounded technical containment, not customer policy acceptance."
+    }
+  ],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "contract_digest": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0202-worker",
+    "independent_reviewer": "w0202-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested",
+    "actor_id": null,
+    "artifact_digest": null,
+    "evidence_ids": [],
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "lead_signoff": {
+    "status": "pending",
+    "actor_id": null,
+    "artifact_digest": null,
+    "review_sha256": null,
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement approved four-file sort-consent scope and retain exact fixed checks for independent review.",
+    "record": null
+  }
+}

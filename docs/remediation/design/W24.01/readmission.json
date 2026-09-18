@@ -1,0 +1,190 @@
+{
+  "at": "2026-09-12T11:30:43.655Z",
+  "before_task": {
+    "id": "W24.01",
+    "package_id": "W24",
+    "title": "Reject incompatible learning writes and omit mismatched live snapshots",
+    "kind": "implementation",
+    "state": "in_progress",
+    "scope": "Six-file forward accumulation tuple guard and actual live snapshot matching; no clean-origin/history/generation claim.",
+    "read_paths": [
+      "AGENTS.md",
+      "src",
+      "docs/architecture",
+      "docs/remediation",
+      "docs/kit",
+      "package.json",
+      "package-lock.json",
+      "tsconfig.json",
+      "vitest.config.ts",
+      ".eslintrc.json"
+    ],
+    "write_paths": [
+      "src/durable-objects/LearnStats.ts",
+      "src/learn/stats.ts",
+      "src/content/service.ts",
+      "src/learn/learn.test.ts",
+      "src/content/consent.test.ts",
+      "docs/kit/02-api-reference.md",
+      "docs/remediation/evidence/W24.01/worker.json"
+    ],
+    "non_goals": [
+      "Forward reward/objective/tau compatibility containment only, anchored to existing stored config; it does not prove legacy item or slot counts were accumulated cleanly. No reset, generation transition, migration, automatic replay, historical rewrite/rebuild/promote or stronger delivery claim. Missing legacy snapshot horizon is omitted from live learning, not repaired. Old binaries, policy/denominator transitions, latent reward filter, prior/money/currency/refund/margin-fallback semantics, old hourly/report data and authorized history recovery remain W24/W22/W30 obligations. Estimator-only settings remain editable; active-request snapshot matching is not atomic configuration rollout. Pure archived replay remains compatible. No additional runtime network hop or broad suite; full W24/F19/F08/N17/customer/SLO/release remain open. No external/cloud/resource/credential/customer-data/deployment/commit/push/destructive cleanup authority."
+    ],
+    "criteria": [
+      {
+        "id": "W24.01-C1",
+        "description": "Explicit valid write configuration required; incompatible reward/objective(default unit)/tau refused before item/slot mutation, put or alarm. Estimator-only changes retain counts. Interleaved old/new calls and restart/publication cannot oscillate accumulation tuple. Legacy config anchor is forward-only, not clean-history attestation.",
+        "required_evidence_kinds": [
+          "runtime_test"
+        ],
+        "minimum_claim": "local_runtime"
+      },
+      {
+        "id": "W24.01-C2",
+        "description": "Snapshot horizon metadata emitted; actual live service checks every fresh/cached snapshot owner, reward, objective, tau and estimator settings against request configuration. Missing legacy horizon or mismatch omits learned evidence; compatible cache remains usable. No extra I/O, pure archived replay/liftFor and deterministic core preserved.",
+        "required_evidence_kinds": [
+          "runtime_test"
+        ],
+        "minimum_claim": "local_runtime"
+      },
+      {
+        "id": "W24.01-C3",
+        "description": "Six owned deltas, two new grouped tests/fixed9; compiler/scopedlint0errors/no increase3/whitespace, separate frozen source/runtime review. Preserve prior capacity/receipt/arithmetic/privacy paths and explicit policy/history/generation/money/customer residuals.",
+        "required_evidence_kinds": [
+          "design_review"
+        ],
+        "minimum_claim": "source_confirmed"
+      }
+    ],
+    "checks": [
+      {
+        "id": "W24.01-K1",
+        "required": true,
+        "criterion_ids": [
+          "W24.01-C1",
+          "W24.01-C2"
+        ],
+        "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/content/consent.test.ts -t 'W24.01|W23.01|W10.01|W09.04 reports acknowledged|the statistics object counts|W09.04 current callers' --maxWorkers=1 --minWorkers=1",
+        "runtime": "Installed Node/Vitest actual statistics DO and content service with synthetic storage/publication.",
+        "workload": "Fixed9 in two existing fixtures, two new grouped cases. No native/cloud/broad suite.",
+        "result": "not_run",
+        "evidence_ids": []
+      },
+      {
+        "id": "W24.01-K2",
+        "required": true,
+        "criterion_ids": [
+          "W24.01-C3"
+        ],
+        "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/LearnStats.ts src/learn/stats.ts src/content/service.ts src/learn/learn.test.ts src/content/consent.test.ts --max-warnings 3 && git diff --check -- src/durable-objects/LearnStats.ts src/learn/stats.ts src/content/service.ts src/learn/learn.test.ts src/content/consent.test.ts docs/kit/02-api-reference.md",
+        "runtime": "Installed compiler, five-source-file ESLint and six-file whitespace.",
+        "workload": "Six owned files; baseline0errors3inheritedwarnings.",
+        "result": "not_run",
+        "evidence_ids": []
+      },
+      {
+        "id": "W24.01-K3",
+        "required": true,
+        "criterion_ids": [
+          "W24.01-C3"
+        ],
+        "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/content/consent.test.ts -t 'W24.01|W23.01|W10.01|W09.04 reports acknowledged|the statistics object counts|W09.04 current callers' --maxWorkers=1 --minWorkers=1",
+        "runtime": "Separate Astra/xhigh frozen source review and fixed9 runtime once.",
+        "workload": "Actual six deltas/protected sources; final static reused.",
+        "result": "not_run",
+        "evidence_ids": []
+      }
+    ],
+    "dependencies": [
+      {
+        "target_type": "task",
+        "target_id": "W23.01",
+        "kind": "informs",
+        "origin": "proposed",
+        "consumed_output": "Implemented monotonic decay/fullprecision",
+        "rationale": "Preserve arithmetic, both focused groups retained; qualify shared artifact only."
+      },
+      {
+        "target_type": "task",
+        "target_id": "W10.01",
+        "kind": "informs",
+        "origin": "proposed",
+        "consumed_output": "Implemented statistics input/state/snapshot budgets",
+        "rationale": "Guard must remain before effects; two grouped checks retained."
+      },
+      {
+        "target_type": "task",
+        "target_id": "W09.04",
+        "kind": "informs",
+        "origin": "proposed",
+        "consumed_output": "Truthful ring/statistics acknowledgements and background callers",
+        "rationale": "Refusal remains incomplete/unknown across non-atomic fan-out, no retry; two existing groups retained."
+      },
+      {
+        "target_type": "package",
+        "target_id": "W22",
+        "kind": "informs",
+        "origin": "source_explicit",
+        "consumed_output": "Logical-event/history reconciliation",
+        "rationale": "Trustworthy rebuild not delivered here."
+      },
+      {
+        "target_type": "package",
+        "target_id": "W30",
+        "kind": "informs",
+        "origin": "source_explicit",
+        "consumed_output": "Historical fold/reconstruction",
+        "rationale": "No old aggregate repair or promotion."
+      }
+    ],
+    "assignments": {
+      "implementer": "w1405-worker",
+      "independent_reviewer": "w1405-reviewer",
+      "lead": "w01-lead"
+    },
+    "artifact": {
+      "status": "not_recorded",
+      "contract_digest": null,
+      "configuration": null,
+      "files": [],
+      "digest": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    },
+    "acceptance_history": [],
+    "blocked": null,
+    "handoff": {
+      "status": "pending",
+      "resume_path": "docs/remediation/RESUME.md",
+      "next_action": "Implement W24.01 six-file tuple guard/live snapshot gate; fixed9/static, freeze for separate review."
+    },
+    "preflight": {
+      "status": "approved",
+      "plan": {
+        "path": "docs/remediation/design/W24.01/plan.md",
+        "sha256": "60603e8872d4323a64336943302a010e8cb60a095a510b9db13899e32a9f57a2"
+      },
+      "contract_digest": "4e99b77bb07a069606d874bb459077b6bc92257bc3b517aa8238075cc4de0988",
+      "approval": {
+        "actor_id": "w01-lead",
+        "at": "2026-09-12T11:24:54.567Z",
+        "plan_sha256": "60603e8872d4323a64336943302a010e8cb60a095a510b9db13899e32a9f57a2",
+        "rationale": "EntryVALID1121, actual source and worker challenge support forward-only six-file containment/fixed9."
+      }
+    }
+  },
+  "after_contract": "e53bfc54ae838c033c1a148e4f15d76dbeb126c2a94320c3cc67645dd255e33b",
+  "added_source_paths": [
+    "src/learn/route.ts",
+    "src/learn/fan.ts",
+    "src/durable-objects/DecisionRing.ts"
+  ],
+  "root_approval": "Same local W24 remediation mandate includes coherent normal-default producer compatibility. No source was changed before revision.",
+  "independent_challenge": "Separate Astra/xhigh actual-source reviewer confirmed defaultSlotConfig propagation and malformed override caveat.",
+  "limitations": "Forward reward/objective/tau compatibility containment only, anchored to existing stored config; it does not prove legacy item or slot counts were accumulated cleanly. No reset, generation transition, migration, automatic replay, historical rewrite/rebuild/promote or stronger delivery claim. Missing legacy snapshot horizon is omitted from live learning, not repaired. Old binaries, policy/denominator transitions, latent reward filter, prior/money/currency/refund/margin-fallback semantics, old hourly/report data and authorized history recovery remain W24/W22/W30 obligations. Estimator-only settings remain editable; active-request snapshot matching is not atomic configuration rollout. Pure archived replay remains compatible. No additional runtime network hop or broad suite; full W24/F19/F08/N17/customer/SLO/release remain open. No external/cloud/resource/credential/customer-data/deployment/commit/push/destructive cleanup authority."
+}

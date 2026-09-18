@@ -1,0 +1,20 @@
+# W07.02 — service and WebSocket log containment
+
+Standing local G0 authority applies. Root owns admission/integration/tracker; w0202-worker alone owns the four production files and one new fixture listed in task-contract-v1.json; w0202-reviewer independently inspects and reruns. Both delegates are Astra/xhigh; no subdelegation. Do not edit existing regression fixtures or any other production file.
+
+Read parent W07 in document35 and F05/F06/N06/N11/N28, the customer requirements and D06, execution entry/protocol/checkpoint and actual source. W07 remains broader than this task: other logs, permitted aggregate schema/access/retention, environment datasets and historical privacy obligations are not closed.
+
+Baseline: actual pre-edit modules in baseline-probe.mjs (SHA f02fb2849212186d46feea5740782585826b08991913f39c1f6706d7d82e9cde) produced ten synthetic cases in baseline.json (SHA 2b0336f64a837dd808c49e8b4b13efc4163f2e1309251f1dcfc04c196291ad87), first-run exit0, 12:17:25–12:17:27 UTC. Five Optimizely methods and both logger paths leak; ordinary dispatcher sends while fresh client does not. Event dispatch leaks destination/error but retains retry/event queue ordering. Scene non-OK reads/logs body and thrown fetch logs error; successful generation writes bytes. Direct socket handlers leak subjects/types/errors while state and sends continue. All SDK/fetch/storage/socket seams are intercepted, no external traffic. Baseline retains original four source bytes. Initial board check/status VALID at trusted seq130, retained before editing.
+
+Production first:
+
+- Optimizely: remove five subject/result success logs and raw errors. Use a fixed-label SDK logger for both factories, preserving initialize threshold3 and string-only missing-datafile suppression; preserve fresh threshold4 and no suppression. Do not coerce arbitrary messages. Preserve ordinary event fetch/body/callback and fresh no-op dispatcher/error handler.
+- Dispatcher: fixed labels, never destination.name/error objects; keep safe no-destinations line. Preserve full payload, per-destination result/responseTime, retry then normal queue behavior, caught queue/cache errors and public error response.
+- Scene: fixed label plus numeric HTTP status, no reading non-OK body solely to log. Fixed catch label. Preserve cached/generated outputs, fallbacks, model request, R2 bytes/metadata and public responses.
+- WebSocket: no subject/connection lifecycle logs; fixed error/unknown-type/send/storage labels, safe numeric cleanup count stays. Subscribe/unsubscribe remain no-ops. Preserve state/storage/sends/heartbeat/broadcast/cleanup; no ownership/auth changes.
+
+Exact acceptance/checks/ownership are in task-contract-v1.json and the tracker: K1 direct service plus unchanged telemetry/consent suites; K2 existing five W07.01 actual-workerd entry cases; K3 independent source review and exact reruns, inspection of worker application noEmit and scoped diff. New service fixture must use actual Optimizely service, not inherit the old route fixture prototype mocks. No new harness, broad matrix, duplicate compile or installed-runner inventory. Packages-external local graph identity only; no native WebSocket, deployed, latency/lift, full-TS-program or customer proof.
+
+Before release qualify affected W34.01/W07.01 broad manifests as historical, retaining prior accepted snapshots and evidence; their implementation remains. These bounded current regressions do not reclose old full contracts. W03.01 and other untouched protections are preserved. No decision blocks this log-only withdrawal; D06/history/datasets require separate authority/resolution.
+
+Rollback: inspect and reverse only this task's four source hunks/new fixture using retained original bytes, never restore/delete unrelated dirty files or mutate historical evidence. Stop/review if domain semantics change or any required check fails. Worker retains all actual failures and superseding results; lead freezes identity, independently verifies evidence and records real disposition/checkpoint. No deploy/commit/push/cloud/credentials/customer operations.

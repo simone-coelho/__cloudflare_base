@@ -1,0 +1,13 @@
+{
+  "task_id": "W35.05",
+  "at": "2026-09-16T01:45:19.793Z",
+  "basis": "Actual-module protocol defect independently source-confirmed by two Astra/xhigh read-only scouts: a prepared source is not bound to the target epoch that reset/erasure/retention rotates. No scout claimed runtime reproduction.",
+  "defect": "After target cleanup removes receipts/profile and writes a fresh empty grant authority, handleTransfer accepts an older prepared transfer as new, remerges frozen pre-erasure behavior and mints recognized authority.",
+  "files": {
+    "src/durable-objects/ShopperReflex.ts": "66d005f5a565c3fe6924ab02e944cdb02ac905957b17974111d448821cca0021",
+    "src/routes/realtime.sdkContract.test.ts": "18cfcbf1c7063f33a4bac5727dcdf0c31a7b0bad30d204d8c0b698bc4b4fb68d"
+  },
+  "static_baseline": "W35.04 final compiler/lint/whitespace passed with 113 admitted warnings across its seven-file scope; W35.05 may add no warning signature in its two owned files.",
+  "rollback": "Reviewed inverse only on the two pinned source files; preserve all prior remediation and unrelated dirty changes. Persisted epoch-bound transfer descriptors require compatibility review before rollback.",
+  "limitations": "Target prepared-transfer resurrection only; no exhaustive source discovery/erasure, session-host revocation, cutover, migration, deployment, customer data, browser/customer/SLO/release acceptance or full W35/F14/F06 closure."
+}

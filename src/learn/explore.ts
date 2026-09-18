@@ -76,11 +76,16 @@ export function betaSample(rng: () => number, alpha: number, beta: number): numb
  * Decide whether and how to explore one slot's decision. `ranked` is the
  * slot's eligible candidates in score order. Null means: serve the ranking.
  */
+/** Internal capability: only retained historical replay opts into withdrawn sampling. */
+export const HISTORICAL_EXPLORATION = Symbol('historical exploration');
+
 export function explorationPick(
   input: { visitorId: string; slot: string; nowMs: number; ranked: readonly Ranked[]; snapshot: LiftSnapshot | null | undefined; cfg: ExploreConfig },
+  historical?: typeof HISTORICAL_EXPLORATION,
 ): ExplorePick | null {
   const { visitorId, slot, nowMs, ranked, snapshot, cfg } = input;
   if (cfg.mode === 'off' || ranked.length < 2) return null;
+  if (cfg.mode === 'thompson' && historical !== HISTORICAL_EXPLORATION) return null;
   const share = Math.min(1, Math.max(0, cfg.share));
   const bucket = Math.round(bucketOf(visitorId, slot, hourKeyOf(nowMs)) * 1000) / 1000;
 

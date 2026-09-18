@@ -3,7 +3,7 @@ import { HTTPException } from 'hono/http-exception';
 import { ZodError } from 'zod';
 
 export const errorHandler = (err: Error, c: Context) => {
-  console.error('Error:', err);
+  console.error('Error');
   
   if (err instanceof HTTPException) {
     return c.json(

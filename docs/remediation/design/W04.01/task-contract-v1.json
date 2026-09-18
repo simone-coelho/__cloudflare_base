@@ -1,0 +1,154 @@
+{
+  "id": "W04.01",
+  "package_id": "W04",
+  "title": "Require backend account proof and refresh signed SDK account-switch retries",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Require configured backend HMAC account proof for every public identity link in all modes; preserve existing tenant/visitor/account/expiry binding, rotation and validation order. Add optional SDK proof provider bound to the captured visitor; signed 409 retry requires successful detach and fresh proof for the new visitor, at most once. Static proof never detaches/retries on409; reject changed-visitor async results. Update only current identity guidance and the two generated SDK bundles.",
+  "read_paths": [
+    "src",
+    "scripts/remediation",
+    "scripts/build-sdk.mjs",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/identity/assertion.ts",
+    "src/sdk/identify.ts",
+    "src/routes/identity.ts",
+    "src/types/env.ts",
+    "src/sdk/README.md",
+    "docs/architecture/25-identity-stitching.md",
+    "src/identity/identity.test.ts",
+    "src/routes/identity.test.ts",
+    "src/sdk/identify.test.ts",
+    "public/sdk/edge-personalization.js",
+    "public/sdk/edge-personalization.esm.js",
+    "docs/remediation/evidence/W04.01"
+  ],
+  "non_goals": [
+    "No session capability/generation/ownership enforcement, cross-tab/ABA revocation, forwarding-pointer or public logout rotation changes. Caller-supplied userId equality is not trusted ownership; full W04/F04/F06/N05 remain open.",
+    "No new demo bypass, signing-strength/wildcard/rotation policy, real backend/SSO/secret provisioning, retention/deletion policy, scoring/learning/ledger/consent changes, new framework or broad retrospective revalidation.",
+    "No external network/cloud/deployment/credential/customer-data/operational scripts, stage/commit/push, cleanup or unrelated edits. Root alone owns tracker/journal/source-of-truth/acceptance."
+  ],
+  "criteria": [
+    {
+      "id": "W04.01-C1",
+      "description": "Actual verification/router fail closed for absent/empty/unusable or other-tenant-only signing config and missing/forged/expired configured proof before session/cache/DO/cookie effects, across both host choices. Valid signed merge/idempotency/relink, tenant/visitor/account/expiry binding, rotation and historical site-assurance records remain compatible; existing pre-proof400/409 priority retained.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W04.01-C2",
+      "description": "SDK optional getAssertion({tenant,visitorId,accountId}) sync/async provider takes precedence without static fallback. Capture visitor through proof and response, reject changed-visitor results. Actual SDK through real crypto/router proves409→successful detach→fresh new-visitor proof→one retry; static409 never detaches/retries. Failed/malformed provider or failed detach prevents another link. Preserve existing controls and publish both source-matching bundles.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W04.01-C3",
+      "description": "Independent frozen actual source/baseline/fixtures/worker-proof review and exactK1 rerun; inspect worker app and separate browser-SDK noEmit, local SDK build/bundle syntax/scoped diff and relevant source/config/lock/output identity. Root separately accepts with historical qualification, failures and residual session/privacy/customer/runtime limits.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W04.01-K1",
+      "required": true,
+      "criterion_ids": [
+        "W04.01-C1",
+        "W04.01-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/identity/identity.test.ts src/routes/identity.test.ts src/sdk/identify.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest, real WebCrypto and actual identity subrouter/SDK; synthetic local KV/DO/fetch/browser bindings, no outbound traffic.",
+      "workload": "Existing40 cases plus compact proof/config/host and SDK retry/async/failure controls in the3 existing fixtures. SDK transport must forward submitted proof unchanged; actual SDK/router integration lives in Worker-typed route fixture. No deployed/workerd or full session-ownership acceptance.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W04.01-K2",
+      "required": true,
+      "criterion_ids": [
+        "W04.01-C3"
+      ],
+      "command": "Independent actual frozen W04.01 source/baseline/fixtures/proof review and exactK1 rerun; inspect worker application noEmit, SDK noEmit, node scripts/build-sdk.mjs, both bundle syntax and scoped diff. Verify relevant artifact identity; retain bounded verdict in review-v1.md.",
+      "runtime": "Independent local Node source/evidence review; inspect two distinct worker TypeScript programs and local esbuild outputs, no duplicate infrastructure programme.",
+      "workload": "C1-C3, preserve pre-existing dirty route fixture and unmodified dependency behavior. Bind actual route/SDK/test graph and selected config/build/lock/proof/generated outputs. Record prior-artifact qualification and all first failures; no previous full-contract, customer, deployed, SLO or release acceptance.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W07.04",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing logging protections remain;3 shared pins change and accepted artifact becomes historical.",
+      "rationale": "Qualify prior proof before edits without rerunning its full broad contract."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D07",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Real customer identity/SSO onboarding choice remains pending; this slice unconditionally requires backend proof.",
+      "rationale": "Local fail-closed code and synthetic provider contract do not select or provision a customer identity system."
+    }
+  ],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0202-worker",
+    "independent_reviewer": "w0202-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested",
+    "actor_id": null,
+    "artifact_digest": null,
+    "evidence_ids": [],
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "lead_signoff": {
+    "status": "pending",
+    "actor_id": null,
+    "artifact_digest": null,
+    "review_sha256": null,
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement admitted mandatory proof/fresh retry; freeze and obtain independent focused review. Next W04 slice must use trusted session capability/ownership with rotation/revocation, not caller-ID equality.",
+    "record": null
+  }
+}
+

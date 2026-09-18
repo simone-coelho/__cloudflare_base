@@ -1,0 +1,40 @@
+{
+  "task_id": "W35.03",
+  "at": "2026-09-15T22:56:37.966Z",
+  "basis": "Source-confirmed design reproduction against actual modules; no failing fixture was added before implementation.",
+  "defects": [
+    "DO link publishes KV identity state before absorb/forward, and a retry trusts the resulting already outcome.",
+    "Source export and forward are separate serialized operations, allowing a committed event between them to be abandoned.",
+    "Concurrent first links can absorb one source twice; target KV visitor membership read/modify/write can lose another source.",
+    "A committed-but-rejected forward write can leave the warm source mirror accepting stale mutations until restart."
+  ],
+  "stale_grant_probe": {
+    "capture": "f1928c->305a21",
+    "result": "Confirmed separate detach/erase bearer-revocation gap; excluded from W35.03 and retained for the next unit."
+  },
+  "files": {
+    "src/identity/link.ts": "0898b366fe2a07450dd1fb779c0a2688e5476e1ecd7ebe9eb0555d46df50069b",
+    "src/identity/store.ts": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5",
+    "src/durable-objects/ShopperReflex.ts": "5845e7ee3c9227eb65adeb80badbfb858376fc5fb233d2a7372061044732022a",
+    "src/routes/realtime.sdkContract.test.ts": "c2f0a854674a058bf1f8c9a668565d4c99cf0f5d122b12a8b4dba3be09f67997"
+  },
+  "checks": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts -t 'W35[.]01' --maxWorkers=1 --minWorkers=1",
+      "exit": 0,
+      "result": "1 passed; 59 skipped"
+    },
+    {
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts -t 'W35[.]01|preserves working non-default-tenant profiles' --maxWorkers=1 --minWorkers=1",
+      "exit": 1,
+      "result": "W35.01 passed; broader W04.02 case failed at an existing content-publication fixture returning 500. Recorded as pre-existing and excluded, not hidden or made green."
+    },
+    {
+      "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/identity/link.ts src/identity/store.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+      "exit": 0,
+      "result": "0 errors, 109 warnings; final bytes may not add warning signatures."
+    }
+  ],
+  "rollback": "Reviewed inverse only of W35.03 deltas atop the recorded hashes; preserve all unrelated dirty work. Upgraded durable records require compatibility review before code rollback.",
+  "limitations": "DO link transfer only. No stale-grant revocation, full erasure race/epoch, host toggle, migration, historical repair, deployment, native/customer/SLO or release claim."
+}

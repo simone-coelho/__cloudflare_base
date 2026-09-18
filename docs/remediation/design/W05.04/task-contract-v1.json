@@ -1,0 +1,139 @@
+{
+  "id": "W05.04",
+  "package_id": "W05",
+  "title": "Consent-safe content decisions without behavioral cold-state creation",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Strict owned content decision consent on both hosts before profile computation or measurement. False-only stored/cookie/strict GET query hints persist before acknowledgement, true cannot enable. No cold behavioral creation; only necessary refusal storage. One owned session read or existing signed serialized DO content projection. Neutralize affinity/stage/visit under either refused switch and request region/channel under tracking refusal; preserve consenting holdout context and permitted tracking-only measurement. Keep deterministic candidate/ranking core unchanged. Unsigned internal both-false monitor calls are explicitly synthetic/state-free; reject other unsigned service calls.",
+  "read_paths": [
+    "src",
+    "scripts/remediation",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/content/service.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/routes/decisions.ts",
+    "src/content/consent.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "docs/remediation/evidence/W05.04/worker.md",
+    "docs/remediation/evidence/W05.04/worker-checks.json"
+  ],
+  "non_goals": [
+    "Not full W05/F05/F10/N06/N11/N12 closure: other ingress/capture/telemetry/logging/general snapshots, SDK collection, global absent-state and necessary-record lifecycle policy, transactional concurrent withdrawal, prior contributions and human D03/D06/customer approval remain open. Existing absent-state default remains; malformed stored state/DO envelopes are not consent.",
+    "No scorer/holdout-science/merchandising/registry/surface/config mismatch redesign, new store/binding/RPC/header protocol, SDK/build/native/new harness/framework/whole-tree retest, deployment/cloud/credentials/customer-data/staging/commit/push/destructive/unrelated changes. Monitor caller stays unchanged; synthetic service probe is not whole-path shopper/runtime/SLO acceptance. Root alone owns governance."
+  ],
+  "criteria": [
+    {
+      "id": "W05.04-C1",
+      "description": "Actual signed content decision route on both hosts uses all four stored switches without cookies; either refusal returns default ranking with empty affinity inputs/no private scoring drivers and neutral affinity/stage/visit cells in top-level and every record. Tracking=false additionally yields unknown channel/null region and no ring/exposure/analytics/queue writes after background drain; tracking=true/personalization=false preserves request context and permitted neutral default measurement but no learned exposures. Warm consenting controls truly rank against nonempty candidates and exercise configured destinations; consenting randomized default holdout context stays intact.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.04-C2",
+      "description": "Strict owned session read and single signed serialized DO content projection honor false-only cookie and optional strict boolean GET trackingConsent/personalizationEnabled hints (mapped to service consent); persist necessary refusal before acknowledgement and retain it on later hint-free requests, never upgrade through true hints; explicit preferences may enable. Cold anonymous decision makes no behavioral/profile/visit/user-pointer writes, necessary refusal only; malformed/read/required-write/ownership/forward/recognized and malformed/missing/failed DO envelopes deny without receipt or fanout. Gate private computation under refusal, not merely score weight. Only explicit both-false unsigned synthetic calls remain state-free; other unsigned service calls reject. Correct receipt reason; skip unused default lift reads.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.04-C3",
+      "description": "Independent actual before/final source, fixture assertions, baseline and full worker evidence review with fixed K1 rerun; app noEmit/scoped diff pass inspected, artifact pins and relevant graph checked. Lead accepts bounded local content containment only, preserving exact historical overlap, all failed/reworked evidence and residual/next-action handoff.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W05.04-K1",
+      "required": true,
+      "criterion_ids": [
+        "W05.04-C1",
+        "W05.04-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/routes/realtime.sdkContract.test.ts src/content/decide.test.ts src/learn/holdoutArms.test.ts src/reflex/shopperReflex.consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual Hono/crypto/SessionManager/ShopperReflex and synthetic configured stores/destinations, no external network or deployed claim.",
+      "workload": "Extend two existing fixtures only: grouped both-host nonempty warm/cold/all-switch/hint/error/ownership controls, strict DO projection, configured positive and denied side effects with async drain, correct receipt/cell/default semantics. Three unchanged core/holdout/DO consent regression suites. Worker app noEmit with task-local temporary build info and five-file scoped diff.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W05.04-K2",
+      "required": true,
+      "criterion_ids": [
+        "W05.04-C3"
+      ],
+      "command": "Independent frozen W05.04 actual before/current source/baseline/fixtures/full worker evidence review and exact K1 rerun; inspect passing app noEmit/scoped diff; verify artifact hashes and relevant local graph; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review, no SDK/native/deployed/infrastructure programme.",
+      "workload": "C1-C3; reject vacuous empty-catalog or disabled-destination evidence. Distinguish necessary refusal persistence, allowed measurement and existing policy/holdout residuals. Historical W05.03 remains historical after overlap.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W05.03",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented strict owned cold-read sort and serialized consent-authorized DO projection patterns; prior exact static acceptance retained historically before overlap.",
+      "rationale": "Reuse helpers and shared boundary checks, not assume focused content regressions reclose old full sort contract."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Human transactional consent/deletion or privacy/retention/unknown-state policy remains pending.",
+      "rationale": "Preserving explicit refusal and restricting unknown transition recovery is bounded technical containment, not customer policy acceptance."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Human transactional consent/deletion or privacy/retention/unknown-state policy remains pending.",
+      "rationale": "Preserving explicit refusal and restricting unknown transition recovery is bounded technical containment, not customer policy acceptance."
+    }
+  ],
+  "preflight": {
+    "status": "pending"
+  },
+  "assignments": {
+    "implementer": "w0202-worker",
+    "independent_reviewer": "w0202-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Sole worker implements approved five-file content-decision scope, runs exact K1/app noEmit/scoped diff and retains full proof. Root freezes before independent review; no scope/release promotion.",
+    "record": null
+  }
+}

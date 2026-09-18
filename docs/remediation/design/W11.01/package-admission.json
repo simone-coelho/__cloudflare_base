@@ -1,0 +1,93 @@
+{
+  "before": {
+    "id": "W11",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Fail closed on read/write errors; use transactional/serialized revision and compare-and-update authority, immutable versions, recoverable publication and explicit propagation bound. Test same-isolate, cross-isolate, concurrent and stale writes, partial puts, rollback and readers across versions. An index read plus key-existence check remains insufficient.",
+      "finding_refs": "F15/F24",
+      "sizing_owner": "S error containment → M/L atomic publication; OL/D"
+    },
+    "title": "Atomic configuration publication",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F15",
+      "F24"
+    ],
+    "proposed_owner": "OL/D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W11",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Fail closed on read/write errors; use transactional/serialized revision and compare-and-update authority, immutable versions, recoverable publication and explicit propagation bound. Test same-isolate, cross-isolate, concurrent and stale writes, partial puts, rollback and readers across versions. An index read plus key-existence check remains insufficient.",
+      "finding_refs": "F15/F24",
+      "sizing_owner": "S error containment → M/L atomic publication; OL/D"
+    },
+    "title": "Atomic configuration publication",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F15",
+      "F24"
+    ],
+    "proposed_owner": "OL/D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W11-CATALOG-PUBLICATION",
+          "description": "Content-only recoverable conditional publication, not all config/multi-document/autonomy/deployed acceptance."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W11-CATALOG-PUBLICATION",
+          "task_id": "W11.01",
+          "task_criterion_id": "W11.01-C1"
+        },
+        {
+          "criterion_id": "W11-CATALOG-PUBLICATION",
+          "task_id": "W11.01",
+          "task_criterion_id": "W11.01-C2"
+        },
+        {
+          "criterion_id": "W11-CATALOG-PUBLICATION",
+          "task_id": "W11.01",
+          "task_criterion_id": "W11.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W11.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

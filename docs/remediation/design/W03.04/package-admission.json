@@ -1,0 +1,228 @@
+{
+  "before": {
+    "id": "W03",
+    "canonical": {
+      "gate_scope": "G0/G4",
+      "full_scope": "Bind canonical customer/brand to credentials and every route/store; scoped operator membership/roles/audit context; conflicting path/header/host/scope rejected. SDK/CORS/socket propagation must match. Test non-default versus non-default brands across reads/writes/exports/erasure, connectors and jobs, including platform-admin exceptions.",
+      "finding_refs": "F03/F31/F33; N01/N03/N13/N29",
+      "sizing_owner": "S ingress subset → M/L end-to-end authority; D + S/P"
+    },
+    "title": "Tenant authority across ingress and storage",
+    "gates": [
+      "G0",
+      "G4"
+    ],
+    "source_findings": [
+      "F03",
+      "F31",
+      "F33",
+      "N01",
+      "N03",
+      "N13",
+      "N29"
+    ],
+    "proposed_owner": "D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W03-N03-ANON",
+          "description": "Bounded anonymous administrative document/merged-validation disclosure containment with compatible existing callers only. Credential-bound tenant/brand membership, conflicts, roles/audit, SDK/CORS/socket and all store/connector/job/customer isolation obligations remain uncovered."
+        },
+        {
+          "id": "W03-OPERATOR-GRANT-CONTAINMENT",
+          "description": "Enforced exact-subject named tenant grants, canonical administrative document destinations and global account/demo administration containment. Full roles/audit/store/connector/job/customer scope remains open."
+        },
+        {
+          "id": "W03-CALLER-TENANT-TRANSPORT",
+          "description": "Retained operator browser/session/document/tool callers carry canonical selected tenant without grant inference; full W03 end-to-end/customer scope remains open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W03-N03-ANON",
+          "task_id": "W03.01",
+          "task_criterion_id": "W03.01-C1"
+        },
+        {
+          "criterion_id": "W03-N03-ANON",
+          "task_id": "W03.01",
+          "task_criterion_id": "W03.01-C2"
+        },
+        {
+          "criterion_id": "W03-N03-ANON",
+          "task_id": "W03.01",
+          "task_criterion_id": "W03.01-C3"
+        },
+        {
+          "criterion_id": "W03-OPERATOR-GRANT-CONTAINMENT",
+          "task_id": "W03.02",
+          "task_criterion_id": "W03.02-C1"
+        },
+        {
+          "criterion_id": "W03-OPERATOR-GRANT-CONTAINMENT",
+          "task_id": "W03.02",
+          "task_criterion_id": "W03.02-C2"
+        },
+        {
+          "criterion_id": "W03-OPERATOR-GRANT-CONTAINMENT",
+          "task_id": "W03.02",
+          "task_criterion_id": "W03.02-C3"
+        },
+        {
+          "criterion_id": "W03-CALLER-TENANT-TRANSPORT",
+          "task_id": "W03.03",
+          "task_criterion_id": "W03.03-C1"
+        },
+        {
+          "criterion_id": "W03-CALLER-TENANT-TRANSPORT",
+          "task_id": "W03.03",
+          "task_criterion_id": "W03.03-C2"
+        },
+        {
+          "criterion_id": "W03-CALLER-TENANT-TRANSPORT",
+          "task_id": "W03.03",
+          "task_criterion_id": "W03.03-C3"
+        }
+      ],
+      "task_ids": [
+        "W03.01",
+        "W03.02",
+        "W03.03"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W03",
+    "canonical": {
+      "gate_scope": "G0/G4",
+      "full_scope": "Bind canonical customer/brand to credentials and every route/store; scoped operator membership/roles/audit context; conflicting path/header/host/scope rejected. SDK/CORS/socket propagation must match. Test non-default versus non-default brands across reads/writes/exports/erasure, connectors and jobs, including platform-admin exceptions.",
+      "finding_refs": "F03/F31/F33; N01/N03/N13/N29",
+      "sizing_owner": "S ingress subset → M/L end-to-end authority; D + S/P"
+    },
+    "title": "Tenant authority across ingress and storage",
+    "gates": [
+      "G0",
+      "G4"
+    ],
+    "source_findings": [
+      "F03",
+      "F31",
+      "F33",
+      "N01",
+      "N03",
+      "N13",
+      "N29"
+    ],
+    "proposed_owner": "D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W03-N03-ANON",
+          "description": "Bounded anonymous administrative document/merged-validation disclosure containment with compatible existing callers only. Credential-bound tenant/brand membership, conflicts, roles/audit, SDK/CORS/socket and all store/connector/job/customer isolation obligations remain uncovered."
+        },
+        {
+          "id": "W03-OPERATOR-GRANT-CONTAINMENT",
+          "description": "Enforced exact-subject named tenant grants, canonical administrative document destinations and global account/demo administration containment. Full roles/audit/store/connector/job/customer scope remains open."
+        },
+        {
+          "id": "W03-CALLER-TENANT-TRANSPORT",
+          "description": "Retained operator browser/session/document/tool callers carry canonical selected tenant without grant inference; full W03 end-to-end/customer scope remains open."
+        },
+        {
+          "id": "W03-ACKNOWLEDGED-READ-AUDIT",
+          "description": "Six enforced operator history/ledger reads and paged tenant-admin audit with acknowledged admission/result; broader identity/mutation/N13/privacy and full W03 scope remain open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W03-N03-ANON",
+          "task_id": "W03.01",
+          "task_criterion_id": "W03.01-C1"
+        },
+        {
+          "criterion_id": "W03-N03-ANON",
+          "task_id": "W03.01",
+          "task_criterion_id": "W03.01-C2"
+        },
+        {
+          "criterion_id": "W03-N03-ANON",
+          "task_id": "W03.01",
+          "task_criterion_id": "W03.01-C3"
+        },
+        {
+          "criterion_id": "W03-OPERATOR-GRANT-CONTAINMENT",
+          "task_id": "W03.02",
+          "task_criterion_id": "W03.02-C1"
+        },
+        {
+          "criterion_id": "W03-OPERATOR-GRANT-CONTAINMENT",
+          "task_id": "W03.02",
+          "task_criterion_id": "W03.02-C2"
+        },
+        {
+          "criterion_id": "W03-OPERATOR-GRANT-CONTAINMENT",
+          "task_id": "W03.02",
+          "task_criterion_id": "W03.02-C3"
+        },
+        {
+          "criterion_id": "W03-CALLER-TENANT-TRANSPORT",
+          "task_id": "W03.03",
+          "task_criterion_id": "W03.03-C1"
+        },
+        {
+          "criterion_id": "W03-CALLER-TENANT-TRANSPORT",
+          "task_id": "W03.03",
+          "task_criterion_id": "W03.03-C2"
+        },
+        {
+          "criterion_id": "W03-CALLER-TENANT-TRANSPORT",
+          "task_id": "W03.03",
+          "task_criterion_id": "W03.03-C3"
+        },
+        {
+          "criterion_id": "W03-ACKNOWLEDGED-READ-AUDIT",
+          "task_id": "W03.04",
+          "task_criterion_id": "W03.04-C1"
+        },
+        {
+          "criterion_id": "W03-ACKNOWLEDGED-READ-AUDIT",
+          "task_id": "W03.04",
+          "task_criterion_id": "W03.04-C2"
+        },
+        {
+          "criterion_id": "W03-ACKNOWLEDGED-READ-AUDIT",
+          "task_id": "W03.04",
+          "task_criterion_id": "W03.04-C3"
+        }
+      ],
+      "task_ids": [
+        "W03.01",
+        "W03.02",
+        "W03.03",
+        "W03.04"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

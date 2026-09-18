@@ -19,13 +19,21 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Env } from '@/types/env';
+import { ownerBindingIdentity } from '@/identity/sessionAuthority';
+import { isEventTimestamp } from '@/events/actionTypes';
+import { isValidTenantId } from '@/tenancy/tenant';
 import { effectiveScore, type ReflexEntry, type Touch } from './core';
+import { mergeEntries } from './identityMerge';
 
 export const REGION_TAU_MS = 24 * 60 * 60 * 1000;
 export const REGION_MAX_VALUES_PER_DIM = 32;
 export const REGION_EPSILON = 1e-3;
 export const TREND_CACHE_TTL_MS = 60_000;
 export const GLOBAL_REGION = '*';
+// Historical populations mixed tenant and demo scope. They remain untouched;
+// only new, tenant-bound frames populate this generation.
+export const REGION_GENERATION = 2;
+export const REGION_STATE_KEY = 'trend:v2';
 
 export interface GeoLike { country?: string | null; regionCode?: string | null }
 
@@ -37,11 +45,19 @@ export function regionKeyOf(geo: GeoLike | null | undefined): string | null {
   return r ? `${c}-${r}` : c;
 }
 export const countryOf = (region: string): string => region.split('-')[0] ?? region;
-export const trendKey = (tenant: string, region: string) => `trend:${tenant}:${region}`;
-export const objectName = (tenant: string, region: string) => `${tenant}:${region}`;
+export const trendKey = (tenant: string, region: string) => `trend:v2:${tenant}:${region}`;
+export const objectName = (tenant: string, region: string) => `trend:v2:${tenant}:${region}`;
+
+export function matchesTrendScope(value: unknown, tenant: string, region: string): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const scope = value as { generation?: unknown; tenant?: unknown; region?: unknown };
+  return scope.generation === REGION_GENERATION && isValidTenantId(tenant)
+    && !!region && scope.tenant === tenant && scope.region === region;
+}
 
 /** What the object stores: raw accumulators per dimension value. */
 export interface RegionState {
+  generation: typeof REGION_GENERATION;
   tenant: string;
   region: string;
   dims: Record<string, Record<string, ReflexEntry>>;
@@ -51,6 +67,7 @@ export interface RegionState {
 
 /** What is published: raw decayed R (for rollups) and within-dimension shares (for blending). */
 export interface TrendSnapshot {
+  generation: typeof REGION_GENERATION;
   tenant: string;
   region: string;
   level: 'region' | 'country' | 'global';
@@ -62,29 +79,31 @@ export interface TrendSnapshot {
 }
 
 export interface TrendFrame { touches: Touch[]; w: number; ts: number }
-/** What the hosts send: the frame plus the object's own name, which it learns from the first one. */
-export interface IngestFrame extends TrendFrame { tenant: string; region: string }
+/** The hosts carry a scope which must match the actual current-generation object. */
+export interface IngestFrame extends TrendFrame { generation: typeof REGION_GENERATION; tenant: string; region: string }
 
-/** Decay-then-accumulate, the personal vector's invariant, on the population. */
+/** Accumulate at each value's latest touch; late frames age only their own mass. */
 export function applyTrend(state: RegionState, frame: TrendFrame, tauMs = REGION_TAU_MS): RegionState {
+  if (!isEventTimestamp(frame.ts)) return state;
   const w = Number.isFinite(frame.w) ? frame.w : 0;
   if (w <= 0 || !frame.touches.length) return state;
   const dims = state.dims;
+  const updatedAt = Math.max(state.updatedAt, frame.ts);
   for (const t of frame.touches) {
     if (!t.dim || !t.value) continue;
     const bucket = (dims[t.dim] ??= {});
     const prev = bucket[t.value];
-    const s = (prev ? effectiveScore(prev, frame.ts, tauMs) : 0) + w;
-    bucket[t.value] = { s, t: frame.ts };
-    // Cap distinct values per dimension: evict the weakest, decayed to now.
+    const incoming = { s: w, t: frame.ts };
+    bucket[t.value] = prev ? mergeEntries(prev, incoming, tauMs) : incoming;
+    // Compare every cap candidate at the latest common frame time.
     const keys = Object.keys(bucket);
     if (keys.length > REGION_MAX_VALUES_PER_DIM) {
       let weakest = keys[0]!, low = Infinity;
-      for (const k of keys) { const e = effectiveScore(bucket[k]!, frame.ts, tauMs); if (e < low) { low = e; weakest = k; } }
+      for (const k of keys) { const e = effectiveScore(bucket[k]!, updatedAt, tauMs); if (e < low) { low = e; weakest = k; } }
       delete bucket[weakest];
     }
   }
-  return { ...state, dims, events: state.events + 1, updatedAt: Math.max(state.updatedAt, frame.ts) };
+  return { ...state, dims, events: state.events + 1, updatedAt };
 }
 
 /** Decayed R per value, pruned at ε, and the within-dimension share (leader = 1). */
@@ -98,7 +117,7 @@ export function snapshotOf(state: RegionState, now: number, version: number, tau
     }
     if (Object.keys(out).length) r[dim] = out;
   }
-  return { tenant: state.tenant, region: state.region, level, events: state.events, updatedAt: state.updatedAt, version, r, share: sharesOf(r) };
+  return { generation: state.generation, tenant: state.tenant, region: state.region, level, events: state.events, updatedAt: state.updatedAt, version, r, share: sharesOf(r) };
 }
 
 export function sharesOf(r: TrendSnapshot['r']): TrendSnapshot['share'] {
@@ -116,13 +135,14 @@ export function rollupSnapshots(parts: TrendSnapshot[], tenant: string, region: 
   const r: TrendSnapshot['r'] = {};
   let events = 0, updatedAt = 0;
   for (const p of parts) {
+    if (!matchesTrendScope(p, tenant, p.region)) continue;
     events += p.events; updatedAt = Math.max(updatedAt, p.updatedAt);
     for (const [dim, values] of Object.entries(p.r)) {
       const out = (r[dim] ??= {});
       for (const [v, x] of Object.entries(values)) out[v] = Math.round(((out[v] ?? 0) + x) * 1000) / 1000;
     }
   }
-  return { tenant, region, level, events, updatedAt, version: now, r, share: sharesOf(r) };
+  return { generation: REGION_GENERATION, tenant, region, level, events, updatedAt, version: now, r, share: sharesOf(r) };
 }
 
 // ── Fan-in (the hosts call this; it never throws and never waits) ───────────
@@ -132,8 +152,8 @@ export interface FanInInput { tenant: string; geo: GeoLike | null | undefined; t
 /** Fire a scored event's touches at the region object. A missing binding, region or weight is a no-op. */
 export function fanInRegionTrend(env: Pick<Env, 'REGION_TREND'>, input: FanInInput): Promise<void> {
   const region = regionKeyOf(input.geo);
-  if (!env.REGION_TREND || !region || input.w <= 0 || input.touches.length === 0) return Promise.resolve();
-  const frame: IngestFrame = { tenant: input.tenant, region, touches: input.touches, w: input.w, ts: input.now };
+  if (!env.REGION_TREND || !isValidTenantId(input.tenant) || !region || input.w <= 0 || input.touches.length === 0) return Promise.resolve();
+  const frame: IngestFrame = { generation: REGION_GENERATION, tenant: input.tenant, region, touches: input.touches, w: input.w, ts: input.now };
   try {
     const stub = env.REGION_TREND.get(env.REGION_TREND.idFromName(objectName(input.tenant, region)));
     return stub.fetch('https://region-trend/ingest', {
@@ -148,17 +168,21 @@ export function fanInRegionTrend(env: Pick<Env, 'REGION_TREND'>, input: FanInInp
 
 export interface TrendRead { snapshot: TrendSnapshot; level: TrendSnapshot['level']; region: string }
 
-interface CacheEntry { at: number; value: TrendSnapshot | null }
-const cache = new Map<string, CacheEntry>();
+interface CacheEntry { binding: Env['CACHE']; key: string; at: number; value: TrendSnapshot | null }
+const cache = new Set<CacheEntry>();
 export function invalidateTrendCache(): void { cache.clear(); }
 
 async function readSnapshot(env: Pick<Env, 'CACHE'>, tenant: string, region: string, now: number): Promise<TrendSnapshot | null> {
   const key = trendKey(tenant, region);
-  const hit = cache.get(key);
-  if (hit && now - hit.at < TREND_CACHE_TTL_MS) return hit.value;
+  const binding = ownerBindingIdentity(env.CACHE);
+  const hit = [...cache].find(e => e.binding === binding && e.key === key);
+  if (hit && now >= hit.at && now - hit.at < TREND_CACHE_TTL_MS) return hit.value;
   let value: TrendSnapshot | null = null;
   try { value = (await env.CACHE.get(key, 'json')) as TrendSnapshot | null; } catch { value = null; }
-  cache.set(key, { at: now, value });
+  if (!matchesTrendScope(value, tenant, region)) value = null;
+  if (hit) cache.delete(hit);
+  if (cache.size >= 256) cache.delete(cache.values().next().value!);
+  cache.add({ binding, key, at: now, value });
   return value;
 }
 
@@ -221,7 +245,7 @@ export interface KvLister { list(opts: { prefix: string; cursor?: string }): Pro
 
 /** Sum every published region of a tenant into its countries and into everyone, and publish those. */
 export async function rollupTenant(env: Pick<Env, 'CACHE'>, tenant: string, now = Date.now()): Promise<{ countries: string[]; regions: number }> {
-  const prefix = `trend:${tenant}:`;
+  const prefix = trendKey(tenant, '');
   const names: string[] = [];
   let cursor: string | undefined;
   do {
@@ -234,7 +258,7 @@ export async function rollupTenant(env: Pick<Env, 'CACHE'>, tenant: string, now 
     const region = name.slice(prefix.length);
     if (region === GLOBAL_REGION || !region.includes('-')) continue;   // only leaf regions feed a rollup
     const snap = (await env.CACHE.get(name, 'json')) as TrendSnapshot | null;
-    if (snap) regions.push(snap);
+    if (snap && matchesTrendScope(snap, tenant, region)) regions.push(snap);
   }
   const byCountry = new Map<string, TrendSnapshot[]>();
   for (const s of regions) { const c = countryOf(s.region); byCountry.set(c, [...(byCountry.get(c) ?? []), s]); }

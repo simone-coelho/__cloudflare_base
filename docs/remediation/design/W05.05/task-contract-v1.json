@@ -1,0 +1,159 @@
+{
+  "id": "W05.05",
+  "package_id": "W05",
+  "title": "Owned consent-gated generic tracking and temporary inert email pixel",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Authorize all generic event/batch principals and resolve durable false-only consent once before request-context collection/dispatch; temporary local inert email pixel with truthful generator. Preserve customer-neutral deterministic core, allowed measurement, existing batch error behavior and necessary consent-only cold records.",
+  "read_paths": [
+    "src",
+    "scripts/remediation",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/routes/tracking.ts",
+    "src/routes/pixel.ts",
+    "src/telemetry.boundary.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "docs/api/01-rest-endpoints.md",
+    "docs/remediation/evidence/W05.05/worker.md",
+    "docs/remediation/evidence/W05.05/worker-checks.json"
+  ],
+  "non_goals": [
+    "Not full W05/F05/F10/N06/N11/N12 or privacy acceptance: SDK collection, other ingress/egress/logs, global absent-state/necessary-record lifecycle, configured destination tenant policy, transactional withdrawal, historical records, and D01/D03/D06 remain. Client email/traits/properties are not backend identity assertions; canonical alias enforcement is not downstream CDP merge-policy approval.",
+    "Pixel is temporary local fail-closed containment, not permanent feature removal or accepted email-open measurement. Generated identifier URLs, hosting logs, existing email/docs examples and lifecycle remain outside collection-route fix. No query credentials or recipient-to-principal minting; re-enablement/design/customer-surface decisions require applicable authority.",
+    "Only five declared route/fixture/API files plus worker proof. No shared helper/DO/SessionManager/dispatcher/scoring/SDK/build/infrastructure changes, new harness or RPC, whole-history reruns, staging/commit/push/deploy/cloud/credentials/customer-data/destructive/unrelated operations. Root alone owns governance."
+  ],
+  "criteria": [
+    {
+      "id": "W05.05-C1",
+      "description": "Actual /track/event and /track/batch require existing shopper capability before broad catches; preserve terminal access errors. Parse whole request/batch and assert every populated user.userId/user.anonymousId/recipientId alias and context.sessionId against canonical owned subject/SID before consent or any dispatch. Reject conflicting/empty supplied aliases and later invalid batch entries atomically. Enriched user anonymousId remains canonical, no getUserContext random alias. Resolve consent once per batch using strict owned session read plus same-snapshot restrictConsent, or one existing signed DO GET /consent or POST /consent/refusal. All four stored switches on both hosts without cookies: tracking=false produces explicit skipped/refused non-dispatched receipt and no context/dispatcher/fetch/retry/event queue/AE; tracking=true preserves permitted measurement regardless of personalization switch. Configured positive controls exercise actual failing fetch plus retry/event queue, not disabled/mock-only dispatch.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.05-C2",
+      "description": "Accept optional strict boolean consent:{tracking?,personalization?} on single event, batch and each event; any false hint anywhere in same-owner batch or cookies restricts whole batch and persists before acknowledgement. True cannot upgrade; explicit preferences can. Consent hints are not event payload. Cold route makes no behavioral/profile/visit/user-pointer records, only necessary refusal. Missing/malformed/failed owned state or DO envelope, required write failure, wrong owner/forward/recognized state deny with no fanout. Pixel GET/HEAD retains 43-byte GIF/cache contract while performing no decode/context/identity/state/dispatcher/queue/fetch/AE for any valid/forged/invalid/cookie/query/capability input. Generator retains shape but explicitly trackingEnabled:false with fixed reason; focused API note documents inactive containment and owned tracking contract. Preserve allowed batch per-event error handling and fixed labels; existing unrelated telemetry assertions stay intact.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.05-C3",
+      "description": "Independent actual original/final source, baseline, existing fixture assertions and full worker proof review; exact K1 rerun, app noEmit/scoped diff inspected, relevant local import graph/artifact pins matched. Separate lead accepts only bounded local containment, retains W05.04 exact acceptance historically before boundary-fixture overlap and all failures/limitations/next action.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W05.05-K1",
+      "required": true,
+      "criterion_ids": [
+        "W05.05-C1",
+        "W05.05-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/telemetry.boundary.test.ts src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest with actual Hono/crypto/SessionManager/ShopperReflex/EventDispatcher and synthetic configured stores/destinations; no external network/deployed claim.",
+      "workload": "Two existing fixtures only: grouped both-host all-switch/cold/hint/persistence/error/identity/batch atomicity and configured positive/negative egress controls; inert pixel and existing telemetry regressions. Worker app noEmit with temporary build info and five-file scoped diff.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W05.05-K2",
+      "required": true,
+      "criterion_ids": [
+        "W05.05-C3"
+      ],
+      "command": "Independent frozen W05.05 actual before/final source/baseline/fixtures/full worker proof review and exact K1 rerun; inspect app noEmit/scoped diff and artifact pins/relevant local import graph; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review; no new SDK/native/deployed/infrastructure programme.",
+      "workload": "C1-C3; reject unsigned or mock-only positive controls. Distinguish temporary pixel containment from accepted feature removal; prior content acceptance remains historical after fixture overlap.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W05.04",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented strict one-read owned consent/refusal and existing serialized DO operation patterns; boundary fixture overlap qualified historically before edits.",
+      "rationale": "Reuse actual helpers without shared source changes; focused regressions do not reclose full prior task."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D01",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Unresolved customer-surface/transactional/privacy and lifecycle decisions.",
+      "rationale": "Technical owned-consent gating and temporary local pixel containment do not approve permanent customer-scope or privacy-policy decisions."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Unresolved customer-surface/transactional/privacy and lifecycle decisions.",
+      "rationale": "Technical owned-consent gating and temporary local pixel containment do not approve permanent customer-scope or privacy-policy decisions."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Unresolved customer-surface/transactional/privacy and lifecycle decisions.",
+      "rationale": "Technical owned-consent gating and temporary local pixel containment do not approve permanent customer-scope or privacy-policy decisions."
+    }
+  ],
+  "preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W05.05/plan-v1.md",
+      "sha256": "9975fedf969f0d51ba0b84cd18d2a4b6ba8d7226680fbec50131ce2dd5ebe747"
+    },
+    "contract_digest": "8c6ec3af6d7c95f58161ed958c7b7f819552376b9598d60089e1fab415e4b072",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-07T21:34:31.960Z",
+      "plan_sha256": "9975fedf969f0d51ba0b84cd18d2a4b6ba8d7226680fbec50131ce2dd5ebe747",
+      "rationale": "Standing local G0 mandate; entry check/status VALID at255; actual configured both-host baseline reproduces refused/unsigned/mixed-subject dispatch. Read canonical scope, source and Astra preflight challenges; admit five files only with two existing suites/noEmit/diff. Pixel temporarily inert locally, no permanent/customer/deployment decision."
+    }
+  },
+  "assignments": {
+    "implementer": "w0202-worker",
+    "independent_reviewer": "w0202-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Sole Astra/xhigh worker implements approved five-file route containment, fixed two-suite K1/app noEmit/scoped diff and full proof; root freezes before independent review.",
+    "record": null
+  }
+}

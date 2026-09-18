@@ -1,0 +1,316 @@
+{
+  "before": {
+    "id": "W08.02",
+    "package_id": "W08",
+    "kind": "implementation",
+    "scope": "Partial W08: explicit configured account/database/environment intent, stdin-held password without printed credential handoff, create-only repeat-safe bootstrap and fail-visible results.",
+    "read_paths": [
+      "AGENTS.md",
+      "scripts",
+      "docs/deployment",
+      "docs/architecture",
+      "docs/remediation",
+      "package.json",
+      "wrangler.toml"
+    ],
+    "write_paths": [
+      "scripts/operator-seed.mjs",
+      "scripts/operator-seed.test.mjs",
+      "docs/architecture/31-load-test-2026-09-05.md",
+      "docs/remediation/evidence/W08.02/worker.json"
+    ],
+    "non_goals": [
+      "No complete desired-state/cloud provisioning, account ownership attestation, rotations, migrations, tenant topology, customer identity policy or historical repair.",
+      "No real seed/Wrangler command, external credentials/customer data, project build/install, broad suite/framework, commit/push/cleanup; hash-bearing SQL argv and trusted operating environment remain qualified."
+    ],
+    "criteria": [
+      {
+        "id": "W08.02-C1",
+        "description": "Strict explicit local/remote, configured environment/binding/account/database-ID checks fail before secret/crypto/child. Anchored direct installed Wrangler command pins config/cwd/env/account/API and logging controls; no guessed target, preview fallback or npx install.",
+        "required_evidence_kinds": [
+          "runtime_test"
+        ],
+        "minimum_claim": "local_runtime"
+      },
+      {
+        "id": "W08.02-C2",
+        "description": "Bounded non-TTY caller-held stdin password only, compatible hash/must-change first creation, atomic canonical-email repeat no-op preserving all existing account/session/audit state, exact outcome validation and confidential failures without false success or rollback claims.",
+        "required_evidence_kinds": [
+          "runtime_test"
+        ],
+        "minimum_claim": "local_runtime"
+      },
+      {
+        "id": "W08.02-C3",
+        "description": "Three focused synthetic intercepted/SQLite groups, exact owned deltas and tool/source pins, static/whitespace and separate independent review support bounded source/local acceptance; doc31 setup advice corrected, full W08/deployed/customer limitations retained.",
+        "required_evidence_kinds": [
+          "design_review"
+        ],
+        "minimum_claim": "source_confirmed"
+      }
+    ],
+    "checks": [
+      {
+        "id": "W08.02-K1",
+        "required": true,
+        "criterion_ids": [
+          "W08.02-C1",
+          "W08.02-C2"
+        ],
+        "command": "node --test scripts/operator-seed.test.mjs",
+        "runtime": "Installed Node22, existing smol-toml and node:sqlite :memory: migration0010; injected input/config/child only, actual seed/Wrangler CLI never invoked.",
+        "workload": "Three grouped target/input/command, actual SQL create/repeat/preservation and SQL/child/result failure checks; synthetic safe outputs, no broad auth/runtime matrix."
+      },
+      {
+        "id": "W08.02-K2",
+        "required": true,
+        "criterion_ids": [
+          "W08.02-C3"
+        ],
+        "command": "node --check scripts/operator-seed.mjs; git diff --check -- scripts/operator-seed.mjs scripts/operator-seed.test.mjs docs/architecture/31-load-test-2026-09-05.md",
+        "runtime": "Node syntax-only and scoped whitespace plus actual new fixture whitespace inspection; no body/CLI execution or compiler/build.",
+        "workload": "Syntax/whitespace zero diagnostics; exact delta review. Existing unchanged W02.07 onboarding/auth assurance reused."
+      },
+      {
+        "id": "W08.02-K3",
+        "required": true,
+        "criterion_ids": [
+          "W08.02-C3"
+        ],
+        "command": "node --test scripts/operator-seed.test.mjs",
+        "runtime": "Separate Astra/xhigh frozen actual source/tool/schema/delta/full outputs review and same synthetic Node/SQLite command once.",
+        "workload": "All C1-C3 and exact artifact identities; final static/whitespace reused, full operational/historical/customer limitations explicit."
+      }
+    ],
+    "dependencies": [
+      {
+        "target_type": "decision",
+        "target_id": "D01",
+        "kind": "informs",
+        "origin": "source_explicit",
+        "consumed_output": "Future authorized demo/customer separation.",
+        "rationale": "Retirement does not choose topology or approve demo schema on customer stamps."
+      },
+      {
+        "target_type": "decision",
+        "target_id": "D08",
+        "kind": "informs",
+        "origin": "source_explicit",
+        "consumed_output": "Approved customer/brand/environment/region resource ownership.",
+        "rationale": "No target/account/resource or desired-state authority is invented."
+      },
+      {
+        "target_type": "decision",
+        "target_id": "D07",
+        "kind": "informs",
+        "origin": "source_explicit",
+        "consumed_output": "Future approved identity onboarding/SSO.",
+        "rationale": "No account seeding, credential replacement or new onboarding contract."
+      },
+      {
+        "target_type": "task",
+        "target_id": "W02.07",
+        "kind": "informs",
+        "origin": "proposed",
+        "consumed_output": "Unchanged accepted current auth/onboarding and retained removal-barrier behavior.",
+        "rationale": "Bootstrap preserves schema/hash/must-change and never erases account removal audit; no affected runtime auth source."
+      }
+    ],
+    "assignments": {
+      "implementer": "w0802-worker",
+      "independent_reviewer": "w0802-reviewer",
+      "lead": "w01-lead"
+    }
+  },
+  "after": {
+    "id": "W08.02",
+    "package_id": "W08",
+    "kind": "implementation",
+    "scope": "Partial W08: explicit configured account/database/environment intent, stdin-held password without printed credential handoff, create-only repeat-safe bootstrap and fail-visible results.",
+    "read_paths": [
+      "AGENTS.md",
+      "scripts",
+      "docs/deployment",
+      "docs/architecture",
+      "docs/remediation",
+      "package.json",
+      "wrangler.toml"
+    ],
+    "write_paths": [
+      "scripts/operator-seed.mjs",
+      "scripts/operator-seed.test.mjs",
+      "docs/architecture/31-load-test-2026-09-05.md",
+      "docs/remediation/evidence/W08.02/worker.json"
+    ],
+    "non_goals": [
+      "No complete desired-state/cloud provisioning, account ownership attestation, rotations, migrations, tenant topology, customer identity policy or historical repair.",
+      "No real seed/Wrangler command, external credentials/customer data, project build/install, broad suite/framework, commit/push/cleanup; hash-bearing SQL argv and trusted operating environment remain qualified."
+    ],
+    "criteria": [
+      {
+        "id": "W08.02-C1",
+        "description": "Strict explicit local/remote, configured environment/binding/account/database-ID checks fail before secret/crypto/child. Anchored direct installed Wrangler command pins config/cwd/env/account/API and logging controls; no guessed target, preview fallback or npx install.",
+        "required_evidence_kinds": [
+          "runtime_test"
+        ],
+        "minimum_claim": "local_runtime"
+      },
+      {
+        "id": "W08.02-C2",
+        "description": "Bounded non-TTY caller-held stdin password only, compatible hash/must-change first creation, atomic canonical-email repeat no-op preserving all existing account/session/audit state, exact outcome validation and confidential failures without false success or rollback claims.",
+        "required_evidence_kinds": [
+          "runtime_test"
+        ],
+        "minimum_claim": "local_runtime"
+      },
+      {
+        "id": "W08.02-C3",
+        "description": "Three focused synthetic intercepted/SQLite groups, exact owned deltas and tool/source pins, static/whitespace and separate independent review support bounded source/local acceptance; doc31 setup advice corrected, full W08/deployed/customer limitations retained.",
+        "required_evidence_kinds": [
+          "design_review"
+        ],
+        "minimum_claim": "source_confirmed"
+      }
+    ],
+    "checks": [
+      {
+        "id": "W08.02-K1",
+        "required": true,
+        "criterion_ids": [
+          "W08.02-C1",
+          "W08.02-C2"
+        ],
+        "command": "node --test scripts/operator-seed.test.mjs",
+        "runtime": "Installed Node22, existing smol-toml and node:sqlite :memory: migration0010; injected input/config/child only, actual seed/Wrangler CLI never invoked.",
+        "workload": "Three grouped target/input/command, actual SQL create/repeat/preservation and SQL/child/result failure checks; synthetic safe outputs, no broad auth/runtime matrix."
+      },
+      {
+        "id": "W08.02-K2",
+        "required": true,
+        "criterion_ids": [
+          "W08.02-C3"
+        ],
+        "command": "node --check scripts/operator-seed.mjs; git diff --check -- scripts/operator-seed.mjs scripts/operator-seed.test.mjs docs/architecture/31-load-test-2026-09-05.md",
+        "runtime": "Node syntax-only and scoped whitespace plus actual new fixture whitespace inspection; no body/CLI execution or compiler/build.",
+        "workload": "Syntax/whitespace zero diagnostics; exact delta review. Existing unchanged W02.07 onboarding/auth assurance reused."
+      },
+      {
+        "id": "W08.02-K3",
+        "required": true,
+        "criterion_ids": [
+          "W08.02-C3"
+        ],
+        "command": "node --test scripts/operator-seed.test.mjs",
+        "runtime": "Separate Astra/xhigh frozen actual source/tool/schema/delta/full outputs review and same synthetic Node/SQLite command once.",
+        "workload": "All C1-C3 and exact artifact identities; final static/whitespace reused, full operational/historical/customer limitations explicit."
+      }
+    ],
+    "dependencies": [
+      {
+        "target_type": "decision",
+        "target_id": "D01",
+        "kind": "informs",
+        "origin": "source_explicit",
+        "consumed_output": "Future authorized demo/customer separation.",
+        "rationale": "Retirement does not choose topology or approve demo schema on customer stamps."
+      },
+      {
+        "target_type": "decision",
+        "target_id": "D08",
+        "kind": "informs",
+        "origin": "source_explicit",
+        "consumed_output": "Approved customer/brand/environment/region resource ownership.",
+        "rationale": "No target/account/resource or desired-state authority is invented."
+      },
+      {
+        "target_type": "decision",
+        "target_id": "D07",
+        "kind": "informs",
+        "origin": "source_explicit",
+        "consumed_output": "Future approved identity onboarding/SSO.",
+        "rationale": "No account seeding, credential replacement or new onboarding contract."
+      },
+      {
+        "target_type": "task",
+        "target_id": "W02.07",
+        "kind": "informs",
+        "origin": "proposed",
+        "consumed_output": "Unchanged accepted current auth/onboarding and retained removal-barrier behavior.",
+        "rationale": "Bootstrap preserves schema/hash/must-change and never erases account removal audit; no affected runtime auth source."
+      }
+    ],
+    "assignments": {
+      "implementer": "w0802-worker",
+      "independent_reviewer": "w0802-reviewer",
+      "lead": "w01-lead"
+    }
+  },
+  "at": "2026-09-10T16:16:27Z",
+  "journal_schema_correction": {
+    "before": {
+      "seq": 797,
+      "kind": "task_transition",
+      "task_id": "W08.02",
+      "from": "in_progress",
+      "to": "blocked",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w0802-worker",
+          "run_id": "/root/w0802_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w0802-reviewer",
+          "run_id": "/root/w0802_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Admission99296 failed before GO: apply_patch added final newline absent from precomputed plan hash; no source implementation occurred.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-10T16:13:47Z"
+    },
+    "after": {
+      "seq": 797,
+      "kind": "task_transition",
+      "task_id": "W08.02",
+      "from": "in_progress",
+      "to": "blocked",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w0802-worker",
+          "run_id": "/root/w0802_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w0802-reviewer",
+          "run_id": "/root/w0802_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Admission99296 failed before GO: apply_patch added final newline absent from precomputed plan hash; no source implementation occurred.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-10T16:13:47Z",
+      "blocked": {
+        "reason": "Admission99296 found plan trailing-newline hash mismatch before any worker GO.",
+        "owner": "w01-lead",
+        "next_action": "Reapprove exact on-disk plan bytes and obtain valid replacement admission check before implementation."
+      }
+    }
+  },
+  "failed_check": {
+    "session_id": 46237,
+    "exit_status": 1,
+    "drained": true,
+    "errors": [
+      "Journal797.blocked.reason missing",
+      "Journal797.blocked.owner missing",
+      "Journal797.blocked.next_action missing"
+    ],
+    "notes": 9073
+  },
+  "qualification": "Root correction of newly created malformed blocked event adds required fields from its already-retained reason; prior actor/time/transitions and contract unchanged. Exact invalid event preserved here, not silently rewritten or claimed append-only. No worker GO/source edit/product test occurred. First read-only patch-builder attempt64acb7 failed with duplicate path variable; no patches/writes happened, corrected before this record."
+}

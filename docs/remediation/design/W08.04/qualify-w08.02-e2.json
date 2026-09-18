@@ -1,0 +1,398 @@
+{
+  "before": {
+    "id": "W08.02-E2",
+    "task_id": "W08.02",
+    "check_id": "W08.02-K2",
+    "criterion_ids": [
+      "W08.02-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0802-worker",
+    "run_id": "/root/w0802_worker",
+    "file": {
+      "path": "docs/remediation/evidence/W08.02/worker.json",
+      "sha256": "cf92867b905e9cb5d9a6062442b53f5e81f0ec219f51bc80cf67c91753aa81e4"
+    },
+    "at": "2026-09-10T16:32:07Z",
+    "limitations": "Bounded local/intercepted Node and in-memory SQLite bootstrap repair, not actual Wrangler/remote execution, account/resource ownership attestation, complete W08/F09/finding/gate/customer/release or SLO acceptance. Explicit configured IDs establish intent and local consistency only. Initial setup still requires separately authorized target/schema/operator owner and caller-held secret delivery; ASCII bootstrap email/canonical case-whitespace matching (other malformed historical records require separate recovery) and existing installed smol-toml/toolchain availability are limits, not runtime account policy. Existing canonical-email account is never reset or elevated; prior account removal barriers are retained. Hash-bearing SQL remains in privileged child argv; trusted host/process/proxy configuration, cloud query retention and source/config concurrent replacement are external operating controls. Failed/ambiguous child result may follow a committed write; retry preserves existing account, not rollback proof. Full desired-state creation/reconcile/add-brand/rotation, secrets/identity continuity, product/demo schema, migrations/artifact/alerts/config/registry, second-brand/restore and D01/D07/D08 remain open. No customer-neutral scoring/learning or privacy/erasure change, no external/cloud/credentials/customer-data/cleanup/staging/commit/push operations or approval.",
+    "command": "node --check scripts/operator-seed.mjs; git diff --check -- scripts/operator-seed.mjs scripts/operator-seed.test.mjs docs/architecture/31-load-test-2026-09-05.md",
+    "runtime": "Node syntax-only and scoped whitespace plus actual new fixture whitespace inspection; no body/CLI execution or compiler/build.",
+    "workload": "Syntax/whitespace zero diagnostics; exact delta review. Existing unchanged W02.07 onboarding/auth assurance reused.",
+    "result": "pass",
+    "artifact_digest": "fe86b8fb96209b0b00934fa33db4a53064072a86661be1d39a6b6bf8b790456d",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+      "configuration": "W08.02 explicit configured target/environment/account, bounded caller-held stdin temporary password, create-only repeat-safe operator bootstrap and confidential truthful result handling. Three owned source/fixture/doc paths and selected installed tool/schema/auth/config pins; injected child/input/config and actual in-memory SQLite schema only. No target Wrangler/seed execution, new schema/service, external writes or engine/learning/customer/SLO/full W08 approval.",
+      "files": [
+        {
+          "path": "scripts/operator-seed.mjs",
+          "sha256": "50e0b53e3b902c35013be6c38d4ee4e37319c496e5fc778f8c87e1bd16af3373",
+          "role": "output"
+        },
+        {
+          "path": "docs/architecture/31-load-test-2026-09-05.md",
+          "sha256": "3b0cd44153dea07a8ce40ddd50db02cd14774812bffdbaf44a16c381d0f1c174",
+          "role": "output"
+        },
+        {
+          "path": "migrations/0010_operator_accounts.sql",
+          "sha256": "7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-stamp.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-staging.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/setup.sh",
+          "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/package.json",
+          "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/wrangler-dist/cli.js",
+          "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/package.json",
+          "sha256": "52a0c051286f51ec4d039ed357260950c8e1e7349c003417e988d8c451cc07af",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/date.js",
+          "sha256": "da5549142bbb43537c03dd9164ad434c3d5ffcc7f674e39e076e8cd23cc719c7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/error.js",
+          "sha256": "9f8d7d23f463a2993afa0aafe54a66e959949dbda7499949693f88115b461312",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/extract.js",
+          "sha256": "c58c68bcd8ee693d2d4e547b07d561b21313c7457e85ee96309c581bd100e98a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/index.cjs",
+          "sha256": "a726cbf954b0f166cb6d7e0cf78c5c078f974cdb0d5792502c8ee58f9c84fdf7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/index.js",
+          "sha256": "4c488bcf2932b62e1fd99f72e89a97ba52eb3f876047b62ff5cddf7f1d69cccc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/parse.js",
+          "sha256": "bf0c4aeb2645fb80d6743bc662990c4807c2858f55548113f60fe98fac6a8210",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/primitive.js",
+          "sha256": "2407a810149df6ba91a5e8c0747d746af5e29a6fbc03c218c32e99020035d78e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/stringify.js",
+          "sha256": "5efe476690082b4f63d6017382251d4b03260e14a3379751cb6889140383cee1",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/struct.js",
+          "sha256": "89fc4aa4e837e9ac432fb20d2da59fa5d2a30a29a5ab5f4749e8e8ed3ec2b7a9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/util.js",
+          "sha256": "955fdd5299536ee7e0286dbdbb481e86e76a6056599f1d92bda8c360f3231c52",
+          "role": "source"
+        },
+        {
+          "path": "scripts/operator-seed.test.mjs",
+          "sha256": "5e963036f6918bf3ceea551ba2fb46df6fddd54644d10f8d083cc25ac6782b95",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.02/worker.json",
+          "sha256": "cf92867b905e9cb5d9a6062442b53f5e81f0ec219f51bc80cf67c91753aa81e4",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/plan.md",
+          "sha256": "4c2a8174d6e2c7187ee6cce488643fe8dac744bfb9212703fe7b39a8da2cb18d",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/baseline.json",
+          "sha256": "e2b4f4fcdd08260a1ea95de0994483beee65f28e5e2618b6ae2cf74e2d7c1512",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.02/source-freeze.json",
+          "sha256": "f80bd87ee6732ee3d10ebcd166a9d7c6e723060d4bbc622b7c9e5fee98dd7aa3",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.02/source-deltas.json",
+          "sha256": "9f89994ac81f12cb87e2fca3fdc9bdec144e28788e50d5de798b6e5e646dc75d",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/admission-correction.json",
+          "sha256": "8a3be6cda5b0b0d1eef9e703465c2e15a986bf31ecb37bf6308cdf42d584bd25",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/admission-correction-2.json",
+          "sha256": "253c7deba08bd04bc226fc05b95bf59ed3053e6053dcc587bca4db4b82a00dd1",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/admission-correction-3.json",
+          "sha256": "5830fddda08997c68a4fea7efade7f6a5538a1b3e9573fa6a8ff1d2a7ac1ada0",
+          "role": "configuration"
+        }
+      ],
+      "digest": "fe86b8fb96209b0b00934fa33db4a53064072a86661be1d39a6b6bf8b790456d"
+    }
+  },
+  "after": {
+    "id": "W08.02-E2",
+    "task_id": "W08.02",
+    "check_id": "W08.02-K2",
+    "criterion_ids": [
+      "W08.02-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0802-worker",
+    "run_id": "/root/w0802_worker",
+    "file": {
+      "path": "docs/remediation/evidence/W08.02/worker.json",
+      "sha256": "cf92867b905e9cb5d9a6062442b53f5e81f0ec219f51bc80cf67c91753aa81e4"
+    },
+    "at": "2026-09-10T16:32:07Z",
+    "limitations": "Bounded local/intercepted Node and in-memory SQLite bootstrap repair, not actual Wrangler/remote execution, account/resource ownership attestation, complete W08/F09/finding/gate/customer/release or SLO acceptance. Explicit configured IDs establish intent and local consistency only. Initial setup still requires separately authorized target/schema/operator owner and caller-held secret delivery; ASCII bootstrap email/canonical case-whitespace matching (other malformed historical records require separate recovery) and existing installed smol-toml/toolchain availability are limits, not runtime account policy. Existing canonical-email account is never reset or elevated; prior account removal barriers are retained. Hash-bearing SQL remains in privileged child argv; trusted host/process/proxy configuration, cloud query retention and source/config concurrent replacement are external operating controls. Failed/ambiguous child result may follow a committed write; retry preserves existing account, not rollback proof. Full desired-state creation/reconcile/add-brand/rotation, secrets/identity continuity, product/demo schema, migrations/artifact/alerts/config/registry, second-brand/restore and D01/D07/D08 remain open. No customer-neutral scoring/learning or privacy/erasure change, no external/cloud/credentials/customer-data/cleanup/staging/commit/push operations or approval.",
+    "command": "node --check scripts/operator-seed.mjs; git diff --check -- scripts/operator-seed.mjs scripts/operator-seed.test.mjs docs/architecture/31-load-test-2026-09-05.md",
+    "runtime": "Node syntax-only and scoped whitespace plus actual new fixture whitespace inspection; no body/CLI execution or compiler/build.",
+    "workload": "Syntax/whitespace zero diagnostics; exact delta review. Existing unchanged W02.07 onboarding/auth assurance reused.",
+    "result": "pass",
+    "artifact_digest": "fe86b8fb96209b0b00934fa33db4a53064072a86661be1d39a6b6bf8b790456d",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "1b9c485775994bcbf857d3d0dcda6c1e58b6e9e451cf2cf1b212eafdb21b6d09",
+      "configuration": "W08.02 explicit configured target/environment/account, bounded caller-held stdin temporary password, create-only repeat-safe operator bootstrap and confidential truthful result handling. Three owned source/fixture/doc paths and selected installed tool/schema/auth/config pins; injected child/input/config and actual in-memory SQLite schema only. No target Wrangler/seed execution, new schema/service, external writes or engine/learning/customer/SLO/full W08 approval.",
+      "files": [
+        {
+          "path": "scripts/operator-seed.mjs",
+          "sha256": "50e0b53e3b902c35013be6c38d4ee4e37319c496e5fc778f8c87e1bd16af3373",
+          "role": "output"
+        },
+        {
+          "path": "docs/architecture/31-load-test-2026-09-05.md",
+          "sha256": "3b0cd44153dea07a8ce40ddd50db02cd14774812bffdbaf44a16c381d0f1c174",
+          "role": "output"
+        },
+        {
+          "path": "migrations/0010_operator_accounts.sql",
+          "sha256": "7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-stamp.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/provision-staging.sh",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+          "role": "source"
+        },
+        {
+          "path": "scripts/setup.sh",
+          "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/package.json",
+          "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/wrangler/wrangler-dist/cli.js",
+          "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/package.json",
+          "sha256": "52a0c051286f51ec4d039ed357260950c8e1e7349c003417e988d8c451cc07af",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/date.js",
+          "sha256": "da5549142bbb43537c03dd9164ad434c3d5ffcc7f674e39e076e8cd23cc719c7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/error.js",
+          "sha256": "9f8d7d23f463a2993afa0aafe54a66e959949dbda7499949693f88115b461312",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/extract.js",
+          "sha256": "c58c68bcd8ee693d2d4e547b07d561b21313c7457e85ee96309c581bd100e98a",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/index.cjs",
+          "sha256": "a726cbf954b0f166cb6d7e0cf78c5c078f974cdb0d5792502c8ee58f9c84fdf7",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/index.js",
+          "sha256": "4c488bcf2932b62e1fd99f72e89a97ba52eb3f876047b62ff5cddf7f1d69cccc",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/parse.js",
+          "sha256": "bf0c4aeb2645fb80d6743bc662990c4807c2858f55548113f60fe98fac6a8210",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/primitive.js",
+          "sha256": "2407a810149df6ba91a5e8c0747d746af5e29a6fbc03c218c32e99020035d78e",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/stringify.js",
+          "sha256": "5efe476690082b4f63d6017382251d4b03260e14a3379751cb6889140383cee1",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/struct.js",
+          "sha256": "89fc4aa4e837e9ac432fb20d2da59fa5d2a30a29a5ab5f4749e8e8ed3ec2b7a9",
+          "role": "source"
+        },
+        {
+          "path": "node_modules/smol-toml/dist/util.js",
+          "sha256": "955fdd5299536ee7e0286dbdbb481e86e76a6056599f1d92bda8c360f3231c52",
+          "role": "source"
+        },
+        {
+          "path": "scripts/operator-seed.test.mjs",
+          "sha256": "5e963036f6918bf3ceea551ba2fb46df6fddd54644d10f8d083cc25ac6782b95",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.02/worker.json",
+          "sha256": "cf92867b905e9cb5d9a6062442b53f5e81f0ec219f51bc80cf67c91753aa81e4",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/plan.md",
+          "sha256": "4c2a8174d6e2c7187ee6cce488643fe8dac744bfb9212703fe7b39a8da2cb18d",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/baseline.json",
+          "sha256": "e2b4f4fcdd08260a1ea95de0994483beee65f28e5e2618b6ae2cf74e2d7c1512",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.02/source-freeze.json",
+          "sha256": "f80bd87ee6732ee3d10ebcd166a9d7c6e723060d4bbc622b7c9e5fee98dd7aa3",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.02/source-deltas.json",
+          "sha256": "9f89994ac81f12cb87e2fca3fdc9bdec144e28788e50d5de798b6e5e646dc75d",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/admission-correction.json",
+          "sha256": "8a3be6cda5b0b0d1eef9e703465c2e15a986bf31ecb37bf6308cdf42d584bd25",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/admission-correction-2.json",
+          "sha256": "253c7deba08bd04bc226fc05b95bf59ed3053e6053dcc587bca4db4b82a00dd1",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W08.02/admission-correction-3.json",
+          "sha256": "5830fddda08997c68a4fea7efade7f6a5538a1b3e9573fa6a8ff1d2a7ac1ada0",
+          "role": "configuration"
+        }
+      ],
+      "digest": "fe86b8fb96209b0b00934fa33db4a53064072a86661be1d39a6b6bf8b790456d"
+    }
+  }
+}

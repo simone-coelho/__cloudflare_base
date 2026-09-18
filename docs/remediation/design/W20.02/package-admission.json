@@ -1,0 +1,164 @@
+{
+  "before": {
+    "id": "W20",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "Reserve pins, reject document-local contradictions and check catalog references at activation/runtime. Define slotTypes/take/eligibility/priority, duplicate prevention, dead-pin diagnostics, exclusions/off-limits and default fallback without arbitrary forbidden fill. Test both arms and actual operator workflows.",
+      "finding_refs": "F28/F26",
+      "sizing_owner": "S reservation → M promised governance; D/OL + C"
+    },
+    "title": "Pins, exclusions and merchandising governance",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F28",
+      "F26"
+    ],
+    "proposed_owner": "D/OL + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W20-PINS",
+          "description": "Reserve valid pins and prevent page duplicates with explicit slotTypes/take/eligibility/priority semantics on both arms (document35 W20/F28)."
+        },
+        {
+          "id": "W20-PUBLICATION",
+          "description": "Reject document-local contradictions at current publication; preserve historical reads/replay; test actual operator validate/write/rollback workflows (W20/F28)."
+        },
+        {
+          "id": "W20-REFERENCES",
+          "description": "Check catalog references at activation and runtime with visible dead-pin diagnostics despite independent revisions (W20/F28)."
+        },
+        {
+          "id": "W20-GOVERNANCE",
+          "description": "Deliver agreed exclusions/off-limits, priority and customer default/fallback without arbitrary forbidden fill, including broader take design (W20/F28/F26)."
+        },
+        {
+          "id": "W20-ACCEPTANCE",
+          "description": "Actual both-arm customer and merchandiser walkthrough with promised governance and tuning; engineering task evidence does not substitute for customer acceptance (W20/F26)."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W20-PINS",
+          "task_id": "W20.01",
+          "task_criterion_id": "W20.01-C1"
+        },
+        {
+          "criterion_id": "W20-PUBLICATION",
+          "task_id": "W20.01",
+          "task_criterion_id": "W20.01-C2"
+        },
+        {
+          "criterion_id": "W20-PUBLICATION",
+          "task_id": "W20.01",
+          "task_criterion_id": "W20.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W20.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W20",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "Reserve pins, reject document-local contradictions and check catalog references at activation/runtime. Define slotTypes/take/eligibility/priority, duplicate prevention, dead-pin diagnostics, exclusions/off-limits and default fallback without arbitrary forbidden fill. Test both arms and actual operator workflows.",
+      "finding_refs": "F28/F26",
+      "sizing_owner": "S reservation → M promised governance; D/OL + C"
+    },
+    "title": "Pins, exclusions and merchandising governance",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F28",
+      "F26"
+    ],
+    "proposed_owner": "D/OL + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W20-PINS",
+          "description": "Reserve valid pins and prevent page duplicates with explicit slotTypes/take/eligibility/priority semantics on both arms (document35 W20/F28)."
+        },
+        {
+          "id": "W20-PUBLICATION",
+          "description": "Reject document-local contradictions at current publication; preserve historical reads/replay; test actual operator validate/write/rollback workflows (W20/F28)."
+        },
+        {
+          "id": "W20-REFERENCES",
+          "description": "Check catalog references at activation and runtime with visible dead-pin diagnostics despite independent revisions (W20/F28)."
+        },
+        {
+          "id": "W20-GOVERNANCE",
+          "description": "Deliver agreed exclusions/off-limits, priority and customer default/fallback without arbitrary forbidden fill, including broader take design (W20/F28/F26)."
+        },
+        {
+          "id": "W20-ACCEPTANCE",
+          "description": "Actual both-arm customer and merchandiser walkthrough with promised governance and tuning; engineering task evidence does not substitute for customer acceptance (W20/F26)."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W20-PINS",
+          "task_id": "W20.01",
+          "task_criterion_id": "W20.01-C1"
+        },
+        {
+          "criterion_id": "W20-PUBLICATION",
+          "task_id": "W20.01",
+          "task_criterion_id": "W20.01-C2"
+        },
+        {
+          "criterion_id": "W20-PUBLICATION",
+          "task_id": "W20.01",
+          "task_criterion_id": "W20.01-C3"
+        },
+        {
+          "criterion_id": "W20-REFERENCES",
+          "task_id": "W20.02",
+          "task_criterion_id": "W20.02-C1"
+        },
+        {
+          "criterion_id": "W20-REFERENCES",
+          "task_id": "W20.02",
+          "task_criterion_id": "W20.02-C2"
+        },
+        {
+          "criterion_id": "W20-PUBLICATION",
+          "task_id": "W20.02",
+          "task_criterion_id": "W20.02-C3"
+        }
+      ],
+      "task_ids": [
+        "W20.01",
+        "W20.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

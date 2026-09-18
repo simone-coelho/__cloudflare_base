@@ -1,0 +1,77 @@
+{
+  "at": "2026-09-11T14:26:46Z",
+  "journal_seq": 949,
+  "session_id": 89226,
+  "exit_status": 0,
+  "drained": true,
+  "actual_command": "node --max-old-space-size=768 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>134217728&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+  "captures": [
+    {
+      "chunk_id": "53b553",
+      "wall_time_seconds": 1.000524772,
+      "session_id": 89226,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "a9cf59",
+      "wall_time_seconds": 5.000929119,
+      "session_id": 89226,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "d56071",
+      "wall_time_seconds": 5.000918677,
+      "session_id": 89226,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "05b993",
+      "wall_time_seconds": 5.000764655,
+      "session_id": 89226,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "10cf82",
+      "wall_time_seconds": 5.001286142,
+      "session_id": 89226,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "9e5d47",
+      "wall_time_seconds": 20.000944668,
+      "session_id": 89226,
+      "original_token_count": 294,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=17, unscoped=24\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=66, closed=3; evidence records=195\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W14.06 — Obtain the agreed Snowflake transfer interface and accountable delivery owner for W14 §§1.8/1.12 before admitting scheduled delivery. Record destination/mechanism/credential-binding responsibility, cadence/late-arrival and event/identity mapping, destination acknowledgement/readback and remote deletion reconciliation with D10/D06/D08 owners. No credentials in chat/evidence. Then admit one concrete customer-neutral local adapter with minimal synthetic checks; no speculative NDJSON endpoint, default destination/schedule, external operations or scope substitution. W14.06 remains accepted unchanged. Other authorized local remediation is not blocked globally.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 11891\n"
+    },
+    {
+      "chunk_id": "5425d7",
+      "wall_time_seconds": 20.001257095,
+      "session_id": 89226,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "f02c2a",
+      "wall_time_seconds": 4.027882028,
+      "exit_code": 0,
+      "original_token_count": 294,
+      "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=17, unscoped=24\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=66, closed=3; evidence records=195\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W14.06 — Obtain the agreed Snowflake transfer interface and accountable delivery owner for W14 §§1.8/1.12 before admitting scheduled delivery. Record destination/mechanism/credential-binding responsibility, cadence/late-arrival and event/identity mapping, destination acknowledgement/readback and remote deletion reconciliation with D10/D06/D08 owners. No credentials in chat/evidence. Then admit one concrete customer-neutral local adapter with minimal synthetic checks; no speculative NDJSON endpoint, default destination/schedule, external operations or scope substitution. W14.06 remains accepted unchanged. Other authorized local remediation is not blocked globally.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 11891\n"
+    }
+  ],
+  "result": "Actual check/status VALID949,11891 notes each; existing bounded memoized filesystem wrapper. Tracker consistency only; no product test or implementation acceptance.",
+  "direct_hold_and_accepted_artifact_check": [
+    {
+      "chunk_id": "5671a8",
+      "wall_time_seconds": 0.780348458,
+      "exit_code": 0,
+      "original_token_count": 21,
+      "output": "D10 pending request pinned; journal949; all three closed task artifacts unchanged.\n"
+    }
+  ],
+  "limitation": "Earlier direct-check invocation printed only output and did not retain status/session, so is uncredited; replacement5671a8 is actual exit0/drained. No product checks repeated."
+}

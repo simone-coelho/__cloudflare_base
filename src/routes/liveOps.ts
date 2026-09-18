@@ -144,7 +144,7 @@ liveOpsRoutes.post('/propose/:itemNumber', async (c) => {
       record: view(next, nowMs),
     });
   } catch (error) {
-    console.error('Offer Desk propose failed:', error);
+    console.error('Offer Desk propose failed');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'propose failed' },
       500
@@ -218,7 +218,7 @@ liveOpsRoutes.post('/approve/:itemNumber', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({ ok: false, error: 'Invalid approval', details: error.issues }, 400);
     }
-    console.error('Offer Desk approve failed:', error);
+    console.error('Offer Desk approve failed');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'approve failed' },
       500
@@ -240,7 +240,7 @@ liveOpsRoutes.post('/reset', async (c) => {
       records: records.map((r) => view(r, nowMs)),
     });
   } catch (error) {
-    console.error('Offer Desk reset failed:', error);
+    console.error('Offer Desk reset failed');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'reset failed' },
       500
@@ -275,7 +275,7 @@ liveOpsRoutes.post('/soldout/:itemNumber', async (c) => {
     await writeOverride(c.env.CACHE, override);
     return c.json({ ok: true, surface: SURFACE, nowMs, override });
   } catch (error) {
-    console.error('Offer Desk soldout failed:', error);
+    console.error('Offer Desk soldout failed');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'sell-out failed' },
       500
@@ -293,7 +293,7 @@ liveOpsRoutes.post('/restock/:itemNumber', async (c) => {
     await clearOverride(c.env.CACHE, itemNumber);
     return c.json({ ok: true, surface: SURFACE, nowMs, itemNumber, restocked: true });
   } catch (error) {
-    console.error('Offer Desk restock failed:', error);
+    console.error('Offer Desk restock failed');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'restock failed' },
       500
@@ -373,7 +373,7 @@ liveOpsRoutes.get('/occupants', async (c) => {
 
     return c.json({ ok: true, surface: SURFACE, nowMs, occupants: rows });
   } catch (error) {
-    console.error('Offer Desk occupants failed:', error);
+    console.error('Offer Desk occupants failed');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'occupants failed' },
       500

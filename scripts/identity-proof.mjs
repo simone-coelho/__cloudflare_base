@@ -10,9 +10,9 @@
 // with the operator token and refuse without it. Every line is a real request.
 //
 // Needs the site key (X-SDK-Key, default demo-site) because the worker is
-// enforced, and mints an operator token from wrangler.toml's dev JWT settings.
+// enforced. Supply OPERATOR_TOKEN or explicit JWT_SECRET, JWT_ISSUER and JWT_AUDIENCE.
 
-import { createHmac } from 'node:crypto';
+import { resolveToolToken } from './lib/tool-token.mjs';
 
 const B = process.argv[2] || process.env.BASE || 'http://localhost:9100';
 const SDK_KEY = process.env.SDK_KEY || 'demo-site';
@@ -22,15 +22,7 @@ const PHONE = `vis-phone-${run}`;
 const LAPTOP = `vis-laptop-${run}`;
 const ACCOUNT = `acct-${run}`;
 
-const b64u = (s) => Buffer.from(s).toString('base64url');
-function mintToken() {
-  const secret = process.env.JWT_SECRET || 'development-secret-key-change-in-production';
-  const now = Math.floor(Date.now() / 1000);
-  const h = b64u(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const p = b64u(JSON.stringify({ sub: 'identity-proof', iss: process.env.JWT_ISSUER || 'edge-platform', aud: process.env.JWT_AUDIENCE || 'edge-platform-api', iat: now, exp: now + 600 }));
-  return `${h}.${p}.${createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url')}`;
-}
-const TOKEN = mintToken();
+const TOKEN = await resolveToolToken({ payload: { sub: 'identity-proof' }, expiresIn: '10m', typ: 'JWT' });
 
 let pass = 0, fail = 0;
 const ok = (cond, label, detail = '') => { if (cond) { pass++; console.log(`  ✓ ${label}`); } else { fail++; console.log(`  ✗ ${label} ${detail}`); } };

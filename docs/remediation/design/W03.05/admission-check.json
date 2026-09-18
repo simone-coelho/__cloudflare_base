@@ -1,0 +1,19 @@
+{
+  "at": "2026-09-11T17:30:53Z",
+  "task_id": "W03.05",
+  "source_go": true,
+  "entry_reused": "99498 VALID979; both check/status0/drained",
+  "proof": {
+    "command": "node --max-old-space-size=768 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{sha256,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';\nconst d=JSON.parse(fs.readFileSync('\\''docs/remediation/tracker.json'\\'','\\''utf8'\\'')),t=d.tasks.find(t=>t.id==='\\''W03.05'\\''),b=JSON.parse(fs.readFileSync('\\''docs/remediation/design/W03.05/baseline.json'\\'','\\''utf8'\\''));\nconst fail=s=>{throw Error(s)};if(d.journal.length!==987||t.state!=='\\''in_progress'\\''||d.tasks.filter(t=>['\\''in_progress'\\'','\\''verification'\\''].includes(t.state)).length!==1)fail('\\''state'\\'');\nif(sha256(fs.readFileSync(t.preflight.plan.path))!=='\\''b97b542d2d735b0ee5fb0780a5d7033238d62453db39230cf437d931a8b8c9d2'\\''||taskContractDigest(t)!=='\\''1ae09756f2fb6a6451e53ae2be0ce426b3af70587293a903b3fa0a7bb0115a5f'\\''||t.preflight.contract_digest!==taskContractDigest(t))fail('\\''contract'\\'');\nconst start=d.journal.findLast(e=>e.task_id===t.id&&e.to==='\\''in_progress'\\'');if(JSON.stringify(start.plan_snapshot)!==JSON.stringify(t.preflight))fail('\\''start snapshot'\\'');\nif(!d.authority.local_engine_changes||!d.authority.local_authorization.scope_package_ids.includes('\\''W03'\\'')||d.authority.deployment!==false)fail('\\''authority'\\'');\nconst auth=d.authority.local_authorization.record;if(sha256(fs.readFileSync(auth.path))!==auth.sha256)fail('\\''mandate record'\\'');\nfor(const p of b.pins)if(sha256(fs.readFileSync(p.path))!==p.sha256)fail('\\''pin '\\''+p.path);for(const o of b.owned)if(o.absent&&fs.existsSync(o.path))fail('\\''unexpected new file '\\''+o.path);\nfor(const prior of d.tasks.filter(t=>t.state==='\\''closed'\\''))for(const p of prior.artifact.files)if(sha256(fs.readFileSync(p.path))!==p.sha256)fail('\\''accepted dependency '\\''+p.path);\nconsole.log(JSON.stringify({at:new Date().toISOString(),task:t.id,journal:d.journal.length,plan:t.preflight.plan,contract:t.preflight.contract_digest,start_snapshot:'\\''exact'\\'',authority:'\\''local W03 only'\\'',pins:b.pins.length,protected:b.pins.filter(p=>!b.owned.some(o=>o.path===p.path)).length,new_files_absent:b.owned.filter(o=>o.absent).length,accepted_dependencies:'\\''unchanged'\\'',result:'\\''pass'\\''}));'",
+    "captures": [
+      {
+        "chunk_id": "6db310",
+        "wall_time_seconds": 1.729135683,
+        "exit_code": 0,
+        "original_token_count": 107,
+        "output": "{\"at\":\"2026-09-11T17:30:26.586Z\",\"task\":\"W03.05\",\"journal\":987,\"plan\":{\"path\":\"docs/remediation/design/W03.05/plan.md\",\"sha256\":\"b97b542d2d735b0ee5fb0780a5d7033238d62453db39230cf437d931a8b8c9d2\"},\"contract\":\"1ae09756f2fb6a6451e53ae2be0ce426b3af70587293a903b3fa0a7bb0115a5f\",\"start_snapshot\":\"exact\",\"authority\":\"local W03 only\",\"pins\":55,\"protected\":46,\"new_files_absent\":0,\"accepted_dependencies\":\"unchanged\",\"result\":\"pass\"}\n"
+      }
+    ]
+  },
+  "authority": "Existing bounded local W03 mandate only; no external/customer/credential/deploy/commit or policy authority."
+}

@@ -26,6 +26,7 @@
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import type { Assurance } from '@/identity/assertion';
 import { isShopperId } from '@/identity/shopperId';
+import { readRetention, type RetentionStamp } from '@/retention';
 
 /** A link lives a long time; it is the memory the scope promises identity lengthens. */
 export const LINK_TTL_S = 400 * 24 * 3600;
@@ -33,6 +34,7 @@ export const LINK_TTL_S = 400 * 24 * 3600;
 export type LinkSource = 'login' | 'signup' | 'checkout' | 'import' | 'other';
 
 export interface VisitorLink {
+  retention?: RetentionStamp;
   visitorId: string;
   shopperId: string;
   linkedAt: number;
@@ -49,6 +51,7 @@ export interface VisitorLink {
 }
 
 export interface ShopperRecord {
+  retention?: RetentionStamp;
   shopperId: string;
   createdAt: number;
   salted: boolean;
@@ -73,6 +76,23 @@ export class IdentityStore {
 
   async shopper(shopperId: string): Promise<ShopperRecord | null> {
     return ((await this.kv.get(this.skey(shopperId), 'json')) as ShopperRecord | null) ?? null;
+  }
+
+  /** A DO publishes its committed projection; KV never decides transfer idempotence. */
+  async publish(link: VisitorLink, shopper: ShopperRecord): Promise<void> {
+    const linkRetention = readRetention(link.retention, this.tenant, 'identity'), shopperRetention = readRetention(shopper.retention, this.tenant, 'identity');
+    if (Math.min(linkRetention.expiresAt, shopperRetention.expiresAt) <= Date.now()) throw new Error('Identity retention unavailable');
+    await this.kv.put(this.skey(shopper.shopperId), JSON.stringify(shopper), { expiration: Math.floor(shopperRetention.expiresAt / 1000) });
+    // The visitor must never advertise a link before the accepted member set.
+    await this.kv.put(this.vkey(link.visitorId), JSON.stringify(link), { expiration: Math.floor(linkRetention.expiresAt / 1000) });
+  }
+
+  /** Preserve absent versus malformed data for the DO's one-time adoption. */
+  async shopperProjection(shopperId: string): Promise<unknown> {
+    const raw = await this.kv.get(this.skey(shopperId));
+    if (raw === null) return undefined;
+    if (typeof raw !== 'string') throw new Error('Identity projection unavailable');
+    return JSON.parse(raw) as unknown;
   }
 
   /**

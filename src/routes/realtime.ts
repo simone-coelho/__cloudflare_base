@@ -9,17 +9,58 @@ import type { Env } from '@/types/env';
 import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegmentEngine';
 import { getConnectors } from '@/connectors';
 import { snapshot as reflexSnapshot } from '@/reflex/core';
-import { resolveReflexConfig, resolveSurface } from '@/demos/registry';
-import { forwardEventToOdp, mapActionToOdp, odpEnabled, upsertOdpProfile } from '@/services/odpLoop';
-import { outcomeFromAction } from '@/ledger/records';
+import { resolveTenantReflexConfig, resolveSurface } from '@/demos/registry';
+import { forwardEventToOdp, projectOdpState, mapActionToOdp, odpEnabled, upsertOdpProfile } from '@/services/odpLoop';
+import { isDecisionReference, outcomeFromAction } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
-import { consentFromCookies, consentOf } from '@/content/consent';
-import { ACTION_EVENT_TYPES } from '@/events/actionTypes';
+import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
+import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
+import { validBufferedAction } from '@/reflex/bufferedAction';
+import { validEntry, type ChannelSignals } from '@/services/visit';
 import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
+import { demoEventCaptureEnabled } from '@/services/demoEventCapture';
+export { demoEventCaptureEnabled } from '@/services/demoEventCapture';
 import { z } from 'zod';
+import { requireShopper, shopperPrincipal, assertSessionTarget, privateShopperHeaders, SessionAccessError } from '@/identity/sessionCapability';
+import { anonymousWithConsent, ownedConsent, rotateObjectSession } from '@/identity/consentContinuity';
+import { capabilityToken } from '@/identity/sessionCapability';
+import { SessionManager } from '@/services/SessionManager';
+import { assertShopperSelectors, parseShopperContext, currentOwnerConsent, ownerRelay } from '@/identity/sessionAuthority';
+import { captureRetention } from '@/retention';
+import { captureBehavior } from '@/ledger/behavior';
+import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
+import { redeemRenderOffer } from '@/content/renderOffer';
 
 const realtimeRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
+for (const path of ['/ws', '/action', '/personalization/:userId', '/reflex', '/session/reset', '/session/preferences', '/session/:sessionId/preferences', '/session/:sessionId/analytics', '/segments/:userId', '/connections/:userId']) {
+  // Authenticate before parsing an action, without entering the subject owner.
+  if (path === '/action') realtimeRoutes.use(path, requireShopper({ forward: false, bodyLimit: 2 * 1024 * 1024, bodyTimeoutMs: 5000 }));
+  realtimeRoutes.use(path, async (c, next) => {
+    assertShopperSelectors(c.req.raw);
+    if (c.req.method === 'POST' && path === '/action') {
+      // Invalid logical identity must not acquire/forward the subject owner.
+      let body: unknown; try { body = await c.req.raw.clone().json(); } catch { return c.json({ error: 'Invalid action event' }, 400); }
+      const event = actionEventSchema.safeParse(body);
+      if (!event.success || event.data.processing === 'buffered' && !validBufferedAction(event.data, Date.now())) {
+        return c.json({ error: 'Invalid action event' }, 400);
+      }
+      if (Object.hasOwn(event.data.data, 'renderOffer') && (event.data.type !== 'content_impression'
+        || !isEventNonce(event.data.eventId) || !isEventTimestamp(event.data.timestamp))) throw new SessionAccessError();
+    }
+    if (c.req.method === 'POST' && path.endsWith('/preferences')) {
+      const body = parseShopperContext(await c.req.raw.clone().text());
+      if (!body || typeof body !== 'object' || Array.isArray(body)) throw new SessionAccessError();
+      // Preferences do not resolve tenant authority from payload/query fields.
+      // Validate supplied selectors before requireShopper can adopt an owner.
+      const tenant = c.get('tenant'), queryTenant = c.req.query('tenant');
+      if ((queryTenant !== undefined && queryTenant !== tenant)
+        || (Object.hasOwn(body, 'tenant') && (body as Record<string, unknown>).tenant !== tenant)) throw new SessionAccessError();
+    }
+    await next();
+  });
+  realtimeRoutes.use(path, requireShopper());
+}
 
 // WebSocket upgrade endpoint
 realtimeRoutes.get('/ws', async (c) => {
@@ -28,10 +69,7 @@ realtimeRoutes.get('/ws', async (c) => {
     return c.text('Expected Upgrade: websocket', 426);
   }
 
-  const userId = c.req.query('userId');
-  if (!userId) {
-    return c.text('Missing userId parameter', 400);
-  }
+  const userId = shopperPrincipal(c.req.raw).subject;
 
   try {
     // Edge Affinity Reflex P2 (doc 16 §6): REFLEX_HOST='do' relocates the socket
@@ -49,9 +87,11 @@ realtimeRoutes.get('/ws', async (c) => {
     const durableObject = c.env.PERSONALIZATION_WEBSOCKET.get(id);
 
     // Forward the WebSocket upgrade request to the Durable Object
-    return durableObject.fetch(c.req.raw);
+    const owned = new URL(c.req.url); owned.pathname = '/owner/upgrade';
+    return durableObject.fetch(new Request(owned, c.req.raw));
   } catch (error) {
-    console.error('Error establishing WebSocket connection:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error establishing WebSocket connection');
     return c.text('Failed to establish WebSocket connection', 500);
   }
 });
@@ -66,6 +106,9 @@ export const actionEventSchema = z.object({
   type: z.enum(ACTION_EVENT_TYPES),
   userId: z.string(),
   anonymousId: z.string().optional(),
+  eventId: z.string().refine(isEventNonce).optional(),
+  processing: z.literal('buffered').optional(),
+  browsingSessionId: z.unknown().optional(),
   data: z.record(z.string(), z.any()),
   source: z.string(),
   // Which demo posted this (@/demos/registry). Optional and stripped-if-absent:
@@ -75,20 +118,33 @@ export const actionEventSchema = z.object({
   // How the shopper arrived. Captured once per page load by the client and sent
   // with every action, because the server cannot know in advance which event
   // will be the one that opens a new visit. Optional, so every existing client
-  // is unaffected and simply resolves to `direct`.
-  entry: z.object({
-    utmMedium: z.string().optional(),
-    utmSource: z.string().optional(),
-    referrer: z.string().optional(),
-    siteHost: z.string().optional(),
-  }).optional(),
-  timestamp: z.number().optional()
+  // is unaffected; omitted/unobserved entry stays unknown.
+  entry: z.custom<ChannelSignals>(value => value !== undefined && validEntry(value)).optional(),
+  timestamp: z.number().refine(isEventTimestamp).optional()
+}).superRefine((event, ctx) => {
+  if (Object.prototype.hasOwnProperty.call(event.data, 'decisionId') && !isDecisionReference(event.data.decisionId)) {
+    ctx.addIssue({ code: 'custom', path: ['data', 'decisionId'], message: 'Invalid decision reference' });
+  }
+  if (event.eventId !== undefined && !isEventTimestamp(event.timestamp)) {
+    ctx.addIssue({ code: 'custom', path: ['timestamp'], message: 'eventId requires a safe integer event timestamp' });
+  }
+  if (event.processing === 'buffered' && !validBufferedAction(event, Number.MAX_SAFE_INTEGER)) {
+    ctx.addIssue({ code: 'custom', path: ['processing'], message: 'Buffered action requires original event identity, timestamp and browsing session' });
+  }
 });
 
 realtimeRoutes.post('/action', async (c) => {
   try {
     const body = await c.req.json();
+    assertSessionTarget(shopperPrincipal(c.req.raw), body?.userId, body?.sessionId);
     const validatedEvent = actionEventSchema.parse(body);
+    // Render retries carry their first wire identity/time. Generic legacy
+    // synthesis would turn a lost acknowledgement into a different render.
+    if (Object.hasOwn(validatedEvent.data, 'renderOffer') && (validatedEvent.type !== 'content_impression'
+      || !isEventNonce(validatedEvent.eventId) || !isEventTimestamp(validatedEvent.timestamp))) throw new SessionAccessError();
+    if (validatedEvent.processing === 'buffered' && !validBufferedAction(validatedEvent, Date.now())) {
+      return c.json({ error: 'Invalid buffered action' }, 400);
+    }
 
     // Add timestamp if not provided.
     // Cast: the zod schema accepts the retail event types ('product_view',
@@ -98,33 +154,61 @@ realtimeRoutes.post('/action', async (c) => {
     const cfGeo = ((c.req.raw as unknown as { cf?: { country?: string; regionCode?: string } }).cf) ?? null;
     const actionEvent = {
       ...validatedEvent,
-      timestamp: validatedEvent.timestamp || Date.now(),
+      eventId: validatedEvent.eventId,
+      anonymousId: shopperPrincipal(c.req.raw).kind === 'anonymous' ? shopperPrincipal(c.req.raw).subject : undefined,
+      timestamp: validatedEvent.timestamp ?? Date.now(),
       // CW6: coarse request geolocation rides the event so the scoring host can
       // fan the touches into the shopper's region. Aggregates only, never stored per person.
       ...(cfGeo?.country ? { geo: { country: cfGeo.country, regionCode: cfGeo.regionCode ?? null } } : {}),
     } as ActionEvent;
 
-    // Capture this demo-run event into D1 `demo_events` (source='demo'), kept
-    // SEPARATE from the historical synthetic data so POST /operator/events/reset
-    // can wipe ONLY these rows. Off the response path (waitUntil) so it adds zero
-    // latency, and self-guarding so a D1 hiccup can never break the demo.
-    const sessionId = typeof body.sessionId === 'string' ? body.sessionId : undefined;
-    const capture = captureDemoEvent(c.env, actionEvent, sessionId);
-    try { c.executionCtx.waitUntil(capture); } catch { void capture; /* no execCtx (e.g. tests) */ }
+    // Browsing attribution is separate from the signed profile session. Capture
+    // and measurement below start only after the host returns resolved consent.
+    const sessionId = validatedEvent.processing === 'buffered' ? validatedEvent.browsingSessionId as string | null
+      : typeof body.browsingSessionId === 'string' && body.browsingSessionId.trim()
+      ? body.browsingSessionId.trim().slice(0, 128) : shopperPrincipal(c.req.raw).sessionId;
+    // Actual accepted action source is admitted durably BEFORE profile, queue,
+    // learning or external side effects; a downstream refusal cannot erase the
+    // original event identity or turn transport ACK into canonical completion.
+    const priorConsent = await currentOwnerConsent();
+    if (!priorConsent) throw new SessionAccessError();
+    const captureConsent = intersectConsent(priorConsent, consentFromCookies(c.req.header('Cookie')), refusalHints(actionEvent.data.consent));
+    if (captureConsent.tracking && !actionEvent.eventId) actionEvent.eventId = crypto.randomUUID();
+    const hasOffer = Object.hasOwn(actionEvent.data, 'renderOffer');
+    if (hasOffer && actionEvent.type !== 'content_impression') throw new SessionAccessError();
+    const render = hasOffer ? await redeemRenderOffer(c.env, shopperPrincipal(c.req.raw), captureConsent, actionEvent) : undefined;
+    // The ciphertext is an admission capability, never behavior, demo capture,
+    // pipeline input or provider data. Remove it before any ordinary handler.
+    if (hasOffer) { const { renderOffer: _offer, ...data } = actionEvent.data; void _offer; actionEvent.data = data; }
+    const behavior = await captureBehavior(c.env, shopperPrincipal(c.req.raw), captureConsent,
+      { type: actionEvent.type, eventId: actionEvent.eventId!, eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
+        timestamp: actionEvent.timestamp!, source: actionEvent.source, data: actionEvent.data }, sessionId ?? null);
     // Phase 0 (doc 22 §3.2): a reward-bearing action becomes an outcome record, after the response.
     // The outcome's session must be the session the decision record carries, or session-scope
     // attribution compares two id spaces and credits nothing (found 2026-09-04). Both now prefer the
     // client's browsing session, which the SDK persists with an idle rule and sends on the snapshot and
     // on every event; a client that sends none gets the server's session on both. Called once the host
     // has answered, so the server's session is known.
-    // CW31: a shopper who withheld tracking consent leaves no outcome anywhere. The object says so on its
-    // envelope (`consent.tracking`); the session host mirrors the switch into the request's cookies.
-    const emitOutcome = (serverSessionId: unknown, envelope?: Record<string, unknown>) => {
-      const consent = consentOf({ consent: (envelope?.consent as { tracking?: unknown } | undefined) ?? null, preferences: { trackingConsent: consentFromCookies(c.req.header('Cookie')).tracking } });
+    // Both hosts return the strict stored/hint intersection; cookie mirrors are
+    // not independent authority for capture or outcome processing.
+    const emitOutcome = (serverSessionId: unknown, consent: Consent) => {
       if (!consent.tracking) return;
+      if (actionEvent.processing !== 'buffered') {
+        const capture = captureDemoEvent(c.env, c.get('tenant'), actionEvent, sessionId);
+        try { c.executionCtx.waitUntil(capture); } catch { void capture; }
+      }
       const server = typeof serverSessionId === 'string' && serverSessionId ? serverSessionId : undefined;
-      const outcome = outcomeFromAction({ ...actionEvent, sessionId: sessionId ?? server }, c.get('tenant'));
-      if (outcome) { const p = Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]); try { c.executionCtx.waitUntil(p); } catch { void p; } }
+      const outcome = outcomeFromAction({ ...actionEvent, sessionId: actionEvent.processing === 'buffered' ? sessionId : sessionId ?? server,
+        eventId: actionEvent.eventId ?? crypto.randomUUID(),
+        eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
+      }, c.get('tenant'));
+      if (outcome) {
+        outcome.retention = captureRetention(c.env, c.get('tenant'), outcome.ts);
+        const p = c.env.LEDGER_RECOVERY_ENABLED === 'true'
+          ? outcomeToLearning(c.env, c.get('tenant'), outcome)
+          : Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]);
+        try { c.executionCtx.waitUntil(p); } catch { void p; }
+      }
     };
 
     // ── Edge Affinity Reflex P2 (doc 16 §6): REFLEX_HOST='do' forwards to the
@@ -132,40 +216,39 @@ realtimeRoutes.post('/action', async (c) => {
     // qualify → decide → push over its own socket) and returns the same envelope
     // shape ({success, update?, sessionId, cookiesUpdated, odp?}). The DO owns the
     // ODP loop on this path (forward + seed + receipt over its own socket), so no
-    // route-level ODP dispatch here. The D1 captureDemoEvent above ran either way.
+    // route-level ODP dispatch here. The same envelope gates D1 capture/outcomes.
     const tEngine = performance.now();
     if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
       const stub = shopperObject(c.env.SHOPPER_REFLEX, actionEvent.userId, c.get('tenant'));
       const doRes = await stub.fetch('https://shopper-reflex/ingest', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...privateShopperHeaders(c.req.raw) },
         body: JSON.stringify(actionEvent),
       });
       const out = (await doRes.json()) as Record<string, unknown>;
       c.header('Server-Timing', `object;dur=${Math.round(performance.now() - tEngine)}`);
-      emitOutcome(out.sessionId, out);
-      return c.json(out, doRes.status as 200);
+      if (doRes.ok && out.success === true && !out.dropped) {
+        if (!out.consent) throw new Error('Consent state unavailable');
+        emitOutcome(out.sessionId, storedConsent(out.consent));
+      }
+      return c.json({ ...out, behavior, ...(render ? { render } : {}) }, doRes.status as 200);
     }
 
     // Get cookie header for session management
     const cookieHeader = c.req.header('Cookie') ?? null;
 
-    // CW31 (BTIE D10). The session host's own report of the shopper's switches:
-    // SessionManager mirrors the two preferences into the request's cookies, so
-    // the cookies are what this host knows before it has read the record. With
-    // tracking off nothing about this request leaves the edge, which is the rule
-    // the object host already holds in-object; the outcome is refused by
-    // emitOutcome above and the two ODP dispatches below are refused here.
-    const consent = consentFromCookies(cookieHeader);
-
     // Process the action event with enhanced session management
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant'), principal: shopperPrincipal(c.req.raw) });
     let execCtx: { waitUntil(p: Promise<unknown>): void } | undefined;
     try { execCtx = c.executionCtx; } catch { execCtx = undefined; /* no execCtx (e.g. tests) */ }
     const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader, execCtx);
+    const consent = result.consent;
     // Where the time went: the engine's own work on the session host, for whoever is measuring.
     c.header('Server-Timing', `engine;dur=${Math.round(performance.now() - tEngine)}`);
-    emitOutcome(result.sessionId);
+    if (!result.dropped) emitOutcome(result.sessionId, consent);
+    if (actionEvent.processing === 'buffered') return c.json({ success: true, processing: 'buffered',
+      interestApplied: result.interestApplied === true, ...(result.dropped ? { dropped: result.dropped } : {}),
+      sessionId: result.sessionId, cookiesUpdated: false, consent, behavior, ...(render ? { render } : {}) });
 
     // ODP loop (doc 16 §8): forward the behavioral event to ODP OFF the response
     // path — the shopper never waits on the memory; ODP down = zero impact.
@@ -173,8 +256,8 @@ realtimeRoutes.post('/action', async (c) => {
     // forwarding); the forwarder later pushes the ODP status over the WebSocket as
     // an `odp_receipt` so the feed row upgrades to its real ✓ 202.
     let odpReceipt: { receiptId: string; type: string; action?: string; product_id?: string } | undefined;
-    if (consent.tracking && odpEnabled(c.env)) {
-      const mapped = mapActionToOdp(actionEvent);
+    if (consent.tracking && odpEnabled(c.env, c.get('tenant'))) {
+      const mapped = mapActionToOdp(actionEvent, c.get('tenant'), c.env);
       if (mapped) {
         odpReceipt = {
           receiptId: crypto.randomUUID(),
@@ -183,20 +266,19 @@ realtimeRoutes.post('/action', async (c) => {
           ...(typeof mapped.data.product_id === 'string' ? { product_id: mapped.data.product_id } : {}),
         };
         c.executionCtx.waitUntil(forwardEventToOdp(
-          c.env, actionEvent,
+          c.env, c.get('tenant'), actionEvent,
           { visitorId: actionEvent.userId, sessionId: result.sessionId },
           odpReceipt.receiptId,
-          undefined,
-          c.get('tenant'),
         ));
       }
       // §4 score upsert: on membership changes, persist the reflex's live scores
       // onto the ODP profile (the memory carrying the edge's numbers).
       const aff = result.update?.data?.affinity;
-      if (aff && Array.isArray(aff.changed) && aff.changed.length > 0) {
+      if (personalizes(consent) && aff && Array.isArray(aff.changed) && aff.changed.length > 0) {
         c.executionCtx.waitUntil(
           upsertOdpProfile(
             c.env,
+            c.get('tenant'),
             { visitorId: actionEvent.userId, sessionId: result.sessionId },
             aff, result.update?.data?.journeyStage,
           )
@@ -216,20 +298,27 @@ realtimeRoutes.post('/action', async (c) => {
         update: result.update,
         sessionId: result.sessionId,
         cookiesUpdated: result.cookieHeaders.length > 0,
-        odp: odpReceipt
+        odp: odpReceipt,
+        behavior,
+        ...(render ? { render } : {}),
+        consent,
       });
     } else {
       return c.json({
         success: true,
         message: 'Action processed, no personalization changes needed',
+        ...(render ? { render } : {}),
         sessionId: result.sessionId,
         cookiesUpdated: result.cookieHeaders.length > 0,
-        odp: odpReceipt
+        odp: odpReceipt,
+        behavior,
+        consent,
       });
     }
 
   } catch (error) {
-    console.error('Error processing action event:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error processing action event');
     
     if (error instanceof z.ZodError) {
       return c.json({
@@ -249,31 +338,31 @@ realtimeRoutes.post('/action', async (c) => {
 realtimeRoutes.get('/personalization/:userId', async (c) => {
   try {
     const userId = c.req.param('userId');
+    if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
+      const response = await shopperObject(c.env.SHOPPER_REFLEX, shopperPrincipal(c.req.raw).subject, c.get('tenant')).fetch('https://shopper-reflex/personalization', { headers: privateShopperHeaders(c.req.raw) });
+      return new Response(response.body, response);
+    }
     
     if (!userId) {
       return c.json({ error: 'User ID is required' }, 400);
     }
 
     const cookieHeader = c.req.header('Cookie') ?? null;
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant'), principal: shopperPrincipal(c.req.raw) });
     
     // Get or create session from cookies
-    const { sessionId, sessionData, isNewSession } = await segmentEngine.getOrCreateSessionFromCookies(
+    const { sessionId, sessionData, isNewSession, reflexConfig } = await segmentEngine.getOrCreateSessionFromCookies(
       cookieHeader,
       userId
     );
 
     // Get personalization configuration
-    const config = await segmentEngine.getSessionPersonalizationConfig(sessionId);
+    const config = await segmentEngine.getSessionPersonalizationConfig(sessionId, sessionData, reflexConfig);
+    assertSessionTarget(shopperPrincipal(c.req.raw), userId, sessionId);
     
     if (!config) {
       return c.json({ error: 'Failed to get personalization configuration' }, 500);
     }
-
-    // Set cookies in response
-    config.cookieHeaders.forEach(cookieHeader => {
-      c.header('Set-Cookie', cookieHeader, { append: true });
-    });
 
     return c.json({
       userId,
@@ -285,12 +374,13 @@ realtimeRoutes.get('/personalization/:userId', async (c) => {
         featureVariables: config.featureVariables,
         experiments: config.experiments
       },
-      cookiesSet: config.cookieHeaders.length > 0,
+      cookiesSet: false,
       timestamp: Date.now()
     });
 
   } catch (error) {
-    console.error('Error getting personalization config:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error getting personalization config');
     return c.json({
       error: 'Failed to get personalization configuration',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -304,32 +394,36 @@ realtimeRoutes.get('/personalization/:userId', async (c) => {
 realtimeRoutes.get('/reflex', async (c) => {
   try {
     const cookieHeader = c.req.header('Cookie') ?? null;
-    const userId = c.req.query('userId') || 'anonymous';
+    const userId = shopperPrincipal(c.req.raw).subject;
 
     // REFLEX_HOST='do' (doc 16 §6): the vector lives in the shopper's own
     // ShopperReflex DO — read the snapshot there (same response shape).
     if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
       const stub = shopperObject(c.env.SHOPPER_REFLEX, userId, c.get('tenant'));
-      const doRes = await stub.fetch('https://shopper-reflex/snapshot');
+      const doRes = await stub.fetch('https://shopper-reflex/snapshot', { headers: privateShopperHeaders(c.req.raw) });
       return c.json((await doRes.json()) as Record<string, unknown>, doRes.status as 200);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
-    const { sessionData } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant'), principal: shopperPrincipal(c.req.raw) });
+    const { sessionData, reflexConfig } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
+    const consent = consentOf(sessionData);
     // Surface-aware tuning (@/demos/registry): an explicit ?surface= wins, else
     // the session remembers which demo it belongs to, else DEFAULT_SURFACE.
     // With both absent and nothing stored, this resolves to
     // DEFAULT_REFLEX_CONFIG BY IDENTITY — every pre-existing caller gets a
     // byte-identical response until someone tunes the scope.
-    const cfg = await resolveReflexConfig(
+    const cfg = reflexConfig ?? await resolveTenantReflexConfig(
       c.env,
+      shopperPrincipal(c.req.raw).tenant,
       resolveSurface({ surface: c.req.query('surface') ?? sessionData.surface })
     );
     const now = Date.now();
+    assertSessionTarget(shopperPrincipal(c.req.raw), userId);
     return c.json({
       ok: true,
       now,
       config: {
+        version: cfg.version,
         tauMs: cfg.tauMs,
         K: cfg.K,
         thetaIn: cfg.thetaIn,
@@ -342,11 +436,14 @@ realtimeRoutes.get('/reflex', async (c) => {
             .map((d) => [d.key, { tauMs: d.tauMs, K: d.K, thetaIn: d.thetaIn, thetaOut: d.thetaOut }])
         ),
       },
-      affinity: sessionData.reflex
-        ? { ...reflexSnapshot(sessionData.reflex, now, cfg), odpConfirmed: sessionData.odpSeed ?? [] }
+      affinity: personalizes(consent) && sessionData.reflex
+        ? { ...reflexSnapshot(sessionData.reflex, now, cfg), odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed }
         : null,
+      ...(!personalizes(consent) ? { journeyStage: null } : {}),
+      consent,
     });
   } catch (error) {
+      if (error instanceof SessionAccessError) throw error;
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'reflex snapshot failed' },
       500
@@ -359,32 +456,15 @@ realtimeRoutes.get('/reflex', async (c) => {
 // fresh reflex, fresh journey, geo cold-start hero. Powers the "New shopper" button
 // so presenters restart WITHOUT hunting for an incognito window.
 realtimeRoutes.post('/session/reset', async (c) => {
-  const cookieHeader = c.req.header('Cookie') ?? '';
-  const cookies: Record<string, string> = {};
-  for (const part of cookieHeader.split(';')) {
-    const i = part.indexOf('=');
-    if (i > 0) cookies[part.slice(0, i).trim()] = part.slice(i + 1).trim();
-  }
-  // Best-effort KV hygiene (TTL would reap these anyway).
-  const sid = cookies['opt_session_id'];
-  const uid = cookies['opt_user_id'];
-  // Scoped to the brand, or a reset on one brand would reach into another's session store.
-  const sessions = new TenantKV(c.env.SESSIONS as unknown as KVLike, c.get('tenant') ?? DEFAULT_TENANT);
-  try { if (sid) await sessions.delete(`session:${sid}`); } catch { /* best-effort */ }
-  try { if (uid) await sessions.delete(`user:${uid}`); } catch { /* best-effort */ }
-  // Expire every opt_* cookie the SessionManager sets (superset — extras are harmless).
-  const names = [
-    'opt_session_id', 'opt_user_id', 'opt_anonymous_id', 'opt_segments',
-    'opt_engagement_score', 'opt_last_update', 'opt_tracking_consent', 'opt_personalization_enabled',
-  ];
-  for (const name of names) {
-    c.header('Set-Cookie', `${name}=; Max-Age=0; Path=/; SameSite=Lax`, { append: true });
-  }
-  return c.json({ ok: true, cleared: !!sid });
+  const principal = shopperPrincipal(c.req.raw);
+  const session = await rotateObjectSession(c.env, principal, capabilityToken(c.req.raw)!, 'reset', c.req.header('Cookie'));
+  for (const header of new SessionManager(c.env, { tenant: principal.tenant }).clearCookieHeaders()) c.header('Set-Cookie', header, { append: true });
+  return c.json({ ok: true, cleared: true, session });
 });
 
 // Session preferences management
 const preferencesSchema = z.object({
+  choice: z.object({ id: z.string().regex(/^[A-Za-z0-9_-]{1,96}$/), expectedRevision: z.string().nullable(), grantId: z.string(), iat: z.number().int(), exp: z.number().int() }).strict().optional(),
   trackingConsent: z.boolean().optional(),
   personalizationEnabled: z.boolean().optional(),
   cookieConsent: z.boolean().optional(),
@@ -392,50 +472,50 @@ const preferencesSchema = z.object({
   userId: z.string().trim().min(1).max(200).optional(),
 });
 
-realtimeRoutes.post('/session/:sessionId/preferences', async (c) => {
+realtimeRoutes.on('POST', ['/session/preferences', '/session/:sessionId/preferences'], async (c) => {
   try {
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param('sessionId') ?? shopperPrincipal(c.req.raw).sessionId;
     const body = await c.req.json();
     const preferences = preferencesSchema.parse(body);
+    const principal = shopperPrincipal(c.req.raw);
+    assertSessionTarget(principal, preferences.userId, sessionId);
 
     if (!sessionId) {
       return c.json({ error: 'Session ID is required' }, 400);
     }
 
-    // CW31: the object host keeps the switches on the shopper's object; tell it, off the response path.
-    if ((c.env.REFLEX_HOST ?? 'session') === 'do' && preferences.userId) {
-      const told = shopperObject(c.env.SHOPPER_REFLEX, preferences.userId, c.get('tenant')).fetch('https://shopper-reflex/consent', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tracking: preferences.trackingConsent, personalization: preferences.personalizationEnabled }),
-      }).catch(() => undefined);
-      try { c.executionCtx.waitUntil(told); } catch { void told; }
+    const manager = new SessionManager(c.env, { tenant: principal.tenant, principal });
+    if (preferences.trackingConsent === undefined && preferences.personalizationEnabled === undefined) {
+      if (preferences.cookieConsent === undefined) return c.json({ error: 'Explicit preference required' }, 400);
+      const current = await manager.updateUserPreferences(sessionId, { cookieConsent: preferences.cookieConsent });
+      if (!current) return c.json({ error: 'Session not found' }, 404);
+      return c.json({ success: true, sessionId, preferences: current.preferences, consent: await currentOwnerConsent(), cookiesUpdated: false });
     }
-
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
-    const updatedSession = await segmentEngine.updateSessionPreferences(sessionId, preferences);
-
-    if (!updatedSession) {
-      return c.json({ error: 'Session not found' }, 404);
-    }
-
-    // Generate updated cookies
-    const cookies = await segmentEngine.getSessionPersonalizationConfig(sessionId);
-    if (cookies) {
-      cookies.cookieHeaders.forEach(cookieHeader => {
-        c.header('Set-Cookie', cookieHeader, { append: true });
+    if (!preferences.choice) return c.json({ error: 'Invalid explicit consent choice' }, 400);
+    // The object's necessary switch write is acknowledged before preference cookies.
+    {
+      const told = await shopperObject(c.env.SHOPPER_REFLEX, principal.subject, principal.tenant).fetch('https://shopper-reflex/consent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...privateShopperHeaders(c.req.raw) },
+        body: JSON.stringify({ tracking: preferences.trackingConsent, personalization: preferences.personalizationEnabled, choice: preferences.choice }),
       });
+      if (told.status === 404) return c.json({ error: 'Session not found' }, 404);
+      if (told.status === 409) return c.json({ error: 'Consent choice conflict' }, 409);
+      if (told.status === 400) return c.json({ error: 'Invalid explicit consent choice' }, 400);
+      if (!told.ok) throw new SessionAccessError();
+      const body = await told.json() as { ok?: unknown; consent?: unknown };
+      if (body.ok !== true || body.consent === undefined) throw new SessionAccessError();
+      const consent = storedConsent(body.consent);
+      if (preferences.cookieConsent !== undefined) await manager.updateUserPreferences(sessionId, { cookieConsent: preferences.cookieConsent });
+      assertSessionTarget(principal, undefined, sessionId);
+      const effective = { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization, cookieConsent: preferences.cookieConsent };
+      const cookieHeaders = manager.generateConsentCookieHeaders(effective, consent);
+      cookieHeaders.forEach(cookie => c.header('Set-Cookie', cookie, { append: true }));
+      return c.json({ success: true, sessionId, preferences: effective, consent, cookiesUpdated: cookieHeaders.length > 0, timestamp: Date.now() });
     }
-
-    return c.json({
-      success: true,
-      sessionId,
-      preferences: updatedSession.preferences,
-      cookiesUpdated: cookies?.cookieHeaders.length || 0 > 0,
-      timestamp: Date.now()
-    });
 
   } catch (error) {
-    console.error('Error updating session preferences:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error updating session preferences');
     
     if (error instanceof z.ZodError) {
       return c.json({
@@ -455,12 +535,16 @@ realtimeRoutes.post('/session/:sessionId/preferences', async (c) => {
 realtimeRoutes.get('/session/:sessionId/analytics', async (c) => {
   try {
     const sessionId = c.req.param('sessionId');
+    if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
+      const response = await shopperObject(c.env.SHOPPER_REFLEX, shopperPrincipal(c.req.raw).subject, c.get('tenant')).fetch('https://shopper-reflex/analytics', { headers: privateShopperHeaders(c.req.raw) });
+      return new Response(response.body, response);
+    }
     
     if (!sessionId) {
       return c.json({ error: 'Session ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant'), principal: shopperPrincipal(c.req.raw) });
     const analytics = await segmentEngine.getSessionAnalytics(sessionId);
 
     if (!analytics) {
@@ -474,7 +558,8 @@ realtimeRoutes.get('/session/:sessionId/analytics', async (c) => {
     });
 
   } catch (error) {
-    console.error('Error retrieving session analytics:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error retrieving session analytics');
     return c.json({
       error: 'Failed to retrieve session analytics',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -486,13 +571,18 @@ realtimeRoutes.get('/session/:sessionId/analytics', async (c) => {
 realtimeRoutes.get('/segments/:userId', async (c) => {
   try {
     const userId = c.req.param('userId');
+    if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
+      const response = await shopperObject(c.env.SHOPPER_REFLEX, shopperPrincipal(c.req.raw).subject, c.get('tenant')).fetch('https://shopper-reflex/segments', { headers: privateShopperHeaders(c.req.raw) });
+      return new Response(response.body, response);
+    }
     
     if (!userId) {
       return c.json({ error: 'User ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
-    const segments = await segmentEngine.getUserSegments(userId);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant'), principal: shopperPrincipal(c.req.raw) });
+    const segments = await segmentEngine.getUserSegments(userId, c.req.header('Cookie'));
+    assertSessionTarget(shopperPrincipal(c.req.raw), userId);
 
     return c.json({
       userId,
@@ -501,7 +591,8 @@ realtimeRoutes.get('/segments/:userId', async (c) => {
     });
 
   } catch (error) {
-    console.error('Error retrieving user segments:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error retrieving user segments');
     return c.json({
       error: 'Failed to retrieve user segments',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -520,13 +611,21 @@ realtimeRoutes.post('/segments/:userId', async (c) => {
     const userId = c.req.param('userId');
     const body = await c.req.json();
     const { segment, source } = assignSegmentSchema.parse(body);
+    assertSessionTarget(shopperPrincipal(c.req.raw), body.userId, body.sessionId);
+    if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
+      const response = await shopperObject(c.env.SHOPPER_REFLEX, shopperPrincipal(c.req.raw).subject, c.get('tenant')).fetch('https://shopper-reflex/segments', { method: 'POST', headers: { ...privateShopperHeaders(c.req.raw), 'Content-Type': 'application/json' }, body: JSON.stringify({ segment, source }) });
+      return new Response(response.body, response);
+    }
 
     if (!userId) {
       return c.json({ error: 'User ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
-    await segmentEngine.assignSegment(userId, segment, source);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant'), principal: shopperPrincipal(c.req.raw) });
+    if (!await segmentEngine.assignSegment(userId, segment, source, c.req.header('Cookie'))) {
+      return c.json({ ok: false, error: 'Shopper consent refused segment assignment' }, 403);
+    }
+    assertSessionTarget(shopperPrincipal(c.req.raw), userId);
 
     return c.json({
       success: true,
@@ -538,7 +637,8 @@ realtimeRoutes.post('/segments/:userId', async (c) => {
     });
 
   } catch (error) {
-    console.error('Error assigning segment:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error assigning segment');
     
     if (error instanceof z.ZodError) {
       return c.json({
@@ -558,23 +658,21 @@ realtimeRoutes.post('/segments/:userId', async (c) => {
 realtimeRoutes.get('/connections/:userId', async (c) => {
   try {
     const userId = c.req.param('userId');
+    if ((c.env.REFLEX_HOST ?? 'session') === 'do') await ownedConsent(c.env, shopperPrincipal(c.req.raw), capabilityToken(c.req.raw)!);
     
     if (!userId) {
       return c.json({ error: 'User ID is required' }, 400);
     }
 
     // Get the Durable Object instance for this user
-    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(c.get('tenant'), userId));
-    const durableObject = c.env.PERSONALIZATION_WEBSOCKET.get(id);
-    
-    // Request connection info from the Durable Object
-    const response = await durableObject.fetch(new Request('http://fake/connections?userId=' + userId));
+    const response = await ownerRelay(c.env, 'connections', c.get('tenant'), userId);
     const connectionInfo = await response.json() as Record<string, unknown>;
 
     return c.json(connectionInfo);
 
   } catch (error) {
-    console.error('Error retrieving connection info:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error retrieving connection info');
     return c.json({
       error: 'Failed to retrieve connection info',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -596,7 +694,8 @@ realtimeRoutes.get('/connections', async (c) => {
     return c.json(connectionsInfo);
 
   } catch (error) {
-    console.error('Error retrieving all connections:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error retrieving all connections');
     return c.json({
       error: 'Failed to retrieve connections info',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -614,7 +713,7 @@ realtimeRoutes.get('/health', async (c) => {
     const wsHealthData = await wsHealth.json();
 
     // Test segment engine by creating a dummy instance
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant') });
     const testProfile = await segmentEngine.getUserProfile('health-check-user');
     
     return c.json({
@@ -632,7 +731,8 @@ realtimeRoutes.get('/health', async (c) => {
     });
 
   } catch (error) {
-    console.error('Health check failed:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Health check failed');
     return c.json({
       status: 'unhealthy',
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -719,7 +819,7 @@ realtimeRoutes.post('/demo/trigger', async (c) => {
     }
 
     // Process the demo action event
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant') });
     const personalizationUpdate = await segmentEngine.processActionEvent(actionEvent);
 
     return c.json({
@@ -731,7 +831,8 @@ realtimeRoutes.post('/demo/trigger', async (c) => {
     });
 
   } catch (error) {
-    console.error('Error triggering demo scenario:', error);
+      if (error instanceof SessionAccessError) throw error;
+    console.error('Error triggering demo scenario');
     
     if (error instanceof z.ZodError) {
       return c.json({
@@ -750,7 +851,8 @@ realtimeRoutes.post('/demo/trigger', async (c) => {
 /**
  * Persist one demo-run shopper action into D1 `demo_events` (source='demo').
  *
- * This is the SINGLE demo-event write path. Rows here are isolated from the
+ * This is the action-event capture path; /funnel/event also writes demo rows.
+ * Both use the same explicit development-demo gate. Rows are separate from the
  * historical synthetic dataset (coach_odp_profiles / coach_transactions /
  * coach_purchase_items), so POST /operator/events/reset can delete ONLY these and
  * never touch history. Opal aggregates these via v_demo_profiles into
@@ -766,34 +868,14 @@ function captureCatalog(): CatalogService {
   return (_captureCatalog = _captureCatalog ?? new CatalogService());
 }
 
-/**
- * Should this deployment write demo events to D1 at all?
- *
- * The write is a per-request insert into a single-primary SQLite from every edge
- * location. Fine at demo volume; the wrong shape for a decision path at Black
- * Friday volume, and the kind of thing that survives into production precisely
- * because it works fine until then. So it is fenced here, at the single write
- * path, and production is OFF by omission: nobody has to remember to disable it.
- */
-export function demoEventCaptureEnabled(env: Pick<Env, 'DEMO_EVENT_CAPTURE' | 'ENVIRONMENT'>): boolean {
-  const flag = (env.DEMO_EVENT_CAPTURE ?? '').trim().toLowerCase();
-  if (flag === 'true') return true;
-  if (flag === 'false') return false;
-  // With no flag, capture only in an environment that has NAMED itself something
-  // other than production. A missing ENVIRONMENT is treated as production: the
-  // failure "demo reset shows nothing" is visible and fixable, and the failure
-  // "per-request D1 writes in production" is neither.
-  const environment = (env.ENVIRONMENT ?? '').trim().toLowerCase();
-  return environment !== '' && environment !== 'production';
-}
-
 async function captureDemoEvent(
   env: Env,
+  tenant: string | undefined,
   event: ActionEvent,
   sessionId?: string
 ): Promise<void> {
   try {
-    if (!demoEventCaptureEnabled(env)) return;
+    if (!demoEventCaptureEnabled(env, tenant)) return;
     if (!env.DB) return; // D1 not bound (e.g. some test envs) — skip silently
     const d = event.data ?? {};
     const vuid = event.anonymousId ?? event.userId;
@@ -830,7 +912,7 @@ async function captureDemoEvent(
       )
       .run();
   } catch (err) {
-    console.error('captureDemoEvent failed (non-fatal):', err);
+    console.error('captureDemoEvent failed (non-fatal)');
   }
 }
 

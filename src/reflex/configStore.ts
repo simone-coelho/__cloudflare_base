@@ -11,10 +11,10 @@
 //
 // Three properties this module exists to guarantee:
 //
-//   1. THE ENGINE NEVER BREAKS ON CONFIG. Every failure path — missing key, KV
-//      outage, malformed JSON, a config that violates an invariant — resolves to
-//      DEFAULT_REFLEX_CONFIG *by identity*. Tuning can be wrong; it can never
-//      take the decision path down.
+//   1. CONFIGURATION BELONGS TO ITS SCOPE. Legacy demo scopes retain compiled
+//      defaults on unavailable configuration. Other tenants require a valid
+//      authored document and fail explicitly when it is unavailable; demo
+//      dimensions and weights cannot silently become customer configuration.
 //
 //   2. AN INVALID CONFIG IS NEVER STORED. validate() runs before any write, and
 //      the hysteresis invariant (θ_out < θ_in, per effective dimension) is
@@ -40,18 +40,48 @@
 
 import { DEFAULT_REFLEX_CONFIG, type DimensionSpec, type ReflexConfig } from '@/reflex/core';
 import type { Env } from '@/types/env';
+import { readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
 import * as store from '@/config/versionedStore';
 import { deepFreeze, structuredCopy } from '@/config/versionedStore';
+import { DEFAULT_TENANT, isValidTenantId, type TenantId } from '@/tenancy/tenant';
 
 /**
- * Config scope. Today this is the demo surface ('coach' | 'brighthour'). CW1
- * (multi-tenancy) makes it '{tenant}:{surface}' — the key builder below is the
- * only place that has to learn about it, which is why scope is a string here and
- * not the DemoSurface union.
+ * Physical versioned-document scope. Use reflexScopeForTenant at tenant runtime
+ * boundaries. The two legacy demo scopes are retained; real brighthour uses a
+ * disjoint scope while other existing tenant scopes keep their physical keys.
  */
 export type ConfigScope = string;
 
 export const DEFAULT_SCOPE: ConfigScope = 'coach';
+
+/** Demo scopes retain their historical keys; a real BrightHour tenant is disjoint. */
+export function reflexScopeForTenant(tenant: TenantId, surface: 'coach' | 'brighthour' = 'coach'): ConfigScope {
+  if (!isValidTenantId(tenant)) throw new Error('Invalid Reflex tenant');
+  return tenant === DEFAULT_TENANT ? surface : tenant === 'brighthour' ? 'tenant:brighthour' : tenant;
+}
+
+export function isDemoConfigScope(scope: ConfigScope): boolean {
+  return scope === 'coach' || scope === 'brighthour';
+}
+
+export class ReflexConfigUnavailableError extends Error {
+  constructor(scope: ConfigScope) {
+    super(`Reflex configuration unavailable for scope "${scope}"`);
+    this.name = 'ReflexConfigUnavailableError';
+  }
+}
+
+/** Shared operator selection; selectors describe storage, not tenant membership. */
+export function reflexScopeFromSelectors(tenant?: string, scope?: string): ConfigScope {
+  if (tenant !== undefined && !isValidTenantId(tenant)) throw new Error('Invalid Reflex tenant');
+  if (scope !== undefined && !isDemoConfigScope(scope) && !isValidTenantId(scope) && scope !== 'tenant:brighthour') {
+    throw new Error('Invalid Reflex scope');
+  }
+  if (tenant === undefined) return scope ?? DEFAULT_SCOPE;
+  const selected = reflexScopeForTenant(tenant);
+  if (scope !== undefined && scope !== selected) throw new Error('Conflicting Reflex tenant and scope');
+  return selected;
+}
 
 /** Inherited from the generic store so there is one number, not two. */
 export const CACHE_TTL_MS = store.CACHE_TTL_MS;
@@ -60,10 +90,9 @@ export const INDEX_LIMIT = store.INDEX_LIMIT;
 /**
  * A stored config plus who changed it, when, and why.
  *
- * `config` is the EFFECTIVE config: the document as stored, with any weight the
- * document does not mention filled from the compiled default for its scope (see
- * inheritWeights). `inherited` names those weights, so a surface can show them
- * and a reader can tell inherited from authored.
+ * Demo configs inherit missing weights from their compiled defaults.
+ * Non-default tenant configs retain exactly their authored weights.
+ * `inherited` names any demo weights filled by the reader.
  */
 export interface ConfigRevision {
   revision: number;
@@ -73,6 +102,9 @@ export interface ConfigRevision {
   actor: string;
   note: string;
   at: number;
+  publication?: { revision: number; digest: string };
+  /** Exact authored document, distinct from demo-only effective inheritance. */
+  authored: ReflexConfig;
 }
 
 export interface ConfigIndexEntry {
@@ -286,7 +318,7 @@ export function stampVersion(baseVersion: string, revision: number): string {
 //
 // The rule, decided with the outcome-learning session (doc 24 addendum 7):
 //
-//   WEIGHTS: absent means INHERIT. A weight the document does not mention is
+//   DEMO WEIGHTS: absent means INHERIT. A weight the document does not mention is
 //   filled from the compiled default for the scope, so a new action carries its
 //   default weight everywhere until a person tunes it. Explicit ZERO means OFF,
 //   and is kept. This is the only way to switch an action off; deleting the key
@@ -302,14 +334,18 @@ export function stampVersion(baseVersion: string, revision: number): string {
 // build), so a replay on the same build reproduces the same effective config.
 // The stamped version still identifies the stored document.
 
-/** The compiled default a scope inherits from. Brighthour has its own; every other scope is the engine default. */
+/** Only legacy demo scopes have compiled defaults. Customer configuration is authored. */
 export async function compiledDefaultFor(scope: ConfigScope): Promise<ReflexConfig> {
   if (scope === 'brighthour') {
     const { BRIGHTHOUR_REFLEX_CONFIG } = await import('@/demos/brighthour/reflexConfig');
     return BRIGHTHOUR_REFLEX_CONFIG;
   }
-  return DEFAULT_REFLEX_CONFIG;
+  if (scope === DEFAULT_SCOPE) return DEFAULT_REFLEX_CONFIG;
+  throw new ReflexConfigUnavailableError(scope);
 }
+
+const defaultsFor = (scope: ConfigScope): Promise<ReflexConfig | null> =>
+  isDemoConfigScope(scope) ? compiledDefaultFor(scope) : Promise.resolve(null);
 
 /** Pure. The effective config and the names of the weights that were filled in. */
 export function inheritWeights(stored: ReflexConfig, defaults: ReflexConfig): { config: ReflexConfig; inherited: string[] } {
@@ -324,7 +360,8 @@ export function inheritWeights(stored: ReflexConfig, defaults: ReflexConfig): { 
  * Pure. What a person should be told about a document that is valid but has
  * drifted from the compiled default. Never blocks a write.
  */
-export function configWarnings(candidate: ReflexConfig, defaults: ReflexConfig): string[] {
+export function configWarnings(candidate: ReflexConfig, defaults: ReflexConfig | null): string[] {
+  if (!defaults) return [];
   const have = new Set(candidate.dimensions.map((d) => d.key));
   const warnings: string[] = [];
   for (const d of defaults.dimensions) {
@@ -337,6 +374,7 @@ export function configWarnings(candidate: ReflexConfig, defaults: ReflexConfig):
 
 export const REFLEX_KIND: store.DocumentKind<ReflexConfig> = {
   name: 'reflex',
+  publication: 'r2',
   validate(candidate) {
     const r = validateReflexConfig(candidate);
     return r.ok ? { ok: true, value: r.config } : { ok: false, errors: r.errors };
@@ -352,45 +390,45 @@ export function invalidateConfigCache(scope?: ConfigScope): void {
   store.invalidateCache(REFLEX_KIND.name, scope);
 }
 
-/** A stored revision as the effective config: weights the document omits filled from the scope's default. */
-const asConfigRevision = (r: store.Revision<ReflexConfig> | null, defaults: ReflexConfig): ConfigRevision | null => {
+/** Stored revision; only demo scopes fill missing weights from their defaults. */
+const asConfigRevision = (r: store.Revision<ReflexConfig> | null, defaults: ReflexConfig | null): ConfigRevision | null => {
   if (r === null) return null;
-  const { config, inherited } = inheritWeights(r.value, defaults);
-  return { revision: r.revision, config, inherited, actor: r.actor, note: r.note, at: r.at };
+  const { config, inherited } = defaults ? inheritWeights(r.value, defaults) : { config: r.value, inherited: [] };
+  return { revision: r.revision, config, authored: r.value, publication: r.publication, inherited, actor: r.actor, note: r.note, at: r.at };
 };
 
-const asWriteResult = (r: store.WriteResult<ReflexConfig>, defaults: ReflexConfig): WriteResult =>
+const asWriteResult = (r: store.WriteResult<ReflexConfig>, defaults: ReflexConfig | null): WriteResult =>
   r.ok ? { ok: true, revision: asConfigRevision(r.revision, defaults) as ConfigRevision } : r;
 
 /**
  * The stored revision for a scope, or null when nothing is stored or what is
  * stored cannot be trusted. Never throws. The config returned is the EFFECTIVE
- * one (inheritWeights), for every reader: the decision path, the content
- * service's direct read, and the routes.
+ * one for every reader, with inheritance restricted to demo scopes.
  */
 export async function readReflexConfigRevision(
-  env: Env, scope: ConfigScope = DEFAULT_SCOPE, nowMs: number = Date.now(),
+  env: Env, scope: ConfigScope = DEFAULT_SCOPE, nowMs: number = Date.now(), pin?: PublicationPin, administrative = false,
 ): Promise<ConfigRevision | null> {
-  const stored = await store.readRevision(env, REFLEX_KIND, scope, nowMs);
+  const stored = pin ? await readPinnedPublication(env, REFLEX_KIND, scope, pin)
+    : administrative ? await readPublication(env, REFLEX_KIND, scope) : await store.readRevision(env, REFLEX_KIND, scope, nowMs);
   if (stored === null) return null;
-  return asConfigRevision(stored, await compiledDefaultFor(scope));
+  return asConfigRevision(stored, await defaultsFor(scope));
 }
 
 /**
- * The config the engine should score with. Falls back to DEFAULT_REFLEX_CONFIG
- * BY IDENTITY, which is what callers holding the constant already compare against.
+ * The config the engine should score with. Only demo scopes may fall back to a
+ * compiled default, by identity; unavailable tenant configuration throws.
  */
 export async function readReflexConfig(
   env: Env, scope: ConfigScope = DEFAULT_SCOPE, nowMs: number = Date.now(),
 ): Promise<ReflexConfig> {
-  return (await readReflexConfigRevision(env, scope, nowMs))?.config ?? DEFAULT_REFLEX_CONFIG;
+  return (await readReflexConfigRevision(env, scope, nowMs))?.config ?? await compiledDefaultFor(scope);
 }
 
 /** A specific historical revision, for diffing, replay and rollback. Effective, like the current one. */
 export async function readReflexConfigVersion(
   env: Env, scope: ConfigScope, revision: number,
 ): Promise<ConfigRevision | null> {
-  return asConfigRevision(await store.readVersion(env, REFLEX_KIND, scope, revision), await compiledDefaultFor(scope));
+  return asConfigRevision(await store.readVersion(env, REFLEX_KIND, scope, revision), await defaultsFor(scope));
 }
 
 export async function readConfigIndex(
@@ -403,13 +441,17 @@ export interface WriteMeta {
   actor: string;
   note?: string;
   nowMs?: number;
+  expectedRevision?: number;
+  operationId?: string;
+  expectedPublication?: { revision: number; digest: string };
+  authorize?: () => Promise<void>;
 }
 
 /** Validate, version, store, audit. */
 export async function writeReflexConfig(
   env: Env, scope: ConfigScope, candidate: unknown, meta: WriteMeta,
 ): Promise<WriteResult> {
-  return asWriteResult(await store.write(env, REFLEX_KIND, scope, candidate, meta), await compiledDefaultFor(scope));
+  return asWriteResult(await store.write(env, REFLEX_KIND, scope, candidate, meta), await defaultsFor(scope));
 }
 
 /**
@@ -464,8 +506,8 @@ export async function patchReflexConfig(
 ): Promise<WriteResult> {
   // The base when nothing is stored yet is the SCOPE's compiled default, not the
   // engine's: a first patch on brighthour starts from brighthour's weights.
-  const defaults = await compiledDefaultFor(scope);
-  return asWriteResult(await store.patch(env, REFLEX_KIND, scope, defaults, patch, meta), defaults);
+  const defaults = await defaultsFor(scope);
+  return asWriteResult(await store.patch(env, REFLEX_KIND, scope, defaults as ReflexConfig, patch, meta), defaults);
 }
 
 /**
@@ -476,5 +518,5 @@ export async function patchReflexConfig(
 export async function rollbackReflexConfig(
   env: Env, scope: ConfigScope, toRevision: number, meta: WriteMeta,
 ): Promise<WriteResult> {
-  return asWriteResult(await store.rollback(env, REFLEX_KIND, scope, toRevision, meta), await compiledDefaultFor(scope));
+  return asWriteResult(await store.rollback(env, REFLEX_KIND, scope, toRevision, meta), await defaultsFor(scope));
 }

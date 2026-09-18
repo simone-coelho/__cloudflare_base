@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-12T15:54:07.580Z",
+  "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/replay.ts src/learn/phase3.test.ts src/ledger/ledger.test.ts",
+  "session_id": 15201,
+  "captures": [
+    {
+      "chunk_id": "d13f96",
+      "wall_time_seconds": 1.00123245,
+      "session_id": 15201,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "e94ca9",
+      "wall_time_seconds": 0.000002241,
+      "exit_code": 0,
+      "original_token_count": 54,
+      "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  158:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 1 problem (0 errors, 1 warning)\n\n"
+    }
+  ],
+  "drained": true,
+  "exit_code": 0,
+  "errors": 0,
+  "warnings": 1
+}

@@ -1,0 +1,31 @@
+{
+  "before": {
+    "id": "D10",
+    "canonical": {
+      "title": "Missing signature workflows and architectural substitutions",
+      "boundary": "Authorized commercial/customer/delivery owners: establish entitlement/feed evidence, deliver missing workflows, and explicitly approve any change to enrichment/search/warehouse/ODP/package or embedding/anonymous-linkage commitments. No internal relabeling closes them."
+    },
+    "state": "pending",
+    "record": null
+  },
+  "after": {
+    "id": "D10",
+    "canonical": {
+      "title": "Missing signature workflows and architectural substitutions",
+      "boundary": "Authorized commercial/customer/delivery owners: establish entitlement/feed evidence, deliver missing workflows, and explicitly approve any change to enrichment/search/warehouse/ODP/package or embedding/anonymous-linkage commitments. No internal relabeling closes them."
+    },
+    "state": "pending",
+    "record": null,
+    "pending_request": {
+      "at": "2026-09-11T14:23:59Z",
+      "scope": "W14 §§1.8/1.12 scheduled Snowflake delivery only; no implementation admitted.",
+      "owner": "Authorized customer/delivery integration owner with D06 privacy and D08 topology owners",
+      "question": "What is the agreed Snowflake transfer interface and responsible delivery owner?",
+      "next_action": "Obtain the agreed Snowflake transfer interface and accountable delivery owner for W14 §§1.8/1.12 before admitting scheduled delivery. Record destination/mechanism/credential-binding responsibility, cadence/late-arrival and event/identity mapping, destination acknowledgement/readback and remote deletion reconciliation with D10/D06/D08 owners. No credentials in chat/evidence. Then admit one concrete customer-neutral local adapter with minimal synthetic checks; no speculative NDJSON endpoint, default destination/schedule, external operations or scope substitution. W14.06 remains accepted unchanged. Other authorized local remediation is not blocked globally.",
+      "preflight": {
+        "path": "docs/remediation/decisions/D10-warehouse-preflight-2026-09-11.json",
+        "sha256": "3c685cc52305d9e0e5faaaf67992f3f6bcbdd6781b3fc5c77ea06b8c2a8ca19f"
+      }
+    }
+  }
+}

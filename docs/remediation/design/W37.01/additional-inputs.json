@@ -1,0 +1,31 @@
+{
+  "at": "2026-09-09T03:36:29.633Z",
+  "reason": "Concrete JSON module imports consumed by actual audience/default-demo fixtures; original baseline remains unchanged, these pins captured at actual current time before checks, not backdated. No source writes authorized in these files.",
+  "pins": [
+    {
+      "path": "src/data/coach-catalog.json",
+      "sha256": "43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e",
+      "role": "source"
+    },
+    {
+      "path": "src/data/insights.json",
+      "sha256": "e6b29448440dd4e4712feb38c99ce485e6badee2aaee1f14401f40211caf3bf9",
+      "role": "source"
+    },
+    {
+      "path": "src/data/signals.json",
+      "sha256": "3dfc6d73e161483092232fadecfc66ed5747daeb8aa57147b118a6a5529877c3",
+      "role": "source"
+    },
+    {
+      "path": "src/demos/brighthour/catalog.data.json",
+      "sha256": "a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6",
+      "role": "source"
+    },
+    {
+      "path": "src/demos/brighthour/staging.data.json",
+      "sha256": "95f6947b89fe85d18e8a979fc9105aad3f0b4ed385614f4527533c4f40d5344f",
+      "role": "source"
+    }
+  ]
+}

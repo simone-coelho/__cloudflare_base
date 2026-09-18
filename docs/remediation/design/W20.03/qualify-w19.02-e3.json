@@ -1,0 +1,532 @@
+{
+  "before": {
+    "id": "W19.02-E3",
+    "task_id": "W19.02",
+    "check_id": "W19.02-K3",
+    "criterion_ids": [
+      "W19.02-C1",
+      "W19.02-C2",
+      "W19.02-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W19.02/review.json",
+      "sha256": "a4c5fc19a082cdfb2ff17d5721b63d3dd9e4dcbd582e166b906b95e6dca667f2"
+    },
+    "at": "2026-09-13T17:39:09.015Z",
+    "limitations": "Bounded content-type loop repair only: authoritative held tags.contentType drives future learning, absent own tag uses safe type on live decision input without rewriting catalog/render metadata. Whole canonical lists1..8 distinct trimmed1..64 code-unit strings, no controls/angle brackets/reserved prototype names; malformed explicit tags retain historical scoring but produce no new canonical touches. Catalog-dimension tags are arrays independent of raw event source/multi mapping; non-derived registered contentType key required for held touches. Idless or successful catalog miss retains existing sanitized event fallback, not authenticated exposure/asset provenance. When contentType is not configured, legacy event extraction runs without lookup or added content-ID validation; invalid-ID refusal applies with that dimension configured. Catalog read failure refuses before new affinity/population effects; existing30s publication cache/staleness and cold-read cost remain. No historical profile migration or event backfill; retained replay runs its original tag-only scoring by absent marker. Full W19/F27/N15 registry/locale/slot/unusable-taxonomy/inheritance/customer feed acceptance remains open; native whole-path latency, W35 authority, gates and release separate. No SDK/build/install/new infrastructure/broad suite/cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy action.",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentTelemetry.test.ts src/routes/realtime.sdkContract.test.ts src/content/consent.test.ts src/learn/phase3.test.ts -t 'W19.02|W37.02 sends scored content|W27.02|W28.01|w_ext × score joins|turns the SDK contentType|ignores attributes the registry|picks up a second attribute|runs through the sanitizer' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct frozen Astra/xhigh source review and fixed14 once; reuse final static.",
+    "workload": "Exact canonical/missing/malformed types, both-host owned effects, actual new/legacy replay, deterministic source/retained limits.",
+    "result": "pass",
+    "artifact_digest": "2f8c3bb053d4b4e2181ab5175300dc5111ad7511c899539948d30b3e4745e87d",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "157f99921fb325b1f18fc5381f41a6e90857f53e45362d7894c3349d4a58ae0b",
+      "configuration": "Bounded content-type loop repair only: authoritative held tags.contentType drives future learning, absent own tag uses safe type on live decision input without rewriting catalog/render metadata. Whole canonical lists1..8 distinct trimmed1..64 code-unit strings, no controls/angle brackets/reserved prototype names; malformed explicit tags retain historical scoring but produce no new canonical touches. Catalog-dimension tags are arrays independent of raw event source/multi mapping; non-derived registered contentType key required for held touches. Idless or successful catalog miss retains existing sanitized event fallback, not authenticated exposure/asset provenance. When contentType is not configured, legacy event extraction runs without lookup or added content-ID validation; invalid-ID refusal applies with that dimension configured. Catalog read failure refuses before new affinity/population effects; existing30s publication cache/staleness and cold-read cost remain. No historical profile migration or event backfill; retained replay runs its original tag-only scoring by absent marker. Full W19/F27/N15 registry/locale/slot/unusable-taxonomy/inheritance/customer feed acceptance remains open; native whole-path latency, W35 authority, gates and release separate. No SDK/build/install/new infrastructure/broad suite/cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy action.",
+      "files": [
+        {
+          "path": "src/reflex/contentTelemetry.ts",
+          "role": "output",
+          "sha256": "8153296908e6fbca19b20b45d447b635f1d20539b09d79f723ebb283551a770e"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "role": "output",
+          "sha256": "9dfec44e96b4bcbaeac12042bebb1d12dbf71614a1d42c31349449baa474b424"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "role": "output",
+          "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "output",
+          "sha256": "e694ea191d5fbbc32c3fbfe7bcf1c48fe1202ca1d6f58082d3f13e3f5970bbdd"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "output",
+          "sha256": "d2655c524599c346fe9c70be050d2d9a8eee073538af6ffc0a8b921e183150ca"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "output",
+          "sha256": "39c738558649397814fb8dcb66c7a13ffced8546f6e13ae0e1847483ad1800a1"
+        },
+        {
+          "path": "src/reflex/contentTelemetry.test.ts",
+          "role": "output",
+          "sha256": "b935143847202c5c2df9617c603e7f54e9e9decd55f69231e4f74290a9072aec"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "role": "output",
+          "sha256": "f0d87963b59b50c80ca934826d5f04d8d4c67c6801e15b73e0bdcc68e708326f"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "role": "output",
+          "sha256": "a25cc3c0e53ff0ce8c759ffe33a4a137b2b15c28276399cb727e3c7879156a24"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "d9a75879b1c760831bb930c4893aac9115147fcffc9ac757a086513bdff0af56"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "output",
+          "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+        },
+        {
+          "path": "src/reflex/regionTrend.ts",
+          "role": "source",
+          "sha256": "e32bf1887ad7c9d7eb4a5fbdf6a78639f76a5927fefc9b88a327875385434f16"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+        },
+        {
+          "path": "src/content/import.ts",
+          "role": "source",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "role": "source",
+          "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "role": "source",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "role": "source",
+          "sha256": "a52f5d1b39a934c893b2d701076573593aa76017f824c88e44e623c3efeb903f"
+        },
+        {
+          "path": "src/sdk/emit.ts",
+          "role": "source",
+          "sha256": "4fc50a87c17cdfda2eb4fefdef5bb10017392db42f9ea941485154d1da2c10b6"
+        },
+        {
+          "path": "src/sdk/wire.ts",
+          "role": "source",
+          "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F27.md",
+          "role": "source",
+          "sha256": "61a44d769aa90bf3e064dc91b2b9d44fc4f0bf05906ffa1b41724ef0bc5f1f02"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-customer-facing-promises.md",
+          "role": "source",
+          "sha256": "b4b6ee77d65101a63557cd38f4c992c6d7cb836be07ae10aefad57835c9859a0"
+        },
+        {
+          "path": "docs/content-personalization-design-tapestry.html",
+          "role": "source",
+          "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+        },
+        {
+          "path": "public/data/coach-content.json",
+          "role": "source",
+          "sha256": "f1443a740cf5b99c87c6aa294ec180233c6b99dc8b385ad1cf43bb4fc58afaaf"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "role": "output",
+          "sha256": "883930220e131097796a3fe75283438eb8266f601927cf35909d204cedf46d8e"
+        },
+        {
+          "path": "src/content/typeAffinity.ts",
+          "role": "output",
+          "sha256": "77b15db553d04e72c838fc0844fc72d6fdd862b5986f0557a3d0ff4b6aef79c7"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.02/worker.json",
+          "role": "output",
+          "sha256": "d3462e313572ac373e717d96ef99e72d738f62b99aa54f88b4166ec99e3790e3"
+        },
+        {
+          "path": "docs/remediation/design/W19.02/plan.md",
+          "role": "configuration",
+          "sha256": "9963ccd4b90d034e819f45dc65beb935f41e2c67b426ac9a749a4fad103f89f2"
+        },
+        {
+          "path": "docs/remediation/design/W19.02/baseline.json",
+          "role": "configuration",
+          "sha256": "0be98afc121df99ab5a484c631713adc4cf985d08cf3d7bb76a63553700e074e"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.02/admission.json",
+          "role": "configuration",
+          "sha256": "b7377c79347bade9fda0af0d67b783e5490f9837ea667ff2615682b71833eb93"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.02/source-freeze.json",
+          "sha256": "df08f56519ee44a6033c856414a9ecaa086241a600f8a1da6f39bb4158f37bb9",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.02/source-deltas.json",
+          "sha256": "188d1f95793869a27d6043aa55224ef641d13bc40b4f3b84c616e1d2f877d9ed",
+          "role": "configuration"
+        }
+      ],
+      "digest": "2f8c3bb053d4b4e2181ab5175300dc5111ad7511c899539948d30b3e4745e87d"
+    }
+  },
+  "after": {
+    "id": "W19.02-E3",
+    "task_id": "W19.02",
+    "check_id": "W19.02-K3",
+    "criterion_ids": [
+      "W19.02-C1",
+      "W19.02-C2",
+      "W19.02-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W19.02/review.json",
+      "sha256": "a4c5fc19a082cdfb2ff17d5721b63d3dd9e4dcbd582e166b906b95e6dca667f2"
+    },
+    "at": "2026-09-13T17:39:09.015Z",
+    "limitations": "Bounded content-type loop repair only: authoritative held tags.contentType drives future learning, absent own tag uses safe type on live decision input without rewriting catalog/render metadata. Whole canonical lists1..8 distinct trimmed1..64 code-unit strings, no controls/angle brackets/reserved prototype names; malformed explicit tags retain historical scoring but produce no new canonical touches. Catalog-dimension tags are arrays independent of raw event source/multi mapping; non-derived registered contentType key required for held touches. Idless or successful catalog miss retains existing sanitized event fallback, not authenticated exposure/asset provenance. When contentType is not configured, legacy event extraction runs without lookup or added content-ID validation; invalid-ID refusal applies with that dimension configured. Catalog read failure refuses before new affinity/population effects; existing30s publication cache/staleness and cold-read cost remain. No historical profile migration or event backfill; retained replay runs its original tag-only scoring by absent marker. Full W19/F27/N15 registry/locale/slot/unusable-taxonomy/inheritance/customer feed acceptance remains open; native whole-path latency, W35 authority, gates and release separate. No SDK/build/install/new infrastructure/broad suite/cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy action.",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentTelemetry.test.ts src/routes/realtime.sdkContract.test.ts src/content/consent.test.ts src/learn/phase3.test.ts -t 'W19.02|W37.02 sends scored content|W27.02|W28.01|w_ext × score joins|turns the SDK contentType|ignores attributes the registry|picks up a second attribute|runs through the sanitizer' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct frozen Astra/xhigh source review and fixed14 once; reuse final static.",
+    "workload": "Exact canonical/missing/malformed types, both-host owned effects, actual new/legacy replay, deterministic source/retained limits.",
+    "result": "pass",
+    "artifact_digest": "2f8c3bb053d4b4e2181ab5175300dc5111ad7511c899539948d30b3e4745e87d",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "157f99921fb325b1f18fc5381f41a6e90857f53e45362d7894c3349d4a58ae0b",
+      "configuration": "Bounded content-type loop repair only: authoritative held tags.contentType drives future learning, absent own tag uses safe type on live decision input without rewriting catalog/render metadata. Whole canonical lists1..8 distinct trimmed1..64 code-unit strings, no controls/angle brackets/reserved prototype names; malformed explicit tags retain historical scoring but produce no new canonical touches. Catalog-dimension tags are arrays independent of raw event source/multi mapping; non-derived registered contentType key required for held touches. Idless or successful catalog miss retains existing sanitized event fallback, not authenticated exposure/asset provenance. When contentType is not configured, legacy event extraction runs without lookup or added content-ID validation; invalid-ID refusal applies with that dimension configured. Catalog read failure refuses before new affinity/population effects; existing30s publication cache/staleness and cold-read cost remain. No historical profile migration or event backfill; retained replay runs its original tag-only scoring by absent marker. Full W19/F27/N15 registry/locale/slot/unusable-taxonomy/inheritance/customer feed acceptance remains open; native whole-path latency, W35 authority, gates and release separate. No SDK/build/install/new infrastructure/broad suite/cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy action.",
+      "files": [
+        {
+          "path": "src/reflex/contentTelemetry.ts",
+          "role": "output",
+          "sha256": "8153296908e6fbca19b20b45d447b635f1d20539b09d79f723ebb283551a770e"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "role": "output",
+          "sha256": "9dfec44e96b4bcbaeac12042bebb1d12dbf71614a1d42c31349449baa474b424"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "role": "output",
+          "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "output",
+          "sha256": "e694ea191d5fbbc32c3fbfe7bcf1c48fe1202ca1d6f58082d3f13e3f5970bbdd"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "output",
+          "sha256": "d2655c524599c346fe9c70be050d2d9a8eee073538af6ffc0a8b921e183150ca"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "output",
+          "sha256": "39c738558649397814fb8dcb66c7a13ffced8546f6e13ae0e1847483ad1800a1"
+        },
+        {
+          "path": "src/reflex/contentTelemetry.test.ts",
+          "role": "output",
+          "sha256": "b935143847202c5c2df9617c603e7f54e9e9decd55f69231e4f74290a9072aec"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "role": "output",
+          "sha256": "f0d87963b59b50c80ca934826d5f04d8d4c67c6801e15b73e0bdcc68e708326f"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "role": "output",
+          "sha256": "a25cc3c0e53ff0ce8c759ffe33a4a137b2b15c28276399cb727e3c7879156a24"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "d9a75879b1c760831bb930c4893aac9115147fcffc9ac757a086513bdff0af56"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "output",
+          "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+        },
+        {
+          "path": "src/reflex/regionTrend.ts",
+          "role": "source",
+          "sha256": "e32bf1887ad7c9d7eb4a5fbdf6a78639f76a5927fefc9b88a327875385434f16"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "8f23649991a104bdd6f9ed612e80e3c294664a06162b6b090475d2e3e4580145"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+        },
+        {
+          "path": "src/content/import.ts",
+          "role": "source",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "role": "source",
+          "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "role": "source",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "role": "source",
+          "sha256": "a52f5d1b39a934c893b2d701076573593aa76017f824c88e44e623c3efeb903f"
+        },
+        {
+          "path": "src/sdk/emit.ts",
+          "role": "source",
+          "sha256": "4fc50a87c17cdfda2eb4fefdef5bb10017392db42f9ea941485154d1da2c10b6"
+        },
+        {
+          "path": "src/sdk/wire.ts",
+          "role": "source",
+          "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F27.md",
+          "role": "source",
+          "sha256": "61a44d769aa90bf3e064dc91b2b9d44fc4f0bf05906ffa1b41724ef0bc5f1f02"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-customer-facing-promises.md",
+          "role": "source",
+          "sha256": "b4b6ee77d65101a63557cd38f4c992c6d7cb836be07ae10aefad57835c9859a0"
+        },
+        {
+          "path": "docs/content-personalization-design-tapestry.html",
+          "role": "source",
+          "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+        },
+        {
+          "path": "public/data/coach-content.json",
+          "role": "source",
+          "sha256": "f1443a740cf5b99c87c6aa294ec180233c6b99dc8b385ad1cf43bb4fc58afaaf"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "role": "output",
+          "sha256": "883930220e131097796a3fe75283438eb8266f601927cf35909d204cedf46d8e"
+        },
+        {
+          "path": "src/content/typeAffinity.ts",
+          "role": "output",
+          "sha256": "77b15db553d04e72c838fc0844fc72d6fdd862b5986f0557a3d0ff4b6aef79c7"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.02/worker.json",
+          "role": "output",
+          "sha256": "d3462e313572ac373e717d96ef99e72d738f62b99aa54f88b4166ec99e3790e3"
+        },
+        {
+          "path": "docs/remediation/design/W19.02/plan.md",
+          "role": "configuration",
+          "sha256": "9963ccd4b90d034e819f45dc65beb935f41e2c67b426ac9a749a4fad103f89f2"
+        },
+        {
+          "path": "docs/remediation/design/W19.02/baseline.json",
+          "role": "configuration",
+          "sha256": "0be98afc121df99ab5a484c631713adc4cf985d08cf3d7bb76a63553700e074e"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.02/admission.json",
+          "role": "configuration",
+          "sha256": "b7377c79347bade9fda0af0d67b783e5490f9837ea667ff2615682b71833eb93"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.02/source-freeze.json",
+          "sha256": "df08f56519ee44a6033c856414a9ecaa086241a600f8a1da6f39bb4158f37bb9",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.02/source-deltas.json",
+          "sha256": "188d1f95793869a27d6043aa55224ef641d13bc40b4f3b84c616e1d2f877d9ed",
+          "role": "configuration"
+        }
+      ],
+      "digest": "2f8c3bb053d4b4e2181ab5175300dc5111ad7511c899539948d30b3e4745e87d"
+    }
+  }
+}

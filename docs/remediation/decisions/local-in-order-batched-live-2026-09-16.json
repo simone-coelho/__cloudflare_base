@@ -1,0 +1,15 @@
+{
+  "at": "2026-09-16T21:58:02.032Z",
+  "actor_id": "g0-user",
+  "user_instruction": "Yes—continue local work in order; batch live checks at the end.",
+  "scope": "Continue original W02–W41 local implementation in order after independent local review; retain W01 and subsequent live acceptance explicitly open.",
+  "execution": "Lead delegates product changes; one writer and distinct gpt-6-astra/xhigh-or-higher reviewer; coherent batches and focused checks. Reuse this mandate without per-item continuation questions.",
+  "not_authorized": [
+    "deployment",
+    "cloud/resource mutation",
+    "credential rotation or customer-data operations",
+    "commit/push/merge",
+    "unrelated or destructive changes"
+  ],
+  "full_acceptance": "Not granted by local implementation or review."
+}

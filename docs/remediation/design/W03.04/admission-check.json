@@ -1,0 +1,18 @@
+{
+  "at": "2026-09-11T16:09:41Z",
+  "task_id": "W03.04",
+  "source_go_at": "2026-09-11T16:09:41Z",
+  "entry_reused": "52663/7d5b9e VALID962; actual full check/status before admission",
+  "command": "node --max-old-space-size=768 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{sha256,taskContractDigest}from'\\''./scripts/remediation/board.mjs'\\'';\nconst d=JSON.parse(fs.readFileSync('\\''docs/remediation/tracker.json'\\'','\\''utf8'\\'')),t=d.tasks.find(t=>t.id==='\\''W03.04'\\''),b=JSON.parse(fs.readFileSync('\\''docs/remediation/design/W03.04/baseline.json'\\'','\\''utf8'\\''));\nconst fail=s=>{throw Error(s)};if(d.journal.length!==974||t.state!=='\\''in_progress'\\''||d.tasks.filter(t=>['\\''in_progress'\\'','\\''verification'\\''].includes(t.state)).length!==1)fail('\\''state'\\'');\nif(sha256(fs.readFileSync(t.preflight.plan.path))!=='\\''870e6fb369e0924916d32df659ff7f85ec1445044133268c326bd0cdc0359f9f'\\''||taskContractDigest(t)!=='\\''b15eb2aeeb4b846ff4f432101a7757f4785cb4cd651289a2950b85c16053a571'\\''||t.preflight.contract_digest!==taskContractDigest(t))fail('\\''contract'\\'');\nconst start=d.journal.findLast(e=>e.task_id===t.id&&e.to==='\\''in_progress'\\'');if(JSON.stringify(start.plan_snapshot)!==JSON.stringify(t.preflight))fail('\\''start snapshot'\\'');\nif(!d.authority.local_engine_changes||!d.authority.local_authorization.scope_package_ids.includes('\\''W03'\\'')||d.authority.deployment!==false)fail('\\''authority'\\'');\nconst auth=d.authority.local_authorization.record;if(sha256(fs.readFileSync(auth.path))!==auth.sha256)fail('\\''mandate record'\\'');\nfor(const p of b.pins)if(sha256(fs.readFileSync(p.path))!==p.sha256)fail('\\''pin '\\''+p.path);for(const o of b.owned)if(o.absent&&fs.existsSync(o.path))fail('\\''unexpected new file '\\''+o.path);\nfor(const prior of d.tasks.filter(t=>t.state==='\\''closed'\\''))for(const p of prior.artifact.files)if(sha256(fs.readFileSync(p.path))!==p.sha256)fail('\\''accepted dependency '\\''+p.path);\nconsole.log(JSON.stringify({at:new Date().toISOString(),task:t.id,journal:d.journal.length,plan:t.preflight.plan,contract:t.preflight.contract_digest,start_snapshot:'\\''exact'\\'',authority:'\\''local W03 only'\\'',pins:b.pins.length,protected:b.pins.filter(p=>!b.owned.some(o=>o.path===p.path)).length,new_files_absent:b.owned.filter(o=>o.absent).length,accepted_dependencies:'\\''unchanged'\\'',result:'\\''pass'\\''}));'",
+  "captures": [
+    {
+      "chunk_id": "07384e",
+      "wall_time_seconds": 0.322065958,
+      "exit_code": 0,
+      "original_token_count": 107,
+      "output": "{\"at\":\"2026-09-11T16:09:27.659Z\",\"task\":\"W03.04\",\"journal\":974,\"plan\":{\"path\":\"docs/remediation/design/W03.04/plan.md\",\"sha256\":\"870e6fb369e0924916d32df659ff7f85ec1445044133268c326bd0cdc0359f9f\"},\"contract\":\"b15eb2aeeb4b846ff4f432101a7757f4785cb4cd651289a2950b85c16053a571\",\"start_snapshot\":\"exact\",\"authority\":\"local W03 only\",\"pins\":40,\"protected\":34,\"new_files_absent\":2,\"accepted_dependencies\":\"unchanged\",\"result\":\"pass\"}\n"
+    }
+  ],
+  "exit_status": 0,
+  "drained": true
+}

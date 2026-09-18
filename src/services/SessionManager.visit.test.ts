@@ -128,10 +128,10 @@ describe('the channel the visit was entered on', () => {
     expect(s.metadata.entryChannel).toBe('email');
   });
 
-  it('resolves to direct when a client sends no entry signals at all', async () => {
+  it('keeps channel unknown when a client sends no entry signals at all', async () => {
     // Every pre-existing client. It must not throw, and it must not guess.
     const s = await mgr.createOrUpdateSession('s1', 'u1', {});
-    expect(s.metadata.entryChannel).toBe('direct');
+    expect(s.metadata.entryChannel).toBeUndefined();
     expect(s.metadata.visitCount).toBe(1);
   });
 });

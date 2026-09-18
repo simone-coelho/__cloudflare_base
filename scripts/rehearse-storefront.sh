@@ -9,16 +9,16 @@
 #
 #   bash scripts/rehearse-storefront.sh [BASE]        BASE defaults to http://127.0.0.1:9100
 #
-# Needs SHOT_TOKEN in .dev.vars (the /__shot route is closed without it) and the JWT vars in
-# wrangler.toml for the ledger check. Prints PASS/FAIL per check and exits non-zero on a FAIL.
+# Needs OPERATOR_TOKEN or explicit JWT_SECRET, JWT_ISSUER and JWT_AUDIENCE for
+# the ledger check, plus SHOT_TOKEN in .dev.vars for the screenshot route.
+# Prints PASS/FAIL per check and exits non-zero on a FAIL.
 set -u
 BASE="${1:-http://127.0.0.1:9100}"
+JWT=$(node --input-type=module -e '
+import { resolveToolToken } from "./scripts/lib/tool-token.mjs";
+console.log(await resolveToolToken({ payload: { sub: "rehearsal" }, expiresIn: "10m" }));') || exit $?
 TOKEN=$(grep -E '^SHOT_TOKEN=' .dev.vars 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"')
 if [ -z "$TOKEN" ]; then echo "SHOT_TOKEN not in .dev.vars; the rehearsal needs the screenshot route"; exit 2; fi
-JWT=$(node --input-type=module -e "
-import { readFileSync } from 'node:fs'; import * as jose from 'jose';
-const t=readFileSync('wrangler.toml','utf8'); const v=(k)=>(t.match(new RegExp('^'+k+' = \"([^\"]+)\"','m'))||[])[1];
-console.log(await new jose.SignJWT({sub:'rehearsal'}).setProtectedHeader({alg:'HS256'}).setIssuedAt().setIssuer(v('JWT_ISSUER')).setAudience(v('JWT_AUDIENCE')).setExpirationTime('10m').sign(new TextEncoder().encode(v('JWT_SECRET'))));" 2>/dev/null || true)
 
 # The beats: load the store, open the first product (product_view), add it to the bag (add_to_cart).
 CLICKS='.tile,#pdp-add'

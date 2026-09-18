@@ -26,7 +26,7 @@ import { SEED_AUDIENCES } from '@/data/seed-audiences';
 import insightsData from '@/data/insights.json';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
 import { z } from 'zod';
-import { jwt } from '@/middleware/auth';
+import { operatorJwt } from '@/middleware/operatorAuth';
 
 const operatorRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
@@ -37,6 +37,7 @@ const operatorRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>()
 // every handler is safe and keeps the operator console self-bootstrapping.
 // ---------------------------------------------------------------------------
 async function ensureSeeded(env: Env, tenant: TenantId = DEFAULT_TENANT): Promise<void> {
+  if (env.DEPLOYMENT_PROFILE !== 'demo' || tenant !== DEFAULT_TENANT) return;
   await new KvAudienceStore(env, tenant).seed(SEED_AUDIENCES);
 }
 
@@ -82,7 +83,7 @@ operatorRoutes.post('/audiences/suggest', async (c) => {
     const { nlPrompt } = suggestSchema.parse(body);
 
     // Opal: plain-language request -> DRAFT AudienceDef[] (status:'suggested').
-    const drafts = await getConnectors(c.env).audiences.suggestAudiences(nlPrompt);
+    const drafts = await getConnectors(c.env, c.get('tenant')).audiences.suggestAudiences(nlPrompt);
 
     return c.json({
       success: true,
@@ -94,7 +95,7 @@ operatorRoutes.post('/audiences/suggest', async (c) => {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('Error suggesting audiences:', error);
+    console.error('Error suggesting audiences');
 
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid suggest request', details: error.issues }, 400);
@@ -115,7 +116,7 @@ operatorRoutes.post('/audiences/publish', async (c) => {
     const body = await c.req.json();
     const { audience } = publishSchema.parse(body);
 
-    const connectors = getConnectors(c.env);
+    const connectors = getConnectors(c.env, c.get('tenant'));
 
     // Human-approved Publish. Persists into the shared AudienceStore that
     // MockSegmentProvider reads — live to qualification with no redeploy.
@@ -137,7 +138,7 @@ operatorRoutes.post('/audiences/publish', async (c) => {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('Error publishing audience:', error);
+    console.error('Error publishing audience');
 
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid publish request', details: error.issues }, 400);
@@ -164,7 +165,7 @@ operatorRoutes.get('/audiences', async (c) => {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('Error listing audiences:', error);
+    console.error('Error listing audiences');
     return c.json({
       error: 'Failed to list audiences',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -211,6 +212,8 @@ operatorRoutes.get('/insights', async (c) => {
 async function broadcastAudiencePublished(
   env: Env, def: AudienceDef, tenant: TenantId = DEFAULT_TENANT,
 ): Promise<number> {
+  // The legacy admin connection index is stamp-wide, not tenant authority.
+  if (env.AUTH_MODE === 'enforced') return 0;
   try {
     const connectedUsers = await getConnectedUsers(env);
     if (connectedUsers.length === 0) return 0;
@@ -218,7 +221,6 @@ async function broadcastAudiencePublished(
     // Prefer the users who already qualify for the new audience (their matching
     // module can pop immediately). Evaluate the published condition tree against
     // each connected user's live qualification context.
-    const connectors = getConnectors(env);
     const targets: string[] = [];
     for (const userId of connectedUsers) {
       const ctx = await loadQualificationContext(env, userId, tenant);
@@ -250,7 +252,7 @@ async function broadcastAudiencePublished(
     return recipients.length;
   } catch (error) {
     // Broadcasting is best-effort — a notify failure must not fail the publish.
-    console.error('Error broadcasting audience_published:', error);
+    console.error('Error broadcasting audience_published');
     return 0;
   }
 }
@@ -265,7 +267,7 @@ async function getConnectedUsers(env: Env): Promise<string[]> {
     const info = (await res.json()) as { users?: string[] };
     return Array.isArray(info.users) ? info.users : [];
   } catch (error) {
-    console.error('Error reading connected users:', error);
+    console.error('Error reading connected users');
     return [];
   }
 }
@@ -327,6 +329,10 @@ const resetEventsSchema = z.object({
 });
 
 operatorRoutes.post('/events/reset', async (c) => {
+  if (c.env.AUTH_MODE === 'enforced') {
+    c.header('Cache-Control', 'no-store');
+    return c.json({ error: 'Global demo administration unavailable' }, 403);
+  }
   try {
     if (!c.env.DB) {
       return c.json({ error: 'D1 not configured (DB binding missing)' }, 503);
@@ -358,7 +364,7 @@ operatorRoutes.post('/events/reset', async (c) => {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('Error resetting demo events:', error);
+    console.error('Error resetting demo events');
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid reset request', details: error.issues }, 400);
     }
@@ -374,6 +380,10 @@ operatorRoutes.post('/events/reset', async (c) => {
 // and to label the storefront's "Clear demo data" control). Read-only.
 // ---------------------------------------------------------------------------
 operatorRoutes.get('/events/stats', async (c) => {
+  if (c.env.AUTH_MODE === 'enforced') {
+    c.header('Cache-Control', 'no-store');
+    return c.json({ error: 'Global demo administration unavailable' }, 403);
+  }
   try {
     if (!c.env.DB) {
       return c.json({ success: true, dbBound: false, demoEvents: 0, demoVisitors: 0 });
@@ -390,7 +400,7 @@ operatorRoutes.get('/events/stats', async (c) => {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('Error reading demo event stats:', error);
+    console.error('Error reading demo event stats');
     return c.json({
       error: 'Failed to read demo event stats',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -420,7 +430,7 @@ const renameSchema = z.object({
 });
 const pinSchema = z.object({ pinned: z.boolean() });
 
-const audienceWrites = jwt({ required: true });
+const audienceWrites = operatorJwt();
 
 /**
  * Rename. The KEY is deliberately not changeable: it is load-bearing in cookies,
@@ -443,7 +453,7 @@ operatorRoutes.post('/audiences/:key/rename', audienceWrites, async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid rename request', details: error.issues }, 400);
     }
-    console.error('Error renaming audience:', error);
+    console.error('Error renaming audience');
     return c.json({ error: 'Failed to rename audience' }, 500);
   }
 });
@@ -467,7 +477,7 @@ operatorRoutes.post('/audiences/:key/pin', audienceWrites, async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid pin request', details: error.issues }, 400);
     }
-    console.error('Error pinning audience:', error);
+    console.error('Error pinning audience');
     return c.json({ error: 'Failed to pin audience' }, 500);
   }
 });
@@ -492,7 +502,7 @@ operatorRoutes.post('/audiences/:key/prune', audienceWrites, async (c) => {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('Error pruning audience:', error);
+    console.error('Error pruning audience');
     return c.json({ error: 'Failed to prune audience' }, 500);
   }
 });

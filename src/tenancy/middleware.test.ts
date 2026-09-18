@@ -1,88 +1,97 @@
-// src/tenancy/middleware.test.ts
-//
-// This runs before every request, including the health check, so the property
-// that matters most is that it cannot throw. A stamp with a typo in its
-// configuration must look under-provisioned, never dead.
-
+// Explicit registry authority must never silently select the legacy namespace.
 import { describe, it, expect } from 'vitest';
+import { Hono } from 'hono';
 import type { Env } from '@/types/env';
-import { DEFAULT_TENANT } from '@/tenancy/tenant';
-import { tenantConfig, tenantForRequest } from '@/tenancy/middleware';
+import { DEFAULT_TENANT, TenantResolutionError } from '@/tenancy/tenant';
+import { tenantConfig, tenantForRequest, tenantMiddleware, TenantConfigurationError } from '@/tenancy/middleware';
+import { shopperTenant, SessionAccessError } from '@/identity/sessionCapability';
 
-const envWith = (TENANTS?: string) => ({ TENANTS }) as unknown as Env;
+const envWith = (TENANTS?: unknown) => ({ TENANTS }) as unknown as Env;
 const req = (url: string, headers: Record<string, string> = {}) => new Request(url, { headers });
+const configured = (provisioned = ['acme', 'globex']) => JSON.stringify({ provisioned,
+  hosts: { ' ACME.example ': 'acme', 'globex.example': 'globex' } });
 
 describe('reading the stamp configuration', () => {
-  it('is default-only when nothing is configured', () => {
+  it('W03.07 customer profiles require an explicit registry before downstream work', () => {
+    expect(() => tenantConfig({ DEPLOYMENT_PROFILE: 'customer' } as Env)).toThrow(TenantConfigurationError);
+    expect(tenantConfig({ DEPLOYMENT_PROFILE: 'customer', TENANTS: configured() } as Env).provisioned).toEqual(['acme', 'globex']);
+  });
+  it('retains an independently owned default only when undefined', () => {
+    const first = tenantConfig(envWith());
+    expect(first).toEqual({ provisioned: [DEFAULT_TENANT], hosts: {} });
+    first.provisioned.push('acme'); first.hosts['other.example'] = 'acme';
     expect(tenantConfig(envWith())).toEqual({ provisioned: [DEFAULT_TENANT], hosts: {} });
-    expect(tenantConfig(envWith('   '))).toEqual({ provisioned: [DEFAULT_TENANT], hosts: {} });
   });
 
-  it('reads provisioned brands and host mappings', () => {
-    const cfg = tenantConfig(envWith(JSON.stringify({
-      provisioned: ['coach', 'kate-spade'],
-      hosts: { 'Shop.KateSpade.com': 'kate-spade' },
-    })));
-    expect(cfg.provisioned).toEqual(['coach', 'kate-spade']);
-    expect(cfg.hosts).toEqual({ 'shop.katespade.com': 'kate-spade' });
+  it('preserves exact declared order, deduplicates and normalizes consistent hosts without Coach', () => {
+    const cfg = tenantConfig(envWith(JSON.stringify({ provisioned: ['globex', 'acme', 'globex'],
+      hosts: { ' ACME.example ': 'acme', 'acme.example': 'acme', 'globex.example': 'globex' } })));
+    expect(cfg).toEqual({ provisioned: ['globex', 'acme'], hosts: { 'acme.example': 'acme', 'globex.example': 'globex' } });
+    expect(tenantConfig(envWith(configured(['acme', 'globex', 'initech']))).provisioned).toEqual(['acme', 'globex', 'initech']);
+    expect(tenantConfig(envWith(JSON.stringify({ provisioned: ['acme'], hosts: { '[::1]': 'acme' } }))).hosts['[::1]']).toBe('acme');
   });
 
-  it('always includes the default, even when the config forgets it', () => {
-    expect(tenantConfig(envWith(JSON.stringify({ provisioned: ['kate-spade'] }))).provisioned)
-      .toContain(DEFAULT_TENANT);
-  });
-
-  it('degrades to default-only rather than throwing on rubbish', () => {
-    for (const bad of ['not json', '[]', 'null', '"a string"', '42']) {
-      expect(tenantConfig(envWith(bad)).provisioned).toEqual([DEFAULT_TENANT]);
-    }
-  });
-
-  it('drops individually bad entries instead of failing the whole config', () => {
-    // One malformed host line must not deprovision a brand.
-    const cfg = tenantConfig(envWith(JSON.stringify({
-      provisioned: ['kate-spade', 'NOT VALID', 42, ''],
-      hosts: { 'good.com': 'kate-spade', 'bad.com': 'NOT VALID', '': 'kate-spade' },
-    })));
-    expect(cfg.provisioned).toEqual(['kate-spade', DEFAULT_TENANT]);
-    expect(cfg.hosts).toEqual({ 'good.com': 'kate-spade' });
+  it('refuses every invalid explicit manifest instead of partially accepting it', () => {
+    const bad = [null, 42, {}, '', ' ', 'not json', '[]', 'null', '"text"', '42', '{}',
+      ...[{ provisioned: [] }, { provisioned: 'acme' }, { provisioned: ['acme', 'UPPER'] },
+        { provisioned: ['acme', null] }, { provisioned: [' acme '] }, { provisioned: ['acme'], hosts: null },
+        { provisioned: ['acme'], hosts: [] }, { provisioned: ['acme'], hosts: 42 },
+        { provisioned: ['acme'], hosts: { 'acme.example': 'globex' } },
+        { provisioned: ['acme', 'globex'], hosts: { ' ACME.EXAMPLE ': 'acme', 'acme.example': 'globex' } },
+        ...['', '__proto__', 'a..example', '-bad.example', 'bad_.example', 'x/y', 'x:443', '[::1]:1234',
+          'https://x', 'x?y', 'user@x', 'x#y', 'a b'].map(host => ({ provisioned: ['acme'], hosts: { [host]: 'acme' } })),
+      ].map(value => JSON.stringify(value))];
+    for (const raw of bad) expect(() => tenantConfig(envWith(raw)), String(raw)).toThrow(TenantConfigurationError);
   });
 });
 
 describe('resolving a request', () => {
-  const CONFIGURED = JSON.stringify({
-    provisioned: ['coach', 'kate-spade'],
-    hosts: { 'shop.katespade.com': 'kate-spade' },
+  it('resolves each customer from a path, header or mapped host and permits only agreeing signals', () => {
+    const env = envWith(configured());
+    for (const tenant of ['acme', 'globex']) {
+      expect(tenantForRequest(env, req(`https://${tenant}.example/`))).toBe(tenant);
+      expect(tenantForRequest(env, req(`https://shared.example/v1/${tenant}/brands`))).toBe(tenant);
+      expect(tenantForRequest(env, req('https://shared.example/', { 'X-Tenant': tenant.toUpperCase() }))).toBe(tenant);
+      expect(tenantForRequest(env, req(`https://${tenant}.example/v1/${tenant}/brands`, { 'X-Tenant': tenant }))).toBe(tenant);
+    }
+    expect(tenantForRequest(env, req('https://shared.example/%761/%61cme/brands'))).toBe('acme');
+    for (const url of ['https://acme.example/v1/globex/brands', 'https://acme.example/v1/unknown/brands',
+      'https://acme.example/v1/ACME/brands', 'https://acme.example/v1/%20acme/brands',
+      'https://acme.example/v1/acme%2fglobex/brands', 'https://acme.example/v1/%2561cme/brands',
+      'https://acme.example/v1/%GG/brands', 'https://shared.example/']) {
+      expect(() => tenantForRequest(env, req(url)), url).toThrow(TenantResolutionError);
+    }
+    for (const header of ['globex', 'unknown', '', 'bad:name']) {
+      expect(() => tenantForRequest(env, req('https://acme.example/', { 'X-Tenant': header }))).toThrow(TenantResolutionError);
+    }
+    expect(tenantForRequest(envWith(), req('https://shared.example/'))).toBe('coach');
+    expect(tenantForRequest(envWith(configured(['coach', 'acme', 'globex'])), req('https://shared.example/'))).toBe('coach');
   });
 
-  it('maps a provisioned host to its brand', () => {
-    expect(tenantForRequest(envWith(CONFIGURED), req('https://shop.katespade.com/x'))).toBe('kate-spade');
+  it('shares WebSocket authority with shopper checks and verifies supplied context', () => {
+    const env = envWith(configured());
+    const socket = req('https://acme.example/realtime/ws?tenant=ACME&tenant=acme', { Upgrade: 'websocket', 'X-Tenant': 'acme' });
+    expect(tenantForRequest(env, socket)).toBe('acme'); expect(shopperTenant(env, socket, 'acme')).toBe('acme');
+    for (const resolved of ['globex', 'coach', 'ACME', '', 'unknown']) expect(() => shopperTenant(env, socket, resolved)).toThrow(SessionAccessError);
+    for (const query of ['globex', '', 'unknown', 'acme&tenant=globex']) {
+      const conflicting = req(`https://acme.example/realtime/ws?tenant=${query}`, { Upgrade: 'websocket' });
+      expect(() => tenantForRequest(env, conflicting)).toThrow(TenantResolutionError);
+      expect(() => shopperTenant(env, conflicting, 'acme')).toThrow(SessionAccessError);
+    }
+    expect(tenantForRequest(env, req('https://acme.example/?tenant=globex'))).toBe('acme');
   });
 
-  it('serves the default from an unmapped host', () => {
-    expect(tenantForRequest(envWith(CONFIGURED), req('https://www.coach.com/x'))).toBe(DEFAULT_TENANT);
-  });
-
-  it('honours X-Tenant only for a provisioned brand', () => {
-    expect(tenantForRequest(envWith(CONFIGURED), req('https://x.com/', { 'X-Tenant': 'kate-spade' }))).toBe('kate-spade');
-    // Not provisioned on this stamp: the header is ignored, not obeyed.
-    expect(tenantForRequest(envWith(CONFIGURED), req('https://x.com/', { 'X-Tenant': 'stuart-weitzman' }))).toBe(DEFAULT_TENANT);
-  });
-
-  it('ignores X-Tenant entirely on an unconfigured stamp', () => {
-    expect(tenantForRequest(envWith(), req('https://x.com/', { 'X-Tenant': 'kate-spade' }))).toBe(DEFAULT_TENANT);
-  });
-
-  it('lets the header override the host, which is how an operator tool reaches a brand', () => {
-    expect(tenantForRequest(envWith(CONFIGURED), req('https://www.coach.com/', { 'X-Tenant': 'kate-spade' }))).toBe('kate-spade');
-  });
-
-  it('never throws, whatever it is handed', () => {
-    // It runs before every request. The worst acceptable outcome is the default
-    // brand; the unacceptable one is a dead worker.
-    expect(tenantForRequest(envWith('{{{'), req('https://x.com/'))).toBe(DEFAULT_TENANT);
-    expect(tenantForRequest({} as Env, req('https://x.com/'))).toBe(DEFAULT_TENANT);
-    expect(tenantForRequest(envWith(CONFIGURED), req('https://x.com/', { 'X-Tenant': 't:kate-spade:evil' })))
-      .toBe(DEFAULT_TENANT);
+  it('returns generic no-store refusals before downstream work', async () => {
+    const app = new Hono<{ Bindings: Env }>(); let effects = 0;
+    app.use('*', tenantMiddleware()); app.get('*', c => { effects++; return c.json({ ok: true }); });
+    for (const [env, request, status, error] of [
+      [envWith('PRIVATE_INVALID_CONFIG'), req('https://acme.example/'), 503, 'Tenant configuration unavailable'],
+      [envWith(configured()), req('https://acme.example/', { 'X-Tenant': 'globex' }), 403, 'Tenant unavailable'],
+    ] as const) {
+      const response = await app.request(request, undefined, env);
+      expect(response.status).toBe(status); expect(response.headers.get('Cache-Control')).toBe('no-store');
+      expect(await response.json()).toEqual({ ok: false, error });
+    }
+    expect(effects).toBe(0);
   });
 });

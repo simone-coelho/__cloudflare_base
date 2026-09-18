@@ -1,0 +1,13 @@
+{
+  "before": "dbf4aa5e8f2d1e2851a340d40d25630364f56550271352fe040661e52106f8b9",
+  "after": "dbf4aa5e8f2d1e2851a340d40d25630364f56550271352fe040661e52106f8b9",
+  "at": "2026-09-11T00:01:00Z",
+  "actor_id": "w01-lead",
+  "disposition": "Approved in-contract implementation correction; no new file, fixture, suite or acceptance criterion.",
+  "findings": [
+    "For a valid tenant named decision/outcome, legacy substring stream selectors can include the new product-sort partition. Exclude isProductSortKey in existing explicit content/outcome export and loadDay matching before budgets/record parsing. Preserve remaining legacy selector behavior.",
+    "Input intent values permit128 UTF16 units; normalization can expand lowercase to256 units (U+0130). Permit normalized stored values to256 while keeping request bound128 and total receipt1MiB; add a focused assertion to the existing route group.",
+    "Pre-correction fixed primary15154 passed22/22; compiler65792 failed with fixture-only narrowing and structural fake methods. Preserve those results; fix fixture typing and rerun the same required checks on final source."
+  ],
+  "approval": "Root authorizes these concrete C1/C2/C3 corrections within the original ten paths and three grouped additions. Original approved plan/task contract unchanged: existing selector API preserved but new partition excluded; normalized explicit intent retained. This is not a scope amendment, additional infrastructure or a new validation programme."
+}

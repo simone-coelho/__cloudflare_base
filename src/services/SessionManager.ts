@@ -1,15 +1,28 @@
 import type { Env } from '@/types/env';
-import type { ReflexChanges, ReflexConfig, ReflexState } from '@/reflex/core';
-import { mergeReflexStates } from '@/reflex/identityMerge';
+import { importUnderOwner, ownerOperationActive, sessionAuthorityKV, currentOwnerConsent, restrictOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
+import { mergeOdpState, projectOdpState, projectedOdpSegments } from './odpLoop';
+import { deriveStage } from './JourneyStage';
+import { tick, type ReflexChanges, type ReflexConfig, type ReflexState, type Touch } from '@/reflex/core';
+import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { z } from 'zod';
+import { assertSessionTarget, SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';
+import { consentOf, consentFromCookies, intersectConsent, withConsent, REFUSING, type Consent } from '@/content/consent';
+import { isShopperId } from '@/identity/shopperId';
+import { applyProfileSnapshot, enrichmentInputs, mergeEnrichment, profileEnrichmentSchema, readEnrichment, type ImportOutcome, type ProfileEnrichment, type ProfileSnapshotRow } from '@/identity/profileEnrichment';
+import { retentionBirth, externalRetentionBirths, requireRetention, type ExternalRetention, type RetentionStamp } from '@/retention';
+import { pinProfileRetention } from '@/identity/sessionAuthority';
 
 import {
-  classifyEntryChannel, isNewVisit, nextVisitCount,
+  liveVisit, mergeVisits, validEntry,
   type ChannelSignals, type EntryChannel,
 } from '@/services/visit';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 
 export interface SessionData {
+  retention?: RetentionStamp;
+  externalRetention?: ExternalRetention;
+  /** Request-only owner projection; never part of the persisted schema. */
+  consent?: Consent;
   userId: string;
   anonymousId?: string;
   segments: string[];
@@ -20,7 +33,10 @@ export interface SessionData {
   /** Edge Affinity Reflex state (doc 16) — raw (R, tLast) per dimension·value.
       P0 hosting: rides the session; relocates into the ShopperReflex DO in P2. */
   reflex?: ReflexState;
+  /** External source snapshots: local qualification only, separate from behavior. */
+  profileEnrichment?: ProfileEnrichment;
   /** ODP loop (doc 16 §8): the session's last-seeded qualified ODP audiences + when. */
+  odpContext?: string;
   odpSeed?: string[];
   odpSeedAt?: number;
   /** Ring of the session's recent events in the FLAT recent_events shape (≤10, ≤55min)
@@ -70,6 +86,7 @@ export interface SessionData {
     cookieConsent: boolean;
   };
 }
+export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 export interface CookieConfig {
   name: string;
@@ -93,7 +110,9 @@ export interface SessionCookies {
   personalizationEnabled: string;
 }
 
-const sessionDataSchema = z.object({
+export const sessionDataSchema = z.object({
+  retention: z.custom<RetentionStamp>().optional(),
+  externalRetention: z.custom<ExternalRetention>().optional(),
   userId: z.string(),
   anonymousId: z.string().optional(),
   segments: z.array(z.string()),
@@ -102,6 +121,8 @@ const sessionDataSchema = z.object({
   surface: z.string().optional(),
   // Reflex state must be declared or .parse() silently STRIPS it on every read/write.
   reflex: z.any().optional(),
+  profileEnrichment: profileEnrichmentSchema.optional(),
+  odpContext: z.string().optional(),
   odpSeed: z.array(z.string()).optional(),
   odpSeedAt: z.number().optional(),
   odpRecentEvents: z.array(z.any()).optional(),
@@ -135,6 +156,15 @@ const sessionDataSchema = z.object({
   })
 });
 
+/** Import must not let the historical reducer treat a corrupt vector as empty. */
+export const historicalReflexSchema = z.object({
+  v: z.literal(1),
+  dims: z.record(z.string(), z.record(z.string(), z.object({
+    s: z.number().finite().nonnegative(), t: z.number().int().nonnegative(),
+  }))),
+  audiences: z.array(z.string()), configVersion: z.string(),
+});
+
 /**
  * CW25. Attributes that count events, which add across a person's devices. The
  * names are RETAIL_SIGNAL_DEFAULTS' (RealtimeSegmentEngine); anything not here
@@ -148,7 +178,7 @@ const COUNTER_ATTRIBUTES = new Set(['product_views', 'cart_adds', 'wishlist_adds
 export class SessionManager {
   private env: Env;
   readonly tenant: TenantId;
-  private sessionTTL: number = 30 * 24 * 60 * 60; // 30 days in seconds
+  private sessionTTL: number = SESSION_TTL_SECONDS;
   private cookieDomain: string;
   private isSecure: boolean;
 
@@ -162,10 +192,14 @@ export class SessionManager {
    */
   private readonly kv: KVLike;
 
-  constructor(env: Env, options?: { domain?: string; secure?: boolean; tenant?: TenantId }) {
+  readonly principal?: SessionCapability;
+
+  constructor(env: Env, options?: { domain?: string; secure?: boolean; tenant?: TenantId; principal?: SessionCapability }) {
     this.env = env;
     this.tenant = options?.tenant ?? DEFAULT_TENANT;
-    this.kv = new TenantKV(env.SESSIONS as unknown as KVLike, this.tenant);
+    this.principal = options?.principal;
+    if (this.principal && this.principal.tenant !== this.tenant) throw new SessionAccessError();
+    this.kv = new TenantKV(sessionAuthorityKV(env, this.principal), this.tenant);
     this.cookieDomain = options?.domain || '';
     this.isSecure = options?.secure ?? true;
   }
@@ -192,12 +226,21 @@ export class SessionManager {
      * path. Omit it and nothing changes: every existing caller still awaits.
      */
     defer?: (p: Promise<unknown>) => void,
+    ownedSnapshot?: { sessionId: string; data: SessionData | null },
+    observedLive = true,
   ): Promise<SessionData> {
+    if (!validEntry(entry)) throw new SessionAccessError();
+    if (this.principal) {
+      assertSessionTarget(this.principal, userId, sessionId);
+      if (data.forwardTo || (data.identity && (this.principal.kind !== 'recognized' || data.identity.shopperId !== userId))) throw new SessionAccessError();
+    }
     try {
       // CW25. A browser that was linked to a person writes to the person's
       // session; the id on the cookie stays what it was, the record it names
       // forwards. Resolved once here, for the read below and the write at the end.
-      const target = await this.resolveRecord(sessionId);
+      const target = ownedSnapshot
+        ? { id: sessionId, data: this.checkedSnapshot(sessionId, ownedSnapshot) }
+        : await this.resolveRecord(sessionId);
       sessionId = target.id;
       const existingSession = target.data;
       // A person's session keeps the person's id whatever browser is writing.
@@ -210,16 +253,17 @@ export class SessionManager {
       // otherwise close the gap it is being measured against, and every event
       // would look like a new visit.
       const priorLastSeen = existingSession?.metadata.lastSeen;
-      const openingNewVisit = isNewVisit(priorLastSeen, now);
-      const visitCount = nextVisitCount(existingSession?.metadata.visitCount, priorLastSeen, now);
+      const visit = observedLive ? liveVisit(existingSession?.metadata, priorLastSeen, now, entry) : {
+        visitCount: existingSession?.metadata.visitCount, lastVisitAt: existingSession?.metadata.lastVisitAt,
+        entryChannel: existingSession?.metadata.entryChannel,
+      };
       // A record written before visitCount existed resolves to visit 1. That
       // under-counts a returning shopper once, which is honest; seeding from
       // sessionCount would import its wrongness instead.
-      const entryChannel: EntryChannel = openingNewVisit && entry
-        ? classifyEntryChannel(entry)
-        : (existingSession?.metadata.entryChannel ?? (entry ? classifyEntryChannel(entry) : 'direct'));
 
       const sessionData: SessionData = {
+        retention: existingSession ? existingSession.retention : data.retention,
+        externalRetention: existingSession ? existingSession.externalRetention : data.externalRetention,
         userId,
         anonymousId: data.anonymousId || existingSession?.anonymousId,
         segments: data.segments || existingSession?.segments || ['new_user'],
@@ -229,17 +273,17 @@ export class SessionManager {
         },
         surface: data.surface ?? existingSession?.surface,
         reflex: data.reflex ?? existingSession?.reflex,
+        profileEnrichment: existingSession?.profileEnrichment,
+        odpContext: data.odpContext ?? existingSession?.odpContext,
         odpSeed: data.odpSeed ?? existingSession?.odpSeed,
         odpSeedAt: data.odpSeedAt ?? existingSession?.odpSeedAt,
         odpRecentEvents: data.odpRecentEvents ?? existingSession?.odpRecentEvents,
         identity: data.identity ?? existingSession?.identity,
         metadata: {
           firstSeen: existingSession?.metadata.firstSeen || now,
-          lastSeen: now,
-          sessionCount: existingSession ? existingSession.metadata.sessionCount + 1 : 1,
-          visitCount,
-          lastVisitAt: openingNewVisit ? now : (existingSession?.metadata.lastVisitAt ?? now),
-          entryChannel,
+          lastSeen: observedLive ? now : existingSession?.metadata.lastSeen ?? now,
+          sessionCount: observedLive ? (existingSession ? existingSession.metadata.sessionCount + 1 : 1) : existingSession?.metadata.sessionCount ?? 0,
+          ...visit,
           engagementScore: data.metadata?.engagementScore || existingSession?.metadata.engagementScore || 0,
           lastSegmentUpdate: data.segments ? now : existingSession?.metadata.lastSegmentUpdate || now,
           journeyStage: data.metadata?.journeyStage ?? existingSession?.metadata.journeyStage
@@ -252,7 +296,20 @@ export class SessionManager {
       };
 
       // Validate the session data
-      const validatedData = sessionDataSchema.parse(sessionData);
+      const resolvedConsent = await currentOwnerConsent() ?? consentOf(existingSession);
+      if (resolvedConsent.tracking) {
+        // Preserve a producer's first birth through awaited catalog/provider work.
+        // A stored untagged profile is not a new record and cannot be enrolled here.
+        if (!existingSession && !sessionData.retention) {
+          sessionData.retention = retentionBirth(this.env, this.tenant, 'profile', now, now);
+          sessionData.externalRetention = externalRetentionBirths(this.env, this.tenant, now, now);
+        }
+        pinProfileRetention(this.env, sessionData, this.tenant);
+      }
+      sessionData.preferences.trackingConsent = resolvedConsent.tracking;
+      sessionData.preferences.personalizationEnabled = resolvedConsent.personalization;
+      const validatedData = withConsent(sessionDataSchema.parse(sessionData), resolvedConsent);
+      if (resolvedConsent.tracking) requireConsentPurpose(resolvedConsent, 'tracking');
 
       // CW31 (BTIE D10). A shopper who withheld tracking consent is still
       // ANSWERED, from the state that is already stored, and nothing this
@@ -262,58 +319,70 @@ export class SessionManager {
       // REFLEX_HOST decides which one a brand runs on and consent is not a
       // property of that choice.
       //
-      // The one write that still happens is the INSTRUCTION itself. Without it
-      // the next request reads no stored preference, the default of that is
-      // consenting, and the engine would start writing again on the request
-      // after the shopper asked it to stop.
+      // Necessary explicit instructions are separate owner records. Neither a
+      // missing instruction nor an old profile preference enables behavior.
       if (!validatedData.preferences.trackingConsent) {
-        const onlyTheInstruction = sessionDataSchema.parse(
-          existingSession
-            ? { ...existingSession, preferences: validatedData.preferences }
-            : {
-                userId,
-                segments: [],
-                attributes: {},
-                metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },
-                preferences: validatedData.preferences,
-              }
-        );
-        // The pointer stays, or the switches could not be found again.
-        const refusal = Promise.all([
-          this.kv.put(`session:${sessionId}`, JSON.stringify(onlyTheInstruction), { expirationTtl: this.sessionTTL }),
-          this.kv.put(`user:${userId}`, sessionId, { expirationTtl: this.sessionTTL }),
-        ]);
-        if (defer) defer(refusal); else await refusal;
-        return validatedData;
+        // Necessary choice authority lives separately on the owner. A refused
+        // request neither creates nor refreshes a behavioral profile or pointer.
+        return withConsent(existingSession ?? { ...validatedData, segments: [], attributes: {},
+          metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now } }, resolvedConsent);
       }
 
       // The record, and the pointer that finds it by user id. These were two
       // awaits in sequence, which paid for two round trips where one would do;
       // neither depends on the other.
       const writes = Promise.all([
-        this.kv.put(`session:${sessionId}`, JSON.stringify(validatedData), { expirationTtl: this.sessionTTL }),
-        this.kv.put(`user:${userId}`, sessionId, { expirationTtl: this.sessionTTL }),
+        this.kv.put(`session:${sessionId}`, JSON.stringify(validatedData), { expiration: Math.floor(Math.min(now + this.sessionTTL * 1000, validatedData.retention!.expiresAt) / 1000) }),
+        this.kv.put(`user:${userId}`, sessionId, { expiration: Math.floor(Math.min(now + this.sessionTTL * 1000, validatedData.retention!.expiresAt) / 1000) }),
       ]);
       if (defer) defer(writes); else await writes;
 
       return validatedData;
 
     } catch (error) {
-      console.error('Error creating/updating session:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error creating/updating session');
       throw error;
     }
   }
 
-  /** The record exactly as stored, forward and all. */
-  async readRaw(sessionId: string): Promise<SessionData | null> {
+  /** One strict read for erasure: parsing must not discard the original byte witness. */
+  async readSnapshot(sessionId: string): Promise<{ data: SessionData; serialized: string } | null> {
+    if (this.principal) throw new SessionAccessError(); // Internal erasure only, never a capability bypass.
     try {
-      const sessionData = await this.kv.get(`session:${sessionId}`, 'json');
-      if (!sessionData) return null;
-      return sessionDataSchema.parse(sessionData);
+      const serialized = await new TenantKV(this.env.SESSIONS as unknown as KVLike, this.tenant).get(`session:${sessionId}`);
+      if (serialized === null) return null;
+      if (typeof serialized !== 'string') throw new SessionAccessError();
+      return { data: sessionDataSchema.parse(JSON.parse(serialized)), serialized };
+    } catch { throw new SessionAccessError(); }
+  }
+
+  /** The record exactly as stored, forward and all. */
+  async readRaw(sessionId: string, strict = false): Promise<SessionData | null> {
+    if (this.principal) assertSessionTarget(this.principal, undefined, sessionId);
+    let raw: SessionData | null;
+    try {
+      const stored = await this.kv.get(`session:${sessionId}`, strict ? undefined : 'json');
+      const sessionData = strict && stored !== null && typeof stored === 'string' ? JSON.parse(stored) : stored;
+      raw = strict ? (stored === null ? null : sessionDataSchema.parse(sessionData)) : (sessionData ? sessionDataSchema.parse(sessionData) : null);
     } catch (error) {
-      console.error('Error retrieving session:', error);
+      if (error instanceof SessionAccessError) throw error;
+      if (this.principal || strict) throw new SessionAccessError();
+      console.error('Error retrieving session');
       return null;
     }
+    if (this.principal) {
+      assertSessionTarget(this.principal);
+      if (raw ? raw.userId !== this.principal.subject || !!raw.forwardTo
+        || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject)
+        : this.principal.kind === 'recognized') throw new SessionAccessError();
+    }
+    if (raw) {
+      const consent = await currentOwnerConsent();
+      if (consent?.instruction && (consent.instruction.tenant !== this.tenant || consent.instruction.subject !== raw.userId)) throw new SessionAccessError();
+      if (consent) withConsent(raw, consent);
+    }
+    return raw;
   }
 
   /**
@@ -323,6 +392,7 @@ export class SessionManager {
    */
   async resolveRecord(sessionId: string): Promise<{ id: string; data: SessionData | null }> {
     const raw = await this.readRaw(sessionId);
+    if (this.principal) return { id: sessionId, data: raw };
     if (raw?.forwardTo && raw.forwardTo !== sessionId) {
       const target = await this.readRaw(raw.forwardTo);
       if (target) {
@@ -351,6 +421,81 @@ export class SessionManager {
     return (await this.resolveRecord(sessionId)).data;
   }
 
+  /** Request-local owned read: cookies only restrict, and refusal is durable before use. */
+  async readOwnedConsent(sessionId: string, cookieHeader?: string | null): Promise<{ sessionId: string; data: SessionData | null; consent: Consent }> {
+    if (!this.principal) throw new SessionAccessError();
+    let data = await this.readRaw(sessionId, true);
+    const consent = intersectConsent(await currentOwnerConsent() ?? consentOf(data), consentFromCookies(cookieHeader));
+    if (!consent.tracking || !consent.personalization) {
+      await this.restrictConsent(sessionId, consent, { sessionId, data });
+      if (data) data = withConsent({ ...data, preferences: { ...data.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization } }, consent);
+    }
+    assertSessionTarget(this.principal, undefined, sessionId);
+    if (data && consent.tracking && consent.personalization) pinProfileRetention(this.env, data, this.tenant);
+    return { sessionId, data, consent };
+  }
+
+  /** Buffered actions require an existing exact signed record, never a pointer or cold profile. */
+  async readBufferedSession(): Promise<SessionData> {
+    if (!this.principal) throw new SessionAccessError();
+    const sessionId = this.principal.sessionId;
+    assertSessionTarget(this.principal, undefined, sessionId);
+    try {
+      const text = await this.kv.get(`session:${sessionId}`);
+      if (typeof text !== 'string') throw new SessionAccessError();
+      const data = JSON.parse(text) as SessionData;
+      this.checkedSnapshot(sessionId, { sessionId, data });
+      if (data.forwardTo !== undefined) throw new SessionAccessError();
+      if (data.reflex !== undefined) historicalReflexSchema.parse(data.reflex);
+      // Validate with the schema, but retain original unrelated fields verbatim.
+      const consent = await currentOwnerConsent() ?? { tracking: false, personalization: false };
+      if (consent.tracking) pinProfileRetention(this.env, data, this.tenant);
+      return withConsent(data, consent);
+    } catch { throw new SessionAccessError(); }
+  }
+
+  /** Narrow non-atomic write: preserve the exact key's observed absolute lifetime and metadata. */
+  async writeBufferedSession(previous: SessionData, patch: Pick<SessionData, 'preferences'> & Partial<Pick<SessionData, 'reflex' | 'segments'>>): Promise<void> {
+    if (!this.principal) throw new SessionAccessError();
+    const sessionId = this.principal.sessionId, key = `session:${sessionId}`;
+    this.checkedSnapshot(sessionId, { sessionId, data: previous });
+    const page = await this.kv.list({ prefix: key, limit: 1 });
+    const row = page?.keys?.length === 1 ? page.keys[0] as { name: string; expiration?: unknown; metadata?: unknown } : undefined;
+    if (!row || row.name !== key) throw new SessionAccessError();
+    const options: { expiration?: number; metadata?: unknown } = {};
+    if (Object.hasOwn(row, 'expiration')) {
+      if (typeof row.expiration !== 'number' || !Number.isSafeInteger(row.expiration)
+        || row.expiration < Math.ceil(Date.now() / 1000) + 60) throw new SessionAccessError();
+      options.expiration = row.expiration;
+    }
+    if (Object.hasOwn(row, 'metadata')) {
+      if (row.metadata === undefined || JSON.stringify(row.metadata) === undefined) throw new SessionAccessError();
+      options.metadata = row.metadata;
+    }
+    const next = { ...previous, ...patch };
+    this.checkedSnapshot(sessionId, { sessionId, data: next });
+    await this.kv.put(key, JSON.stringify(next), options);
+  }
+
+  /** Necessary refusal storage only: no visit, profile merge, or user-pointer write. */
+  async restrictConsent(sessionId: string, hints: Consent, ownedSnapshot?: { sessionId: string; data: SessionData | null }): Promise<Consent> {
+    const previous = ownedSnapshot ? this.checkedSnapshot(sessionId, ownedSnapshot) : await this.readRaw(sessionId, true);
+    const consent = intersectConsent(await currentOwnerConsent() ?? consentOf(previous), hints);
+    // Do not renew an existing full-profile TTL merely to remember a restriction.
+    return await restrictOwnerConsent(consent) ?? consent;
+  }
+
+  /** Request-local state already read by the owned action lane, never a caller payload. */
+  private checkedSnapshot(sessionId: string, snapshot: { sessionId: string; data: SessionData | null }): SessionData | null {
+    if (!this.principal || snapshot.sessionId !== sessionId) throw new SessionAccessError();
+    assertSessionTarget(this.principal, undefined, sessionId);
+    const raw = snapshot.data === null ? null : withConsent(sessionDataSchema.parse(snapshot.data), consentOf(snapshot.data));
+    if (raw ? raw.userId !== this.principal.subject || !!raw.forwardTo
+      || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject)
+      : this.principal.kind === 'recognized') throw new SessionAccessError();
+    return raw;
+  }
+
   /**
    * CW25. Fold a browser's session into a person's, and leave the browser's
    * record forwarding there.
@@ -377,6 +522,8 @@ export class SessionManager {
      * went there, and a shared computer's second account must not inherit it.
      */
     mode?: 'merge' | 'repoint';
+    /** Public identity transitions intersect, never upgrade, the source switches. */
+    consent?: Consent;
   }): Promise<{ sessionId: string; data: SessionData; changes: ReflexChanges; created: boolean }> {
     const now = input.now ?? Date.now();
     const { shopperId } = input;
@@ -389,44 +536,52 @@ export class SessionManager {
     const from = input.from && !input.from.identity && input.from.userId === browserId ? input.from : null;
 
     let canonicalId = (await this.kv.get(`user:${shopperId}`)) as string | null;
-    let base: SessionData | null = canonicalId ? await this.readRaw(canonicalId) : null;
+    const base: SessionData | null = canonicalId ? await this.readRaw(canonicalId, input.consent !== undefined) : null;
     const created = !base;
     if (!base) canonicalId = this.generateSessionId();
     // A browser already forwarding here, or one being repointed, has nothing to fold in.
     const fold = input.mode !== 'repoint' && from && from.forwardTo !== canonicalId && from.userId !== shopperId ? from : null;
 
     const merged = mergeReflexStates(base?.reflex, fold?.reflex, now, input.config);
+    const profileEnrichment = mergeEnrichment(base?.profileEnrichment, fold?.profileEnrichment);
+    const previousExternal = new Set([...enrichmentInputs(base?.profileEnrichment).audiences, ...enrichmentInputs(fold?.profileEnrichment).audiences]);
     const counters: Record<string, unknown> = { ...(fold?.attributes ?? {}), ...(base?.attributes ?? {}) };
     for (const k of Object.keys(fold?.attributes ?? {})) {
       const a = base?.attributes?.[k]; const b = fold?.attributes?.[k];
       if (typeof a === 'number' && typeof b === 'number' && COUNTER_ATTRIBUTES.has(k)) counters[k] = a + b;
     }
-    const laterVisit = (fold?.metadata.lastVisitAt ?? 0) > (base?.metadata.lastVisitAt ?? 0) ? fold : base;
 
+    const odp = await mergeOdpState(this.env, this.tenant, base, fold);
+    const oldOdp = new Set([...(base?.odpSeed ?? []), ...(fold?.odpSeed ?? [])]);
     const data: SessionData = {
       userId: shopperId,
       anonymousId: base?.anonymousId ?? fold?.anonymousId,
-      segments: [...new Set([...(base?.segments ?? []), ...(fold?.segments ?? []), ...merged.state.audiences])].sort(),
+      segments: [...new Set([...[
+        ...(base?.segments ?? []).filter(s => !base?.odpSeed?.includes(s)),
+        ...(fold?.segments ?? []).filter(s => !fold?.odpSeed?.includes(s)),
+      ].filter(segment => !previousExternal.has(segment)), ...merged.state.audiences, ...enrichmentInputs(profileEnrichment).audiences, ...odp.odpSeed])].sort(),
       attributes: counters,
       surface: base?.surface ?? fold?.surface,
       reflex: merged.state,
-      odpSeed: base?.odpSeed ?? fold?.odpSeed,
-      odpSeedAt: base?.odpSeedAt ?? fold?.odpSeedAt,
-      odpRecentEvents: [...(fold?.odpRecentEvents ?? []), ...(base?.odpRecentEvents ?? [])].slice(-10),
+      profileEnrichment,
+      ...odp,
       identity: base?.identity ?? { shopperId, linkedAt: now },
       metadata: {
         firstSeen: Math.min(base?.metadata.firstSeen ?? now, fold?.metadata.firstSeen ?? now),
         lastSeen: Math.max(base?.metadata.lastSeen ?? 0, fold?.metadata.lastSeen ?? 0) || now,
         sessionCount: (base?.metadata.sessionCount ?? 0) + (fold?.metadata.sessionCount ?? 0),
-        visitCount: (base?.metadata.visitCount ?? 0) + (fold?.metadata.visitCount ?? 0) || undefined,
-        lastVisitAt: laterVisit?.metadata.lastVisitAt,
-        entryChannel: laterVisit?.metadata.entryChannel,
+        ...mergeVisits(base?.metadata, fold?.metadata),
         engagementScore: Math.max(base?.metadata.engagementScore ?? 0, fold?.metadata.engagementScore ?? 0),
         lastSegmentUpdate: now,
         journeyStage: base?.metadata.journeyStage ?? fold?.metadata.journeyStage,
       },
-      preferences: base?.preferences ?? fold?.preferences ?? { trackingConsent: true, personalizationEnabled: true, cookieConsent: true },
+      preferences: base?.preferences ?? fold?.preferences ?? { trackingConsent: false, personalizationEnabled: false, cookieConsent: true },
     };
+    if (oldOdp.size) data.metadata.journeyStage = deriveStage({ userId: shopperId, attributes: counters, segments: data.segments });
+    if (input.consent) {
+      const consent = intersectConsent(consentOf(data), input.consent);
+      data.preferences = { ...data.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization };
+    }
     const validated = sessionDataSchema.parse(data);
 
     await this.kv.put(`session:${canonicalId}`, JSON.stringify(validated), { expirationTtl: this.sessionTTL });
@@ -445,44 +600,88 @@ export class SessionManager {
   }
 
   /**
-   * CW25. Write an imported reflex vector onto a shopper's session, and nothing
-   * else about the visit. History informs interest; it does not claim visits the
-   * engine never saw, so lastSeen and the visit number are left exactly as they
-   * were. A shopper met first through an import gets a record with the identity
-   * block and no visit at all.
+   * Fold history into the current, explicitly consenting canonical profile.
+   * Backend import cannot create consent or follow a stale forwarding record.
+   * This KV read/write is not a cross-isolate transaction.
    */
   async applyImport(input: {
     userId: string;
-    reflex: ReflexState;
-    identity?: { shopperId: string; linkedAt: number };
+    rows: Array<{ action: string; at: number; touches: Touch[] } | ProfileSnapshotRow>;
+    config: ReflexConfig;
     now?: number;
-  }): Promise<{ sessionId: string; data: SessionData; created: boolean }> {
+  }): Promise<{ applied: false; reason: 'profile_missing' | 'consent_missing' | 'consent_refused' }
+    | { applied: true; sessionId: string; data: SessionData; created: false; outcomes: ImportOutcome[] }> {
+    if (!ownerOperationActive(this.env)) {
+      const result = await importUnderOwner(this.env, this.tenant, input.userId, { rows: input.rows, now: input.now ?? Date.now() }) as {
+        ok?: boolean; reason?: 'profile_missing' | 'consent_missing' | 'consent_refused'; data?: SessionData; sessionId?: string; outcomes?: ImportOutcome[];
+      };
+      if (result.ok !== true) throw new SessionAccessError();
+      if (result.reason) return { applied: false, reason: result.reason };
+      if (!result.data || !result.sessionId || !Array.isArray(result.outcomes)) throw new SessionAccessError();
+      return { applied: true, data: sessionDataSchema.parse(result.data), sessionId: result.sessionId, outcomes: result.outcomes, created: false };
+    }
     const now = input.now ?? Date.now();
-    const sid0 = (await this.kv.get(`user:${input.userId}`)) as string | null;
-    const resolved = sid0 ? await this.resolveRecord(sid0) : { id: this.generateSessionId(), data: null };
-    const existing = resolved.data;
-    const sessionId = resolved.id;
-    const data: SessionData = existing
-      ? {
-          ...existing,
-          reflex: input.reflex,
-          segments: [...new Set([...existing.segments, ...input.reflex.audiences])].sort(),
-          identity: existing.identity ?? input.identity,
-          metadata: { ...existing.metadata, lastSegmentUpdate: now },
-        }
-      : {
-          userId: input.userId,
-          segments: [...input.reflex.audiences].sort(),
-          attributes: {},
-          reflex: input.reflex,
-          identity: input.identity,
-          metadata: { firstSeen: now, lastSeen: 0, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },
-          preferences: { trackingConsent: true, personalizationEnabled: true, cookieConsent: true },
-        };
+    const sessionId = await this.kv.get(`user:${input.userId}`);
+    if (sessionId === null) return { applied: false, reason: 'profile_missing' };
+    if (typeof sessionId !== 'string' || !/^[A-Za-z0-9_.-]{1,200}$/.test(sessionId)) throw new SessionAccessError();
+    const stored = await this.kv.get(`session:${sessionId}`);
+    if (stored === null) return { applied: false, reason: 'profile_missing' };
+    if (typeof stored !== 'string') throw new SessionAccessError();
+    let raw: Record<string, unknown>;
+    try {
+      raw = JSON.parse(stored);
+      sessionDataSchema.omit({ preferences: true }).parse(raw);
+      if (raw.reflex !== undefined) historicalReflexSchema.parse(raw.reflex);
+    } catch { throw new SessionAccessError(); }
+    if (raw.userId !== input.userId || raw.forwardTo !== undefined
+      || (isShopperId(input.userId)
+        ? (raw.identity as SessionData['identity'])?.shopperId !== input.userId : raw.identity !== undefined)) throw new SessionAccessError();
+    if (raw.preferences === undefined) return { applied: false, reason: 'consent_missing' };
+    if (!raw.preferences || typeof raw.preferences !== 'object' || Array.isArray(raw.preferences)) throw new SessionAccessError();
+    const preferences = raw.preferences as Partial<SessionData['preferences']>;
+    for (const value of [preferences.trackingConsent, preferences.personalizationEnabled]) {
+      if (value !== undefined && typeof value !== 'boolean') throw new SessionAccessError();
+    }
+    if (preferences.trackingConsent === undefined || preferences.personalizationEnabled === undefined) return { applied: false, reason: 'consent_missing' };
+    let existing: SessionData;
+    try { existing = sessionDataSchema.parse(raw); } catch { throw new SessionAccessError(); }
+    const consent = await currentOwnerConsent();
+    if (!consent?.tracking || !consent.personalization) return { applied: false, reason: 'consent_refused' };
+    requireConsentPurpose(consent, 'personalization');
+    const retention = pinProfileRetention(this.env, existing, this.tenant);
+    let state = existing.reflex ?? null;
+    let profileEnrichment = readEnrichment(existing.profileEnrichment);
+    let behavioral = false;
+    const outcomes: ImportOutcome[] = [];
+    for (const [index, row] of input.rows.entries()) {
+      if ('kind' in row) {
+        const next = applyProfileSnapshot(profileEnrichment, row, now);
+        profileEnrichment = next.state;
+        outcomes.push(next.reason ? { index, applied: false, reason: next.reason } : { index, applied: true });
+      } else {
+        state = applyHistorical(state, { action: row.action, touches: row.touches }, row.at, input.config);
+        behavioral = true;
+        outcomes.push({ index, applied: true });
+      }
+    }
+    // A replay is a read, not a TTL refresh or a behavioral tick.
+    if (!outcomes.some(outcome => outcome.applied)) return { applied: true, sessionId, data: existing, created: false, outcomes };
+    const reflex = behavioral ? tick(state, now, input.config).state : existing.reflex;
+    const oldExternal = new Set(enrichmentInputs(existing.profileEnrichment).audiences);
+    const data: SessionData = {
+      ...existing, reflex, profileEnrichment,
+      segments: [...new Set([...existing.segments.filter(segment => !oldExternal.has(segment)), ...(reflex?.audiences ?? []), ...enrichmentInputs(profileEnrichment).audiences])].sort(),
+      metadata: { ...existing.metadata, lastSegmentUpdate: now },
+    };
     const validated = sessionDataSchema.parse(data);
-    await this.kv.put(`session:${sessionId}`, JSON.stringify(validated), { expirationTtl: this.sessionTTL });
-    await this.kv.put(`user:${validated.userId}`, sessionId, { expirationTtl: this.sessionTTL });
-    return { sessionId, data: validated, created: !existing };
+    const key = `session:${sessionId}`, listed = await this.kv.list({ prefix: key, limit: 2 });
+    const entry = listed.keys.find(entry => entry.name === key) as { name: string; expiration?: number; metadata?: unknown } | undefined;
+    if (!entry) throw new SessionAccessError();
+    const expiration = Math.min(Math.floor(retention.expiresAt / 1000), entry.expiration ?? Infinity);
+    if (expiration < Math.ceil(Date.now() / 1000) + 60) throw new SessionAccessError();
+    pinProfileRetention(this.env, existing, this.tenant);
+    await this.kv.put(key, JSON.stringify(validated), { expiration, ...(entry.metadata === undefined ? {} : { metadata: entry.metadata }) });
+    return { applied: true, sessionId, data: validated, created: false, outcomes };
   }
 
   /**
@@ -495,7 +694,8 @@ export class SessionManager {
       if (ownSessionId) await this.kv.delete(`session:${ownSessionId}`);
       await this.kv.delete(`user:${userId}`);
     } catch (error) {
-      console.error('Error forgetting visitor:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error forgetting visitor');
     }
   }
 
@@ -503,6 +703,10 @@ export class SessionManager {
    * Get session data by user ID
    */
   async getSessionByUserId(userId: string): Promise<SessionData | null> {
+    if (this.principal) {
+      assertSessionTarget(this.principal, userId);
+      return this.getSession(this.principal.sessionId);
+    }
     try {
       const sessionId = (await this.kv.get(`user:${userId}`)) as string | null;
       if (!sessionId) {
@@ -511,7 +715,8 @@ export class SessionManager {
 
       return this.getSession(sessionId);
     } catch (error) {
-      console.error('Error retrieving session by user ID:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error retrieving session by user ID');
       return null;
     }
   }
@@ -521,10 +726,15 @@ export class SessionManager {
    * Used as a continuity fallback when the session cookie is absent or blocked.
    */
   async resolveSessionIdByUserId(userId: string): Promise<string | null> {
+    if (this.principal) {
+      assertSessionTarget(this.principal, userId);
+      return this.principal.sessionId;
+    }
     try {
       return (await this.kv.get(`user:${userId}`)) as string | null;
     } catch (error) {
-      console.error('Error resolving session id by user ID:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error resolving session id by user ID');
       return null;
     }
   }
@@ -551,11 +761,12 @@ export class SessionManager {
           engagementScore: engagementScore ?? existingSession.metadata.engagementScore,
           lastSegmentUpdate: Date.now()
         }
-      });
+      }, undefined, undefined, undefined, false);
 
       return updatedSession;
     } catch (error) {
-      console.error('Error updating user segments:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error updating user segments');
       return null;
     }
   }
@@ -564,8 +775,9 @@ export class SessionManager {
    * Generate secure cookies for client-side persistence
    */
   generateSessionCookies(sessionData: SessionData, sessionId: string): CookieConfig[] {
+    const consent = consentOf(sessionData);
     const cookieOptions: Partial<CookieConfig> = {
-      maxAge: this.sessionTTL,
+      maxAge: Math.max(0, Math.min(this.sessionTTL, Math.floor(((sessionData.retention?.expiresAt ?? 0) - Date.now()) / 1000))),
       httpOnly: false, // Need to be accessible to JavaScript for personalization
       secure: this.isSecure,
       sameSite: 'Lax',
@@ -602,13 +814,13 @@ export class SessionManager {
       },
       {
         name: 'opt_tracking_consent',
-        value: sessionData.preferences.trackingConsent.toString(),
-        ...cookieOptions
+        value: consent.tracking.toString(),
+        ...cookieOptions, maxAge: Math.max(0, Math.floor(((consent.instruction?.tracking?.expiresAt ?? 0) - Date.now()) / 1000))
       },
       {
         name: 'opt_personalization_enabled',
-        value: sessionData.preferences.personalizationEnabled.toString(),
-        ...cookieOptions
+        value: consent.personalization.toString(),
+        ...cookieOptions, maxAge: Math.max(0, Math.floor(((consent.instruction?.personalization?.expiresAt ?? 0) - Date.now()) / 1000))
       }
     ];
 
@@ -622,6 +834,14 @@ export class SessionManager {
     }
 
     return cookies;
+  }
+
+  /** Necessary preference mirrors only; never inspect or serialize a behavioral profile. */
+  generateConsentCookieHeaders(preferences: Pick<SessionData['preferences'], 'trackingConsent' | 'personalizationEnabled'>, consent: Consent = REFUSING): string[] {
+    return this.createCookieHeaders([
+      { name: 'opt_tracking_consent', value: String(preferences.trackingConsent) },
+      { name: 'opt_personalization_enabled', value: String(preferences.personalizationEnabled) },
+    ].map((cookie, index) => ({ ...cookie, maxAge: Math.max(0, Math.floor(((consent.instruction?.[index === 0 ? 'tracking' : 'personalization']?.expiresAt ?? 0) - Date.now()) / 1000)), secure: this.isSecure, sameSite: 'Lax', path: '/', ...(this.cookieDomain && { domain: this.cookieDomain }) })));
   }
 
   /**
@@ -657,13 +877,12 @@ export class SessionManager {
    * Create cookie header string for HTTP response
    */
   /**
-   * CW25. Every cookie this manager sets, expired. What a detach (logout) sends:
-   * the device forgets which session it was on; nothing server-side changes.
+   * Private identity/profile mirrors only. Refusal cookies must survive logout/reset.
    * `maxAge` 0 is rendered by hand because createCookieHeaders treats 0 as unset.
    */
   clearCookieHeaders(): string[] {
     const names = ['opt_session_id', 'opt_user_id', 'opt_anonymous_id', 'opt_segments',
-      'opt_engagement_score', 'opt_last_update', 'opt_tracking_consent', 'opt_personalization_enabled'];
+      'opt_engagement_score', 'opt_last_update'];
     const domain = this.cookieDomain ? `; Domain=${this.cookieDomain}` : '';
     return names.map((n) => `${n}=; Max-Age=0; Path=/${domain}; SameSite=Lax`);
   }
@@ -711,6 +930,7 @@ export class SessionManager {
    * Delete session and clear cookies
    */
   async deleteSession(sessionId: string): Promise<boolean> {
+    if (this.principal) assertSessionTarget(this.principal, undefined, sessionId);
     try {
       // The record as stored, NOT what it forwards to: deleting a linked
       // browser's session detaches that browser; only the person's own session
@@ -727,7 +947,8 @@ export class SessionManager {
 
       return true;
     } catch (error) {
-      console.error('Error deleting session:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error deleting session');
       return false;
     }
   }
@@ -742,7 +963,8 @@ export class SessionManager {
       console.log('Session cleanup scheduled - KV TTL handles automatic expiration');
       return 0;
     } catch (error) {
-      console.error('Error during session cleanup:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error during session cleanup');
       return 0;
     }
   }
@@ -763,15 +985,17 @@ export class SessionManager {
       }
 
       const sessionDuration = Date.now() - sessionData.metadata.firstSeen;
+      pinProfileRetention(this.env, sessionData, this.tenant);
       
       return {
         sessionDuration,
         pageViews: sessionData.attributes.page_views || 0,
         engagementScore: sessionData.metadata.engagementScore,
-        segmentHistory: sessionData.segments
+        segmentHistory: projectedOdpSegments(sessionData.segments, sessionData, await projectOdpState(this.env, this.tenant, sessionData))
       };
     } catch (error) {
-      console.error('Error retrieving session analytics:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error retrieving session analytics');
       return null;
     }
   }
@@ -781,8 +1005,30 @@ export class SessionManager {
    */
   async updateUserPreferences(
     sessionId: string,
-    preferences: Partial<SessionData['preferences']>
+    preferences: Partial<SessionData['preferences']>,
+    cookieHeader?: string | null,
   ): Promise<SessionData | null> {
+    if (this.principal) {
+      const existing = await this.readRaw(sessionId, true);
+      const restricted = intersectConsent(await currentOwnerConsent() ?? consentOf(existing), consentFromCookies(cookieHeader));
+      const effective = {
+        trackingConsent: restricted.tracking && preferences.trackingConsent !== false,
+        personalizationEnabled: restricted.personalization && preferences.personalizationEnabled !== false,
+        cookieConsent: preferences.cookieConsent ?? existing?.preferences.cookieConsent ?? true,
+      };
+      // Anonymous absence is not a visit. Only an instruction to refuse may create it.
+      if (!existing) return null;
+      const now = Date.now();
+      const updated = sessionDataSchema.parse({
+        ...(existing ?? { userId: this.principal.subject, segments: [], attributes: {},
+          metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now } }),
+        preferences: effective,
+      });
+      assertSessionTarget(this.principal, undefined, sessionId);
+      await this.writeBufferedSession(existing, { preferences: updated.preferences });
+      assertSessionTarget(this.principal, undefined, sessionId);
+      return withConsent(updated, restricted);
+    }
     try {
       const existingSession = await this.getSession(sessionId);
       if (!existingSession) {
@@ -795,9 +1041,10 @@ export class SessionManager {
           ...existingSession.preferences,
           ...preferences
         }
-      });
+      }, undefined, undefined, undefined, false);
     } catch (error) {
-      console.error('Error updating user preferences:', error);
+      if (error instanceof SessionAccessError) throw error;
+      console.error('Error updating user preferences');
       return null;
     }
   }

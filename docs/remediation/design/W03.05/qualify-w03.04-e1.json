@@ -1,0 +1,540 @@
+{
+  "before": {
+    "id": "W03.04-E1",
+    "task_id": "W03.04",
+    "check_id": "W03.04-K1",
+    "criterion_ids": [
+      "W03.04-C1",
+      "W03.04-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W03.04/review.json",
+      "sha256": "3e18b86581512f99a122c90e47f4483f91c8ecaf708af2cdf662f0419936de3b"
+    },
+    "at": "2026-09-11T16:40:52.000Z",
+    "limitations": "Local enforced-mode audit of six decisions.ts read disclosures plus tenant-admin readback only. Open/demo reads remain unaudited explicitly. Not identity/resolve/import or erasure-mutation auditing, actual external downloads, historical completeness, anonymous data, retention/key lifecycle approval, cross-store transactions, customer/native deployment/SLO/full W03/N13/gates/release acceptance. Pending D06/D10 and Snowflake hold retained. No external/customer-data/credentials/build output/install/commit/push/deploy/provision/cleanup or policy amendment. Existing in-memory test bundling and synthetic workerd/D1 fixture allowed; no new framework. Current-artifact runtime is the independent final-byte fixed three-fixture command; all baseline/worker failures and corrected results remain retained.",
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/middleware/auth.claims-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t 'W03.04|W02.06 native D1' && node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t 'W03.02|W03.04'",
+    "runtime": "Installed Node/Vitest plus existing synthetic actual workerd/D1/mounted-entry harness; in-memory bundling, zero outbound.",
+    "workload": "Existing12 ledger cases plus at most2 groups; claims selected W03.04 native group and existing W02.06 native D1; mounted three W03.02 groups plus at most1 new W03.04. No SLO/live claims.",
+    "result": "pass",
+    "artifact_digest": "d25acee6e4dbb46982ca21bef8516066f38bd12dc1b65129e294baa236aaf4df",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "b15eb2aeeb4b846ff4f432101a7757f4785cb4cd651289a2950b85c16053a571",
+      "configuration": "Local enforced-mode audit of six decisions.ts read disclosures plus tenant-admin readback only. Open/demo reads remain unaudited explicitly. Not identity/resolve/import or erasure-mutation auditing, actual external downloads, historical completeness, anonymous data, retention/key lifecycle approval, cross-store transactions, customer/native deployment/SLO/full W03/N13/gates/release acceptance. Pending D06/D10 and Snowflake hold retained. No external/customer-data/credentials/build output/install/commit/push/deploy/provision/cleanup or policy amendment. Existing in-memory test bundling and synthetic workerd/D1 fixture allowed; no new framework.",
+      "files": [
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/edgeAccess.ts",
+          "role": "source",
+          "sha256": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "role": "source",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/identity/shopperId.ts",
+          "role": "source",
+          "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "da7743fdfec69d2f549fff954435a273b14d90493255efba9f4f74a08c5901e9"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "f0a6285ae7371d4dc1e2830c8133d25ff72885ececff77641c282a52673473d7"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7"
+        },
+        {
+          "path": "src/ledger/enqueue.ts",
+          "role": "source",
+          "sha256": "1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "role": "source",
+          "sha256": "712d51a2d337f4cbbb1bfa91e23edd728efe4e3c04c57b2938bf5719a8d19b3e"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "110192a195b7d18d001e17ba657ddd54adb96d30823262ee74ef9ddeabaf3273"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "source",
+          "sha256": "2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5"
+        },
+        {
+          "path": "src/learn/receipts.ts",
+          "role": "source",
+          "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c"
+        },
+        {
+          "path": "src/learn/rows.ts",
+          "role": "source",
+          "sha256": "3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+        },
+        {
+          "path": "src/routes/auth.ts",
+          "role": "source",
+          "sha256": "50822373d16974d80b0ad1440d039d5cb7a3812c3ce07ec418a309012d48ed36"
+        },
+        {
+          "path": "src/middleware/error.ts",
+          "role": "source",
+          "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "role": "source",
+          "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+        },
+        {
+          "path": "migrations/0010_operator_accounts.sql",
+          "role": "source",
+          "sha256": "7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "public/console/views-explore.js",
+          "role": "source",
+          "sha256": "21da13c01ebedc1b75f9922940044f788ceec9c32a476a10ee50bd7a5a1a1efa"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "role": "output",
+          "sha256": "367cf481aa04bd7cb2ed6c83004f527d982d301b08c9f69861eaf6f34b04e423"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "output",
+          "sha256": "51083a5ea69a79279d487af4d4fab4d771c0f4e7f294b984575bd28bfce2db7c"
+        },
+        {
+          "path": "src/ledger/ledger.test.ts",
+          "role": "output",
+          "sha256": "693bb14c7bc1bb35e3d303b8f65b12207d703212e5e949d70a56deaa6f6cd53a"
+        },
+        {
+          "path": "src/middleware/auth.claims-boundary.test.ts",
+          "role": "output",
+          "sha256": "2b853d19538ed3a15dc081f4f22c5939aff150c7a52bcddd965f1f47c5a3c6fa"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "role": "output",
+          "sha256": "2d60268d218c2008979e9fab1f299b7075c9959d4bf349b3c161710ec82781e2"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "b720f2d467cd240ef6822c28008d6eee804bf96e7245a12168b87349e881ac6c"
+        },
+        {
+          "path": "src/auth/subjectAudit.ts",
+          "role": "output",
+          "sha256": "c9199d6efeea52815773128cb64766e4e7bae7d8c1360919c802a206c6953f97"
+        },
+        {
+          "path": "migrations/0011_operator_audit_tenant.sql",
+          "role": "output",
+          "sha256": "d279d332fbc0fdbdcfe5ad1dad2cb8347a056ee85ea9b975127dd3cf40e2074c"
+        },
+        {
+          "path": "docs/remediation/evidence/W03.04/worker.json",
+          "role": "output",
+          "sha256": "ae85aabf4fac68d9b3d72ff2127db39d5d8fbec3fa4b34de8c93d2a9c4be576f"
+        },
+        {
+          "path": "docs/remediation/design/W03.04/plan.md",
+          "role": "configuration",
+          "sha256": "870e6fb369e0924916d32df659ff7f85ec1445044133268c326bd0cdc0359f9f"
+        },
+        {
+          "path": "docs/remediation/design/W03.04/baseline.json",
+          "role": "configuration",
+          "sha256": "fbddf663ab0e907a8b3a4052b52b6df9e3451fd546eb1e5be53b29fbd640fea3"
+        },
+        {
+          "path": "docs/remediation/evidence/W03.04/source-freeze.json",
+          "role": "configuration",
+          "sha256": "938316d6f5cc02a810890659d3b14ad08a234cd672a3f8aa945f0019afe60ac1"
+        },
+        {
+          "path": "docs/remediation/evidence/W03.04/source-deltas.json",
+          "role": "configuration",
+          "sha256": "e04b8258b26012ce821eacbcc2dfd29922e1960fd4bc7cb8a5a61cb3e3a76199"
+        }
+      ],
+      "digest": "d25acee6e4dbb46982ca21bef8516066f38bd12dc1b65129e294baa236aaf4df"
+    }
+  },
+  "after": {
+    "id": "W03.04-E1",
+    "task_id": "W03.04",
+    "check_id": "W03.04-K1",
+    "criterion_ids": [
+      "W03.04-C1",
+      "W03.04-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W03.04/review.json",
+      "sha256": "3e18b86581512f99a122c90e47f4483f91c8ecaf708af2cdf662f0419936de3b"
+    },
+    "at": "2026-09-11T16:40:52.000Z",
+    "limitations": "Local enforced-mode audit of six decisions.ts read disclosures plus tenant-admin readback only. Open/demo reads remain unaudited explicitly. Not identity/resolve/import or erasure-mutation auditing, actual external downloads, historical completeness, anonymous data, retention/key lifecycle approval, cross-store transactions, customer/native deployment/SLO/full W03/N13/gates/release acceptance. Pending D06/D10 and Snowflake hold retained. No external/customer-data/credentials/build output/install/commit/push/deploy/provision/cleanup or policy amendment. Existing in-memory test bundling and synthetic workerd/D1 fixture allowed; no new framework. Current-artifact runtime is the independent final-byte fixed three-fixture command; all baseline/worker failures and corrected results remain retained.",
+    "command": "node node_modules/vitest/vitest.mjs run src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/middleware/auth.claims-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t 'W03.04|W02.06 native D1' && node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t 'W03.02|W03.04'",
+    "runtime": "Installed Node/Vitest plus existing synthetic actual workerd/D1/mounted-entry harness; in-memory bundling, zero outbound.",
+    "workload": "Existing12 ledger cases plus at most2 groups; claims selected W03.04 native group and existing W02.06 native D1; mounted three W03.02 groups plus at most1 new W03.04. No SLO/live claims.",
+    "result": "pass",
+    "artifact_digest": "d25acee6e4dbb46982ca21bef8516066f38bd12dc1b65129e294baa236aaf4df",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "b15eb2aeeb4b846ff4f432101a7757f4785cb4cd651289a2950b85c16053a571",
+      "configuration": "Local enforced-mode audit of six decisions.ts read disclosures plus tenant-admin readback only. Open/demo reads remain unaudited explicitly. Not identity/resolve/import or erasure-mutation auditing, actual external downloads, historical completeness, anonymous data, retention/key lifecycle approval, cross-store transactions, customer/native deployment/SLO/full W03/N13/gates/release acceptance. Pending D06/D10 and Snowflake hold retained. No external/customer-data/credentials/build output/install/commit/push/deploy/provision/cleanup or policy amendment. Existing in-memory test bundling and synthetic workerd/D1 fixture allowed; no new framework.",
+      "files": [
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/edgeAccess.ts",
+          "role": "source",
+          "sha256": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "role": "source",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/identity/shopperId.ts",
+          "role": "source",
+          "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "d04df3d0a91d62db0ae3db2455db86839d644aac7cc0b1a3f3ce7736ddcb6411"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "84c80906990e80cc64025517a20e1ff2f7764b4f4d295b2040974c32852f2d13"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "2e19e75ce4ff9306292ed5d5e51969eb35ec6e7eb3d214843b1b4aa143ed0457"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "da7743fdfec69d2f549fff954435a273b14d90493255efba9f4f74a08c5901e9"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "f0a6285ae7371d4dc1e2830c8133d25ff72885ececff77641c282a52673473d7"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7"
+        },
+        {
+          "path": "src/ledger/enqueue.ts",
+          "role": "source",
+          "sha256": "1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "role": "source",
+          "sha256": "712d51a2d337f4cbbb1bfa91e23edd728efe4e3c04c57b2938bf5719a8d19b3e"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "110192a195b7d18d001e17ba657ddd54adb96d30823262ee74ef9ddeabaf3273"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "source",
+          "sha256": "2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5"
+        },
+        {
+          "path": "src/learn/receipts.ts",
+          "role": "source",
+          "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c"
+        },
+        {
+          "path": "src/learn/rows.ts",
+          "role": "source",
+          "sha256": "3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+        },
+        {
+          "path": "src/routes/auth.ts",
+          "role": "source",
+          "sha256": "50822373d16974d80b0ad1440d039d5cb7a3812c3ce07ec418a309012d48ed36"
+        },
+        {
+          "path": "src/middleware/error.ts",
+          "role": "source",
+          "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b"
+        },
+        {
+          "path": "src/identity/erase.ts",
+          "role": "source",
+          "sha256": "6ce2f780bdfbe7c5493401c1f2ee83ebbed606ec0e115580dfdaa9b8a3bd33d5"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+        },
+        {
+          "path": "migrations/0010_operator_accounts.sql",
+          "role": "source",
+          "sha256": "7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "public/console/views-explore.js",
+          "role": "source",
+          "sha256": "21da13c01ebedc1b75f9922940044f788ceec9c32a476a10ee50bd7a5a1a1efa"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "role": "output",
+          "sha256": "367cf481aa04bd7cb2ed6c83004f527d982d301b08c9f69861eaf6f34b04e423"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "output",
+          "sha256": "51083a5ea69a79279d487af4d4fab4d771c0f4e7f294b984575bd28bfce2db7c"
+        },
+        {
+          "path": "src/ledger/ledger.test.ts",
+          "role": "output",
+          "sha256": "693bb14c7bc1bb35e3d303b8f65b12207d703212e5e949d70a56deaa6f6cd53a"
+        },
+        {
+          "path": "src/middleware/auth.claims-boundary.test.ts",
+          "role": "output",
+          "sha256": "2b853d19538ed3a15dc081f4f22c5939aff150c7a52bcddd965f1f47c5a3c6fa"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "role": "output",
+          "sha256": "2d60268d218c2008979e9fab1f299b7075c9959d4bf349b3c161710ec82781e2"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "b720f2d467cd240ef6822c28008d6eee804bf96e7245a12168b87349e881ac6c"
+        },
+        {
+          "path": "src/auth/subjectAudit.ts",
+          "role": "output",
+          "sha256": "c9199d6efeea52815773128cb64766e4e7bae7d8c1360919c802a206c6953f97"
+        },
+        {
+          "path": "migrations/0011_operator_audit_tenant.sql",
+          "role": "output",
+          "sha256": "d279d332fbc0fdbdcfe5ad1dad2cb8347a056ee85ea9b975127dd3cf40e2074c"
+        },
+        {
+          "path": "docs/remediation/evidence/W03.04/worker.json",
+          "role": "output",
+          "sha256": "ae85aabf4fac68d9b3d72ff2127db39d5d8fbec3fa4b34de8c93d2a9c4be576f"
+        },
+        {
+          "path": "docs/remediation/design/W03.04/plan.md",
+          "role": "configuration",
+          "sha256": "870e6fb369e0924916d32df659ff7f85ec1445044133268c326bd0cdc0359f9f"
+        },
+        {
+          "path": "docs/remediation/design/W03.04/baseline.json",
+          "role": "configuration",
+          "sha256": "fbddf663ab0e907a8b3a4052b52b6df9e3451fd546eb1e5be53b29fbd640fea3"
+        },
+        {
+          "path": "docs/remediation/evidence/W03.04/source-freeze.json",
+          "role": "configuration",
+          "sha256": "938316d6f5cc02a810890659d3b14ad08a234cd672a3f8aa945f0019afe60ac1"
+        },
+        {
+          "path": "docs/remediation/evidence/W03.04/source-deltas.json",
+          "role": "configuration",
+          "sha256": "e04b8258b26012ce821eacbcc2dfd29922e1960fd4bc7cb8a5a61cb3e3a76199"
+        }
+      ],
+      "digest": "d25acee6e4dbb46982ca21bef8516066f38bd12dc1b65129e294baa236aaf4df"
+    }
+  }
+}

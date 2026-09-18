@@ -13,12 +13,16 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { Env } from '@/types/env';
 import { SessionManager } from '@/services/SessionManager';
 import { DEFAULT_REFLEX_CONFIG, apply, audienceKey, emptyState, snapshot, type ReflexState } from '@/reflex/core';
+import { newAnonymousSession, SessionAccessError } from '@/identity/sessionCapability';
+import { admitOwnerPrincipal, runOwnerOperation } from '@/identity/sessionAuthority';
+import { consentInstruction, CONSENT_LIFETIME_MS } from '@/content/consent';
 
 class FakeKV {
   store = new Map<string, string>();
   async get(key: string, type?: string) { const r = this.store.get(key); return r === undefined ? null : (type === 'json' ? JSON.parse(r) : r); }
   async put(key: string, value: string) { this.store.set(key, value); }
   async delete(key: string) { this.store.delete(key); }
+  async list(options?: { prefix?: string }) { return { keys: [...this.store.keys()].filter(key => key.startsWith(options?.prefix ?? '')).map(name => ({ name })), list_complete: true }; }
 }
 
 const cfg = DEFAULT_REFLEX_CONFIG;
@@ -38,6 +42,28 @@ let sm: SessionManager;
 beforeEach(() => {
   kv = new FakeKV();
   sm = new SessionManager({ SESSIONS: kv } as unknown as Env);
+});
+
+it('W04.02 owned mode rejects pointers, forwarding renewal and repeated read/write promotion', async () => {
+  const env = { SESSIONS: kv, JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
+  const grant = await newAnonymousSession(env, 'coach');
+  const owned = new SessionManager(env, { principal: grant });
+  await expect(owned.getSession(grant.sessionId)).rejects.toBeInstanceOf(SessionAccessError);
+  const owner = {};
+  await runOwnerOperation(owner, env, async () => {
+  admitOwnerPrincipal(owner, grant);
+  await owned.createOrUpdateSession(grant.sessionId, grant.subject, { segments: ['owned'] });
+  await device('victim', 'victim-session', ['Tabby'], T0);
+  kv.store.set(`user:${grant.subject}`, 'victim-session');
+  expect((await owned.getSessionByUserId(grant.subject))?.segments).toEqual(['owned']);
+  const raw = await sm.readRaw(grant.sessionId);
+  kv.store.set(`session:${grant.sessionId}`, JSON.stringify({ ...raw, forwardTo: 'victim-session', metadata: { ...raw!.metadata, lastSeen: 1 } }));
+  const before = [...kv.store];
+  await expect(owned.getSession(grant.sessionId)).rejects.toBeInstanceOf(SessionAccessError);
+  await expect(owned.createOrUpdateSession(grant.sessionId, grant.subject, { segments: ['must-not-write'] })).rejects.toBeInstanceOf(SessionAccessError);
+  await expect(owned.getSession('victim-session')).rejects.toBeInstanceOf(SessionAccessError);
+  expect([...kv.store]).toEqual(before);
+  }, kv);
 });
 
 /** A browser with a session holding a reflex vector and a few counters. */
@@ -139,25 +165,49 @@ describe('leaving', () => {
 });
 
 describe('applyImport', () => {
-  it('writes interest onto a person who has never visited, and claims no visit', async () => {
-    const reflex = browse(['Brooklyn', 'Brooklyn', 'Brooklyn'], T0 - 30 * 24 * 3600_000);
-    const r = await sm.applyImport({ userId: SH, reflex, identity: { shopperId: SH, linkedAt: T0 }, now: T0 });
-    expect(r.created).toBe(true);
-    expect(r.data.metadata.visitCount).toBeUndefined();
-    expect(r.data.metadata.lastSeen).toBe(0);
+  // Arithmetic-only service tests. The mounted W04.03/W05.09 fixtures exercise
+  // the actual owner-issued preparation, grant, epoch and erasure protocol.
+  const held = (work: () => Promise<void>) => {
+    const now = Date.now(), consent = consentInstruction({ version: 1, tenant: 'coach', subject: SH, revision: 'explicit-unit-choice',
+      tracking: { value: true, chosenAt: now, expiresAt: now + CONSENT_LIFETIME_MS },
+      personalization: { value: true, chosenAt: now, expiresAt: now + CONSENT_LIFETIME_MS } });
+    return runOwnerOperation({}, (sm as unknown as { env: Env }).env, work, kv, undefined, async () => consent);
+  };
+  it('refuses a cold import and enriches an existing consenting person without claiming a visit', async () => {
+    await held(async () => {
+    const input = { userId: SH, rows: [{ action: 'purchase', at: T0, touches: [{ dim: 'line', value: 'Brooklyn' }] }], config: cfg, now: T0 };
+    expect(await sm.applyImport(input)).toEqual({ applied: false, reason: 'profile_missing' });
+    expect(kv.store.size).toBe(0);
+    const before = await sm.createOrUpdateSession('s-person', SH, { identity: { shopperId: SH, linkedAt: T0 },
+      preferences: { trackingConsent: true, personalizationEnabled: true, cookieConsent: true } });
+    const r = await sm.applyImport(input);
+    expect(r.applied).toBe(true); if (!r.applied) throw new Error('expected import');
+    expect(r.created).toBe(false);
+    expect(r.data.metadata).toEqual({ ...before.metadata, lastSegmentUpdate: T0 });
     expect(r.data.identity?.shopperId).toBe(SH);
-    // The next live visit is visit 1 and the record already knows Brooklyn.
     const live = await sm.createOrUpdateSession(r.sessionId, SH, {});
-    expect(live.metadata.visitCount).toBe(1);
+    expect(live.metadata.visitCount).toBe(before.metadata.visitCount);
     expect(live.reflex?.dims.line?.Brooklyn).toBeDefined();
+    });
   });
 
-  it('onto a linked browser, lands on the person', async () => {
-    await device('vis-phone', 's-phone', ['Tabby'], T0);
-    const linked = await sm.absorbIntoShopper({ shopperId: SH, from: await sm.readRaw('s-phone'), fromSessionId: 's-phone', config: cfg, now: T0 + 5000 });
-    const r = await sm.applyImport({ userId: 'vis-phone', reflex: browse(['Rogue'], T0), now: T0 + 6000 });
+  it('requires the already resolved canonical person for a linked browser', async () => {
+    await held(async () => {
+    const person = await sm.createOrUpdateSession('s-person', SH, { identity: { shopperId: SH, linkedAt: T0 }, reflex: browse(['Tabby'], T0) });
+    const linked = { sessionId: 's-person' };
+    // Exact retained forwarding shape; constructing it is fixture setup, not
+    // a replacement for the separately tested signed account-link protocol.
+    kv.store.set('session:s-phone', JSON.stringify({ ...person, userId: 'vis-phone', identity: undefined, forwardTo: linked.sessionId }));
+    kv.store.set('user:vis-phone', linked.sessionId);
+    const rows = [{ action: 'purchase', at: T0, touches: [{ dim: 'line', value: 'Rogue' }] }];
+    const before = [...kv.store];
+    await expect(sm.applyImport({ userId: 'vis-phone', rows, config: cfg, now: T0 + 6000 })).rejects.toBeInstanceOf(SessionAccessError);
+    expect([...kv.store]).toEqual(before);
+    const r = await sm.applyImport({ userId: SH, rows, config: cfg, now: T0 + 6000 });
+    expect(r.applied).toBe(true); if (!r.applied) throw new Error('expected import');
     expect(r.sessionId).toBe(linked.sessionId);
     expect(r.data.userId).toBe(SH);
+    });
   });
 });
 

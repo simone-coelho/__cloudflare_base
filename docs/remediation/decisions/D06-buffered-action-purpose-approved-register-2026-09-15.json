@@ -1,0 +1,62 @@
+{
+  "before": {
+    "id": "D06",
+    "canonical": {
+      "title": "Consent, retention, erasure and historic destinations",
+      "boundary": "Customer privacy/security owners: define permitted states, necessary records, store/destination inventory, progress/retention requirements and historic-data handling. An internal notice or contract wording change does not automatically waive applicable duties."
+    },
+    "state": "pending",
+    "record": null,
+    "pending_request": {
+      "at": "2026-09-15T17:14:42.069Z",
+      "scope": "Scenario-specific buffered browser/app processing-purpose choice; no universal day cutoff.",
+      "owner": "User/customer product and DS owner; privacy owner retains separate D06 retention/erasure authority.",
+      "question": "For explicitly buffered browser/app actions, age-decayed current interest plus eligible historical measurement, or measurement only?",
+      "next_action": "Complete independently implementable W23.02 internal regional ordering fix. Await concrete buffered-purpose choice; then admit one coherent explicitly classified action flow with consent/erasure/time/recency guards. Do not infer new retention or experiment lifecycle.",
+      "original_preflight": {
+        "path": "docs/remediation/decisions/D06-W30-history-preflight-2026-09-14.json",
+        "sha256": "24cb32ca2ab6d5df7a3a4de4f183cbc0c704a445de890694f031ba0f15e3ce60"
+      },
+      "clarification": {
+        "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+        "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72"
+      },
+      "purpose_choice": {
+        "path": "docs/remediation/decisions/D06-buffered-action-purpose-2026-09-15.json",
+        "sha256": "764f707e5c6696036dbd0550949878eac1358ec02cff855bce33f0e9792fd1ea"
+      }
+    }
+  },
+  "after": {
+    "id": "D06",
+    "canonical": {
+      "title": "Consent, retention, erasure and historic destinations",
+      "boundary": "Customer privacy/security owners: define permitted states, necessary records, store/destination inventory, progress/retention requirements and historic-data handling. An internal notice or contract wording change does not automatically waive applicable duties."
+    },
+    "state": "pending",
+    "record": null,
+    "pending_request": {
+      "at": "2026-09-15T17:14:42.069Z",
+      "scope": "Scenario-specific buffered browser/app processing-purpose choice; no universal day cutoff.",
+      "owner": "User/customer product and DS owner; privacy owner retains separate D06 retention/erasure authority.",
+      "question": "Buffered-action purpose answered. Remaining: concrete retention/erasure and historical reconstruction/lifecycle choices as separately scoped.",
+      "next_action": "Implement one explicit buffered-action path using approved age-decayed interest plus eligible original-time measurement; no fresh recency/regional attribution. Keep full D06 pending.",
+      "original_preflight": {
+        "path": "docs/remediation/decisions/D06-W30-history-preflight-2026-09-14.json",
+        "sha256": "24cb32ca2ab6d5df7a3a4de4f183cbc0c704a445de890694f031ba0f15e3ce60"
+      },
+      "clarification": {
+        "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+        "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72"
+      },
+      "purpose_choice": {
+        "path": "docs/remediation/decisions/D06-buffered-action-purpose-2026-09-15.json",
+        "sha256": "764f707e5c6696036dbd0550949878eac1358ec02cff855bce33f0e9792fd1ea"
+      }
+    },
+    "approved_buffered_purpose": {
+      "path": "docs/remediation/decisions/D06-buffered-action-purpose-approved-2026-09-15.json",
+      "sha256": "469cc9e3c566c9430b855e01d200120e5c5f075ef9b595b0ca99db22e64923db"
+    }
+  }
+}

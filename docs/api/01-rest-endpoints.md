@@ -29,6 +29,16 @@
 
 Cookies: `opt_session_id` (HttpOnly), `opt_user_id`, `opt_segments`, `opt_engagement_score`.
 
+Owned content snapshots (`GET /v1/:tenant/decisions/snapshot`) accept optional `entry`, a single JSON query object with string fields `utmMedium` (128 characters), `utmSource` (256), `referrer` (host only, 253), and `siteHost` (253); the JSON query is at most 4096 characters. SDK hydration supplies these observations after tracking consent, without referrer paths/query strings. Live actions accept the same fields, with the existing URL-or-host referrer bounded to 2048 characters. Invalid entry input refuses before host effects. Missing entry or no supplied string fields stays unknown; observed empty strings may classify as direct. Explicit `channel` accepts the six values `direct`, `paid_social`, `paid_search`, `email`, `organic`, `referral` (case/whitespace normalized); unsupported values are ignored, falling back to valid stored/current entry or unknown. Existing classifier mappings are unchanged.
+
+Both hosts retain a known entry during same-visit navigation. Only accepted live actions persist visit count/start/channel; content reads project the existing 30-minute idle boundary without writing activity or extending lifetime. Unknown cold/legacy counts remain unknown until an observed live event. An idle return without entry does not inherit the previous visit's channel. Stored context requires both consent switches; request-only context follows tracking consent. Owned legacy personalization reads also avoid session creation and cookie refresh. These fields make context evidence available, not gamma-zero channel influence, calibrated journey/memory behavior, or a production-host cutover.
+
+Caller-managed buffered browser/app actions use HTTP `POST /realtime/action` with top-level `processing: "buffered"`, a stable `eventId`, an explicit nonnegative integer millisecond `timestamp` no later than server evaluation time, and original `browsingSessionId` (1–128 characters without surrounding whitespace, or explicit `null` when unknown). Numeric zero is valid; there is no maximum event age. The signed session still identifies the existing owned profile. Absent `processing` keeps live behavior; buffered WebSocket actions are refused. This adds no SDK offline queue or emitted bundle behavior.
+
+Buffered processing applies current configured interest weights with occurrence-time decay and re-evaluates local memberships, without fresh visits, counters, last activity, profile cookies, ODP activity, demo capture or receipt-geolocation regional counts. Interest needs registry-resolvable top-level product/event attributes or canonical content touches; `items[]` alone does not invent basket/quantity interest weighting. Tracking refusal prevents measurement; personalization refusal permits eligible measurement only. Missing/corrupt/forwarded profiles, unavailable erasure barriers and unsafe persistence refuse or explicitly drop; observed erased events do not resurrect state. Existing absolute Session expiry/metadata and DO last-seen/retention deadline are preserved; an earlier audience-exit alarm may be scheduled.
+
+The buffered response identifies `processing`, `interestApplied`, optional `dropped`, resolved `consent` and `cookiesUpdated: false`. Eligible reward outcomes retain original timestamp, nonce, browsing session (including unknown `null`) and decision reference into the existing ledger/online path. This acknowledges eligible submission, not durable delivery, historical credit or completed-report repair. Current config/retained rings are not original-policy or experiment-lifecycle reconstruction, and a stable nonce does not make repeated personal accumulation idempotent. No new history/retention, atomic KV write or concurrent erasure fence is supplied.
+
 ## AI — `/ai`, `/ai/scene` (Gemini)
 
 | Method & path | Purpose |
@@ -42,14 +52,20 @@ Cookies: `opt_session_id` (HttpOnly), `opt_user_id`, `opt_segments`, `opt_engage
 
 | Method & path | Purpose |
 |---|---|
-| `POST /optimizely/decisions` | `{userId, userAttributes?, experiments?, features?}` → decisions + segments |
+| `POST /optimizely/decisions` | Owned shopper `{userId, userAttributes?, experiments?, features?, consent?}` → decisions + segments, or explicit inert defaults |
 | `POST /optimizely/preview` | fresh no-store `decide()`; supports forced `variationKey` — the storefront's preview path |
 | `GET /optimizely/banner-rules` | live `personalized_banner` cascade (`[]` without FX token) |
-| `POST /optimizely/track` | event tracking (mock-safe) |
+| `POST /optimizely/track` | Owned shopper `{userId, eventKey, userAttributes?, eventTags?, consent?}`; tracking refusal explicitly skips delivery |
 | `GET /optimizely/datafile` | current datafile |
 | `GET /optimizely/experiments` · `GET /optimizely/features` | **JWT required** |
 | `POST /webhook/optimizely-datafile` | datafile-change webhook; HMAC `X-Hub-Signature` verified when `OPTIMIZELY_WEBHOOK_SECRET` set → refreshes the KV datafile cache |
-| `POST /webhook/optimizely` · `/webhook/segment` · `/webhook/custom` | generic inbound webhooks |
+| `POST /webhook/optimizely` · `/webhook/segment` · `/webhook/custom` | generic inbound webhooks; synchronous delivery receipts follow the Eventing contract below |
+
+Only the shopper `/optimizely/track` and `/decisions` calls require the current `X-Shopper-Session` capability and matching `X-Tenant`; body `userId` must equal its canonical subject. Obtain/reuse that owned session through the SDK or `/v1/:tenant/identity/session` (including that endpoint's existing site-key gate). Optional JWT validation remains, but JWT/site keys alone do not establish shopper ownership. Optional strict boolean `consent:{tracking?,personalization?}` and false cookies can only restrict durable owned consent, never enable it; enabling uses owned session preferences. Invalid ownership/state or failed refusal persistence fails closed before Optimizely initialization.
+
+Tracking refusal returns `success:true,status:"skipped",tracked:false,reason:"tracking_refused",consent` with no metric delivery. Tracking true with personalization false still permits metrics. Decisions require both switches: refusal returns `status:"default",personalized:false,reason,consent`, requested experiment keys as `null`, requested feature keys as `{enabled:false,variables:{}}`, and `segments:[]`, without SDK evaluation or cache/egress effects. Keep site defaults; this is not an experiment control assignment. Allowed response shapes stay unchanged. Request-snapshot enforcement is not transactional revocation.
+
+Storefront experiment metrics use its current SDK capture/owned transport lane. Legacy copy mode reports `owned_metric_unavailable` and keeps its separate engine action without experiment/creative tags; this is temporary unauthorized-path containment, not accepted metric/preview attribution parity or permanent integration removal. Provider webhooks and presenter preview/datafile/banner routes remain separate and unchanged; this contract does not authorize their sender-to-subject mapping or resolve their remaining consent/access scope.
 
 ## Operator — `/operator` (two-call governance: suggest → publish)
 
@@ -85,7 +101,13 @@ Cookies: `opt_session_id` (HttpOnly), `opt_user_id`, `opt_segments`, `opt_engage
 
 ## Eventing — `/track`, `/pixel`, `/cdp`
 
-`POST /track/event` (zod-validated, enriched, dispatched) · `POST /track/batch` · `GET /pixel/track/:pixelId` (1×1 GIF) · `POST /pixel/generate` (returns `htmlTag`) · `/cdp/*` (mock CDP identify/track/forward; `GET /cdp/destinations` JWT).
+`POST /track/event` and `POST /track/batch` require `X-Shopper-Session` and the matching tenant. Every supplied `user.userId`, `user.anonymousId`, `recipientId` and `context.sessionId` must match the capability's canonical subject/session; a batch is validated completely before dispatch. Required event `timestamp` is occurrence time in epoch milliseconds: a nonnegative safe integer within JavaScript's Date range, including zero. Invalid time rejects the whole request before owned state or consent changes. Valid occurrence time and `eventId` are preserved through synchronous dispatch and the single-event response. Delayed and repeated submissions are allowed without an age/skew cutoff or implicit deduplication; validation does not establish timestamp authenticity or downstream lifecycle eligibility. Optional strict boolean `consent:{tracking?,personalization?}` on the event, batch or each batch event can only restrict stored consent (as can false cookies). Any false hint restricts the whole same-owner batch. Tracking refusal is persisted when necessary and returns `dispatched:false`, `reason:"tracking_refused"` and skipped status/results; no event is collected or sent. Personalization refusal alone permits tracking. Client email/traits/properties remain assertions, not verified account identity or downstream merge authorization.
+
+Allowed tracking and the three generic event webhooks dispatch synchronously to enabled `WEBHOOK_ENDPOINTS`. HTTP 200 with `success:true` requires at least one destination and an HTTP acknowledgement from every destination; success response fields remain compatible. Missing, disabled or invalid destination configuration returns HTTP 503, `success:false` and `delivery:{status:"unconfigured",attempted:0,acknowledged:0}`. HTTP 502 reports `partial` when some destinations acknowledge or `unconfirmed` when none acknowledge; an unexpected dispatch failure uses `unconfirmed` with null counts. Failures include `eventId`, fixed `error:"Event delivery not confirmed"` and the receipt; tracking single-event failures also retain occurrence `timestamp`. Counts describe destination attempts and HTTP acknowledgements, not durable processing. A failed acknowledgement does not prove that no destination processed the event.
+
+Tracking batches keep input order, continue after member delivery failures and report `processed` as members attempted. Successful members retain `{eventId,status:"success"}`; failed members carry `status:"error"`, the fixed error and delivery receipt. Any failed member makes top-level `success:false` and HTTP 502, or HTTP 503 if every attempted member is unconfigured. All-success and empty batches return HTTP 200. Request validation, owned-session errors, stored refusal and the enforced customer-surface withdrawal retain their existing behavior. No generic event/retry queue messages are produced and no automatic retry is scheduled; resubmission can duplicate already processed effects. This does not provide durable recovery, tenant-isolated global destination configuration or decision/outcome ledger acceptance. Previously queued envelopes and their historical loss remain separate work.
+
+`GET`/`HEAD /pixel/track/:pixelId` temporarily serve an inert 1×1 GIF with no decoding or collection. `POST /pixel/generate` retains its URL/`htmlTag` fields but reports `trackingEnabled:false` and a reason. This is local fail-closed containment, not accepted email-open measurement or permanent feature removal; no credentials belong in pixel URLs. Generated identifier URLs, hosting logs and historic records remain separate privacy work. `/cdp/*` remains the separate mock CDP identify/track/forward surface (`GET /cdp/destinations` JWT).
 
 ## Opal chat — `/agents/*`
 
@@ -94,4 +116,6 @@ Cookies: `opt_session_id` (HttpOnly), `opt_user_id`, `opt_segments`, `opt_engage
 ## Auth & platform (mostly internal)
 
 `POST /auth/login|register|refresh|logout` · `GET /auth/me` — demo JWT.
-**Internal / exclude from partner docs:** `/api/*` (infra CRUD over R2/KV/Queue/DO; JWT + rate-limited; `/api/analytics/query` is a stub) · `/health*` · `GET /api-info` (self-description — currently stale, flagged for code fix) · `/realtime/connections*` · `POST /realtime/demo/trigger` (bank-demo scenarios) · `/funnel/sim/*` · **`GET /__shot`** (Browser Rendering screenshot verification) · Durable Object internal endpoints (`/broadcast`, `/connections` on the WS DO; StateManager `/get|/set|…`; RateLimiter POST).
+The obsolete generic `/api` and `/api/*` infrastructure routes are removed and return 404, including with an operator or admin token.
+
+**Internal / exclude from partner docs:** `/health*` · `GET /api-info` (self-description — currently stale, flagged for code fix) · `/realtime/connections*` · `POST /realtime/demo/trigger` (bank-demo scenarios) · `/funnel/sim/*` · **`GET /__shot`** (Browser Rendering screenshot verification) · Durable Object internal endpoints (`/broadcast`, `/connections` on the WS DO; StateManager `/get|/set|…`; RateLimiter POST).

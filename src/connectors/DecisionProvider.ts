@@ -376,22 +376,22 @@ export class LiveDecisionProvider implements DecisionProvider {
 
   constructor(private opti: OptimizelyService) {}
 
+  private degraded(flagKey: string, userId: string, segments: SegmentKey[], attributes: Record<string, any>): Promise<Decision> {
+    return this.opti.demo ? this.fallback.decide(flagKey, userId, segments, attributes)
+      : Promise.resolve({ flagKey, enabled: false, variationKey: null, variables: {}, ruleKey: null, reason: 'fallback' });
+  }
+
   private getCtx(): Promise<{ client: any; datafile: any; revision: string | null } | null> {
     if (!this.ctx) {
       this.ctx = this.opti
         .createFreshClient()
         .then((c) => {
           const flags = (c.datafile && c.datafile.featureFlags) || [];
-          console.log(
-            `LiveDecisionProvider: datafile revision=${c.revision}, featureFlags=${flags.length}`
-          );
+          console.log('LiveDecisionProvider: datafile loaded; feature flags', Array.isArray(flags) ? flags.length : 0);
           return c;
         })
         .catch((err) => {
-          console.error(
-            'LiveDecisionProvider: datafile/client init failed — using mock fallback:',
-            err
-          );
+          console.error('LiveDecisionProvider: datafile/client init failed — using mock fallback');
           return null;
         });
     }
@@ -408,23 +408,23 @@ export class LiveDecisionProvider implements DecisionProvider {
 
     // No live datafile/client (fetch failed) → mock keeps the slot personalized.
     if (!ctx || !ctx.client) {
-      return this.fallback.decide(flagKey, userId, segments, attributes);
+      return this.degraded(flagKey, userId, segments, attributes);
     }
 
     // Degrade gracefully when the (near-empty) project has no such flag yet.
     const flags = (ctx.datafile && ctx.datafile.featureFlags) || [];
     const known = Array.isArray(flags) && flags.some((f: any) => f && f.key === flagKey);
     if (!known) {
-      return this.fallback.decide(flagKey, userId, segments, attributes);
+      return this.degraded(flagKey, userId, segments, attributes);
     }
 
     try {
-      const user = ctx.client.createUserContext(userId, toUserAttributes(attributes, segments));
-      if (!user) return this.fallback.decide(flagKey, userId, segments, attributes);
+      const user = ctx.client.createUserContext(await this.opti.externalIdentity(userId), toUserAttributes(attributes, segments));
+      if (!user) return this.degraded(flagKey, userId, segments, attributes);
 
       // DISABLE_DECISION_EVENT: this is a decision READ at the edge, not measurement.
       const d = user.decide(flagKey, [OptimizelyDecideOption.DISABLE_DECISION_EVENT]);
-      if (!d) return this.fallback.decide(flagKey, userId, segments, attributes);
+      if (!d) return this.degraded(flagKey, userId, segments, attributes);
 
       return {
         flagKey: d.flagKey ?? flagKey,
@@ -436,8 +436,8 @@ export class LiveDecisionProvider implements DecisionProvider {
         reason: d.ruleKey ? 'experiment' : 'rollout',
       };
     } catch (err) {
-      console.error(`LiveDecisionProvider.decide(${flagKey}) failed — using mock fallback:`, err);
-      return this.fallback.decide(flagKey, userId, segments, attributes);
+      console.error('LiveDecisionProvider.decide failed — using mock fallback');
+      return this.degraded(flagKey, userId, segments, attributes);
     }
   }
 

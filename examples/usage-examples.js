@@ -156,12 +156,17 @@ async function generateEmailPixelExample() {
 // Optimizely Integration Examples
 // =============================================================================
 
-async function getOptimizelyDecisionsExample() {
+// Supply the CURRENT owned session from the SDK or /v1/:tenant/identity/session.
+// subject is its canonical subject, not an arbitrary account/display ID. Optional
+// consent booleans can only withdraw; enabling uses the owned preferences route.
+async function getOptimizelyDecisionsExample({ tenant, capability, subject, consent }) {
   const response = await fetch(`${BASE_URL}/optimizely/decisions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant, 'X-Shopper-Session': capability },
+    credentials: 'include',
     body: JSON.stringify({
-      userId: 'user-123',
+      userId: subject,
+      consent,
       userAttributes: {
         plan: 'premium',
         country: 'US',
@@ -173,9 +178,12 @@ async function getOptimizelyDecisionsExample() {
   });
   
   const decisions = await response.json();
+  if (!response.ok) throw new Error('Owned Optimizely decisions unavailable');
+  // Refusal returns null experiments and disabled features; keep site defaults.
+  if (decisions.status === 'default') return decisions;
   
   // Use decisions to personalize experience
-  if (decisions.features['new-dashboard'].enabled) {
+  if (decisions.features?.['new-dashboard']?.enabled) {
     console.log('Show new dashboard');
   }
   
@@ -185,12 +193,14 @@ async function getOptimizelyDecisionsExample() {
   return decisions;
 }
 
-async function trackOptimizelyEventExample() {
+async function trackOptimizelyEventExample({ tenant, capability, subject, consent }) {
   const response = await fetch(`${BASE_URL}/optimizely/track`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant, 'X-Shopper-Session': capability },
+    credentials: 'include',
     body: JSON.stringify({
-      userId: 'user-123',
+      userId: subject,
+      consent,
       eventKey: 'purchase_completed',
       userAttributes: {
         plan: 'premium',
@@ -204,7 +214,10 @@ async function trackOptimizelyEventExample() {
     })
   });
   
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error('Owned Optimizely tracking unavailable');
+  if (result.tracked === false) return result; // skipped, not a delivered metric
+  return result;
 }
 
 // =============================================================================
@@ -267,68 +280,6 @@ async function getUserSegmentsExample() {
 }
 
 // =============================================================================
-// Infrastructure API Examples (Requires Authentication)
-// =============================================================================
-
-async function useStorageExample(token) {
-  // Store a file
-  const uploadResponse = await fetch(`${BASE_URL}/api/storage/user-data.json`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ userId: 'user-123', preferences: { theme: 'dark' } })
-  });
-  
-  // Retrieve the file
-  const downloadResponse = await fetch(`${BASE_URL}/api/storage/user-data.json`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  
-  return await downloadResponse.json();
-}
-
-async function useCacheExample(token) {
-  // Store in cache
-  await fetch(`${BASE_URL}/api/cache/user-session`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      value: { sessionId: 'session-123', userId: 'user-456' },
-      ttl: 3600 // 1 hour
-    })
-  });
-  
-  // Retrieve from cache
-  const response = await fetch(`${BASE_URL}/api/cache/user-session`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  
-  return await response.json();
-}
-
-async function sendToQueueExample(token) {
-  const response = await fetch(`${BASE_URL}/api/queue/send`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      type: 'user-action',
-      data: { userId: 'user-123', action: 'login' },
-      priority: 'normal'
-    })
-  });
-  
-  return await response.json();
-}
-
-// =============================================================================
 // Webhook Examples
 // =============================================================================
 
@@ -356,7 +307,8 @@ async function handleOptimizelyWebhookExample() {
 // Complete User Journey Example
 // =============================================================================
 
-async function completeUserJourneyExample() {
+async function completeUserJourneyExample(getOwnedSession) {
+  if (typeof getOwnedSession !== 'function') throw new Error('Provide getOwnedSession to read the current owned shopper session');
   console.log('🚀 Starting complete user journey example...');
   
   // 1. User lands on page
@@ -364,7 +316,7 @@ async function completeUserJourneyExample() {
   console.log('✅ Page view tracked');
   
   // 2. Get personalization decisions
-  const decisions = await getOptimizelyDecisionsExample();
+  const decisions = await getOptimizelyDecisionsExample(await getOwnedSession());
   console.log('✅ Got Optimizely decisions:', decisions);
   
   // 3. User performs actions
@@ -380,8 +332,8 @@ async function completeUserJourneyExample() {
   console.log('✅ Got user profile:', profile);
   
   // 6. Track conversion event
-  await trackOptimizelyEventExample();
-  console.log('✅ Conversion event tracked');
+  const metric = await trackOptimizelyEventExample(await getOwnedSession());
+  console.log(metric.tracked === false ? 'Conversion metric skipped: ' + metric.reason : '✅ Conversion event submitted');
   
   // 7. Generate email pixel for follow-up campaign
   const pixel = await generateEmailPixelExample();

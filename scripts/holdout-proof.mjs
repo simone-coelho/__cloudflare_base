@@ -2,6 +2,7 @@
 // scripts/holdout-proof.mjs — ledger 20 row 12, proven live against a running worker.
 //
 //   node scripts/holdout-proof.mjs [http://localhost:9100] [--scope holdout-proof]
+// Supply OPERATOR_TOKEN or explicit JWT_SECRET, JWT_ISSUER and JWT_AUDIENCE.
 //
 // Seeds a scope with the demo catalog and slots (import-content.mjs), sets a
 // half-and-half holdout with both arms so the arms are visible in a small run,
@@ -23,7 +24,7 @@
 // 0; and FNV-1a puts blocks of consecutive visitor ids on one arm.
 
 import { execFileSync } from 'node:child_process';
-import { createHmac } from 'node:crypto';
+import { resolveToolToken } from './lib/tool-token.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const B = (process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : process.env.BASE) || 'http://localhost:9100';
@@ -31,11 +32,7 @@ const SCOPE = arg('--scope', 'holdout-proof');
 const SDK_KEY = process.env.SDK_KEY || 'demo-site';
 const run = Date.now().toString(36);
 
-const b64u = (s) => Buffer.from(s).toString('base64url');
-const now = Math.floor(Date.now() / 1000);
-const H = b64u(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-const P = b64u(JSON.stringify({ sub: 'holdout-proof', roles: ['operator'], iss: 'edge-platform', aud: 'edge-platform-api', iat: now, exp: now + 900 }));
-const TOKEN = `${H}.${P}.${createHmac('sha256', process.env.JWT_SECRET || 'development-secret-key-change-in-production').update(`${H}.${P}`).digest('base64url')}`;
+const TOKEN = await resolveToolToken({ payload: { sub: 'holdout-proof', roles: ['operator'] }, expiresIn: '15m', typ: 'JWT' });
 
 let pass = 0, fail = 0;
 const ok = (c, label, detail = '') => { if (c) { pass++; console.log(`  ✓ ${label}`); } else { fail++; console.log(`  ✗ ${label} ${detail}`); } };

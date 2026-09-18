@@ -1,0 +1,112 @@
+{
+  "before": {
+    "id": "W31",
+    "canonical": {
+      "gate_scope": "G2 report contract / G3 claims",
+      "full_scope": "Refuse or explicitly mark incomplete/oversized windows and incompatible policies; no favorable standing on incomplete evidence. Full monthly/quarterly/biannual coverage, per-tenant metric/target versions and correct zero/sparse/unequal-arm/cluster/revenue analysis under W21. Separate lightweight report summaries from full payloads.",
+      "finding_refs": "F25/F07/F34",
+      "sizing_owner": "S coverage/claim containment → M/L valid long-window measurement; OL + DS/C"
+    },
+    "title": "Complete and valid long-window reports",
+    "gates": [
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F25",
+      "F07",
+      "F34"
+    ],
+    "proposed_owner": "OL + DS/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W31",
+    "canonical": {
+      "gate_scope": "G2 report contract / G3 claims",
+      "full_scope": "Refuse or explicitly mark incomplete/oversized windows and incompatible policies; no favorable standing on incomplete evidence. Full monthly/quarterly/biannual coverage, per-tenant metric/target versions and correct zero/sparse/unequal-arm/cluster/revenue analysis under W21. Separate lightweight report summaries from full payloads.",
+      "finding_refs": "F25/F07/F34",
+      "sizing_owner": "S coverage/claim containment → M/L valid long-window measurement; OL + DS/C"
+    },
+    "title": "Complete and valid long-window reports",
+    "gates": [
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F25",
+      "F07",
+      "F34"
+    ],
+    "proposed_owner": "OL + DS/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W31-COVERAGE",
+          "description": "Refuse or mark incomplete/oversized windows and prohibit favorable standing on incomplete evidence."
+        },
+        {
+          "id": "W31-COMPUTATION",
+          "description": "Record actual reporting computation basis and prevent pooling incompatible or unknown policies/accumulators. No retrospective serving/control compatibility inferred."
+        },
+        {
+          "id": "W31-LONG-WINDOW",
+          "description": "Full monthly, quarterly and biannual coverage, not only current92day bounded containment."
+        },
+        {
+          "id": "W31-METRICS",
+          "description": "Per-tenant metric and target versions plus served allocation/control/enrollment provenance and valid compatibility."
+        },
+        {
+          "id": "W31-METHOD",
+          "description": "Correct zero/sparse/unequal-arm/cluster/revenue analysis under W21 and customer/scientific acceptance."
+        },
+        {
+          "id": "W31-SUMMARIES",
+          "description": "Separate lightweight report summaries from full payloads; preserve bounded access and validated same-generation values."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W31-COMPUTATION",
+          "task_id": "W31.01",
+          "task_criterion_id": "W31.01-C1"
+        },
+        {
+          "criterion_id": "W31-COMPUTATION",
+          "task_id": "W31.01",
+          "task_criterion_id": "W31.01-C2"
+        }
+      ],
+      "task_ids": [
+        "W31.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

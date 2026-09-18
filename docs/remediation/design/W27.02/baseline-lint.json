@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-12T15:04:50.297Z",
+  "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/types.ts src/content/decide.ts src/learn/replay.ts src/learn/phase3.test.ts src/content/consent.test.ts src/ledger/ledger.test.ts",
+  "captures": [
+    {
+      "chunk_id": "3596ff",
+      "wall_time_seconds": 1.001212022,
+      "session_id": 58203,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "bc8fdf",
+      "wall_time_seconds": 0.000002373,
+      "exit_code": 0,
+      "original_token_count": 126,
+      "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/content/decide.ts\n  210:20  warning  '_share' is assigned a value but never used  @typescript-eslint/no-unused-vars\n  290:62  warning  '_s' is defined but never used               @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/replay.ts\n  90:25  warning  '_c' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+    }
+  ],
+  "session_id": 58203,
+  "drained": true,
+  "exit_code": 0,
+  "errors": 0,
+  "warnings": 3
+}

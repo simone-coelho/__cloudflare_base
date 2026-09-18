@@ -15,9 +15,14 @@
  */
 import optimizely from '@optimizely/optimizely-sdk/lite';
 import type { Env } from '@/types/env';
+import { ownerEffect, ownerFetch, currentOwnerConsent, currentProfileBirth, requireConsentPurpose } from '@/identity/sessionAuthority';
+import { currentExternalRetention } from '@/identity/sessionAuthority';
+import { destinationRetentionCategory } from '@/retention';
+import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import { connectorConfiguration, connectorDigest, connectorIdentity, connectorSecret, legacyConnectors, ConnectorConfigurationError, type FxConfiguration } from '@/connectors/config';
 
 /**
- * A logger that keeps real SDK errors and drops ONE expected class of noise.
+ * A logger that records fixed SDK failure labels, never callback payloads.
  *
  * `FeatureVariableManager` probes eight demo feature keys (hero_content,
  * ui_theme, …) that intentionally do not exist in this project — it owns local
@@ -26,13 +31,14 @@ import type { Env } from '@/types/env';
  * probes were silent; against the real datafile the SDK logs a red ERROR per
  * probe per request, which on a demo night is a console full of alarming lines
  * describing normal, designed behaviour. The absence is expected, so it is
- * logged at debug volume; everything else still surfaces.
+ * suppressed on the ordinary client. The fresh client retains its ERROR-only
+ * threshold without that suppression. Neither path logs SDK message content.
  */
-function quietLogger(): { log: (level: number, message: string) => void } {
+function quietLogger(minimumLevel = 3, suppressMissing = true): { log: (level: number, message: string) => void } {
   return {
     log: (level: number, message: string) => {
-      if (/is not in datafile/i.test(message)) return;
-      if (level >= 3) console.error(`[optimizely] ${message}`);
+      if (suppressMissing && typeof message === 'string' && /is not in datafile/i.test(message)) return;
+      if (typeof level === 'number' && level >= minimumLevel) console.error('[optimizely] SDK error');
     },
   };
 }
@@ -42,16 +48,19 @@ function quietLogger(): { log: (level: number, message: string) => void } {
  * no-op dispatcher by default. Fire-and-forget on purpose: measurement must
  * never sit in front of a decision the shopper is waiting on.
  */
-function fetchEventDispatcher(): {
+function fetchEventDispatcher(destination?: string, accountId?: string, admit?: (at: number) => Promise<void>): {
   dispatchEvent: (event: any, callback?: (response: { statusCode: number }) => void) => void;
 } {
   return {
     dispatchEvent: (event: any, callback?: (response: { statusCode: number }) => void) => {
-      void fetch(event.url, {
+      if (accountId && String(event.params?.account_id) !== accountId) { callback?.({ statusCode: 0 }); return; }
+      const at = Date.now();
+      void ownerEffect(async () => { if (!admit) throw new Error('FX retention authority unavailable'); await admit(at); return ownerFetch(destination ?? event.url, {
+        redirect: 'error',
         method: event.httpVerb || 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(event.params),
-      })
+      }); })
         .then((res) => callback?.({ statusCode: res.status }))
         .catch(() => callback?.({ statusCode: 0 }));
     },
@@ -78,17 +87,49 @@ export class OptimizelyService {
   private datafile: any = null;
   private initialized = false;
 
-  constructor(env: Env) {
+  constructor(env: Env, readonly tenant: string = DEFAULT_TENANT) {
     this.env = env;
   }
 
+  get demo(): boolean { return legacyConnectors(this.env, this.tenant); }
+  private settings(): { sdkKey: string; datafileUrl: string; configuration?: FxConfiguration } {
+    if (this.demo) {
+      const sdkKey = this.env.OPTIMIZELY_SDK_KEY;
+      return { sdkKey, datafileUrl: this.env.OPTIMIZELY_DATAFILE_URL || `https://cdn.optimizely.com/datafiles/${sdkKey}.json` };
+    }
+    const configuration = connectorConfiguration(this.env, this.tenant).fx;
+    if (!configuration) throw new ConnectorConfigurationError();
+    const sdkKey = connectorSecret(this.env, configuration.sdkKeyRef);
+    return { sdkKey, datafileUrl: configuration.datafileUrl.replace('{sdkKey}', encodeURIComponent(sdkKey)), configuration };
+  }
+
+  async externalIdentity(subject: string): Promise<string> {
+    if (this.demo) return subject;
+    const config = this.settings().configuration!;
+    return connectorIdentity(this.tenant, config.identityNamespace, subject);
+  }
+
+  private async cacheKey(): Promise<string> {
+    const settings = this.settings();
+    return this.demo ? `optimizely-datafile-${settings.sdkKey}`
+      : `t:${this.tenant}:connector:fx:${await connectorDigest(settings)}`;
+  }
+
+  private validateDatafile(datafile: any): any {
+    const config = this.settings().configuration;
+    if (config && (String(datafile?.accountId) !== config.accountId || String(datafile?.projectId) !== config.projectId)) throw new ConnectorConfigurationError();
+    return datafile;
+  }
+
   async initialize(): Promise<void> {
+    const consent = await currentOwnerConsent();
+    if (consent) requireConsentPurpose(consent, 'tracking');
     if (this.initialized) return;
 
     try {
       // Check if we have a real SDK key or just a placeholder
-      const isPlaceholderKey = !this.env.OPTIMIZELY_SDK_KEY || 
-                               this.env.OPTIMIZELY_SDK_KEY === 'your-sdk-key-here';
+      const settings = this.settings();
+      const isPlaceholderKey = !settings.sdkKey || settings.sdkKey === 'your-sdk-key-here';
       
       if (isPlaceholderKey) {
         console.log('Using mock Optimizely client (no SDK key configured)');
@@ -98,10 +139,14 @@ export class OptimizelyService {
         
         this.optimizelyClient = optimizely.createInstance({
           datafile: this.datafile,
-          eventDispatcher: fetchEventDispatcher(),
+          eventDispatcher: fetchEventDispatcher(settings.configuration?.eventsUrl, settings.configuration?.accountId, async at => {
+            const descriptor = settings.configuration ?? { eventsUrl: 'https://logx.optimizely.com/v1/events', accountId: String(this.datafile?.accountId), projectId: String(this.datafile?.projectId) };
+            const category = await destinationRetentionCategory('fx', descriptor);
+            currentExternalRetention(this.env, this.tenant, category);
+          }),
           errorHandler: {
             handleError: (error: any) => {
-              console.error('Optimizely error:', error);
+              console.error('Optimizely error');
             },
           },
           logger: quietLogger(),
@@ -120,7 +165,7 @@ export class OptimizelyService {
 
       this.initialized = true;
     } catch (error) {
-      console.error('Failed to initialize Optimizely, falling back to mock client:', error);
+      console.error('Failed to initialize Optimizely, falling back to mock client');
       this.initializeMockClient();
       this.initialized = true;
     }
@@ -134,7 +179,7 @@ export class OptimizelyService {
   private initializeMockClient(): void {
     // Create a mock client for development without a real SDK key
     this.optimizelyClient = {
-      getVariation: () => 'control',
+      getVariation: () => this.demo ? 'control' : null,
       isFeatureEnabled: () => false,
       getFeatureVariable: () => null,
       getAllFeatureVariables: () => ({}),
@@ -164,25 +209,22 @@ export class OptimizelyService {
 
   private async fetchDatafile(): Promise<any> {
     try {
-      const cacheKey = `optimizely-datafile-${this.env.OPTIMIZELY_SDK_KEY}`;
+      const cacheKey = await this.cacheKey();
       
       const cachedDatafile = await this.env.CACHE.get(cacheKey, 'json');
       if (cachedDatafile) {
         console.log('Using cached Optimizely datafile');
-        return cachedDatafile;
+        return this.validateDatafile(cachedDatafile);
       }
 
-      let datafileUrl = this.env.OPTIMIZELY_DATAFILE_URL;
-      if (!datafileUrl) {
-        datafileUrl = `https://cdn.optimizely.com/datafiles/${this.env.OPTIMIZELY_SDK_KEY}.json`;
-      }
+      const datafileUrl = this.settings().datafileUrl;
 
-      const response = await fetch(datafileUrl);
+      const response = await ownerFetch(datafileUrl, { redirect: 'error' });
       if (!response.ok) {
         throw new Error(`Failed to fetch datafile: ${response.status} ${response.statusText}`);
       }
 
-      const datafile = await response.json();
+      const datafile = this.validateDatafile(await response.json());
       
       await this.env.CACHE.put(cacheKey, JSON.stringify(datafile), {
         expirationTtl: 300,
@@ -191,7 +233,7 @@ export class OptimizelyService {
       console.log('Fetched and cached new Optimizely datafile');
       return datafile;
     } catch (error) {
-      console.error('Error fetching datafile:', error);
+      console.error('Error fetching datafile');
       throw error;
     }
   }
@@ -207,27 +249,26 @@ export class OptimizelyService {
    * skip impression-event delivery (no waitUntil dependency, no extra latency).
    */
   async createFreshClient(): Promise<{ client: any; datafile: any; revision: string | null }> {
-    const url = `https://cdn.optimizely.com/datafiles/${this.env.OPTIMIZELY_SDK_KEY}.json`;
+    const url = this.settings().datafileUrl;
     // No-store freshness (doc 09 §6.1). NOTE: the standard `cache: 'no-store'` field
     // is NOT implemented by workerd (it throws "'cache' field ... is not implemented"),
     // so we use the Cloudflare-native equivalent — `cf.cacheTtl: 0` +
     // `cacheEverything: false` + a no-cache request header — to bypass the edge cache.
-    const response = await fetch(url, {
+    const response = await ownerFetch(url, {
+      redirect: 'error',
       headers: { 'Cache-Control': 'no-cache' },
       cf: { cacheTtl: 0, cacheEverything: false },
     });
     if (!response.ok) {
       throw new Error(`Failed to fetch datafile: ${response.status} ${response.statusText}`);
     }
-    const datafile = (await response.json()) as any;
+    const datafile = this.validateDatafile(await response.json());
 
     const client = optimizely.createInstance({
       datafile,
       eventDispatcher: { dispatchEvent: () => {} },
       errorHandler: { handleError: () => {} },
-      logger: optimizely.logging.createLogger({
-        logLevel: optimizely.enums.LOG_LEVEL.ERROR,
-      }),
+      logger: quietLogger(optimizely.enums.LOG_LEVEL.ERROR, false),
     });
 
     // With a static datafile this resolves immediately; guard for SDK shape drift.
@@ -251,11 +292,11 @@ export class OptimizelyService {
    * fresh-on-change. The 24h TTL is just a safety floor; the webhook keeps it current.
    */
   async refreshDatafileCache(): Promise<{ revision: string | null; flags: number }> {
-    const url = `https://cdn.optimizely.com/datafiles/${this.env.OPTIMIZELY_SDK_KEY}.json`;
-    const res = await fetch(url, { headers: { 'Cache-Control': 'no-cache' }, cf: { cacheTtl: 0, cacheEverything: false } });
+    const url = this.settings().datafileUrl;
+    const res = await ownerFetch(url, { redirect: 'error', headers: { 'Cache-Control': 'no-cache' }, cf: { cacheTtl: 0, cacheEverything: false } });
     if (!res.ok) throw new Error(`datafile fetch failed: ${res.status} ${res.statusText}`);
-    const datafile = (await res.json()) as any;
-    await this.env.CACHE.put(`optimizely-datafile-${this.env.OPTIMIZELY_SDK_KEY}`, JSON.stringify(datafile), { expirationTtl: 86400 });
+    const datafile = this.validateDatafile(await res.json());
+    await this.env.CACHE.put(await this.cacheKey(), JSON.stringify(datafile), { expirationTtl: 86400 });
     return {
       revision: datafile?.revision != null ? String(datafile.revision) : null,
       flags: Array.isArray(datafile?.featureFlags) ? datafile.featureFlags.length : 0,
@@ -272,14 +313,13 @@ export class OptimizelyService {
     try {
       const variation = this.optimizelyClient.getVariation(
         experimentKey,
-        userId,
+        await this.externalIdentity(userId),
         userAttributes
       );
       
-      console.log(`Variation for experiment ${experimentKey}, user ${userId}:`, variation);
       return variation;
     } catch (error) {
-      console.error('Error getting variation:', error);
+      console.error('Error getting variation');
       return null;
     }
   }
@@ -294,14 +334,13 @@ export class OptimizelyService {
     try {
       const isEnabled = this.optimizelyClient.isFeatureEnabled(
         featureKey,
-        userId,
+        await this.externalIdentity(userId),
         userAttributes
       );
       
-      console.log(`Feature ${featureKey} enabled for user ${userId}:`, isEnabled);
       return isEnabled;
     } catch (error) {
-      console.error('Error checking feature flag:', error);
+      console.error('Error checking feature flag');
       return false;
     }
   }
@@ -318,14 +357,13 @@ export class OptimizelyService {
       const variable = this.optimizelyClient.getFeatureVariable(
         featureKey,
         variableKey,
-        userId,
+        await this.externalIdentity(userId),
         userAttributes
       );
       
-      console.log(`Variable ${variableKey} for feature ${featureKey}, user ${userId}:`, variable);
       return variable;
     } catch (error) {
-      console.error('Error getting feature variable:', error);
+      console.error('Error getting feature variable');
       return null;
     }
   }
@@ -340,14 +378,13 @@ export class OptimizelyService {
     try {
       const variables = this.optimizelyClient.getAllFeatureVariables(
         featureKey,
-        userId,
+        await this.externalIdentity(userId),
         userAttributes
       );
       
-      console.log(`All variables for feature ${featureKey}, user ${userId}:`, variables);
       return variables || {};
     } catch (error) {
-      console.error('Error getting all feature variables:', error);
+      console.error('Error getting all feature variables');
       return {};
     }
   }
@@ -379,7 +416,7 @@ export class OptimizelyService {
     await this.initialize();
     try {
       if (typeof this.optimizelyClient?.createUserContext !== 'function') return null;
-      const user = this.optimizelyClient.createUserContext(userId, userAttributes);
+      const user = this.optimizelyClient.createUserContext(await this.externalIdentity(userId), userAttributes);
       if (!user) return null;
       const options = sendImpression
         ? []
@@ -394,7 +431,7 @@ export class OptimizelyService {
         variables: (d.variables as Record<string, any>) ?? {},
       };
     } catch (error) {
-      console.error(`Error deciding flag ${flagKey}:`, error);
+      console.error('Error deciding flag');
       return null;
     }
   }
@@ -408,10 +445,9 @@ export class OptimizelyService {
     await this.initialize();
     
     try {
-      this.optimizelyClient.track(eventKey, userId, userAttributes, eventTags);
-      console.log(`Tracked event ${eventKey} for user ${userId}`);
+      this.optimizelyClient.track(eventKey, await this.externalIdentity(userId), userAttributes, eventTags);
     } catch (error) {
-      console.error('Error tracking event:', error);
+      console.error('Error tracking event');
     }
   }
 
@@ -470,7 +506,7 @@ export class OptimizelyService {
       
       return segments;
     } catch (error) {
-      console.error('Error getting segments:', error);
+      console.error('Error getting segments');
       return [];
     }
   }
@@ -482,7 +518,7 @@ export class OptimizelyService {
       const conditions = JSON.parse(audience.conditions);
       return this.evaluateConditions(conditions, userAttributes);
     } catch (error) {
-      console.error('Error evaluating audience:', error);
+      console.error('Error evaluating audience');
       return false;
     }
   }
@@ -516,7 +552,7 @@ export class OptimizelyService {
 
   async refreshDatafile(): Promise<boolean> {
     try {
-      const cacheKey = `optimizely-datafile-${this.env.OPTIMIZELY_SDK_KEY}`;
+      const cacheKey = await this.cacheKey();
       await this.env.CACHE.delete(cacheKey);
       
       this.datafile = await this.fetchDatafile();
@@ -525,7 +561,7 @@ export class OptimizelyService {
       
       return true;
     } catch (error) {
-      console.error('Error refreshing datafile:', error);
+      console.error('Error refreshing datafile');
       return false;
     }
   }

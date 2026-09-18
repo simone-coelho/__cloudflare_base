@@ -293,6 +293,7 @@ export function sanitizeEventAttributes(data: Record<string, unknown>, config: R
   const clean = (v: unknown): string | null => {
     if (typeof v !== 'string') return null;
     const t = v.trim().slice(0, MAX_EVENT_VALUE_LENGTH);
+    // eslint-disable-next-line no-control-regex -- Reject control characters in event attributes.
     return t && !/[\u0000-\u001f<>]/.test(t) ? t : null;
   };
   for (const spec of config.dimensions) {

@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-12T11:46:53.989Z",
+  "task_id": "W24.01",
+  "actor_id": "w01-lead",
+  "status": "approved",
+  "scope": "Only two normal-caller configuration additions in already-owned src/learn/learn.test.ts; no new production files or test groups.",
+  "reason": "Root found existing storedRing credit helper and 200-record retention fixture omit configuration and would test the old interface after the strict guard. Supply explicit bounded default so original retention/erasure/capacity semantics remain exercised. This is an affected dependency, not new coverage programme.",
+  "required_contract": "Existing C1-C3 and fixed9 remain unchanged. Independent final frozen fixed9 supplies current-byte required runtime; prior worker9 is retained as superseded candidate after unselected helper/retention fixture edits. Final static must be current-byte.",
+  "supplemental_command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts -t 'W10.02|the ring keeps the last 200' --maxWorkers=1 --minWorkers=1",
+  "supplemental_workload": "Three existing affected ring capacity/retention checks; no broad suite.",
+  "supersedes_stop": "2026-09-12T11:45:41.561Z / ebb26d retained by worker",
+  "authority": "Normal fixture compatibility within current local W24 task mandate; no external or customer policy action."
+}

@@ -177,7 +177,7 @@ describe('linkVisitor on the object host', () => {
     expect(r.shopperId).toBe(sh);
     expect(r.outcome).toBe('linked');
     expect(r.audiences).toContain(TABBY);
-    expect(r.sessionId).toBeNull();
+    expect(r.sessionId).toBe((ns.object(r.shopperId).storage.map.get('pipeline') as { sessionId: string }).sessionId);
     expect((await get('vis-phone', '/identity/export')).body.forwardTo).toBe(sh); // default brand: bare name
     // Linking again from the same browser folds nothing and reports the person.
     const again = await linkVisitor(env, 'coach', { visitorId: 'vis-phone', accountId: 'acct-1001', source: 'login', assurance: 'site' });

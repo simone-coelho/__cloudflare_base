@@ -1,0 +1,510 @@
+{
+  "before": {
+    "id": "W05.09-E1",
+    "task_id": "W05.09",
+    "check_id": "W05.09-K1",
+    "criterion_ids": [
+      "W05.09-C1",
+      "W05.09-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w0509-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W05.09/review.json",
+      "sha256": "36f69706c44b01667343f73fd5dc718581bd772e428ead9c033c1eac00baf473"
+    },
+    "at": "2026-09-11T08:08:15.740Z",
+    "limitations": "Bounded existing historical-import consent/target containment only. Synthetic actual Hono/session/DO fixture evidence, not native/deployed/customer acceptance. Requires existing matching state with explicit persisted booleans; these are not proof of affirmative historic consent or a new global policy. No cold consent grants, typed attributes/audience capability, new scoring model or hot-path algorithm. Session KV read/write, cross-store identity/erasure, batch partial failures, retry deduplication and full W05/W06/W35/W14, D03/D10, retention/customer/SLO/release remain open. No cloud/provider/warehouse/customer-data/credential/build/install/commit/deploy/cleanup actions. Current-artifact runtime is the independent final-byte compound command; all baseline/worker failures and corrected results remain retained.",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/services/SessionManager.identity.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1 -t 'uses tenant config for historical import and link/absorb, with actual internal object context before effects'",
+    "runtime": "Installed Node/Vitest existing actual Hono/history/session/DO modules over synthetic KV/DO storage; exact compound two-file primary then named W37.04 case.",
+    "workload": "At most3 grouped additions to actual-host route fixture, direct applyImport updated semantics and only affected history-config integration case; retain baseline failures and corrected explicit eligible setup.",
+    "result": "pass",
+    "artifact_digest": "16e0aec4c2011b738b89affdb447b1902404a2faa1ebf401f2d2909486e62be4",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "4197ea4370428d976e6ef3e773d1db9a1567c99bae0541ae1c3d9d44877b2c8a",
+      "configuration": "Bounded existing historical-import consent/target containment only. Synthetic actual Hono/session/DO fixture evidence, not native/deployed/customer acceptance. Requires existing matching state with explicit persisted booleans; these are not proof of affirmative historic consent or a new global policy. No cold consent grants, typed attributes/audience capability, new scoring model or hot-path algorithm. Session KV read/write, cross-store identity/erasure, batch partial failures, retry deduplication and full W05/W06/W35/W14, D03/D10, retention/customer/SLO/release remain open. No cloud/provider/warehouse/customer-data/credential/build/install/commit/deploy/cleanup actions.",
+      "files": [
+        {
+          "path": "src/identity/history.ts",
+          "role": "output",
+          "sha256": "18400fb9812c44c3442020fa82271b67e10daf1bad336c32f7ff1a3fc6421b0b"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "role": "output",
+          "sha256": "e1560b24b8ec4c12b0d70a62e6baac3dfacec173c5b8ea2fdb9b93f6199fb15a"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "role": "output",
+          "sha256": "7ccb2e2272c2124da9724cc199ac953e616f34c9bf836b75c515a5adbc923a2a"
+        },
+        {
+          "path": "src/routes/identity.test.ts",
+          "role": "output",
+          "sha256": "b32694c52e1f95b4fda48a6d08da9a468778acbbdc07e77bd887fa60ce60c213"
+        },
+        {
+          "path": "src/services/SessionManager.identity.test.ts",
+          "role": "output",
+          "sha256": "a6d5d16b44a6adeb02c9a84cfaafd7676fba5a12a0803cb8645f59fbbec9ef14"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "role": "output",
+          "sha256": "1d0ae39829d7660deaebe7e3b5072b08000368583d304e275799d36289583558"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "6a658959963532c2f2387863a6b1976ef76ea654b37c22d722674f77f4be98c7"
+        },
+        {
+          "path": "src/identity/store.ts",
+          "role": "source",
+          "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+        },
+        {
+          "path": "src/identity/shopperId.ts",
+          "role": "source",
+          "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+        },
+        {
+          "path": "src/identity/link.ts",
+          "role": "source",
+          "sha256": "c9502bc68028351005a5744161f73adb8b2589b76fbcfd7c3fd8709d03f9804a"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "role": "source",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+        },
+        {
+          "path": "src/identity/consentContinuity.ts",
+          "role": "source",
+          "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "role": "source",
+          "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/reflex/identityMerge.ts",
+          "role": "source",
+          "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "role": "source",
+          "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+        },
+        {
+          "path": "src/routes/identity.ts",
+          "role": "source",
+          "sha256": "7c367e606c65e4216cb7b64a576218b314b1dd804abb80df700579b4b3385572"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/middleware/edgeAccess.ts",
+          "role": "source",
+          "sha256": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/tenancy/objects.ts",
+          "role": "source",
+          "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "role": "source",
+          "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "role": "source",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "role": "source",
+          "sha256": "88708ef67688bd95e44b9b9a4e92e339fd37ae943849766cfc3776ae839c2162"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+        },
+        {
+          "path": "src/connectors/index.ts",
+          "role": "source",
+          "sha256": "656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "role": "source",
+          "sha256": "43a043ac41d5b8ae27cc10c78b2cb6f2469dcce959e1cc7222daedd54badb34f"
+        },
+        {
+          "path": "src/reflex/shopperReflex.identity.test.ts",
+          "role": "source",
+          "sha256": "fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W05.09/worker.json",
+          "role": "output",
+          "sha256": "6ec99161a5da9117b34a19303c9843379b0fdcb6bd5ec7414fd465ece85ee25c"
+        },
+        {
+          "path": "docs/remediation/design/W05.09/plan.md",
+          "role": "configuration",
+          "sha256": "f27c227f7f8aded687f035655c76795da988047f8fdd02aeaaacf7eef502e68f"
+        },
+        {
+          "path": "docs/remediation/design/W05.09/baseline.json",
+          "role": "configuration",
+          "sha256": "12dba3a835dc867dff32ed5b02d72bc5fd7bc3f40152d5bda1d6551868922a64"
+        },
+        {
+          "path": "docs/remediation/evidence/W05.09/source-freeze.json",
+          "role": "configuration",
+          "sha256": "97b9532a2f2c964b4e20c719736807c88ad764731132b9f8b2bd5bdcc4eb5a60"
+        },
+        {
+          "path": "docs/remediation/evidence/W05.09/source-deltas.json",
+          "role": "configuration",
+          "sha256": "f0bd965488fab6d9453323f310e55ef7d13bb8e21a390b1f5fb07d530fa0e21f"
+        }
+      ],
+      "digest": "16e0aec4c2011b738b89affdb447b1902404a2faa1ebf401f2d2909486e62be4"
+    }
+  },
+  "after": {
+    "id": "W05.09-E1",
+    "task_id": "W05.09",
+    "check_id": "W05.09-K1",
+    "criterion_ids": [
+      "W05.09-C1",
+      "W05.09-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w0509-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W05.09/review.json",
+      "sha256": "36f69706c44b01667343f73fd5dc718581bd772e428ead9c033c1eac00baf473"
+    },
+    "at": "2026-09-11T08:08:15.740Z",
+    "limitations": "Bounded existing historical-import consent/target containment only. Synthetic actual Hono/session/DO fixture evidence, not native/deployed/customer acceptance. Requires existing matching state with explicit persisted booleans; these are not proof of affirmative historic consent or a new global policy. No cold consent grants, typed attributes/audience capability, new scoring model or hot-path algorithm. Session KV read/write, cross-store identity/erasure, batch partial failures, retry deduplication and full W05/W06/W35/W14, D03/D10, retention/customer/SLO/release remain open. No cloud/provider/warehouse/customer-data/credential/build/install/commit/deploy/cleanup actions. Current-artifact runtime is the independent final-byte compound command; all baseline/worker failures and corrected results remain retained.",
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/services/SessionManager.identity.test.ts --maxWorkers=1 --minWorkers=1 && node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1 -t 'uses tenant config for historical import and link/absorb, with actual internal object context before effects'",
+    "runtime": "Installed Node/Vitest existing actual Hono/history/session/DO modules over synthetic KV/DO storage; exact compound two-file primary then named W37.04 case.",
+    "workload": "At most3 grouped additions to actual-host route fixture, direct applyImport updated semantics and only affected history-config integration case; retain baseline failures and corrected explicit eligible setup.",
+    "result": "pass",
+    "artifact_digest": "16e0aec4c2011b738b89affdb447b1902404a2faa1ebf401f2d2909486e62be4",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "4197ea4370428d976e6ef3e773d1db9a1567c99bae0541ae1c3d9d44877b2c8a",
+      "configuration": "Bounded existing historical-import consent/target containment only. Synthetic actual Hono/session/DO fixture evidence, not native/deployed/customer acceptance. Requires existing matching state with explicit persisted booleans; these are not proof of affirmative historic consent or a new global policy. No cold consent grants, typed attributes/audience capability, new scoring model or hot-path algorithm. Session KV read/write, cross-store identity/erasure, batch partial failures, retry deduplication and full W05/W06/W35/W14, D03/D10, retention/customer/SLO/release remain open. No cloud/provider/warehouse/customer-data/credential/build/install/commit/deploy/cleanup actions.",
+      "files": [
+        {
+          "path": "src/identity/history.ts",
+          "role": "output",
+          "sha256": "18400fb9812c44c3442020fa82271b67e10daf1bad336c32f7ff1a3fc6421b0b"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "role": "output",
+          "sha256": "e1560b24b8ec4c12b0d70a62e6baac3dfacec173c5b8ea2fdb9b93f6199fb15a"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "role": "output",
+          "sha256": "7ccb2e2272c2124da9724cc199ac953e616f34c9bf836b75c515a5adbc923a2a"
+        },
+        {
+          "path": "src/routes/identity.test.ts",
+          "role": "output",
+          "sha256": "b32694c52e1f95b4fda48a6d08da9a468778acbbdc07e77bd887fa60ce60c213"
+        },
+        {
+          "path": "src/services/SessionManager.identity.test.ts",
+          "role": "output",
+          "sha256": "a6d5d16b44a6adeb02c9a84cfaafd7676fba5a12a0803cb8645f59fbbec9ef14"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "role": "output",
+          "sha256": "1d0ae39829d7660deaebe7e3b5072b08000368583d304e275799d36289583558"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "6a658959963532c2f2387863a6b1976ef76ea654b37c22d722674f77f4be98c7"
+        },
+        {
+          "path": "src/identity/store.ts",
+          "role": "source",
+          "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+        },
+        {
+          "path": "src/identity/shopperId.ts",
+          "role": "source",
+          "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+        },
+        {
+          "path": "src/identity/link.ts",
+          "role": "source",
+          "sha256": "c9502bc68028351005a5744161f73adb8b2589b76fbcfd7c3fd8709d03f9804a"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "role": "source",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49"
+        },
+        {
+          "path": "src/identity/consentContinuity.ts",
+          "role": "source",
+          "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "e506ca706d2066d3dc99fa886eb175369fccf52e05a7c59c7517b914e54155c7"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "role": "source",
+          "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/reflex/identityMerge.ts",
+          "role": "source",
+          "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+        },
+        {
+          "path": "src/reflex/configStore.ts",
+          "role": "source",
+          "sha256": "a740a4bf3e5d8a870eb1c52b9a1324b7f7948b877ce44d644a26ce30528a2b53"
+        },
+        {
+          "path": "src/demos/registry.ts",
+          "role": "source",
+          "sha256": "9d02087adc49ab71dcc01777d6b3a33120a5fcc2d1f23390b37b8795109c187b"
+        },
+        {
+          "path": "src/routes/identity.ts",
+          "role": "source",
+          "sha256": "7c367e606c65e4216cb7b64a576218b314b1dd804abb80df700579b4b3385572"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/middleware/edgeAccess.ts",
+          "role": "source",
+          "sha256": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/tenancy/objects.ts",
+          "role": "source",
+          "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "role": "source",
+          "sha256": "22fb52765bd78411a2c11f4a7109ee9b36bb63a03a1e469e46b3d02f45e721c6"
+        },
+        {
+          "path": "src/auth/accounts.ts",
+          "role": "source",
+          "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "a21ae0a34e8dff657428ba25e7503bd5b970bd58b18506b28f2dd17f8e7de81e"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "role": "source",
+          "sha256": "88708ef67688bd95e44b9b9a4e92e339fd37ae943849766cfc3776ae839c2162"
+        },
+        {
+          "path": "src/types/env.ts",
+          "role": "source",
+          "sha256": "a08edb614a3630444ad3299f4b7b710e1127f5e085e8e1bee8c29f370f795b54"
+        },
+        {
+          "path": "src/connectors/index.ts",
+          "role": "source",
+          "sha256": "656f659dceb0c62102477f841df8512b2513a9444273075da053c349b59b4e67"
+        },
+        {
+          "path": "src/services/RealtimeSegmentEngine.ts",
+          "role": "source",
+          "sha256": "43a043ac41d5b8ae27cc10c78b2cb6f2469dcce959e1cc7222daedd54badb34f"
+        },
+        {
+          "path": "src/reflex/shopperReflex.identity.test.ts",
+          "role": "source",
+          "sha256": "fbbf099ac3d76fe0e00f01baae4acc2f53eba3eb38e939969e478c8a234c1ced"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W05.09/worker.json",
+          "role": "output",
+          "sha256": "6ec99161a5da9117b34a19303c9843379b0fdcb6bd5ec7414fd465ece85ee25c"
+        },
+        {
+          "path": "docs/remediation/design/W05.09/plan.md",
+          "role": "configuration",
+          "sha256": "f27c227f7f8aded687f035655c76795da988047f8fdd02aeaaacf7eef502e68f"
+        },
+        {
+          "path": "docs/remediation/design/W05.09/baseline.json",
+          "role": "configuration",
+          "sha256": "12dba3a835dc867dff32ed5b02d72bc5fd7bc3f40152d5bda1d6551868922a64"
+        },
+        {
+          "path": "docs/remediation/evidence/W05.09/source-freeze.json",
+          "role": "configuration",
+          "sha256": "97b9532a2f2c964b4e20c719736807c88ad764731132b9f8b2bd5bdcc4eb5a60"
+        },
+        {
+          "path": "docs/remediation/evidence/W05.09/source-deltas.json",
+          "role": "configuration",
+          "sha256": "f0bd965488fab6d9453323f310e55ef7d13bb8e21a390b1f5fb07d530fa0e21f"
+        }
+      ],
+      "digest": "16e0aec4c2011b738b89affdb447b1902404a2faa1ebf401f2d2909486e62be4"
+    }
+  }
+}

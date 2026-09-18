@@ -1,0 +1,198 @@
+{
+  "id": "W07.04",
+  "package_id": "W07",
+  "title": "Contain remaining runtime raw logs and monitor error-detail telemetry",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Bounded W07 future-write containment across the18 production files listed in ownership: replace remaining raw error/problem/request-derived tenant/scope/flag/action/revision/cron log values with fixed labels and safe numeric aggregate diagnostics. Remove only monitor AE problem-detail blob tail; retain first4 category blobs,4 doubles,indexes and buffered handling. Preserve returned/KV/alert diagnostics, job scheduling, delivery, memoization, fallback/return/rethrow and deterministic decision/learning/ledger behavior.",
+  "read_paths": [
+    "src",
+    "scripts/remediation",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/index.ts",
+    "src/routes/live.ts",
+    "src/routes/liveOps.ts",
+    "src/routes/operator.ts",
+    "src/routes/ai.ts",
+    "src/routes/aiScene.ts",
+    "src/routes/funnel.ts",
+    "src/routes/webhook.ts",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/durable-objects/RateLimiter.ts",
+    "src/durable-objects/StateManager.ts",
+    "src/config/versionedStore.ts",
+    "src/connectors/DecisionProvider.ts",
+    "src/tenancy/middleware.ts",
+    "src/ops/monitor.ts",
+    "src/demos/meridian/MeridianReflex.ts",
+    "src/demos/brighthour/offerDesk.ts",
+    "src/demos/brighthour/composer.ts",
+    "src/services/telemetry.boundary.test.ts",
+    "src/index.api-boundary.test.ts",
+    "docs/remediation/evidence/W07.04"
+  ],
+  "non_goals": [
+    "No scoring/learning/ledger/auth/consent/ownership/retry changes, no new awaits in StateManager or RateLimiter cleanup, no public error-response/retained monitor diagnostics/alert policy change. No new telemetry schema/version/metric fields, pipeline, harness, packages or runtime infrastructure.",
+    "No full W07/log-store inventory/aggregate safety/history/schema/access/retention/dataset/privacy/customer/deployed/SLO/release acceptance. Source console scan is bounded repository-source assurance, not platform/SDK/dependency-log attestation. Current regressions do not reclose old broad contracts.",
+    "No live network/cloud/deploy/provision/seed/credentials/customer-data/operational scripts, stage/commit/push, cleanup or unrelated edits. Root alone owns canonical source/governance."
+  ],
+  "criteria": [
+    {
+      "id": "W07.04-C1",
+      "description": "Scoped18-source console writers contain no raw exception/problem/body/dynamic tenant/scope/flag/action/revision/cron values; safe numeric counts/timing remain. Actual representative config retry/validation/write, live-provider memoization/decision/no-event/fallback, DO caught error/unawaited-handler, scene queue-to-inline and webhook/tenant behavior are preserved. Repetitive catch-only paths are source-reviewed without an exhaustive per-catch matrix.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W07.04-C2",
+      "description": "Actual monitor point omits only raw problem tail and keeps exact4 category blobs/4 doubles/tenant index; returned result, KV diagnostics, alert/cooldown remain. Existing55 focused cases preserve prior telemetry/consent/domain controls; existing5 workerd entry/queue cases plus compact actual scheduled control preserve scheduled job/waitUntil behavior and numeric-only logs. No prior full-contract or auth/customer/deployed acceptance.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W07.04-C3",
+      "description": "Independent frozen actual source/baseline/fixture/worker-proof review and exact K1/K2 reruns, inspected worker application noEmit/scoped diff and relevant identity confirm bounded console/monitor AE containment and required limits. Root separately accepts and retains source qualification, historical proof, failures and handoff.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W07.04-K1",
+      "required": true,
+      "criterion_ids": [
+        "W07.04-C1",
+        "W07.04-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/services/telemetry.boundary.test.ts src/telemetry.boundary.test.ts src/content/consent.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual modules and mounted routes with intercepted synthetic SDK/fetch/KV/DO/AE/alert seams; existing route/consent fixtures. No external traffic.",
+      "workload": "Existing55 cases plus compact grouped config/provider/DO/scene/webhook/tenant/monitor controls in the existing service fixture; preserve original17 service assertions. Monitor raw error removed only from console/AE, not returned/stored/alert diagnostics. No new harness or per-route matrix.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W07.04-K2",
+      "required": true,
+      "criterion_ids": [
+        "W07.04-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t 'W07.01|W07.04'",
+      "runtime": "Existing Miniflare/workerd actual-entry fixture, synthetic bindings and blocked outbound; extend only for compact scheduled invocation.",
+      "workload": "Existing5 W07.01 entry/queue cases unchanged plus compact W07.04 actual scheduled control; retain cron/tenant/job/waitUntil and failure handling.19 unrelated historical cases deliberately excluded; no prior full-contract reclosure.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W07.04-K3",
+      "required": true,
+      "criterion_ids": [
+        "W07.04-C3"
+      ],
+      "command": "Independent frozen W07.04 source/baseline/assertion/evidence review and exact K1/K2 reruns; inspect worker application noEmit, scoped diff and relevant source/config/lock/proof identity; retain results and bounded verdict in review-v1.md.",
+      "runtime": "Independent actual source and declared Node/workerd review; inspect one worker compiler execution with temporary metadata, no duplicate compile or installed-runner inventory.",
+      "workload": "All C1-C3; distinguish18-source static catch review from representative execution, preserve numeric diagnostics/monitor downstream data and original asynchronous contracts. Verify relevant packages-external graph and unchanged protections; record source qualification and historical proof without broad revalidation.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W07.03",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented protections remain. Overlapping broad artifact is historical; current bounded W07.04 regression covers affected behaviors.",
+      "rationale": "Do not expand logging containment into old full-contract revalidation or imply prior acceptance on changed dependencies."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W03.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented protections remain. Overlapping broad artifact is historical; current bounded W07.04 regression covers affected behaviors.",
+      "rationale": "Do not expand logging containment into old full-contract revalidation or imply prior acceptance on changed dependencies."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W07.02",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented protections remain. Overlapping broad artifact is historical; current bounded W07.04 regression covers affected behaviors.",
+      "rationale": "Do not expand logging containment into old full-contract revalidation or imply prior acceptance on changed dependencies."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W07.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented protections remain. Overlapping broad artifact is historical; current bounded W07.04 regression covers affected behaviors.",
+      "rationale": "Do not expand logging containment into old full-contract revalidation or imply prior acceptance on changed dependencies."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W34.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented protections remain. Overlapping broad artifact is historical; current bounded W07.04 regression covers affected behaviors.",
+      "rationale": "Do not expand logging containment into old full-contract revalidation or imply prior acceptance on changed dependencies."
+    }
+  ],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "contract_digest": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0202-worker",
+    "independent_reviewer": "w0202-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested",
+    "actor_id": null,
+    "artifact_digest": null,
+    "evidence_ids": [],
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "lead_signoff": {
+    "status": "pending",
+    "actor_id": null,
+    "artifact_digest": null,
+    "review_sha256": null,
+    "record": null,
+    "at": null,
+    "limitations": null
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement admitted18-source console and monitor-AE containment production first; compact existing-fixture controls, focused checks then freeze for independent review.",
+    "record": null
+  }
+}

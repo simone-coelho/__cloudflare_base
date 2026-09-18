@@ -1,0 +1,528 @@
+{
+  "before": {
+    "id": "W32.02-E2",
+    "task_id": "W32.02",
+    "check_id": "W32.02-K2",
+    "criterion_ids": [
+      "W32.02-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-worker",
+    "run_id": "/root/w1405_design",
+    "file": {
+      "path": "docs/remediation/evidence/W32.02/worker.json",
+      "sha256": "d846de149980bc13228a21dfd7a17ca558a946eec1da88ecfe9d338f2c50d888"
+    },
+    "at": "2026-09-12T21:34:35.054Z",
+    "limitations": "Raw-report containment and policy-independent pass removal only. Budgets are explicit application refusal limits, not a qualified Worker/CPU/memory/customer workload or a new scientific/customer policy. Aggregate construction/loadHours, stored GET/window report bytes and lightweight consistent summaries remain open in W32/W31; no sidecar/versioned-write protocol here. Config, auth and tombstone reads remain existing separately qualified dependencies. Optional text-only R2 adapters permit actual byte checking only after materialization; native size-before-text helps but is not a process-memory guarantee. Strict raw-report loading refuses overflow before publication/response; generic loadDay callers retain their existing explicitly capped/truncated contract. Pure caller-supplied truncated coverage is retained, not repaired. Existing first-match duplicate IDs, W33 custom nonpersistence, W30 coverage and W21 diagnostic-only counts remain implemented; shared W32.01 broad proof is qualified and all accepted history retained. Historical provenance/repair, full W30 reconstruction, zero-base/reference/model validation and full W32/F34/F32/N20/N21/N24/customer/release acceptance remain open. No serving I/O, new test/benchmark infrastructure, deployment/cloud/resource/credential/customer-data/external/commit/push/destructive or customer-policy authority. Paired final local Node medians2k9.57→11.77ms and10k42.98→45.92ms retain modest guard overhead; no total speedup claim. Initial10k150.63ms admission regression and its executed source/captures are retained, optimized without loosening budgets. No timing threshold was retroactively invented.",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/report.test.ts src/learn/hourly.ts src/routes/decisions.ts --max-warnings 0 && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/routes/decisions.ts src/learn/report.test.ts docs/kit/02-api-reference.md",
+    "runtime": "Installed full compiler/four-file lint/five-file whitespace.",
+    "workload": "Baseline four-file lint0 and accepted compiler reuse; final scoped checks rerun.",
+    "result": "pass",
+    "artifact_digest": "dd085b87c12bead51df2a315a483716b413ad97bf09fd75103e760f44fb4f066",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "61a2d54d608eb5525991b612c92b220d9f0eccf7f3685140a5034e22c1463250",
+      "configuration": "Raw-report containment and policy-independent pass removal only. Budgets are explicit application refusal limits, not a qualified Worker/CPU/memory/customer workload or a new scientific/customer policy. Aggregate construction/loadHours, stored GET/window report bytes and lightweight consistent summaries remain open in W32/W31; no sidecar/versioned-write protocol here. Config, auth and tombstone reads remain existing separately qualified dependencies. Optional text-only R2 adapters permit actual byte checking only after materialization; native size-before-text helps but is not a process-memory guarantee. Strict raw-report loading refuses overflow before publication/response; generic loadDay callers retain their existing explicitly capped/truncated contract. Pure caller-supplied truncated coverage is retained, not repaired. Existing first-match duplicate IDs, W33 custom nonpersistence, W30 coverage and W21 diagnostic-only counts remain implemented; shared W32.01 broad proof is qualified and all accepted history retained. Historical provenance/repair, full W30 reconstruction, zero-base/reference/model validation and full W32/F34/F32/N20/N21/N24/customer/release acceptance remain open. No serving I/O, new test/benchmark infrastructure, deployment/cloud/resource/credential/customer-data/external/commit/push/destructive or customer-policy authority. Paired final local Node medians2k9.57→11.77ms and10k42.98→45.92ms retain modest guard overhead; no total speedup claim. Initial10k150.63ms admission regression and its executed source/captures are retained, optimized without loosening budgets. No timing threshold was retroactively invented.",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "role": "output",
+          "sha256": "5a7d06a222680a6ba4714994f1a242948afae6b4bbd270671f2ce74f8ffe51f8"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "role": "output",
+          "sha256": "0f7d25584fa830e33e06ef9a74efd8a3ad44d067e27e354d688cb213562b07d0"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "68546596e5fba3b27e73a4c3f4a35a50e034b235fa8378ffb40981b83a7c1ecf"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "output",
+          "sha256": "6ac092272a367af274f1d0c281075dc6ecfdca64cdd23ae529777f28a318d773"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "source",
+          "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "role": "source",
+          "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "output",
+          "sha256": "e3dee7a1c506e49d12b871e3ace4cb83e722cfb16375af59647f39ae41bedfae"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-learning-and-statistics.md",
+          "role": "source",
+          "sha256": "0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F17.md",
+          "role": "source",
+          "sha256": "84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F25.md",
+          "role": "source",
+          "sha256": "2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F34.md",
+          "role": "source",
+          "sha256": "19fb69a80a5261cc36561ff880a940822191d677f768ce1890777b3265497f12"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "role": "source",
+          "sha256": "4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995"
+        },
+        {
+          "path": "src/durable-objects/LearnStats.ts",
+          "role": "source",
+          "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/measurement.json",
+          "role": "configuration",
+          "sha256": "e7d2445ff9991ed539b2d395134750351741b4f084a04688b279385e00298d04"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/measurement-attempt1.json",
+          "role": "configuration",
+          "sha256": "597f54cbd361092e6d85dee28b8d47b7c5347a36e941d07fe729cb4d994cb9d0"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/worker-attempt1.json",
+          "role": "configuration",
+          "sha256": "701232e353115d507285d0475df06f64d5fee123a75947af0a1059e1b4e6d4f0"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/worker.json",
+          "role": "output",
+          "sha256": "d846de149980bc13228a21dfd7a17ca558a946eec1da88ecfe9d338f2c50d888"
+        },
+        {
+          "path": "docs/remediation/design/W32.02/plan-r2.md",
+          "role": "configuration",
+          "sha256": "2885e740b617bbac4cd30c2d05d4d76946c65d074d68d5cf6a44e335247847da"
+        },
+        {
+          "path": "docs/remediation/design/W32.02/baseline.json",
+          "role": "configuration",
+          "sha256": "72a80cf387a3a7b566844618aea942b09d9b1c970cddfeac0277703029734492"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/admission.json",
+          "role": "configuration",
+          "sha256": "6da346c5ca66e3e74ee07815488dcf0df9236cd5da41bebda4c1db029c39f9a9"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/admission-r2.json",
+          "role": "configuration",
+          "sha256": "bffd3a3c0b4a0a9d66e6b7ccc5ecdf7c3710fbba079bba640547079a281a2983"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/policy-budget-correction.json",
+          "role": "configuration",
+          "sha256": "5e9a8661cf9cdabf7d3d34716c0c3db4a0f68b25053baca02dc42783cbb90075"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/source-freeze.json",
+          "sha256": "d3e7956b375a141936bed67c91a23c4ab49ba33a904ac738734a60388fbd3185",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/source-deltas.json",
+          "sha256": "62e5099d5420813de20d756e41b88603581027717798b4b91028531cb4f53db7",
+          "role": "configuration"
+        }
+      ],
+      "digest": "dd085b87c12bead51df2a315a483716b413ad97bf09fd75103e760f44fb4f066"
+    }
+  },
+  "after": {
+    "id": "W32.02-E2",
+    "task_id": "W32.02",
+    "check_id": "W32.02-K2",
+    "criterion_ids": [
+      "W32.02-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-worker",
+    "run_id": "/root/w1405_design",
+    "file": {
+      "path": "docs/remediation/evidence/W32.02/worker.json",
+      "sha256": "d846de149980bc13228a21dfd7a17ca558a946eec1da88ecfe9d338f2c50d888"
+    },
+    "at": "2026-09-12T21:34:35.054Z",
+    "limitations": "Raw-report containment and policy-independent pass removal only. Budgets are explicit application refusal limits, not a qualified Worker/CPU/memory/customer workload or a new scientific/customer policy. Aggregate construction/loadHours, stored GET/window report bytes and lightweight consistent summaries remain open in W32/W31; no sidecar/versioned-write protocol here. Config, auth and tombstone reads remain existing separately qualified dependencies. Optional text-only R2 adapters permit actual byte checking only after materialization; native size-before-text helps but is not a process-memory guarantee. Strict raw-report loading refuses overflow before publication/response; generic loadDay callers retain their existing explicitly capped/truncated contract. Pure caller-supplied truncated coverage is retained, not repaired. Existing first-match duplicate IDs, W33 custom nonpersistence, W30 coverage and W21 diagnostic-only counts remain implemented; shared W32.01 broad proof is qualified and all accepted history retained. Historical provenance/repair, full W30 reconstruction, zero-base/reference/model validation and full W32/F34/F32/N20/N21/N24/customer/release acceptance remain open. No serving I/O, new test/benchmark infrastructure, deployment/cloud/resource/credential/customer-data/external/commit/push/destructive or customer-policy authority. Paired final local Node medians2k9.57→11.77ms and10k42.98→45.92ms retain modest guard overhead; no total speedup claim. Initial10k150.63ms admission regression and its executed source/captures are retained, optimized without loosening budgets. No timing threshold was retroactively invented.",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/report.ts src/learn/report.test.ts src/learn/hourly.ts src/routes/decisions.ts --max-warnings 0 && git diff --check -- src/learn/report.ts src/learn/hourly.ts src/routes/decisions.ts src/learn/report.test.ts docs/kit/02-api-reference.md",
+    "runtime": "Installed full compiler/four-file lint/five-file whitespace.",
+    "workload": "Baseline four-file lint0 and accepted compiler reuse; final scoped checks rerun.",
+    "result": "pass",
+    "artifact_digest": "dd085b87c12bead51df2a315a483716b413ad97bf09fd75103e760f44fb4f066",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "61a2d54d608eb5525991b612c92b220d9f0eccf7f3685140a5034e22c1463250",
+      "configuration": "Raw-report containment and policy-independent pass removal only. Budgets are explicit application refusal limits, not a qualified Worker/CPU/memory/customer workload or a new scientific/customer policy. Aggregate construction/loadHours, stored GET/window report bytes and lightweight consistent summaries remain open in W32/W31; no sidecar/versioned-write protocol here. Config, auth and tombstone reads remain existing separately qualified dependencies. Optional text-only R2 adapters permit actual byte checking only after materialization; native size-before-text helps but is not a process-memory guarantee. Strict raw-report loading refuses overflow before publication/response; generic loadDay callers retain their existing explicitly capped/truncated contract. Pure caller-supplied truncated coverage is retained, not repaired. Existing first-match duplicate IDs, W33 custom nonpersistence, W30 coverage and W21 diagnostic-only counts remain implemented; shared W32.01 broad proof is qualified and all accepted history retained. Historical provenance/repair, full W30 reconstruction, zero-base/reference/model validation and full W32/F34/F32/N20/N21/N24/customer/release acceptance remain open. No serving I/O, new test/benchmark infrastructure, deployment/cloud/resource/credential/customer-data/external/commit/push/destructive or customer-policy authority. Paired final local Node medians2k9.57→11.77ms and10k42.98→45.92ms retain modest guard overhead; no total speedup claim. Initial10k150.63ms admission regression and its executed source/captures are retained, optimized without loosening budgets. No timing threshold was retroactively invented.",
+      "files": [
+        {
+          "path": "src/learn/report.ts",
+          "role": "output",
+          "sha256": "5a7d06a222680a6ba4714994f1a242948afae6b4bbd270671f2ce74f8ffe51f8"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "role": "output",
+          "sha256": "0f7d25584fa830e33e06ef9a74efd8a3ad44d067e27e354d688cb213562b07d0"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "68546596e5fba3b27e73a4c3f4a35a50e034b235fa8378ffb40981b83a7c1ecf"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "output",
+          "sha256": "6ac092272a367af274f1d0c281075dc6ecfdca64cdd23ae529777f28a318d773"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "source",
+          "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "role": "source",
+          "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "output",
+          "sha256": "e3dee7a1c506e49d12b871e3ace4cb83e722cfb16375af59647f39ae41bedfae"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "b86a105226ef5bf94be2d026f0cccf77bf4d1ea87e22e6fa3de51e02ac3558ff"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "src/middleware/auth.ts",
+          "role": "source",
+          "sha256": "9ed09bbc7b27ff6c3c50fd598154659980eabec904af0753b73dfa4688049890"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "role": "source",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "role": "source",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084"
+        },
+        {
+          "path": "src/index.ts",
+          "role": "source",
+          "sha256": "c82b51d53a5422b84a08b2871d4d1753ebd77c189809107ca84610c940943d3b"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-learning-and-statistics.md",
+          "role": "source",
+          "sha256": "0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F17.md",
+          "role": "source",
+          "sha256": "84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F25.md",
+          "role": "source",
+          "sha256": "2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F34.md",
+          "role": "source",
+          "sha256": "19fb69a80a5261cc36561ff880a940822191d677f768ce1890777b3265497f12"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "role": "source",
+          "sha256": "4b914c9952ae58cb1a34faa860a30e78ce258c9ec9cbc8af1ea91cf5474ee995"
+        },
+        {
+          "path": "src/durable-objects/LearnStats.ts",
+          "role": "source",
+          "sha256": "07e9eb959497eb9ec3760b7dabc6dd70700bb5d68a8492ce3e053b7600169974"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/measurement.json",
+          "role": "configuration",
+          "sha256": "e7d2445ff9991ed539b2d395134750351741b4f084a04688b279385e00298d04"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/measurement-attempt1.json",
+          "role": "configuration",
+          "sha256": "597f54cbd361092e6d85dee28b8d47b7c5347a36e941d07fe729cb4d994cb9d0"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/worker-attempt1.json",
+          "role": "configuration",
+          "sha256": "701232e353115d507285d0475df06f64d5fee123a75947af0a1059e1b4e6d4f0"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/worker.json",
+          "role": "output",
+          "sha256": "d846de149980bc13228a21dfd7a17ca558a946eec1da88ecfe9d338f2c50d888"
+        },
+        {
+          "path": "docs/remediation/design/W32.02/plan-r2.md",
+          "role": "configuration",
+          "sha256": "2885e740b617bbac4cd30c2d05d4d76946c65d074d68d5cf6a44e335247847da"
+        },
+        {
+          "path": "docs/remediation/design/W32.02/baseline.json",
+          "role": "configuration",
+          "sha256": "72a80cf387a3a7b566844618aea942b09d9b1c970cddfeac0277703029734492"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/admission.json",
+          "role": "configuration",
+          "sha256": "6da346c5ca66e3e74ee07815488dcf0df9236cd5da41bebda4c1db029c39f9a9"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/admission-r2.json",
+          "role": "configuration",
+          "sha256": "bffd3a3c0b4a0a9d66e6b7ccc5ecdf7c3710fbba079bba640547079a281a2983"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/policy-budget-correction.json",
+          "role": "configuration",
+          "sha256": "5e9a8661cf9cdabf7d3d34716c0c3db4a0f68b25053baca02dc42783cbb90075"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/source-freeze.json",
+          "sha256": "d3e7956b375a141936bed67c91a23c4ab49ba33a904ac738734a60388fbd3185",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W32.02/source-deltas.json",
+          "sha256": "62e5099d5420813de20d756e41b88603581027717798b4b91028531cb4f53db7",
+          "role": "configuration"
+        }
+      ],
+      "digest": "dd085b87c12bead51df2a315a483716b413ad97bf09fd75103e760f44fb4f066"
+    }
+  }
+}

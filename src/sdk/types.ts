@@ -29,9 +29,20 @@ export interface ClientConfig {
   /** Storage key for the first-party visitor id. Shared with the demo storefront by default. */
   visitorIdKey?: string;
   paths?: Partial<Paths>;
+  /** Same-origin first-party HttpOnly session broker; no fallback if configured. */
+  sessionBroker?: string;
+}
+
+/** Server-issued explicit instruction. Boolean cookies and response hints are
+ * restrictions only and cannot stand in for this authority. */
+export interface ConsentInstruction {
+  version: 1; tenant: string; subject: string; revision: string;
+  tracking?: { value: boolean; chosenAt: number; expiresAt: number };
+  personalization?: { value: boolean; chosenAt: number; expiresAt: number };
 }
 
 export interface Paths {
+  identitySession: string;
   action: string;
   ws: string;
   reflex: string;
@@ -67,14 +78,18 @@ export interface DomLike {
 
 export interface Host {
   now(): number;
+  /** Opaque safe token (1..96 ASCII letters/digits/_/-); need not be a UUID. */
   uuid(): string;
   storage: { get(key: string): string | null; set(key: string, value: string): void };
+  /** Real cross-context exclusion (Web Locks in browsers); absence refuses shared identity authority. */
+  acquireAuthorityLock?: (name: string) => Promise<() => void>;
+  onStorageChange?: (key: string, listener: () => void) => () => void;
   cookie: { get(key: string): string | null; set(key: string, value: string, maxAgeSeconds: number): void };
   location: { href: string; host: string; hostname: string; protocol: string; search: string } | null;
   referrer: string;
   fetch: (url: string, init?: RequestInitLike) => Promise<ResponseLike>;
   sendBeacon?: (url: string, body: string) => boolean;
-  openSocket?: (url: string) => SocketLike;
+  openSocket?: (url: string, protocols?: string[]) => SocketLike;
   setTimeout(fn: () => void, ms: number): unknown;
   clearTimeout(handle: unknown): void;
   setInterval(fn: () => void, ms: number): unknown;
@@ -92,8 +107,9 @@ export interface RequestInitLike {
   body?: string;
   credentials?: 'include' | 'omit' | 'same-origin';
   keepalive?: boolean;
+  signal?: AbortSignal;
 }
-export interface ResponseLike { ok: boolean; status: number; json(): Promise<unknown> }
+export interface ResponseLike { ok: boolean; status: number; json(): Promise<unknown>; body?: ReadableStream<Uint8Array> | null }
 
 // ── Events ──────────────────────────────────────────────────────────────────
 
@@ -107,10 +123,14 @@ export interface EntrySignals { utmMedium: string; utmSource: string; referrer: 
 
 /** The envelope POST /realtime/action validates. Field for field what the demo storefront sends. */
 export interface ActionEnvelope {
+  /** Logical event identity, minted once per consent-approved envelope. */
+  eventId?: string;
   type: string;
   userId: string;
   anonymousId: string;
   sessionId: string;
+  /** Attribution only; never a profile locator or authority proof. */
+  browsingSessionId: string;
   data: Record<string, unknown>;
   source: string;
   surface?: string;
@@ -122,6 +142,10 @@ export interface ActionEnvelope {
 
 /** One decision from GET /v1/:tenant/decisions/snapshot, or a `content_decisions` frame. */
 export interface ContentDecision {
+  /** Exact original served receipt, when tracking was allowed. Not a render acknowledgment. */
+  decisionId?: string;
+  /** Opaque short-lived encrypted admission, never a behavior/debug payload. */
+  renderOffer?: string;
   contentId: string;
   customerContentId: string;
   type: string;
@@ -134,11 +158,17 @@ export interface ContentDecision {
 
 export interface DecisionSet {
   page: string;
+  pageInstance?: string;
   arm?: string;
   versions?: Record<string, number>;
   config_label?: string;
   decisions: ContentDecision[];
   ts?: number;
+}
+
+export interface RenderAcknowledgment {
+  version: 1; decisionId: string; eventId: string; pageInstance: string;
+  status: 'durable'; source: 'pending' | 'recovered';
 }
 
 /** What the engine pushes after an action: the demo storefront applies this whole. */
@@ -157,6 +187,7 @@ export interface EngineUpdate {
 export type SocketStatus = 'connecting' | 'connected' | 'reconnecting' | 'error' | 'closed' | 'unavailable';
 
 export interface CoreEvents {
+  generation: (generation: number) => void;
   update: (update: EngineUpdate, meta: { fromPush: boolean; rttMs: number | null }) => void;
   decisions: (set: DecisionSet) => void;
   /** An ODP receipt: from the POST response (`fetch`, the dispatch) or the socket (`push`, ODP answered). */

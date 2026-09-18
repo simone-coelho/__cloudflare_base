@@ -32,6 +32,14 @@ max_batch_size = 100      # doc 31: the ledger writes one R2 object per batch, h
 max_batch_timeout = 3     # a scene-gen job waits at most three seconds for the batch to fill
 max_concurrency = 6       # generate several novel scenes in parallel under load
 max_retries = 2
+dead_letter_queue = "events-dead-letter"
+
+[[queues.consumers]]
+queue = "events-dead-letter"
+max_batch_size = 100
+max_batch_timeout = 3
+max_concurrency = 6
+max_retries = 2
 
 # Browser Rendering — headless Chromium on Cloudflare, for visual verification (the /__shot route)
 [browser]
@@ -125,13 +133,14 @@ new_sqlite_classes = ["DecisionRing", "LearnStats"]
 # Analytics Engine
 [[analytics_engine_datasets]]
 binding = "ANALYTICS"
+dataset = "edge_ops_development_v1"
 
 # D1 database — Coach demo dataset (ODP profiles + commerce + warehouse-export mirror).
 # Powers the Opal chat's aggregate-then-reason query surface (v_profiles / meta_attribute_catalog).
-# Apply schema + seed locally:
-#   npx wrangler d1 execute coach-demo-db --local --file=migrations/0001_d1_init.sql
-#   node scripts/seed-d1.mjs && npx wrangler d1 execute coach-demo-db --local --file=migrations/0002_seed_catalog.sql  (then 0003, 0004)
-# At deploy time, re-run the same with --remote.
+# Legacy seed generation and apply/remote instructions are withdrawn.
+# scripts/seed-d1.mjs is retired; the mixed demo migration/seed chain is not an
+# approved customer setup or recovery workflow. Scoped ownership and recovery
+# remain pending W08/W39; see docs/remediation/README.md and doc 10 Operations.
 [[d1_databases]]
 binding = "DB"
 database_name = "coach-demo-db"
@@ -141,13 +150,18 @@ migrations_dir = "migrations"
 # Environment Variables (use wrangler secret for sensitive values)
 [vars]
 ENVIRONMENT = "development"
+DEPLOYMENT_PROFILE = "demo"
+# Explicitly held. No unknown-owner policy or retention period is invented.
+LEDGER_RECOVERY_ENABLED = "false"
+# Declaration only: workflow activation/resume requires explicit intake policies,
+# including unknown-owner disposal, independently of this producer flag.
+LEDGER_RECOVERY_CONFIG = '{"version":1,"sourceQueue":"events","deadLetterQueue":"events-dead-letter"}'
 # Who may talk to this worker (src/middleware/edgeAccess.ts). ENFORCED since
 # 2026-09-03: the demo pages carry the site key `demo-site` in a <meta> and
 # /edge-auth.js attaches it; the presenter signs in once on /tuning.html (email and
 # password, the shared sign-in) and that covers the merchandiser's writes. The audience needs nothing.
-# Requires the SDK_KEYS secret on the worker (deploy.sh refuses without it):
-#   printf '*:demo-site' | wrangler secret put SDK_KEYS
-# ROLLBACK IS THIS ONE LINE: set it to "open".
+# Customer lifecycle uses stamp-workflow.mjs and protected desired state.
+# Never disable authentication or install wildcard material for recovery.
 AUTH_MODE = "enforced"
 CONNECTOR_MODE = "mock"
 # Mode-B decision source: 'mock' (default — current demo) | 'optimizely' (real FX SDK + datafile).
@@ -156,7 +170,7 @@ DECISION_SOURCE = "mock"
 # ODP REST base (NOT secret — the key is; `wrangler secret put ODP_PUBLIC_KEY`).
 # Coach RTS demo instance scope 11023 (app.zaius.com); v3 endpoints: /v3/graphql, /v3/events.
 ODP_API_HOST = "https://api.zaius.com"
-JWT_SECRET = "development-secret-key-change-in-production"
+# Signing material is a secret; no published fallback is deployable.
 JWT_ISSUER = "edge-platform"
 JWT_AUDIENCE = "edge-platform-api"
 # Optimizely FX SDK key — NOT secret (the datafile at cdn.optimizely.com/datafiles/<key>.json is public).
@@ -191,11 +205,9 @@ ip = "localhost"
 # ═════════════════════════════════════════════════════════════════════════════
 # STAGING — the customer-facing lower environment (CW10, plan 21 Lane B).
 #
-# Every binding is declared again here against staging's OWN resources, which
-# is the hard isolation from the demo worker that section 1.7 promises. Fill the
-# <staging-…> placeholders with scripts/provision-staging.sh, which creates the
-# resources, applies the D1 migrations, sets the secrets and seeds an operator
-# login. scripts/deploy.sh refuses `--env staging` while a placeholder remains.
+# Customer bindings are declared independently; demo-only bindings are omitted.
+# These declarations do not attest deployed ownership or authorize provisioning.
+# Existing class migrations and stored objects are intentionally retained.
 #
 # Secrets (never here): JWT_SECRET, SDK_KEYS, GEMINI_API_KEY, and optionally
 # ODP_PUBLIC_KEY, SHOT_TOKEN. Set them with `wrangler secret put NAME --env staging`.
@@ -203,10 +215,15 @@ ip = "localhost"
 # Cron schedules (the scheduled handler in src/index.ts matches on the pattern):
 #   0 * * * *  regional trend roll-up, per tenant in TREND_ROLLUP_TENANTS (doc 22 §5.2)
 #   0 3 * * *  the learning cycle: proposals or bounded moves for slots in assisted / autonomous mode (doc 22 §7.3)
-# Persisted, queryable logs in the dashboard for every environment (src/ops/monitor.ts writes one line per run).
+# Desired local controls, not evidence of deployed settings or historical deletion.
+# Enable persistence only after separately approved access/retention verification.
 [observability]
-enabled = true
-head_sampling_rate = 1
+enabled = false
+head_sampling_rate = 0
+
+[observability.logs]
+enabled = false
+invocation_logs = false
 
 [triggers]
 crons = ["*/5 * * * *", "0 * * * *", "0 3 * * *"]   # the monitor every five minutes; the trend rollup hourly; the day report, the autonomy cycle and the erasure rewrite at 03:00 UTC
@@ -216,6 +233,10 @@ name = "edge-platform-staging"
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
+DEPLOYMENT_PROFILE = "customer"
+LEDGER_RECOVERY_ENABLED = "false"
+# Policy-unset intake is held by workflow activation/resume preflight.
+LEDGER_RECOVERY_CONFIG = '{"version":1,"sourceQueue":"events-staging","deadLetterQueue":"events-staging-dead-letter"}'
 # Enforced: SDK keys on /realtime and /v1, JWT on operator writes, CORS allow-list only.
 AUTH_MODE = "enforced"
 # The customer's lower-environment origins, comma-separated (`*.example.com` allowed).
@@ -253,13 +274,14 @@ max_batch_size = 100
 max_batch_timeout = 3
 max_concurrency = 6
 max_retries = 2
+dead_letter_queue = "events-staging-dead-letter"
 
-[env.staging.browser]
-binding = "BROWSER"
-
-[[env.staging.durable_objects.bindings]]
-name = "STATE_MANAGER"
-class_name = "StateManager"
+[[env.staging.queues.consumers]]
+queue = "events-staging-dead-letter"
+max_batch_size = 100
+max_batch_timeout = 3
+max_concurrency = 6
+max_retries = 2
 
 [[env.staging.durable_objects.bindings]]
 name = "RATE_LIMITER"
@@ -270,16 +292,8 @@ name = "PERSONALIZATION_WEBSOCKET"
 class_name = "PersonalizationWebSocket"
 
 [[env.staging.durable_objects.bindings]]
-name = "OpalAgent"
-class_name = "OpalAgent"
-
-[[env.staging.durable_objects.bindings]]
 name = "SHOPPER_REFLEX"
 class_name = "ShopperReflex"
-
-[[env.staging.durable_objects.bindings]]
-name = "MERIDIAN_REFLEX"
-class_name = "MeridianReflex"
 
 [[env.staging.durable_objects.bindings]]
 name = "REGION_TREND"
@@ -295,17 +309,20 @@ class_name = "LearnStats"
 
 [[env.staging.analytics_engine_datasets]]
 binding = "ANALYTICS"
+dataset = "edge_ops_staging_v1"
 
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "coach-demo-db-staging"
 database_id = "5849815f-37df-4a90-9975-704125e78f63"
-migrations_dir = "migrations"
+migrations_dir = "migrations/product"
 
 [env.staging.assets]
 directory = "public"
 binding = "ASSETS"
-not_found_handling = "single-page-application"
+run_worker_first = true
+html_handling = "none"
+not_found_handling = "none"
 
 # ── Production ────────────────────────────────────────────────────────────────
 # Provisioned with scripts/provision-stamp.sh production (2026-09-05). Mirrors staging with its own
@@ -315,6 +332,10 @@ name = "edge-platform-production"
 
 [env.production.vars]
 ENVIRONMENT = "production"
+DEPLOYMENT_PROFILE = "customer"
+LEDGER_RECOVERY_ENABLED = "false"
+# Policy-unset intake is held by workflow activation/resume preflight.
+LEDGER_RECOVERY_CONFIG = '{"version":1,"sourceQueue":"events-production","deadLetterQueue":"events-production-dead-letter"}'
 # Enforced: SDK keys on /realtime and /v1, JWT on operator writes, CORS allow-list only.
 AUTH_MODE = "enforced"
 # The customer's site origins, comma-separated (`*.example.com` allowed): an onboarding input.
@@ -351,10 +372,14 @@ max_batch_size = 100
 max_batch_timeout = 3
 max_concurrency = 6
 max_retries = 2
+dead_letter_queue = "events-production-dead-letter"
 
-[[env.production.durable_objects.bindings]]
-name = "STATE_MANAGER"
-class_name = "StateManager"
+[[env.production.queues.consumers]]
+queue = "events-production-dead-letter"
+max_batch_size = 100
+max_batch_timeout = 3
+max_concurrency = 6
+max_retries = 2
 
 [[env.production.durable_objects.bindings]]
 name = "RATE_LIMITER"
@@ -365,16 +390,8 @@ name = "PERSONALIZATION_WEBSOCKET"
 class_name = "PersonalizationWebSocket"
 
 [[env.production.durable_objects.bindings]]
-name = "OpalAgent"
-class_name = "OpalAgent"
-
-[[env.production.durable_objects.bindings]]
 name = "SHOPPER_REFLEX"
 class_name = "ShopperReflex"
-
-[[env.production.durable_objects.bindings]]
-name = "MERIDIAN_REFLEX"
-class_name = "MeridianReflex"
 
 [[env.production.durable_objects.bindings]]
 name = "REGION_TREND"
@@ -390,14 +407,17 @@ class_name = "LearnStats"
 
 [[env.production.analytics_engine_datasets]]
 binding = "ANALYTICS"
+dataset = "edge_ops_production_v1"
 
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "edge-platform-db-production"
 database_id = "e55d131f-cc5a-4a9b-adba-da5fd709c3ad"
-migrations_dir = "migrations"
+migrations_dir = "migrations/product"
 
 [env.production.assets]
 directory = "public"
 binding = "ASSETS"
-not_found_handling = "single-page-application"
+run_worker_first = true
+html_handling = "none"
+not_found_handling = "none"

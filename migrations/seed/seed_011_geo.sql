@@ -3,10 +3,9 @@
 --                      NC/Piedmont-Triad first-party cohort (ADDITIVE — never alters
 --                      the proven base seed seed_001..010).
 --   Requires migrations/0004_geo_census.sql (geo_census + geo_xref) applied first.
---   Apply LOCAL then REMOTE:
---     npx wrangler d1 execute coach-demo-db --local  --file=migrations/seed/seed_011_geo.sql
---     npx wrangler d1 execute coach-demo-db --remote --file=migrations/seed/seed_011_geo.sql
---   (or via the seed loop:  for f in migrations/seed/*.sql; do wrangler d1 execute … --file="$f"; done)
+--   Legacy apply/remote/wildcard instructions are withdrawn. This mixed demo seed
+--   is not an approved customer setup or recovery workflow; see W08/W39 in
+--   docs/remediation/README.md before any separately authorized application.
 --
 -- HONESTY (doc 13 §3/§10):
 --   * geo_census rows below are REAL public-domain data, cited per row in `source`+`vintage`:
@@ -29,8 +28,9 @@
 DELETE FROM coach_purchase_items WHERE vuid LIKE 'v-nc-%';
 DELETE FROM coach_transactions   WHERE order_id LIKE 'ordnc-%';
 DELETE FROM coach_odp_profiles   WHERE vuid LIKE 'v-nc-%';
-DELETE FROM geo_xref;
-DELETE FROM geo_census;
+
+-- Shared references are add-only: existing primary-key rows and provenance win.
+-- Lost or incorrect references need a separately reviewed reference-only recovery.
 
 
 -- =============================================================================
@@ -38,7 +38,7 @@ DELETE FROM geo_census;
 -- =============================================================================
 
 -- (a) The verified ACS 2024 demo set (doc 13 §8 — cite these on stage). REAL public.
-INSERT INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_home_value_usd, source, vintage) VALUES
+INSERT OR IGNORE INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_home_value_usd, source, vintage) VALUES
   ('national', 'US',               'United States',                                81604, 360600, 'Census ACS 2024', '2024'),
   ('region',   'NC',               'North Carolina',                               73958, 333000, 'Census ACS 2024', '2024'),
   ('metro',    '49180',            'Winston-Salem, NC Metro (Piedmont Triad)',     65903, 270700, 'Census ACS 2024', '2024'),
@@ -55,7 +55,7 @@ INSERT INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_
 --     One consistent source + vintage (matches the national row); safe to cite on stage. This is
 --     what powers the representative geo-cohort fallback (doc §12) so ANY presenter, anywhere in
 --     the US, gets a local cold start on their REAL state income even with no first-party rows there.
-INSERT INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_home_value_usd, source, vintage) VALUES
+INSERT OR IGNORE INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_home_value_usd, source, vintage) VALUES
   ('region', 'AL', 'Alabama', 66659, 233300, 'Census ACS 2024 1-yr', '2024'),
   ('region', 'AK', 'Alaska', 95665, 376500, 'Census ACS 2024 1-yr', '2024'),
   ('region', 'AZ', 'Arizona', 81486, 426000, 'Census ACS 2024 1-yr', '2024'),
@@ -111,7 +111,7 @@ INSERT INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_
 --     representative (state-level proxy) per doc 13 §70 — first-party never rolls up to
 --     these grains for the synthetic data (random historical ZIPs), so they exist for
 --     completeness/contrast only; the demo path uses the REAL ACS 2024 metros above.
-INSERT INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_home_value_usd, source, vintage) VALUES
+INSERT OR IGNORE INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_home_value_usd, source, vintage) VALUES
   ('metro', '31080', 'Los Angeles-Long Beach-Anaheim, CA Metro',    95521, 809227, 'Representative (CA state ACS 2023 / Zillow 2025 proxy)', '2023/2025'),
   ('metro', '35620', 'New York-Newark-Jersey City, NY-NJ Metro',    82095, 487737, 'Representative (NY state ACS 2023 / Zillow 2025 proxy)', '2023/2025'),
   ('metro', '19100', 'Dallas-Fort Worth-Arlington, TX Metro',       75780, 308212, 'Representative (TX state ACS 2023 / Zillow 2025 proxy)', '2023/2025'),
@@ -135,7 +135,7 @@ INSERT INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_
 
 -- (a) Winston-Salem metro (CBSA 49180 / Piedmont Triad) ZIPs — the cohort's geography.
 --     All genuinely in the Winston-Salem MSA (Forsyth + Davie counties).
-INSERT INTO geo_xref (zip, metro_cbsa, region, country) VALUES
+INSERT OR IGNORE INTO geo_xref (zip, metro_cbsa, region, country) VALUES
   ('27101', '49180', 'NC', 'US'),
   ('27103', '49180', 'NC', 'US'),
   ('27104', '49180', 'NC', 'US'),
@@ -153,7 +153,7 @@ INSERT INTO geo_xref (zip, metro_cbsa, region, country) VALUES
 
 -- (b) Token ZIP per existing-state metro (lets a real detected ZIP there resolve
 --     metro+region; first-party rolls up to region for the synthetic data).
-INSERT INTO geo_xref (zip, metro_cbsa, region, country) VALUES
+INSERT OR IGNORE INTO geo_xref (zip, metro_cbsa, region, country) VALUES
   ('90001', '31080', 'CA', 'US'),
   ('10001', '35620', 'NY', 'US'),
   ('75201', '19100', 'TX', 'US'),

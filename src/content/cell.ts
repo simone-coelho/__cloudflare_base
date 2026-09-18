@@ -1,10 +1,11 @@
 // src/content/cell.ts
 // Doc 22 §5.4: the context a decision was made in. Built only from what is
-// actually known. Channel and visit bucket are `unknown` until CW7 lands and are
-// recorded that way; a cell that guessed would poison the statistics it feeds.
+// actually known. Unknown visit/channel evidence stays unknown; a guessed cell
+// would poison the statistics it feeds.
 
 import type { AffinitySnapshot, ReflexConfig } from '@/reflex/core';
 import { asStage } from '@/services/JourneyStage';
+import { entryChannelOf } from '@/services/visit';
 import type { Cell } from './types';
 
 /** The subset of request.cf this module reads. */
@@ -60,7 +61,7 @@ export function cellFor(input: {
    */
   stage?: string | null;
 }): Cell {
-  const channel = (input.channel ?? '').trim().toLowerCase().slice(0, 32) || 'unknown';
+  const channel = entryChannelOf(input.channel) ?? 'unknown';
   return {
     channel,
     visit_bucket: visitBucketOf(input.visitNumber),

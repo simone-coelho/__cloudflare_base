@@ -29,6 +29,14 @@ const base: DecideInput = {
 };
 
 describe('decideContent', () => {
+  it('W15 frozen lift keeps configured rendered revenue labels without a compatible snapshot and preserves replay identity/time', () => {
+    const input: DecideInput = { ...base, learning: { snapshots: {}, gammaOf: () => 1,
+      controlOf: () => ({ mode: 'freeze', lift: 1.5 }), metadataOf: () => ({ reward: 'purchase', objective: 'revenue', measurementBasis: 'rendered-v1' }) } };
+    const result = decideContent(input), hero = result.records.find(row => row.slot === 'hero')!;
+    expect(hero.explain.lift).toMatchObject({ reward: 'purchase', objective: 'revenue', measurementBasis: 'rendered-v1', n: 0, s: 0, lift: 1.5 });
+    expect(hero.ts).toBe(base.nowMs); expect(decideContent(input)).toEqual(result);
+    expect(hero.decision_id).toBe(decideContent(base).records.find(row => row.slot === 'hero')!.decision_id);
+  });
   it('emits the delivery contract and one §3.1 record per served position', () => {
     const out = decideContent(base);
     expect(out.decisions.map((d) => [d.slot, d.contentId])).toEqual([['merch', 'p'], ['hero', 'a'], ['story', 'c'], ['story', 'b']]);

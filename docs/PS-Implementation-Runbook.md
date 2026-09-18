@@ -133,9 +133,9 @@ The workshops themselves are Delivery Guide P1 (three sessions, straw-man materi
 
 One npm package (+ CDN build), browser-first, three parts:
 
-- **Core (mandatory, shared):** first-party visitor identity (localStorage + cookie, no fingerprinting), session boundaries, WebSocket + snapshot transport, SDK-key auth. Non-negotiable because events and decisions must share one visitor ID and one socket.
-- **Emit (events in), four capture paths used together:** automatic (impressions/dwell for content we pushed — free), declarative (`data-*` attributes on slots), **dataLayer/GTM adapter** (the cheap path wherever a tag layer exists), explicit API (commerce events — add-to-cart, purchase).
-- **Listen (decisions out):** subscribes to the page-level ordered `content_decisions`, per-slot callbacks, first-paint snapshot hydration (no flash of default), and **guaranteed graceful absence** — no decision means the customer's default renders; the page never waits on us.
+- **Core (mandatory, shared):** server-issued signed shopper/profile authority (cookie/body hints only restrict, no fingerprinting), session boundaries, WebSocket + snapshot transport, SDK-key auth. Non-negotiable because events and decisions must share one visitor ID and one socket.
+- **Emit (events in), four capture paths used together:** automatic (renderer callback plus exact durable ACK of the original painted receipt), declarative (`data-*` attributes on slots), **dataLayer/GTM adapter** (the cheap path wherever a tag layer exists), explicit API (commerce events — add-to-cart, purchase).
+- **Listen (decisions out):** supported coalesced snapshot refresh, per-slot callbacks and conditional same-grant server-first-paint adoption; customer SSR/browser/no-flash acceptance remains open. Graceful absence requires the host default integration — no decision means the customer's default renders; the page never waits on us.
 
 Integration mode selection: dataLayer exists → adapter path first. No dataLayer → declarative + explicit (and the added customer effort goes in the SOW explicitly, never absorbed). Customers keeping their own analytics pipeline → **listen-only mode** is supported; PS then QAs their pipeline to the same standard.
 
@@ -152,18 +152,18 @@ Integration mode selection: dataLayer exists → adapter path first. No dataLaye
 
 ## 8. Verification and acceptance — the wire-check
 
-The pipeline runs this loop automatically against every fresh or upgraded stamp (synthetic visitor, scripted browse) — it is the §3 gate. PS and agents rerun it on demand, and it doubles as the manual checklist when a human wants to see the loop with their own eyes. In this order; each step has a visible artifact; "it should work" is not a step.
+This is the operator/customer verification checklist. Local fixtures and separately authorized target scripts provide engineering evidence, not automatically executed customer acceptance. Each step needs its visible artifact.
 
-1. **Connect:** visitor ID minted; WebSocket up (or snapshot fallback engages).
-2. **Events land:** the debug overlay shows schema-complete events on every page type in the tag plan.
+1. **Connect:** server-issued signed shopper session and explicit consent; optional socket, supported snapshot refresh.
+2. **Events land:** redacted debug dispatch/response counts are checked on every tag-plan page type; schema/consumer readback requires its separate evidence.
 3. **Scores move:** the affinity vector responds to a scripted browse sequence.
 4. **Memberships flip — both directions:** audiences enter on interest AND exit on decay.
-5. **Decisions push:** `content_decisions` arrives with the contract shape (IDs, order, scores).
+5. **Decisions refresh:** acknowledged interaction triggers coalesced signed snapshot request/response; inspect exact IDs, order and current page.
 6. **Paint:** the customer's front end renders it — **verify rendered state (computed display/geometry), never attributes or DOM flags.** This is a house rule with a scar behind it.
-7. **Explain:** every decision has its receipt (the explain record).
-8. **Fallback:** kill the socket — defaults render, no flash, no waiting page.
+7. **Explain:** after actual paint, exact rendered ACK admits the original receipt; inspect its operator explain record.
+8. **Fallback:** blocked/failed snapshots or expired authority restore defaults; socket loss alone can retain a current selection and use fetch refresh. The local first-party server bridge resolves the same current grant before HTML; safely embedded private bootstrap plus matching SDK/DOM adoption avoids repaint. Client-only hydration/refresh can show defaults first. Real customer SSR/browser/no-flash and latency acceptance remain open.
 
-Then the scripted acceptance run (Delivery Guide P6): an N-asset pool, verifiably different picks for different visitors, a live weight change re-ranks, an explain record behind every decision. Launch gate, rollback (= flip the stamp's version pin), and the hypercare window are P7.
+Then the scripted acceptance run (Delivery Guide P6): an N-asset pool, verifiably different picks for different visitors, a live weight change re-ranks, an explain record behind every decision. Launch gate, rollback through the guarded compatible-artifact workflow (deployment/01-deploy.md), and the hypercare window are P7.
 
 ## 9. Multiple customers, brands, environments — the separation model
 

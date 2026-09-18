@@ -1,0 +1,310 @@
+{
+  "before": {
+    "id": "W02",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Reject refresh-as-access, migrate access/service claims and tool tokens, enforce temporary-password/account/session revocation policy, and reject unsafe/missing configured signing material at readiness. Add abuse budgets and bounded account lockout/audit growth for N14. Prove logout/disable/delete/demotion/password/rotation transitions and recovery without locking legitimate operators out.",
+      "finding_refs": "F02/F09; N02/N14",
+      "sizing_owner": "S narrow guard → M full auth/abuse contract; D/OL + S/P"
+    },
+    "title": "Operator credentials and session policy",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F02",
+      "F09",
+      "N02",
+      "N14"
+    ],
+    "proposed_owner": "D/OL + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W02-F02-REFRESH",
+          "description": "Narrow refresh-as-access containment only; credential migration, full account/session/onboarding/membership/signing/abuse policy remains uncovered."
+        },
+        {
+          "id": "W02-N02-CONFIG",
+          "description": "Bounded shared signing-configuration readiness and eight explicit tool-token preflights; actual provisioning/rotation/entropy attestation, credential type/session/onboarding/membership and N14 abuse remain uncovered."
+        },
+        {
+          "id": "W02-F02-CLAIMS",
+          "description": "Bounded required subject/authority shape validation and existing credential compatibility only; full access/service/session/onboarding/membership/abuse/provisioning obligations remain uncovered."
+        },
+        {
+          "id": "W02-ACCESS-SESSION",
+          "description": "Typed current account/session authority and restricted onboarding, completed lifecycle recovery and explicit service-tool migration; atomic concurrency, machine lifecycle, N14, deployed/customer policy remain open."
+        },
+        {
+          "id": "W02-LOGIN-ABUSE",
+          "description": "Bounded source/global login admission, no attacker-email lock/anonymous audit amplification, bounded body/missing-account work; recovery preserved, operating/deployed policy remains open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W02-F02-REFRESH",
+          "task_id": "W02.01",
+          "task_criterion_id": "W02.01-C1"
+        },
+        {
+          "criterion_id": "W02-F02-REFRESH",
+          "task_id": "W02.01",
+          "task_criterion_id": "W02.01-C2"
+        },
+        {
+          "criterion_id": "W02-F02-REFRESH",
+          "task_id": "W02.01",
+          "task_criterion_id": "W02.01-C3"
+        },
+        {
+          "criterion_id": "W02-N02-CONFIG",
+          "task_id": "W02.02",
+          "task_criterion_id": "W02.02-C1"
+        },
+        {
+          "criterion_id": "W02-N02-CONFIG",
+          "task_id": "W02.02",
+          "task_criterion_id": "W02.02-C2"
+        },
+        {
+          "criterion_id": "W02-N02-CONFIG",
+          "task_id": "W02.02",
+          "task_criterion_id": "W02.02-C3"
+        },
+        {
+          "criterion_id": "W02-N02-CONFIG",
+          "task_id": "W02.02",
+          "task_criterion_id": "W02.02-C4"
+        },
+        {
+          "criterion_id": "W02-F02-CLAIMS",
+          "task_id": "W02.03",
+          "task_criterion_id": "W02.03-C1"
+        },
+        {
+          "criterion_id": "W02-F02-CLAIMS",
+          "task_id": "W02.03",
+          "task_criterion_id": "W02.03-C2"
+        },
+        {
+          "criterion_id": "W02-F02-CLAIMS",
+          "task_id": "W02.03",
+          "task_criterion_id": "W02.03-C3"
+        },
+        {
+          "criterion_id": "W02-ACCESS-SESSION",
+          "task_id": "W02.04",
+          "task_criterion_id": "W02.04-C1"
+        },
+        {
+          "criterion_id": "W02-ACCESS-SESSION",
+          "task_id": "W02.04",
+          "task_criterion_id": "W02.04-C2"
+        },
+        {
+          "criterion_id": "W02-ACCESS-SESSION",
+          "task_id": "W02.04",
+          "task_criterion_id": "W02.04-C3"
+        },
+        {
+          "criterion_id": "W02-LOGIN-ABUSE",
+          "task_id": "W02.05",
+          "task_criterion_id": "W02.05-C1"
+        },
+        {
+          "criterion_id": "W02-LOGIN-ABUSE",
+          "task_id": "W02.05",
+          "task_criterion_id": "W02.05-C2"
+        },
+        {
+          "criterion_id": "W02-LOGIN-ABUSE",
+          "task_id": "W02.05",
+          "task_criterion_id": "W02.05-C3"
+        }
+      ],
+      "task_ids": [
+        "W02.01",
+        "W02.02",
+        "W02.03",
+        "W02.04",
+        "W02.05"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W02",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Reject refresh-as-access, migrate access/service claims and tool tokens, enforce temporary-password/account/session revocation policy, and reject unsafe/missing configured signing material at readiness. Add abuse budgets and bounded account lockout/audit growth for N14. Prove logout/disable/delete/demotion/password/rotation transitions and recovery without locking legitimate operators out.",
+      "finding_refs": "F02/F09; N02/N14",
+      "sizing_owner": "S narrow guard → M full auth/abuse contract; D/OL + S/P"
+    },
+    "title": "Operator credentials and session policy",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F02",
+      "F09",
+      "N02",
+      "N14"
+    ],
+    "proposed_owner": "D/OL + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W02-F02-REFRESH",
+          "description": "Narrow refresh-as-access containment only; credential migration, full account/session/onboarding/membership/signing/abuse policy remains uncovered."
+        },
+        {
+          "id": "W02-N02-CONFIG",
+          "description": "Bounded shared signing-configuration readiness and eight explicit tool-token preflights; actual provisioning/rotation/entropy attestation, credential type/session/onboarding/membership and N14 abuse remain uncovered."
+        },
+        {
+          "id": "W02-F02-CLAIMS",
+          "description": "Bounded required subject/authority shape validation and existing credential compatibility only; full access/service/session/onboarding/membership/abuse/provisioning obligations remain uncovered."
+        },
+        {
+          "id": "W02-ACCESS-SESSION",
+          "description": "Typed current account/session authority and restricted onboarding, completed lifecycle recovery and explicit service-tool migration; atomic concurrency, machine lifecycle, N14, deployed/customer policy remain open."
+        },
+        {
+          "id": "W02-LOGIN-ABUSE",
+          "description": "Bounded source/global login admission, no attacker-email lock/anonymous audit amplification, bounded body/missing-account work; recovery preserved, operating/deployed policy remains open."
+        },
+        {
+          "id": "W02-CONDITIONAL-LIFECYCLE",
+          "description": "Bounded conditional account writes and atomic session/password/revocation using existing D1; legacy reimport, in-flight actor, machine/deployed/rotation/customer obligations remain."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W02-F02-REFRESH",
+          "task_id": "W02.01",
+          "task_criterion_id": "W02.01-C1"
+        },
+        {
+          "criterion_id": "W02-F02-REFRESH",
+          "task_id": "W02.01",
+          "task_criterion_id": "W02.01-C2"
+        },
+        {
+          "criterion_id": "W02-F02-REFRESH",
+          "task_id": "W02.01",
+          "task_criterion_id": "W02.01-C3"
+        },
+        {
+          "criterion_id": "W02-N02-CONFIG",
+          "task_id": "W02.02",
+          "task_criterion_id": "W02.02-C1"
+        },
+        {
+          "criterion_id": "W02-N02-CONFIG",
+          "task_id": "W02.02",
+          "task_criterion_id": "W02.02-C2"
+        },
+        {
+          "criterion_id": "W02-N02-CONFIG",
+          "task_id": "W02.02",
+          "task_criterion_id": "W02.02-C3"
+        },
+        {
+          "criterion_id": "W02-N02-CONFIG",
+          "task_id": "W02.02",
+          "task_criterion_id": "W02.02-C4"
+        },
+        {
+          "criterion_id": "W02-F02-CLAIMS",
+          "task_id": "W02.03",
+          "task_criterion_id": "W02.03-C1"
+        },
+        {
+          "criterion_id": "W02-F02-CLAIMS",
+          "task_id": "W02.03",
+          "task_criterion_id": "W02.03-C2"
+        },
+        {
+          "criterion_id": "W02-F02-CLAIMS",
+          "task_id": "W02.03",
+          "task_criterion_id": "W02.03-C3"
+        },
+        {
+          "criterion_id": "W02-ACCESS-SESSION",
+          "task_id": "W02.04",
+          "task_criterion_id": "W02.04-C1"
+        },
+        {
+          "criterion_id": "W02-ACCESS-SESSION",
+          "task_id": "W02.04",
+          "task_criterion_id": "W02.04-C2"
+        },
+        {
+          "criterion_id": "W02-ACCESS-SESSION",
+          "task_id": "W02.04",
+          "task_criterion_id": "W02.04-C3"
+        },
+        {
+          "criterion_id": "W02-LOGIN-ABUSE",
+          "task_id": "W02.05",
+          "task_criterion_id": "W02.05-C1"
+        },
+        {
+          "criterion_id": "W02-LOGIN-ABUSE",
+          "task_id": "W02.05",
+          "task_criterion_id": "W02.05-C2"
+        },
+        {
+          "criterion_id": "W02-LOGIN-ABUSE",
+          "task_id": "W02.05",
+          "task_criterion_id": "W02.05-C3"
+        },
+        {
+          "criterion_id": "W02-CONDITIONAL-LIFECYCLE",
+          "task_id": "W02.06",
+          "task_criterion_id": "W02.06-C1"
+        },
+        {
+          "criterion_id": "W02-CONDITIONAL-LIFECYCLE",
+          "task_id": "W02.06",
+          "task_criterion_id": "W02.06-C2"
+        },
+        {
+          "criterion_id": "W02-CONDITIONAL-LIFECYCLE",
+          "task_id": "W02.06",
+          "task_criterion_id": "W02.06-C3"
+        }
+      ],
+      "task_ids": [
+        "W02.01",
+        "W02.02",
+        "W02.03",
+        "W02.04",
+        "W02.05",
+        "W02.06"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

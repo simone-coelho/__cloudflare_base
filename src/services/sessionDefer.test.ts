@@ -18,6 +18,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { Env } from '@/types/env';
 import { SessionManager } from '@/services/SessionManager';
 import { RealtimeSegmentEngine } from '@/services/RealtimeSegmentEngine';
+import { newAnonymousSession } from '@/identity/sessionCapability';
+import { admitOwnerPrincipal, runOwnerOperation } from '@/identity/sessionAuthority';
 
 /** A KV whose writes take as long as we say, so "did it wait?" is answerable. */
 class SlowKV {
@@ -52,6 +54,30 @@ let mgr: SessionManager;
 beforeEach(() => {
   kv = new SlowKV();
   mgr = new SessionManager({ SESSIONS: kv } as unknown as Env);
+});
+
+it('W04.02 a verified fresh SID survives deferred writes without restoring cookie/profile authority', async () => {
+  const env = { SESSIONS: kv, CACHE: kv, JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
+  const principal = await newAnonymousSession(env, 'coach');
+  const owner = {};
+  await runOwnerOperation(owner, env, async () => {
+  admitOwnerPrincipal(owner, principal);
+  const engine = new RealtimeSegmentEngine(env, {} as never, { principal });
+  kv.delayMs = 50;
+  const pending: Promise<unknown>[] = [];
+  const cookies = 'opt_session_id=victim; opt_user_id=victim; opt_segments=PRIVATE; opt_engagement_score=999; opt_tracking_consent=false';
+  const first = await engine.getOrCreateSessionFromCookies(cookies, principal.subject, p => pending.push(p), principal.sessionId);
+  // Current owned consent persists the necessary refusal before answering;
+  // this is not a behavioral write that may be left behind the response.
+  expect(kv.putsFinished).toBe(1); expect(pending).toEqual([]); expect(first.sessionId).toBe(principal.sessionId);
+  expect(kv.store.has(`user:${principal.subject}`)).toBe(false);
+  expect(JSON.parse(kv.store.get(`session:${principal.sessionId}`)!)).toMatchObject({ attributes: {}, segments: [] });
+  expect(first.sessionData.segments).not.toContain('PRIVATE'); expect(first.sessionData.preferences.trackingConsent).toBe(false);
+  const second = await engine.getOrCreateSessionFromCookies(cookies, principal.subject, p => pending.push(p), principal.sessionId);
+  expect(second.sessionId).toBe(first.sessionId);
+  await Promise.all(pending);
+  expect(kv.store.has(`session:${principal.sessionId}`)).toBe(true); expect(kv.store.has('session:victim')).toBe(false);
+  }, kv);
 });
 
 describe('CW37: the session write leaves the decision path', () => {

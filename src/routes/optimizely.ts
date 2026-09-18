@@ -1,17 +1,24 @@
 import { Hono } from 'hono';
+import { requireConsentPurpose } from '@/identity/sessionAuthority';
 import { z } from 'zod';
 import type { Env } from '@/types/env';
 import { OptimizelyService } from '@/services/OptimizelyService';
 import { listBannerRules } from '@/services/optimizelyFx';
 import { jwt } from '@/middleware/auth';
+import type { TenantVariables } from '@/tenancy/tenant';
+import { requireShopper, shopperPrincipal, assertSessionTarget, capabilityToken, SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';
+import { ownedConsent, establishRefusal } from '@/identity/consentContinuity';
+import { consentFromCookies, refusalHints, intersectConsent } from '@/content/consent';
 
-const optimizely = new Hono<{ Bindings: Env }>();
+const optimizely = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
+const consentSchema = z.object({ tracking: z.boolean().optional(), personalization: z.boolean().optional() });
 
 const DecisionRequestSchema = z.object({
   userId: z.string(),
   userAttributes: z.record(z.string(), z.any()).optional(),
   experiments: z.array(z.string()).optional(),
   features: z.array(z.string()).optional(),
+  consent: consentSchema.optional(),
 });
 
 const TrackEventSchema = z.object({
@@ -19,29 +26,50 @@ const TrackEventSchema = z.object({
   eventKey: z.string(),
   userAttributes: z.record(z.string(), z.any()).optional(),
   eventTags: z.record(z.string(), z.any()).optional(),
+  consent: consentSchema.optional(),
 });
+
+/** Reuse the exact owned source; caller hints can withdraw, never grant consent. */
+async function resolveConsent(env: Env, principal: SessionCapability, token: string, cookie: string | undefined, hint: unknown) {
+  try {
+    const consent = intersectConsent(await ownedConsent(env, principal, token), consentFromCookies(cookie), refusalHints(hint));
+    return await establishRefusal(env, principal, token, consent);
+  } catch { throw new SessionAccessError(); }
+}
 
 optimizely.use('/decisions', jwt({ required: false }));
 optimizely.use('/track', jwt({ required: false }));
 
-optimizely.post('/decisions', async (c) => {
+optimizely.post('/decisions', requireShopper(), async (c) => {
   try {
     const body = await c.req.json();
-    const { userId, userAttributes = {}, experiments = [], features = [] } = 
+    const { userId, userAttributes = {}, experiments = [], features = [], consent: hint } =
       DecisionRequestSchema.parse(body);
-
-    const optimizelyService = new OptimizelyService(c.env);
-    await optimizelyService.initialize();
+    const principal = shopperPrincipal(c.req.raw);
+    assertSessionTarget(principal, userId);
+    const consent = await resolveConsent(c.env, principal, capabilityToken(c.req.raw)!, c.req.header('Cookie'), hint);
+    assertSessionTarget(principal);
 
     const results: any = {
       userId,
-      experiments: {},
-      features: {},
+      experiments: Object.create(null),
+      features: Object.create(null),
       segments: [],
     };
+    if (!consent.tracking || !consent.personalization) {
+      for (const key of experiments) results.experiments[key] = null;
+      for (const key of features) results.features[key] = { enabled: false, variables: {} };
+      return c.json({ ...results, status: 'default', personalized: false,
+        reason: !consent.tracking ? 'tracking_refused' : 'personalization_refused', consent });
+    }
+
+    requireConsentPurpose(consent, 'personalization');
+    const optimizelyService = new OptimizelyService(c.env);
+    await optimizelyService.initialize();
 
     if (experiments.length > 0) {
       for (const experimentKey of experiments) {
+        assertSessionTarget(principal);
         const variation = await optimizelyService.getVariation(
           experimentKey,
           userId,
@@ -53,11 +81,13 @@ optimizely.post('/decisions', async (c) => {
 
     if (features.length > 0) {
       for (const featureKey of features) {
+        assertSessionTarget(principal);
         const isEnabled = await optimizelyService.isFeatureEnabled(
           featureKey,
           userId,
           userAttributes
         );
+        assertSessionTarget(principal);
         const variables = await optimizelyService.getAllFeatureVariables(
           featureKey,
           userId,
@@ -71,22 +101,14 @@ optimizely.post('/decisions', async (c) => {
       }
     }
 
+    assertSessionTarget(principal);
     const segments = await optimizelyService.getSegments(userId, userAttributes);
     results.segments = segments;
 
-    await c.env.ANALYTICS.writeDataPoint({
-      blobs: [
-        JSON.stringify(results),
-        'optimizely_decision',
-        userId,
-      ],
-      doubles: [Date.now()],
-      indexes: [userId],
-    });
-
     return c.json(results);
   } catch (error) {
-    console.error('Optimizely decision error:', error);
+    if (error instanceof SessionAccessError) throw error;
+    console.error('Optimizely decision error');
     return c.json({ error: 'Failed to get decisions' }, 500);
   }
 });
@@ -120,7 +142,7 @@ optimizely.post('/preview', async (c) => {
       revision,
     });
   } catch (error) {
-    console.error('Optimizely preview error:', error);
+    console.error('Optimizely preview error');
     return c.json({ error: 'Failed to preview decision' }, 500);
   }
 });
@@ -135,31 +157,28 @@ optimizely.get('/banner-rules', async (c) => {
     const out = await listBannerRules({ token, projectId, environment: c.env.OPTIMIZELY_ENVIRONMENT || 'development', sdkKey: c.env.OPTIMIZELY_SDK_KEY });
     return c.json({ ok: true, ...out });
   } catch (e) {
-    console.error('banner-rules error:', e);
+    console.error('banner-rules error');
     return c.json({ ok: false, rules: [], error: e instanceof Error ? e.message : String(e) });
   }
 });
 
-optimizely.post('/track', async (c) => {
+optimizely.post('/track', requireShopper(), async (c) => {
   try {
     const body = await c.req.json();
-    const { userId, eventKey, userAttributes = {}, eventTags = {} } = 
+    const { userId, eventKey, userAttributes = {}, eventTags = {}, consent: hint } =
       TrackEventSchema.parse(body);
+    const principal = shopperPrincipal(c.req.raw);
+    assertSessionTarget(principal, userId);
+    const consent = await resolveConsent(c.env, principal, capabilityToken(c.req.raw)!, c.req.header('Cookie'), hint);
+    assertSessionTarget(principal);
+    if (!consent.tracking) return c.json({ success: true, userId, eventKey, status: 'skipped', tracked: false, reason: 'tracking_refused', consent });
+    requireConsentPurpose(consent, 'tracking');
 
     const optimizelyService = new OptimizelyService(c.env);
     await optimizelyService.initialize();
 
+    assertSessionTarget(principal);
     await optimizelyService.track(eventKey, userId, userAttributes, eventTags);
-
-    await c.env.ANALYTICS.writeDataPoint({
-      blobs: [
-        JSON.stringify({ userId, eventKey, userAttributes, eventTags }),
-        'optimizely_track',
-        eventKey,
-      ],
-      doubles: [Date.now()],
-      indexes: [userId],
-    });
 
     return c.json({
       success: true,
@@ -168,7 +187,8 @@ optimizely.post('/track', async (c) => {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('Optimizely track error:', error);
+    if (error instanceof SessionAccessError) throw error;
+    console.error('Optimizely track error');
     return c.json({ error: 'Failed to track event' }, 500);
   }
 });
@@ -193,7 +213,7 @@ optimizely.get('/experiments', jwt(), async (c) => {
       })),
     });
   } catch (error) {
-    console.error('Optimizely experiments error:', error);
+    console.error('Optimizely experiments error');
     return c.json({ error: 'Failed to get experiments' }, 500);
   }
 });
@@ -219,7 +239,7 @@ optimizely.get('/features', jwt(), async (c) => {
       })),
     });
   } catch (error) {
-    console.error('Optimizely features error:', error);
+    console.error('Optimizely features error');
     return c.json({ error: 'Failed to get features' }, 500);
   }
 });
@@ -231,7 +251,7 @@ optimizely.get('/datafile', async (c) => {
     
     return c.json(datafile);
   } catch (error) {
-    console.error('Optimizely datafile error:', error);
+    console.error('Optimizely datafile error');
     return c.json({ error: 'Failed to get datafile' }, 500);
   }
 });

@@ -1,0 +1,107 @@
+{
+  "before": {
+    "id": "W33",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Custom overlays never overwrite canonical day reports. Use separate policy/version identity or non-persistent results, verify subsequent canonical GET/window unchanged, and define safe repair/provenance for any historical canonical results affected. Protect against concurrent overlay/canonical writes.",
+      "finding_refs": "N09; F17/F25",
+      "sizing_owner": "S forward fix → M if historical repair required; OL"
+    },
+    "title": "Canonical report overlay isolation",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "N09",
+      "F17",
+      "F25"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W33",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Custom overlays never overwrite canonical day reports. Use separate policy/version identity or non-persistent results, verify subsequent canonical GET/window unchanged, and define safe repair/provenance for any historical canonical results affected. Protect against concurrent overlay/canonical writes.",
+      "finding_refs": "N09; F17/F25",
+      "sizing_owner": "S forward fix → M if historical repair required; OL"
+    },
+    "title": "Canonical report overlay isolation",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "N09",
+      "F17",
+      "F25"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W33-WRITERS",
+          "description": "Custom overlays never create/overwrite canonical day reports; separate version identity or nonpersistent output."
+        },
+        {
+          "id": "W33-READS",
+          "description": "Subsequent canonical GET/window retains intended counts and coverage."
+        },
+        {
+          "id": "W33-RACES",
+          "description": "Custom/canonical concurrent publication cannot substitute overlays for canonical results; mixed writer rollout remains qualified."
+        },
+        {
+          "id": "W33-HISTORY",
+          "description": "Establish historical canonical provenance/impact and a safe authorized repair/disposition. Preserve suspect evidence; no silent rebuild from incomplete/different policy history. Unscoped and open in this forward fix."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W33-WRITERS",
+          "task_id": "W33.01",
+          "task_criterion_id": "W33.01-C1"
+        },
+        {
+          "criterion_id": "W33-READS",
+          "task_id": "W33.01",
+          "task_criterion_id": "W33.01-C2"
+        },
+        {
+          "criterion_id": "W33-RACES",
+          "task_id": "W33.01",
+          "task_criterion_id": "W33.01-C2"
+        }
+      ],
+      "task_ids": [
+        "W33.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

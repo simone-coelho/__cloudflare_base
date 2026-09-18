@@ -1,0 +1,141 @@
+{
+  "before": {
+    "id": "W19",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "One lossless, versioned import/direct-PUT/merge contract for merchandising, lifecycle/windows, stage aliases, registry tags and locale/slot vocabulary. Canonical content type drives accumulated signals and ranking, including existing film/video mismatch. Decide product-attribute inheritance, warn/reject unusable taxonomy and prove idempotent round trips.",
+      "finding_refs": "F27; N15",
+      "sizing_owner": "S field repair → M/L full schema/feed contract; OL/D + C"
+    },
+    "title": "Lossless catalog and feed contract",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F27",
+      "N15"
+    ],
+    "proposed_owner": "OL/D + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W19-FIDELITY",
+          "description": "Lossless currently supported merchandising/metadata and safe import/direct-write/merge contract."
+        },
+        {
+          "id": "W19-COMPATIBILITY",
+          "description": "Customer stage aliases, duplicate tag scoring protection and retained historical receipt compatibility."
+        },
+        {
+          "id": "W19-VOCABULARY",
+          "description": "Canonical content type across signal/ranking including film/video; registry tags/locale/slot vocabulary and unusable taxonomy policy."
+        },
+        {
+          "id": "W19-INHERITANCE",
+          "description": "Customer-approved product-attribute inheritance separate from attribution linkage; complete versioned feed and customer round-trip acceptance."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W19-FIDELITY",
+          "task_id": "W19.01",
+          "task_criterion_id": "W19.01-C1"
+        },
+        {
+          "criterion_id": "W19-COMPATIBILITY",
+          "task_id": "W19.01",
+          "task_criterion_id": "W19.01-C2"
+        }
+      ],
+      "task_ids": [
+        "W19.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W19",
+    "canonical": {
+      "gate_scope": "G2",
+      "full_scope": "One lossless, versioned import/direct-PUT/merge contract for merchandising, lifecycle/windows, stage aliases, registry tags and locale/slot vocabulary. Canonical content type drives accumulated signals and ranking, including existing film/video mismatch. Decide product-attribute inheritance, warn/reject unusable taxonomy and prove idempotent round trips.",
+      "finding_refs": "F27; N15",
+      "sizing_owner": "S field repair → M/L full schema/feed contract; OL/D + C"
+    },
+    "title": "Lossless catalog and feed contract",
+    "gates": [
+      "G2"
+    ],
+    "source_findings": [
+      "F27",
+      "N15"
+    ],
+    "proposed_owner": "OL/D + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W19-FIDELITY",
+          "description": "Lossless currently supported merchandising/metadata and safe import/direct-write/merge contract."
+        },
+        {
+          "id": "W19-COMPATIBILITY",
+          "description": "Customer stage aliases, duplicate tag scoring protection and retained historical receipt compatibility."
+        },
+        {
+          "id": "W19-VOCABULARY",
+          "description": "Canonical content type across signal/ranking including film/video; registry tags/locale/slot vocabulary and unusable taxonomy policy."
+        },
+        {
+          "id": "W19-INHERITANCE",
+          "description": "Customer-approved product-attribute inheritance separate from attribution linkage; complete versioned feed and customer round-trip acceptance."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W19-FIDELITY",
+          "task_id": "W19.01",
+          "task_criterion_id": "W19.01-C1"
+        },
+        {
+          "criterion_id": "W19-COMPATIBILITY",
+          "task_id": "W19.01",
+          "task_criterion_id": "W19.01-C2"
+        },
+        {
+          "criterion_id": "W19-VOCABULARY",
+          "task_id": "W19.02",
+          "task_criterion_id": "W19.02-C1"
+        },
+        {
+          "criterion_id": "W19-COMPATIBILITY",
+          "task_id": "W19.02",
+          "task_criterion_id": "W19.02-C2"
+        }
+      ],
+      "task_ids": [
+        "W19.01",
+        "W19.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

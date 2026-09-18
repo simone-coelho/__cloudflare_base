@@ -104,6 +104,7 @@ class FakeStorage {
 
 function fakeEnv(overrides: Record<string, unknown> = {}): Env {
   return {
+    DEPLOYMENT_PROFILE: 'demo',
     CACHE: new FakeKV(),
     SESSIONS: new FakeKV(),
     ENVIRONMENT: 'test',

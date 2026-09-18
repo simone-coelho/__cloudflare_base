@@ -1,0 +1,17 @@
+# W26.04 — Brand-local live fatigue
+
+Scope: document35 complete W26, specifically its brand identity/fatigue and repeated-placement/replay subset; F21/F16/F34, relevant W15 and F03/customer §1.7. Source-confirmed service.ts passes the whole tenant+visitor ring into servedCounts, which counts timestamp/item across brands; decide.ts subtracts those counts before ranking and records them in explanation/inputs. Doc22 §6.4 intentionally counts within-brand views across slots/pages. §1.7 forbids cross-brand shopper influence. No failed baseline runtime claimed.
+
+Implement only an exact `e.brand === brand` filter in the live service before servedCounts. Missing-brand history contributes nothing to this live owned-brand view; do not infer a brand or fail the whole decision. Preserve same-brand cross-slot/page/arm counting, time windows, caps, ordering, timeout/null/default behavior, shared helper legacy compatibility and historical recorded-input replay. No schema, new policy/retention, old-report repair or migration.
+
+One grouped regression in existing consent.test.ts uses the actual serveContentDecisions and replayDecision with synthetic existing publication/shopper/ring bindings, a non-default tenant and two explicit non-default brands (requested brand different from tenant). Empty, foreign-only and missing-brand-only history have equal rankings/scores/fatigue explanations and inputs; own history from other slots/pages, including default arm, changes the actual winner/penalty as expected. Mixed history equals own-only. Replay JSON-roundtripped new receipts after changing the live ring, asserting original own-only counts. Existing envWith may gain an optional tenant argument defaulting to coach to reuse its publication fixture; preserve all existing calls.
+
+Fixed4 worker and distinct reviewer once each:
+
+`node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/content/freshFatigue.test.ts -t 'W26[.]04|is off without a ring read|reads the ring.*full records|counts the ring inside' --maxWorkers=1 --minWorkers=1`
+
+Three unchanged freshFatigue controls cover off/default/recorded-input behavior, full-record conversion/slow/unbound timeout and per-slot windows with cross-slot counts. No new suite or wider matrix. Static: existing compiler1536MiB no emit; scoped service.ts/consent.test.ts ESLint with admitted inherited warnings/no new signatures; two-file git diff --check. Reviewer may reuse identical-byte static. Extra work is one O(n) filter over the existing ring, no new I/O; no SLO/native/browser claim.
+
+Worker w2206-worker (/root/w2206_worker) owns only src/content/service.ts, src/content/consent.test.ts and evidence/W26.04/worker.json after lead GO. Independent w2205-reviewer (/root/late_hour_next_review) writes only its final review. Both Astra/xhigh; no further delegation. Root owns tracker/freeze/acceptance. Preserve complete accepted W22.07/W22.09 artifacts/reviews: neither overlaps these outputs, and W22.08 ordering remains unchanged.
+
+Current Continue extends the existing bounded local mandate; root admission records exact approval, source/fixture baseline, warning baseline and dependencies. Rollback is a reviewed inverse of this task's two-file baseline-relative delta only; never restore unrelated dirty files. Retain failures/rework. No install/emitted build/stage/commit/push/deploy/cloud/credentials/customer-data/destructive/external operations. Full W26 placement/viewability/policy agreement, hard isolation, customer/SLO and release acceptance remain open.

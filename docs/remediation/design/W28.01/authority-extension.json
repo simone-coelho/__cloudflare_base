@@ -1,0 +1,537 @@
+{
+  "before": {
+    "mode": "local_remediation_authorized",
+    "local_engine_changes": true,
+    "local_authorization": {
+      "actor_id": "g0-user",
+      "at": "2026-09-06T23:27:46.881Z",
+      "description": "User Approved local decision-independent G0 code remediation, starting with unused API removal. Reuse for admitted in-scope fixes; excludes deployment, real credentials/customer data, customer-policy decisions, staging/commit/push and unrelated/destructive operations. Bounded W11.01 local catalog publication added by separately dated scope_extensions record; original at is original mandate inception only. Bounded W09.01 local oversized-ledger containment added by separately dated scope_extensions record. Bounded W09.02 local retry-safe recovery added by separately dated scope_extensions record. Bounded W09.03 local consumer acknowledgement correction added by separately dated scope_extensions record. Bounded W09.04 downstream acknowledgement correction added by dated extension. Bounded W09.05 producer logical identity correction added by dated extension. Bounded W10.01 learning ingestion/snapshot guard added by dated extension. Bounded W10.02 DecisionRing byte/index admission guard added by dated extension. Bounded W23.01 forward arithmetic/precision correction added by dated extension. Bounded W24.01 forward compatibility correction added by dated extension. Bounded W25.01 structured prior identity correction added by dated extension. Bounded W26.01 named-slot direct attribution added by dated extension. Bounded W27.01 archive-before-live publication added by dated extension. Bounded W27.02 page-wide replay dependencies added by dated extension. Bounded W27.03 exact replay revision identity added by dated extension.",
+      "record": {
+        "path": "docs/remediation/evidence/W01.02/authorization.md",
+        "sha256": "67f30789c71bff1f416497106ee6d3760f53630d93eebdcbeff648ff37d55f70"
+      },
+      "scope_task_ids": [
+        "W01.02",
+        "W11.01",
+        "W09.01",
+        "W09.02",
+        "W09.03",
+        "W09.04",
+        "W09.05",
+        "W10.01",
+        "W10.02",
+        "W23.01",
+        "W24.01",
+        "W25.01",
+        "W26.01",
+        "W27.01",
+        "W27.02",
+        "W27.03"
+      ],
+      "scope_package_ids": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W12",
+        "W13",
+        "W14",
+        "W21",
+        "W29",
+        "W34",
+        "W37",
+        "W39"
+      ],
+      "allowed_actions": [
+        "local_engine_changes",
+        "local_checks"
+      ],
+      "scope_extensions": [
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T02:35:49Z",
+          "scope_task_ids": [
+            "W11.01"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W11.01/authorization.md",
+            "sha256": "fa6ccf17fc51448be5163686c8d66ea90d8794340996d35b7ac4b459143c6696"
+          },
+          "description": "User continue accepts explicit local W11 safe-publication offer, without deployment."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T21:44:10Z",
+          "scope_task_ids": [
+            "W09.01"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.01/authorization.md",
+            "sha256": "bc09288022fdc9bd6134a81898d2feec2a321fbdb6678d79543a29d09a3b867e"
+          },
+          "description": "User yes approves specifically offered local oversized-ledger W09.01 containment, not full W09."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T22:44:01Z",
+          "scope_task_ids": [
+            "W09.02"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.02/authorization.md",
+            "sha256": "ef15cf8189d281c65ed5a3f67ea7551d64633acc24429ecc3783142bf01cddc2"
+          },
+          "description": "User yes approves bounded local retry-safe ledger recovery including duplicate prevention and erasure safeguards; no deployment/new cloud resources."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T23:55:00.053Z",
+          "scope_task_ids": [
+            "W09.03"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.03/authorization.md",
+            "sha256": "d8955ba2dd0cd370d1292bc29ace3b2eb9c4fd4602deeed531c5ad14e84f262d"
+          },
+          "description": "User continue accepts explicit remaining local consumer-loss offer; bounded malformed-envelope and per-message acknowledgement correction only."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T00:26:59.363Z",
+          "scope_task_ids": [
+            "W09.04"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W09.04/authorization.md",
+            "sha256": "ea62f66a56ab1522fa27cdf8095b6d2731324276894efecb8207cf4fb8a45543"
+          },
+          "description": "Continue bounded local learning-write acknowledgements, no non-idempotent retries or external operations."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T01:07:51.795Z",
+          "scope_task_ids": [
+            "W09.05"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W09.05/authorization.md",
+            "sha256": "10ad66a21ab3ade50062650e3d7cc118e41d9d3ce06676e742277a84693df1d7"
+          },
+          "description": "Continue bounded local collision-resistant identity; only existing SDK outputs may be rebuilt; no new state/retries/external authority."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T02:09:49.824Z",
+          "scope_task_ids": [
+            "W10.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W10.01/authorization.md",
+            "sha256": "a329f2ddf9466fdb14adbaebe10b3e8ddd686753d59d2d9233513aacdf574720"
+          },
+          "description": "Continue bounded local capacity containment; no full W10/recovery/customer/external authority."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T03:10:56.762Z",
+          "scope_task_ids": [
+            "W10.02"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W10.02/authorization.md",
+            "sha256": "ff128856a1d1b127d3ddb783a1ef5816b4d769cf81a4789a1dcb57904b4408dd"
+          },
+          "description": "Continue bounded local ring admission guard; no full W10/projection/recovery/customer/external authority."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T04:09:29.750Z",
+          "scope_task_ids": [
+            "W23.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W23.01/authorization.md",
+            "sha256": "d2daa0b97a37a0879ca0d79e4aea326bbd5181052616eda87bb43a8ed709f6a6"
+          },
+          "description": "Continue the offered bounded W23 forward arithmetic correction; no historical/customer-policy/external operations."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T11:24:54.567Z",
+          "scope_task_ids": [
+            "W24.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W24.01/authorization.md",
+            "sha256": "69872d8417d2ba9fa5fb41edbef60e34e0723e5086bc7eb8508156aaae73d76d"
+          },
+          "description": "Continue offered bounded W24 incompatibility rejection and live snapshot matching, not policy/history/reset/external operations."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T12:17:55.551Z",
+          "scope_task_ids": [
+            "W25.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W25.01/authorization.md",
+            "sha256": "93e1ecd021334ee4c4a4fa99baae2e1d0ac4d1524cfba070e48af73379ebfd3e"
+          },
+          "description": "Continue offered structured prior indexing/materialization; no grammar migration, policy/history/customer/external scope."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T12:51:35.751Z",
+          "scope_task_ids": [
+            "W26.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W26.01/authorization.md",
+            "sha256": "3e2b6058a151ce64c73ef60aba5bd9bcbcf87dc008c48e3f63680627b82d67f7"
+          },
+          "description": "Continue offered named-slot direct credit containment, not identity/exposure policy or historical/external changes."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T13:39:10.472Z",
+          "scope_task_ids": [
+            "W27.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W27.01/authorization.md",
+            "sha256": "b9641c76f3a14e93e0fb61bf0c32190db6632307a94b00cc41bf9e851c3b51c4"
+          },
+          "description": "Continue offered bounded archive-before-live fix, including truthful current operator publication/reset outcomes, not history/customer/external changes."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T15:04:50.297Z",
+          "scope_task_ids": [
+            "W27.02"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W27.02/authorization.md",
+            "sha256": "c1e14c555d9ce9e2f9259fe984f7a60b473c8899b083add4664667cdf845405d"
+          },
+          "description": "Continue offered page-wide replay dependency correction and pins/choice metadata, not historical or external operations."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T15:54:07.580Z",
+          "scope_task_ids": [
+            "W27.03"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W27.03/authorization.md",
+            "sha256": "4df44343c6ea19e4bfeb8a67f78e551419c354ce50e4fd66b9518df64ad02bb3"
+          },
+          "description": "Continue offered local replay lifecycle/dependency correctness; exact consumed identity guard only."
+        }
+      ]
+    },
+    "deployment": false,
+    "model": "gpt-6-astra",
+    "efforts": [
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "max_active_tasks": 1,
+    "design_authorization": {
+      "actor_id": "w01-user",
+      "at": "2026-09-06T21:29:15Z",
+      "scope_task_ids": [
+        "W01.01"
+      ],
+      "allowed_actions": [
+        "source_inspection",
+        "task_documentation_and_tracking",
+        "independent_source_review",
+        "local_read_only_checks"
+      ],
+      "record": {
+        "path": "docs/remediation/evidence/W01.01/authorization.md",
+        "sha256": "99ba9e72bf83297e940eb23cce1a80f52dd6e00c4a8c88a410b649115bac7bf7"
+      },
+      "description": "User's go accepted the bounded source-only W01.01 offer. Legacy framework_only mode retains no-engine-write permission; this record is specific design authority, not a customer decision or local implementation mandate."
+    }
+  },
+  "after": {
+    "mode": "local_remediation_authorized",
+    "local_engine_changes": true,
+    "local_authorization": {
+      "actor_id": "g0-user",
+      "at": "2026-09-06T23:27:46.881Z",
+      "description": "User Approved local decision-independent G0 code remediation, starting with unused API removal. Reuse for admitted in-scope fixes; excludes deployment, real credentials/customer data, customer-policy decisions, staging/commit/push and unrelated/destructive operations. Bounded W11.01 local catalog publication added by separately dated scope_extensions record; original at is original mandate inception only. Bounded W09.01 local oversized-ledger containment added by separately dated scope_extensions record. Bounded W09.02 local retry-safe recovery added by separately dated scope_extensions record. Bounded W09.03 local consumer acknowledgement correction added by separately dated scope_extensions record. Bounded W09.04 downstream acknowledgement correction added by dated extension. Bounded W09.05 producer logical identity correction added by dated extension. Bounded W10.01 learning ingestion/snapshot guard added by dated extension. Bounded W10.02 DecisionRing byte/index admission guard added by dated extension. Bounded W23.01 forward arithmetic/precision correction added by dated extension. Bounded W24.01 forward compatibility correction added by dated extension. Bounded W25.01 structured prior identity correction added by dated extension. Bounded W26.01 named-slot direct attribution added by dated extension. Bounded W27.01 archive-before-live publication added by dated extension. Bounded W27.02 page-wide replay dependencies added by dated extension. Bounded W27.03 exact replay revision identity added by dated extension. Bounded W28.01 Thompson withdrawal added by dated extension.",
+      "record": {
+        "path": "docs/remediation/evidence/W01.02/authorization.md",
+        "sha256": "67f30789c71bff1f416497106ee6d3760f53630d93eebdcbeff648ff37d55f70"
+      },
+      "scope_task_ids": [
+        "W01.02",
+        "W11.01",
+        "W09.01",
+        "W09.02",
+        "W09.03",
+        "W09.04",
+        "W09.05",
+        "W10.01",
+        "W10.02",
+        "W23.01",
+        "W24.01",
+        "W25.01",
+        "W26.01",
+        "W27.01",
+        "W27.02",
+        "W27.03",
+        "W28.01"
+      ],
+      "scope_package_ids": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W12",
+        "W13",
+        "W14",
+        "W21",
+        "W29",
+        "W34",
+        "W37",
+        "W39"
+      ],
+      "allowed_actions": [
+        "local_engine_changes",
+        "local_checks"
+      ],
+      "scope_extensions": [
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T02:35:49Z",
+          "scope_task_ids": [
+            "W11.01"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W11.01/authorization.md",
+            "sha256": "fa6ccf17fc51448be5163686c8d66ea90d8794340996d35b7ac4b459143c6696"
+          },
+          "description": "User continue accepts explicit local W11 safe-publication offer, without deployment."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T21:44:10Z",
+          "scope_task_ids": [
+            "W09.01"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.01/authorization.md",
+            "sha256": "bc09288022fdc9bd6134a81898d2feec2a321fbdb6678d79543a29d09a3b867e"
+          },
+          "description": "User yes approves specifically offered local oversized-ledger W09.01 containment, not full W09."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T22:44:01Z",
+          "scope_task_ids": [
+            "W09.02"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.02/authorization.md",
+            "sha256": "ef15cf8189d281c65ed5a3f67ea7551d64633acc24429ecc3783142bf01cddc2"
+          },
+          "description": "User yes approves bounded local retry-safe ledger recovery including duplicate prevention and erasure safeguards; no deployment/new cloud resources."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T23:55:00.053Z",
+          "scope_task_ids": [
+            "W09.03"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.03/authorization.md",
+            "sha256": "d8955ba2dd0cd370d1292bc29ace3b2eb9c4fd4602deeed531c5ad14e84f262d"
+          },
+          "description": "User continue accepts explicit remaining local consumer-loss offer; bounded malformed-envelope and per-message acknowledgement correction only."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T00:26:59.363Z",
+          "scope_task_ids": [
+            "W09.04"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W09.04/authorization.md",
+            "sha256": "ea62f66a56ab1522fa27cdf8095b6d2731324276894efecb8207cf4fb8a45543"
+          },
+          "description": "Continue bounded local learning-write acknowledgements, no non-idempotent retries or external operations."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T01:07:51.795Z",
+          "scope_task_ids": [
+            "W09.05"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W09.05/authorization.md",
+            "sha256": "10ad66a21ab3ade50062650e3d7cc118e41d9d3ce06676e742277a84693df1d7"
+          },
+          "description": "Continue bounded local collision-resistant identity; only existing SDK outputs may be rebuilt; no new state/retries/external authority."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T02:09:49.824Z",
+          "scope_task_ids": [
+            "W10.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W10.01/authorization.md",
+            "sha256": "a329f2ddf9466fdb14adbaebe10b3e8ddd686753d59d2d9233513aacdf574720"
+          },
+          "description": "Continue bounded local capacity containment; no full W10/recovery/customer/external authority."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T03:10:56.762Z",
+          "scope_task_ids": [
+            "W10.02"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W10.02/authorization.md",
+            "sha256": "ff128856a1d1b127d3ddb783a1ef5816b4d769cf81a4789a1dcb57904b4408dd"
+          },
+          "description": "Continue bounded local ring admission guard; no full W10/projection/recovery/customer/external authority."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T04:09:29.750Z",
+          "scope_task_ids": [
+            "W23.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W23.01/authorization.md",
+            "sha256": "d2daa0b97a37a0879ca0d79e4aea326bbd5181052616eda87bb43a8ed709f6a6"
+          },
+          "description": "Continue the offered bounded W23 forward arithmetic correction; no historical/customer-policy/external operations."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T11:24:54.567Z",
+          "scope_task_ids": [
+            "W24.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W24.01/authorization.md",
+            "sha256": "69872d8417d2ba9fa5fb41edbef60e34e0723e5086bc7eb8508156aaae73d76d"
+          },
+          "description": "Continue offered bounded W24 incompatibility rejection and live snapshot matching, not policy/history/reset/external operations."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T12:17:55.551Z",
+          "scope_task_ids": [
+            "W25.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W25.01/authorization.md",
+            "sha256": "93e1ecd021334ee4c4a4fa99baae2e1d0ac4d1524cfba070e48af73379ebfd3e"
+          },
+          "description": "Continue offered structured prior indexing/materialization; no grammar migration, policy/history/customer/external scope."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T12:51:35.751Z",
+          "scope_task_ids": [
+            "W26.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W26.01/authorization.md",
+            "sha256": "3e2b6058a151ce64c73ef60aba5bd9bcbcf87dc008c48e3f63680627b82d67f7"
+          },
+          "description": "Continue offered named-slot direct credit containment, not identity/exposure policy or historical/external changes."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T13:39:10.472Z",
+          "scope_task_ids": [
+            "W27.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W27.01/authorization.md",
+            "sha256": "b9641c76f3a14e93e0fb61bf0c32190db6632307a94b00cc41bf9e851c3b51c4"
+          },
+          "description": "Continue offered bounded archive-before-live fix, including truthful current operator publication/reset outcomes, not history/customer/external changes."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T15:04:50.297Z",
+          "scope_task_ids": [
+            "W27.02"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W27.02/authorization.md",
+            "sha256": "c1e14c555d9ce9e2f9259fe984f7a60b473c8899b083add4664667cdf845405d"
+          },
+          "description": "Continue offered page-wide replay dependency correction and pins/choice metadata, not historical or external operations."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T15:54:07.580Z",
+          "scope_task_ids": [
+            "W27.03"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W27.03/authorization.md",
+            "sha256": "4df44343c6ea19e4bfeb8a67f78e551419c354ce50e4fd66b9518df64ad02bb3"
+          },
+          "description": "Continue offered local replay lifecycle/dependency correctness; exact consumed identity guard only."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T16:34:24.946Z",
+          "scope_task_ids": [
+            "W28.01"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W28.01/authorization.md",
+            "sha256": "a13ecbc622b60d766e89c9ad6953f2177870a8622173b48266b796654334e49e"
+          },
+          "description": "Continue offered local W28 withdrawal; associated legacy read/replay and operator status/reset compatibility, no enabling/customer-policy amendment."
+        }
+      ]
+    },
+    "deployment": false,
+    "model": "gpt-6-astra",
+    "efforts": [
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "max_active_tasks": 1,
+    "design_authorization": {
+      "actor_id": "w01-user",
+      "at": "2026-09-06T21:29:15Z",
+      "scope_task_ids": [
+        "W01.01"
+      ],
+      "allowed_actions": [
+        "source_inspection",
+        "task_documentation_and_tracking",
+        "independent_source_review",
+        "local_read_only_checks"
+      ],
+      "record": {
+        "path": "docs/remediation/evidence/W01.01/authorization.md",
+        "sha256": "99ba9e72bf83297e940eb23cce1a80f52dd6e00c4a8c88a410b649115bac7bf7"
+      },
+      "description": "User's go accepted the bounded source-only W01.01 offer. Legacy framework_only mode retains no-engine-write permission; this record is specific design authority, not a customer decision or local implementation mandate."
+    }
+  }
+}

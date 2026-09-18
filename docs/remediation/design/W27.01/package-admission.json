@@ -1,0 +1,107 @@
+{
+  "before": {
+    "id": "W27",
+    "canonical": {
+      "gate_scope": "G3, earlier for promised replay",
+      "full_scope": "Archive dependencies before visibility; immutable page-wide snapshot manifest, choice metadata and dependency-aware pins. Prove replay parity under coupled slots, exploration, gamma zero, archive/write failure, rollout and retention. Missing dependencies fail explicitly rather than silently guessing.",
+      "finding_refs": "F22",
+      "sizing_owner": "S manifest/archive subset → M full replay contract; OL"
+    },
+    "title": "Immutable page-wide replay dependencies",
+    "gates": [
+      "G3"
+    ],
+    "source_findings": [
+      "F22"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W27",
+    "canonical": {
+      "gate_scope": "G3, earlier for promised replay",
+      "full_scope": "Archive dependencies before visibility; immutable page-wide snapshot manifest, choice metadata and dependency-aware pins. Prove replay parity under coupled slots, exploration, gamma zero, archive/write failure, rollout and retention. Missing dependencies fail explicitly rather than silently guessing.",
+      "finding_refs": "F22",
+      "sizing_owner": "S manifest/archive subset → M full replay contract; OL"
+    },
+    "title": "Immutable page-wide replay dependencies",
+    "gates": [
+      "G3"
+    ],
+    "source_findings": [
+      "F22"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W27-ARCHIVE",
+          "description": "Required snapshot archive acknowledged before live visibility; immutable retained-version writes by upgraded publisher and truthful failures."
+        },
+        {
+          "id": "W27-MANIFEST",
+          "description": "Immutable page-wide snapshot dependency manifest and choice metadata, not delivered by per-slot archive ordering."
+        },
+        {
+          "id": "W27-PINS",
+          "description": "Dependency-aware pins and explicit required-missing dependency refusal, not delivered here."
+        },
+        {
+          "id": "W27-PARITY",
+          "description": "Replay parity for coupled slots, exploration and gamma zero, beyond single-slot local proof."
+        },
+        {
+          "id": "W27-LIFECYCLE",
+          "description": "Safe rollout, retention and complete retained dependency/history behavior, not delivered here."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W27-ARCHIVE",
+          "task_id": "W27.01",
+          "task_criterion_id": "W27.01-C1"
+        },
+        {
+          "criterion_id": "W27-ARCHIVE",
+          "task_id": "W27.01",
+          "task_criterion_id": "W27.01-C2"
+        },
+        {
+          "criterion_id": "W27-ARCHIVE",
+          "task_id": "W27.01",
+          "task_criterion_id": "W27.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W27.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

@@ -42,7 +42,7 @@ cdp.post('/profile', async (c) => {
 
     return c.json(profile);
   } catch (error) {
-    console.error('CDP profile error:', error);
+    console.error('CDP profile error');
     return c.json({ error: 'Failed to retrieve profile' }, 500);
   }
 });
@@ -57,7 +57,7 @@ cdp.post('/segments', async (c) => {
 
     return c.json({ userId, segments });
   } catch (error) {
-    console.error('CDP segments error:', error);
+    console.error('CDP segments error');
     return c.json({ error: 'Failed to retrieve segments' }, 500);
   }
 });
@@ -76,7 +76,7 @@ cdp.post('/identify', async (c) => {
 
     return c.json({ success: true, timestamp: Date.now() });
   } catch (error) {
-    console.error('CDP identify error:', error);
+    console.error('CDP identify error');
     return c.json({ error: 'Failed to identify user' }, 500);
   }
 });
@@ -102,7 +102,7 @@ cdp.post('/track', async (c) => {
 
     return c.json({ success: true, timestamp: Date.now() });
   } catch (error) {
-    console.error('CDP track error:', error);
+    console.error('CDP track error');
     return c.json({ error: 'Failed to track event' }, 500);
   }
 });
@@ -117,7 +117,7 @@ cdp.post('/forward/:destination', async (c) => {
 
     return c.json(result);
   } catch (error) {
-    console.error('CDP forward error:', error);
+    console.error('CDP forward error');
     return c.json({ error: 'Failed to forward event' }, 500);
   }
 });
@@ -129,7 +129,7 @@ cdp.get('/destinations', jwt(), async (c) => {
 
     return c.json({ destinations });
   } catch (error) {
-    console.error('CDP destinations error:', error);
+    console.error('CDP destinations error');
     return c.json({ error: 'Failed to get destinations' }, 500);
   }
 });
@@ -153,7 +153,7 @@ cdp.post('/destinations', jwt({ roles: ['admin'] }), async (c) => {
 
     return c.json(destination);
   } catch (error) {
-    console.error('CDP create destination error:', error);
+    console.error('CDP create destination error');
     return c.json({ error: 'Failed to create destination' }, 500);
   }
 });

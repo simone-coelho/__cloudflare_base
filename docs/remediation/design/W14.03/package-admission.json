@@ -1,0 +1,186 @@
+{
+  "before": {
+    "id": "W14",
+    "canonical": {
+      "gate_scope": "G0/G2",
+      "full_scope": "Register and deliver every applicable source clause: generic enrichment/review/publication (§1.3), product-sort persistence (§1.6), entitlement evidence (§1.9), generic AI Search (§1.10), external/SFCC acceptance (§1.11), typed attributes/audiences and scheduled warehouse destination/readback/deletion (§1.12). Track §2.3's optional, no-additional-cost widget/template handoff as availability is triggered, not a January widget build; retain tag-plan deliverables and approved mechanism substitutions. The internal register portion is updated here; implementation, customer documents, evidence and authorized amendments remain open.",
+      "finding_refs": "F07/F11/F29/F31; N16/N17",
+      "sizing_owner": "S register/claim containment → L/externally dependent capability packages, re-estimate separately; D/OL + C"
+    },
+    "title": "Source-clause capability delivery",
+    "gates": [
+      "G0",
+      "G2"
+    ],
+    "source_findings": [
+      "F07",
+      "F11",
+      "F29",
+      "F31",
+      "N16",
+      "N17"
+    ],
+    "proposed_owner": "D/OL + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "description": "Reusable deterministic structured-intent candidate-page filtering/live-affinity ranking only; full §1.10 NL/customer-catalog and every other W14 clause retained open."
+        },
+        {
+          "id": "W14-PRODUCT-SORT-RECEIPTS",
+          "description": "Best-effort versioned product-sort R2 explain records with explicit operator readback only; no every-decision/delivery/warehouse/customer completeness."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C1"
+        },
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C2"
+        },
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C3"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C1"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C2"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C3"
+        }
+      ],
+      "task_ids": [
+        "W14.01",
+        "W14.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W14",
+    "canonical": {
+      "gate_scope": "G0/G2",
+      "full_scope": "Register and deliver every applicable source clause: generic enrichment/review/publication (§1.3), product-sort persistence (§1.6), entitlement evidence (§1.9), generic AI Search (§1.10), external/SFCC acceptance (§1.11), typed attributes/audiences and scheduled warehouse destination/readback/deletion (§1.12). Track §2.3's optional, no-additional-cost widget/template handoff as availability is triggered, not a January widget build; retain tag-plan deliverables and approved mechanism substitutions. The internal register portion is updated here; implementation, customer documents, evidence and authorized amendments remain open.",
+      "finding_refs": "F07/F11/F29/F31; N16/N17",
+      "sizing_owner": "S register/claim containment → L/externally dependent capability packages, re-estimate separately; D/OL + C"
+    },
+    "title": "Source-clause capability delivery",
+    "gates": [
+      "G0",
+      "G2"
+    ],
+    "source_findings": [
+      "F07",
+      "F11",
+      "F29",
+      "F31",
+      "N16",
+      "N17"
+    ],
+    "proposed_owner": "D/OL + C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "description": "Reusable deterministic structured-intent candidate-page filtering/live-affinity ranking only; full §1.10 NL/customer-catalog and every other W14 clause retained open."
+        },
+        {
+          "id": "W14-PRODUCT-SORT-RECEIPTS",
+          "description": "Best-effort versioned product-sort R2 explain records with explicit operator readback only; no every-decision/delivery/warehouse/customer completeness."
+        },
+        {
+          "id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "description": "Supplied generic content-label proposals, explicit human decisions and approved-only patch export; not AI generation/publication/full customer acceptance."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C1"
+        },
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C2"
+        },
+        {
+          "criterion_id": "W14-STRUCTURED-INTENT-CANDIDATES",
+          "task_id": "W14.01",
+          "task_criterion_id": "W14.01-C3"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C1"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C2"
+        },
+        {
+          "criterion_id": "W14-PRODUCT-SORT-RECEIPTS",
+          "task_id": "W14.02",
+          "task_criterion_id": "W14.02-C3"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "task_id": "W14.03",
+          "task_criterion_id": "W14.03-C1"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "task_id": "W14.03",
+          "task_criterion_id": "W14.03-C2"
+        },
+        {
+          "criterion_id": "W14-ENRICHMENT-REVIEW-HANDOFF",
+          "task_id": "W14.03",
+          "task_criterion_id": "W14.03-C3"
+        }
+      ],
+      "task_ids": [
+        "W14.01",
+        "W14.02",
+        "W14.03"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

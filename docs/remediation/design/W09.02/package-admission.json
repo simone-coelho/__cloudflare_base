@@ -1,0 +1,140 @@
+{
+  "before": {
+    "id": "W09",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Version/chunk queue envelopes by serialized byte and batch budgets, including shared inputs without breaking readers. Define durable recovery for producer rejection, invalid/quarantined records and partial writes; DLQ in each environment; validate fan-out responses and reconcile counts to sinks. Fault tests cover oversize, outage, malformed records, retry/regroup, duplicate sends and recovery. Logging/DLQ alone is not closure.",
+      "finding_refs": "F16; N07/N08/N10",
+      "sizing_owner": "S envelope/visibility containment → M/L delivery guarantees; OL"
+    },
+    "title": "Bounded ledger delivery and recovery",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F16",
+      "N07",
+      "N08",
+      "N10"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W09-ENVELOPE-VISIBILITY",
+          "description": "Byte-budgeted legacy-compatible full-record queue envelope and producer rejection visibility only; full delivery/recovery/quarantine/DLQ/consumer/fanout/reconciliation/fold obligations remain open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W09-ENVELOPE-VISIBILITY",
+          "task_id": "W09.01",
+          "task_criterion_id": "W09.01-C1"
+        },
+        {
+          "criterion_id": "W09-ENVELOPE-VISIBILITY",
+          "task_id": "W09.01",
+          "task_criterion_id": "W09.01-C2"
+        },
+        {
+          "criterion_id": "W09-ENVELOPE-VISIBILITY",
+          "task_id": "W09.01",
+          "task_criterion_id": "W09.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W09.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W09",
+    "canonical": {
+      "gate_scope": "G1",
+      "full_scope": "Version/chunk queue envelopes by serialized byte and batch budgets, including shared inputs without breaking readers. Define durable recovery for producer rejection, invalid/quarantined records and partial writes; DLQ in each environment; validate fan-out responses and reconcile counts to sinks. Fault tests cover oversize, outage, malformed records, retry/regroup, duplicate sends and recovery. Logging/DLQ alone is not closure.",
+      "finding_refs": "F16; N07/N08/N10",
+      "sizing_owner": "S envelope/visibility containment → M/L delivery guarantees; OL"
+    },
+    "title": "Bounded ledger delivery and recovery",
+    "gates": [
+      "G1"
+    ],
+    "source_findings": [
+      "F16",
+      "N07",
+      "N08",
+      "N10"
+    ],
+    "proposed_owner": "OL",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W09-ENVELOPE-VISIBILITY",
+          "description": "Byte-budgeted legacy-compatible full-record queue envelope and producer rejection visibility only; full delivery/recovery/quarantine/DLQ/consumer/fanout/reconciliation/fold obligations remain open."
+        },
+        {
+          "id": "W09-MANAGED-RECOVERY",
+          "description": "Managed retry-safe canonical persistence/shared fallback plus conditional erasure containment only; full recovery/DLQ/quarantine/completeness/fanout/fold and erasure fence remain open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W09-ENVELOPE-VISIBILITY",
+          "task_id": "W09.01",
+          "task_criterion_id": "W09.01-C1"
+        },
+        {
+          "criterion_id": "W09-ENVELOPE-VISIBILITY",
+          "task_id": "W09.01",
+          "task_criterion_id": "W09.01-C2"
+        },
+        {
+          "criterion_id": "W09-ENVELOPE-VISIBILITY",
+          "task_id": "W09.01",
+          "task_criterion_id": "W09.01-C3"
+        },
+        {
+          "criterion_id": "W09-MANAGED-RECOVERY",
+          "task_id": "W09.02",
+          "task_criterion_id": "W09.02-C1"
+        },
+        {
+          "criterion_id": "W09-MANAGED-RECOVERY",
+          "task_id": "W09.02",
+          "task_criterion_id": "W09.02-C2"
+        },
+        {
+          "criterion_id": "W09-MANAGED-RECOVERY",
+          "task_id": "W09.02",
+          "task_criterion_id": "W09.02-C3"
+        }
+      ],
+      "task_ids": [
+        "W09.01",
+        "W09.02"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

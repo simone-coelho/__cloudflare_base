@@ -27,8 +27,8 @@ export function queueOf(input: { proposals: readonly Proposal[]; slots: readonly
   for (const d of Object.values(input.learn.slots ?? {})) for (const c of Object.values(d.items ?? {})) { if (c.mode === 'freeze') frozen++; else if (c.mode === 'reject') rejected++; }
   return {
     proposals_pending: input.proposals.filter((p) => p.status === 'proposed').length,
-    slots_without_evidence: input.slots.filter((s) => !s.pinned && (!s.evidence || s.evidence.items === 0)).map((s) => ({ page: s.page, slot: s.slot })),
-    slots_acting: input.slots.filter((s) => s.gamma > 0).map((s) => ({ page: s.page, slot: s.slot, gamma: s.gamma })),
+    slots_without_evidence: input.slots.filter((s) => (s.rankedCapacity !== undefined ? s.rankedCapacity > 0 : !s.pinned) && (!s.evidence || s.evidence.items === 0)).map((s) => ({ page: s.page, slot: s.slot })),
+    slots_acting: input.slots.filter((s) => (s.rankedCapacity === undefined || s.rankedCapacity > 0) && s.gamma > 0).map((s) => ({ page: s.page, slot: s.slot, gamma: s.gamma })),
     items_frozen: frozen,
     items_rejected: rejected,
     erasures_pending: input.erasuresPending,

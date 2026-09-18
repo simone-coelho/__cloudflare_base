@@ -28,3 +28,11 @@ export type ActionEventType = (typeof ACTION_EVENT_TYPES)[number];
 
 /** The same list as a membership test, for the doors that guard on it. */
 export const ACTION_EVENT_TYPE_SET: ReadonlySet<string> = new Set(ACTION_EVENT_TYPES);
+
+/** Opaque logical identity, including the SDK's non-UUID Host fallback. */
+export const isEventNonce = (value: unknown): value is string =>
+  typeof value === 'string' && value.length >= 1 && value.length <= 128 && !/[^A-Za-z0-9_-]/.test(value);
+
+/** An immutable nonce-bearing event time; zero is valid. No skew policy implied. */
+export const isEventTimestamp = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && Number.isFinite(new Date(value).getTime());

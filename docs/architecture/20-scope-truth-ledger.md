@@ -2,12 +2,15 @@
 
 **INTERNAL. Never send this, quote it, or paraphrase it outside the delivery team.**
 
+**Current acceptance authority, 2026-09-06:** [document 35, the reconciled audit/source of truth](35-audit-verification-and-source-of-truth.md), supersedes the historical closure labels and remediation sequence below. Its section 4 maps every working row and all twelve signature clauses, including omitted capabilities; section 5 holds the consolidated work packages and gates. This document preserves source commitments and their history, not a second current readiness verdict. No customer commitment is amended by that reconciliation.
+
 This exists because a customer-facing appendix now states that twelve capabilities are *"built, tested,
 and active on signature"*, and an audit of this repository on 2026-08-31 found that a majority are not
 yet true in code. The answers we give the account team are written forward and confidently — that is
 correct, and it is not the problem this document solves. **The problem this document solves is
 forgetting.** Every clause below is a commitment that has to become true, with an owner and a date, and
-this ledger is the single place that tracks it.
+this ledger preserves its source-clause history. Document 35 governs the consolidated current audit
+disposition and acceptance gates.
 
 The governance rule, stated once:
 
@@ -16,7 +19,8 @@ The governance rule, stated once:
 > list from the moment it is written down, not from the moment we start building it.
 
 **How this list is worked: `21-tapestry-gap-closure-plan.md`** — four parallel lanes, keyed to the five
-contract deadlines. This document stays the register of clauses; 21 is the operating plan.
+contract deadlines. This document and 21 preserve clause and operating-plan history; document 35
+governs current readiness and remediation dependencies after reconciliation.
 
 Related: `19-tapestry-delivery-ledger.md` (the CW work items), `18-content-affinity-engine.md` (the
 design), `docs/handover/03-tapestry-pending.md` (the promised-vs-built audit that preceded this).

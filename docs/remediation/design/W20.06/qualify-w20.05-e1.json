@@ -1,0 +1,662 @@
+{
+  "before": {
+    "id": "W20.05-E1",
+    "task_id": "W20.05",
+    "check_id": "W20.05-K1",
+    "criterion_ids": [
+      "W20.05-C1",
+      "W20.05-C2",
+      "W20.05-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W20.05/review.json",
+      "sha256": "a30a519b1645ea79e3c3f8d2fbcf0d76f1646fd4dc6f388870cace0fec3cd45d"
+    },
+    "at": "2026-09-13 22:01:31 UTC",
+    "limitations": "Bounded customer-neutral ordered-prefix pinning, compatible current API/Rules/readback, exact historical replay and affected exploration-count correction only. Legacy scalar pins retain their semantics; new prefix pins use atomic whole-slot refusal on invalid required positions, never shifted or arbitrary replacement. No sparse-position/default asset/customer vocabulary/priority-policy invention, exposure or attribution policy change, learning-ingestion claim or full W20/F28/F26/customer acceptance. Existing provider reads, 30-second caches, independent non-atomic catalog/slot publication and customer default handoff remain unaccepted; zero pin scoring is not zero I/O. Old stored formats and receipt markers retain meaning; no migration/history rewrite. Compatible readers/UI and reporting workers must precede controlled format3 publication; retained old cached readers and mixed deployment are not attested. No native/SLO/release claim, deployment/cloud/build/install/provision/seed/credential/customer-data/destructive/commit/push/external action. W20.04 prior exact-byte proof prospectively qualified with implemented controls/history retained; W08.04 unchanged. No package/finding/gate promotion.",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.test.ts src/learn/queue.test.ts src/learn/hourly.test.ts -t 'W20.05|groups every slot by page with what is set on it, and counts the pieces eligible now|counts pending proposals, slots without evidence, slots acting, controls and erasures|the day from its hours is the day from its records: grids, arms, exploration, credits, counts|W20.04|W38.05|W20.03|W20.01|W20.02|W18.01|W19.02|W27.02|history shows every document|W03.03 carries named auth context|w_ext × score joins the base score' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed actual Node/Vitest composer/service/replay/mounted HTTP/JSDOM and raw/hourly synthetic stores.",
+    "workload": "Fixed36: prior27 + six grouped W20.05 additions + two existing rows/queue and one raw/hour comparison. No new suite or native workload.",
+    "result": "pass",
+    "artifact_digest": "41ee785836fb39d3e234f21fbbd8e391eaf355f12cda89ba98d3db4c767c29f7",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "8e23fb28189276ab6995c8605f38134e7c614f3a89d719e3851705b439b69975",
+      "configuration": "Bounded customer-neutral ordered-prefix pinning, compatible current API/Rules/readback, exact historical replay and affected exploration-count correction only. Legacy scalar pins retain their semantics; new prefix pins use atomic whole-slot refusal on invalid required positions, never shifted or arbitrary replacement. No sparse-position/default asset/customer vocabulary/priority-policy invention, exposure or attribution policy change, learning-ingestion claim or full W20/F28/F26/customer acceptance. Existing provider reads, 30-second caches, independent non-atomic catalog/slot publication and customer default handoff remain unaccepted; zero pin scoring is not zero I/O. Old stored formats and receipt markers retain meaning; no migration/history rewrite. Compatible readers/UI and reporting workers must precede controlled format3 publication; retained old cached readers and mixed deployment are not attested. No native/SLO/release claim, deployment/cloud/build/install/provision/seed/credential/customer-data/destructive/commit/push/external action. W20.04 prior exact-byte proof prospectively qualified with implemented controls/history retained; W08.04 unchanged. No package/finding/gate promotion.",
+      "files": [
+        {
+          "path": "src/content/types.ts",
+          "role": "output",
+          "sha256": "1ee42b71f35c042174cf4bf5dbe4376740b7e87469e50ac0de3010f7ccdde98b"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "output",
+          "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "output",
+          "sha256": "87d88bd5815f18d79a1d53909021edbfe67ceb4039826603ed66310f72ed462e"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "output",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "output",
+          "sha256": "d7e830270b1f18962d42555fb6ee8b12c6d446ae5d5fa5937cc579175a1427a4"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "2dbb3ea87ffa67d34e2acb2088e68fe9f7798959226689daa1f8d903353aadcd"
+        },
+        {
+          "path": "src/content/slotDiagnostics.ts",
+          "role": "output",
+          "sha256": "7caaeb9ad1c7ad5c75f02beb54206b0666be7138a932860f72162dc02a0c1595"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "role": "output",
+          "sha256": "853e936a7c25ffa32ef18788a18ec87233431f7913e61af58d90e26038a4c4c7"
+        },
+        {
+          "path": "src/reflex/contentCompose.test.ts",
+          "role": "output",
+          "sha256": "8832a50721937b506c64bef8a4b15287234612481ecf4365c7edcf0c827db7b6"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "role": "output",
+          "sha256": "4c793accdd379deee9d06f7af8196249d968f83153c2bde867570d9486e6e2c3"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "1de0b950a935ef214fd83d2ae41bb74fbdfbba748f0d7a269e8fcdeecf7455fc"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "role": "output",
+          "sha256": "53747df01ea85cee7f5094e29507bea3d1f991d54abdbe4670023b6c84f17137"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "role": "output",
+          "sha256": "19be59ee0d1c94165b4192e282d73e9bd36d6148d9e2ce0206686fc6ed4bbbfb"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "e1f722ab023df513c752c70d873e761ff789331e06b53a75733ee0cc37adaa31"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "869b4bcdee304c00b50de4752f428d44a6ab6fc336fa1f210ff2b71333de9320"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "06c2ea4f18954bf919314afef75c18ec4b5a51c2ed0f8b8023ea0567d72d90fc"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "role": "source",
+          "sha256": "e69b1cbde91aa894f44fe480316340b7317a8aee88c81a52629627e09ad464b3"
+        },
+        {
+          "path": "src/content/catalogDiagnostics.ts",
+          "role": "source",
+          "sha256": "799d71550ae29c10c3947b00da4fd6962b93f04a5eaf699ec789deaa013e4a9d"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/config/input.ts",
+          "role": "source",
+          "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "public/console/shell.js",
+          "role": "output",
+          "sha256": "4121514f827d843c0ea62b35b076a39e3c6fe9d31ea7d22d2d9a03cddc153e32"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F28.md",
+          "role": "source",
+          "sha256": "121a07ed372126d8e1741d374865e8af6eef55357b76a955b4db18fba236da9f"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F26.md",
+          "role": "source",
+          "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+        },
+        {
+          "path": "docs/content-personalization-design-tapestry.html",
+          "role": "source",
+          "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+        },
+        {
+          "path": "docs/architecture/18-content-affinity-engine.md",
+          "role": "source",
+          "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "source",
+          "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "public/console/index.html",
+          "role": "source",
+          "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "role": "source",
+          "sha256": "a52f5d1b39a934c893b2d701076573593aa76017f824c88e44e623c3efeb903f"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+        },
+        {
+          "path": "src/content/typeAffinity.ts",
+          "role": "source",
+          "sha256": "77b15db553d04e72c838fc0844fc72d6fdd862b5986f0557a3d0ff4b6aef79c7"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "docs/Tapestry-Scope-Questions-Answers.md",
+          "role": "source",
+          "sha256": "84db3ca353f907fc2e170ed4ba4307a6a785c9b7c8c77d161eb2a40d8071e844"
+        },
+        {
+          "path": "src/content/slotConstraints.ts",
+          "role": "output",
+          "sha256": "5fe3ea07c0d949b9f67081598369690fcd5c33a14bf5ec4b34e3a56579d7d3e5"
+        },
+        {
+          "path": "src/learn/rows.ts",
+          "role": "output",
+          "sha256": "5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060"
+        },
+        {
+          "path": "src/learn/queue.ts",
+          "role": "output",
+          "sha256": "724bd6caf6332b74d8706c1410531f1a550a13341bbf381326eb96e40429644c"
+        },
+        {
+          "path": "public/console/views.js",
+          "role": "output",
+          "sha256": "03d7a3f7b90fcceccad2d66717951fc735d0f5fa4e322a24369a5c17f673c114"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "output",
+          "sha256": "ec9725d6ee2448017cccf38d93a9ad8235417231089b9d46d048a3f74da3b2db"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "role": "output",
+          "sha256": "007903b466010ec67d7ca129833b5834f157e2366dc34a733864c72f6ab6e8f4"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "output",
+          "sha256": "d9470a838f6e1aff68ae7f1e6e2ba7d63729faecaff0d26d1e4189c8ba9bf3fa"
+        },
+        {
+          "path": "src/learn/rows.test.ts",
+          "role": "source",
+          "sha256": "4d77e27931c589b1a442140270f9a36a9dc9014d99ba390c3173504fe2e1cb80"
+        },
+        {
+          "path": "src/learn/queue.test.ts",
+          "role": "source",
+          "sha256": "e145b9db91f1086692bb4924aa2af8550ef5da2ef35a5bf66183c29bce61235e"
+        },
+        {
+          "path": "docs/remediation/design/W38.05/baseline.json",
+          "role": "source",
+          "sha256": "bcc7f9d575cdbb8167ddd6f52e186d0c67c7246b5dcb1f6f1dbb4c6b0a2bcbdd"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.05/worker.json",
+          "role": "output",
+          "sha256": "53b4858e6fa9fda254eab74aef96e54268e82f5a6e1c3a94a3a08f8eebf492c8"
+        },
+        {
+          "path": "docs/remediation/design/W20.05/plan.md",
+          "role": "configuration",
+          "sha256": "7617ce7ea49b6b8490b5f06220399e8075074691ed63e26b2364f9e091c01def"
+        },
+        {
+          "path": "docs/remediation/design/W20.05/baseline.json",
+          "role": "configuration",
+          "sha256": "c4d5b315a319bdfdade6905a773b9ba85a329fbfc2a29c259fa63c1a14712b0f"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.05/admission.json",
+          "role": "configuration",
+          "sha256": "be03dadbe5c86d8e43f950a34d1db6ea1f1a1a3490b436cf79b1accd11cc6ef5"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.05/source-freeze.json",
+          "sha256": "ccf031e8a8f7b74d3dc5e4b83818a5b0f272ccf8b9e455af985fb3b95b191279",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.05/source-deltas.json",
+          "sha256": "97c3073444d505d3e0e95a671419eef420f35042c2c49ed9aecf08bc490057c2",
+          "role": "configuration"
+        }
+      ],
+      "digest": "41ee785836fb39d3e234f21fbbd8e391eaf355f12cda89ba98d3db4c767c29f7"
+    }
+  },
+  "after": {
+    "id": "W20.05-E1",
+    "task_id": "W20.05",
+    "check_id": "W20.05-K1",
+    "criterion_ids": [
+      "W20.05-C1",
+      "W20.05-C2",
+      "W20.05-C3"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W20.05/review.json",
+      "sha256": "a30a519b1645ea79e3c3f8d2fbcf0d76f1646fd4dc6f388870cace0fec3cd45d"
+    },
+    "at": "2026-09-13 22:01:31 UTC",
+    "limitations": "Bounded customer-neutral ordered-prefix pinning, compatible current API/Rules/readback, exact historical replay and affected exploration-count correction only. Legacy scalar pins retain their semantics; new prefix pins use atomic whole-slot refusal on invalid required positions, never shifted or arbitrary replacement. No sparse-position/default asset/customer vocabulary/priority-policy invention, exposure or attribution policy change, learning-ingestion claim or full W20/F28/F26/customer acceptance. Existing provider reads, 30-second caches, independent non-atomic catalog/slot publication and customer default handoff remain unaccepted; zero pin scoring is not zero I/O. Old stored formats and receipt markers retain meaning; no migration/history rewrite. Compatible readers/UI and reporting workers must precede controlled format3 publication; retained old cached readers and mixed deployment are not attested. No native/SLO/release claim, deployment/cloud/build/install/provision/seed/credential/customer-data/destructive/commit/push/external action. W20.04 prior exact-byte proof prospectively qualified with implemented controls/history retained; W08.04 unchanged. No package/finding/gate promotion.",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/learn/phase3.test.ts src/routes/content.test.ts src/console/console.render.test.ts src/content/consent.test.ts src/learn/rows.test.ts src/learn/queue.test.ts src/learn/hourly.test.ts -t 'W20.05|groups every slot by page with what is set on it, and counts the pieces eligible now|counts pending proposals, slots without evidence, slots acting, controls and erasures|the day from its hours is the day from its records: grids, arms, exploration, credits, counts|W20.04|W38.05|W20.03|W20.01|W20.02|W18.01|W19.02|W27.02|history shows every document|W03.03 carries named auth context|w_ext × score joins the base score' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed actual Node/Vitest composer/service/replay/mounted HTTP/JSDOM and raw/hourly synthetic stores.",
+    "workload": "Fixed36: prior27 + six grouped W20.05 additions + two existing rows/queue and one raw/hour comparison. No new suite or native workload.",
+    "result": "pass",
+    "artifact_digest": "41ee785836fb39d3e234f21fbbd8e391eaf355f12cda89ba98d3db4c767c29f7",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "8e23fb28189276ab6995c8605f38134e7c614f3a89d719e3851705b439b69975",
+      "configuration": "Bounded customer-neutral ordered-prefix pinning, compatible current API/Rules/readback, exact historical replay and affected exploration-count correction only. Legacy scalar pins retain their semantics; new prefix pins use atomic whole-slot refusal on invalid required positions, never shifted or arbitrary replacement. No sparse-position/default asset/customer vocabulary/priority-policy invention, exposure or attribution policy change, learning-ingestion claim or full W20/F28/F26/customer acceptance. Existing provider reads, 30-second caches, independent non-atomic catalog/slot publication and customer default handoff remain unaccepted; zero pin scoring is not zero I/O. Old stored formats and receipt markers retain meaning; no migration/history rewrite. Compatible readers/UI and reporting workers must precede controlled format3 publication; retained old cached readers and mixed deployment are not attested. No native/SLO/release claim, deployment/cloud/build/install/provision/seed/credential/customer-data/destructive/commit/push/external action. W20.04 prior exact-byte proof prospectively qualified with implemented controls/history retained; W08.04 unchanged. No package/finding/gate promotion.",
+      "files": [
+        {
+          "path": "src/content/types.ts",
+          "role": "output",
+          "sha256": "1ee42b71f35c042174cf4bf5dbe4376740b7e87469e50ac0de3010f7ccdde98b"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "output",
+          "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "output",
+          "sha256": "87d88bd5815f18d79a1d53909021edbfe67ceb4039826603ed66310f72ed462e"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "output",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "output",
+          "sha256": "d7e830270b1f18962d42555fb6ee8b12c6d446ae5d5fa5937cc579175a1427a4"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "2dbb3ea87ffa67d34e2acb2088e68fe9f7798959226689daa1f8d903353aadcd"
+        },
+        {
+          "path": "src/content/slotDiagnostics.ts",
+          "role": "output",
+          "sha256": "7caaeb9ad1c7ad5c75f02beb54206b0666be7138a932860f72162dc02a0c1595"
+        },
+        {
+          "path": "public/console/views-config.js",
+          "role": "output",
+          "sha256": "853e936a7c25ffa32ef18788a18ec87233431f7913e61af58d90e26038a4c4c7"
+        },
+        {
+          "path": "src/reflex/contentCompose.test.ts",
+          "role": "output",
+          "sha256": "8832a50721937b506c64bef8a4b15287234612481ecf4365c7edcf0c827db7b6"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "role": "output",
+          "sha256": "4c793accdd379deee9d06f7af8196249d968f83153c2bde867570d9486e6e2c3"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "1de0b950a935ef214fd83d2ae41bb74fbdfbba748f0d7a269e8fcdeecf7455fc"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "role": "output",
+          "sha256": "53747df01ea85cee7f5094e29507bea3d1f991d54abdbe4670023b6c84f17137"
+        },
+        {
+          "path": "src/content/consent.test.ts",
+          "role": "output",
+          "sha256": "19be59ee0d1c94165b4192e282d73e9bd36d6148d9e2ce0206686fc6ed4bbbfb"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "e1f722ab023df513c752c70d873e761ff789331e06b53a75733ee0cc37adaa31"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "869b4bcdee304c00b50de4752f428d44a6ab6fc336fa1f210ff2b71333de9320"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "06c2ea4f18954bf919314afef75c18ec4b5a51c2ed0f8b8023ea0567d72d90fc"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "role": "source",
+          "sha256": "e69b1cbde91aa894f44fe480316340b7317a8aee88c81a52629627e09ad464b3"
+        },
+        {
+          "path": "src/content/catalogDiagnostics.ts",
+          "role": "source",
+          "sha256": "799d71550ae29c10c3947b00da4fd6962b93f04a5eaf699ec789deaa013e4a9d"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "source",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/config/input.ts",
+          "role": "source",
+          "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "role": "source",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3"
+        },
+        {
+          "path": "src/middleware/operatorAuth.ts",
+          "role": "source",
+          "sha256": "0b4c7673f070f9889c52cad245c763f41a6f1a9ec216e1bed0aa03c302ca0c6d"
+        },
+        {
+          "path": "public/console/shell.js",
+          "role": "output",
+          "sha256": "4121514f827d843c0ea62b35b076a39e3c6fe9d31ea7d22d2d9a03cddc153e32"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F28.md",
+          "role": "source",
+          "sha256": "121a07ed372126d8e1741d374865e8af6eef55357b76a955b4db18fba236da9f"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F26.md",
+          "role": "source",
+          "sha256": "8ad73a3b71993daa5746e11ecc0f507b8ab82cb6fe06b44c93d41b526a0b564f"
+        },
+        {
+          "path": "docs/content-personalization-design-tapestry.html",
+          "role": "source",
+          "sha256": "83f7610db351099c5cc1e4fc33297b30e444b2a5b9c53dbb0781d3f2c868076c"
+        },
+        {
+          "path": "docs/architecture/18-content-affinity-engine.md",
+          "role": "source",
+          "sha256": "1ddfcde4f2840fd8d7c2db375c7ed55de0372d14999bf46738be2f63e80e4d5d"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "source",
+          "sha256": "b48793cb0c20a941d768a37902a1c038ca0d1213f3755e81a7382a03a51a951b"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "public/console/index.html",
+          "role": "source",
+          "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+        },
+        {
+          "path": "src/sdk/listen.ts",
+          "role": "source",
+          "sha256": "a52f5d1b39a934c893b2d701076573593aa76017f824c88e44e623c3efeb903f"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+        },
+        {
+          "path": "src/content/typeAffinity.ts",
+          "role": "source",
+          "sha256": "77b15db553d04e72c838fc0844fc72d6fdd862b5986f0557a3d0ff4b6aef79c7"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "docs/Tapestry-Scope-Questions-Answers.md",
+          "role": "source",
+          "sha256": "84db3ca353f907fc2e170ed4ba4307a6a785c9b7c8c77d161eb2a40d8071e844"
+        },
+        {
+          "path": "src/content/slotConstraints.ts",
+          "role": "output",
+          "sha256": "5fe3ea07c0d949b9f67081598369690fcd5c33a14bf5ec4b34e3a56579d7d3e5"
+        },
+        {
+          "path": "src/learn/rows.ts",
+          "role": "output",
+          "sha256": "5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060"
+        },
+        {
+          "path": "src/learn/queue.ts",
+          "role": "output",
+          "sha256": "724bd6caf6332b74d8706c1410531f1a550a13341bbf381326eb96e40429644c"
+        },
+        {
+          "path": "public/console/views.js",
+          "role": "output",
+          "sha256": "03d7a3f7b90fcceccad2d66717951fc735d0f5fa4e322a24369a5c17f673c114"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "output",
+          "sha256": "ec9725d6ee2448017cccf38d93a9ad8235417231089b9d46d048a3f74da3b2db"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "role": "output",
+          "sha256": "007903b466010ec67d7ca129833b5834f157e2366dc34a733864c72f6ab6e8f4"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "output",
+          "sha256": "d9470a838f6e1aff68ae7f1e6e2ba7d63729faecaff0d26d1e4189c8ba9bf3fa"
+        },
+        {
+          "path": "src/learn/rows.test.ts",
+          "role": "source",
+          "sha256": "4d77e27931c589b1a442140270f9a36a9dc9014d99ba390c3173504fe2e1cb80"
+        },
+        {
+          "path": "src/learn/queue.test.ts",
+          "role": "source",
+          "sha256": "e145b9db91f1086692bb4924aa2af8550ef5da2ef35a5bf66183c29bce61235e"
+        },
+        {
+          "path": "docs/remediation/design/W38.05/baseline.json",
+          "role": "source",
+          "sha256": "bcc7f9d575cdbb8167ddd6f52e186d0c67c7246b5dcb1f6f1dbb4c6b0a2bcbdd"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.05/worker.json",
+          "role": "output",
+          "sha256": "53b4858e6fa9fda254eab74aef96e54268e82f5a6e1c3a94a3a08f8eebf492c8"
+        },
+        {
+          "path": "docs/remediation/design/W20.05/plan.md",
+          "role": "configuration",
+          "sha256": "7617ce7ea49b6b8490b5f06220399e8075074691ed63e26b2364f9e091c01def"
+        },
+        {
+          "path": "docs/remediation/design/W20.05/baseline.json",
+          "role": "configuration",
+          "sha256": "c4d5b315a319bdfdade6905a773b9ba85a329fbfc2a29c259fa63c1a14712b0f"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.05/admission.json",
+          "role": "configuration",
+          "sha256": "be03dadbe5c86d8e43f950a34d1db6ea1f1a1a3490b436cf79b1accd11cc6ef5"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.05/source-freeze.json",
+          "sha256": "ccf031e8a8f7b74d3dc5e4b83818a5b0f272ccf8b9e455af985fb3b95b191279",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W20.05/source-deltas.json",
+          "sha256": "97c3073444d505d3e0e95a671419eef420f35042c2c49ed9aecf08bc490057c2",
+          "role": "configuration"
+        }
+      ],
+      "digest": "41ee785836fb39d3e234f21fbbd8e391eaf355f12cda89ba98d3db4c767c29f7"
+    }
+  }
+}

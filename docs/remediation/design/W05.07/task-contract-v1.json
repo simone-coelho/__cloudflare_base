@@ -1,0 +1,161 @@
+{
+  "id": "W05.07",
+  "package_id": "W05",
+  "title": "Owned Optimizely shopper consent and caller compatibility",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Guard retained shopper Optimizely tracking and decisions with existing tenant-owned capability and strict durable false-only consent before any Optimizely initialization, evaluation or dispatch; update the owned storefront lane and two examples to that contract.",
+  "read_paths": [
+    "src",
+    "public/storefront.js",
+    "public/sdk",
+    "examples/usage-examples.js",
+    "docs/api/01-rest-endpoints.md",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/routes/optimizely.ts",
+    "public/storefront.js",
+    "examples/usage-examples.js",
+    "docs/api/01-rest-endpoints.md",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/telemetry.boundary.test.ts",
+    "docs/remediation/evidence/W05.07/worker.md",
+    "docs/remediation/evidence/W05.07/worker-checks.json"
+  ],
+  "non_goals": [
+    "Partial W05/F05/F10/N06/N11/N12 only. Keep provider webhooks, preview/datafile/banner behavior separate: no invented sender-to-shopper trust or automatic integration removal. D01/D03/D06 and global absent-state, necessary-record retention, privacy/customer/release decisions remain pending.",
+    "No shared consent/SDK/service/scorer/DO algorithm changes, new protocol, identity bootstrap, infrastructure or broad test programme. Legacy storefront metric has no owned lane and is explicitly unavailable as temporary unauthorized-path containment, not claimed integration parity. Reuse valid unchanged interfaces, not historical whole-task acceptance.",
+    "No stage/commit/push/deploy/cloud/resources/credentials/customer-data/destructive/unrelated operations; root alone owns records and acceptance, worker no subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W05.07-C1",
+      "description": "Only /optimizely/track and /decisions require current provisioned-tenant shopper capability; canonical body userId must match before owned-state reads. Strict optional boolean consent hints and false cookies can only restrict stored consent; persist necessary refusal before success/effects. Invalid, unavailable, malformed, forwarded or recognized-missing owned state fails closed with SessionAccessError preserved, no Optimizely fallback; existing anonymous absent-state compatibility remains. Tracking false returns explicit skipped/tracked:false/tracking_refused and consent with zero service initialization/cache/evaluation/dispatch. Decisions with either switch false return requested experiment keys null, feature keys {enabled:false,variables:{}}, segments:[], explicit default/refusal metadata and consent without service construction or evaluation; own-key-safe maps, never mock control. Tracking-only measurement remains allowed; allowed shape/attributes/tags and optional JWT behavior remain compatible. Recheck target after awaits before permitted service operation; per-request snapshot, not atomic revocation.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.07-C2",
+      "description": "Storefront trackXsurf collects behavior tags only inside current SDK core.capture, uses live canonical visitorId, current owned headers/tenant and configured URL, and initiates metric fetch synchronously inside the gated callback with final current/tracking guard, not generic postJson readiness gap or stale anonId. Readiness withdrawal/identity change drops stale capture; no refusal-side metric/tag reads. Legacy non-SDK lane explicitly skips unavailable metric without new identity bootstrap or unrelated transport changes. Two Optimizely examples and short API contract show current owned credentials, false-only hints and refusal defaults; consenting calls still work and errors/defaults are handled.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.07-C3",
+      "description": "Extend only existing two route/boundary suites with both hosts, switch combinations, ownership/unknown/error cases, refusal persistence, default keys and positive controls; retain actual service initialize/cache/fetch dispatcher positive proof with synthetic SDK-creation seam explicitly labeled. Worker fixed K1, app noEmit, JS syntax, actual storefront-method/core in-memory smoke and scoped diff. Independent exact K1 once plus caller smoke, actual before/final source/full proof and relevant local import graph/pins review. Preserve exact W05.06 acceptance historically before shared fixture overlap and qualify its proof; no whole-task reacceptance, SDK rebuild or deployed/native/runtime/performance/customer acceptance.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W05.07-K1",
+      "required": true,
+      "criterion_ids": [
+        "W05.07-C1",
+        "W05.07-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts src/telemetry.boundary.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest, existing actual Hono/crypto/SessionManager/ShopperReflex both-host synthetic boundary; no external network or deployed claim.",
+      "workload": "Two existing suites only, grouped owned Optimizely refusal/authorization/state/default/positive cases and telemetry compatibility. Worker app noEmit, JS syntax, actual storefront-method plus actual SDK core in-memory refusal/readiness/identity/positive smoke and scoped diff. Positive route-to-actual-service initialize/cache/dispatcher with explicitly synthetic SDK creation; unchanged service-specific proof may be reused or its three Optimizely tests narrowly run.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W05.07-K2",
+      "required": true,
+      "criterion_ids": [
+        "W05.07-C3"
+      ],
+      "command": "Independent frozen W05.07 actual before/final source/baseline/full worker evidence review, exact K1 rerun and actual storefront-method/core smoke; inspect app noEmit/JS syntax/scoped diff, relevant local import graph and artifact pins; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review, synthetic network destinations only; no native browser/workerd/deployed/SLO qualification.",
+      "workload": "C1-C3, including zero Optimizely effects before refused defaults, safe allowed measurement, actual caller ownership/collection timing, existing SDK interface assurance and explicit provider/preview/legacy/global-policy limitations.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W05.06",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Unchanged implemented SDK capture/current identity/header/consent interfaces; accepted dependency assurance remains scoped to those unchanged interfaces.",
+      "rationale": "Preserve exact accepted artifact historically and qualify shared fixture overlap before edits, not whole SDK contract reacceptance."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W05.05",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing owned consent helpers and both-host generic ingress fixture.",
+      "rationale": "Targeted reuse and tests, not historical full-contract reacceptance."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D01",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Pending customer topology/privacy/absent-state/necessary-record and external integration policy decisions.",
+      "rationale": "Owned shopper refusal containment does not approve or require inventing these policies."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Pending customer topology/privacy/absent-state/necessary-record and external integration policy decisions.",
+      "rationale": "Owned shopper refusal containment does not approve or require inventing these policies."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Pending customer topology/privacy/absent-state/necessary-record and external integration policy decisions.",
+      "rationale": "Owned shopper refusal containment does not approve or require inventing these policies."
+    }
+  ],
+  "preflight": {
+    "status": "pending"
+  },
+  "assignments": {
+    "implementer": "w0507-worker",
+    "independent_reviewer": "w0507-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement admitted six-file owned Optimizely containment; freeze worker evidence before independent review."
+  }
+}

@@ -7,7 +7,9 @@
 //   seed:     qualified real-time audiences ← ODP `/v3/graphql` once per session
 //             + refreshed every ~2 min (ODP's own RTS cadence is ~a minute)
 //
-// ADDITIVE BY DESIGN: gated only on ODP creds being present; the mock connector
+// The legacy Coach contract belongs only to the default tenant. Its credentials,
+// taxonomy and identity mapping are not a customer connector configuration.
+// Within that owner, ODP is additive when credentials are present; the mock connector
 // triad stays untouched (no CONNECTOR_MODE flip — 'live' would swap all three
 // connectors and the unwired ones throw). ODP being slow or down degrades to
 // exactly the pre-ODP behavior: the edge keeps qualifying on its own.
@@ -29,8 +31,12 @@ import { actionOf } from '@/reflex/contentTelemetry';
 import { shopperObject } from '@/tenancy/objects';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import type { Env } from '@/types/env';
+import { ownerFetch, currentOwnerConsent, currentProfileBirth, currentExternalRetention, requireConsentPurpose, pinRetention } from '@/identity/sessionAuthority';
+import { destinationRetentionCategory, type ExternalRetention } from '@/retention';
 import { CatalogService, priceBandOf, type Product } from './CatalogService';
 import type { ActionEvent } from './RealtimeSegmentEngine';
+import { connectorConfiguration, connectorDigest, connectorIdentity, connectorSecret, legacyConnectors, type OdpConfiguration } from '@/connectors/config';
+import { stageFromCounters } from './JourneyStage';
 
 /** The audiences the ODP team mirrored 1:1 with our edge keys (handoff 2026-07-03).
     GraphQL subset queries MUST enumerate names — unknown names risk validation
@@ -43,8 +49,68 @@ export const ODP_MIRRORED_AUDIENCES = [
   'late_journey_ready_to_buy',
 ] as const;
 
-export function odpEnabled(env: Env): boolean {
-  return Boolean(env.ODP_API_HOST && env.ODP_PUBLIC_KEY);
+export function isLegacyOdpTenant(tenant: TenantId): boolean {
+  return tenant === DEFAULT_TENANT;
+}
+
+export function odpEnabled(env: Env, tenant: TenantId): boolean {
+  try { return resolveOdp(env, tenant) !== null; } catch { return false; }
+}
+
+
+function resolveOdp(env: Env, tenant: string): { host: string; key: string; config?: OdpConfiguration } | null {
+  if (!tenant) return null;
+  if (legacyConnectors(env, tenant)) return env.ODP_API_HOST && env.ODP_PUBLIC_KEY
+    ? { host: env.ODP_API_HOST, key: env.ODP_PUBLIC_KEY } : null;
+  const config = connectorConfiguration(env, tenant).odp;
+  return config ? { host: config.apiHost.replace(/\/$/, ''), key: connectorSecret(env, config.publicKeyRef), config } : null;
+}
+
+async function admitOdp(env: Env, tenant: string, resolved: NonNullable<ReturnType<typeof resolveOdp>>, _bornAt: number): Promise<void> {
+  // The descriptor contains references, never the resolved secret. Each actual
+  // configured destination has its own policy and copies keep their source birth.
+  const category = await destinationRetentionCategory('odp', resolved.config ?? { apiHost: resolved.host, identityNamespace: 'legacy-vuid' });
+  currentExternalRetention(env, tenant, category);
+}
+
+export interface OdpState { odpContext?: string; odpSeed?: string[]; odpSeedAt?: number; odpRecentEvents?: Array<Record<string, unknown>> }
+/** Remove the previous source's contributions before adopting a current pin. No network. */
+export function projectedOdpSegments(segments: string[], previous: OdpState | null | undefined, current: OdpState): string[] {
+  return [...new Set([...segments.filter(s => !previous?.odpSeed?.includes(s)), ...(current.odpSeed ?? [])])];
+}
+/** Correct derived stage only when an old provider contribution is rejected. */
+export async function projectedOdpStage(env: Env, tenant: string, state: OdpState | null | undefined,
+  segments: string[], attributes: Record<string, unknown>, stage: string | null): Promise<string | null> {
+  const current = await projectOdpState(env, tenant, state);
+  return state?.odpSeed?.some(s => !current.odpSeed.includes(s))
+    ? stageFromCounters(attributes, projectedOdpSegments(segments, state, current)) : stage;
+}
+/** Every retained source must prove its own current mapping; another source's pin is not authority. */
+export async function projectOdpState(env: Env, tenant: string, state: (OdpState & { externalRetention?: ExternalRetention }) | null | undefined): Promise<Required<OdpState>> {
+  const empty = { odpContext: '', odpSeed: [] as string[], odpSeedAt: 0, odpRecentEvents: [] as Array<Record<string, unknown>> };
+  try {
+    const resolved = resolveOdp(env, tenant);
+    if (!resolved) return empty;
+    const context = resolved.config ? await connectorDigest(['odp-context-v1', tenant, resolved]) : 'legacy-demo';
+    if (resolved.config && state?.odpContext !== context) return { ...empty, odpContext: context };
+    if (state?.odpSeed?.length || state?.odpRecentEvents?.length) {
+      const category = await destinationRetentionCategory('odp', resolved.config ?? { apiHost: resolved.host, identityNamespace: 'legacy-vuid' });
+      pinRetention(env, state.externalRetention?.[category], tenant, category);
+    }
+    const allowed = resolved.config ? new Set(Object.values(resolved.config.audiences)) : null;
+    return { odpContext: context, odpSeed: (state?.odpSeed ?? []).filter(k => !allowed || allowed.has(k)),
+      odpSeedAt: state?.odpSeedAt ?? 0, odpRecentEvents: state?.odpRecentEvents?.slice() ?? [] };
+  } catch { return empty; }
+}
+
+export async function mergeOdpState(env: Env, tenant: string, first: (OdpState & { externalRetention?: ExternalRetention }) | null | undefined, second: (OdpState & { externalRetention?: ExternalRetention }) | null | undefined): Promise<Required<OdpState>> {
+  const [a, b] = await Promise.all([projectOdpState(env, tenant, first), projectOdpState(env, tenant, second)]);
+  return { odpContext: a.odpContext, odpSeed: [...new Set([...a.odpSeed, ...b.odpSeed])],
+    odpSeedAt: Math.max(a.odpSeedAt, b.odpSeedAt), odpRecentEvents: [...b.odpRecentEvents, ...a.odpRecentEvents].slice(-10) };
+}
+
+async function mappedIdentity(tenant: string, identity: OdpIdentity, config?: OdpConfiguration): Promise<string> {
+  return config ? connectorIdentity(tenant, config.identityNamespace, identityKeyOf(identity).key) : vuidFor(identity);
 }
 
 /**
@@ -113,8 +179,23 @@ function catalog(): CatalogService {
 
 /** Our internal action names → the ODP wire taxonomy the RTS conditions fire on. */
 export function mapActionToOdp(
-  event: ActionEvent
+  event: ActionEvent,
+  tenant: TenantId,
+  env?: Env,
 ): { type: string; action?: string; data: Record<string, unknown> } | null {
+  if (env && !legacyConnectors(env, tenant)) {
+    try {
+      const mapping = connectorConfiguration(env, tenant).odp?.actions[actionOf(event)];
+      if (!mapping) return null;
+      const data: Record<string, unknown> = {};
+      for (const [destination, source] of Object.entries(mapping.fields)) {
+        const value = Object.hasOwn(event.data ?? {}, source) ? event.data?.[source] : undefined;
+        if (typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))) data[destination] = value;
+      }
+      return { type: mapping.type, ...(mapping.action ? { action: mapping.action } : {}), data };
+    } catch { return null; }
+  }
+  if (!isLegacyOdpTenant(tenant)) return null;
   const data = event.data ?? {};
   const action = actionOf(event);
   const productId: string | undefined = data.productId ?? data.product_id ?? data.sku;
@@ -214,9 +295,12 @@ export function toRecentEventFlat(
 export function updateOdpRing(
   ring: Array<Record<string, unknown>>,
   event: ActionEvent,
-  nowMs: number
+  nowMs: number,
+  tenant: TenantId,
+  env?: Env,
 ): Array<Record<string, unknown>> {
-  const mapped = mapActionToOdp(event);
+  if (env ? !odpEnabled(env, tenant) : !isLegacyOdpTenant(tenant)) return [];
+  const mapped = mapActionToOdp(event, tenant, env);
   if (!mapped) return ring;
   const next = [...ring, toRecentEventFlat(mapped, nowMs)];
   const floorTs = Math.floor(nowMs / 1000) - 3300;
@@ -233,26 +317,29 @@ export function updateOdpRing(
  */
 export async function refreshOdpSeedIfDue(
   env: Env,
+  tenant: TenantId,
   identity: OdpIdentity,
   ring: Array<Record<string, unknown>>,
   current: { seed: string[]; seedAt: number },
   nowMs: number,
   membershipChanged: boolean
 ): Promise<{ seed: string[]; seedAt: number }> {
+  if (!odpEnabled(env, tenant)) return { seed: [], seedAt: 0 };
   const throttle = ring.length ? 10_000 : 120_000;
   if (!membershipChanged && nowMs - current.seedAt <= throttle) return current;
-  const fetched = await fetchOdpAudiences(env, identity, ring);
+  const fetched = await fetchOdpAudiences(env, tenant, identity, ring);
   return { seed: fetched ?? current.seed, seedAt: nowMs };
 }
 
-/** Serialize a flat object as a GraphQL literal (bare keys), pre-escaped for our
-    manually-built JSON body (strings land as \" in the body string). */
+/** A GraphQL object literal. JSON encoding belongs to the outer request body. */
 export function gqlObjectLiteral(obj: Record<string, unknown>): string {
   const parts: string[] = [];
   for (const [k, v] of Object.entries(obj)) {
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(k)) throw new Error('Invalid GraphQL field');
     if (v === undefined || v === null) continue;
-    if (typeof v === 'number') parts.push(`${k}: ${v}`);
-    else parts.push(`${k}: \\"${String(v).replace(/\\/g, '').replace(/"/g, '')}\\"`);
+    if (typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v))) {
+      parts.push(`${k}: ${JSON.stringify(v)}`);
+    } else throw new Error('Invalid GraphQL value');
   }
   return `{${parts.join(', ')}}`;
 }
@@ -265,28 +352,29 @@ export function gqlObjectLiteral(obj: Record<string, unknown>): string {
     hop) supplies `pushReceipt` and the receipt is delivered through it instead. */
 export async function forwardEventToOdp(
   env: Env,
+  tenant: TenantId,
   event: ActionEvent,
   identity: OdpIdentity,
   receiptId?: string,
   pushReceipt?: (data: { receiptId: string; status: number; ts: number; source: string }) => void,
-  /**
-   * The brand whose socket receives the receipt. Two brands share a visitor id,
-   * so without this the receipt for one is pushed to a socket the other is also
-   * addressed by.
-   */
-  tenant: TenantId = DEFAULT_TENANT,
 ): Promise<void> {
+  const admittedAt = Date.now();
+  const consent = await currentOwnerConsent();
+  if (consent) requireConsentPurpose(consent, 'tracking');
   try {
-    if (!odpEnabled(env)) return;
-    const mapped = mapActionToOdp(event);
+    const resolved = resolveOdp(env, tenant);
+    if (!resolved) return;
+    const mapped = mapActionToOdp(event, tenant, env);
     if (!mapped) return;
-    const vuid = await vuidFor(identity);
-    const res = await fetch(`${env.ODP_API_HOST}/v3/events`, {
+    await admitOdp(env, tenant, resolved, currentProfileBirth(tenant) ?? admittedAt);
+    const vuid = await mappedIdentity(tenant, identity, resolved.config);
+    const res = await ownerFetch(`${resolved.host}/v3/events`, {
+      redirect: 'error',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ODP_PUBLIC_KEY as string },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': resolved.key },
       body: JSON.stringify({ ...mapped, identifiers: { vuid } }),
     });
-    if (!res.ok) console.warn(`[odp] event forward ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok) console.warn('[odp] event forward HTTP', res.status);
     if (receiptId) {
       const receipt = { receiptId, status: res.status, ts: Date.now(), source: 'odp' };
       try {
@@ -307,7 +395,7 @@ export async function forwardEventToOdp(
       } catch { /* receipt push is chrome — never let it fail the forward */ }
     }
   } catch (e) {
-    console.warn('[odp] event forward failed:', e instanceof Error ? e.message : e);
+    console.warn('[odp] event forward failed');
   }
 }
 
@@ -318,17 +406,24 @@ export async function forwardEventToOdp(
  */
 export async function upsertOdpProfile(
   env: Env,
+  tenant: TenantId,
   identity: OdpIdentity,
   affinity: { dims?: Record<string, Record<string, number>>; audiences?: string[] },
   journeyStage?: string
 ): Promise<void> {
+  const consent = await currentOwnerConsent();
+  if (consent) requireConsentPurpose(consent, 'personalization');
   try {
-    if (!odpEnabled(env)) return;
-    const vuid = await vuidFor(identity);
+    const resolved = resolveOdp(env, tenant);
+    if (!resolved) return;
+    const bornAt = currentProfileBirth(tenant);
+    if (bornAt === undefined) throw new Error('Profile retention authority unavailable');
+    await admitOdp(env, tenant, resolved, bornAt);
+    const vuid = await mappedIdentity(tenant, identity, resolved.config);
     const dims = affinity.dims ?? {};
     const lines = dims.line ?? {};
     const dominant = Object.entries(lines).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
-    const attributes: Record<string, unknown> = {
+    const attributes: Record<string, unknown> = resolved.config ? { vuid } : {
       vuid,
       line_affinity_tabby: lines.Tabby ?? 0,
       silhouette_affinity_tote: dims.silhouette?.tote ?? 0,
@@ -336,14 +431,20 @@ export async function upsertOdpProfile(
       dominant_line: dominant,
       journey_stage: journeyStage ?? '',
     };
-    const res = await fetch(`${env.ODP_API_HOST}/v3/profiles`, {
+    if (resolved.config) for (const [field, mapping] of Object.entries(resolved.config.profile)) {
+      if ('journey' in mapping) attributes[field] = journeyStage ?? '';
+      else if ('value' in mapping) attributes[field] = dims[mapping.dimension]?.[mapping.value] ?? 0;
+      else attributes[field] = Object.entries(dims[mapping.dimension] ?? {}).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+    }
+    const res = await ownerFetch(`${resolved.host}/v3/profiles`, {
+      redirect: 'error',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ODP_PUBLIC_KEY as string },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': resolved.key },
       body: JSON.stringify([{ attributes }]),
     });
-    if (!res.ok) console.warn(`[odp] profile upsert ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok) console.warn('[odp] profile upsert HTTP', res.status);
   } catch (e) {
-    console.warn('[odp] profile upsert failed:', e instanceof Error ? e.message : e);
+    console.warn('[odp] profile upsert failed');
   }
 }
 
@@ -360,38 +461,46 @@ export async function upsertOdpProfile(
  */
 export async function fetchOdpAudiences(
   env: Env,
+  tenant: TenantId,
   identity: OdpIdentity,
   recentEvents?: Array<Record<string, unknown>>
 ): Promise<string[] | null> {
+  const consent = await currentOwnerConsent();
+  if (consent) requireConsentPurpose(consent, 'personalization');
   try {
-    if (!odpEnabled(env)) return null;
-    const vuid = await vuidFor(identity);
-    const subset = ODP_MIRRORED_AUDIENCES.map((k) => `\\"${k}\\"`).join(',');
+    const resolved = resolveOdp(env, tenant);
+    if (!resolved) return null;
+    const bornAt = currentProfileBirth(tenant);
+    if (bornAt === undefined) throw new Error('Profile retention authority unavailable');
+    await admitOdp(env, tenant, resolved, bornAt);
+    const vuid = await mappedIdentity(tenant, identity, resolved.config);
+    const subset = (resolved.config ? Object.keys(resolved.config.audiences) : ODP_MIRRORED_AUDIENCES).map(k => JSON.stringify(k)).join(',');
     const recentArg = recentEvents && recentEvents.length
       ? `, recent_events: [${recentEvents.map(gqlObjectLiteral).join(', ')}]`
       : '';
-    const query = `query { customer(vuid: \\"${vuid}\\") { audiences(subset: [${subset}]${recentArg}) { edges { node { name state } } } } }`;
-    const res = (await Promise.race([
-      fetch(`${env.ODP_API_HOST}/v3/graphql`, {
+    const query = `query { customer(vuid: ${JSON.stringify(vuid)}) { audiences(subset: [${subset}]${recentArg}) { edges { node { name state } } } } }`;
+    const res = await ownerFetch(`${resolved.host}/v3/graphql`, {
+        redirect: 'error',
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': env.ODP_PUBLIC_KEY as string },
-        body: `{"query":"${query}"}`,
-      }),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('odp seed timeout')), 1500)),
-    ])) as Response;
+        headers: { 'Content-Type': 'application/json', 'x-api-key': resolved.key },
+        body: JSON.stringify({ query }),
+      }, 1500);
     if (!res.ok) return null;
     const json = (await res.json()) as {
       data?: { customer?: { audiences?: { edges?: Array<{ node: { name: string; state: string } }> } } };
       errors?: unknown[];
     };
     if (json.errors?.length) {
-      console.warn('[odp] seed graphql errors:', JSON.stringify(json.errors).slice(0, 200));
+      console.warn('[odp] seed graphql errors');
       return null;
     }
     const edges = json.data?.customer?.audiences?.edges ?? [];
-    return edges.filter((e) => e.node.state === 'qualified').map((e) => e.node.name);
+    return edges.filter((e) => e.node.state === 'qualified').flatMap((e) => {
+      if (!resolved.config) return [e.node.name];
+      return Object.hasOwn(resolved.config.audiences, e.node.name) ? [resolved.config.audiences[e.node.name]!] : [];
+    });
   } catch (e) {
-    console.warn('[odp] seed failed:', e instanceof Error ? e.message : e);
+    console.warn('[odp] seed failed');
     return null;
   }
 }

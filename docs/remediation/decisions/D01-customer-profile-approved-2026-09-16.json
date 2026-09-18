@@ -1,0 +1,9 @@
+{
+  "decision": "D01",
+  "actor_id": "g0-user",
+  "at": "2026-09-16T20:50:09.046Z",
+  "request": "Select strict customer profile in existing entry point, or separate customer entry and deployment configuration.",
+  "answer": "Strict customer profile in the existing entry point (recommended; smaller change)",
+  "outcome": "Implement local strict customer profile in existing entry point with explicit permitted APIs/assets, omitted demo bindings and prohibited demo job refusal.",
+  "limits": "Local implementation choice only. No resource mutation, deployment, credential/customer-data operation, historical-object deletion or release/resource attestation is approved."
+}

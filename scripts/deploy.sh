@@ -1,73 +1,10 @@
-#!/bin/bash
-
-set -e
-
-ENVIRONMENT=${1:-default}
-
-echo "🚀 Deploying to $ENVIRONMENT environment..."
-
-# Run type check
-echo "🔍 Running type check..."
-npm run typecheck
-
-# Run linter
-echo "✨ Running linter..."
-npm run lint
-
-# Run tests
-echo "🧪 Running tests..."
-npm run test
-
-# Deploy
-echo "📦 Deploying to Cloudflare Workers..."
-if [ "$ENVIRONMENT" = "staging" ]; then
-    # An unfilled id looks like  id = "<staging-…>"; the comment that names the placeholders must not trip this.
-    if grep -Eq '^\s*(id|database_id)\s*=\s*"<staging-' wrangler.toml; then
-        echo "❌ staging is declared but not provisioned: placeholders remain in [env.staging]."
-        echo "   Run: bash scripts/provision-staging.sh   (creates the resources and fills the ids)"
-        exit 1
-    fi
-    npm run build:meridian && npm run build:sdk
-    wrangler deploy --env staging
-elif [ "$ENVIRONMENT" = "production" ]; then
-    # Provisioned 2026-09-05 with scripts/provision-stamp.sh production; an unfilled id means it was not.
-    if grep -Eq '^\s*(id|database_id)\s*=\s*"<production-' wrangler.toml; then
-        echo "❌ production is declared but not provisioned: placeholders remain in [env.production]."
-        echo "   Run: bash scripts/provision-stamp.sh production --admin-email <you>"
-        exit 1
-    fi
-    npm run build:meridian && npm run build:sdk
-    wrangler deploy --env production
-else
-    # The demo worker runs AUTH_MODE=enforced (wrangler.toml [vars]). Enforced with
-    # no SDK_KEYS secret means every shopper call answers 401 and every demo page
-    # goes dark, so refuse to ship that combination. The pages carry the site key
-    # `demo-site`; the secret is the allow-list that recognises it:
-    #   printf '*:demo-site' | wrangler secret put SDK_KEYS
-    # Rollback for the whole gate is one line: AUTH_MODE = "open" in [vars].
-    if grep -Eq '^AUTH_MODE *= *"enforced"' wrangler.toml; then
-        if ! wrangler secret list 2>/dev/null | grep -q '"SDK_KEYS"'; then
-            echo "❌ AUTH_MODE is enforced but the SDK_KEYS secret is not set on this worker."
-            echo "   Every demo page would answer 401. Set it first:"
-            echo "     printf '*:demo-site' | wrangler secret put SDK_KEYS"
-            echo "   or set AUTH_MODE = \"open\" in [vars] to ship without the gate."
-            exit 1
-        fi
-    fi
-    npm run build:meridian && npm run build:sdk
-    wrangler deploy
+#!/usr/bin/env bash
+# npm deploy uses this guarded artifact workflow; no rebuild or default target.
+set -eu
+if [ "$#" -lt 1 ]; then
+  builtin printf '%s\n' 'Require staging|production and protected artifact workflow arguments.' >&2
+  exit 2
 fi
-
-echo "✅ Deployment to $ENVIRONMENT completed successfully!"
-
-# Get the deployed URL
-DEPLOYED_URL=$(wrangler whoami | grep -o 'https://[^/]*\.workers\.dev' | head -1)
-if [ ! -z "$DEPLOYED_URL" ]; then
-    echo "🌐 Your worker is available at: $DEPLOYED_URL"
-fi
-
-echo ""
-echo "🔗 Useful post-deployment commands:"
-echo "  wrangler tail                    - View real-time logs"
-echo "  wrangler kv key list --binding CACHE  - List cache keys"
-echo "  curl $DEPLOYED_URL/health        - Check health status"
+case "$1" in staging|production) stamp_environment=$1 ;; *) exit 2 ;; esac
+shift
+exec node "$(dirname "$0")/stamp-workflow.mjs" --environment "$stamp_environment" "$@"

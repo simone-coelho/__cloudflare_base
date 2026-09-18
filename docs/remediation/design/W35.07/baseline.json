@@ -1,0 +1,16 @@
+{
+  "task_id": "W35.07",
+  "at": "2026-09-16T04:22:48.265Z",
+  "basis": "Actual-source review by three independent Astra/xhigh scouts and a distinct Astra/xhigh preflight; no deployed-data exposure or pre-remediation runtime reproduction is claimed.",
+  "defect": "V5 scans and deletes session copies before exact source/object generation proof; its session witness omits raw generation, a permanent same-job object receipt can mask a fresh successor SID, and rejected/accepted v5 extra plans share an ambiguous numeric cursor.",
+  "files": {
+    "src/durable-objects/ShopperReflex.ts": "5ea9b3a0b4d32577f7eba602ec67f8c662e4091f476d2acb1071b71b519aeaf3",
+    "src/identity/erase.ts": "caeee8658ba74903c0915c267b373081d0068cbe24c5bf6a2e372736e6fe7f3e",
+    "src/services/SessionManager.ts": "19faab942934a61c7ef13db67e62fcb06228346be85abed9d3b71ac00d37d186",
+    "src/routes/realtime.sdkContract.test.ts": "eeb1ef6b7cd6e853ee4e714e3eaa63af00fc49a15c38b81b628786d164424c0c",
+    "src/routes/identity.test.ts": "fe7ca153df7e39f174b7c1cdedbbcc9acad0796e73daaa9976917433d1cebec4"
+  },
+  "performance_budget": "One strict KV read per frozen or compared session, one serialized object session-eligibility call before each v6 session delete, and existing bounded erasure checkpoints only. Serving paths gain no call. Capacity and latency remain unqualified.",
+  "rollback": "Reviewed inverse only on the five pinned source/test files. V6 roots, session witnesses and tagged-v5 pages require a compatible reader or explicit reconciliation before older code runs.",
+  "limitations": "Prospective DO-authorized eligibility and guarded exact snapshots only. Legacy concurrent KV writers/session-host authority, unseen SID reuse, legacy/grantless cleanup, migration/cutover/deployment, external/physical erasure, retention/capacity, customer/native/browser/SLO/release and full W35/F06/F14 remain open."
+}

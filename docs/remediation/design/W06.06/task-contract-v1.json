@@ -1,0 +1,144 @@
+{
+  "id": "W06.06",
+  "package_id": "W06",
+  "title": "Enforce erasure cutoff inside the decision ring",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Enforce the retained tenant/visitor erasure cutoff inside DecisionRing append, recent projection and outcome attribution, including its existing decision index.",
+  "read_paths": [
+    "src/durable-objects/DecisionRing.ts",
+    "src/learn",
+    "src/ledger",
+    "src/content",
+    "src/routes/decisions.ts",
+    "src/types/env.ts",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/durable-objects/DecisionRing.ts",
+    "src/learn/learn.test.ts",
+    "src/learn/holdoutArms.test.ts",
+    "docs/remediation/evidence/W06.06/worker.json"
+  ],
+  "non_goals": [
+    "No D03 cross-store transaction, D06 retention/re-entry policy, stale capability revocation, orphan/D1/external/seen cleanup, full W06, customer or release acceptance.",
+    "Recent reads project safe records without promising physical deletion. Preserve existing 60ms fatigue fallback and multi-brand tenant/visitor scope; no new owner schema or external recent HTTP-status promise.",
+    "One production module and two existing fixtures only; no new harness, broad suite, deploy, credentials/customer data, commit/push or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W06.06-C1",
+      "description": "Recent projections exclude ring and index entries at or before the fresh retained cutoff, including index-only valid stored state; inconsistent/malformed stored scope and unavailable/corrupt barrier disclose no records.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.06-C2",
+      "description": "Serialized append excludes delayed pre-cutoff rows before persistence, and outcome attribution excludes old outcomes and stored pre-cutoff decisions before credits. Preserve post-cutoff, holdout, tenant/visitor isolation, reset and failed-save safety.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.06-C3",
+      "description": "Independent frozen-source review and exact existing K1 verify C1-C2 actual effects, expected existing positive behavior, unchanged timeout and explicit concurrency/physical/receipt limitations; review worker compiler/scoped diff evidence.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.06-K1",
+      "required": true,
+      "criterion_ids": [
+        "W06.06-C1",
+        "W06.06-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/learn.test.ts src/learn/holdoutArms.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest and actual DecisionRing with synthetic DO/R2/LearnStats seams; no network.",
+      "workload": "Two existing affected fixtures; inclusive cutoffs, persisted ring/index-only state, append/outcome effects, missing/corrupt/mixed scope, failure recovery and holdout positives. Worker app noEmit/scoped diff; no SLO claim.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.06-K2",
+      "required": true,
+      "criterion_ids": [
+        "W06.06-C3"
+      ],
+      "command": "Independent frozen W06.06 source and worker-proof review; exact K1 once, verify relevant artifact pins and preserve concise review.json.",
+      "runtime": "Independent local source review and actual DO with synthetic storage.",
+      "workload": "C1-C3 semantic review of three-file diff, relevant dependency scope, compiler evidence and existing timeout; exact K1 once, no broader checks.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W06.05",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Strict exact retained tombstone reader and caller-side sequential replay suppression.",
+      "rationale": "Reuse current shared helper; this task addresses residual persisted consumers and does not claim previous whole-task acceptance on changed dependencies."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future cross-store concurrent authority.",
+      "rationale": "The local serialized cutoff read is not a transaction with erasure writers."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved retention and re-entry policy.",
+      "rationale": "Keep existing inclusive point-in-time semantics without a new lifecycle decision."
+    }
+  ],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "contract_digest": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0606-worker",
+    "independent_reviewer": "w0606-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "files": [],
+    "configuration": null,
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement the admitted DecisionRing cutoff repair, run exact K1/app noEmit, freeze for independent review."
+  }
+}

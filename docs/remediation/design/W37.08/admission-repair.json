@@ -1,0 +1,70 @@
+{
+  "at": "2026-09-09T15:09:50.886Z",
+  "reason": "Repair unvalidated amendment metadata, preserving exact rejected journal entry and prior artifact status. No implementation/test assertion or accepted history is changed. Earlier checker595 passed before shared edits; checker599 failed and is not approval.",
+  "rejected_check": {
+    "exit_code": 1,
+    "output": "Tracker INVALID at599: Journal597 missing blocked.reason/owner/next_action; prior W37.07 artifact remained recorded after proof qualification, causing six expected source drift errors."
+  },
+  "journal_entry": {
+    "before": {
+      "seq": 597,
+      "kind": "task_transition",
+      "task_id": "W37.08",
+      "from": "in_progress",
+      "to": "blocked",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w3708-worker",
+          "run_id": "/root/w3708_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w3708-reviewer",
+          "run_id": "/root/w3708_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Amend bounded CORS metadata ordering before editing index; independent source confirmation, no new policy or infrastructure.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-09T15:07:38.200Z"
+    },
+    "after": {
+      "seq": 597,
+      "kind": "task_transition",
+      "task_id": "W37.08",
+      "from": "in_progress",
+      "to": "blocked",
+      "assignments": {
+        "implementer": {
+          "actor_id": "w3708-worker",
+          "run_id": "/root/w3708_worker"
+        },
+        "independent_reviewer": {
+          "actor_id": "w3708-reviewer",
+          "run_id": "/root/w3708_review"
+        },
+        "lead": {
+          "actor_id": "w01-lead",
+          "run_id": "/root"
+        }
+      },
+      "reason": "Amend bounded CORS metadata ordering before editing index; independent source confirmation, no new policy or infrastructure.",
+      "actor_id": "w01-lead",
+      "at": "2026-09-09T15:07:38.200Z",
+      "blocked": {
+        "reason": "Concrete shared-host CORS preflight defect requires adding untouched index.ts before implementation.",
+        "owner": "w01-lead",
+        "next_action": "Approve seven-file plan-v2 and admission checker before index.ts edit."
+      }
+    }
+  },
+  "prior_task_artifact": {
+    "task_id": "W37.07",
+    "digest": "acfe8350927d91bb855ae7f0a0080eea11071d0c6ae50bfb3cee8df8b671d367",
+    "before_status": "recorded",
+    "after_status": "revalidation_required"
+  },
+  "superseding_check": "Pending after this recorded correction; no backdated approval."
+}

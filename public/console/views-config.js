@@ -1,3 +1,4 @@
+/* eslint-env browser */
 // public/console/views-config.js
 // ---------------------------------------------------------------------------
 // The two configuration screens, migrated into the application (doc 28 §3.1).
@@ -6,7 +7,7 @@
 //               for, how long interest lasts, when a shopper joins an audience
 //               and when they leave, the registry, and the safety limits. One
 //               versioned document (`reflex`), saved as a patch with a note.
-//   Slot rules  the four rules that sit on a slot strategy beside its weights:
+//   Slot rules  dimension weights and the rules on a slot strategy:
 //               journey stage, freshness, fatigue and diversity, plus the
 //               merchandising multipliers and how many pieces the slot shows.
 //
@@ -109,7 +110,7 @@
     cfg.timer = setTimeout(async () => {
       const patch = buildPatch();
       if (!Object.keys(patch).length) { cfg.errors = []; cfg.checking = false; C.render(); return; }
-      const r = await C.call(`/config/reflex/validate${C.query({ scope: S.scope })}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ patch }) });
+      const r = await C.call(`/config/reflex/validate${C.query({ scope: C.configScope() })}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ patch }) });
       cfg.errors = r.data.valid ? [] : r.data.errors || ['The settings as drafted were refused.'];
       cfg.checking = false;
       C.render();
@@ -117,9 +118,10 @@
     C.render();
   }
   async function loadConfig() {
-    const { data } = await C.call(`/config/reflex${C.query({ scope: S.scope })}`);
-    cfg.base = data.config || null;
-    cfg.draft = data.config ? copy(data.config) : null;
+    const { data } = await C.call(`/config/reflex${C.query({ scope: C.configScope() })}`);
+    cfg.authored = C.authored(data);
+    cfg.base = data.authored || null;
+    cfg.draft = data.authored ? copy(data.authored) : null;
     cfg.revision = data.revision || 0;
     cfg.source = data.source || 'compiled-default';
     cfg.inherited = data.inherited || [];
@@ -129,10 +131,10 @@
   async function saveConfig(note) {
     const patch = buildPatch();
     if (!Object.keys(patch).length) return;
-    const res = await C.write(`/config/reflex${C.query({ scope: S.scope })}`, 'PATCH', { patch, note });
+    const res = await C.write(`/config/reflex${C.query({ scope: C.configScope() })}`, 'PATCH', { patch, note }, cfg.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     document.getElementById('note').value = '';
-    C.flash(`Saved as revision ${fmt(res.data.revision)}. Live now, on ${res.data.version}.`);
+    C.flash(`Saved as revision ${fmt(res.data.revision)}. Published as ${res.data.version}; serving refreshes within 30 seconds.`);
     await loadConfig();
   }
 
@@ -250,7 +252,32 @@
   });
 
   // ═══════════════════════════════════════════════════════ Slot rules ════════
-  const rules = { doc: null, draft: null, revision: 0, errors: [], checking: false, timer: null };
+  // Shared by Rules and the existing History rollback response, using text only.
+  C.pinFeedback = (report, label) => {
+    const valid = report && report.schema === 'slot-pin-diagnostics/v1' && report.advisory === true;
+    const count = value => Number.isSafeInteger(value) && value >= 0;
+    const reasons = { missing_piece: 'Pinned piece is missing from this catalog.', slot_type: 'Pinned piece does not allow this slot type.', currently_ineligible: 'Pinned piece is currently outside lifecycle, publish-window or stock eligibility.', off_limits: 'Pin is dormant: this slot is off-limits and receives no engine decision.', excluded: 'Pinned piece is explicitly excluded from this slot and cannot be served.', type_not_allowed: 'Pinned piece has a rendering type not allowed in this slot.', excluded_tag: 'Pinned piece matches an exact excluded tag in this slot.' };
+    let detail = 'Pin check unavailable. No catalog-reference assurance is available; saving remains subject to normal slot validation.';
+    const warnings = [];
+    if (valid && report.status === 'not_required') detail = 'No pins in this document; catalog not read. This is not a checked-catalog result.';
+    if (valid && report.status === 'available' && report.catalog && report.catalog.source === 'stored' && count(report.catalog.revision) && report.catalog.revision > 0
+      && (report.slotsRevision === null || (count(report.slotsRevision) && report.slotsRevision > 0))
+      && count(report.warningCount) && count(report.omittedWarningCount) && Array.isArray(report.warnings) && report.warnings.length <= 50
+      && report.warningCount === report.warnings.length + report.omittedWarningCount
+      && report.warnings.every(w => w && count(w.pageIndex) && count(w.slotIndex) && (w.pinIndex === undefined || count(w.pinIndex) && w.pinIndex < 50) && Object.hasOwn(reasons, w.reason))
+      && typeof report.checkedAt === 'string' && report.checkedAt.length <= 64 && Number.isFinite(Date.parse(report.checkedAt))) {
+      detail = `${report.slotsRevision === null ? 'Draft' : `Slot revision ${fmt(report.slotsRevision)}`}; catalog revision ${fmt(report.catalog.revision)}, checked ${report.checkedAt.slice(0, 64)}. ${fmt(report.warningCount)} pin warnings; ${fmt(report.omittedWarningCount)} not shown.`;
+      for (const warning of report.warnings.slice(0, 50)) if (Number.isSafeInteger(warning.pageIndex) && Number.isSafeInteger(warning.slotIndex) && Object.hasOwn(reasons, warning.reason)) {
+        warnings.push(h('li', {}, `Page ${warning.pageIndex + 1}, slot ${warning.slotIndex + 1}${warning.pinIndex !== undefined ? `, pinned position ${warning.pinIndex + 1}` : ''}: ${reasons[warning.reason]}`));
+      }
+    }
+    return h('div', { class: 'msg note', 'data-pin-feedback': label }, h('strong', {}, `${label}: `), detail,
+      warnings.length ? h('ul', {}, ...warnings) : null,
+      h('div', { class: 'help' }, 'Advisory only, not atomic activation or guaranteed delivery. Scheduled pins remain authorable; runtime rechecks eligibility and never fills a refused pin arbitrarily.'));
+  };
+  const rules = { doc: null, draft: null, revision: 0, errors: [], checking: false, timer: null,
+    scope: '', load: 0, validation: 0, dimensions: [], registryError: '', pins: null, activation: null, exclusionEditors: new Map() };
+  const editorErrors = () => [...rules.exclusionEditors.values()].flatMap(fields => [...fields.values()].map(editor => editor.error)).filter(Boolean);
   const strategyOf = (doc) => {
     for (const [page, list] of Object.entries((doc && doc.pages) || {})) {
       const i = (list || []).findIndex((x) => x.slot === S.slot);
@@ -259,35 +286,61 @@
     return null;
   };
   function ruleCheck() {
+    if (!rules.draft || rules.scope !== S.scope) return;
     clearTimeout(rules.timer);
-    rules.checking = true;
+    rules.checking = true; rules.pins = null; rules.activation = null;
+    const scope = rules.scope, request = rules.load, generation = ++rules.validation, draft = rules.draft;
+    if (editorErrors().length) { rules.errors = editorErrors(); rules.checking = false; C.render(); return; }
     rules.timer = setTimeout(async () => {
-      const r = await C.call(`/content/slots/validate${C.query({ scope: S.scope })}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ document: rules.draft }) });
+      if (scope !== S.scope || request !== rules.load || generation !== rules.validation) return;
+      const r = await C.call(`/content/slots/validate${C.query({ scope })}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ document: draft }) });
+      if (scope !== S.scope || request !== rules.load || generation !== rules.validation) return;
       rules.errors = r.data.valid ? [] : r.data.errors || ['The slot document as drafted was refused.'];
+      rules.pins = r.data.valid ? r.data.pinDiagnostics || null : null;
       rules.checking = false;
       C.render();
     }, 350);
     C.render();
   }
-  async function loadRules() {
+  async function loadRules(activation = null) {
     // Same rule as the dials: a failed read says so and paints an empty document,
     // rather than leaving the screen on the word "Loading" for ever.
-    const res = await C.content('/slots');
+    const request = ++rules.load, scope = S.scope;
+    clearTimeout(rules.timer);
+    ++rules.validation; rules.pins = null; rules.activation = activation;
+    rules.exclusionEditors.clear();
+    rules.scope = scope; rules.doc = null; rules.draft = null; rules.dimensions = []; rules.checking = false;
+    C.render();
+    const [res, registry] = await Promise.all([
+      C.content('/slots'), C.call(`/config/reflex${C.query({ scope: C.configScope() })}`),
+    ]);
+    if (request !== rules.load || scope !== S.scope) return;
+    const dimensions = registry.data && registry.data.config && registry.data.config.dimensions;
+    const validRegistry = registry.ok && Array.isArray(dimensions)
+      && dimensions.every(d => d && typeof d.key === 'string' && d.key.length > 0);
+    rules.dimensions = validRegistry ? [...new Set(dimensions.map(d => d.key))] : [];
+    rules.registryError = rules.dimensions.length ? '' : 'Dimension editor unavailable: this brand’s dimension registry could not be read or has no dimensions. Stored weights are preserved; no replacement registry is assumed.';
     const data = res.data || {};
     rules.failed = res.ok ? '' : (res.status === 401 || res.status === 403
       ? 'Sign in at the top right to read this brand\u2019s slot document.'
       : `Could not read the slot document (${res.status || 'no answer'}).`);
+    rules.authored = res.ok ? C.authored(data) : null;
     rules.doc = data.document || { pages: {} };
     rules.draft = copy(rules.doc);
     rules.revision = data.revision || 0;
+    rules.pins = res.ok ? data.pinDiagnostics || null : null;
     rules.errors = [];
+    C.render();
   }
   async function saveRules(note) {
-    const res = await C.write(`/content/slots${C.query({ scope: S.scope })}`, 'PUT', { document: rules.draft, note });
+    if (!rules.draft || rules.scope !== S.scope || rules.checking || rules.errors.length || editorErrors().length) return;
+    const scope = rules.scope, request = rules.load, generation = rules.validation;
+    const res = await C.write(`/content/slots${C.query({ scope: S.scope })}`, 'PUT', { document: rules.draft, note }, rules.authored);
+    if (scope !== S.scope || request !== rules.load || generation !== rules.validation) return;
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     document.getElementById('note').value = '';
-    C.flash(`Saved as slots revision ${fmt(res.data.revision)}. Live on the next decision.`);
-    await Promise.all([loadRules(), C.loadSlots()]);
+    C.flash(`Saved as slots revision ${fmt(res.data.revision)}. Pin feedback is advisory; delivery is checked at runtime.`);
+    await Promise.all([loadRules({ report: res.data.pinDiagnostics || null, revision: res.data.revision }), C.loadSlots()]);
   }
   /** How many settings differ, so the bar says "3 changes" and not "1 change" for any edit at all. */
   function countDiff(a, b) {
@@ -296,7 +349,7 @@
     for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) n += countDiff(a[k], b[k]);
     return n;
   }
-  const ruleChanged = () => countDiff(rules.doc, rules.draft);
+  const ruleChanged = () => countDiff(rules.doc, rules.draft) + editorErrors().length;
 
   /** A rule is off when it is absent. Switching it on writes its defaults; switching it off deletes it. */
   function toggle(name, on, defaults, target) {
@@ -315,31 +368,92 @@
 
   C.view({
     id: 'rules', group: 'This slot', title: 'Slot rules', heading: 'The rules on this slot',
-    hint: 'Beside the weights, four rules shape what this slot may show: whether a piece suits where the shopper is, how fresh it is, how often she has already seen it, and how much of one thing the slot may show at once.',
+    hint: 'Dimension weights set how interests count in this slot. Journey stage, freshness, fatigue, diversity and merchandising can then shape its ranking.',
     async enter() { await loadRules(); },
     render(host) {
-      if (!rules.draft) { host.append(h('div', { class: 'msg err' }, 'The slot document could not be read, so there is nothing to show. Reload the page; if it happens again the platform is not answering.')); return; }
+      if (rules.scope === S.scope) {
+        if (rules.activation) host.append(C.pinFeedback(rules.activation.report, `Saved revision ${fmt(rules.activation.revision)} response`));
+        host.append(rules.checking ? h('div', { class: 'msg note' }, 'Pin check pending for this draft; previous feedback cleared.')
+          : C.pinFeedback(rules.pins, ruleChanged() ? 'Draft pin check' : 'Current pin check'));
+      }
+      if (!rules.draft || rules.scope !== S.scope) { host.append(h('div', { class: 'msg err' }, 'The slot document could not be read, so there is nothing to show. Reload the page; if it happens again the platform is not answering.')); return; }
       if (rules.failed) host.append(h('div', { class: 'msg note' }, rules.failed));
       if (!S.slot) { host.append(h('div', { class: 'empty' }, 'Choose a slot in the rail.')); return; }
       const found = strategyOf(rules.draft);
       if (!found) { host.append(h('div', { class: 'empty' }, `${S.slot} is not in the slot document for this brand.`)); return; }
       const st = found.strategy;
-      C.dirty({ count: ruleChanged(), checking: rules.checking, blocked: rules.errors.length > 0, save: saveRules, discard: () => { rules.draft = copy(rules.doc); rules.errors = []; C.render(); } });
+      C.dirty({ count: ruleChanged(), checking: rules.checking, blocked: rules.errors.length > 0, save: saveRules, discard: () => { rules.draft = copy(rules.doc); rules.errors = []; rules.exclusionEditors.clear(); ruleCheck(); } });
       if (rules.errors.length) host.append(h('div', { class: 'msg err' }, 'This change cannot be saved:', h('ul', {}, ...rules.errors.map((e) => h('li', {}, String(e))))));
-      host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' }, `${S.slot} on ${found.page}, from revision ${fmt(rules.revision)} of the slot document.`));
+      host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' }, `${S.slot} on ${found.page}, from revision ${fmt(rules.revision)} of the slot document.`,
+        ' ', h('a', { class: 'link', href: C.href('history') }, 'History and rollback')));
 
       const n = (label, help, value, onChange, key, opts, derived) => trow({ name: label, help, value, changed: false, key, unit: (opts || {}).unit, min: (opts || {}).min, max: (opts || {}).max, step: (opts || {}).step, derived, onChange });
 
       host.append(card('What this slot shows',
-        'How many pieces it fills, and the piece a merchandiser has pinned there, which outranks everything the engine would choose.',
-        n('Pieces shown at once', 'The slot takes this many from the ranking.', st.take, (v) => { st.take = v ?? 1; ruleCheck(); }, 'take', { min: 1, step: 1, unit: 'pieces' }),
-        h('div', { class: 'kv' }, h('span', { class: 'k' }, 'Pinned'), h('span', { class: 'v' }, st.pinnedPieceId ? `${st.pinnedPieceId}: the engine does not rank this slot at all` : 'nothing pinned; the engine ranks the slot'))));
+        st.offLimits ? 'Off-limits: no piece is selected; pin and ranking settings are dormant.' : 'Pins occupy the first positions in exact order. If any required prefix pin fails, the whole slot is refused: no shifted positions or arbitrary replacement.',
+        n('Pieces shown at once', 'Total capacity, including pinned first positions and the ranked remainder.', st.take, (v) => { st.take = v ?? 1; ruleCheck(); }, 'take', { min: 1, step: 1, unit: 'pieces' }),
+        h('div', { class: 'kv' }, h('span', { class: 'k' }, 'Pinned'), h('span', { class: 'v' }, st.offLimits ? `${JSON.stringify(st.pinnedPieceIds ?? st.pinnedPieceId ?? [])}; dormant while off-limits` : st.pinnedPieceIds ? `${JSON.stringify(st.pinnedPieceIds)} first; ${Math.max(0, st.take - st.pinnedPieceIds.length)} ranked positions` : st.pinnedPieceId ? `${st.pinnedPieceId}: the engine does not rank this slot at all` : 'nothing pinned; the engine ranks the slot'))));
+
+      const scope = rules.scope, draft = rules.draft;
+      const currentEditor = () => scope === S.scope && draft === rules.draft && S.slot === st.slot && strategyOf(draft)?.strategy === st;
+      const off = h('select', { class: 'small', 'data-focus-key': 'governance.off', disabled: !C.canEdit() || null },
+        h('option', { value: 'false', selected: st.offLimits ? null : true }, 'Engine may select'),
+        h('option', { value: 'true', selected: st.offLimits ? true : null }, 'Off-limits'));
+      off.addEventListener('change', () => { if (!currentEditor()) return; st.offLimits = off.value === 'true'; ruleCheck(); });
+      const jsonEditor = (field, focus, neutral, syntax, nullDeletes = false) => {
+        const input = h('textarea', { class: 'txt', rows: 3, 'data-focus-key': focus, disabled: !C.canEdit() || null });
+        input.value = rules.exclusionEditors.get(st)?.get(field)?.text ?? JSON.stringify((field === 'pinnedPieceId' ? st.pinnedPieceIds ?? st[field] : st[field]) ?? neutral);
+        input.addEventListener('input', () => {
+          if (!currentEditor()) return;
+          const editor = { text: input.value, error: '' };
+          try {
+            const value = JSON.parse(input.value);
+            if (field === 'pinnedPieceId') {
+              delete st.pinnedPieceId; delete st.pinnedPieceIds;
+              if (Array.isArray(value)) st.pinnedPieceIds = value;
+              else if (value !== null) st.pinnedPieceId = value;
+            } else if (nullDeletes && value === null) delete st[field]; else st[field] = value;
+          } catch { editor.error = syntax; }
+          let fields = rules.exclusionEditors.get(st);
+          if (!fields) { fields = new Map(); rules.exclusionEditors.set(st, fields); }
+          fields.set(field, editor);
+          ruleCheck();
+        });
+        return input;
+      };
+      const excluded = jsonEditor('excludedPieceIds', 'governance.excluded', [], 'Excluded piece IDs must be a valid JSON array. Use [] to clear; malformed text cannot be saved.');
+      const tagEditor = jsonEditor('excludedTags', 'governance.tags', [], 'Excluded tags must be a valid JSON array of dimension/value pairs. Use [] to clear.');
+      const typeEditor = jsonEditor('allowedTypes', 'governance.types', null, 'Allowed rendering types must be a valid JSON array or null to remove the limit.', true);
+      const pinEditor = jsonEditor('pinnedPieceId', 'governance.pin', null, 'Pins must be a valid JSON string, ordered array or null to clear.', true);
+      host.append(card('Hard slot controls',
+        'These gates apply on every arm before pins, scoring and diversity. No decision leaves the site’s existing default in place; no fallback asset is selected.',
+        h('div', { class: 'dial' }, h('div', {}, h('div', { class: 'name' }, 'Off-limits'), h('div', { class: 'help' }, 'No engine candidates, decisions or records. Pin and ranking settings remain stored but dormant.')), off),
+        st.offLimits ? h('div', { class: 'msg note' }, 'Off-limits: the pin and all ranking settings below are dormant. Re-enabling must pass current pin validation.') : null,
+        h('div', { class: 'name' }, 'Pinned internal piece IDs (JSON string, array or null)'), pinEditor,
+        h('div', { class: 'help' }, 'Exact IDs, including spaces and escapes. A string keeps the single-pin take-1 contract; an ordered array pins the first positions, up to 50 distinct nonempty IDs and no more than total take. [] or null clears. This editor never changes take automatically. One invalid required prefix pin refuses the whole slot; tag/type conflicts are catalog warnings and runtime refusals, not replacements.'),
+        h('div', { class: 'name' }, 'Excluded internal piece IDs (JSON array)'), excluded,
+        h('div', { class: 'help' }, 'Exact internal catalog IDs, not customer IDs or tags. No trimming or case conversion. Up to 1000 distinct IDs of 1–1024 UTF-16 units; [] clears. An active pin cannot name an excluded ID.'),
+        h('div', { class: 'name' }, 'Excluded tags (JSON pair array)'), tagEditor,
+        h('div', { class: 'help' }, 'Any exact {"dimension":"…","value":"…"} match excludes a piece. Up to 1000 distinct pairs; both strings 1–1024 UTF-16 units. [] clears. No vocabulary, trimming or case conversion. Explicit own tags match literally; only absent contentType uses the safe rendering-type fallback on every arm.'),
+        h('div', { class: 'name' }, 'Allowed rendering types (JSON array or null)'), typeEditor,
+        h('div', { class: 'help' }, 'Matches piece.type exactly, not tags.contentType. Use 1–1000 distinct strings of 1–1024 UTF-16 units; [] is invalid, null removes the limit. Saved controls apply when the serving worker reads that revision; caches may still hold an earlier revision.')));
+
+      const unregistered = Object.keys(st.weights).filter(key => !rules.dimensions.includes(key));
+      host.append(card('How much each interest counts in this slot',
+        'Each matching interest strength is multiplied by its dimension weight, then added to the score. Weights are independent, not percentages that must add to 100. Zero switches that contribution off; it does not exclude a piece.',
+        st.pinnedPieceId || st.pinnedPieceIds?.length ? h('div', { class: 'msg note' }, 'These weights apply only to the ranked remainder, never to pinned positions. Fully pinned or off-limits slots keep them dormant.') : null,
+        rules.registryError ? h('div', { class: 'msg note' }, rules.registryError) : null,
+        ...rules.dimensions.map((key, index) => n(`Weight on ${key}`, '0 is off; 1 counts the full interest strength. Clearing the field sets 0.',
+          st.weights[key] ?? 0, value => { st.weights[key] = value ?? 0; ruleCheck(); }, `weight:${index}`, { min: 0, max: 1, step: 0.05 })),
+        unregistered.length ? h('div', { class: 'msg note' },
+          'Stored weights outside the loaded registry are read-only here. They are preserved, not activated or removed by this editor; only matching dimensions in decision inputs can contribute.',
+          ...unregistered.map(key => h('div', { class: 'kv' }, h('span', { class: 'k' }, key), h('span', { class: 'v' }, dec(st.weights[key]))))) : null));
 
       host.append(ruleCard('Where the shopper is in her journey',
-        'Content made for exploring does not serve someone who is deciding. A piece carries the stages it is made for; this rule demotes one made for another stage and can favour one made for hers.',
-        Boolean(st.stage), (on) => toggle('stage', on, { outOfStage: 0.5, inStage: 1.2 }, st),
-        st.stage ? n('A piece for another stage is worth', 'A multiplier on its score. Below 1 demotes it; 0 removes it from this slot entirely.', st.stage.outOfStage, (v) => { st.stage.outOfStage = v ?? 0; ruleCheck(); }, 'stage.out', { min: 0, max: 1, step: 0.05 }, `${pct(st.stage.outOfStage)} of what it would otherwise score`) : null,
-        st.stage ? n('A piece for her stage is worth', 'A multiplier on its score. Above 1 favours it.', st.stage.inStage, (v) => { st.stage.inStage = v ?? 1; ruleCheck(); }, 'stage.in', { min: 1, max: 3, step: 0.05 }) : null));
+        'A piece carries the stages it is made for. This rule can demote a different-stage match or add a bonus for the shopper’s stage; it does not change eligibility.',
+        Boolean(st.stage), (on) => toggle('stage', on, { outOfStage: 0.5, inStage: 0.2 }, st),
+        st.stage ? n('A piece for another stage is worth', 'Multiplies its score before later terms such as freshness. 1 is neutral; 0 zeros this part of the score, not eligibility. Clearing sets 1.', st.stage.outOfStage ?? 1, (v) => { st.stage.outOfStage = v ?? 1; ruleCheck(); }, 'stage.out', { min: 0, max: 1, step: 0.05 }, `${pct(st.stage.outOfStage ?? 1)} of what it would otherwise score`) : null,
+        st.stage ? n('A piece for her stage gets a bonus of', 'Added to its score, not multiplied. 0 is off; 1 adds a whole point and can outweigh other signals. Clearing sets 0.', st.stage.inStage ?? 0, (v) => { st.stage.inStage = v ?? 0; ruleCheck(); }, 'stage.in', { min: 0, max: 1, step: 0.05 }, `+${dec(st.stage.inStage ?? 0)} added to its score`) : null));
 
       host.append(ruleCard('How fresh the piece is',
         'New work earns a bonus that halves as it ages, from the date the piece says it became current.',

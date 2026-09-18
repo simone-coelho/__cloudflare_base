@@ -374,7 +374,7 @@ function wire() {
     if (view.disabled) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     dragging = true;
-    if (u.stage.setPointerCapture) { try { u.stage.setPointerCapture(e.pointerId); } catch {} }
+    if (u.stage.setPointerCapture) { try { u.stage.setPointerCapture(e.pointerId); } catch { /* Optional capture: seam drag still works inside the stage. */ } }
     setSeam(seamAt(e)); e.preventDefault();
   });
   u.stage.addEventListener('pointermove', (e) => { if (dragging) setSeam(seamAt(e)); });

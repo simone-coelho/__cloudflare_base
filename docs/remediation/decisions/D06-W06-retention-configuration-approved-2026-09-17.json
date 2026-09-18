@@ -1,0 +1,18 @@
+{
+  "id": "D06-W06-RETENTION-CONFIGURATION-APPROVED-2026-09-17",
+  "at": "2026-09-17T05:19:23.049Z",
+  "kind": "bounded_user_choice",
+  "approved_by": "User in current conversation",
+  "user_selection": {
+    "question": "For W06 retention, should agents build explicit per-category settings and block new policy-dependent capture/replay until approved values are configured? Existing data and erasure/recovery barriers would not be automatically deleted. Your 30-day consent choice would remain separate. Alternatively, provide the approved retention periods you want enforced.",
+    "answer": "Explicit per-category settings; fail closed when unset"
+  },
+  "scope": "W06 local implementation of explicit per-category retention configuration and refusal of new policy-dependent capture/replay until approved values are configured.",
+  "constraints": [
+    "Existing data and erasure/recovery barriers are not automatically deleted by this choice. Preserve prior recovery, suppression and security lifetimes; no invented global cutoff or inferred physical retention from scan horizons.",
+    "W05 minimal consent/refusal instruction remains30days from explicit choice, refreshed only by another explicit choice. This is separate from behavioral retention.",
+    "The approval is a configuration/fail-closed design choice, not concrete category periods, historical disposition or permission to operate on customer data.",
+    "Continue original W06 after W05 independent local disposition under the standing in-order delegated local mandate. No deployment, resource, credential, destructive, external or customer-data operation; live proof remains the final separately authorized batch."
+  ],
+  "remaining": "Full D06 remains pending for concrete configured periods, historical destinations, reconstruction/lifecycle and actual customer/live acceptance. No W06 implementation or acceptance is claimed by this record."
+}

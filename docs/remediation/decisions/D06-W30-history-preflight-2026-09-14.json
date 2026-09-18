@@ -1,0 +1,75 @@
+{
+  "id": "D06-W30-HISTORY-PREFLIGHT-2026-09-14",
+  "at": "2026-09-15T03:33:37.069Z",
+  "status": "pending_owner_retention_correction_decision",
+  "scope": "W30 late/mutable and higher-cap historical reconstruction; no implementation task admitted, no source change or new completion.",
+  "lead": "/root",
+  "consulted_agent": {
+    "run_id": "/root/w30_recovery_review",
+    "model": "gpt-6-astra",
+    "effort": "xhigh",
+    "mode": "read_only_no_tests_no_edits_no_subdelegation"
+  },
+  "source_basis": [
+    {
+      "path": "src/learn/hourly.ts",
+      "sha256": "7cf8afe8e8b980583204976184fd08845128ff0dba146f2adf6b79aa550ca645",
+      "anchors": "32-42,73-137,269-412,621-648,650-708,766-790",
+      "finding": "Current 200-entry/48-hour bounded live shards have no historical before-state. Current-hour replay uses surviving carry-in; partial shard writes precede aggregate publication, existing aggregate membership skips later mutation and ordinary failure can be followed by newer hours."
+    },
+    {
+      "path": "src/learn/hourly.test.ts",
+      "sha256": "332ec75c34e962019995347f7fc63423a2b4d23cdebd06380181a08f601c3fe6",
+      "anchors": "298-305,677-702",
+      "finding": "Existing source fixtures assert partial earlier-shard progress before a later collision and three credits on first build versus two on identical non-erased rebuild after carry-in eviction. Read, not rerun this turn."
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+      "anchors": "16-19,199-211,275-289",
+      "finding": "Configured scan horizon explicitly is not approved physical retention. Current rewrite journal has before/after fingerprints; it is not an hourly history checkpoint."
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+      "anchors": "F17/F18/F25,N08/N23,W22/W24/W30,section7",
+      "finding": "Requires retained event-time reconstruction, dependent correction and authorized reset or trustworthy rebuild/promote. D06 privacy/retention/historic-data decision remains pending."
+    },
+    {
+      "path": "docs/architecture/22-outcome-learning-design.md",
+      "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+      "anchors": "section4.1-4.2",
+      "finding": "Seven-day purchase attribution and recomputation on policy promotion are promised design behavior, not proof of an approved late-arrival/correction retention window."
+    }
+  ],
+  "consultation_verdict": "Independent Astra/xhigh source investigation agrees blind refolding cannot reconstruct evicted carry-in. Existing raw storage might supply a valid history basis, but its completeness/retention and a trustworthy start checkpoint are not established. No new runtime result is claimed.",
+  "lead_disposition": "Do not manufacture a warning/count comparison as reconstruction or invent subject-history retention/reset policy. Record this precise owner decision. This blocks full historical-recovery admission, not every authorized local remedy.",
+  "forward_recovery_boundary": "Separate forward interrupted-fold recovery may preserve computed numeric per-shard contribution atomically with its existing bounded ring without extra decision-history copies. It is not an approved safe design: exact input/config/tombstone identity, cross-shard ID validation after eviction, concurrent later-hour progress and guarded aggregate publication must be resolved. Changing write order alone is unsafe; no speculative journal/framework added.",
+  "required_decision": {
+    "owner": "Customer privacy/security and delivery/DS owners with architecture; D06/W24",
+    "question": "What maximum late-arrival/correction window should the engine support, and may it retain the corresponding erasure-covered replay history?",
+    "details": "Specify maximum accepted correction age and necessary replay/checkpoint lifecycle covering the largest supported attribution window plus correction window, including erasure. If a verified historical basis cannot be obtained, any clean-generation reset with disclosed loss needs separate explicit authorization; do not silently substitute it for reconstruction."
+  },
+  "checks": {
+    "entry": {
+      "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+      "initial_chunk": "0458c1",
+      "session_id": 43610,
+      "final_chunk": "a710f0",
+      "check": "VALID",
+      "status": "VALID",
+      "journal_seq": 1774,
+      "exit_status": 0,
+      "drained": true,
+      "historical_notes_each": 25370
+    },
+    "product": "No runtime/static product tests launched; source-only admission investigation.",
+    "unchanged_acceptance": {
+      "task": "W30.03",
+      "artifact": "dab855b1061967dfe6b9904ebf282f4a913ae890fe8c3091bb4f7ea82256c244",
+      "pins_verified": 44
+    },
+    "read_limitations": "Oversized source displays were narrowed; relevant required scope and source were read. No cloud/raw customer-data inspection or actual retained-history completeness attestation."
+  },
+  "next_action": "Obtain the D06/W24 owner decision for W30 historical recovery: maximum late-arrival/correction age, permitted replay-history/checkpoint retention and erasure lifecycle, and handling of already-unrecoverable history. Supporting a seven-day attribution policy requires its carry-in history as well as the chosen correction window; a 48-hour/200-entry live ring or erasure scan horizon does not establish that basis. Do not implement blind refolding, retain extra subject history or reset a generation by assumption. W30.03 remains accepted unchanged. Other authorized local remediation is not globally blocked; forward interrupted-fold recovery is a separate possible technical task, requiring an admitted design for exact input/config/tombstone identity, cross-shard validation, concurrent progress and guarded publication before coding. No customer-data recovery, cloud/deploy or release authority is supplied."
+}

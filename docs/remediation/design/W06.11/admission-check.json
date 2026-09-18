@@ -1,0 +1,15 @@
+{
+  "at": "2026-09-11T14:44:29Z",
+  "phase": "source GO after direct check",
+  "captures": [
+    {
+      "chunk_id": "efe3b8",
+      "wall_time_seconds": 0.570910837,
+      "exit_code": 0,
+      "original_token_count": 79,
+      "output": "{\"task\":\"W06.11\",\"journal\":957,\"plan\":{\"path\":\"docs/remediation/design/W06.11/plan.md\",\"sha256\":\"50e056b9a2859af0c60e94f5cbc36733b9212a8258b46b13ab7e73f831a0cd88\"},\"contract\":\"4f0e219a937975ade25206e39c30db08bc44a7aee52943fb858e3e4443936557\",\"pins\":66,\"protected\":63,\"authority\":\"local bounded\",\"admission\":\"PASS\"}\n"
+    }
+  ],
+  "result": "Approved plan/contract/start/authority66pins/63protected and unchanged current accepted tasks verified; reuses full VALID949 entry, not a second full board.",
+  "delegation": "Sole w1405-worker and separate w1405-reviewer Astra/xhigh; source GO sent after actualefe3b8 exit0/drained."
+}

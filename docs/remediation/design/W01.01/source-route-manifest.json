@@ -1,0 +1,4560 @@
+{
+  "schema": "W01.01-source-routes-v1",
+  "claim": "source_confirmed; no handlers executed or deployment attested",
+  "generator": "docs/remediation/evidence/W01.01/inspect-routes.mjs",
+  "counts": {
+    "mounts": 26,
+    "explicit_routes": 185,
+    "get_routes_with_derived_head": 91,
+    "middleware_registrations": 20,
+    "router_fetch_dispatches": 3,
+    "unmounted_routers": 0,
+    "source_files": 200,
+    "public_files": 361
+  },
+  "dependency_versions": {
+    "hono": "4.12.27",
+    "agents": "0.16.2",
+    "partyserver": "0.5.8",
+    "@cloudflare/ai-chat": "0.8.6",
+    "wrangler": "4.105.0",
+    "typescript": "5.9.2"
+  },
+  "mounts": [
+    {
+      "prefix": "/health",
+      "symbol": "healthRoutes",
+      "file": "src/index.ts",
+      "line": 91,
+      "target_file": "src/routes/health.ts",
+      "target_router": "health"
+    },
+    {
+      "prefix": "/auth",
+      "symbol": "authRoutes",
+      "file": "src/index.ts",
+      "line": 92,
+      "target_file": "src/routes/auth.ts",
+      "target_router": "auth"
+    },
+    {
+      "prefix": "/api",
+      "symbol": "apiRoutes",
+      "file": "src/index.ts",
+      "line": 93,
+      "target_file": "src/routes/api.ts",
+      "target_router": "api"
+    },
+    {
+      "prefix": "/track",
+      "symbol": "trackingRoutes",
+      "file": "src/index.ts",
+      "line": 94,
+      "target_file": "src/routes/tracking.ts",
+      "target_router": "tracking"
+    },
+    {
+      "prefix": "/pixel",
+      "symbol": "pixelRoutes",
+      "file": "src/index.ts",
+      "line": 95,
+      "target_file": "src/routes/pixel.ts",
+      "target_router": "pixel"
+    },
+    {
+      "prefix": "/webhook",
+      "symbol": "webhookRoutes",
+      "file": "src/index.ts",
+      "line": 96,
+      "target_file": "src/routes/webhook.ts",
+      "target_router": "webhook"
+    },
+    {
+      "prefix": "/optimizely",
+      "symbol": "optimizelyRoutes",
+      "file": "src/index.ts",
+      "line": 97,
+      "target_file": "src/routes/optimizely.ts",
+      "target_router": "optimizely"
+    },
+    {
+      "prefix": "/cdp",
+      "symbol": "cdpRoutes",
+      "file": "src/index.ts",
+      "line": 98,
+      "target_file": "src/routes/cdp.ts",
+      "target_router": "cdp"
+    },
+    {
+      "prefix": "/operator",
+      "symbol": "operatorRoutes",
+      "file": "src/index.ts",
+      "line": 99,
+      "target_file": "src/routes/operator.ts",
+      "target_router": "operatorRoutes"
+    },
+    {
+      "prefix": "/config",
+      "symbol": "configRoutes",
+      "file": "src/index.ts",
+      "line": 102,
+      "target_file": "src/routes/config.ts",
+      "target_router": "configRoutes"
+    },
+    {
+      "prefix": "/sort",
+      "symbol": "sortRoutes",
+      "file": "src/index.ts",
+      "line": 106,
+      "target_file": "src/routes/sort.ts",
+      "target_router": "sortRoutes"
+    },
+    {
+      "prefix": "/content",
+      "symbol": "contentRoutes",
+      "file": "src/index.ts",
+      "line": 109,
+      "target_file": "src/routes/content.ts",
+      "target_router": "contentRoutes"
+    },
+    {
+      "prefix": "/realtime",
+      "symbol": "realtimeRoutes",
+      "file": "src/index.ts",
+      "line": 110,
+      "target_file": "src/routes/realtime.ts",
+      "target_router": "realtimeRoutes"
+    },
+    {
+      "prefix": "/meridian/api",
+      "symbol": "meridianRoutes",
+      "file": "src/index.ts",
+      "line": 111,
+      "target_file": "src/demos/meridian/routes.ts",
+      "target_router": "meridian"
+    },
+    {
+      "prefix": "/v1",
+      "symbol": "decisionRoutes",
+      "file": "src/index.ts",
+      "line": 114,
+      "target_file": "src/routes/decisions.ts",
+      "target_router": "decisionRoutes"
+    },
+    {
+      "prefix": "/v1",
+      "symbol": "identityRoutes",
+      "file": "src/index.ts",
+      "line": 116,
+      "target_file": "src/routes/identity.ts",
+      "target_router": "identityRoutes"
+    },
+    {
+      "prefix": "/ai",
+      "symbol": "aiRoutes",
+      "file": "src/index.ts",
+      "line": 117,
+      "target_file": "src/routes/ai.ts",
+      "target_router": "ai"
+    },
+    {
+      "prefix": "/ai/scene",
+      "symbol": "aiSceneRoutes",
+      "file": "src/index.ts",
+      "line": 118,
+      "target_file": "src/routes/aiScene.ts",
+      "target_router": "scene"
+    },
+    {
+      "prefix": "/__shot",
+      "symbol": "shotRoutes",
+      "file": "src/index.ts",
+      "line": 119,
+      "target_file": "src/routes/shot.ts",
+      "target_router": "shot"
+    },
+    {
+      "prefix": "/geo",
+      "symbol": "geoRoutes",
+      "file": "src/index.ts",
+      "line": 120,
+      "target_file": "src/routes/geo.ts",
+      "target_router": "geo"
+    },
+    {
+      "prefix": "/funnel",
+      "symbol": "funnelRoutes",
+      "file": "src/index.ts",
+      "line": 121,
+      "target_file": "src/routes/funnel.ts",
+      "target_router": "funnel"
+    },
+    {
+      "prefix": "/funnel/sim",
+      "symbol": "funnelSimRoutes",
+      "file": "src/index.ts",
+      "line": 122,
+      "target_file": "src/routes/funnelSim.ts",
+      "target_router": "funnelSim"
+    },
+    {
+      "prefix": "/experiment",
+      "symbol": "experimentRoutes",
+      "file": "src/index.ts",
+      "line": 123,
+      "target_file": "src/routes/experiment.ts",
+      "target_router": "experiment"
+    },
+    {
+      "prefix": "/signals",
+      "symbol": "signalRoutes",
+      "file": "src/index.ts",
+      "line": 124,
+      "target_file": "src/routes/signals.ts",
+      "target_router": "signals"
+    },
+    {
+      "prefix": "/live/api",
+      "symbol": "liveRoutes",
+      "file": "src/index.ts",
+      "line": 128,
+      "target_file": "src/routes/live.ts",
+      "target_router": "liveRoutes"
+    },
+    {
+      "prefix": "/live/ops-api",
+      "symbol": "liveOpsRoutes",
+      "file": "src/index.ts",
+      "line": 132,
+      "target_file": "src/routes/liveOps.ts",
+      "target_router": "liveOpsRoutes"
+    }
+  ],
+  "routes": [
+    {
+      "id": "R001",
+      "method": "GET",
+      "path": "/health",
+      "file": "src/routes/health.ts",
+      "line": 6,
+      "mount": "/health",
+      "local_path": "/",
+      "derived_head": true
+    },
+    {
+      "id": "R002",
+      "method": "GET",
+      "path": "/health/ready",
+      "file": "src/routes/health.ts",
+      "line": 67,
+      "mount": "/health",
+      "local_path": "/ready",
+      "derived_head": true
+    },
+    {
+      "id": "R003",
+      "method": "GET",
+      "path": "/health/live",
+      "file": "src/routes/health.ts",
+      "line": 71,
+      "mount": "/health",
+      "local_path": "/live",
+      "derived_head": true
+    },
+    {
+      "id": "R004",
+      "method": "POST",
+      "path": "/auth/login",
+      "file": "src/routes/auth.ts",
+      "line": 59,
+      "mount": "/auth",
+      "local_path": "/login",
+      "derived_head": false
+    },
+    {
+      "id": "R005",
+      "method": "POST",
+      "path": "/auth/refresh",
+      "file": "src/routes/auth.ts",
+      "line": 90,
+      "mount": "/auth",
+      "local_path": "/refresh",
+      "derived_head": false
+    },
+    {
+      "id": "R006",
+      "method": "POST",
+      "path": "/auth/logout",
+      "file": "src/routes/auth.ts",
+      "line": 108,
+      "mount": "/auth",
+      "local_path": "/logout",
+      "derived_head": false
+    },
+    {
+      "id": "R007",
+      "method": "GET",
+      "path": "/auth/me",
+      "file": "src/routes/auth.ts",
+      "line": 115,
+      "mount": "/auth",
+      "local_path": "/me",
+      "derived_head": true
+    },
+    {
+      "id": "R008",
+      "method": "POST",
+      "path": "/auth/password",
+      "file": "src/routes/auth.ts",
+      "line": 123,
+      "mount": "/auth",
+      "local_path": "/password",
+      "derived_head": false
+    },
+    {
+      "id": "R009",
+      "method": "GET",
+      "path": "/auth/users",
+      "file": "src/routes/auth.ts",
+      "line": 143,
+      "mount": "/auth",
+      "local_path": "/users",
+      "derived_head": true
+    },
+    {
+      "id": "R010",
+      "method": "GET",
+      "path": "/auth/audit",
+      "file": "src/routes/auth.ts",
+      "line": 146,
+      "mount": "/auth",
+      "local_path": "/audit",
+      "derived_head": true
+    },
+    {
+      "id": "R011",
+      "method": "POST",
+      "path": "/auth/users",
+      "file": "src/routes/auth.ts",
+      "line": 152,
+      "mount": "/auth",
+      "local_path": "/users",
+      "derived_head": false
+    },
+    {
+      "id": "R012",
+      "method": "PATCH",
+      "path": "/auth/users/:id",
+      "file": "src/routes/auth.ts",
+      "line": 164,
+      "mount": "/auth",
+      "local_path": "/users/:id",
+      "derived_head": false
+    },
+    {
+      "id": "R013",
+      "method": "POST",
+      "path": "/auth/users/:id/reset",
+      "file": "src/routes/auth.ts",
+      "line": 188,
+      "mount": "/auth",
+      "local_path": "/users/:id/reset",
+      "derived_head": false
+    },
+    {
+      "id": "R014",
+      "method": "DELETE",
+      "path": "/auth/users/:id",
+      "file": "src/routes/auth.ts",
+      "line": 200,
+      "mount": "/auth",
+      "local_path": "/users/:id",
+      "derived_head": false
+    },
+    {
+      "id": "R015",
+      "method": "GET",
+      "path": "/api/storage/:key",
+      "file": "src/routes/api.ts",
+      "line": 9,
+      "mount": "/api",
+      "local_path": "/storage/:key",
+      "derived_head": true
+    },
+    {
+      "id": "R016",
+      "method": "PUT",
+      "path": "/api/storage/:key",
+      "file": "src/routes/api.ts",
+      "line": 28,
+      "mount": "/api",
+      "local_path": "/storage/:key",
+      "derived_head": false
+    },
+    {
+      "id": "R017",
+      "method": "DELETE",
+      "path": "/api/storage/:key",
+      "file": "src/routes/api.ts",
+      "line": 51,
+      "mount": "/api",
+      "local_path": "/storage/:key",
+      "derived_head": false
+    },
+    {
+      "id": "R018",
+      "method": "GET",
+      "path": "/api/cache/:key",
+      "file": "src/routes/api.ts",
+      "line": 63,
+      "mount": "/api",
+      "local_path": "/cache/:key",
+      "derived_head": true
+    },
+    {
+      "id": "R019",
+      "method": "PUT",
+      "path": "/api/cache/:key",
+      "file": "src/routes/api.ts",
+      "line": 79,
+      "mount": "/api",
+      "local_path": "/cache/:key",
+      "derived_head": false
+    },
+    {
+      "id": "R020",
+      "method": "DELETE",
+      "path": "/api/cache/:key",
+      "file": "src/routes/api.ts",
+      "line": 99,
+      "mount": "/api",
+      "local_path": "/cache/:key",
+      "derived_head": false
+    },
+    {
+      "id": "R021",
+      "method": "POST",
+      "path": "/api/queue/send",
+      "file": "src/routes/api.ts",
+      "line": 111,
+      "mount": "/api",
+      "local_path": "/queue/send",
+      "derived_head": false
+    },
+    {
+      "id": "R022",
+      "method": "GET",
+      "path": "/api/state/:namespace/:key",
+      "file": "src/routes/api.ts",
+      "line": 124,
+      "mount": "/api",
+      "local_path": "/state/:namespace/:key",
+      "derived_head": true
+    },
+    {
+      "id": "R023",
+      "method": "PUT",
+      "path": "/api/state/:namespace/:key",
+      "file": "src/routes/api.ts",
+      "line": 151,
+      "mount": "/api",
+      "local_path": "/state/:namespace/:key",
+      "derived_head": false
+    },
+    {
+      "id": "R024",
+      "method": "GET",
+      "path": "/api/analytics/query",
+      "file": "src/routes/api.ts",
+      "line": 178,
+      "mount": "/api",
+      "local_path": "/analytics/query",
+      "derived_head": true
+    },
+    {
+      "id": "R025",
+      "method": "POST",
+      "path": "/track/event",
+      "file": "src/routes/tracking.ts",
+      "line": 10,
+      "mount": "/track",
+      "local_path": "/event",
+      "derived_head": false
+    },
+    {
+      "id": "R026",
+      "method": "POST",
+      "path": "/track/batch",
+      "file": "src/routes/tracking.ts",
+      "line": 54,
+      "mount": "/track",
+      "local_path": "/batch",
+      "derived_head": false
+    },
+    {
+      "id": "R027",
+      "method": "GET",
+      "path": "/track/health",
+      "file": "src/routes/tracking.ts",
+      "line": 124,
+      "mount": "/track",
+      "local_path": "/health",
+      "derived_head": true
+    },
+    {
+      "id": "R028",
+      "method": "GET",
+      "path": "/pixel/track/:pixelId",
+      "file": "src/routes/pixel.ts",
+      "line": 17,
+      "mount": "/pixel",
+      "local_path": "/track/:pixelId",
+      "derived_head": true
+    },
+    {
+      "id": "R029",
+      "method": "POST",
+      "path": "/pixel/generate",
+      "file": "src/routes/pixel.ts",
+      "line": 80,
+      "mount": "/pixel",
+      "local_path": "/generate",
+      "derived_head": false
+    },
+    {
+      "id": "R030",
+      "method": "GET",
+      "path": "/pixel/health",
+      "file": "src/routes/pixel.ts",
+      "line": 114,
+      "mount": "/pixel",
+      "local_path": "/health",
+      "derived_head": true
+    },
+    {
+      "id": "R031",
+      "method": "POST",
+      "path": "/webhook/optimizely",
+      "file": "src/routes/webhook.ts",
+      "line": 17,
+      "mount": "/webhook",
+      "local_path": "/optimizely",
+      "derived_head": false
+    },
+    {
+      "id": "R032",
+      "method": "POST",
+      "path": "/webhook/optimizely-datafile",
+      "file": "src/routes/webhook.ts",
+      "line": 60,
+      "mount": "/webhook",
+      "local_path": "/optimizely-datafile",
+      "derived_head": false
+    },
+    {
+      "id": "R033",
+      "method": "POST",
+      "path": "/webhook/segment",
+      "file": "src/routes/webhook.ts",
+      "line": 90,
+      "mount": "/webhook",
+      "local_path": "/segment",
+      "derived_head": false
+    },
+    {
+      "id": "R034",
+      "method": "POST",
+      "path": "/webhook/custom",
+      "file": "src/routes/webhook.ts",
+      "line": 129,
+      "mount": "/webhook",
+      "local_path": "/custom",
+      "derived_head": false
+    },
+    {
+      "id": "R035",
+      "method": "GET",
+      "path": "/webhook/health",
+      "file": "src/routes/webhook.ts",
+      "line": 168,
+      "mount": "/webhook",
+      "local_path": "/health",
+      "derived_head": true
+    },
+    {
+      "id": "R036",
+      "method": "POST",
+      "path": "/optimizely/decisions",
+      "file": "src/routes/optimizely.ts",
+      "line": 27,
+      "mount": "/optimizely",
+      "local_path": "/decisions",
+      "derived_head": false
+    },
+    {
+      "id": "R037",
+      "method": "POST",
+      "path": "/optimizely/preview",
+      "file": "src/routes/optimizely.ts",
+      "line": 96,
+      "mount": "/optimizely",
+      "local_path": "/preview",
+      "derived_head": false
+    },
+    {
+      "id": "R038",
+      "method": "GET",
+      "path": "/optimizely/banner-rules",
+      "file": "src/routes/optimizely.ts",
+      "line": 130,
+      "mount": "/optimizely",
+      "local_path": "/banner-rules",
+      "derived_head": true
+    },
+    {
+      "id": "R039",
+      "method": "POST",
+      "path": "/optimizely/track",
+      "file": "src/routes/optimizely.ts",
+      "line": 143,
+      "mount": "/optimizely",
+      "local_path": "/track",
+      "derived_head": false
+    },
+    {
+      "id": "R040",
+      "method": "GET",
+      "path": "/optimizely/experiments",
+      "file": "src/routes/optimizely.ts",
+      "line": 176,
+      "mount": "/optimizely",
+      "local_path": "/experiments",
+      "derived_head": true
+    },
+    {
+      "id": "R041",
+      "method": "GET",
+      "path": "/optimizely/features",
+      "file": "src/routes/optimizely.ts",
+      "line": 201,
+      "mount": "/optimizely",
+      "local_path": "/features",
+      "derived_head": true
+    },
+    {
+      "id": "R042",
+      "method": "GET",
+      "path": "/optimizely/datafile",
+      "file": "src/routes/optimizely.ts",
+      "line": 227,
+      "mount": "/optimizely",
+      "local_path": "/datafile",
+      "derived_head": true
+    },
+    {
+      "id": "R043",
+      "method": "GET",
+      "path": "/optimizely/health",
+      "file": "src/routes/optimizely.ts",
+      "line": 239,
+      "mount": "/optimizely",
+      "local_path": "/health",
+      "derived_head": true
+    },
+    {
+      "id": "R044",
+      "method": "POST",
+      "path": "/cdp/profile",
+      "file": "src/routes/cdp.ts",
+      "line": 31,
+      "mount": "/cdp",
+      "local_path": "/profile",
+      "derived_head": false
+    },
+    {
+      "id": "R045",
+      "method": "POST",
+      "path": "/cdp/segments",
+      "file": "src/routes/cdp.ts",
+      "line": 50,
+      "mount": "/cdp",
+      "local_path": "/segments",
+      "derived_head": false
+    },
+    {
+      "id": "R046",
+      "method": "POST",
+      "path": "/cdp/identify",
+      "file": "src/routes/cdp.ts",
+      "line": 65,
+      "mount": "/cdp",
+      "local_path": "/identify",
+      "derived_head": false
+    },
+    {
+      "id": "R047",
+      "method": "POST",
+      "path": "/cdp/track",
+      "file": "src/routes/cdp.ts",
+      "line": 84,
+      "mount": "/cdp",
+      "local_path": "/track",
+      "derived_head": false
+    },
+    {
+      "id": "R048",
+      "method": "POST",
+      "path": "/cdp/forward/:destination",
+      "file": "src/routes/cdp.ts",
+      "line": 110,
+      "mount": "/cdp",
+      "local_path": "/forward/:destination",
+      "derived_head": false
+    },
+    {
+      "id": "R049",
+      "method": "GET",
+      "path": "/cdp/destinations",
+      "file": "src/routes/cdp.ts",
+      "line": 125,
+      "mount": "/cdp",
+      "local_path": "/destinations",
+      "derived_head": true
+    },
+    {
+      "id": "R050",
+      "method": "POST",
+      "path": "/cdp/destinations",
+      "file": "src/routes/cdp.ts",
+      "line": 137,
+      "mount": "/cdp",
+      "local_path": "/destinations",
+      "derived_head": false
+    },
+    {
+      "id": "R051",
+      "method": "GET",
+      "path": "/cdp/health",
+      "file": "src/routes/cdp.ts",
+      "line": 161,
+      "mount": "/cdp",
+      "local_path": "/health",
+      "derived_head": true
+    },
+    {
+      "id": "R052",
+      "method": "POST",
+      "path": "/operator/audiences/suggest",
+      "file": "src/routes/operator.ts",
+      "line": 78,
+      "mount": "/operator",
+      "local_path": "/audiences/suggest",
+      "derived_head": false
+    },
+    {
+      "id": "R053",
+      "method": "POST",
+      "path": "/operator/audiences/publish",
+      "file": "src/routes/operator.ts",
+      "line": 112,
+      "mount": "/operator",
+      "local_path": "/audiences/publish",
+      "derived_head": false
+    },
+    {
+      "id": "R054",
+      "method": "GET",
+      "path": "/operator/audiences",
+      "file": "src/routes/operator.ts",
+      "line": 155,
+      "mount": "/operator",
+      "local_path": "/audiences",
+      "derived_head": true
+    },
+    {
+      "id": "R055",
+      "method": "GET",
+      "path": "/operator/insights",
+      "file": "src/routes/operator.ts",
+      "line": 179,
+      "mount": "/operator",
+      "local_path": "/insights",
+      "derived_head": true
+    },
+    {
+      "id": "R056",
+      "method": "POST",
+      "path": "/operator/events/reset",
+      "file": "src/routes/operator.ts",
+      "line": 329,
+      "mount": "/operator",
+      "local_path": "/events/reset",
+      "derived_head": false
+    },
+    {
+      "id": "R057",
+      "method": "GET",
+      "path": "/operator/events/stats",
+      "file": "src/routes/operator.ts",
+      "line": 376,
+      "mount": "/operator",
+      "local_path": "/events/stats",
+      "derived_head": true
+    },
+    {
+      "id": "R058",
+      "method": "POST",
+      "path": "/operator/audiences/:key/rename",
+      "file": "src/routes/operator.ts",
+      "line": 431,
+      "mount": "/operator",
+      "local_path": "/audiences/:key/rename",
+      "derived_head": false
+    },
+    {
+      "id": "R059",
+      "method": "POST",
+      "path": "/operator/audiences/:key/pin",
+      "file": "src/routes/operator.ts",
+      "line": 453,
+      "mount": "/operator",
+      "local_path": "/audiences/:key/pin",
+      "derived_head": false
+    },
+    {
+      "id": "R060",
+      "method": "POST",
+      "path": "/operator/audiences/:key/prune",
+      "file": "src/routes/operator.ts",
+      "line": 481,
+      "mount": "/operator",
+      "local_path": "/audiences/:key/prune",
+      "derived_head": false
+    },
+    {
+      "id": "R061",
+      "method": "GET",
+      "path": "/config/reflex",
+      "file": "src/routes/config.ts",
+      "line": 70,
+      "mount": "/config",
+      "local_path": "/reflex",
+      "derived_head": true
+    },
+    {
+      "id": "R062",
+      "method": "GET",
+      "path": "/config/reflex/history",
+      "file": "src/routes/config.ts",
+      "line": 90,
+      "mount": "/config",
+      "local_path": "/reflex/history",
+      "derived_head": true
+    },
+    {
+      "id": "R063",
+      "method": "GET",
+      "path": "/config/reflex/revisions/:n",
+      "file": "src/routes/config.ts",
+      "line": 95,
+      "mount": "/config",
+      "local_path": "/reflex/revisions/:n",
+      "derived_head": true
+    },
+    {
+      "id": "R064",
+      "method": "POST",
+      "path": "/config/reflex/validate",
+      "file": "src/routes/config.ts",
+      "line": 108,
+      "mount": "/config",
+      "local_path": "/reflex/validate",
+      "derived_head": false
+    },
+    {
+      "id": "R065",
+      "method": "PUT",
+      "path": "/config/reflex",
+      "file": "src/routes/config.ts",
+      "line": 130,
+      "mount": "/config",
+      "local_path": "/reflex",
+      "derived_head": false
+    },
+    {
+      "id": "R066",
+      "method": "PATCH",
+      "path": "/config/reflex",
+      "file": "src/routes/config.ts",
+      "line": 148,
+      "mount": "/config",
+      "local_path": "/reflex",
+      "derived_head": false
+    },
+    {
+      "id": "R067",
+      "method": "POST",
+      "path": "/config/reflex/rollback/:n",
+      "file": "src/routes/config.ts",
+      "line": 163,
+      "mount": "/config",
+      "local_path": "/reflex/rollback/:n",
+      "derived_head": false
+    },
+    {
+      "id": "R068",
+      "method": "POST",
+      "path": "/sort",
+      "file": "src/routes/sort.ts",
+      "line": 81,
+      "mount": "/sort",
+      "local_path": "/",
+      "derived_head": false
+    },
+    {
+      "id": "R069",
+      "method": "GET",
+      "path": "/content/:kind",
+      "file": "src/routes/content.ts",
+      "line": 58,
+      "mount": "/content",
+      "local_path": "/:kind",
+      "derived_head": true
+    },
+    {
+      "id": "R070",
+      "method": "GET",
+      "path": "/content/:kind/history",
+      "file": "src/routes/content.ts",
+      "line": 67,
+      "mount": "/content",
+      "local_path": "/:kind/history",
+      "derived_head": true
+    },
+    {
+      "id": "R071",
+      "method": "GET",
+      "path": "/content/:kind/revisions/:n",
+      "file": "src/routes/content.ts",
+      "line": 73,
+      "mount": "/content",
+      "local_path": "/:kind/revisions/:n",
+      "derived_head": true
+    },
+    {
+      "id": "R072",
+      "method": "POST",
+      "path": "/content/:kind/validate",
+      "file": "src/routes/content.ts",
+      "line": 83,
+      "mount": "/content",
+      "local_path": "/:kind/validate",
+      "derived_head": false
+    },
+    {
+      "id": "R073",
+      "method": "PUT",
+      "path": "/content/:kind",
+      "file": "src/routes/content.ts",
+      "line": 93,
+      "mount": "/content",
+      "local_path": "/:kind",
+      "derived_head": false
+    },
+    {
+      "id": "R074",
+      "method": "POST",
+      "path": "/content/:kind/rollback/:n",
+      "file": "src/routes/content.ts",
+      "line": 114,
+      "mount": "/content",
+      "local_path": "/:kind/rollback/:n",
+      "derived_head": false
+    },
+    {
+      "id": "R075",
+      "method": "POST",
+      "path": "/content/catalog/import",
+      "file": "src/routes/content.ts",
+      "line": 145,
+      "mount": "/content",
+      "local_path": "/catalog/import",
+      "derived_head": false
+    },
+    {
+      "id": "R076",
+      "method": "POST",
+      "path": "/content/catalog/pull",
+      "file": "src/routes/content.ts",
+      "line": 167,
+      "mount": "/content",
+      "local_path": "/catalog/pull",
+      "derived_head": false
+    },
+    {
+      "id": "R077",
+      "method": "GET",
+      "path": "/realtime/ws",
+      "file": "src/routes/realtime.ts",
+      "line": 25,
+      "mount": "/realtime",
+      "local_path": "/ws",
+      "derived_head": true
+    },
+    {
+      "id": "R078",
+      "method": "POST",
+      "path": "/realtime/action",
+      "file": "src/routes/realtime.ts",
+      "line": 88,
+      "mount": "/realtime",
+      "local_path": "/action",
+      "derived_head": false
+    },
+    {
+      "id": "R079",
+      "method": "GET",
+      "path": "/realtime/personalization/:userId",
+      "file": "src/routes/realtime.ts",
+      "line": 249,
+      "mount": "/realtime",
+      "local_path": "/personalization/:userId",
+      "derived_head": true
+    },
+    {
+      "id": "R080",
+      "method": "GET",
+      "path": "/realtime/reflex",
+      "file": "src/routes/realtime.ts",
+      "line": 304,
+      "mount": "/realtime",
+      "local_path": "/reflex",
+      "derived_head": true
+    },
+    {
+      "id": "R081",
+      "method": "POST",
+      "path": "/realtime/session/reset",
+      "file": "src/routes/realtime.ts",
+      "line": 361,
+      "mount": "/realtime",
+      "local_path": "/session/reset",
+      "derived_head": false
+    },
+    {
+      "id": "R082",
+      "method": "POST",
+      "path": "/realtime/session/:sessionId/preferences",
+      "file": "src/routes/realtime.ts",
+      "line": 395,
+      "mount": "/realtime",
+      "local_path": "/session/:sessionId/preferences",
+      "derived_head": false
+    },
+    {
+      "id": "R083",
+      "method": "GET",
+      "path": "/realtime/session/:sessionId/analytics",
+      "file": "src/routes/realtime.ts",
+      "line": 455,
+      "mount": "/realtime",
+      "local_path": "/session/:sessionId/analytics",
+      "derived_head": true
+    },
+    {
+      "id": "R084",
+      "method": "GET",
+      "path": "/realtime/segments/:userId",
+      "file": "src/routes/realtime.ts",
+      "line": 486,
+      "mount": "/realtime",
+      "local_path": "/segments/:userId",
+      "derived_head": true
+    },
+    {
+      "id": "R085",
+      "method": "POST",
+      "path": "/realtime/segments/:userId",
+      "file": "src/routes/realtime.ts",
+      "line": 518,
+      "mount": "/realtime",
+      "local_path": "/segments/:userId",
+      "derived_head": false
+    },
+    {
+      "id": "R086",
+      "method": "GET",
+      "path": "/realtime/connections/:userId",
+      "file": "src/routes/realtime.ts",
+      "line": 558,
+      "mount": "/realtime",
+      "local_path": "/connections/:userId",
+      "derived_head": true
+    },
+    {
+      "id": "R087",
+      "method": "GET",
+      "path": "/realtime/connections",
+      "file": "src/routes/realtime.ts",
+      "line": 586,
+      "mount": "/realtime",
+      "local_path": "/connections",
+      "derived_head": true
+    },
+    {
+      "id": "R088",
+      "method": "GET",
+      "path": "/realtime/health",
+      "file": "src/routes/realtime.ts",
+      "line": 608,
+      "mount": "/realtime",
+      "local_path": "/health",
+      "derived_head": true
+    },
+    {
+      "id": "R089",
+      "method": "POST",
+      "path": "/realtime/demo/trigger",
+      "file": "src/routes/realtime.ts",
+      "line": 651,
+      "mount": "/realtime",
+      "local_path": "/demo/trigger",
+      "derived_head": false
+    },
+    {
+      "id": "R090",
+      "method": "GET",
+      "path": "/meridian/api/catalog",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 50,
+      "mount": "/meridian/api",
+      "local_path": "/catalog",
+      "derived_head": true
+    },
+    {
+      "id": "R091",
+      "method": "POST",
+      "path": "/meridian/api/concierge",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 93,
+      "mount": "/meridian/api",
+      "local_path": "/concierge",
+      "derived_head": false
+    },
+    {
+      "id": "R092",
+      "method": "GET",
+      "path": "/meridian/api/funnel",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 113,
+      "mount": "/meridian/api",
+      "local_path": "/funnel",
+      "derived_head": true
+    },
+    {
+      "id": "R093",
+      "method": "GET",
+      "path": "/meridian/api/coldstart",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 125,
+      "mount": "/meridian/api",
+      "local_path": "/coldstart",
+      "derived_head": true
+    },
+    {
+      "id": "R094",
+      "method": "GET",
+      "path": "/meridian/api/cohort",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 150,
+      "mount": "/meridian/api",
+      "local_path": "/cohort",
+      "derived_head": true
+    },
+    {
+      "id": "R095",
+      "method": "GET",
+      "path": "/meridian/api/ws",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 162,
+      "mount": "/meridian/api",
+      "local_path": "/ws",
+      "derived_head": true
+    },
+    {
+      "id": "R096",
+      "method": "POST",
+      "path": "/meridian/api/action",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 173,
+      "mount": "/meridian/api",
+      "local_path": "/action",
+      "derived_head": false
+    },
+    {
+      "id": "R097",
+      "method": "GET",
+      "path": "/meridian/api/snapshot",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 189,
+      "mount": "/meridian/api",
+      "local_path": "/snapshot",
+      "derived_head": true
+    },
+    {
+      "id": "R098",
+      "method": "POST",
+      "path": "/meridian/api/vertical",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 197,
+      "mount": "/meridian/api",
+      "local_path": "/vertical",
+      "derived_head": false
+    },
+    {
+      "id": "R099",
+      "method": "POST",
+      "path": "/meridian/api/reset",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 212,
+      "mount": "/meridian/api",
+      "local_path": "/reset",
+      "derived_head": false
+    },
+    {
+      "id": "R100",
+      "method": "POST",
+      "path": "/meridian/api/search",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 225,
+      "mount": "/meridian/api",
+      "local_path": "/search",
+      "derived_head": false
+    },
+    {
+      "id": "R101",
+      "method": "GET",
+      "path": "/meridian/api/scenes",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 235,
+      "mount": "/meridian/api",
+      "local_path": "/scenes",
+      "derived_head": true
+    },
+    {
+      "id": "R102",
+      "method": "POST",
+      "path": "/meridian/api/experiment/dispatch",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 241,
+      "mount": "/meridian/api",
+      "local_path": "/experiment/dispatch",
+      "derived_head": false
+    },
+    {
+      "id": "R103",
+      "method": "GET",
+      "path": "/meridian/api/experiment/status",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 253,
+      "mount": "/meridian/api",
+      "local_path": "/experiment/status",
+      "derived_head": true
+    },
+    {
+      "id": "R104",
+      "method": "POST",
+      "path": "/meridian/api/opal/propose",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 259,
+      "mount": "/meridian/api",
+      "local_path": "/opal/propose",
+      "derived_head": false
+    },
+    {
+      "id": "R105",
+      "method": "GET",
+      "path": "/meridian/api/opal/vocabulary",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 271,
+      "mount": "/meridian/api",
+      "local_path": "/opal/vocabulary",
+      "derived_head": true
+    },
+    {
+      "id": "R106",
+      "method": "POST",
+      "path": "/meridian/api/decisions",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 282,
+      "mount": "/meridian/api",
+      "local_path": "/decisions",
+      "derived_head": false
+    },
+    {
+      "id": "R107",
+      "method": "GET",
+      "path": "/meridian/api/decisions/export",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 298,
+      "mount": "/meridian/api",
+      "local_path": "/decisions/export",
+      "derived_head": true
+    },
+    {
+      "id": "R108",
+      "method": "GET",
+      "path": "/meridian/api/moment/signals",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 311,
+      "mount": "/meridian/api",
+      "local_path": "/moment/signals",
+      "derived_head": true
+    },
+    {
+      "id": "R109",
+      "method": "POST",
+      "path": "/meridian/api/moment/write",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 315,
+      "mount": "/meridian/api",
+      "local_path": "/moment/write",
+      "derived_head": false
+    },
+    {
+      "id": "R110",
+      "method": "GET",
+      "path": "/meridian/api/wire-check",
+      "file": "src/demos/meridian/routes.ts",
+      "line": 324,
+      "mount": "/meridian/api",
+      "local_path": "/wire-check",
+      "derived_head": true
+    },
+    {
+      "id": "R111",
+      "method": "GET",
+      "path": "/v1/:tenant/trend",
+      "file": "src/routes/decisions.ts",
+      "line": 54,
+      "mount": "/v1",
+      "local_path": "/:tenant/trend",
+      "derived_head": true
+    },
+    {
+      "id": "R112",
+      "method": "GET",
+      "path": "/v1/:tenant/lift/rows",
+      "file": "src/routes/decisions.ts",
+      "line": 73,
+      "mount": "/v1",
+      "local_path": "/:tenant/lift/rows",
+      "derived_head": true
+    },
+    {
+      "id": "R113",
+      "method": "GET",
+      "path": "/v1/:tenant/brands",
+      "file": "src/routes/decisions.ts",
+      "line": 110,
+      "mount": "/v1",
+      "local_path": "/:tenant/brands",
+      "derived_head": true
+    },
+    {
+      "id": "R114",
+      "method": "GET",
+      "path": "/v1/:tenant/learn/slots",
+      "file": "src/routes/decisions.ts",
+      "line": 125,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/slots",
+      "derived_head": true
+    },
+    {
+      "id": "R115",
+      "method": "GET",
+      "path": "/v1/:tenant/learn/exploring",
+      "file": "src/routes/decisions.ts",
+      "line": 151,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/exploring",
+      "derived_head": true
+    },
+    {
+      "id": "R116",
+      "method": "GET",
+      "path": "/v1/:tenant/monitor",
+      "file": "src/routes/decisions.ts",
+      "line": 178,
+      "mount": "/v1",
+      "local_path": "/:tenant/monitor",
+      "derived_head": true
+    },
+    {
+      "id": "R117",
+      "method": "POST",
+      "path": "/v1/:tenant/monitor",
+      "file": "src/routes/decisions.ts",
+      "line": 186,
+      "mount": "/v1",
+      "local_path": "/:tenant/monitor",
+      "derived_head": false
+    },
+    {
+      "id": "R118",
+      "method": "GET",
+      "path": "/v1/:tenant/learn/queue",
+      "file": "src/routes/decisions.ts",
+      "line": 198,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/queue",
+      "derived_head": true
+    },
+    {
+      "id": "R119",
+      "method": "GET",
+      "path": "/v1/:tenant/visitors/:visitorId/receipts",
+      "file": "src/routes/decisions.ts",
+      "line": 223,
+      "mount": "/v1",
+      "local_path": "/:tenant/visitors/:visitorId/receipts",
+      "derived_head": true
+    },
+    {
+      "id": "R120",
+      "method": "GET",
+      "path": "/v1/:tenant/lift",
+      "file": "src/routes/decisions.ts",
+      "line": 251,
+      "mount": "/v1",
+      "local_path": "/:tenant/lift",
+      "derived_head": true
+    },
+    {
+      "id": "R121",
+      "method": "GET",
+      "path": "/v1/:tenant/visitors/:visitorId/recent",
+      "file": "src/routes/decisions.ts",
+      "line": 270,
+      "mount": "/v1",
+      "local_path": "/:tenant/visitors/:visitorId/recent",
+      "derived_head": true
+    },
+    {
+      "id": "R122",
+      "method": "POST",
+      "path": "/v1/:tenant/learn/cycle",
+      "file": "src/routes/decisions.ts",
+      "line": 288,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/cycle",
+      "derived_head": false
+    },
+    {
+      "id": "R123",
+      "method": "GET",
+      "path": "/v1/:tenant/learn/proposals",
+      "file": "src/routes/decisions.ts",
+      "line": 295,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/proposals",
+      "derived_head": true
+    },
+    {
+      "id": "R124",
+      "method": "POST",
+      "path": "/v1/:tenant/learn/proposals/:id/:decision",
+      "file": "src/routes/decisions.ts",
+      "line": 302,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/proposals/:id/:decision",
+      "derived_head": false
+    },
+    {
+      "id": "R125",
+      "method": "POST",
+      "path": "/v1/:tenant/trend/rollup",
+      "file": "src/routes/decisions.ts",
+      "line": 312,
+      "mount": "/v1",
+      "local_path": "/:tenant/trend/rollup",
+      "derived_head": false
+    },
+    {
+      "id": "R126",
+      "method": "GET",
+      "path": "/v1/:tenant/decisions/snapshot",
+      "file": "src/routes/decisions.ts",
+      "line": 318,
+      "mount": "/v1",
+      "local_path": "/:tenant/decisions/snapshot",
+      "derived_head": true
+    },
+    {
+      "id": "R127",
+      "method": "GET",
+      "path": "/v1/:tenant/ledger/batches",
+      "file": "src/routes/decisions.ts",
+      "line": 355,
+      "mount": "/v1",
+      "local_path": "/:tenant/ledger/batches",
+      "derived_head": true
+    },
+    {
+      "id": "R128",
+      "method": "GET",
+      "path": "/v1/:tenant/ledger/erasures",
+      "file": "src/routes/decisions.ts",
+      "line": 381,
+      "mount": "/v1",
+      "local_path": "/:tenant/ledger/erasures",
+      "derived_head": true
+    },
+    {
+      "id": "R129",
+      "method": "POST",
+      "path": "/v1/:tenant/ledger/erasures",
+      "file": "src/routes/decisions.ts",
+      "line": 388,
+      "mount": "/v1",
+      "local_path": "/:tenant/ledger/erasures",
+      "derived_head": false
+    },
+    {
+      "id": "R130",
+      "method": "POST",
+      "path": "/v1/:tenant/ledger/erasures/rewrite",
+      "file": "src/routes/decisions.ts",
+      "line": 399,
+      "mount": "/v1",
+      "local_path": "/:tenant/ledger/erasures/rewrite",
+      "derived_head": false
+    },
+    {
+      "id": "R131",
+      "method": "GET",
+      "path": "/v1/:tenant/ledger/:id",
+      "file": "src/routes/decisions.ts",
+      "line": 416,
+      "mount": "/v1",
+      "local_path": "/:tenant/ledger/:id",
+      "derived_head": true
+    },
+    {
+      "id": "R132",
+      "method": "GET",
+      "path": "/v1/:tenant/replay/:id",
+      "file": "src/routes/decisions.ts",
+      "line": 434,
+      "mount": "/v1",
+      "local_path": "/:tenant/replay/:id",
+      "derived_head": true
+    },
+    {
+      "id": "R133",
+      "method": "POST",
+      "path": "/v1/:tenant/models/reference",
+      "file": "src/routes/decisions.ts",
+      "line": 452,
+      "mount": "/v1",
+      "local_path": "/:tenant/models/reference",
+      "derived_head": false
+    },
+    {
+      "id": "R134",
+      "method": "GET",
+      "path": "/v1/:tenant/lift/history",
+      "file": "src/routes/decisions.ts",
+      "line": 467,
+      "mount": "/v1",
+      "local_path": "/:tenant/lift/history",
+      "derived_head": true
+    },
+    {
+      "id": "R135",
+      "method": "POST",
+      "path": "/v1/:tenant/learn/items/reset",
+      "file": "src/routes/decisions.ts",
+      "line": 493,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/items/reset",
+      "derived_head": false
+    },
+    {
+      "id": "R136",
+      "method": "POST",
+      "path": "/v1/:tenant/learn/publish",
+      "file": "src/routes/decisions.ts",
+      "line": 513,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/publish",
+      "derived_head": false
+    },
+    {
+      "id": "R137",
+      "method": "POST",
+      "path": "/v1/:tenant/learn/report",
+      "file": "src/routes/decisions.ts",
+      "line": 533,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/report",
+      "derived_head": false
+    },
+    {
+      "id": "R138",
+      "method": "GET",
+      "path": "/v1/:tenant/learn/report/window",
+      "file": "src/routes/decisions.ts",
+      "line": 568,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/report/window",
+      "derived_head": true
+    },
+    {
+      "id": "R139",
+      "method": "GET",
+      "path": "/v1/:tenant/learn/report",
+      "file": "src/routes/decisions.ts",
+      "line": 580,
+      "mount": "/v1",
+      "local_path": "/:tenant/learn/report",
+      "derived_head": true
+    },
+    {
+      "id": "R140",
+      "method": "POST",
+      "path": "/v1/:tenant/identity/link",
+      "file": "src/routes/identity.ts",
+      "line": 55,
+      "mount": "/v1",
+      "local_path": "/:tenant/identity/link",
+      "derived_head": false
+    },
+    {
+      "id": "R141",
+      "method": "POST",
+      "path": "/v1/:tenant/identity/detach",
+      "file": "src/routes/identity.ts",
+      "line": 98,
+      "mount": "/v1",
+      "local_path": "/:tenant/identity/detach",
+      "derived_head": false
+    },
+    {
+      "id": "R142",
+      "method": "POST",
+      "path": "/v1/:tenant/identity/resolve",
+      "file": "src/routes/identity.ts",
+      "line": 108,
+      "mount": "/v1",
+      "local_path": "/:tenant/identity/resolve",
+      "derived_head": false
+    },
+    {
+      "id": "R143",
+      "method": "GET",
+      "path": "/v1/:tenant/identity/visitor/:visitorId",
+      "file": "src/routes/identity.ts",
+      "line": 120,
+      "mount": "/v1",
+      "local_path": "/:tenant/identity/visitor/:visitorId",
+      "derived_head": true
+    },
+    {
+      "id": "R144",
+      "method": "GET",
+      "path": "/v1/:tenant/identity/shopper/:shopperId",
+      "file": "src/routes/identity.ts",
+      "line": 130,
+      "mount": "/v1",
+      "local_path": "/:tenant/identity/shopper/:shopperId",
+      "derived_head": true
+    },
+    {
+      "id": "R145",
+      "method": "POST",
+      "path": "/v1/:tenant/identity/events",
+      "file": "src/routes/identity.ts",
+      "line": 146,
+      "mount": "/v1",
+      "local_path": "/:tenant/identity/events",
+      "derived_head": false
+    },
+    {
+      "id": "R146",
+      "method": "POST",
+      "path": "/v1/:tenant/identity/erase",
+      "file": "src/routes/identity.ts",
+      "line": 175,
+      "mount": "/v1",
+      "local_path": "/:tenant/identity/erase",
+      "derived_head": false
+    },
+    {
+      "id": "R147",
+      "method": "POST",
+      "path": "/ai/search",
+      "file": "src/routes/ai.ts",
+      "line": 16,
+      "mount": "/ai",
+      "local_path": "/search",
+      "derived_head": false
+    },
+    {
+      "id": "R148",
+      "method": "POST",
+      "path": "/ai/concierge",
+      "file": "src/routes/ai.ts",
+      "line": 56,
+      "mount": "/ai",
+      "local_path": "/concierge",
+      "derived_head": false
+    },
+    {
+      "id": "R149",
+      "method": "GET",
+      "path": "/ai/scene/:productId/:sceneId",
+      "file": "src/routes/aiScene.ts",
+      "line": 22,
+      "mount": "/ai/scene",
+      "local_path": "/:productId/:sceneId",
+      "derived_head": true
+    },
+    {
+      "id": "R150",
+      "method": "POST",
+      "path": "/ai/scene",
+      "file": "src/routes/aiScene.ts",
+      "line": 37,
+      "mount": "/ai/scene",
+      "local_path": "/",
+      "derived_head": false
+    },
+    {
+      "id": "R151",
+      "method": "GET",
+      "path": "/__shot",
+      "file": "src/routes/shot.ts",
+      "line": 69,
+      "mount": "/__shot",
+      "local_path": "/",
+      "derived_head": true
+    },
+    {
+      "id": "R152",
+      "method": "GET",
+      "path": "/geo",
+      "file": "src/routes/geo.ts",
+      "line": 21,
+      "mount": "/geo",
+      "local_path": "/",
+      "derived_head": true
+    },
+    {
+      "id": "R153",
+      "method": "GET",
+      "path": "/geo/cohort",
+      "file": "src/routes/geo.ts",
+      "line": 58,
+      "mount": "/geo",
+      "local_path": "/cohort",
+      "derived_head": true
+    },
+    {
+      "id": "R154",
+      "method": "GET",
+      "path": "/funnel",
+      "file": "src/routes/funnel.ts",
+      "line": 20,
+      "mount": "/funnel",
+      "local_path": "/",
+      "derived_head": true
+    },
+    {
+      "id": "R155",
+      "method": "POST",
+      "path": "/funnel/event",
+      "file": "src/routes/funnel.ts",
+      "line": 46,
+      "mount": "/funnel",
+      "local_path": "/event",
+      "derived_head": false
+    },
+    {
+      "id": "R156",
+      "method": "GET",
+      "path": "/funnel/diagnose",
+      "file": "src/routes/funnel.ts",
+      "line": 75,
+      "mount": "/funnel",
+      "local_path": "/diagnose",
+      "derived_head": true
+    },
+    {
+      "id": "R157",
+      "method": "POST",
+      "path": "/funnel/audience",
+      "file": "src/routes/funnel.ts",
+      "line": 88,
+      "mount": "/funnel",
+      "local_path": "/audience",
+      "derived_head": false
+    },
+    {
+      "id": "R158",
+      "method": "POST",
+      "path": "/funnel/sim/tick",
+      "file": "src/routes/funnelSim.ts",
+      "line": 32,
+      "mount": "/funnel/sim",
+      "local_path": "/tick",
+      "derived_head": false
+    },
+    {
+      "id": "R159",
+      "method": "POST",
+      "path": "/funnel/sim/burst",
+      "file": "src/routes/funnelSim.ts",
+      "line": 53,
+      "mount": "/funnel/sim",
+      "local_path": "/burst",
+      "derived_head": false
+    },
+    {
+      "id": "R160",
+      "method": "POST",
+      "path": "/funnel/sim/reset",
+      "file": "src/routes/funnelSim.ts",
+      "line": 82,
+      "mount": "/funnel/sim",
+      "local_path": "/reset",
+      "derived_head": false
+    },
+    {
+      "id": "R161",
+      "method": "POST",
+      "path": "/experiment/launch",
+      "file": "src/routes/experiment.ts",
+      "line": 25,
+      "mount": "/experiment",
+      "local_path": "/launch",
+      "derived_head": false
+    },
+    {
+      "id": "R162",
+      "method": "GET",
+      "path": "/experiment/cmab/decide",
+      "file": "src/routes/experiment.ts",
+      "line": 32,
+      "mount": "/experiment",
+      "local_path": "/cmab/decide",
+      "derived_head": true
+    },
+    {
+      "id": "R163",
+      "method": "GET",
+      "path": "/experiment/cmab/matrix",
+      "file": "src/routes/experiment.ts",
+      "line": 46,
+      "mount": "/experiment",
+      "local_path": "/cmab/matrix",
+      "derived_head": true
+    },
+    {
+      "id": "R164",
+      "method": "GET",
+      "path": "/experiment/scenarios",
+      "file": "src/routes/experiment.ts",
+      "line": 49,
+      "mount": "/experiment",
+      "local_path": "/scenarios",
+      "derived_head": true
+    },
+    {
+      "id": "R165",
+      "method": "GET",
+      "path": "/experiment/:key/readout",
+      "file": "src/routes/experiment.ts",
+      "line": 54,
+      "mount": "/experiment",
+      "local_path": "/:key/readout",
+      "derived_head": true
+    },
+    {
+      "id": "R166",
+      "method": "GET",
+      "path": "/experiment",
+      "file": "src/routes/experiment.ts",
+      "line": 59,
+      "mount": "/experiment",
+      "local_path": "/",
+      "derived_head": true
+    },
+    {
+      "id": "R167",
+      "method": "GET",
+      "path": "/signals/next",
+      "file": "src/routes/signals.ts",
+      "line": 24,
+      "mount": "/signals",
+      "local_path": "/next",
+      "derived_head": true
+    },
+    {
+      "id": "R168",
+      "method": "POST",
+      "path": "/signals/ingest",
+      "file": "src/routes/signals.ts",
+      "line": 49,
+      "mount": "/signals",
+      "local_path": "/ingest",
+      "derived_head": false
+    },
+    {
+      "id": "R169",
+      "method": "POST",
+      "path": "/live/api/page",
+      "file": "src/routes/live.ts",
+      "line": 361,
+      "mount": "/live/api",
+      "local_path": "/page",
+      "derived_head": false
+    },
+    {
+      "id": "R170",
+      "method": "GET",
+      "path": "/live/api/geo",
+      "file": "src/routes/live.ts",
+      "line": 479,
+      "mount": "/live/api",
+      "local_path": "/geo",
+      "derived_head": true
+    },
+    {
+      "id": "R171",
+      "method": "POST",
+      "path": "/live/api/event",
+      "file": "src/routes/live.ts",
+      "line": 685,
+      "mount": "/live/api",
+      "local_path": "/event",
+      "derived_head": false
+    },
+    {
+      "id": "R172",
+      "method": "POST",
+      "path": "/live/api/events",
+      "file": "src/routes/live.ts",
+      "line": 728,
+      "mount": "/live/api",
+      "local_path": "/events",
+      "derived_head": false
+    },
+    {
+      "id": "R173",
+      "method": "GET",
+      "path": "/live/api/reflex",
+      "file": "src/routes/live.ts",
+      "line": 779,
+      "mount": "/live/api",
+      "local_path": "/reflex",
+      "derived_head": true
+    },
+    {
+      "id": "R174",
+      "method": "POST",
+      "path": "/live/api/experiment/launch",
+      "file": "src/routes/live.ts",
+      "line": 805,
+      "mount": "/live/api",
+      "local_path": "/experiment/launch",
+      "derived_head": false
+    },
+    {
+      "id": "R175",
+      "method": "GET",
+      "path": "/live/api/experiment/status",
+      "file": "src/routes/live.ts",
+      "line": 849,
+      "mount": "/live/api",
+      "local_path": "/experiment/status",
+      "derived_head": true
+    },
+    {
+      "id": "R176",
+      "method": "GET",
+      "path": "/live/api/decisions/export",
+      "file": "src/routes/live.ts",
+      "line": 885,
+      "mount": "/live/api",
+      "local_path": "/decisions/export",
+      "derived_head": true
+    },
+    {
+      "id": "R177",
+      "method": "GET",
+      "path": "/live/ops-api/staged",
+      "file": "src/routes/liveOps.ts",
+      "line": 99,
+      "mount": "/live/ops-api",
+      "local_path": "/staged",
+      "derived_head": true
+    },
+    {
+      "id": "R178",
+      "method": "POST",
+      "path": "/live/ops-api/propose/:itemNumber",
+      "file": "src/routes/liveOps.ts",
+      "line": 116,
+      "mount": "/live/ops-api",
+      "local_path": "/propose/:itemNumber",
+      "derived_head": false
+    },
+    {
+      "id": "R179",
+      "method": "POST",
+      "path": "/live/ops-api/approve/:itemNumber",
+      "file": "src/routes/liveOps.ts",
+      "line": 181,
+      "mount": "/live/ops-api",
+      "local_path": "/approve/:itemNumber",
+      "derived_head": false
+    },
+    {
+      "id": "R180",
+      "method": "POST",
+      "path": "/live/ops-api/reset",
+      "file": "src/routes/liveOps.ts",
+      "line": 231,
+      "mount": "/live/ops-api",
+      "local_path": "/reset",
+      "derived_head": false
+    },
+    {
+      "id": "R181",
+      "method": "POST",
+      "path": "/live/ops-api/soldout/:itemNumber",
+      "file": "src/routes/liveOps.ts",
+      "line": 267,
+      "mount": "/live/ops-api",
+      "local_path": "/soldout/:itemNumber",
+      "derived_head": false
+    },
+    {
+      "id": "R182",
+      "method": "POST",
+      "path": "/live/ops-api/restock/:itemNumber",
+      "file": "src/routes/liveOps.ts",
+      "line": 286,
+      "mount": "/live/ops-api",
+      "local_path": "/restock/:itemNumber",
+      "derived_head": false
+    },
+    {
+      "id": "R183",
+      "method": "GET",
+      "path": "/live/ops-api/occupants",
+      "file": "src/routes/liveOps.ts",
+      "line": 310,
+      "mount": "/live/ops-api",
+      "local_path": "/occupants",
+      "derived_head": true
+    },
+    {
+      "id": "R184",
+      "method": "GET",
+      "path": "/live/ops-api/state",
+      "file": "src/routes/liveOps.ts",
+      "line": 386,
+      "mount": "/live/ops-api",
+      "local_path": "/state",
+      "derived_head": true
+    },
+    {
+      "id": "R185",
+      "method": "GET",
+      "path": "/api-info",
+      "file": "src/index.ts",
+      "line": 135,
+      "mount": "/",
+      "local_path": "/api-info",
+      "derived_head": true
+    }
+  ],
+  "middleware": [
+    {
+      "path": "*",
+      "file": "src/index.ts",
+      "line": 60,
+      "router": "app"
+    },
+    {
+      "path": "*",
+      "file": "src/index.ts",
+      "line": 62,
+      "router": "app"
+    },
+    {
+      "path": "*",
+      "file": "src/index.ts",
+      "line": 63,
+      "router": "app"
+    },
+    {
+      "path": "*",
+      "file": "src/index.ts",
+      "line": 64,
+      "router": "app"
+    },
+    {
+      "path": "*",
+      "file": "src/index.ts",
+      "line": 65,
+      "router": "app"
+    },
+    {
+      "path": "*",
+      "file": "src/index.ts",
+      "line": 67,
+      "router": "app"
+    },
+    {
+      "path": "/api/*",
+      "file": "src/index.ts",
+      "line": 81,
+      "router": "app"
+    },
+    {
+      "path": "/realtime/*",
+      "file": "src/index.ts",
+      "line": 85,
+      "router": "app"
+    },
+    {
+      "path": "/v1/:tenant/*",
+      "file": "src/index.ts",
+      "line": 86,
+      "router": "app"
+    },
+    {
+      "path": "/operator/*",
+      "file": "src/index.ts",
+      "line": 87,
+      "router": "app"
+    },
+    {
+      "path": "/api/*",
+      "file": "src/routes/api.ts",
+      "line": 7,
+      "router": "api"
+    },
+    {
+      "path": "/optimizely/decisions",
+      "file": "src/routes/optimizely.ts",
+      "line": 24,
+      "router": "optimizely"
+    },
+    {
+      "path": "/optimizely/track",
+      "file": "src/routes/optimizely.ts",
+      "line": 25,
+      "router": "optimizely"
+    },
+    {
+      "path": "/cdp/*",
+      "file": "src/routes/cdp.ts",
+      "line": 29,
+      "router": "cdp"
+    },
+    {
+      "path": "/config/reflex",
+      "file": "src/routes/config.ts",
+      "line": 123,
+      "router": "configRoutes"
+    },
+    {
+      "path": "/config/reflex/rollback/*",
+      "file": "src/routes/config.ts",
+      "line": 127,
+      "router": "configRoutes"
+    },
+    {
+      "path": "/content/:kind",
+      "file": "src/routes/content.ts",
+      "line": 52,
+      "router": "contentRoutes"
+    },
+    {
+      "path": "/content/:kind/rollback/*",
+      "file": "src/routes/content.ts",
+      "line": 53,
+      "router": "contentRoutes"
+    },
+    {
+      "path": "/content/catalog/import",
+      "file": "src/routes/content.ts",
+      "line": 54,
+      "router": "contentRoutes"
+    },
+    {
+      "path": "/content/catalog/pull",
+      "file": "src/routes/content.ts",
+      "line": 55,
+      "router": "contentRoutes"
+    }
+  ],
+  "router_fetch_dispatches": [
+    {
+      "file": "src/index.ts",
+      "line": 187,
+      "receiver": "app",
+      "target_file": "src/index.ts",
+      "target_router": "app"
+    },
+    {
+      "file": "src/routes/live.ts",
+      "line": 577,
+      "receiver": "realtimeRoutes",
+      "target_file": "src/routes/realtime.ts",
+      "target_router": "realtimeRoutes"
+    },
+    {
+      "file": "src/routes/live.ts",
+      "line": 785,
+      "receiver": "realtimeRoutes",
+      "target_file": "src/routes/realtime.ts",
+      "target_router": "realtimeRoutes"
+    }
+  ],
+  "unmounted": [],
+  "uncertainties": [],
+  "derived_dispatch": {
+    "HEAD": "Hono invokes GET route with original Request then strips response body; per-route middleware can still inspect HEAD.",
+    "OPTIONS": "Global Hono CORS returns 204 before rate/auth/routes; pre-Hono Agents and asset service are separate.",
+    "agents": "/agents/:namespace/:name[/...] forwards original URL to each discovered idFromName binding; all methods and upgrades require separate review.",
+    "assets": "Declared public/ and SPA fallback; no run_worker_first configured; deployed edge/host behavior unverified."
+  },
+  "source_hashes": [
+    {
+      "file": "src/agents/OpalAgent.ts",
+      "sha256": "1fe4bfea369c8937e57169ae205f76f7ead393cda6a298433f84d97a33c4daab"
+    },
+    {
+      "file": "src/agents/tools/diagnoseFunnel.ts",
+      "sha256": "44d3bb43084508959a1b3656491b586efb5c64eaa938f8fdbf9d053c2cb0ebe8"
+    },
+    {
+      "file": "src/agents/tools/experimentTools.ts",
+      "sha256": "145fea74bd33c8efd3875dffc558055949542979742578f5ca16d7f65afe4ac3"
+    },
+    {
+      "file": "src/agents/tools/geoCohort.ts",
+      "sha256": "6742792d8be2b1fcf71f025a0a3e70b17455a56f92e5b0015c1ecd077858a8e9"
+    },
+    {
+      "file": "src/agents/tools.ts",
+      "sha256": "f6c4b44c36e38b4799da35b6657035e65345e521d9e3598c079aefce981e5d8a"
+    },
+    {
+      "file": "src/auth/accounts.ts",
+      "sha256": "837ddc0695cb4e41ae4f162a18d6a759414aab38ab43322587097f5e66c7f3da"
+    },
+    {
+      "file": "src/auth/store.ts",
+      "sha256": "7d0513e2456798aff7d448fc79d11ebad4f3b014a74a03b2df1843a2238144cf"
+    },
+    {
+      "file": "src/config/versionedStore.ts",
+      "sha256": "a0f4de159c1e83a5f81fd5c75f54f74662ce6e6d35a0e4b72de6a8d870801081"
+    },
+    {
+      "file": "src/connectors/AudienceAuthoring.ts",
+      "sha256": "58757744a3bfbb5d7d9f64ed15a1c0837aac97be57bb7e1906742fa09087ce42"
+    },
+    {
+      "file": "src/connectors/AudienceStore.ts",
+      "sha256": "a860201e5b7a27550ebf0ac171923e7d07586d1b54a29c1e69887a08f7acabcf"
+    },
+    {
+      "file": "src/connectors/DecisionProvider.ts",
+      "sha256": "8fa9a5c60a8d678d4fc232e6914e4d1e53505b726896d582fdbd57c80eb59106"
+    },
+    {
+      "file": "src/connectors/evaluateCondition.ts",
+      "sha256": "55552d09dd9e4430a3ef764c772664f83b1d47ab3fb216cf8ba0658149f18a59"
+    },
+    {
+      "file": "src/connectors/index.ts",
+      "sha256": "efa519931607a1319d33fcbb5b1b9c1526a7e164845a99cd9e6e60878d935871"
+    },
+    {
+      "file": "src/connectors/SegmentProvider.ts",
+      "sha256": "ce97570e1465c98b012a51b6dcfa0c4a12b61dfc603dc6de14a90f3332eff359"
+    },
+    {
+      "file": "src/connectors/SignalProvider.ts",
+      "sha256": "81936e5cf88c48ad7e31fddbb631ae24717c1e3d2ef9dab3fd921616a47e2965"
+    },
+    {
+      "file": "src/connectors/types.ts",
+      "sha256": "b7a4a01d60cd6f392872bb5c87af2f1764fc4c6691634dd50a69b6b8459e6bd3"
+    },
+    {
+      "file": "src/console/jsdom.d.ts",
+      "sha256": "ed11ae4357dd935864c3c981ec17707a0644ca63bf620b3544a1466054e782d6"
+    },
+    {
+      "file": "src/content/cell.ts",
+      "sha256": "b3fc57930c43d36681edda47d040f46691c4a442c5d84d816102dc906a203b6c"
+    },
+    {
+      "file": "src/content/consent.ts",
+      "sha256": "987fca9a029f08e0fbd98fa3e201dac3062a5a0bef562aecabfd724031e0fbad"
+    },
+    {
+      "file": "src/content/decide.ts",
+      "sha256": "d56578edd1a6c880b22d30dce137bed135797a1a0837d9d7395aef5f267a79e5"
+    },
+    {
+      "file": "src/content/holdout.ts",
+      "sha256": "0fd34298f5af6c4c330b7d87228140449807c836f7b4c596ddad769dfc6861fc"
+    },
+    {
+      "file": "src/content/import.ts",
+      "sha256": "af58910d15c024795ba961f3fce3e5c188f3d4dfa319a914d4e2d73558f2bccc"
+    },
+    {
+      "file": "src/content/kinds.ts",
+      "sha256": "e223a26eb147dfa6e966943b54d14b1569e2c9da295ca781601a21b1235d960b"
+    },
+    {
+      "file": "src/content/lifecycle.ts",
+      "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+    },
+    {
+      "file": "src/content/service.ts",
+      "sha256": "a19d57d85dd757574eb5e3e913ec06635314f839efe372771a1f35cd503d4d6d"
+    },
+    {
+      "file": "src/content/types.ts",
+      "sha256": "a19ed9440ddd6855b0354b86ec0ee399a968efa26d518a824e074b59e99d4b06"
+    },
+    {
+      "file": "src/data/coach-catalog.json",
+      "sha256": "43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e"
+    },
+    {
+      "file": "src/data/insights.json",
+      "sha256": "e6b29448440dd4e4712feb38c99ce485e6badee2aaee1f14401f40211caf3bf9"
+    },
+    {
+      "file": "src/data/seed-audiences.ts",
+      "sha256": "3e8e23f7cf778e27c76b67025d3c734624bf801627a6a864830725e6cd449f78"
+    },
+    {
+      "file": "src/data/signals.json",
+      "sha256": "3dfc6d73e161483092232fadecfc66ed5747daeb8aa57147b118a6a5529877c3"
+    },
+    {
+      "file": "src/demos/brighthour/catalog.data.json",
+      "sha256": "a50a9554b639842e176e4c6a97cbf7398c6a398db1d7f8f120c3ca31c8230af6"
+    },
+    {
+      "file": "src/demos/brighthour/catalog.ts",
+      "sha256": "c4dba820172246e1acf1ff03e2551a2113edcaf45aab875ef1f9bc1b90d323dd"
+    },
+    {
+      "file": "src/demos/brighthour/composer.ts",
+      "sha256": "b8b314648ef35a8b2a7bcd25e05bf71825ac98d6441bf6543e9e0f687e2f546e"
+    },
+    {
+      "file": "src/demos/brighthour/demoClock.ts",
+      "sha256": "a1dc0281e0b2527c1fb53317fddee5773f66a44b135383e86c72e084fe719bce"
+    },
+    {
+      "file": "src/demos/brighthour/experiment.ts",
+      "sha256": "ff85b9a1405970eecc5e130746a7d1d992df675a7efd6ea9f093dda2bf60cb43"
+    },
+    {
+      "file": "src/demos/brighthour/geoCohort.ts",
+      "sha256": "a06df0433f449b7f71dd14eb1085b52c79fdf040aca4911ca486bbe0ce4b16c9"
+    },
+    {
+      "file": "src/demos/brighthour/offerDesk.ts",
+      "sha256": "caf6960876f5d96d61de4db2ec087a988a2b13035895a712b89d804c57c389d2"
+    },
+    {
+      "file": "src/demos/brighthour/offerLifecycle.ts",
+      "sha256": "7cd83b1d4c8c8ddf8b70f9725dee48349f85266f97d257d268753df78e3e4d82"
+    },
+    {
+      "file": "src/demos/brighthour/README.md",
+      "sha256": "ea5a9f16d4fe9d71ceb2b8a1589a0307172750fa1e46ce30615aa76e5d75f59a"
+    },
+    {
+      "file": "src/demos/brighthour/reflexConfig.ts",
+      "sha256": "524304426e2926a34e78c362521e3605338c19e14180ed2bf15e10acc8af3cbf"
+    },
+    {
+      "file": "src/demos/brighthour/staging.data.json",
+      "sha256": "95f6947b89fe85d18e8a979fc9105aad3f0b4ed385614f4527533c4f40d5344f"
+    },
+    {
+      "file": "src/demos/brighthour/types.ts",
+      "sha256": "34770f522ef7592df7435c5faab43ac022cf67d2959e2d9a68a38ab03ce0ef4d"
+    },
+    {
+      "file": "src/demos/meridian/build-catalogs.mjs",
+      "sha256": "1f77c3d7649ecc692a06c64f04c2ae25e4309bb3240f54d6b460aae64f78ab19"
+    },
+    {
+      "file": "src/demos/meridian/build-content.mjs",
+      "sha256": "82e291f1bb6c8cfd0b822d1cb08a36cfa278b58442f246bfe87623bc7decf750"
+    },
+    {
+      "file": "src/demos/meridian/build-images.mjs",
+      "sha256": "6d5e6b365f5b33034089b4f49f1e62b21373fcec43303429dc15fabe28e0de36"
+    },
+    {
+      "file": "src/demos/meridian/build-scenes.mjs",
+      "sha256": "9c0f29cfdabcbf9249d4683f4b589fa32e0e80f30eb3ef0d2c7f383320ed59e4"
+    },
+    {
+      "file": "src/demos/meridian/build-talk-track.mjs",
+      "sha256": "f09915033c9f7ab237552861cfdbe82d38529e02032f06c98e9af550e554a50c"
+    },
+    {
+      "file": "src/demos/meridian/catalog.blocks.json",
+      "sha256": "f8476c64d3713979cf395143dd356ae52d0baf97002a7e6ca85e277847c6d86b"
+    },
+    {
+      "file": "src/demos/meridian/catalog.financial.json",
+      "sha256": "86c0f45c8e6d38f313d17ea7473a7a0c1424b11d73362e3604be37911de99870"
+    },
+    {
+      "file": "src/demos/meridian/catalog.retail.json",
+      "sha256": "51cd7b127e715c2ccb012f2bcb7d7b338020d844c628f6c7154543939698e8e3"
+    },
+    {
+      "file": "src/demos/meridian/catalog.ts",
+      "sha256": "f3c743ecbca547d21148abe0f58cf301647e504dc6a5aef634aeaacab66b60e4"
+    },
+    {
+      "file": "src/demos/meridian/client-engine.ts",
+      "sha256": "db02d8d144764ce16dd2e4bcc2561284ce724cc17d40e0abafb39fa6a12a72be"
+    },
+    {
+      "file": "src/demos/meridian/coldstart.ts",
+      "sha256": "4e408e09ea89565a2e9357c24a6d74064216407a70fa50cdda41bcb67108fe92"
+    },
+    {
+      "file": "src/demos/meridian/composer.ts",
+      "sha256": "0102629c38a923b489f8873b348010fdcdeb6d906390d42391777bee64a68839"
+    },
+    {
+      "file": "src/demos/meridian/concierge.ts",
+      "sha256": "bf05bb6a7ae7d0878851fed256895c7b9e6bcc62bbbdfebec4e8522597af6757"
+    },
+    {
+      "file": "src/demos/meridian/content.catalog.json",
+      "sha256": "31a161ab69338f05bdbc698d2dda7c4e7eba73366ccd5fc9e6751a3053a33f7d"
+    },
+    {
+      "file": "src/demos/meridian/content.ts",
+      "sha256": "6577a357b3e742eafd66ad90407780bba1ccc8b382b3ea052b4f789252368dfb"
+    },
+    {
+      "file": "src/demos/meridian/contentCompose.ts",
+      "sha256": "92813439f8f29c2612e7fbc8cd9c2649342a6859db7cfb40fec6bb9445cdfdf1"
+    },
+    {
+      "file": "src/demos/meridian/experiment.ts",
+      "sha256": "81079e86b59e053e7ad4dd9a43f394c443956b332cc8e17e98e7fbdbfa46cd4f"
+    },
+    {
+      "file": "src/demos/meridian/funnel.ts",
+      "sha256": "b6ba3ec7e1ff1857c573b782cbb137046c6f92b867c75b2f5cfa3ef6e022688b"
+    },
+    {
+      "file": "src/demos/meridian/geoCohort.ts",
+      "sha256": "17449b3e0dd74db2ab0654b4c3878bb4dfae86f81190f2dffb1debf9b32f7859"
+    },
+    {
+      "file": "src/demos/meridian/layout.ts",
+      "sha256": "596191783819ef9da110dc9d89a5df4b74bc24da02ba75de7f20c75a07866ac2"
+    },
+    {
+      "file": "src/demos/meridian/lead.ts",
+      "sha256": "40c75eb7446886a7ad8a336104314921cd782c21785193fc99862b7eeb75ba9d"
+    },
+    {
+      "file": "src/demos/meridian/MeridianReflex.ts",
+      "sha256": "ef7bc1b76f0dc06838b6902b93b40e0a31d79a2ed041c364a59593daeba87799"
+    },
+    {
+      "file": "src/demos/meridian/moment.ts",
+      "sha256": "d00904a84bad1bda4476c362184fec0927f3c2ad7068bcc15a2b0cdabf84d162"
+    },
+    {
+      "file": "src/demos/meridian/normalise-images.mjs",
+      "sha256": "441edfd93b15f7b8c46acccd1b8179ffdc47441068cbd9d04e6ec522743b8879"
+    },
+    {
+      "file": "src/demos/meridian/opal.ts",
+      "sha256": "0e8fbc9e6b8276c6517cba8ac26345418f5c4a995209087b5c7121705dd78456"
+    },
+    {
+      "file": "src/demos/meridian/README.md",
+      "sha256": "7385e3092a5a2967eadd6d619cfa601606e288d9b24914e711751ea192c7acde"
+    },
+    {
+      "file": "src/demos/meridian/receipts.ts",
+      "sha256": "19e52898e0641f75270fcf0e05eb893ede39270b49ffdb6f8020db0f9a1d44e1"
+    },
+    {
+      "file": "src/demos/meridian/reflexConfig.ts",
+      "sha256": "241294f7064739d7dc5b651c9d64c749f68bf5ebeb312b8e0ab385b42cb89d65"
+    },
+    {
+      "file": "src/demos/meridian/routes.ts",
+      "sha256": "329258ef3f746357f97d67f3e04150694d30dc3ea1a8af615165e65e34a82a2b"
+    },
+    {
+      "file": "src/demos/meridian/scenes.ts",
+      "sha256": "f481673970a3926db48d25554b02ddad2d9fd7253e1a0d87f65391baed924215"
+    },
+    {
+      "file": "src/demos/meridian/search.ts",
+      "sha256": "b8bc51aafbf95a1b59d45a507a333a150a86f61de5ca096e26c44df90678dc43"
+    },
+    {
+      "file": "src/demos/meridian/silhouettes.ts",
+      "sha256": "c4cfa5e5120df4dd19e4349d9103a4f8871f0a4b88488a675ef4b9097528b4f2"
+    },
+    {
+      "file": "src/demos/meridian/types.ts",
+      "sha256": "9b61f727266d7d711f2f6f00ee690d759deb1d98201b53b105afd9ac262b48fe"
+    },
+    {
+      "file": "src/demos/registry.ts",
+      "sha256": "18fe3eee3e23986731e00e0d288ab88be86bcc7827f04a952f77666574aa05eb"
+    },
+    {
+      "file": "src/durable-objects/DecisionRing.ts",
+      "sha256": "018c947b601c7dad7df6ebe0c5bf93b034d6f012e3df3a4c4ef746043c16a012"
+    },
+    {
+      "file": "src/durable-objects/LearnStats.ts",
+      "sha256": "c98d68408ecd641b7d31819fde525fb21cc19125636c08ef6d143bdc1271437b"
+    },
+    {
+      "file": "src/durable-objects/PersonalizationWebSocket.ts",
+      "sha256": "a693c1bd7e99315d368924cd037b523ea02717f9a35d8418b5240bcb97422cc9"
+    },
+    {
+      "file": "src/durable-objects/RateLimiter.ts",
+      "sha256": "d37b30d675c0f2d5880536eedf735ca16706eaeff82e9c3c4ec589e3323a5b35"
+    },
+    {
+      "file": "src/durable-objects/RegionTrend.ts",
+      "sha256": "08f0a17c19b3b4d9ba6a05627a71727f655d6bdd37369f9e9f338acae4aab1bc"
+    },
+    {
+      "file": "src/durable-objects/ShopperReflex.ts",
+      "sha256": "29ff5cfc3b723fc29f9513b0bf37b4b68eb8b3a8a17b668336517909dbe74f5e"
+    },
+    {
+      "file": "src/durable-objects/StateManager.ts",
+      "sha256": "b88f7fdeb2171221a175800847961843cf3ebc934640555cc13b4590e3e62399"
+    },
+    {
+      "file": "src/events/actionTypes.ts",
+      "sha256": "865d11512ca0af01c6104789b2e2155cb5272deeafd12bd890ccff6e9064712a"
+    },
+    {
+      "file": "src/identity/assertion.ts",
+      "sha256": "8dede599a59f42b9ad7d72a711a35149dec5cd24701470baad8823d9aa771cbb"
+    },
+    {
+      "file": "src/identity/erase.ts",
+      "sha256": "0e765552b560be17fb0937f904df1745183fb0b2b53de6783352133938c953e6"
+    },
+    {
+      "file": "src/identity/history.ts",
+      "sha256": "010a2f96b9e1dd6558c08190cc3edbf05327c4524a1232f7ad7cf9dbbcd37c21"
+    },
+    {
+      "file": "src/identity/link.ts",
+      "sha256": "6f1738ef48f3a33dfffa3b4a4d81063b44ba30f613430500c8b6d2f0be6ee0b1"
+    },
+    {
+      "file": "src/identity/shopperId.ts",
+      "sha256": "210478fd7ba7bc325664cb48ff0386bb9aa3ac128ef43bd129b337af121300c3"
+    },
+    {
+      "file": "src/identity/store.ts",
+      "sha256": "a62cdc8b0b2bcc4f62ef5cf4707e8f5d54d4cc10331ad6281ecf123b958a6bc5"
+    },
+    {
+      "file": "src/index.ts",
+      "sha256": "a9ca5ae49c3741d9375bd0245c7e377bfd779021055df9d90671b0f580f9f4f1"
+    },
+    {
+      "file": "src/learn/autonomy.ts",
+      "sha256": "667a6083d145ab6f4f35944a8b290738396b6fdac006abcc7baaf919903ebc60"
+    },
+    {
+      "file": "src/learn/cycle.ts",
+      "sha256": "708c1702ed09dc70adb3a3ee9744b41d896183cbe969e0c5b73d70be2ebec34c"
+    },
+    {
+      "file": "src/learn/explore.ts",
+      "sha256": "90d1c1952e8f126d58ad2c17c134f3dc6e31e2de33c0fd40006122bb2e3b898c"
+    },
+    {
+      "file": "src/learn/external.ts",
+      "sha256": "af5bb4cb5ec6a4080d3aeec190bdf9c1fe67c69b4f1a2a9905618ad330efda0d"
+    },
+    {
+      "file": "src/learn/fan.ts",
+      "sha256": "13d090c8e11c42916b01ec81e4c5b7ccc2cbedc93ee97fe8f4be4d1a25150496"
+    },
+    {
+      "file": "src/learn/hourly.ts",
+      "sha256": "2959c467763850b5de6d7c904d6bc5ec8ffd2c56e440753f3a284488cd0279e1"
+    },
+    {
+      "file": "src/learn/policy.ts",
+      "sha256": "6ca29313461021d1415f5dc9bf926fb873f1258b126f3a753bbd2188887f7e73"
+    },
+    {
+      "file": "src/learn/priors.ts",
+      "sha256": "bec20339acdd6c3168e7b374ab8bf99e3cf34053a6c16a9dd156c6f94f30d72f"
+    },
+    {
+      "file": "src/learn/queue.ts",
+      "sha256": "47411c4358b60caac52a36c0e8bacc8a678334bac7d3cedc2555af33ccc6246c"
+    },
+    {
+      "file": "src/learn/receipts.ts",
+      "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c"
+    },
+    {
+      "file": "src/learn/replay.ts",
+      "sha256": "2ec510eb0ff05cf630f102e1c79bfa2cb0649b23d5e2368b906dbfc0c5ce89c5"
+    },
+    {
+      "file": "src/learn/report.ts",
+      "sha256": "ace43a542d4f5ef96ecc5d7eb17256cb391390832092c319bd0a0e01c3ab57ff"
+    },
+    {
+      "file": "src/learn/route.ts",
+      "sha256": "fb7ba5e29cc20de154510626f7250632adf62e568cb353a9174d2f8bf1eb592e"
+    },
+    {
+      "file": "src/learn/rows.ts",
+      "sha256": "3db186e4f27f0e0070f3691b6c831347ebc240b053edb2b7ccf4a0acd955e614"
+    },
+    {
+      "file": "src/learn/stats.ts",
+      "sha256": "8b874c7d1107e6a4f8b1ccd8850558d02ef3b41c8f149b15cf17195f7622561a"
+    },
+    {
+      "file": "src/ledger/consume.ts",
+      "sha256": "046f3fb3b2938aaced340ab74576fbdace4341ffade548d1d8d56e07d1e3cf28"
+    },
+    {
+      "file": "src/ledger/enqueue.ts",
+      "sha256": "1f8c23868fd66661a340a145e62f7035c5077459cd1b7b7b3c96830a7c452830"
+    },
+    {
+      "file": "src/ledger/erasure.ts",
+      "sha256": "410ba87a205e6aa06c0fc627c9ab8dfde44aabe51bd5a690bfa9c5107b83831c"
+    },
+    {
+      "file": "src/ledger/records.ts",
+      "sha256": "73f8fbd34413425c34c3ac64a9ef853e302a18278f84b5df8bfb58073235f11e"
+    },
+    {
+      "file": "src/ledger/writer.ts",
+      "sha256": "c1d51c467ae6a8623677a36c7df43750b28c85a945d85278e68ad6900742b002"
+    },
+    {
+      "file": "src/measure/holdout.ts",
+      "sha256": "cd421bae32093f09b37c2d36e3253d85ce9c4cfad9cb8d5913730e92098ace9b"
+    },
+    {
+      "file": "src/measure/window.ts",
+      "sha256": "652f123b5f28f2907f7cf831a24f6e5afe8b80c025d93d0f32634fd42a8ff6ba"
+    },
+    {
+      "file": "src/middleware/auth.ts",
+      "sha256": "65a1553ae0d93627f82f5c6dd3f5acb8ee3a8b94b7d82955c15098d3c1317492"
+    },
+    {
+      "file": "src/middleware/edgeAccess.ts",
+      "sha256": "ef4935e1c8eaf725efb4c7372faa5ea5b09082b0d238b68de09e1d4934375999"
+    },
+    {
+      "file": "src/middleware/error.ts",
+      "sha256": "bad42710c2409fc6daad4f398e8d35802deb2ff92aaa95e06224f012cf6a8b6f"
+    },
+    {
+      "file": "src/middleware/rate-limiter.ts",
+      "sha256": "2ecf40ca0f70d7b0e6848c1c11927a22896db9e295320db60e40d803d5510fe6"
+    },
+    {
+      "file": "src/middleware/request-id.ts",
+      "sha256": "ac0d8806f2fdd9cde3074bf86375563a1ebd1c102f97f5a2834e71a6f1689465"
+    },
+    {
+      "file": "src/ops/monitor.ts",
+      "sha256": "41a2b64c1d04b5f6da5a5c27d7228e0d118a5621ce03d33d4792ea40bc0c5484"
+    },
+    {
+      "file": "src/reflex/audienceGenerator.ts",
+      "sha256": "663c87b162c7373c138d0c40ce50c16051c0d31ce5e34d2a8e3aa366f2bd8940"
+    },
+    {
+      "file": "src/reflex/configStore.ts",
+      "sha256": "0d810da9b4fc1750196b595648efe6d0ca71e9fa84a5866f346d9bcb9a7025f2"
+    },
+    {
+      "file": "src/reflex/contentCompose.ts",
+      "sha256": "0f8888e00ee83f96290a4395dd2566d531395de0b53f708e5a29ffb985d0affe"
+    },
+    {
+      "file": "src/reflex/contentTelemetry.ts",
+      "sha256": "ec6ef52dd9800f7488bcb03d6def18f2fe084208dca0b0f48ca604d9a74c5e41"
+    },
+    {
+      "file": "src/reflex/core.ts",
+      "sha256": "287b9f2f563e285c9dbd270ba02ca31989859eaefca341e52c8c2256c5d247db"
+    },
+    {
+      "file": "src/reflex/identityMerge.ts",
+      "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508"
+    },
+    {
+      "file": "src/reflex/merchandising.ts",
+      "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+    },
+    {
+      "file": "src/reflex/regionTrend.ts",
+      "sha256": "94c0fa6e51313f8a361e05088cc20c04563f40a37b8fb5a6a2db9382302d0531"
+    },
+    {
+      "file": "src/reflex/sortCandidates.ts",
+      "sha256": "e7e195583c7e96452a646108e6eca583b2d59a88f77f95721a2607cecf900bbe"
+    },
+    {
+      "file": "src/routes/ai.ts",
+      "sha256": "f6172ce5371c14f0e71ce2f525b2b3e6b10e45f8c29c0598b301ca67472b0805"
+    },
+    {
+      "file": "src/routes/aiScene.ts",
+      "sha256": "214da944b45f416b2b4ccff928015fdf3c99bb87d94d034b6ae7a2f07ad07c5d"
+    },
+    {
+      "file": "src/routes/api.ts",
+      "sha256": "905f2512b23e6639441067a45864fe25634b3fbf2d9fc977b34370fbd90dca58"
+    },
+    {
+      "file": "src/routes/auth.ts",
+      "sha256": "678fd63e42f5ce93b2cce1eb7f6d7a05ee98cbb33d7f18c3b9e04e279ff8d20e"
+    },
+    {
+      "file": "src/routes/cdp.ts",
+      "sha256": "853201c6529260e4373ea3b32f08368daebb06b9363b120c7e9138873d307961"
+    },
+    {
+      "file": "src/routes/config.ts",
+      "sha256": "2e1d5c1e42c5ceb498b8011de65d495b185afcbe21da8b326a2d8b6ed9b04560"
+    },
+    {
+      "file": "src/routes/content.ts",
+      "sha256": "e23b7b7bd03116dcaeb65a35b01d67e0da36015a90b6b7a240e4b5fb663ae531"
+    },
+    {
+      "file": "src/routes/decisions.ts",
+      "sha256": "0df0fbf548f5a6139cd25102c87bf71a599a41d6a57156bcc44d7dcaa4141003"
+    },
+    {
+      "file": "src/routes/experiment.ts",
+      "sha256": "896f6ad917396dced06e50c0cd4c7f99800bcc6a7cf708375f8fe048c99b8fb6"
+    },
+    {
+      "file": "src/routes/funnel.ts",
+      "sha256": "6defca5e21b8aef9c00b2daa9d73ea25771b65692b8498922085407404d41eb7"
+    },
+    {
+      "file": "src/routes/funnelSim.ts",
+      "sha256": "7df45aa331766a4a058570db59c4fa5522164de9e48f6c9d697650c77ff5321d"
+    },
+    {
+      "file": "src/routes/geo.ts",
+      "sha256": "5836b61ca7336edb27d1f5568f118f8325f11510d169250cd09439dcfba467ed"
+    },
+    {
+      "file": "src/routes/health.ts",
+      "sha256": "aff5a4bd2eff3caf35136f4550dbc85e5f1647fb7bbc0f662b71dc5ee65e3d6e"
+    },
+    {
+      "file": "src/routes/identity.ts",
+      "sha256": "c3b92551b0f4292c6cbdfadd77bcdeb6bd9571cd33e0b7343f034dec6195e8dd"
+    },
+    {
+      "file": "src/routes/live.ts",
+      "sha256": "77853323d6722ac9626ca63a657de0ad7c2cae3bc506ebd96d8570b294cb4cb7"
+    },
+    {
+      "file": "src/routes/liveOps.ts",
+      "sha256": "3f3323836af0dd5edcc239049c619e4454884132d75cae30abe24fb937773990"
+    },
+    {
+      "file": "src/routes/operator.ts",
+      "sha256": "937d897b152e1ba52b47d080bf7d83a53a00051e802002427b5fd281613dc16f"
+    },
+    {
+      "file": "src/routes/optimizely.ts",
+      "sha256": "93064ec611d2c86ad001db533d46318cf644a5b646981b460fdfcd410d6cdf2c"
+    },
+    {
+      "file": "src/routes/pixel.ts",
+      "sha256": "ba6877b23bf9b1e3ae678dcb07d15b55d7c4d4b373ee6a91a7b3e634b9ad492e"
+    },
+    {
+      "file": "src/routes/realtime.ts",
+      "sha256": "c2a0dd981fa8759f9bebb109e3f4bc33d2a91f868ce6e0896c22ea772d446c23"
+    },
+    {
+      "file": "src/routes/shot.ts",
+      "sha256": "b889bbb38b6a171484525ccf49c9b958f560c5177d267aa413d325fe10f1fbc2"
+    },
+    {
+      "file": "src/routes/signals.ts",
+      "sha256": "159a1e961043940a6404bdb170ea98e920b9532ec3f8a076618f7a8476194504"
+    },
+    {
+      "file": "src/routes/sort.ts",
+      "sha256": "cb153c09e168307d52c3969beb683896166d0f3c3fbcf79d22c2d24afd53656d"
+    },
+    {
+      "file": "src/routes/tracking.ts",
+      "sha256": "89498a85412b7ca9b7f4cc952a4df9d636794660266fc6bab5fdacb6dc1ec088"
+    },
+    {
+      "file": "src/routes/webhook.ts",
+      "sha256": "a32f18d11d6e240c12bd100314620c6d23e4a00f15d044b25823855824496404"
+    },
+    {
+      "file": "src/sdk/browser.ts",
+      "sha256": "52b3a6609d3e052ba94499b9d6d4145666f00e6da1da754af357e5cac2f8c321"
+    },
+    {
+      "file": "src/sdk/core.ts",
+      "sha256": "4e00b83659eadf40fd58c80de48667f996a165b2e93f97a76ba604f1e598eb24"
+    },
+    {
+      "file": "src/sdk/emit.ts",
+      "sha256": "537d7112784f29780b3d4e9fa300b3e73de67e085deeffad99a9293cf8f63731"
+    },
+    {
+      "file": "src/sdk/host.ts",
+      "sha256": "179b975bbdd1d68ef54e4093ab82848113b35f1cad2dd33c0f994bea094c2896"
+    },
+    {
+      "file": "src/sdk/identify.ts",
+      "sha256": "5d30544dce04da6f5583b51d57fd4dc6d009a78a094e3d1cbb7a4c47417f793a"
+    },
+    {
+      "file": "src/sdk/identity.ts",
+      "sha256": "3389149258c439a23bfda2138af623e3c0ab7da4f896ef6338095872a1cc4e77"
+    },
+    {
+      "file": "src/sdk/index.ts",
+      "sha256": "fb035d9eada9efd9c18e74ffebace9815764ab1c08d63dff116994d103063ffa"
+    },
+    {
+      "file": "src/sdk/listen.ts",
+      "sha256": "619c4b51562d85050bd13c0575391040778fb97bedf298797403068106d56007"
+    },
+    {
+      "file": "src/sdk/memoryHost.ts",
+      "sha256": "34e1aaa1ba6732d4274db0bfbabfb2841f2bba47846373312d3afd50448310e1"
+    },
+    {
+      "file": "src/sdk/README.md",
+      "sha256": "a465ecb637bc41fd91a2fd8bf330692266e0dd67193018f33abafc7b06b1c5c2"
+    },
+    {
+      "file": "src/sdk/testHost.ts",
+      "sha256": "1033bc8f2bcd6bd03f9fb615f33a77100d968be1b6ea41e69d8a07f999d845f1"
+    },
+    {
+      "file": "src/sdk/tsconfig.json",
+      "sha256": "cd6e9fa8ab4fd883a99d51c83f41fe6e1c80ef5c24820668d877893a037d0360"
+    },
+    {
+      "file": "src/sdk/types.ts",
+      "sha256": "4736e6b3a8b931472cfd0fe6eef02021530650b7c8622446b76cc7553db48498"
+    },
+    {
+      "file": "src/sdk/version.ts",
+      "sha256": "64e09ef10a40d8cebf6e0e169823dc71f5445391777c4fee3dcf5069f082002f"
+    },
+    {
+      "file": "src/sdk/wire.ts",
+      "sha256": "91ad0c9852edb9af65c21acd2b6a82bbecd231f9581f941a8b144a00b4f5b9d6"
+    },
+    {
+      "file": "src/services/CatalogIntent.ts",
+      "sha256": "6bbb93b6fbfb2528c4d2864787a0dd85820ce755b4ff68e05176bdb1c70d8bdc"
+    },
+    {
+      "file": "src/services/CatalogService.ts",
+      "sha256": "da69ad0ee6fe6b2204cf36987c9df48c694644d46acd6ef8f2500d89e28f51ff"
+    },
+    {
+      "file": "src/services/CDPService.ts",
+      "sha256": "1c95a74e27d9a3eab423250ad5177f2356cc8112594748e915bd95938fa7e72c"
+    },
+    {
+      "file": "src/services/cmab.ts",
+      "sha256": "0846b6352912c0ec3546036c3ab4583ea02bf5ca3afce731cc06e4dba9742bc8"
+    },
+    {
+      "file": "src/services/EventDispatcher.ts",
+      "sha256": "7dbb0b1fbc5158cadaa63520379127e918ec3759787cb5095abb4ca4a567b9be"
+    },
+    {
+      "file": "src/services/experimentFx.ts",
+      "sha256": "eca1a25a02188b419340ff27a3ee8948191f74e5f5fa26d6c10a6027926ed7c4"
+    },
+    {
+      "file": "src/services/experimentRun.ts",
+      "sha256": "83b3886b26afaeaf454074cb9e1fe9cbaf9dd8896c84df7d122ca628ba54d006"
+    },
+    {
+      "file": "src/services/experimentScenarios.ts",
+      "sha256": "6f0cf44c27c637e1b162811129e7b1f848922c532eafbcbfa3a0c1b160579cb3"
+    },
+    {
+      "file": "src/services/FeatureVariableManager.ts",
+      "sha256": "0460c5e0592fe26814d03e552ba421a953253c0b183a9b3f850ac2a2a34c6ff7"
+    },
+    {
+      "file": "src/services/funnel/compute.ts",
+      "sha256": "11264dcab83275c5a163b45d42097ded85fc2a395bfcf44d136070933bd9551d"
+    },
+    {
+      "file": "src/services/funnel/contract.ts",
+      "sha256": "8b2ab459d4f3889c652ea929a3346e3ab418f508c8355cbf46a50ea94878242e"
+    },
+    {
+      "file": "src/services/funnel/diagnose.ts",
+      "sha256": "91c619834f0d80f0dc27b61e3ef89f136e260f3ac36e9fe96ae8b841f96c3395"
+    },
+    {
+      "file": "src/services/funnel/sim.ts",
+      "sha256": "5df1c1d9b5859324492d6f1a3e331aadbb603720fbeafe50b991f517465d5346"
+    },
+    {
+      "file": "src/services/fxEnv.ts",
+      "sha256": "0d4c7bd1aa077cb6790eed95578f445396ddb188387d6dca15aa2c662db421fd"
+    },
+    {
+      "file": "src/services/geo/cohort.ts",
+      "sha256": "925076a0a7cda8fbd5bed44150702bdf21f2e71cf19cf905b3099aa8f2b89fe2"
+    },
+    {
+      "file": "src/services/JourneyStage.ts",
+      "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+    },
+    {
+      "file": "src/services/odpLoop.ts",
+      "sha256": "47853951cfc87d414f2a2659aac38095ba33ba9e08331d6c6fc1c4e8c89b0586"
+    },
+    {
+      "file": "src/services/optimizelyFx.ts",
+      "sha256": "89a8683a5980d830e64768ed755a061d345a2bf7a7de1f11b8795d97694af0c3"
+    },
+    {
+      "file": "src/services/OptimizelyService.ts",
+      "sha256": "b59fbabf16f2f5bfa093e29d533d4b5f6bfc559378bd2661211a9cce9facab75"
+    },
+    {
+      "file": "src/services/PixelDecoder.ts",
+      "sha256": "547961dcbc091d2cb24fe10021d3fa4617fc33e49895f6081084da2e17ef6889"
+    },
+    {
+      "file": "src/services/RealtimeSegmentEngine.ts",
+      "sha256": "127e5b4fc9af111e5fcf581509fcac6b8ee2485f0a1bc8b2bfbf409718a844c4"
+    },
+    {
+      "file": "src/services/sceneGen.ts",
+      "sha256": "151e4a2aeda24ec59073c6c40462a2b9328a95a5f705a94e5d1432b8196e5ca3"
+    },
+    {
+      "file": "src/services/SessionManager.ts",
+      "sha256": "f6b3a28793f20851c71268a9c12c60d074fc1968bca661b1acff334d9f832594"
+    },
+    {
+      "file": "src/services/visit.ts",
+      "sha256": "27738aaa9c27d83fe35593223060a79c9e06593d5bf6ace90bba5afcfe78e25d"
+    },
+    {
+      "file": "src/tenancy/d1.ts",
+      "sha256": "3f278c372b6e2e205ba3b49ef7f952245dc994ea5ac29b33864f253cce5bb412"
+    },
+    {
+      "file": "src/tenancy/middleware.ts",
+      "sha256": "c77edd27a186ea504b1c6ec014162f7d254466da1f4920c39aaf2087e0fe1a06"
+    },
+    {
+      "file": "src/tenancy/objects.ts",
+      "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67"
+    },
+    {
+      "file": "src/tenancy/tenant.ts",
+      "sha256": "2deb33d222398890568b7cdb596d669b8d021e886b91501d90af128736a0f072"
+    },
+    {
+      "file": "src/types/env.ts",
+      "sha256": "e44f357958d91affcd4610c62a8e23a36d48431ddfff16f2b6d7440598bf2d50"
+    },
+    {
+      "file": "src/types/events.ts",
+      "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb"
+    },
+    {
+      "file": "src/utils/context.ts",
+      "sha256": "64969bfb7d22959c072ac2a3425861f20658a502b3590c7205b050cb96231475"
+    },
+    {
+      "file": "src/utils/pixel.ts",
+      "sha256": "a54f03bb984f590ceb22fbe9dcb15fd959d1f6ebcdb297ac50b37b4ec21420f8"
+    }
+  ],
+  "dependency_hashes": [
+    {
+      "file": "package.json",
+      "sha256": "593c556fb01f56f2faba4eb9a0f34c70bd7f9c905fa082e2285fc7d1310d8c8c"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+    },
+    {
+      "file": "wrangler.toml",
+      "sha256": "921dfbb9e5f786144570d01caa5cc98c84e8546832ed72cce5a8949115be931d"
+    },
+    {
+      "file": "node_modules/hono/package.json",
+      "sha256": "0190ed73085e7509f652e5877691ea52063628ad633add49e7ffef4a375389cd"
+    },
+    {
+      "file": "node_modules/hono/dist/hono-base.js",
+      "sha256": "59bb88ced3ac86331450dd053ea902d8d054ccf5f1b8ce4a90746edd9a33102b"
+    },
+    {
+      "file": "node_modules/hono/dist/compose.js",
+      "sha256": "8096ae2158a8723431973682d2ed9383a53e7d6b50a54058eb56a9c224274a99"
+    },
+    {
+      "file": "node_modules/hono/dist/utils/url.js",
+      "sha256": "2cc4e2597d52a0c87cea7ea6cbba64b15f928d52031ed671402d1d9c6f41a473"
+    },
+    {
+      "file": "node_modules/hono/dist/middleware/cors/index.js",
+      "sha256": "4112ff4c133945cd35490c37c92f818b2d59bd96711e68ce4d1369a51891350a"
+    },
+    {
+      "file": "node_modules/agents/package.json",
+      "sha256": "10d317ad44f78d7d511539bcfd01137172462a99ffb2b89b8e1c506f4664fae8"
+    },
+    {
+      "file": "node_modules/agents/dist/index.js",
+      "sha256": "a396f2b468889c5cb3297e97ec4be7594a6b760495fd7a15772b78fac7f4a7c9"
+    },
+    {
+      "file": "node_modules/partyserver/package.json",
+      "sha256": "e9df511062ec376c198cec82fb4b362e71ba67544781b4dc573c452c3f6fd5f1"
+    },
+    {
+      "file": "node_modules/partyserver/dist/index.js",
+      "sha256": "a15a4d1903c1696d288eb793cf29a0bd1fa2105ff10cde41648bb3dc2313bcc5"
+    },
+    {
+      "file": "node_modules/@cloudflare/ai-chat/package.json",
+      "sha256": "cf450ba47c9662264d7499504bdc3227e251574e8f33b2059d8f30cc5c0762ee"
+    },
+    {
+      "file": "node_modules/@cloudflare/ai-chat/dist/index.js",
+      "sha256": "343f8fb90cea485ecefa8db527d3d085cf004ea8d02d14401ecdc8f56e7f041d"
+    },
+    {
+      "file": "node_modules/wrangler/package.json",
+      "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8"
+    },
+    {
+      "file": "node_modules/wrangler/config-schema.json",
+      "sha256": "5d8419a29c6d6b40835dfe372da73b8c6c2c3be02c84fd35cfbb33ce08780f87"
+    },
+    {
+      "file": "node_modules/typescript/package.json",
+      "sha256": "5a0bb7f286c4b3f1413a42c05f902311b161f70e5f52d9da10490443bfd595a3"
+    },
+    {
+      "file": "node_modules/typescript/lib/typescript.js",
+      "sha256": "e5f1f6b3e82228a89873cc7b941b2465185e839c0692860f83e3e63e53f94c2b"
+    }
+  ],
+  "public_asset_hashes": [
+    {
+      "file": "public/ab-cmab.js",
+      "sha256": "2567930943745a57ebe9971e8da56c1f45eb146c5c32515e40ebe1563fbae691"
+    },
+    {
+      "file": "public/console/index.html",
+      "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+    },
+    {
+      "file": "public/console/shell.js",
+      "sha256": "840a1321d0d29be64eb0fc5890d96236115a8a3081bb0a5a5f8146660fe2ed0e"
+    },
+    {
+      "file": "public/console/views-accounts.js",
+      "sha256": "4f7a2c72206496ab8900cac6d3a9d19d3d32777ff3bc49662664e2fda22956c0"
+    },
+    {
+      "file": "public/console/views-config.js",
+      "sha256": "020b19d1eb9bd6ce14e47c58a9f5631fd082fb8a50dc8f57c2cedb05943710f8"
+    },
+    {
+      "file": "public/console/views-explore.js",
+      "sha256": "21da13c01ebedc1b75f9922940044f788ceec9c32a476a10ee50bd7a5a1a1efa"
+    },
+    {
+      "file": "public/console/views-measure.js",
+      "sha256": "0c12bef662472330e1f9d0bba174ccaf716b6101de297490e9d09da89915adde"
+    },
+    {
+      "file": "public/console/views.js",
+      "sha256": "18ae70abf1f9f949f5797a4794f23e952f48d03ee090339ef49083baa8e8a985"
+    },
+    {
+      "file": "public/data/coach-catalog.json",
+      "sha256": "43860b004fc13cba9215127d402892d6510a635dcd3e687e5e9cdcbb2f521a5e"
+    },
+    {
+      "file": "public/data/coach-content.json",
+      "sha256": "f1443a740cf5b99c87c6aa294ec180233c6b99dc8b385ad1cf43bb4fc58afaaf"
+    },
+    {
+      "file": "public/demo.js",
+      "sha256": "7cf2b493f33def6f935d51b93a0fa89ccbb7cadb7c40af7f0596189ebc3ea8e8"
+    },
+    {
+      "file": "public/edge-auth.js",
+      "sha256": "cc528ade8b902c5ac28d9f6210f2e3f61849bc3fe0926b45d506e6112593989b"
+    },
+    {
+      "file": "public/html2canvas.min.js",
+      "sha256": "e87e550794322e574a1fda0c1549a3c70dae5a93d9113417a429016838eab8cb"
+    },
+    {
+      "file": "public/images/_fallback.jpg",
+      "sha256": "96aece5613fa8d5a1005f0908a77a8b702093af59508383e3a81ee55821dedf9"
+    },
+    {
+      "file": "public/images/COA-1635.jpg",
+      "sha256": "2b2c5705f215642af327d194e9e80ce457a211527deb2efe78c6212c5f46d11a"
+    },
+    {
+      "file": "public/images/COA-21816.jpg",
+      "sha256": "43473ae013418c79341209c77c488c66d4170074da08a1cd011a735ab48294a9"
+    },
+    {
+      "file": "public/images/COA-4416.png",
+      "sha256": "be7118336e60521d79472fc81e016187de9a4ea01cb57ade22bb9976c165a154"
+    },
+    {
+      "file": "public/images/COA-58032.jpg",
+      "sha256": "cb59eef10f5151725c3ac7ade1c050fa1f26cfd234f00ecc7a53fdca6f952b56"
+    },
+    {
+      "file": "public/images/COA-73549.jpg",
+      "sha256": "c4d36b976b327e6800908c344a83656538ce3cf04dea488838207fdaf47c0bf0"
+    },
+    {
+      "file": "public/images/COA-76197.jpg",
+      "sha256": "1495e95f039fb7c2cd9c1e3cef0b060ef9b8b0dccbe03f8a0fc2ee8b21fd9bee"
+    },
+    {
+      "file": "public/images/COA-77840.jpg",
+      "sha256": "1bca5efbcfa94919639f594b5e48067798839366610ae4bb13bf5ab8a8fc624c"
+    },
+    {
+      "file": "public/images/COA-C0772.jpg",
+      "sha256": "ad7db146437d29de5bfd51e4fee4f04f9f47c30d9d12a5d26896f4cc6ea0d3bb"
+    },
+    {
+      "file": "public/images/COA-C0773.jpg",
+      "sha256": "5a9b2082d089844b64b427deca6a9e56da8b07c04b2b4a76d079ecf73a0da7a8"
+    },
+    {
+      "file": "public/images/COA-C1451.jpg",
+      "sha256": "4e788ed877819da3017dcce2e9d825bceb21d9ca514cfc718a73de685774aedb"
+    },
+    {
+      "file": "public/images/COA-C1985.png",
+      "sha256": "4c637c2f26b4864f4bd95878ea9ffdfd590c9a95c2b181c794422490f02a79d1"
+    },
+    {
+      "file": "public/images/COA-C2621.jpg",
+      "sha256": "1f33efbaaa11096bbb059076a8c9a2ef0042a7c0db0b2e74432b3a648bc2cf6d"
+    },
+    {
+      "file": "public/images/COA-C4084.png",
+      "sha256": "1e094feb89560c276196a8af0761e252d71c993e66eec661222e2cc26bd23f2b"
+    },
+    {
+      "file": "public/images/COA-C8288.jpg",
+      "sha256": "4e788ed877819da3017dcce2e9d825bceb21d9ca514cfc718a73de685774aedb"
+    },
+    {
+      "file": "public/images/COA-CA334.jpg",
+      "sha256": "7ce4a7524cb3985bd2bd61db96180502279235993e5e5b2b8819bc7c3d75b124"
+    },
+    {
+      "file": "public/images/COA-CB923.jpg",
+      "sha256": "a52b03ef38a4f40d3c48bc5b12b2b239e6221a27f25045cfa91b7622aef786f6"
+    },
+    {
+      "file": "public/images/COA-CB924.jpg",
+      "sha256": "a52b03ef38a4f40d3c48bc5b12b2b239e6221a27f25045cfa91b7622aef786f6"
+    },
+    {
+      "file": "public/images/COA-CB925.jpg",
+      "sha256": "f495ae22d263a2c032082f60bb898cead5856b0c34250c885eb26ba7da30782e"
+    },
+    {
+      "file": "public/images/COA-CB926.jpg",
+      "sha256": "bf5751fc3a12b72f63466273bc47e785254f9c7f85d06237391e1cf293e968fc"
+    },
+    {
+      "file": "public/images/COA-CB927.jpg",
+      "sha256": "7833abe513e38ed9723ec39f673c0f317e9113deb980de74e4419e384af04fb8"
+    },
+    {
+      "file": "public/images/COA-CB928.jpg",
+      "sha256": "2b2c5705f215642af327d194e9e80ce457a211527deb2efe78c6212c5f46d11a"
+    },
+    {
+      "file": "public/images/COA-CB929.jpg",
+      "sha256": "1bca5efbcfa94919639f594b5e48067798839366610ae4bb13bf5ab8a8fc624c"
+    },
+    {
+      "file": "public/images/COA-CBH23.jpg",
+      "sha256": "a8f0c181d21542742fa235b8da4f241684a6d47fab41f31ab8de65f80eeefcd3"
+    },
+    {
+      "file": "public/images/COA-CBH42.jpg",
+      "sha256": "1e9906c7785a95c459d79e90179b9df151f8fa09ea0d3483a97968c64a90d7bc"
+    },
+    {
+      "file": "public/images/COA-CC435.png",
+      "sha256": "9a4c088dcc22d619cd201fa4947dbea98fb8a485c8a1453f6eec655c61c61a66"
+    },
+    {
+      "file": "public/images/COA-CC437.jpg",
+      "sha256": "75b7a0526cd467a1ac8c4d8515c7472cfcebb02ffe500b56632815f1387e1704"
+    },
+    {
+      "file": "public/images/COA-CCC16.jpg",
+      "sha256": "b668a16dc3a9112369f880cf5cad7d7e75d9956ab4b70ee4d9ca88e64fcb5251"
+    },
+    {
+      "file": "public/images/COA-CCD79.jpg",
+      "sha256": "bbd63e47083be0ad958db8032240128bfc70633efc422e46f0df9f35dce8a8dd"
+    },
+    {
+      "file": "public/images/COA-CCD82.jpg",
+      "sha256": "b0c4fb8bdff86a2df73bacfabd66d426db03ba3e83df0dda028ce44cdc8e595d"
+    },
+    {
+      "file": "public/images/COA-CCU00.jpg",
+      "sha256": "d152c91118a388b7a70e30fc5f98054026d24d4a171414f7eb839bd5dfb20d74"
+    },
+    {
+      "file": "public/images/COA-CCW45.jpg",
+      "sha256": "bfdda3a583f0014a428900ab58d04bba98a161c61c07e608bc7773c82a1e4a3c"
+    },
+    {
+      "file": "public/images/COA-CCW92.jpg",
+      "sha256": "3fae8173f83f2c4c44dd69c18b5a640df6ff033e8733afd3be1c5b76a45905a0"
+    },
+    {
+      "file": "public/images/COA-CCX04.jpg",
+      "sha256": "d584d65182914c5276cbd7ac3a0c557ae57145a68e99630618caa997c41ab604"
+    },
+    {
+      "file": "public/images/COA-CCX14.jpg",
+      "sha256": "51d3bc78c0548f12c4602dfec013e553c501e4e307dcd589fc3435a0602e8bd7"
+    },
+    {
+      "file": "public/images/COA-CCX21.jpg",
+      "sha256": "8df64dec81a4cea3958f6579d4b5c6fdc7b69612376fc59f50574bb06f4539d1"
+    },
+    {
+      "file": "public/images/COA-CCX23.jpg",
+      "sha256": "b420f599aab2811e8b1613b2423204826eb5123a5608c81a2842219c567357c8"
+    },
+    {
+      "file": "public/images/COA-CCY28.jpg",
+      "sha256": "43473ae013418c79341209c77c488c66d4170074da08a1cd011a735ab48294a9"
+    },
+    {
+      "file": "public/images/COA-CCY32.jpg",
+      "sha256": "d1d4819e91076a2f7d0de1405ddabe66fa27c5f0a9b196aaff16985fc1ce1095"
+    },
+    {
+      "file": "public/images/COA-CCZ00.png",
+      "sha256": "be7118336e60521d79472fc81e016187de9a4ea01cb57ade22bb9976c165a154"
+    },
+    {
+      "file": "public/images/COA-CD724.jpg",
+      "sha256": "915af9160a284833c301152a7e38ed82b2403493bf41af2e97007eca0dd6d657"
+    },
+    {
+      "file": "public/images/COA-CG654.jpg",
+      "sha256": "a52b03ef38a4f40d3c48bc5b12b2b239e6221a27f25045cfa91b7622aef786f6"
+    },
+    {
+      "file": "public/images/COA-CH818.jpg",
+      "sha256": "cb59eef10f5151725c3ac7ade1c050fa1f26cfd234f00ecc7a53fdca6f952b56"
+    },
+    {
+      "file": "public/images/COA-CH819.png",
+      "sha256": "1b882a1893dda19afa2584952e1a8dc3ff751b0a327f44e3947648905e72d5c1"
+    },
+    {
+      "file": "public/images/COA-CH857.jpg",
+      "sha256": "d1616cb6f472a5a65268a4ca4a56b10b074d4e784b38f4644f47f03ac31ceabf"
+    },
+    {
+      "file": "public/images/COA-CI032.jpg",
+      "sha256": "51be4b838ffcf4794701b5756f0c17db2b44090042b8fca209aca539e2c7e0e2"
+    },
+    {
+      "file": "public/images/COA-CM531.png",
+      "sha256": "1b882a1893dda19afa2584952e1a8dc3ff751b0a327f44e3947648905e72d5c1"
+    },
+    {
+      "file": "public/images/COA-CM544.jpg",
+      "sha256": "d1d4819e91076a2f7d0de1405ddabe66fa27c5f0a9b196aaff16985fc1ce1095"
+    },
+    {
+      "file": "public/images/COA-CM545.jpg",
+      "sha256": "d1d4819e91076a2f7d0de1405ddabe66fa27c5f0a9b196aaff16985fc1ce1095"
+    },
+    {
+      "file": "public/images/COA-CN382.png",
+      "sha256": "8b309d95de4ef44f4a7d3037c67ab895ca9cda4cd0e1ee968fb2b6fe258dca5c"
+    },
+    {
+      "file": "public/images/COA-CP133.jpg",
+      "sha256": "b420f599aab2811e8b1613b2423204826eb5123a5608c81a2842219c567357c8"
+    },
+    {
+      "file": "public/images/COA-CP149.jpg",
+      "sha256": "5a9b2082d089844b64b427deca6a9e56da8b07c04b2b4a76d079ecf73a0da7a8"
+    },
+    {
+      "file": "public/images/COA-CP150.jpg",
+      "sha256": "ad7db146437d29de5bfd51e4fee4f04f9f47c30d9d12a5d26896f4cc6ea0d3bb"
+    },
+    {
+      "file": "public/images/COA-CR551.jpg",
+      "sha256": "b0c4fb8bdff86a2df73bacfabd66d426db03ba3e83df0dda028ce44cdc8e595d"
+    },
+    {
+      "file": "public/images/COA-CR552.jpg",
+      "sha256": "bf5751fc3a12b72f63466273bc47e785254f9c7f85d06237391e1cf293e968fc"
+    },
+    {
+      "file": "public/images/COA-CR553.jpg",
+      "sha256": "bf5751fc3a12b72f63466273bc47e785254f9c7f85d06237391e1cf293e968fc"
+    },
+    {
+      "file": "public/images/COA-CR554.jpg",
+      "sha256": "e3a8970322a721e12fbca409c2cf802171f41fe885a4a2e84d2390726fba66e4"
+    },
+    {
+      "file": "public/images/COA-CR654.jpg",
+      "sha256": "3c2081b23dac8d6bff6bafc9386027c56f360852cb2060ebf4e0694194e1b5e5"
+    },
+    {
+      "file": "public/images/COA-CU044.jpg",
+      "sha256": "530d7b37da1da38572a609d2f0daf0d3a0201a127c0cb44b0bb2a389a7bc8cbf"
+    },
+    {
+      "file": "public/images/COA-CU068.jpg",
+      "sha256": "a6ee8d60f66b23f51297c2210380a1eafa6161894f6a1fe0024666dd3a6df45b"
+    },
+    {
+      "file": "public/images/COA-CV933.png",
+      "sha256": "9631b665e12927729e194c518da84b61dbb7569f0fde6610a5147bea5e402d04"
+    },
+    {
+      "file": "public/images/COA-CV934.jpg",
+      "sha256": "46fae2cc6f234151c1f780a114e93a15a929e297e72b13275305f55707bfeb57"
+    },
+    {
+      "file": "public/images/COA-CV965.png",
+      "sha256": "1e094feb89560c276196a8af0761e252d71c993e66eec661222e2cc26bd23f2b"
+    },
+    {
+      "file": "public/images/COA-CV968.png",
+      "sha256": "1e094feb89560c276196a8af0761e252d71c993e66eec661222e2cc26bd23f2b"
+    },
+    {
+      "file": "public/images/COA-CW573.png",
+      "sha256": "1b882a1893dda19afa2584952e1a8dc3ff751b0a327f44e3947648905e72d5c1"
+    },
+    {
+      "file": "public/images/COA-CW614.jpg",
+      "sha256": "cc07d9c3741a80e6a3d3c01c09a1943239c9f29a6d2bc89c38f4277b81299b84"
+    },
+    {
+      "file": "public/images/COA-CW620.jpg",
+      "sha256": "e080b8933f936a46829154e675131085117d1425457f2f880ef256c4addcbff0"
+    },
+    {
+      "file": "public/images/COA-CX204.jpg",
+      "sha256": "2b2c5705f215642af327d194e9e80ce457a211527deb2efe78c6212c5f46d11a"
+    },
+    {
+      "file": "public/images/COA-CY201.jpg",
+      "sha256": "eb978c65d129c7dc9dd74b56b93b194f981dfdf12446a87eaff1680ff2e4a9a1"
+    },
+    {
+      "file": "public/images/COA-CY919.jpg",
+      "sha256": "e6518bef9f02b2b6ec8fc984620c8af34e1b4a89dc91670b427764b6e8b08424"
+    },
+    {
+      "file": "public/images/COA-CZ111.jpg",
+      "sha256": "bbd63e47083be0ad958db8032240128bfc70633efc422e46f0df9f35dce8a8dd"
+    },
+    {
+      "file": "public/images/COA-F80186.jpg",
+      "sha256": "43473ae013418c79341209c77c488c66d4170074da08a1cd011a735ab48294a9"
+    },
+    {
+      "file": "public/images/demo/after-banner.png",
+      "sha256": "748f0739ddfd343ce383e61a7b73fbd440b8dfcd4dc239f15b8b94afd376d2dc"
+    },
+    {
+      "file": "public/images/demo/after-coldstart.png",
+      "sha256": "af5425497cac5c722e64769c529a167ea9772c231bf4e432aee0e353391958d3"
+    },
+    {
+      "file": "public/images/demo/after-concierge.png",
+      "sha256": "9664ea13881c9aa4357867b21baaaa77dc73e22360b47af26a6eb1bc769e37b1"
+    },
+    {
+      "file": "public/images/demo/after-curated.png",
+      "sha256": "69a421cd0840f631d8711bc81b3d7a25b58881d70bb5e31bbf50b504c6bc7967"
+    },
+    {
+      "file": "public/images/demo/after-grid.png",
+      "sha256": "5f68279107778c1a674af4a239503b3f831ea18b6da973784aac815c2f3fd33d"
+    },
+    {
+      "file": "public/images/demo/after-hero.png",
+      "sha256": "f5fd4f7db302a13cae5012c459a1560c65c01b564469d29d3c94d198b6ad6c5b"
+    },
+    {
+      "file": "public/images/demo/after-journey.png",
+      "sha256": "28edff569c75cc07886ca7afc9bd1c32eea119750a7d41429a8787b13ede5a45"
+    },
+    {
+      "file": "public/images/demo/after-pdp.png",
+      "sha256": "32d540156fabd42646e0baf03f3854e34bf56f1cf4331dab100e752f329a513a"
+    },
+    {
+      "file": "public/images/demo/after-search.png",
+      "sha256": "bc8259ef0d84788f005205a69cbb9bf0549f48e0ed43f79a0a6c3ab8539f2201"
+    },
+    {
+      "file": "public/images/demo/after-welcome.png",
+      "sha256": "743606ff4c4a85570092f4af9534cf280b0d97fa56c220b63ef78d4f65fde0d2"
+    },
+    {
+      "file": "public/images/demo/before-banner.png",
+      "sha256": "51158c9fec17a4f3cb030b24c7dd9920b2f357ce3a30004d5f6570ef530efdb8"
+    },
+    {
+      "file": "public/images/demo/before-coldstart.png",
+      "sha256": "cfe7e5f7563ba7749165af0e85b602c9a111dc50e7fe93ce751ea49c88cfadaa"
+    },
+    {
+      "file": "public/images/demo/before-curated.png",
+      "sha256": "b953265925ec14d6e6d8771b0bd8524a224b2633caac38e142e2800ce1a709db"
+    },
+    {
+      "file": "public/images/demo/before-grid.png",
+      "sha256": "0d86d7473b0fff91157f69666f90d9479713db3a55d630d69b71f729e9abce0c"
+    },
+    {
+      "file": "public/images/demo/before-hero.png",
+      "sha256": "0c68b1dd123c40952132110df5654a62df1675db34013ffe97ab970e54bd4510"
+    },
+    {
+      "file": "public/images/demo/before-journey.png",
+      "sha256": "1507a38d129eededd4a8e230c64b2b569a1b2c8b758dfbc900213fe047b2ccf3"
+    },
+    {
+      "file": "public/images/demo/before-modal.png",
+      "sha256": "fed0d67aa70a179ecd7e639586be708368803ace1b03df03e0dcfbe1ff811cc4"
+    },
+    {
+      "file": "public/images/demo/before-pdp.png",
+      "sha256": "1507a38d129eededd4a8e230c64b2b569a1b2c8b758dfbc900213fe047b2ccf3"
+    },
+    {
+      "file": "public/images/demo/before-welcome.png",
+      "sha256": "51158c9fec17a4f3cb030b24c7dd9920b2f357ce3a30004d5f6570ef530efdb8"
+    },
+    {
+      "file": "public/images/generated/grid/look-beach-resort-COA-CBH42.jpg",
+      "sha256": "d005b5fc10d4c90ed628ea2207a89e99681303136dc2b06acb67e5b2ecbd89ca"
+    },
+    {
+      "file": "public/images/generated/grid/look-brunch-COA-CCX04.jpg",
+      "sha256": "53210c5d3b3d6058d6b9ddd719e830f717443e0c5430b6768b357d7f0fe5e7ea"
+    },
+    {
+      "file": "public/images/generated/grid/look-cocktail-COA-CW620.jpg",
+      "sha256": "e4b2d9699dd47605bc95a06051f2e382d6b78ac3c3f6c170f1ec7a1417371e73"
+    },
+    {
+      "file": "public/images/generated/grid/look-date-night-COA-CW620.jpg",
+      "sha256": "6aa512fb64133b9269b90222764de430d86eb69dd8f62ee2dcb936f79a9a0de7"
+    },
+    {
+      "file": "public/images/generated/grid/look-everyday-COA-CCX04.jpg",
+      "sha256": "4038c56abe469be4d53bfcce87faec85a9139254d882aa0487cc947463c328b3"
+    },
+    {
+      "file": "public/images/generated/grid/look-festival-COA-CCW45.jpg",
+      "sha256": "c7330c1ad6d9880304248b6672f8afcdc3b85bb93cdc428bedd67dd9e99e8600"
+    },
+    {
+      "file": "public/images/generated/grid/look-gala-COA-CCW92.jpg",
+      "sha256": "c3e6dbad5ebd337e66dbf4d32b39b558e7954e370a41887c7c3c91f4b3e21ba7"
+    },
+    {
+      "file": "public/images/generated/grid/look-gallery-COA-CCW92.jpg",
+      "sha256": "7c25439ff39d193fb8c37db6da96645a34654202a343a2fd57aa086898ab72f8"
+    },
+    {
+      "file": "public/images/generated/grid/look-investment-COA-CCW92.jpg",
+      "sha256": "8e6dc87ebd3bedcf79d2d3615a4ef917ced8fea260346d7fdc16b3ef8f26c4fc"
+    },
+    {
+      "file": "public/images/generated/grid/look-opera-COA-CCW92.jpg",
+      "sha256": "66400ac9127aee61a2534a6fff263c58fcc83730d05350046cc17174bf5925b2"
+    },
+    {
+      "file": "public/images/generated/grid/look-travel-COA-CCX21.jpg",
+      "sha256": "13b2af6d3f90b2744e8713bf90b75df6b3d4433855db7524313538dd5f825891"
+    },
+    {
+      "file": "public/images/generated/grid/look-winter-wedding-COA-CCW92.jpg",
+      "sha256": "c8414cb449fe2988ebda0f02e25c2fe0c8e131befdc8a34cc23ff6faab21cc5e"
+    },
+    {
+      "file": "public/images/generated/grid/look-work-COA-CCX21.jpg",
+      "sha256": "123218dfc4a8d6607fc9b13ee12b16b3b18a0506a635d7e0d35c4c9d992f1cff"
+    },
+    {
+      "file": "public/images/generated/grid/search-beach-resort-COA-CBH42.jpg",
+      "sha256": "5b958bc19602ad28680eaad239db7b9c9a3c9b4b28dc86a4f1c96e5715207ca3"
+    },
+    {
+      "file": "public/images/generated/grid/search-beach-resort-COA-CU044.jpg",
+      "sha256": "1c227d82afe9a6e81c1692a67887f5eba0babdf8b46d71e17e6e6f1b2636478c"
+    },
+    {
+      "file": "public/images/generated/grid/search-brunch-COA-CBH42.jpg",
+      "sha256": "04d00fe53487c9fb76c4544b52a311b307289c8e829429ed49a9d8087e5ae754"
+    },
+    {
+      "file": "public/images/generated/grid/search-brunch-COA-CCX04.jpg",
+      "sha256": "3891dba173032d9a95a8242259a9a62775e0185be0ac6c11c8f1d090b0a5eeb3"
+    },
+    {
+      "file": "public/images/generated/grid/search-cocktail-COA-C0772.jpg",
+      "sha256": "aa76346b1dd73252a4f2f92166c9ceac5777403bbf5205c30b2d9c8df06c89f2"
+    },
+    {
+      "file": "public/images/generated/grid/search-cocktail-COA-CW620.jpg",
+      "sha256": "94c0cbbe6be549e16606e7504f742f4a80f66bcbec12177cd929f65129466af2"
+    },
+    {
+      "file": "public/images/generated/grid/search-date-night-COA-C0772.jpg",
+      "sha256": "dc1a642c3bfc853f4b877179a8ce9b1940c4470360e5f5998d7f606cf06f406a"
+    },
+    {
+      "file": "public/images/generated/grid/search-date-night-COA-CW620.jpg",
+      "sha256": "4147a53882e605aca52a48cb3131fd698532e6399fc5c1e1233eed46d6202703"
+    },
+    {
+      "file": "public/images/generated/grid/search-everyday-COA-CBH42.jpg",
+      "sha256": "b3256407b165aaa98991b03fbee544f09f71f9536972668eabdf3e81a5cf121d"
+    },
+    {
+      "file": "public/images/generated/grid/search-everyday-COA-CCX04.jpg",
+      "sha256": "f9d6f2baaa718991d0aba267c6e22c65e922e16a9b2ec67807b18c256d8e4170"
+    },
+    {
+      "file": "public/images/generated/grid/search-festival-COA-76197.jpg",
+      "sha256": "f418b1c8a8279346f76a4d690265e119608ebde50e0204a5b4278d7d05a0ddb7"
+    },
+    {
+      "file": "public/images/generated/grid/search-festival-COA-CCW45.jpg",
+      "sha256": "d87902518dce10ebb6ccf492b0501f791a3ebd2e1041e8c254d6e596b2e16122"
+    },
+    {
+      "file": "public/images/generated/grid/search-gala-COA-CCW92.jpg",
+      "sha256": "fc81c5a912ba147ff1bfd7878e8b462a44eea1769d4f32b8db09f033587387c2"
+    },
+    {
+      "file": "public/images/generated/grid/search-gala-COA-CCX14.jpg",
+      "sha256": "fcc108f39f4f3d43fad2670206bceeb2ec8094268d2d904aceb0746816a75c7f"
+    },
+    {
+      "file": "public/images/generated/grid/search-gallery-COA-CCW92.jpg",
+      "sha256": "3f8b9cb6aa1d342c43ee6143bd3127010bf93697d91d938531042621e70b93df"
+    },
+    {
+      "file": "public/images/generated/grid/search-gallery-COA-CCX14.jpg",
+      "sha256": "d8fe612e4553febaf4a6af4ce289d87b42cd01d7c77d1e7856dd1a35ed64d6cd"
+    },
+    {
+      "file": "public/images/generated/grid/search-investment-COA-CCW92.jpg",
+      "sha256": "3e75e3eeb5b37ac70d3b81055543a182e4c5be01e2759c43434da54b727d562b"
+    },
+    {
+      "file": "public/images/generated/grid/search-investment-COA-CCX14.jpg",
+      "sha256": "60e97e3b2d46d80a1a15131484d604da5d0df55ec011470e907aa485dd8bb096"
+    },
+    {
+      "file": "public/images/generated/grid/search-opera-COA-CCW92.jpg",
+      "sha256": "0c1bdda28766d8bb6374955c21b73a87af749b8c30e2d29a75f738a2903280c8"
+    },
+    {
+      "file": "public/images/generated/grid/search-opera-COA-CCX14.jpg",
+      "sha256": "1ba993fec1d6077ef81ad5fe3f116783f858fdfe032e023593f38b5ba8381581"
+    },
+    {
+      "file": "public/images/generated/grid/search-travel-COA-CCX21.jpg",
+      "sha256": "e0a2d6f7ab3e32012ec4601324677e3a00949700d13e984912a56e20a944e73f"
+    },
+    {
+      "file": "public/images/generated/grid/search-travel-COA-CCX23.jpg",
+      "sha256": "99f96b609427657755e55a902029d9dbe6856d3f3d9996ffaae04cfe3a9c9d40"
+    },
+    {
+      "file": "public/images/generated/grid/search-winter-wedding-COA-CCW92.jpg",
+      "sha256": "d9f7fc0bcf5cbbd3237e28274790bee64b802e185bb241408157684b8c5433b3"
+    },
+    {
+      "file": "public/images/generated/grid/search-winter-wedding-COA-CCX14.jpg",
+      "sha256": "5d7e59ca1f62db3b1c702e38aa311eafa38c8bc7fab429fc765b30063ba9db00"
+    },
+    {
+      "file": "public/images/generated/grid/search-work-COA-CCX21.jpg",
+      "sha256": "32ba855ffbd1f299e60639647ed2c44f43e5ea595db8255a7d3f3658a3c88193"
+    },
+    {
+      "file": "public/images/generated/grid/search-work-COA-CCX23.jpg",
+      "sha256": "f38f846b77dd175639f1992cf146cd1c8b4b08f902300f35e16d5f2ff8fac3ab"
+    },
+    {
+      "file": "public/images/generated/look-brooklyn.jpg",
+      "sha256": "6c1d6744ba36dd7675d9ec51f4220cc8b5aa426339d426191b31fa05f081a9bb"
+    },
+    {
+      "file": "public/images/generated/look-capsule-tabby.jpg",
+      "sha256": "1a34b80c12f5cc713cabaaacb9a584f0ba9dae4bd5b09359ce3b44d0310eecac"
+    },
+    {
+      "file": "public/images/generated/look-gift-200.jpg",
+      "sha256": "0009aa641b0761eb98554f704266518fdb3c6d93e27ff5243538c3d449d49da9"
+    },
+    {
+      "file": "public/images/generated/look-travel.jpg",
+      "sha256": "fe00f103e03d0a67e92f75589eb82135d5d07da5c7d81537817f86df6ce812cb"
+    },
+    {
+      "file": "public/images/generated/look-winter-wedding.jpg",
+      "sha256": "b903cbf192bffeea2e8177a8a0360817ccaa79ac177c68912039e5651f44e827"
+    },
+    {
+      "file": "public/images/generated/look-work.jpg",
+      "sha256": "7292e95e89112e1855f402cafdf6e959dab9864774ecbeb09b9ea6b4f8271967"
+    },
+    {
+      "file": "public/images/generated/manifest.json",
+      "sha256": "958c0254de0f88673ef2b1f5325b9ed2533ddab2ccfa6823271472d16afb6155"
+    },
+    {
+      "file": "public/images/generated/sample-25flash-office-flatlay-tabby.png",
+      "sha256": "62fa055fd4150941acd0e803db98e45ead1f5343ea20bccf52382bdd551e7cf3"
+    },
+    {
+      "file": "public/images/generated/sample-25flash-summer-travel-tabby.png",
+      "sha256": "8e3b29598e06988dcdc82862380742652a690a5bcb6870fe63c46db3b1250e6f"
+    },
+    {
+      "file": "public/images/generated/sample-25flash-via-aisdk-winter-wedding.png",
+      "sha256": "16b348da6bd49a2048a885f2440b375de430c297ed8d9f07dfcb667094b462c1"
+    },
+    {
+      "file": "public/images/generated/sample-25flash-winter-wedding-tabby.png",
+      "sha256": "61e522ae506089564714b5a74cb59a88feff43e4af0db8998b8a4fdb41ad4396"
+    },
+    {
+      "file": "public/images/generated/sample-31flash-hero-16x9-tabby.jpg",
+      "sha256": "825a7336a816407e7ea8e86629a2f82d56fb684c7ee656f1a17536a18dcb5959"
+    },
+    {
+      "file": "public/images/generated/sample-31flash-mollie-tote-travel.jpg",
+      "sha256": "3c20c672d4b68aca188a620aaf17dc30921f8ae4c4058c845ca84f7abb6bfb3c"
+    },
+    {
+      "file": "public/images/generated/sample-31flash-winter-wedding-tabby.jpg",
+      "sha256": "d525fbe9616d0f97a97c78a61e0c51310b101063b55073519f7cdf92cb80b56d"
+    },
+    {
+      "file": "public/images/generated/scene-grid.json",
+      "sha256": "7872bc717e3a12775c53bc4f3ea211e249208ca1a55e61aa96c41023570121b4"
+    },
+    {
+      "file": "public/images/generated/search-date-night.jpg",
+      "sha256": "a37e9fccf73a4d3a47830e0c6ddd26601bafbdbc695227181106904d9a74dc4e"
+    },
+    {
+      "file": "public/images/generated/search-everyday.jpg",
+      "sha256": "fa133cc88413a2c32c89cf46826d444003313b7e2a531348d06ece91e0771359"
+    },
+    {
+      "file": "public/images/generated/search-festival.jpg",
+      "sha256": "0637fba1007b4c618eb8735a198163ccdf91d3c9292ec066673d42eaf8bc9110"
+    },
+    {
+      "file": "public/images/generated/search-gift-150.jpg",
+      "sha256": "57c9a7d3d8efd9f147866b4c37cc8c267e1af73f57539e68515cc118462fcbad"
+    },
+    {
+      "file": "public/images/generated/search-investment.jpg",
+      "sha256": "1207669d0e073fc90be17c9c6bbd46200d2ad3360698e0eaadbab36dd949eb51"
+    },
+    {
+      "file": "public/images/generated/search-travel-crossbody.jpg",
+      "sha256": "07aad693ecba869b125ab365900a6836d960a43e686d492b11b62bc55c904db0"
+    },
+    {
+      "file": "public/images/generated/search-winter-wedding.jpg",
+      "sha256": "ee00a7b9f6d858d7f4ed5a61e34897f301cb9fae47077b59630468dceadfaf84"
+    },
+    {
+      "file": "public/images/generated/search-work-tote.jpg",
+      "sha256": "20906e399ecac2c8ecbe79e7de72ede08535250c85ec88a2980e83d3c50eae34"
+    },
+    {
+      "file": "public/index.html",
+      "sha256": "bca1a1142f940a29c737b85bec5cbc8de710da634faa90cb80db9af30d8beda8"
+    },
+    {
+      "file": "public/learning.html",
+      "sha256": "d904b78cdc0ea25e8fa1fba58d0545c65c3f274e16e7a50f8a3bcab85c2c65a5"
+    },
+    {
+      "file": "public/learning.js",
+      "sha256": "88e11a93c895e15f2a7713b2005eb6188fa3bb7be290a4825a7a7282823ca01c"
+    },
+    {
+      "file": "public/legacy/learning.html",
+      "sha256": "eeff0154dcab52b19ee19f836b6660fc4c858a121df6b160080b4d2784d49220"
+    },
+    {
+      "file": "public/legacy/tuning.html",
+      "sha256": "f1d40850f8d5f3cbbc10928ed3fb83646cd79ad70ace8970f6e13240e6872d90"
+    },
+    {
+      "file": "public/live/img/B412907.jpg",
+      "sha256": "b76b3077f9b8b6a0bef843de0d1b87bea401990c7fa70533afe8f4080a0d0699"
+    },
+    {
+      "file": "public/live/img/B412915.jpg",
+      "sha256": "bf1b676601a4ef01aab5bb49b5da19be32808a3ae56c8c4a29ddfb99363d7eae"
+    },
+    {
+      "file": "public/live/img/B412933.jpg",
+      "sha256": "894b852efd94b6a0fdc8db226094fde1dd983bb11caac1cd6f626b2587cdad39"
+    },
+    {
+      "file": "public/live/img/B412948.jpg",
+      "sha256": "d53f0847a6a6cfa0aee51c4dc210e67c8c9840416d36277ba2724d529fe4c4b5"
+    },
+    {
+      "file": "public/live/img/B412961.jpg",
+      "sha256": "18fc1ed25ba533e763e0474e03f0caebaebf1386bc90f2a60ea7878cbb043ca7"
+    },
+    {
+      "file": "public/live/img/B412974.jpg",
+      "sha256": "dcfae595e784daf5383c6cb36667b1276f5353ebefe819873aeedc2698f1606d"
+    },
+    {
+      "file": "public/live/img/B412988.jpg",
+      "sha256": "932a678e38b17833456a4cd5c8158941fd3b159a89c65f2bd7b04e9b320b24e4"
+    },
+    {
+      "file": "public/live/img/B413006.jpg",
+      "sha256": "4e39524f7d1c3809977d3ea881acdf83068830d19465c92e82ce6f239b954030"
+    },
+    {
+      "file": "public/live/img/B413019.jpg",
+      "sha256": "e6793f73bceda84240bb1c4e84c5985e4deec8334baed202cdaf37fed75e8ea1"
+    },
+    {
+      "file": "public/live/img/B413027.jpg",
+      "sha256": "f343c3b8f1b8ed5fc63a683fbb39ac2c6db899e1780e023b7af2a5422827dc47"
+    },
+    {
+      "file": "public/live/img/B413041.jpg",
+      "sha256": "85d6930e3bf2d7fa4a59f4fa43ec9e479fbe9e74ab277c688e970e3bc7b1e1c5"
+    },
+    {
+      "file": "public/live/img/B413058.jpg",
+      "sha256": "081a41d27c8c3afdef6e79ecf5ee333d65a332be48541cb7454c784590a4004f"
+    },
+    {
+      "file": "public/live/img/B421104.jpg",
+      "sha256": "8476b9535e24f1e970ebed0ae672d3dbd76375ed2e3e819e1f15bb0d1d8225f4"
+    },
+    {
+      "file": "public/live/img/B421118.jpg",
+      "sha256": "81bca079be13c27c009d3d4d2622d74c2902120ea8f84fab5cd75bba32b46001"
+    },
+    {
+      "file": "public/live/img/B421126.jpg",
+      "sha256": "de20a8df223d6945c3dc699ddba2e9f40006c2162dabe6edb77970f84128f914"
+    },
+    {
+      "file": "public/live/img/B421139.jpg",
+      "sha256": "e69fa6c8fae57d39547032b6fe2cf3338ebd10374afdfda9b2c4679e6b3c5198"
+    },
+    {
+      "file": "public/live/img/B421147.jpg",
+      "sha256": "4295ca7aa1aca0f1889f240b93ee3dfb70f646f2f647e71c230482dfc14634f1"
+    },
+    {
+      "file": "public/live/img/B421155.jpg",
+      "sha256": "a80a68fda68c262e5bf96538084c71aa6d2e8c0fe3274303c563bb01a5f89a90"
+    },
+    {
+      "file": "public/live/img/B421168.jpg",
+      "sha256": "951be7c3538c112170e96b25fd86a6a32c21175cde3846859b876826e7589754"
+    },
+    {
+      "file": "public/live/img/B421172.jpg",
+      "sha256": "a320077c6f5ac18f7d36a4d0b4b407f27751c1b8a08104145f48082b8fb1c991"
+    },
+    {
+      "file": "public/live/img/B421186.jpg",
+      "sha256": "53d81f7405aa5633ea94aad0f89f3281b1822ea2764c1cb79bbc6dba902f039f"
+    },
+    {
+      "file": "public/live/img/B421195.jpg",
+      "sha256": "66d6eb476e76d70040c3232992061c2283868356f1ca4320c8e5c46cd653f6d4"
+    },
+    {
+      "file": "public/live/img/B421203.jpg",
+      "sha256": "dc7a2f46c15cb59d08adb6bd56dd63957ed1090f2a500f869791de14bcec7890"
+    },
+    {
+      "file": "public/live/img/B433208.jpg",
+      "sha256": "2483e8f2cfb166a55374de39f666461a790ce5e14e3a6d103fdee10277ae5334"
+    },
+    {
+      "file": "public/live/img/B433216.jpg",
+      "sha256": "b7b7808693c8e286c80b8c48a26ea031376e0302aea0fabe347240ab2a06ade2"
+    },
+    {
+      "file": "public/live/img/B433224.jpg",
+      "sha256": "17e72d9dddcb9e0ec55a2284e4df3b49983ac3446871c7303d001e4f8129dabb"
+    },
+    {
+      "file": "public/live/img/B433237.jpg",
+      "sha256": "dccfbe711095b8cdfae6928b3c45bf5e2d589d84a182014a5f0247a42c6d5335"
+    },
+    {
+      "file": "public/live/img/B433245.jpg",
+      "sha256": "6bb289d75027b4c995734091ee0ea5458adb7d77f6842014d699bc289d30b1b7"
+    },
+    {
+      "file": "public/live/img/B433259.jpg",
+      "sha256": "1156a42df95fb5d584f4f002d75083fb2cc639037142ce14545cd2c239912228"
+    },
+    {
+      "file": "public/live/img/B433263.jpg",
+      "sha256": "dd640cf5e6b700edede01a17759481e9d6ae8911ec577636c635ee8db94d8a69"
+    },
+    {
+      "file": "public/live/img/B433271.jpg",
+      "sha256": "3ec97d60459f06a251031ce44d3bd43a47baa640fddbfb860d9b6b30f548f9b7"
+    },
+    {
+      "file": "public/live/img/B433288.jpg",
+      "sha256": "9ee0afc773f9638c66394524b3b7962110b302fc4b03995b80e3e678e75e1b85"
+    },
+    {
+      "file": "public/live/img/B433294.jpg",
+      "sha256": "726ce13803ad92b71916bed19bc8a472bcb14a42d4c84f2108f92d373332c6fd"
+    },
+    {
+      "file": "public/live/img/B445301.jpg",
+      "sha256": "5d255457d5a848253e46a6329627f4e5cdd107f3c95820904cc92b1d6f5df904"
+    },
+    {
+      "file": "public/live/img/B445318.jpg",
+      "sha256": "aa25c7fdd4e8118934a2a489ff61c3cafa3c94d80732dec557f9144478260bfc"
+    },
+    {
+      "file": "public/live/img/B445326.jpg",
+      "sha256": "7e3d927fefbb3394d3a9a7c0d572349de9fce989919727aeb9dac679534d11bb"
+    },
+    {
+      "file": "public/live/img/B445334.jpg",
+      "sha256": "bcd22f1da8c94fc340b0852da2eb78185ea0210644e5dc89d3a6fb295f757432"
+    },
+    {
+      "file": "public/live/img/B445347.jpg",
+      "sha256": "15c80b2bd0d13d94eeab88eb5470ecf2835c55e5c1551966696811b03f0e449f"
+    },
+    {
+      "file": "public/live/img/B445355.jpg",
+      "sha256": "2947e2490923be6fb2a58b4d746b374b48d45aff19b350e95d55f2678fdc90b8"
+    },
+    {
+      "file": "public/live/img/B445369.jpg",
+      "sha256": "69714c0bdd80754ca7f7744ff48f4a94332ba871398be8bf7099e5ff94a2f135"
+    },
+    {
+      "file": "public/live/img/B445372.jpg",
+      "sha256": "ca5cc2bea30bcbc52c2548286aabf4a581897f28353e7b40fd175263a58dd46a"
+    },
+    {
+      "file": "public/live/img/B445384.jpg",
+      "sha256": "859aa7bcc373088210757652b667e4677f7cc1cba2958be63da0bba216002d60"
+    },
+    {
+      "file": "public/live/img/B445396.jpg",
+      "sha256": "fe68f9371aeeed93c977a4fcf4aebbcd45c310202350e999f8c6d86bbeb88416"
+    },
+    {
+      "file": "public/live/img/B456402.jpg",
+      "sha256": "b5b0924c7d96437d39a30c1bad26574fb0931ff24347438b06e99c223567131c"
+    },
+    {
+      "file": "public/live/img/B456417.jpg",
+      "sha256": "4a986443f8df3f86426c2d49f8bc2388a0211c1eae6c7ef1287363ee6c265c12"
+    },
+    {
+      "file": "public/live/img/B456425.jpg",
+      "sha256": "547e74073d580e56bb71b7de5f0500f87916d8e98c1c24abb7c87dc0b0ba41eb"
+    },
+    {
+      "file": "public/live/img/B456438.jpg",
+      "sha256": "6f7c04d304e161c245e12d021ad95a5cd237a281c417756b8530539c54880d33"
+    },
+    {
+      "file": "public/live/img/B456446.jpg",
+      "sha256": "ecea6d618f920a0252f9753641a24de7339d70b65c542e6e305f9a8fa3c5cc98"
+    },
+    {
+      "file": "public/live/img/B456453.jpg",
+      "sha256": "cd6da41d55799826d4dddd10fc9c764f824aadd32d447815365193bcc9569420"
+    },
+    {
+      "file": "public/live/img/B456467.jpg",
+      "sha256": "8f6a7fdfa30c55df467469fbf6823844e3d892a8c2a0b7ee7392acb1d6373d12"
+    },
+    {
+      "file": "public/live/img/B456479.jpg",
+      "sha256": "af04a6cc35c4c55588b664c8a70fb4c4ce95c08afb41d53d5271febfaedb30c8"
+    },
+    {
+      "file": "public/live/img/B467503.jpg",
+      "sha256": "06b4d2b845af39e686fa1ad8ededcdd82a0820fb491b2472e770969c8a973b11"
+    },
+    {
+      "file": "public/live/img/B467511.jpg",
+      "sha256": "56efa0a783cc1bec958ac825ac9b6af058a614dfcbfcb339144627c55a57bd37"
+    },
+    {
+      "file": "public/live/img/B467528.jpg",
+      "sha256": "1b8f97895416c97f87aa8d35e93b97e853b59382632d54f552b115806020f233"
+    },
+    {
+      "file": "public/live/img/B467536.jpg",
+      "sha256": "00497ab1b78d2968965ff1eab96dfcd7600addb33de7e45a86dfa68cec289018"
+    },
+    {
+      "file": "public/live/img/B467549.jpg",
+      "sha256": "87c4b6c273a54ed35c90dc2f0799eafc6bd91bf6153749032be7712262ef0feb"
+    },
+    {
+      "file": "public/live/img/B467557.jpg",
+      "sha256": "21f86dd389024192e1b11b76b4144a2c09fc4ec0105e30e7c6c0b52f1da34f2a"
+    },
+    {
+      "file": "public/live/img/B467565.jpg",
+      "sha256": "8d27680c4c5de13e637ff361a8b63d9e547c95e492158197de7d02408cc8c2df"
+    },
+    {
+      "file": "public/live/img/B467578.jpg",
+      "sha256": "bf8425346fac1a812413d0b6db8da6735687d73ad233094938d51933d1e8abde"
+    },
+    {
+      "file": "public/live/img/B478604.jpg",
+      "sha256": "d77f11121a7a96a3704af69e35a219737c6f70a5d89c7a524bfa20028e2b3e29"
+    },
+    {
+      "file": "public/live/img/B478612.jpg",
+      "sha256": "6b7570adce9ee48c108884ea81dff23c0d3be1a3670df56df3fbde3695ab50e9"
+    },
+    {
+      "file": "public/live/img/B478629.jpg",
+      "sha256": "81d62eabd5247143ef2f0d9c5749fab73aa624c1902c6a67949441c5d3503c04"
+    },
+    {
+      "file": "public/live/img/B478637.jpg",
+      "sha256": "a6714f050445bffd0f78dd52664f57eb1e63d8597e9373e015cde6e67b20b4b6"
+    },
+    {
+      "file": "public/live/img/B478645.jpg",
+      "sha256": "b0af91773241df18134e7805eb2a4b2a9f4ebeb33287f339ab362c31e8beb63d"
+    },
+    {
+      "file": "public/live/img/B478658.jpg",
+      "sha256": "1e21c7167da69cb41ce1a379e39e3e43e8af19cf3fb4f7238c2095df4f07ecbf"
+    },
+    {
+      "file": "public/live/img/B478663.jpg",
+      "sha256": "9684182c3be9168c407e79b8298579701696e552af6b2bdbfb8ba5afedfe80bf"
+    },
+    {
+      "file": "public/live/img/B478677.jpg",
+      "sha256": "cf0449bd4351b4187e29a456c9eb5fba1fe55901eef135e1ce215f6887a87137"
+    },
+    {
+      "file": "public/live/img/B478689.jpg",
+      "sha256": "f1aa818f0421a82fbb5c911371034d05bd579e7b003a2353660567ab5571661f"
+    },
+    {
+      "file": "public/live/img/B489705.jpg",
+      "sha256": "5e0343423936221cbf5db0733cc179330c76e8cbe525369a8ba2140a37676efc"
+    },
+    {
+      "file": "public/live/img/B489713.jpg",
+      "sha256": "112b513a9237a2f0485ba50078e44b922a6267bca40625e2eb6458a7e18563e8"
+    },
+    {
+      "file": "public/live/img/B489728.jpg",
+      "sha256": "3a12fa61b4505af7a779ad3bd67892130c074a5324f5b83b2d5faf57d537bb02"
+    },
+    {
+      "file": "public/live/img/B489736.jpg",
+      "sha256": "1cf261b34014051a19c975fce7272420fc3c5bc924630ac05954e8a9197c0f94"
+    },
+    {
+      "file": "public/live/img/B489744.jpg",
+      "sha256": "e5527d59ec47fa7108abac50271dd752540f9f35b40b1cdb2dfd613adf4580a4"
+    },
+    {
+      "file": "public/live/img/B489752.jpg",
+      "sha256": "61362a7c466a278fed6bc06b7c05917e9384d593e90f3bdd608715a14b4220bd"
+    },
+    {
+      "file": "public/live/img/B489767.jpg",
+      "sha256": "59cc89dd80d0d10fd583105217c1092df5e169765c9422c50a33d35801677fb2"
+    },
+    {
+      "file": "public/live/img/B489775.jpg",
+      "sha256": "ef33233298c97ff4124199b0848f00b8a421ff5b381063f3899efa11d2faeb2b"
+    },
+    {
+      "file": "public/live/img/B489783.jpg",
+      "sha256": "6f7eaa46a8c9b18c5d9e4af5a4319fc71e33eebd96097cd74c7b0003102f83b1"
+    },
+    {
+      "file": "public/live/index.html",
+      "sha256": "767df29ac3ff252e559a162566d0b55c8dcdbbe80ad7e5755f9fa4ea6bc1e470"
+    },
+    {
+      "file": "public/live/live.css",
+      "sha256": "3ce654c0c03012eed0ad625ffddf11b65584960efac1f466250b2ab855c290b0"
+    },
+    {
+      "file": "public/live/live.js",
+      "sha256": "25e70ee4579346f6924b08ee4bb645467029c67046c66be90f1a04be1c458335"
+    },
+    {
+      "file": "public/live/ops.html",
+      "sha256": "24cb6e9dcab7efe4b72ebfcb77f24b5c2ef20a2b278cdea8afbd366b660a2016"
+    },
+    {
+      "file": "public/live/ops.js",
+      "sha256": "6f45b4e27dec2c06248ac31946bb6e6f6f7dad63603360d554c319cb1a6f18dd"
+    },
+    {
+      "file": "public/meridian/_design-sheet.html",
+      "sha256": "d471e88a4cb917f44490d6191a37e27d2b078c21efb83a7d7d2566426910b3ec"
+    },
+    {
+      "file": "public/meridian/_meridian-v1.js.bak",
+      "sha256": "4d85973bfb8bd606ac71b3ecb765a71ffcffcf5e43228bc9b45243e94ef436d5"
+    },
+    {
+      "file": "public/meridian/beats.js",
+      "sha256": "54123fe08191b2ac08d8290aa97dfda8fdf7b0670f62728be621769d9f8c94aa"
+    },
+    {
+      "file": "public/meridian/compare.css",
+      "sha256": "ca012699d7d7a6fc404fefd725459fc5ff7e2a322b6e5c142b178b0d01e0fe6b"
+    },
+    {
+      "file": "public/meridian/compare.js",
+      "sha256": "cc8a8c36aad8836257610963cc031c0a9ce8e1752d7f1cc934dcd74808f4d30a"
+    },
+    {
+      "file": "public/meridian/content/CMP-1001.jpg",
+      "sha256": "0d3ba3bf3b45335b5a5cb4348780c5f18294ed855fcd30b5efd4249bc1734f4d"
+    },
+    {
+      "file": "public/meridian/content/CMP-1002.jpg",
+      "sha256": "fd65244e17607883f17828145ce7d337706d5cc6dca3b18e44aba0bb046e186b"
+    },
+    {
+      "file": "public/meridian/content/CMP-1003.jpg",
+      "sha256": "f26e862eb058aaa6b46376b979a25684341b0226fc29f8917a36d82f3141925b"
+    },
+    {
+      "file": "public/meridian/content/CMP-1004.jpg",
+      "sha256": "763e80773294cbeb5cacd63f8c45e763bf95d3373647150816a54a482b2bb257"
+    },
+    {
+      "file": "public/meridian/content/CMP-1005.jpg",
+      "sha256": "b7c789b6b9aeb9eedda49eb6ccd3e3ac54f48bcfe4895dee859d7228e5146389"
+    },
+    {
+      "file": "public/meridian/content/CMP-1006.jpg",
+      "sha256": "edd063bf0b1d6b7514377c72bd9c0c579e33924994cf72bd27142bee04ff81c5"
+    },
+    {
+      "file": "public/meridian/content/CMP-1007.jpg",
+      "sha256": "b11a778c54652c88f65c0ed012d123933d792dc490394f6390151cc7d0909b56"
+    },
+    {
+      "file": "public/meridian/content/CMP-1008.jpg",
+      "sha256": "19ca3ae88ec7909d9821b1898c3f3313af0538967982166238fd566f4d5f2a5f"
+    },
+    {
+      "file": "public/meridian/content/CMP-1009.jpg",
+      "sha256": "a9ac0b086ea4f16a611a0a0ed8e0770b36ee221a469170c3c0c4297475580c02"
+    },
+    {
+      "file": "public/meridian/content/CMP-1010.jpg",
+      "sha256": "be433d43a89cf98d49b33bf4af0c3b6340b3bc1f9f9fe186482ebfb9f88ff10e"
+    },
+    {
+      "file": "public/meridian/content/CMP-1011.jpg",
+      "sha256": "317ca79f3e71de103ee355eba4965fc7b0d8146b0b28517f275c48aecf89106d"
+    },
+    {
+      "file": "public/meridian/content/CMP-1012.jpg",
+      "sha256": "6623a3b24c437ed4ce10d4c7221dad181d322c74921d5da1aeccf6647325edd5"
+    },
+    {
+      "file": "public/meridian/content/CMP-1013.jpg",
+      "sha256": "6c2ab737ab74364497feaf26291a1fc385b7ce5aad4cad4c32038d7257e86a13"
+    },
+    {
+      "file": "public/meridian/content/CMP-1014.jpg",
+      "sha256": "ea46b7dc36b6141cf8878334ef356b61db384eb83535c23871556fb3a1bc4cd2"
+    },
+    {
+      "file": "public/meridian/content/CMP-1015.jpg",
+      "sha256": "39a8c93d61b50b9683ee2bccf0fa470766b5acebca96699e6e33f30c0dd7402e"
+    },
+    {
+      "file": "public/meridian/content/CMP-1016.jpg",
+      "sha256": "b47f497d91dbce3bdbc425c803d602b4a0967ce319c4f90215682beff8458d6e"
+    },
+    {
+      "file": "public/meridian/content/CMP-1017.jpg",
+      "sha256": "de2f3767055c4f558125c96e81d9e53cc63320cfc8ee75b2def5faeffd43f012"
+    },
+    {
+      "file": "public/meridian/content/CMP-1018.jpg",
+      "sha256": "4dfe35f06ac909e47646cf0422d345f8cb08f54a1a648b38d680145aa9cda19f"
+    },
+    {
+      "file": "public/meridian/engine.bundle.js",
+      "sha256": "9629201649f5feced00e022aa97d3409cfb2160db055e96283b39d8f8c6f4f78"
+    },
+    {
+      "file": "public/meridian/img/MRD-R001.jpg",
+      "sha256": "d76381d094dfe53b512aa3fab58675b5415f935b300a2de073a953c77fdaed66"
+    },
+    {
+      "file": "public/meridian/img/MRD-R002.jpg",
+      "sha256": "3c0bd7b2fe7c300633758bc78ebde90a6115f984062d7f8540eb2670fa6d4405"
+    },
+    {
+      "file": "public/meridian/img/MRD-R003.jpg",
+      "sha256": "cdff7bd44c54a1a611d0964dd5312faf48e3321495326dd4b2a7e6708feafa3b"
+    },
+    {
+      "file": "public/meridian/img/MRD-R004.jpg",
+      "sha256": "688168d108161b127befcef5f25a8e4043567b7ba8630706ca40c952d9b777b8"
+    },
+    {
+      "file": "public/meridian/img/MRD-R005.jpg",
+      "sha256": "60f4a36088208331b5a80756bd26c5abc88764c4f2c48d94c941efbc63ed01ec"
+    },
+    {
+      "file": "public/meridian/img/MRD-R006.jpg",
+      "sha256": "896931ee4e5545f8ecf5ffdc86b8cbf7dbbabb43f90deb086044db9676ad5865"
+    },
+    {
+      "file": "public/meridian/img/MRD-R007.jpg",
+      "sha256": "7d9a810785e052a82d6d90b8bf2f60f0e0dd5f2cc5ffc4eafcfa879b6a510a09"
+    },
+    {
+      "file": "public/meridian/img/MRD-R008.jpg",
+      "sha256": "edef8ccbf27b2328255ba576bf1d4cfd4c18a2942f125c53541debb3bc34bfac"
+    },
+    {
+      "file": "public/meridian/img/MRD-R009.jpg",
+      "sha256": "94d68ea27fc7def1921ac46cc9d08c44ccda1c7ddd30d57517e9ed822ddee458"
+    },
+    {
+      "file": "public/meridian/img/MRD-R010.jpg",
+      "sha256": "cd720a3e1fe8b243b6fae81b107c866e334e2a49cdf5ee998ce6bf09c5ed654f"
+    },
+    {
+      "file": "public/meridian/img/MRD-R011.jpg",
+      "sha256": "f3382cc76314146a64fb65f78401e3908b01c58769c83cb7df0968865d6888b4"
+    },
+    {
+      "file": "public/meridian/img/MRD-R012.jpg",
+      "sha256": "e58af5bcab8c6e2595fcf053db8ad010d9ccf78d4a9c71cf5f8865c409810dd7"
+    },
+    {
+      "file": "public/meridian/img/MRD-R013.jpg",
+      "sha256": "a5678e690bd8fff0f805ad8ec57b77fbdd91b34dfef11e53b4a318a8b5f4f540"
+    },
+    {
+      "file": "public/meridian/img/MRD-R014.jpg",
+      "sha256": "8d9171d5376d94f5902994130028e0e58d37ba8324d850f2aabc90f97c6270ac"
+    },
+    {
+      "file": "public/meridian/img/MRD-R015.jpg",
+      "sha256": "b8b4291216325a5c97ab89943747b5f9d75641cf7dcd7e72af4aa4a8bbadc61d"
+    },
+    {
+      "file": "public/meridian/img/MRD-R016.jpg",
+      "sha256": "6c4f62c8f7a52d30ad36ef41717ee662443ab21d029777826ea44b823ee018be"
+    },
+    {
+      "file": "public/meridian/img/MRD-R017.jpg",
+      "sha256": "3edca163acd95d4e071546a77706316b60b3eb3ecccbdc2dd8daaab81fa879d5"
+    },
+    {
+      "file": "public/meridian/img/MRD-R018.jpg",
+      "sha256": "bdf8c20607abe87250ebcd77cfd8db8338d951f0857adcf4114e730b22db4e58"
+    },
+    {
+      "file": "public/meridian/img/MRD-R019.jpg",
+      "sha256": "40a645b36cfbe3e447c7307f6535aa7e65aa45ea0548b8770405d4a5c58c3c03"
+    },
+    {
+      "file": "public/meridian/img/MRD-R020.jpg",
+      "sha256": "271c1dd330c5cdaaa1d2fc6af0a04ab7da517cf90a7982adfa7b4440c675bfc1"
+    },
+    {
+      "file": "public/meridian/img/MRD-R021.jpg",
+      "sha256": "6c378b75e60419d0e34bf7e6b1e1be733ce69ff003cee41d90d97ca8d62a9ca4"
+    },
+    {
+      "file": "public/meridian/img/MRD-R022.jpg",
+      "sha256": "be8d2fa70aefe10075bc9206363f7a3fd80e4b8d88c41581b239fcea686f0fb4"
+    },
+    {
+      "file": "public/meridian/img/MRD-R023.jpg",
+      "sha256": "7a8171e9c79483dd032b4ea3e2116fee6325f608a93e0257c0efc98f96ce149c"
+    },
+    {
+      "file": "public/meridian/img/MRD-R024.jpg",
+      "sha256": "3f20dc0a1b95d478dfb1b5675f591dfcbe7c726a21bb14f6459c5af27ad66c08"
+    },
+    {
+      "file": "public/meridian/img/MRD-R025.jpg",
+      "sha256": "69beb6d55f352bb40b86dd51e9d47a0d434e9b08a3baae2f95c143527035b644"
+    },
+    {
+      "file": "public/meridian/img/MRD-R026.jpg",
+      "sha256": "4c78f39fd5a3179792cc9ff2f331451ebbb13c36200a350d4c2459b1e39df41f"
+    },
+    {
+      "file": "public/meridian/img/MRD-R027.jpg",
+      "sha256": "0096e3b61aafad4fa35d225c33768abd8baea87120beb0a08c12117c1e9d5f22"
+    },
+    {
+      "file": "public/meridian/img/MRD-R028.jpg",
+      "sha256": "d75529d150c6505af2be632fa52f08a080dbe3dd8148dafd81fe128d5442258b"
+    },
+    {
+      "file": "public/meridian/img/MRD-R029.jpg",
+      "sha256": "3ebe987fd2459fbd014fd221456d66f3246e944f87cc58db3826985dc949d308"
+    },
+    {
+      "file": "public/meridian/img/MRD-R030.jpg",
+      "sha256": "8c31b94eba181bcd2e3af7782777fd290221a4a5b98c445af30f3791ac4a3ba2"
+    },
+    {
+      "file": "public/meridian/img/MRD-R031.jpg",
+      "sha256": "4b2233f7161e4804f1ebe2b69ae8134e248d71ef650222302ee9f1b332bf33bd"
+    },
+    {
+      "file": "public/meridian/img/MRD-R032.jpg",
+      "sha256": "475d0156d09412906bb9e7665fe372be101189610dbbbd50b5d53080aff50c35"
+    },
+    {
+      "file": "public/meridian/img/MRD-R033.jpg",
+      "sha256": "e2d94a689496be5448fa608aa0d2d33c379bbc2bfcb830a9c021685ea2ce2f49"
+    },
+    {
+      "file": "public/meridian/img/MRD-R034.jpg",
+      "sha256": "58664459cf43831786a0a3f1ec157547a62aa906fe4cb0875f32cef1b1907a6a"
+    },
+    {
+      "file": "public/meridian/img/MRD-R035.jpg",
+      "sha256": "bc73f6139709f3fffa1c9fee1175f743d73396a32ffa2dcd20a91ad8cfeeca79"
+    },
+    {
+      "file": "public/meridian/img/MRD-R036.jpg",
+      "sha256": "9b31404407ff8890ffac90d142858ec9f3021debe444b4a73ada89757d7efe3f"
+    },
+    {
+      "file": "public/meridian/img/MRD-R037.jpg",
+      "sha256": "d14778fd1f3d4f1040e9372d38d9b1c7881b3e3476d80fca847be5a0d446863e"
+    },
+    {
+      "file": "public/meridian/img/MRD-R038.jpg",
+      "sha256": "79fac7c1f54ac2510d896bc0c4aee905b1060c43eee1694cde0b751ab6eaac72"
+    },
+    {
+      "file": "public/meridian/img/MRD-R039.jpg",
+      "sha256": "0a404a83d3bf74026e6c6e0ab388fe8d05317ccc03e508561f99be76eff8f09d"
+    },
+    {
+      "file": "public/meridian/img/MRD-R040.jpg",
+      "sha256": "eef475f48f2fe6c0730077d2a4d5af76e63b7c114e928fea94fddbf4bd7182e2"
+    },
+    {
+      "file": "public/meridian/index.html",
+      "sha256": "a53ccb21e5027a06f1283e5a3f96c2acdab10b29cefb1c2dbfc2dd00ad26e3ec"
+    },
+    {
+      "file": "public/meridian/layout.js",
+      "sha256": "74bbf914ce07ac20235d7e2b31a7d3b66fb008b74d606dcd6146cb12c828162a"
+    },
+    {
+      "file": "public/meridian/meridian.css",
+      "sha256": "56a291e5a4acb1bcd980c60f998b039b3f9e8a316cb1eb0897b6f2ae2a41bd64"
+    },
+    {
+      "file": "public/meridian/meridian.js",
+      "sha256": "a61bb0c3dc458b05406c2f3ee708f772b1c032534f94bf4ae0417e3c5d930957"
+    },
+    {
+      "file": "public/meridian/moments.css",
+      "sha256": "8be5ed23933285e3ca5b3b9a261afba40feebb9d7fd8ca7cbe7e6bb8108fec51"
+    },
+    {
+      "file": "public/meridian/moments.js",
+      "sha256": "1c706e7350a0a1beebda3a21d1c7339e9792944481194d27e0b87790bcca0c6a"
+    },
+    {
+      "file": "public/meridian/scenes/black-tie.jpg",
+      "sha256": "d6a597a2d54ccfc7d3ec46b0ca485ac0d2ebcf3c7dd0d1a438a593bbd6ca957e"
+    },
+    {
+      "file": "public/meridian/scenes/black-tie.svg",
+      "sha256": "3e7566eb1577bb274c4cef33563cd7b3e704f18472eac9080005c7bbb89abb74"
+    },
+    {
+      "file": "public/meridian/scenes/cold-snap.jpg",
+      "sha256": "72523a097b664fda24870faf7c715efaba1ec553982e565088de855179c26327"
+    },
+    {
+      "file": "public/meridian/scenes/cold-snap.svg",
+      "sha256": "db5a616776313cd8d214d4adca05cd27674dd0383268c1b66c4bb90e9191efbd"
+    },
+    {
+      "file": "public/meridian/scenes/first-home.svg",
+      "sha256": "65dbdb9d1bcc0a898f52730effab840f5f40e74dd100bfb2db001b0daa53a47e"
+    },
+    {
+      "file": "public/meridian/scenes/graduation.jpg",
+      "sha256": "bea606294e595511d49986a355df3772809451587ead03a001fbe7aca4e74207"
+    },
+    {
+      "file": "public/meridian/scenes/graduation.svg",
+      "sha256": "6a25e498ba8614c35fa7369c0db01f988d4f5c8e69e97f660264e58b8d02ec49"
+    },
+    {
+      "file": "public/meridian/scenes/hard-to-buy-for.jpg",
+      "sha256": "4bfd875f0a38cb728e9e343e6ff99a5f666ff1d5746a067a67e302ae72842b0f"
+    },
+    {
+      "file": "public/meridian/scenes/hard-to-buy-for.svg",
+      "sha256": "74aff07f8918dd73b3c7986e7da61210e50afeffb3c94a5d6ce86dbeb2161bac"
+    },
+    {
+      "file": "public/meridian/scenes/investment-piece.jpg",
+      "sha256": "5926f5dec47b799e17a6d23c1442aee404bc9a4a480d09c913905ab5fd4246ed"
+    },
+    {
+      "file": "public/meridian/scenes/investment-piece.svg",
+      "sha256": "7db4d87c584f3ad597b837f00458d00c2a58467def46395d175433e0fe643a78"
+    },
+    {
+      "file": "public/meridian/scenes/new-car.svg",
+      "sha256": "c43eda87d695f20e2ad8ffcfe876317e4d20b3161e63b86bd246c4eb3108a394"
+    },
+    {
+      "file": "public/meridian/scenes/new-job.jpg",
+      "sha256": "a5b3cbb4939f95690dcd914656b6486b5d2ca80f983ae3dfeae06906503606d3"
+    },
+    {
+      "file": "public/meridian/scenes/new-job.svg",
+      "sha256": "563a9e5fd1fd7f1b500240daaac133fe8d2b6d0d29a0e5e7274b7e02872dcd44"
+    },
+    {
+      "file": "public/meridian/scenes/paying-down.svg",
+      "sha256": "e34604b4daca3b1390ca3821c8e90dad6a415a3a9dd09cfa4064dfaa6217428c"
+    },
+    {
+      "file": "public/meridian/scenes/retirement.svg",
+      "sha256": "2ec0f61b0ede4067a9e8608ace5dc133cbfeee8169bf8ccf6e131472b9b8ffea"
+    },
+    {
+      "file": "public/meridian/scenes/saving-up.svg",
+      "sha256": "04eb7f44012d88f4d294c49f05b54d67260a6784dd216f1cba3ed7f4c01c203f"
+    },
+    {
+      "file": "public/meridian/scenes/starting-out.svg",
+      "sha256": "551f290942e60b1624609ad712359b2c546ee67183038945f4c5a50412877303"
+    },
+    {
+      "file": "public/meridian/scenes/wedding.jpg",
+      "sha256": "74349df44e6ff4ce2c6bb3310f287c6ea41a0cba4ca156c216e800511d2ba216"
+    },
+    {
+      "file": "public/meridian/scenes/wedding.svg",
+      "sha256": "02da8d304bb0bb7c1f863bcc0a024abbe229f011efb5033bba63d30f68e834b0"
+    },
+    {
+      "file": "public/meridian/scenes/weekend-away.jpg",
+      "sha256": "36006340d7a5bc65bce735fbf429f9519010a7751275b2780cce21ef668dbd31"
+    },
+    {
+      "file": "public/meridian/scenes/weekend-away.svg",
+      "sha256": "649de657649eb9c7cbbf257641248fed03a6578863e8b4355977f0aecfa20301"
+    },
+    {
+      "file": "public/meridian/surfaces.js",
+      "sha256": "15bac508a6b6dd6a0198367acf2663a9e73d086ab1d0de7a69d98b768f0caa72"
+    },
+    {
+      "file": "public/opal-chat.js",
+      "sha256": "0d5d45a33d03b05b3c4a7ebdaffe41ddf8ab1e4f0cd6356d3ec85c021c8895e7"
+    },
+    {
+      "file": "public/operator-console.html",
+      "sha256": "3c62747952163707ccb9b89d6526f4615c48b779cba8469930c9e141d94090f9"
+    },
+    {
+      "file": "public/operator-console.js",
+      "sha256": "5f7fefd127551e7ef2b48fb192533855af5f9c0d5cff9c1b4671ded85e62547b"
+    },
+    {
+      "file": "public/operator-session.js",
+      "sha256": "d759f3fccd0e2c5b8aed493b663218fa316036bbfa31de23a4f0de9284fcdeb0"
+    },
+    {
+      "file": "public/optimizely-content.js",
+      "sha256": "bcaf07fc7d69943020787e27b97fd15bf07b38c15de422c340e0d06ce9457c1e"
+    },
+    {
+      "file": "public/revenue-radar.js",
+      "sha256": "86290faeee2798c181e4b851ec03d4608c9762d212ce40365202f7631c516405"
+    },
+    {
+      "file": "public/scenarios.js",
+      "sha256": "b0af826e8c79ee0d26a64bb6c02aec58aaf73466297fae32756f2a9a4f654085"
+    },
+    {
+      "file": "public/sdk/edge-personalization.esm.js",
+      "sha256": "4314093fc70c27eeaa52b210b2a684daa95ba5087955cc0299fb271703a8c73e"
+    },
+    {
+      "file": "public/sdk/edge-personalization.js",
+      "sha256": "71e622ea78cd6c9aabd968a6a7f35e30d9781a2bcbf2d26c4cf280edd84605c8"
+    },
+    {
+      "file": "public/storefront.html",
+      "sha256": "72e0d7474d2371adb52bca2bc960f3f3dc620a5e739b16a5efc97672f3012994"
+    },
+    {
+      "file": "public/storefront.js",
+      "sha256": "5cf2c29ced16f802fda4bac97be8fb903bb7b3cfa1513e20ea36f1a896a866de"
+    },
+    {
+      "file": "public/tuning.html",
+      "sha256": "d8ded142aa10b0c9b82bf3c294522c77b04d86435cb9f42ca74b36c5b14fbd19"
+    },
+    {
+      "file": "public/tuning.js",
+      "sha256": "df551faa8e1cea942a12e0b401c815c253803f70242232571a52db2fb2919be6"
+    },
+    {
+      "file": "public/visual-demo.html",
+      "sha256": "fe3e272bd02f24556fa0638c250423de8e564cf35d1a8873a24b4bfbc7c3de3f"
+    },
+    {
+      "file": "public/visual-demo.js",
+      "sha256": "6df82a9b78c400df6bc863faa0897b44c93fbf70434139730908531f99a9dc2b"
+    }
+  ]
+}

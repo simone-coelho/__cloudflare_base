@@ -46,7 +46,7 @@ export class FeatureVariableManager {
   constructor(env: Env, readonly tenant: TenantId = DEFAULT_TENANT) {
     this.env = env;
     this.kv = new TenantKV(env.CACHE as unknown as KVLike, tenant);
-    this.optimizelyService = new OptimizelyService(env);
+    this.optimizelyService = new OptimizelyService(env, tenant);
   }
 
   /**
@@ -106,7 +106,7 @@ export class FeatureVariableManager {
         results[featureKey] = this.applyOverrides(result, overrides, featureKey);
 
       } catch (error) {
-        console.error(`Error getting feature variables for ${featureKey}:`, error);
+        console.error('Error getting feature variables');
         
         // Return fallback configuration
         results[featureKey] = {
@@ -198,7 +198,7 @@ export class FeatureVariableManager {
         }
       }
     } catch (error) {
-      console.error('Error fetching user overrides:', error);
+      console.error('Error fetching user overrides');
     }
 
     return overrides;
@@ -418,7 +418,7 @@ export class FeatureVariableManager {
         lastUpdated: Date.now()
       };
     } catch (error) {
-      console.error('Error getting feature variable analytics:', error);
+      console.error('Error getting feature variable analytics');
       return {
         totalFeatures: 0,
         activeOverrides: 0,

@@ -1,0 +1,428 @@
+{
+  "before": {
+    "id": "W19.01-E2",
+    "task_id": "W19.01",
+    "check_id": "W19.01-K2",
+    "criterion_ids": [
+      "W19.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1404-reviewer",
+    "run_id": "/root/w1404_review",
+    "file": {
+      "path": "docs/remediation/evidence/W19.01/worker.json",
+      "sha256": "074ca7b39525f89dbd470c00bc8b9e6c66ea4c425fc3da45a9cfd13e974d8a25"
+    },
+    "at": "2026-09-13T15:59:52.722Z",
+    "limitations": "Bounded current supported-field import/merge fidelity, promised stage aliases and duplicate-tag refusal with retained-history compatibility only. Full W19/F27/N15 stays open: canonical type/film-video signal and ranking agreement, registry/locale/slot vocabulary, unusable taxonomy policy, product-attribute inheritance, full versioned feed/customer acceptance remain. Stored duplicate tags retain old scoring; new writes/rollback/enrichment containing them refuse until explicit correction; no silent historical rewrite. No new infrastructure, broad suite, benchmark, scoring/model/consent/authority change, emitted build/install, cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions. Retained raw enrichment proposals keep their original sample/digest and validate against the whole historical or current schema only on reads; new captures remain strict. CSV row provenance is local to parser-returned objects; copied rows are ordinary JSON. Unknown metadata is outside this bounded supported-field contract.",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts src/content/enrichment.ts --max-warnings 0 && git diff --check -- src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts docs/kit/03-payload-schemas.md src/content/enrichment.ts",
+    "runtime": "Installed full compiler, six-file TS lint0 and seven-file whitespace.",
+    "workload": "No errors/new warnings/whitespace or emitted outputs/config changes.",
+    "result": "pass",
+    "artifact_digest": "de9e7386adb6fe63a4790b476ea848adf4141726adb584ad9db6ba1a3bedbdcc",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "ff0af9a552112143e6830a55b9176a27cc1fdea3e1a10a7b720f8c4ca5f46c15",
+      "configuration": "Bounded current supported-field import/merge fidelity, promised stage aliases and duplicate-tag refusal with retained-history compatibility only. Full W19/F27/N15 stays open: canonical type/film-video signal and ranking agreement, registry/locale/slot vocabulary, unusable taxonomy policy, product-attribute inheritance, full versioned feed/customer acceptance remain. Stored duplicate tags retain old scoring; new writes/rollback/enrichment containing them refuse until explicit correction; no silent historical rewrite. No new infrastructure, broad suite, benchmark, scoring/model/consent/authority change, emitted build/install, cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions. Retained raw enrichment proposals keep their original sample/digest and validate against the whole historical or current schema only on reads; new captures remain strict. CSV row provenance is local to parser-returned objects; copied rows are ordinary JSON. Unknown metadata is outside this bounded supported-field contract.",
+      "files": [
+        {
+          "path": "src/content/import.ts",
+          "role": "output",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "output",
+          "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "output",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/content/import.test.ts",
+          "role": "output",
+          "sha256": "15848205482dc1b282643439610a12762e3fb9a217b79aabfa51d6364d46b3ce"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "7265be662c9aba28c99125209f13a0ab0a75232471814e99ebfe8c57b217e453"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "46474d96c793290fe7caf46ac8389aad23d66c5da7845c75969598ce536e197d"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "d04666cef4f89021ec1332d398912012727f6367a897fe5dec5c41220af2fc40"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "25cb30a37549a662cd60a5e5dbcdac81ddc26e0c455cbe53f86cf2361a5694ff"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+        },
+        {
+          "path": "src/content/enrichmentPublication.ts",
+          "role": "source",
+          "sha256": "8956b007c0a9a766d794d7f33f07ca268607dfbd7f4921f4bb23e9a8edbcb21d"
+        },
+        {
+          "path": "src/content/enrichment.ts",
+          "role": "output",
+          "sha256": "c4c3e9234102b4ca2e577e141b96a285d5b6a0f2a52fdd663138c7eb50c25daa"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/input.ts",
+          "role": "source",
+          "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "source",
+          "sha256": "f344688f18cbecd678dfd6c40566f4f86d20492eea9334603c82c903c160af31"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/reflex/merchandising.ts",
+          "role": "source",
+          "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "source",
+          "sha256": "b71665cb95a72b95b5f9cf438985561935e59601678b09b48852f11af2d1cc68"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "source",
+          "sha256": "558029ddee9299f1821c7dea6f658c47b622f17eff479f5b78f4c05d2834964a"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F27.md",
+          "role": "source",
+          "sha256": "61a44d769aa90bf3e064dc91b2b9d44fc4f0bf05906ffa1b41724ef0bc5f1f02"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/worker.json",
+          "role": "output",
+          "sha256": "074ca7b39525f89dbd470c00bc8b9e6c66ea4c425fc3da45a9cfd13e974d8a25"
+        },
+        {
+          "path": "docs/remediation/design/W19.01/plan-v2.md",
+          "role": "configuration",
+          "sha256": "eec80e7be8174c2dc6f227940b1bdc11f98935e62e168a35fa381a3396745a3d"
+        },
+        {
+          "path": "docs/remediation/design/W19.01/baseline.json",
+          "role": "configuration",
+          "sha256": "efeeeae1fda119d01b7c7f8828d04205f9ad45a8d047f86354da49d6898ebdb8"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/admission-v2.json",
+          "role": "configuration",
+          "sha256": "f7d7144d8103828daa6c32ffd600514ad38d013bfc1a689f57d52f33db42cd36"
+        },
+        {
+          "path": "docs/remediation/design/W19.01/baseline-supplement.json",
+          "role": "configuration",
+          "sha256": "ef7178a720a26e609d809842b1ff1cf85e8b42b6f3c5ef407e528aa2c6cf8d83"
+        },
+        {
+          "path": "docs/remediation/design/W19.01/plan.md",
+          "role": "configuration",
+          "sha256": "c215795d22413d561de53aef9fdb71e6c5f0eb6f2241fc0e051baf79ab20f27f"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/admission.json",
+          "role": "configuration",
+          "sha256": "a812616bf11a90d1238970bbe44e84f13fa7b03069eb3eadbc8e842a91673b8a"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/source-freeze.json",
+          "sha256": "2e48a0bcdee891bd913ebb648c029dac7b0c8d94ce0ea3d47962c33e13528460",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/source-deltas.json",
+          "sha256": "df55ebeef4f02e66c6e778b78683e3768b0ab45f98a7e5ff20a13099aaa48ff6",
+          "role": "configuration"
+        }
+      ],
+      "digest": "de9e7386adb6fe63a4790b476ea848adf4141726adb584ad9db6ba1a3bedbdcc"
+    }
+  },
+  "after": {
+    "id": "W19.01-E2",
+    "task_id": "W19.01",
+    "check_id": "W19.01-K2",
+    "criterion_ids": [
+      "W19.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1404-reviewer",
+    "run_id": "/root/w1404_review",
+    "file": {
+      "path": "docs/remediation/evidence/W19.01/worker.json",
+      "sha256": "074ca7b39525f89dbd470c00bc8b9e6c66ea4c425fc3da45a9cfd13e974d8a25"
+    },
+    "at": "2026-09-13T15:59:52.722Z",
+    "limitations": "Bounded current supported-field import/merge fidelity, promised stage aliases and duplicate-tag refusal with retained-history compatibility only. Full W19/F27/N15 stays open: canonical type/film-video signal and ranking agreement, registry/locale/slot vocabulary, unusable taxonomy policy, product-attribute inheritance, full versioned feed/customer acceptance remain. Stored duplicate tags retain old scoring; new writes/rollback/enrichment containing them refuse until explicit correction; no silent historical rewrite. No new infrastructure, broad suite, benchmark, scoring/model/consent/authority change, emitted build/install, cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions. Retained raw enrichment proposals keep their original sample/digest and validate against the whole historical or current schema only on reads; new captures remain strict. CSV row provenance is local to parser-returned objects; copied rows are ordinary JSON. Unknown metadata is outside this bounded supported-field contract.",
+    "command": "node --max-old-space-size=768 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts src/content/enrichment.ts --max-warnings 0 && git diff --check -- src/content/import.ts src/content/kinds.ts src/config/publication.ts src/content/import.test.ts src/routes/content.test.ts docs/kit/03-payload-schemas.md src/content/enrichment.ts",
+    "runtime": "Installed full compiler, six-file TS lint0 and seven-file whitespace.",
+    "workload": "No errors/new warnings/whitespace or emitted outputs/config changes.",
+    "result": "pass",
+    "artifact_digest": "de9e7386adb6fe63a4790b476ea848adf4141726adb584ad9db6ba1a3bedbdcc",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "ff0af9a552112143e6830a55b9176a27cc1fdea3e1a10a7b720f8c4ca5f46c15",
+      "configuration": "Bounded current supported-field import/merge fidelity, promised stage aliases and duplicate-tag refusal with retained-history compatibility only. Full W19/F27/N15 stays open: canonical type/film-video signal and ranking agreement, registry/locale/slot vocabulary, unusable taxonomy policy, product-attribute inheritance, full versioned feed/customer acceptance remain. Stored duplicate tags retain old scoring; new writes/rollback/enrichment containing them refuse until explicit correction; no silent historical rewrite. No new infrastructure, broad suite, benchmark, scoring/model/consent/authority change, emitted build/install, cloud/deploy/provision/seed/credentials/customer-data/destructive/commit/push/external or customer-policy actions. Retained raw enrichment proposals keep their original sample/digest and validate against the whole historical or current schema only on reads; new captures remain strict. CSV row provenance is local to parser-returned objects; copied rows are ordinary JSON. Unknown metadata is outside this bounded supported-field contract.",
+      "files": [
+        {
+          "path": "src/content/import.ts",
+          "role": "output",
+          "sha256": "1b1931682a48dce358b1f4b7eb42c35b6872864fb0337c7fb040e778ba3715f4"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "output",
+          "sha256": "96a7e3586a9c2a0ebda4797669afb9cd9fdc1946bdddd2c40fb0745ee5db5cdd"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "role": "output",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f"
+        },
+        {
+          "path": "src/content/import.test.ts",
+          "role": "output",
+          "sha256": "15848205482dc1b282643439610a12762e3fb9a217b79aabfa51d6364d46b3ce"
+        },
+        {
+          "path": "src/routes/content.test.ts",
+          "role": "output",
+          "sha256": "7265be662c9aba28c99125209f13a0ab0a75232471814e99ebfe8c57b217e453"
+        },
+        {
+          "path": "docs/kit/03-payload-schemas.md",
+          "role": "output",
+          "sha256": "46474d96c793290fe7caf46ac8389aad23d66c5da7845c75969598ce536e197d"
+        },
+        {
+          "path": "src/routes/content.ts",
+          "role": "source",
+          "sha256": "71edcfbf4676cd8c3535d2b3c3845711bf53a1fdddfb48d15c1fc840c8d183be"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "d04666cef4f89021ec1332d398912012727f6367a897fe5dec5c41220af2fc40"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "25cb30a37549a662cd60a5e5dbcdac81ddc26e0c455cbe53f86cf2361a5694ff"
+        },
+        {
+          "path": "src/content/service.ts",
+          "role": "source",
+          "sha256": "918357740c44ad311a151c986ffa722412192ad79e145fb16f14b211c4542f9f"
+        },
+        {
+          "path": "src/content/enrichmentPublication.ts",
+          "role": "source",
+          "sha256": "8956b007c0a9a766d794d7f33f07ca268607dfbd7f4921f4bb23e9a8edbcb21d"
+        },
+        {
+          "path": "src/content/enrichment.ts",
+          "role": "output",
+          "sha256": "c4c3e9234102b4ca2e577e141b96a285d5b6a0f2a52fdd663138c7eb50c25daa"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "role": "source",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f"
+        },
+        {
+          "path": "src/config/input.ts",
+          "role": "source",
+          "sha256": "1cea4c54cad05329dae78df2d24e9e803f22d83bc1a24aa5967f62ec0199010f"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "source",
+          "sha256": "f344688f18cbecd678dfd6c40566f4f86d20492eea9334603c82c903c160af31"
+        },
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "source",
+          "sha256": "d0c1bf7f05e3c3210de8d09099ebc45255003fe06f061ba3fca85300b0f6ffc1"
+        },
+        {
+          "path": "src/reflex/core.ts",
+          "role": "source",
+          "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c"
+        },
+        {
+          "path": "src/reflex/merchandising.ts",
+          "role": "source",
+          "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+        },
+        {
+          "path": "docs/PS-Implementation-Delivery-Guide.md",
+          "role": "source",
+          "sha256": "b71665cb95a72b95b5f9cf438985561935e59601678b09b48852f11af2d1cc68"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "source",
+          "sha256": "558029ddee9299f1821c7dea6f658c47b622f17eff479f5b78f4c05d2834964a"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F27.md",
+          "role": "source",
+          "sha256": "61a44d769aa90bf3e064dc91b2b9d44fc4f0bf05906ffa1b41724ef0bc5f1f02"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/worker.json",
+          "role": "output",
+          "sha256": "074ca7b39525f89dbd470c00bc8b9e6c66ea4c425fc3da45a9cfd13e974d8a25"
+        },
+        {
+          "path": "docs/remediation/design/W19.01/plan-v2.md",
+          "role": "configuration",
+          "sha256": "eec80e7be8174c2dc6f227940b1bdc11f98935e62e168a35fa381a3396745a3d"
+        },
+        {
+          "path": "docs/remediation/design/W19.01/baseline.json",
+          "role": "configuration",
+          "sha256": "efeeeae1fda119d01b7c7f8828d04205f9ad45a8d047f86354da49d6898ebdb8"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/admission-v2.json",
+          "role": "configuration",
+          "sha256": "f7d7144d8103828daa6c32ffd600514ad38d013bfc1a689f57d52f33db42cd36"
+        },
+        {
+          "path": "docs/remediation/design/W19.01/baseline-supplement.json",
+          "role": "configuration",
+          "sha256": "ef7178a720a26e609d809842b1ff1cf85e8b42b6f3c5ef407e528aa2c6cf8d83"
+        },
+        {
+          "path": "docs/remediation/design/W19.01/plan.md",
+          "role": "configuration",
+          "sha256": "c215795d22413d561de53aef9fdb71e6c5f0eb6f2241fc0e051baf79ab20f27f"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/admission.json",
+          "role": "configuration",
+          "sha256": "a812616bf11a90d1238970bbe44e84f13fa7b03069eb3eadbc8e842a91673b8a"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/source-freeze.json",
+          "sha256": "2e48a0bcdee891bd913ebb648c029dac7b0c8d94ce0ea3d47962c33e13528460",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W19.01/source-deltas.json",
+          "sha256": "df55ebeef4f02e66c6e778b78683e3768b0ab45f98a7e5ff20a13099aaa48ff6",
+          "role": "configuration"
+        }
+      ],
+      "digest": "de9e7386adb6fe63a4790b476ea848adf4141726adb584ad9db6ba1a3bedbdcc"
+    }
+  }
+}

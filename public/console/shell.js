@@ -1,3 +1,5 @@
+/* eslint-env browser */
+/* global OperatorSession:readonly */
 // public/console/shell.js
 // ---------------------------------------------------------------------------
 // The operator application's shell (doc 28). One application, a left rail, a
@@ -81,10 +83,16 @@
   const go = (path, patch) => { location.hash = href(path, patch); };
 
   // ---------- the platform ----------
-  const auth = () => (S.token ? { authorization: `Bearer ${S.token}` } : {});
   async function call(url, init) {
+    const tenant = S.scope;
     try {
-      const r = await fetch(url, { ...(init || {}), headers: { ...auth(), ...((init && init.headers) || {}) } });
+      if (new URL(url, location.href).origin !== location.origin) throw new Error('Operator requests must stay on this origin.');
+      const headers = new Headers(init && init.headers);
+      if (headers.has('X-Tenant') && headers.get('X-Tenant') !== tenant) throw new Error('Conflicting operator tenant.');
+      headers.set('X-Tenant', tenant);
+      const token = window.OperatorSession ? await OperatorSession.token() : S.token;
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      const r = await fetch(url, { ...(init || {}), headers: Object.fromEntries(headers) });
       const data = await r.json().catch(() => ({}));
       return { ok: r.ok, status: r.status, data: data || {} };
     } catch (e) {
@@ -93,14 +101,83 @@
   }
   const v1 = (path, params) => call(`/v1/${encodeURIComponent(S.scope)}${path}${query({ brand: S.brand === S.scope ? undefined : S.brand, ...(params || {}) })}`);
   const content = (path, params) => call(`/content${path}${query({ scope: S.scope, ...(params || {}) })}`);
+  // Physical config scope is not a tenant selector; real BrightHour is disjoint from the demo.
+  const configScope = () => S.scope === 'brighthour' ? 'tenant:brighthour' : S.scope;
   function query(params) {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(params || {})) if (v !== undefined && v !== null && v !== '') q.set(k, String(v));
     const s = q.toString();
     return s ? `?${s}` : '';
   }
-  async function write(url, method, body) {
-    const res = await call(url, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+  const pendingWrites = new Map(JSON.parse(sessionStorage.getItem('configuration-pending-v1') || '[]'));
+  const persistPending = () => {
+    const raw = JSON.stringify([...pendingWrites]);
+    if (pendingWrites.size > 16 || new TextEncoder().encode(raw).length > 2 * 1024 * 1024) throw new Error('Pending configuration capacity exceeded; retain and resolve the original intent.');
+    sessionStorage.setItem('configuration-pending-v1', raw);
+  };
+  const removePending = key => {
+    const previous = pendingWrites.get(key); pendingWrites.delete(key);
+    try { persistPending(); } catch (error) { if (previous) pendingWrites.set(key, previous); throw error; }
+  };
+  const configurationWrite = url => /^\/(?:content\/|config\/reflex|v1\/[^/]+\/learn\/items\/reset)/.test(url);
+  function authored(data) {
+    return data && Number.isSafeInteger(data.revision) && data.revision > 0 && data.publication
+      && Number.isSafeInteger(data.publication.revision) && /^[0-9a-f]{64}$/.test(data.publication.digest)
+      ? Object.freeze({ scope: S.scope, revision: data.revision, publication: Object.freeze({ ...data.publication }) }) : null;
+  }
+  function publicationTarget(url) {
+    const parsed = new URL(url, location.href), kind = parsed.pathname.startsWith('/config/') ? 'reflex'
+      : parsed.pathname.startsWith('/v1/') ? 'learn' : parsed.pathname.split('/')[2];
+    return '/content/catalog/publication' + query({ scope: S.scope, kind, memberScope: kind === 'reflex' ? parsed.searchParams.get('scope') || configScope() : S.scope });
+  }
+  async function resolveWrite(key, recover) {
+    const pending = pendingWrites.get(key); if (!pending || pending.scope !== S.scope) return;
+    const res = await call(pending.target, { method: 'GET', headers: pending.headers });
+    if (!res.ok) {
+      if (res.status === 409 && res.data.code === 'publication_conflict') { pending.conflicted = true; persistPending(); }
+      S.errors = [res.data.error || 'Publication status unavailable; original intent retained.']; render(); return;
+    }
+    if (recover && res.data.state === 'pending') {
+      const url = new URL(pending.target, location.href); url.pathname += '/recover';
+      const recovered = await call(url.pathname + url.search, { method: 'POST', headers: pending.headers, body: '{}' });
+      if (!recovered.ok) { S.errors = [recovered.data.error || 'Recovery acknowledgement unknown; original intent retained.']; render(); return; }
+    } else if (res.data.state !== 'committed') {
+      S.errors = ['Publication ' + res.data.state + '; retry the exact original change, or explicitly reload/re-author after resolving it.']; render(); return;
+    }
+    if (pending.reset) { S.errors = ['Configuration intent committed. Retry the exact Reset to finish its idempotent statistics continuation.']; render(); return; }
+    removePending(key); S.errors = []; flash('Original publication committed. Reload the document before authoring another change.');
+  }
+  async function write(url, method, body, base) {
+    let headers = { 'content-type': 'application/json' }, raw = JSON.stringify(body || {}), pending, key;
+    if (configurationWrite(url)) {
+      key = S.scope + '|' + url;
+      pending = pendingWrites.get(key);
+      if (pending && (pending.raw !== raw || pending.method !== method)) {
+        S.errors = ['An earlier publication has an unresolved acknowledgement. Resolve its original intent before changing the draft.'];
+        return { ok: false, status: 409, data: { error: S.errors[0] } };
+      }
+      if (!pending) {
+        if (!base || base.scope !== S.scope || !base.publication || pendingWrites.size >= 16) {
+          S.errors = ['Load an authoritative document before editing; no replacement base is inferred.'];
+          return { ok: false, status: 428, data: { error: S.errors[0] } };
+        }
+        headers['If-Match'] = '"' + base.revision + '/' + base.publication.revision + '/' + base.publication.digest + '"';
+        headers['Idempotency-Key'] = base.revision + ':' + crypto.randomUUID();
+        pending = { scope: S.scope, url, method, raw, headers, target: publicationTarget(url), reset: url.includes('/items/reset') };
+        pendingWrites.set(key, pending);
+        try { persistPending(); } catch (error) { pendingWrites.delete(key); return { ok: false, status: 503, data: { error: error.message } }; }
+      }
+      headers = pending.headers; raw = pending.raw;
+    }
+    const res = await call(url, { method, headers, body: raw });
+    if (pending && pending.reset && res.ok && res.data.ok === true && res.data.publicationOutcome !== 'acknowledged') {
+      res.ok = false; res.status = 503;
+      res.data = { ...res.data, error: 'Reset completed; snapshot publication acknowledgement is unknown. Retry the exact retained original operation, not another reset.' };
+    }
+    if (key && res.ok && res.data.ok !== true) { res.ok = false; res.status = 503; res.data = { error: 'Publication response body unavailable; original intent retained.' }; }
+    if (res.ok && res.data.ok === true && key) {
+      try { removePending(key); } catch { res.ok = false; res.status = 503; res.data = { error: 'Acknowledged, but local completion could not be saved; exact original intent retained.' }; }
+    }
     if (!res.ok || res.data.ok === false) {
       const why = res.status === 401 || res.status === 403
         ? 'Your sign-in was not accepted. Sign in again to make this change.'
@@ -132,7 +209,7 @@
     }
     S.slots = { pages: data.pages || [], total: data.total || 0, loading: false, error: '' };
     const all = slotList();
-    if (!all.some((s) => s.slot === S.slot)) S.slot = (all.find((s) => !s.pinned) || all[0] || { slot: '' }).slot;
+    if (!all.some((s) => s.slot === S.slot)) S.slot = (all.find((s) => s.rankedCapacity !== undefined ? s.rankedCapacity > 0 : !s.pinned) || all[0] || { slot: '' }).slot;
   }
   const slotList = () => S.slots.pages.flatMap((p) => p.slots.map((s) => ({ ...s, page: s.page || p.page })));
   const slotEntry = (name) => slotList().find((s) => s.slot === (name || S.slot)) || null;
@@ -142,12 +219,12 @@
     if ($('slot-q').value !== S.slotQuery) $('slot-q').value = S.slotQuery;
     $('scope-note').textContent = S.brand === S.scope ? '' : `reading what was learned for ${S.brand}`;
     const sel = $('slot');
-    const wanted = slotList().map((s) => `${s.page}/${s.slot}`).join('|');
+    const wanted = JSON.stringify(slotList().map((s) => [s.page, s.slot, s.pinned, s.pinnedPieceIds, s.rankedCapacity]));
     if (sel.dataset.shape !== wanted) {
       clear(sel);
       for (const page of S.slots.pages) {
         const group = h('optgroup', { label: page.page });
-        for (const s of page.slots) group.append(h('option', { value: s.slot }, `${s.slot}${s.pinned ? ' · pinned' : ''}`));
+        for (const s of page.slots) group.append(h('option', { value: s.slot }, `${s.slot}${s.pinnedPieceIds?.length ? ` · ${s.pinnedPieceIds.length} pinned${s.rankedCapacity > 0 ? ' + ranked' : ''}` : s.pinned ? ' · pinned' : ''}`));
         sel.append(group);
       }
       sel.dataset.shape = wanted;
@@ -246,7 +323,7 @@
     $('who').textContent = u ? `Signed in as ${u.name || u.email}` : '';
     $('sign-in').hidden = on;
     $('sign-out').hidden = !on;
-    $('change-password').hidden = !on;
+    $('change-password').hidden = !on || u.authMode === 'oidc';
     if (on) $('sign-in-form').hidden = true;
     // A temporary password is good for one sign-in. An operator who has just
     // been given an account is asked to choose their own before anything else,
@@ -264,6 +341,17 @@
   function renderMessages() {
     const host = clear($('messages'));
     if (S.flash) host.append(h('div', { class: 'msg ok' }, S.flash));
+    for (const [key, pending] of pendingWrites) if (pending.scope === S.scope) host.append(h('div', { class: 'msg err' },
+      'Publication intent retained: ' + pending.headers['Idempotency-Key'] + '. ',
+      h('button', { onclick: () => resolveWrite(key, false) }, 'Check original status'), ' ',
+      h('button', { onclick: () => resolveWrite(key, true) }, 'Recover original publication'), ' ',
+      h('button', { onclick: async () => { await write(pending.url, pending.method, JSON.parse(pending.raw)); render(); } }, 'Retry exact original'),
+      pending.conflicted ? h('button', { onclick: () => {
+        if (confirm('Discard this definitively conflicted local draft? Reload the authoritative document before authoring a replacement.')) {
+          try { removePending(key); S.errors = ['Conflicted draft discarded. Reload before authoring a replacement.']; } catch { S.errors = ['Local completion unavailable; original draft retained.']; }
+          render();
+        }
+      } }, 'Discard conflicted draft') : null));
     if (S.errors.length) host.append(h('div', { class: 'msg err' }, 'The change was refused:', h('ul', {}, ...S.errors.map((e) => h('li', {}, String(e))))));
     if (!canEdit()) host.append(h('div', { class: 'msg note' }, 'Read only. Sign in at the top right to change anything; everything on this page can be read without signing in.'));
   }
@@ -328,6 +416,14 @@
     // register first and this runs last (the bottom of views.js).
     $('sign-in').addEventListener('click', () => { $('sign-in-form').hidden = false; $('si-error').textContent = ''; $('si-email').focus(); });
     $('si-cancel').addEventListener('click', () => { $('sign-in-form').hidden = true; });
+    $('si-oidc').addEventListener('click', async () => {
+      $('si-oidc').disabled = true; $('si-error').textContent = '';
+      try {
+        const destination = await OperatorSession.startFederation($('si-email').value);
+        if (destination) window.location.assign(destination);
+      } catch (err) { $('si-error').textContent = err && err.message ? err.message : 'Federated sign-in unavailable.'; }
+      finally { $('si-oidc').disabled = false; }
+    });
     $('sign-in-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       $('si-submit').disabled = true; $('si-error').textContent = '';
@@ -372,9 +468,19 @@
     window.addEventListener('hashchange', () => { route().catch(fail); });
 
     const first = readHash();
-    S.scope = first.params.scope || 'coach';
+    const completion = new URL(window.location.href);
+    const completing = completion.searchParams.get('oidc') === 'complete';
+    const completionTenant = completion.searchParams.get('tenant');
+    S.scope = completing && /^[a-z0-9][a-z0-9-]{0,62}$/.test(completionTenant || '') ? completionTenant : first.params.scope || 'coach';
     S.brand = first.params.brand || S.scope;
     S.slot = first.params.slot || '';
+    if (window.OperatorSession) OperatorSession.setTenantProvider(() => S.scope);
+    if (completing) {
+      completion.searchParams.delete('oidc'); completion.searchParams.delete('tenant');
+      window.history.replaceState(null, '', completion.pathname + completion.search + completion.hash);
+      try { await OperatorSession.completeFederation(); }
+      catch (err) { $('sign-in-form').hidden = false; $('si-error').textContent = err && err.message ? err.message : 'Federated sign-in incomplete.'; }
+    }
     $('scope-list').append(h('option', { value: S.scope }));
     await freshToken();
     renderSession();
@@ -384,7 +490,7 @@
   const fail = (e) => { S.errors = [`The console could not load: ${e && e.message ? e.message : e}`]; render(); };
 
   window.Console = {
-    h, clear, table, pager, pageState, dirty, flash, go, href, call, v1, content, write, query,
+    h, clear, table, pager, pageState, dirty, flash, go, href, call, v1, content, configScope, write, authored, query,
     canEdit, freshToken, render, loadSlots, slotList, slotEntry, state: S,
     fmt, dec, pct, r3, when, plural,
     view: (def) => { VIEWS.push(def); },

@@ -108,7 +108,7 @@ A thin embeddable client: **connect** (WebSocket, stable visitor identity) · **
 
 Two deliberate choices in that shape. It is **page-level**: one push carries every slot's pick for the page — one interest reading, all sections filled together. And it carries **`order` from day one** — initially echoing your template exactly, so nothing moves until you decide it should; when experience personalization arrives (your ~6-month tier), reordering becomes a **data change inside a contract your front end already speaks**, not a new integration.
 
-Your front end subscribes once (a wrapper at the application skeleton, as we discussed) and paints whatever arrives, wherever its slot maps. A snapshot endpoint covers first paint (no flash); absence of a decision means your default renders — the system never blocks your page and never fills a slot arbitrarily.
+Your front end subscribes once (a wrapper at the application skeleton, as we discussed) and paints whatever arrives, wherever its slot maps. The local first-party server bridge resolves the same current grant before HTML; safely embedded private bootstrap plus matching SDK/DOM adoption avoids repaint. Client-only hydration/refresh can show defaults first. Real customer SSR/browser/no-flash and latency acceptance remain open. The retained first-paint/no-flash promise requires customer acceptance; absence of a decision means your default renders — the system never blocks your page and never fills a slot arbitrarily.
 
 ## 5. The tuning surface — your anti-black-box control
 

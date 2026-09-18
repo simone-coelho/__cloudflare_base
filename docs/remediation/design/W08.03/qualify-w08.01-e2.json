@@ -1,0 +1,168 @@
+{
+  "before": {
+    "id": "W08.01-E2",
+    "task_id": "W08.01",
+    "check_id": "W08.01-K2",
+    "criterion_ids": [
+      "W08.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0801-reviewer",
+    "run_id": "/root/w0801_review",
+    "file": {
+      "path": "docs/remediation/evidence/W08.01/review.json",
+      "sha256": "f4b47c3ec7a214ee27ee73fbf3ead29193c50a4a5ed65f1a9571636a55265a5a"
+    },
+    "at": "2026-09-08T23:23:05.000Z",
+    "limitations": "Source inventory and syntax proof only: no target provisioning/deployment/seed script body was executed; no observed rerun, runtime refusal or remote-zero-call result. Guarantee concerns these literal script bodies. Caller interpreter selection, startup hooks/functions and caller redirections are outside this assurance. Other deploy/CLI/migration/seed entrypoints remain executable outside containment. No global provisioning/learning-ingestion kill switch or deployed-resource attestation. Safe desired state; creation/reconcile/add-brand/rotation; account/resource/tenant ownership; secret continuity and historical recovery; idempotent scoped seeds; product/demo schema separation; required alerts/configuration/identity; artifact/migration promotion and tested rollback/restore remain W08 work. D01/D07/D08 and applicable customer authority remain pending. No topology, privacy, identity onboarding or commercial decision was made. No runtime engine/scoring/ranking/learning change or measured relevance, latency, SLO, customer-isolation, full-W08, finding, gate or release acceptance. Independent review verified the admitted five-file diff and artifact evidence. The lead retains responsibility for global protected-worktree assurance, tracker history, acceptance and durable handoff.",
+    "command": "Independent frozen W08.01 actual source/admission-diff/pins/full worker proof review and exact K1 once; record review.json.",
+    "runtime": "Independent source-only inspection plus same four syntax-only parses; no target script execution.",
+    "workload": "All C1-C3 and authority/residual coverage; inspect worker scoped whitespace without repeating it.",
+    "result": "pass",
+    "artifact_digest": "10a6ba0af7a1af5196c50c408e17060741c338a81576720ad63cec70cf88fd1b",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "01667e6ac0c7aef478be358c99941b12080c71ccf3b9398171f8adfb5a152871",
+      "configuration": "W08.01 source-only retirement of three legacy mutating provisioners. Each full body replaced by literal builtin stderr printf and exit2, no bypass/archive. deploy.sh actual executable logic preserved; unsafe recovery strings and current runbook guidance withdrawn. Exact inline K1 checks all four scripts with bash -n only plus literal-body/deploy-logic/runbook assertions; worker K1 and scoped whitespace0. Root verified all five original/final bytes and patches against immutable baseline. No target script execution, runtime/remote-zero-call measurement, cloud state, secure replacement or full W08/customer/release claim. No project runtime dependencies or import graph needed for builtin source inspection.",
+      "files": [
+        {
+          "path": "docs/deployment/01-deploy.md",
+          "role": "output",
+          "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee"
+        },
+        {
+          "path": "docs/remediation/design/W08.01/plan-v1.md",
+          "role": "configuration",
+          "sha256": "2d87bc75cdebbe2d3dbff585cafed7c30c95a3a7a3644600625e2df9d8893c1e"
+        },
+        {
+          "path": "docs/remediation/design/W08.01/task-contract-v1.json",
+          "role": "configuration",
+          "sha256": "95db74e9ccc9445fb193921ec7fe6e75b77be5f2562359a1dea0665ca2aa0f0a"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.01/baseline.json",
+          "role": "configuration",
+          "sha256": "d0ff8c197e2cb067364b347124f11592225b63e7246fec3e4dbfc875b5fbc899"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.01/package-scope.json",
+          "role": "configuration",
+          "sha256": "5f8073bd4c812d102894f891a33aecc48ded037a235340a068bc36f3c50c52c8"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.01/worker.json",
+          "role": "output",
+          "sha256": "6ee61e7bd58eb5ccad1e0cc2764c04568e97734af6e99e40ae2a67479c55e13b"
+        },
+        {
+          "path": "scripts/deploy.sh",
+          "role": "output",
+          "sha256": "14ad032bf8e7f3a9398a7e703def34e62fd41689be085449a8a710e5deb633c2"
+        },
+        {
+          "path": "scripts/provision-staging.sh",
+          "role": "output",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+        },
+        {
+          "path": "scripts/provision-stamp.sh",
+          "role": "output",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+        },
+        {
+          "path": "scripts/setup.sh",
+          "role": "output",
+          "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34"
+        }
+      ],
+      "digest": "10a6ba0af7a1af5196c50c408e17060741c338a81576720ad63cec70cf88fd1b"
+    }
+  },
+  "after": {
+    "id": "W08.01-E2",
+    "task_id": "W08.01",
+    "check_id": "W08.01-K2",
+    "criterion_ids": [
+      "W08.01-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w0801-reviewer",
+    "run_id": "/root/w0801_review",
+    "file": {
+      "path": "docs/remediation/evidence/W08.01/review.json",
+      "sha256": "f4b47c3ec7a214ee27ee73fbf3ead29193c50a4a5ed65f1a9571636a55265a5a"
+    },
+    "at": "2026-09-08T23:23:05.000Z",
+    "limitations": "Source inventory and syntax proof only: no target provisioning/deployment/seed script body was executed; no observed rerun, runtime refusal or remote-zero-call result. Guarantee concerns these literal script bodies. Caller interpreter selection, startup hooks/functions and caller redirections are outside this assurance. Other deploy/CLI/migration/seed entrypoints remain executable outside containment. No global provisioning/learning-ingestion kill switch or deployed-resource attestation. Safe desired state; creation/reconcile/add-brand/rotation; account/resource/tenant ownership; secret continuity and historical recovery; idempotent scoped seeds; product/demo schema separation; required alerts/configuration/identity; artifact/migration promotion and tested rollback/restore remain W08 work. D01/D07/D08 and applicable customer authority remain pending. No topology, privacy, identity onboarding or commercial decision was made. No runtime engine/scoring/ranking/learning change or measured relevance, latency, SLO, customer-isolation, full-W08, finding, gate or release acceptance. Independent review verified the admitted five-file diff and artifact evidence. The lead retains responsibility for global protected-worktree assurance, tracker history, acceptance and durable handoff.",
+    "command": "Independent frozen W08.01 actual source/admission-diff/pins/full worker proof review and exact K1 once; record review.json.",
+    "runtime": "Independent source-only inspection plus same four syntax-only parses; no target script execution.",
+    "workload": "All C1-C3 and authority/residual coverage; inspect worker scoped whitespace without repeating it.",
+    "result": "pass",
+    "artifact_digest": "10a6ba0af7a1af5196c50c408e17060741c338a81576720ad63cec70cf88fd1b",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "01667e6ac0c7aef478be358c99941b12080c71ccf3b9398171f8adfb5a152871",
+      "configuration": "W08.01 source-only retirement of three legacy mutating provisioners. Each full body replaced by literal builtin stderr printf and exit2, no bypass/archive. deploy.sh actual executable logic preserved; unsafe recovery strings and current runbook guidance withdrawn. Exact inline K1 checks all four scripts with bash -n only plus literal-body/deploy-logic/runbook assertions; worker K1 and scoped whitespace0. Root verified all five original/final bytes and patches against immutable baseline. No target script execution, runtime/remote-zero-call measurement, cloud state, secure replacement or full W08/customer/release claim. No project runtime dependencies or import graph needed for builtin source inspection.",
+      "files": [
+        {
+          "path": "docs/deployment/01-deploy.md",
+          "role": "output",
+          "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee"
+        },
+        {
+          "path": "docs/remediation/design/W08.01/plan-v1.md",
+          "role": "configuration",
+          "sha256": "2d87bc75cdebbe2d3dbff585cafed7c30c95a3a7a3644600625e2df9d8893c1e"
+        },
+        {
+          "path": "docs/remediation/design/W08.01/task-contract-v1.json",
+          "role": "configuration",
+          "sha256": "95db74e9ccc9445fb193921ec7fe6e75b77be5f2562359a1dea0665ca2aa0f0a"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.01/baseline.json",
+          "role": "configuration",
+          "sha256": "d0ff8c197e2cb067364b347124f11592225b63e7246fec3e4dbfc875b5fbc899"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.01/package-scope.json",
+          "role": "configuration",
+          "sha256": "5f8073bd4c812d102894f891a33aecc48ded037a235340a068bc36f3c50c52c8"
+        },
+        {
+          "path": "docs/remediation/evidence/W08.01/worker.json",
+          "role": "output",
+          "sha256": "6ee61e7bd58eb5ccad1e0cc2764c04568e97734af6e99e40ae2a67479c55e13b"
+        },
+        {
+          "path": "scripts/deploy.sh",
+          "role": "output",
+          "sha256": "14ad032bf8e7f3a9398a7e703def34e62fd41689be085449a8a710e5deb633c2"
+        },
+        {
+          "path": "scripts/provision-staging.sh",
+          "role": "output",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+        },
+        {
+          "path": "scripts/provision-stamp.sh",
+          "role": "output",
+          "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6"
+        },
+        {
+          "path": "scripts/setup.sh",
+          "role": "output",
+          "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34"
+        }
+      ],
+      "digest": "10a6ba0af7a1af5196c50c408e17060741c338a81576720ad63cec70cf88fd1b"
+    }
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "id": "W06.07",
+  "package_id": "W06",
+  "title": "Erase persisted hourly seen membership with witnessed cutoffs",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Remove erased visitor membership from persisted hourly seen state without losing proven post-cutoff membership; retain honest uncertainty for legacy entries with missing timestamps.",
+  "read_paths": [
+    "src/learn",
+    "src/ledger",
+    "src/content/types.ts",
+    "src/types/env.ts",
+    "src/routes/decisions.ts",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules",
+    "public/console/views-measure.js"
+  ],
+  "write_paths": [
+    "src/learn/hourly.ts",
+    "src/learn/hourly.test.ts",
+    "public/console/views-measure.js",
+    "docs/remediation/evidence/W06.07/worker-v2.json"
+  ],
+  "non_goals": [
+    "No D03 cross-store transaction, D06 retention/re-entry policy, historical aggregate max-count correction/refold, all-destination erasure, customer/deployed/SLO/full-W06/finding/gate/release acceptance.",
+    "Keep version1 seen arrays with additive witnesses/uncertainty only. No new infrastructure, extra R2 reads, live decision-path changes, schema-wide migration, broad suite, external/cloud/customer-data operations, commit/push or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W06.07-C1",
+      "description": "Every fold durably removes seen membership and its witness at/before the retained cutoff, including seen-only and replay/empty folds. Max witnessed same-brand/day timestamps preserve post-cutoff membership despite ring eviction. Orphan metadata/rings never create membership; unrelated subjects/brands/two non-default tenants and existing holdout behavior remain correct.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.07-C2",
+      "description": "Legacy membership uses positive same-brand/day ring evidence only; missing timing is conservatively suppressed or rescued only by positive post-cutoff evidence, with persistent date-scoped per-brand uncertainty when legacy timing is incomplete. Propagate uncertainty to hour metadata/report counts.truncated; forward rollover clears all seen fields. Reject malformed/unreadable or older-date state before writing that shard and do not publish a successful hour aggregate; prior shards may have idempotent cleanup. Failed-put retries recover. Catch-up uses a typed newer-date refusal to skip definitely older candidates without I/O while keeping them failed/pending, preserves budget/maxHours/two genuine-failure limits, and reaches eligible current dates when budget allows.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.07-C3",
+      "description": "Independent frozen source/proof review and exact single-fixture K1 verify actual persisted effects, witness/uncertainty semantics, compatible schema, no added R2 read/serving path and explicit historical/concurrency/performance limits; inspect worker compiler/scoped diff evidence. Inspect the one console incomplete-coverage string; no browser qualification is implied.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.07-K1",
+      "required": true,
+      "criterion_ids": [
+        "W06.07-C1",
+        "W06.07-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest, actual buildHour/foldShard/report with existing synthetic R2; no network.",
+      "workload": "One existing hourly fixture: inclusive cutoff, seen-only/replay persistence, post-cutoff/ring eviction, legacy uncertainty, tenant/brand boundaries, rollover/refusal/malformed state and failed-put retry; worker app noEmit/scoped diff. One concrete scheduler case covers two older missing hours ahead of eligible current work.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.07-K2",
+      "required": true,
+      "criterion_ids": [
+        "W06.07-C3"
+      ],
+      "command": "Independent frozen W06.07 source and complete worker-proof review; exact K1 once, verify relevant pins and write review.json.",
+      "runtime": "Independent local actual-source review and synthetic R2 hourly fixture.",
+      "workload": "Review C1-C3 artifacts/semantics and focused runtime inputs; inspect worker compiler output without rerun. No broad or deployed qualification. Inspect existing console wording for the broader incomplete-coverage flag; no UI suite.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W06.02",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Retained inclusive tenant/visitor tombstone semantics and strict loadTombstones.",
+      "rationale": "Reuse existing barrier lifecycle without renewing historical whole-task proof."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future authoritative cross-store concurrency design.",
+      "rationale": "Per-fold cleanup is not a transaction with concurrent writers."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved retention and shopper re-entry lifecycle.",
+      "rationale": "Preserve existing point-in-time semantics; do not decide new policy."
+    }
+  ],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "contract_digest": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0607-worker",
+    "independent_reviewer": "w0607-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "files": [],
+    "configuration": null,
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Independent reviewer verifies frozen W06.07 artifact/source/worker proof, exact hourly K1 once and review.json, then root accepts or records rework."
+  }
+}

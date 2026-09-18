@@ -1,0 +1,31 @@
+# W35.01 — Commit-safe shopper-object state and recovery
+
+Bounded implementation under the user continuation of document35 remediation. Candidate-host correctness only; D03 remains pending and REFLEX_HOST stays unchanged.
+
+## Scope and basis
+Document35 W35/F14/F13/F05/F29/F32 requires transactional shopper authority, session/identity/visit/channel/consent and link/erase/SDK/sort/fatigue parity, concurrent writes/stale pointers/delayed creates/restart/ownership/rollback, and exact browser/server/runtime tails. This task covers only existing ShopperReflex local state commit/recovery and personalization publication ordering; every other package clause remains open. Root read those findings, W35, D03, F14 original verifier, relevant doc16 deterministic/state invariants and doc33 North Star. Worker and independent architect source investigation agree local repair need not select production authority.
+
+Source case (not a claimed failed runtime): live/manual/alarm/absorb mutate affinity/pipeline/owner before storage; load returns cached mirrors; some projections use identity checks without the uncommitted-owner gate. Existing W37.03 tests expect sticky refusal until restart after rejected puts. Live/alarm push before put. Existing buffered/import stage candidates, but ambiguous commit rejection must not leave cached old state authoritative. Source captures 0ec917/a0772b/a07b79/65f6b3/e2f80e/026a65.
+
+## Smallest coherent change
+Only src/durable-objects/ShopperReflex.ts and src/routes/realtime.sdkContract.test.ts. Worker also owns evidence/W35.01/worker.json; lead alone owns tracker/plan/baseline/freeze/acceptance; distinct reviewer owns review.json.
+
+Use one commit helper for affinity/pipeline/exact owner in live/manual/alarm/absorb/import/buffered writes. Derive candidate records without modifying committed mirrors, including visitorId and nested segments. Build updates against candidates without temporarily assigning them to live mirrors. Publish mirrors only after the existing coalesced put resolves, then socket personalization updates. Do not roll back a successful put because later output/alarm work fails.
+
+On rejected/ambiguous put, invalidate cached behavioral authority and require a fresh validated storage read before next read/reducer/alarm. Never guess old/new stored bytes, silently retry the event, or re-bless malformed ownership. Stage load assignments after validation so failed read/validation cannot leak partial mirrors. Preserve undefined legacy / null invalidated / exact owned markers. Existing staged buffered/import paths use the same recovery boundary while preserving their owner/lifetime and missing/refused-state rules.
+
+Consent, forwarding, erasure protocols, configuration, math and event purpose are unchanged. Region/ODP fanout is not made transactional by this task; do not claim zero external effects on failure or exactly-once events. No schema/identity/retention/host toggle/migration/new data store.
+
+## Acceptance
+C1: actual object candidate writes do not expose dirty projections or emit personalization before put succeeds; failed derivation/put leaves no new behavioral result; a serialized following event/retry consumes actual stored state, with no lost successful updates.
+C2: ambiguous write-then-reject reloads actual persisted records, failed recovery reads remain closed, postcommit alarm failure cannot roll back accepted state. Exercise live/manual/alarm/absorb and shared import/buffered boundary through the smallest grouped fixture; reject wrong owner/tenant and preserve refusal, typed membership, legacy adoption and buffered expiry.
+C3: same-byte source delta, protected dependencies, independent fixed8, no-emit compiler, two-file lint zero errors/no new warning signatures and whitespace check. Preserve W22.09/W26.04 complete accepted artifacts. Prospectively qualify W22.07 overlapping exact proof with its history/unowned assurance retained, not erased implementation or automatic package reacceptance.
+
+Fixed8 (no broad suite): one new W35.01 grouped case; existing W37.03 internal import/absorb failure case (only recovery assertions superseded, security negatives retained), two-tenant/restarted-alarm positive and unbound/corrupt/forwarded/refused negative; all four W22.07 buffered cases. Typed/import logic is reviewed with the shared helper rather than adding another suite. Worker and independent reviewer each run once on final frozen source, rerun only for concrete failure/rework.
+`node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts -t 'W35[.]01|invalidates internal import/absorb authority|qualifies signed HTTP/read/WS and real restarted crossing alarms|contains unbound/corrupt/forwarded/refused alarms|W22[.]07' --maxWorkers=1 --minWorkers=1`
+Static: existing tsc --noEmit --incremental false --composite false (1536MB), two-file ESLint (512MB), warning signature comparison to retained 15/94 baseline, git diff --check for those files. Reviewer may reuse same-byte static evidence. Synthetic Node binding tests prove application ordering/recovery, NOT native failure durability, browser/customer acceptance or latency SLO.
+
+Cloudflare official storage API inspected 2026-09-15: https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/ (output-gate and write-buffer sections). Output gates cover messages after writes; a disk failure can reset the object. Awaited put can resolve after buffering. Accordingly “commit” here denotes accepted application write plus existing platform output gate, not an independently measured disk flush. No extra sync/storage operation per successful event solely for this task.
+
+## Authority, rollback, handoff
+Local user continue plus lead admitted scope; D03 production authority remains pending. Retain before bytes and exact protected pins; rollback is a reviewed inverse of this task delta, never whole-file restore over user work. No stage/commit/push/install/emitted build/deploy/cloud/resource/customer-data/credentials/destructive or external operations. Root admits before source GO, freezes actual artifact, reviews independent evidence, records limitations and updates existing tracker/checkpoint. No full W35/F14/customer/release claim.

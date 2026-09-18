@@ -1,0 +1,120 @@
+{
+  "id": "W06.04",
+  "package_id": "W06",
+  "title": "Durable known-subject CACHE cleanup",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Extend the existing bounded erasure job to discover, durably checkpoint and delete known tenant-scoped subject profile and override CACHE keys without reinterpreting pending version-1 cursors.",
+  "read_paths": [
+    "src/identity",
+    "src/routes/identity.ts",
+    "src/routes/identity.test.ts",
+    "src/services/RealtimeSegmentEngine.ts",
+    "src/services/FeatureVariableManager.ts",
+    "src/services/CDPService.ts",
+    "src/services/SessionManager.ts",
+    "src/tenancy",
+    "src/ledger",
+    "src/durable-objects/ShopperReflex.ts",
+    "src/durable-objects/DecisionRing.ts",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/identity/erase.ts",
+    "src/routes/identity.test.ts",
+    "docs/remediation/evidence/W06.04/worker.md",
+    "docs/remediation/evidence/W06.04/worker-checks.json"
+  ],
+  "non_goals": [
+    "Partial W06/F06/N05 known-subject CACHE repair only. No email/account alias inference, unscoped/full-cache scan, shared config/datafile deletion, in-memory isolate purge, orphan discovery, stale-cookie/session/capability generation, concurrent writer fence, ring/seen/D1/AE/log/external erasure, approved retention or accountability policy.",
+    "Preserve point-in-time erasure semantics and explicit incomplete receipt. Do not invent D03 transactional authority, D06 retention/re-entry policy, deployed cleanup or exhaustive deletion.",
+    "One production module and one existing fixture only. No new harness/suite, broad build, request-time scorer/SDK change, deployment, cloud, credentials, customer data, commit/push, destructive cleanup or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W06.04-C1",
+      "description": "Before destructive work, a new versioned erasure job freezes only immutable discovered targets' tenant-scoped profile:<id>, profile:user:<id>, profile:anon:<id> keys and every key from complete strict pagination of override:<id>:. Missing CACHE, list failure, malformed/repeated cursor or unsafe key fails without deletion; no email/shared/foreign-tenant key is inferred.",
+      "required_evidence_kinds": ["integration_test"],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.04-C2",
+      "description": "Each frozen CACHE deletion is part of the existing bounded checkpointed job and is idempotently resumable after delete/checkpoint ambiguity without losing targets or reporting completion early. Pending version-1 numeric cursors retain their exact legacy step meaning and can finish after discovery links disappear; compact v1 completion is not retroactively promoted.",
+      "required_evidence_kinds": ["integration_test"],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.04-C3",
+      "description": "The existing identity fixture proves actual known profile/override removal and cold/absent reads, complete pagination, non-target and two-non-default-tenant preservation, discovery/delete/checkpoint/binding failure truth, nonzero v1 continuation, 32-step continuation and both-host compatibility. Worker exact K1 plus app noEmit/scoped diff; independent exact K1 once and frozen source/proof/import pins.",
+      "required_evidence_kinds": ["design_review"],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.04-K1",
+      "required": true,
+      "criterion_ids": ["W06.04-C1", "W06.04-C2"],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual identity route/job, tenant CACHE wrapper, reset and ledger helpers with the existing synthetic KV/R2/DO seams. No external network.",
+      "workload": "One existing identity suite only; grouped cache-key discovery/deletion/retry/version compatibility plus existing both-host and bounded-job cases. Worker app noEmit and scoped diff; no engine latency claim.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.04-K2",
+      "required": true,
+      "criterion_ids": ["W06.04-C3"],
+      "command": "Independent frozen W06.04 actual source and complete worker proof review; exact K1 once; relevant local import graph and physical pins; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review; actual route/job with synthetic storage only.",
+      "workload": "C1-C3 known CACHE keys, pagination, deletion/checkpoint recovery, tenant/target isolation and v1 cursor compatibility; inspect compiler/scoped diff evidence without rerun. No broad/deployed qualification.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W06.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing durable discovered-target job, per-step checkpoints, bounded continuation, both-host cleanup and honest incomplete receipt.",
+      "rationale": "CACHE deletion extends that exact job while preserving pending version-1 execution semantics."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future serialized authority for concurrent cross-store erasure and ingestion.",
+      "rationale": "Checkpointed exact CACHE deletion does not fence a concurrent profile writer."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved retention, deletion-generation and shopper re-entry policy.",
+      "rationale": "This task deletes current known keys without choosing future re-entry semantics."
+    }
+  ],
+  "preflight": {"status": "pending", "plan": null, "contract_digest": null, "approval": null},
+  "assignments": {"implementer": "w0602-worker", "independent_reviewer": "w0602-reviewer", "lead": "w01-lead"},
+  "artifact": {"status": "not_recorded", "contract_digest": null, "configuration": null, "files": [], "digest": null},
+  "acceptance_history": [],
+  "independent_review": {"status": "pending"},
+  "lead_signoff": {"status": "pending"},
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement version-compatible known-subject CACHE deletion in the existing erasure job and identity fixture; freeze for independent review."
+  }
+}

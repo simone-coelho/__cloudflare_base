@@ -1,0 +1,138 @@
+{
+  "id": "W12.01",
+  "package_id": "W12",
+  "title": "Reject empty monitor decisions and retain alert delivery outcomes",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Repair monitor false-green empty decisions and discarded delivery/recovery retry status without changing scoring, customer state, telemetry schema or building monitoring infrastructure.",
+  "read_paths": [
+    "AGENTS.md",
+    "src",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/ops/monitor.ts",
+    "src/ops/monitor.test.ts",
+    "docs/remediation/evidence/W12.01/worker.json"
+  ],
+  "non_goals": [
+    "No queue/schema/full-personalization monitoring, destination provisioning/on-call approval, justified operational SLO or full W12/F10/N19/gate/customer/release acceptance.",
+    "No unrelated source, broad suite/new harness, cloud/network/credential/customer-data/commit/push/destructive action or subdelegation; webhook uses synthetic fetch only."
+  ],
+  "criteria": [
+    {
+      "id": "W12.01-C1",
+      "description": "Actual monitor rejects zero records; healthy nonempty remains possible. New results expose check-health ok and separate alert kind/status consistently in returned and successfully stored final record. Problem cooldown and failed/no-webhook recovery retry until sent are preserved; legacy previous results readable.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W12.01-C2",
+      "description": "Actual fixtures cover empty/nonempty, delivery terminal states, recovery retry and tenant cooldown, both-host nondefault examples, synthetic probe no shopper/receipt/learning effects, KV/AE best-effort compatibility and exact prior minimized monitor telemetry case.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W12.01-C3",
+      "description": "Independent actual frozen source/admission-diff/pin/full worker-proof review and exact K1 once; inspect worker compiler/whitespace without rerun. Explicitly retain KV concurrency/durability, destination/on-call and complete W12 limits.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W12.01-K1",
+      "required": true,
+      "criterion_ids": [
+        "W12.01-C1",
+        "W12.01-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/ops/monitor.test.ts src/services/telemetry.boundary.test.ts --maxWorkers=1 --minWorkers=1 -t 'the monitor|W12.01|keeps monitor returned/stored/alert diagnostics'",
+      "runtime": "Installed Node/Vitest, actual monitor and decision service with local synthetic stores/fetch; no network.",
+      "workload": "Existing monitor fixture plus exact existing minimized-telemetry monitor regression only; worker app noEmit --incremental false --composite false and scoped whitespace.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W12.01-K2",
+      "required": true,
+      "criterion_ids": [
+        "W12.01-C3"
+      ],
+      "command": "Independent frozen W12.01 actual source/admission-diff/pins/full worker-proof review and exact K1 once; record review.json.",
+      "runtime": "Independent source inspection and same bounded local synthetic check.",
+      "workload": "C1-C3 and full W12 residuals; inspect compiler/whitespace without rerun.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W07.04",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing actual monitor AE/log minimization and narrow regression.",
+      "rationale": "Historical whole-task assurance is already qualified; inspect current source and rerun only the affected existing monitor case."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W05.04",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing unsigned explicitly refused synthetic decision service.",
+      "rationale": "Current source has no shopper state/fan/lift work for this probe; verify actual monitor cases without claiming historical whole-task acceptance."
+    }
+  ],
+  "preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W12.01/plan-v1.md",
+      "sha256": "44efc1863a457ecfc613afa1564ed912770c979794ca7f690b439f7f7ce19227"
+    },
+    "contract_digest": "ddb50ebfd3f10734e1fc2a7890c3509f0bac21d036bc1a7025954371bbc1af38",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-09T00:20:35.678Z",
+      "plan_sha256": "44efc1863a457ecfc613afa1564ed912770c979794ca7f690b439f7f7ce19227",
+      "rationale": "Standing local mandate, concrete actual-source defects and independent preflight; existing two-file remedy and bounded regression only."
+    }
+  },
+  "assignments": {
+    "implementer": "w1201-worker",
+    "independent_reviewer": "w1201-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement only admitted monitor remedy; freeze exact source and worker proof for independent review."
+  },
+  "blocked": null,
+  "acceptance_history": []
+}

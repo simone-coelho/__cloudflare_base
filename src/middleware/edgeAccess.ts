@@ -6,8 +6,8 @@
 // today's behavior: the shared demo worker keeps working, the Coach console keeps
 // posting to /operator without a token, the storefront keeps posting to /realtime
 // without a key, and CORS reflects any origin. AUTH_MODE = 'enforced' is what the
-// staging stamp sets: the SDK-facing surface needs an SDK key, operator writes
-// need a JWT, and CORS answers only the configured origins (and the page's own).
+// staging stamp sets: SDK keys bind the selected tenant, operator reads/writes
+// need a tenant-authorized JWT, and CORS answers only configured origins (and self).
 //
 // The one exception to the switch is CORS_ORIGINS: when it is configured, the
 // allow-list applies in either mode, because listing origins IS the decision.
@@ -16,7 +16,10 @@
 import type { Context, MiddlewareHandler } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import type { Env } from '@/types/env';
-import { jwt } from './auth';
+import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
+import { tenantConfig } from '@/tenancy/middleware';
+import { operatorJwt } from './operatorAuth';
+import { assertShopperSelectors } from '@/identity/sessionAuthority';
 
 export type AuthMode = 'open' | 'enforced';
 
@@ -73,7 +76,8 @@ export function corsOrigin(origin: string, c: Context<{ Bindings: Env }>): strin
 
 /**
  * SDK_KEYS is `tenant:key[|key2],tenant2:key3`. A tenant of `*` accepts the key
- * for any tenant. The value is a secret; the format is not.
+ * for any tenant when wildcard grants are permitted by the stamp policy.
+ * The value is a secret; the format is not.
  */
 export function sdkKeyTable(env: Pick<Env, 'SDK_KEYS'>): Map<string, Set<string>> {
   const table = new Map<string, Set<string>>();
@@ -93,12 +97,24 @@ export type SdkKeyVerdict =
   | { ok: true; tenant: string }
   | { ok: false; status: 401 | 403; reason: string };
 
-export function verifySdkKey(key: string, tenant: string | null, env: Pick<Env, 'SDK_KEYS'>): SdkKeyVerdict {
+export function verifySdkKey(key: string, tenant: string | null, env: Pick<Env, 'SDK_KEYS' | 'AUTH_MODE' | 'TENANTS'>): SdkKeyVerdict {
   if (!key) return { ok: false, status: 401, reason: 'SDK key required' };
   const table = sdkKeyTable(env);
   const owners = [...table.entries()].filter(([, keys]) => keys.has(key)).map(([t]) => t);
   if (owners.length === 0) return { ok: false, status: 401, reason: 'SDK key not recognized' };
-  if (tenant && !owners.includes(tenant) && !owners.includes('*')) {
+  // Explicit named grants remain valid even if this key also has a wildcard
+  // entry. A null tenant is only the pure helper's named-owner lookup.
+  const named = tenant ? owners.includes(tenant) : owners.some(owner => owner !== '*');
+  let wildcard = false;
+  if (!named && owners.includes('*')) {
+    if (authMode(env) === 'open') wildcard = true;
+    else {
+      // tenantConfig reads TENANTS only and supplies canonical distinct brands.
+      // Invalid configuration must never grant wildcard authority.
+      try { wildcard = tenantConfig(env as Env).provisioned.length === 1; } catch { wildcard = false; }
+    }
+  }
+  if (!named && !wildcard) {
     return { ok: false, status: 403, reason: 'SDK key is for a different tenant' };
   }
   return { ok: true, tenant: tenant ?? (owners.find((t) => t !== '*') ?? '*') };
@@ -107,37 +123,67 @@ export function verifySdkKey(key: string, tenant: string | null, env: Pick<Env, 
 /**
  * The SDK-facing surface. Reads the key from the header the SDK sends on fetch,
  * or from the query the SDK sends on a socket upgrade, where headers cannot be set.
- * An operator token is stronger than a site key: the learning console and the
- * support tools reach the same routes with a Bearer token and no site key, and a
- * verified token passes the gate (CW22, 2026-09-04). Routes that require a token
- * still verify it themselves; this only opens the door the site key guards.
+ * Operator tools may use a Bearer token without a site key, but must hold an
+ * explicit grant for the canonical tenant. JWT-required routes repeat that
+ * authorization independently, so a site key never bypasses operator authority.
  */
-export function sdkKey(): MiddlewareHandler<{ Bindings: Env }> {
-  return createMiddleware<{ Bindings: Env }>(async (c, next) => {
-    if (authMode(c.env) === 'open') return next();
-    const key = (c.req.header('X-SDK-Key') ?? c.req.query('sdkKey') ?? '').trim();
-    if (!key && /^Bearer\s+\S+/i.test(c.req.header('Authorization') ?? '')) {
-      return jwt({ required: true })(c as unknown as Parameters<ReturnType<typeof jwt>>[0], next);
+export function sdkKey(): MiddlewareHandler<{ Bindings: Env; Variables: TenantVariables }> {
+  return createMiddleware<{ Bindings: Env; Variables: TenantVariables }>(async (c, next) => {
+    if (/\/(?:decisions\/snapshot|realtime\/(?:ws|session\/(?:[^/]+\/)?preferences))$/.test(new URL(c.req.url).pathname)) assertShopperSelectors(c.req.raw);
+    let key: string;
+    try { key = sdkRequestKey(c.req.raw); } catch {
+      c.header('Cache-Control', 'no-store');
+      return c.json({ ok: false, error: 'Invalid SDK key transport' }, 401);
     }
-    const tenant = (c.req.param('tenant') ?? '').trim() || null;
+    if (authMode(c.env) === 'open') return next();
+    if (!key && /^Bearer\s+\S+/i.test(c.req.header('Authorization') ?? '')) {
+      return operatorJwt()(c as unknown as Parameters<ReturnType<typeof operatorJwt>>[0], next);
+    }
+    // The ingress resolver owns this context; key ownership must authorize it,
+    // including generic routes that have no :tenant path parameter.
+    const tenant = c.get('tenant');
+    if (!isValidTenantId(tenant)) {
+      c.header('Cache-Control', 'no-store');
+      return c.json({ ok: false, error: 'Tenant unavailable' }, 403);
+    }
     const verdict = verifySdkKey(key, tenant, c.env);
     if (verdict.ok) return next();
+    c.header('Cache-Control', 'no-store');
     return c.json({ ok: false, error: verdict.reason }, verdict.status);
   });
 }
 
-// ── Operator writes ──────────────────────────────────────────────────────────
+/** Browser sockets cannot set headers. This canonical protocol is still a
+ * secret transport, not a logging/redaction or deployed-access guarantee. */
+export function sdkRequestKey(request: Request): string {
+  const offered = (request.headers.get('Sec-WebSocket-Protocol') ?? '').split(',').map(v => v.trim());
+  const keys = offered.filter(v => v.startsWith('sdk-key-v1'));
+  if (keys.length > 1) throw new Error('Invalid site key');
+  let protocol: string | undefined;
+  if (keys.length) {
+    const encoded = keys[0]!.slice('sdk-key-v1.'.length);
+    if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket' || !keys[0]!.startsWith('sdk-key-v1.') || !/^[A-Za-z0-9_-]{1,683}$/.test(encoded)) throw new Error('Invalid site key');
+    const raw = Uint8Array.from(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+    protocol = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(raw);
+    const canonical = btoa(String.fromCharCode(...new TextEncoder().encode(protocol))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    if (raw.length > 512 || !protocol || protocol.trim() !== protocol || canonical !== encoded) throw new Error('Invalid site key');
+  }
+  const query = new URL(request.url).searchParams.getAll('sdkKey');
+  if (query.length > 1) throw new Error('Invalid site key');
+  const selected = [request.headers.get('X-SDK-Key'), query[0], protocol].filter((v): v is string => v !== undefined && v !== null);
+  if (selected.some(v => !v || v !== v.trim() || v !== selected[0])) throw new Error('Conflicting site key');
+  return selected[0] ?? '';
+}
+
+// ── Operator access ──────────────────────────────────────────────────────────
 
 /**
- * Reads stay open; anything that changes state needs a verified token. The
- * config routes already hold this line unconditionally; this brings the
- * operator surface up to it when enforced.
+ * Enforced reads and writes both need tenant-authorized operator access.
+ * The historical export name remains for existing mounts; open demos bypass it.
  */
 export function operatorWrites(): MiddlewareHandler<{ Bindings: Env }> {
   return createMiddleware<{ Bindings: Env }>(async (c, next) => {
     if (authMode(c.env) === 'open') return next();
-    const m = c.req.method.toUpperCase();
-    if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return next();
-    return jwt({ required: true })(c as unknown as Parameters<ReturnType<typeof jwt>>[0], next);
+    return operatorJwt()(c as unknown as Parameters<ReturnType<typeof operatorJwt>>[0], next);
   });
 }

@@ -1,0 +1,146 @@
+{
+  "id": "W08.01",
+  "package_id": "W08",
+  "title": "Retire unsafe legacy provisioning entrypoints",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Replace three mutating legacy provisioners with unconditional literal refusal; retire unsafe recovery guidance in deploy diagnostics and existing runbook without changing deployment execution logic.",
+  "read_paths": [
+    "AGENTS.md",
+    "scripts",
+    "docs/deployment",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "wrangler.toml"
+  ],
+  "write_paths": [
+    "scripts/provision-stamp.sh",
+    "scripts/provision-staging.sh",
+    "scripts/setup.sh",
+    "scripts/deploy.sh",
+    "docs/deployment/01-deploy.md",
+    "docs/remediation/evidence/W08.01/worker.json"
+  ],
+  "non_goals": [
+    "No working desired-state reconciler, secret-name skip/merge fiction, initial-create/add-brand/rotation capability, migration/seed repair, resource/identity recovery, caller-shell startup security or full W08/finding/gate/customer/release acceptance.",
+    "No target provisioning/deploy/seed script execution, CLI/login/install/network/cloud/credential/customer-data/commit/push/cleanup, broad suite/framework or subdelegation. deploy.sh comments and literal diagnostic strings only. Runbook change limited to retirement/status/unsafe operative setup/auth advice."
+  ],
+  "criteria": [
+    {
+      "id": "W08.01-C1",
+      "description": "All three provisioner bodies are fully replaced by one literal builtin printf to stderr plus exit2 only. No expansion, arguments, environment bypass, remote/local mutation, subprocess, surviving unsafe block or executable archive. Honest retirement message names pending W08, not successful provisioning.",
+      "required_evidence_kinds": [
+        "source_inventory"
+      ],
+      "minimum_claim": "source_confirmed"
+    },
+    {
+      "id": "W08.01-C2",
+      "description": "All four shell files parse without execution. Actual deploy executable logic remains exactly unchanged excluding comments/diagnostics; changed diagnostics are literal and no longer recommend retired entrypoints, wildcard-key writes or AUTH_MODE=open recovery. Existing runbook withdraws operative safe/verified provisioning/auth advice and marks remaining legacy commands non-operative. Preserve unrelated work.",
+      "required_evidence_kinds": [
+        "source_inventory"
+      ],
+      "minimum_claim": "source_confirmed"
+    },
+    {
+      "id": "W08.01-C3",
+      "description": "Independent exact before/final/pin/full-proof inspection and same source-only K1 once, inspecting worker scoped whitespace without rerun. Explicitly distinguish structural removal from executed script/remote-zero-call/working provisioning/customer isolation and release proof.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W08.01-K1",
+      "required": true,
+      "criterion_ids": [
+        "W08.01-C1",
+        "W08.01-C2"
+      ],
+      "command": "node --input-type=module <<'NODE'\nimport fs from 'node:fs';\nimport assert from 'node:assert/strict';\nimport { spawnSync } from 'node:child_process';\nconst baseline = JSON.parse(fs.readFileSync('docs/remediation/evidence/W08.01/baseline.json', 'utf8'));\nconst scripts = ['scripts/provision-stamp.sh', 'scripts/provision-staging.sh', 'scripts/setup.sh', 'scripts/deploy.sh'];\nconst active = s => s.split(/\\r?\\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));\nfor (const path of scripts) {\n  const checked = spawnSync('/bin/bash', ['--noprofile', '--norc', '-n', path], { encoding: 'utf8', env: { PATH: '' } });\n  assert.equal(checked.error, undefined); assert.equal(checked.status, 0, checked.stderr);\n  if (path !== 'scripts/deploy.sh') {\n    const lines = active(fs.readFileSync(path, 'utf8'));\n    assert.equal(lines.length, 2, path);\n    assert.match(lines[0], /^builtin printf '%s\\\\n'(?: '[^'\\n]*')+ >&2$/);\n    assert.equal(lines[1], 'exit 2');\n    assert.match(lines[0], /W08/);\n  }\n}\nconst deploy = fs.readFileSync(scripts[3], 'utf8'), before = baseline.files.find(f => f.path === scripts[3]).content;\nconst logic = s => active(s).filter(l => !/^echo(?:\\s|$)/.test(l));\nassert.deepEqual(logic(deploy), logic(before), 'deploy execution logic changed');\nconst oldLines = new Set(before.split(/\\r?\\n/));\nfor (const line of deploy.split(/\\r?\\n/)) if (!oldLines.has(line) && /^\\s*echo(?:\\s|$)/.test(line)) {\n  assert.match(line, /^\\s*echo \"[^\"$`\\\\]*\"\\s*$/, 'changed diagnostics must be literal');\n}\nassert.doesNotMatch(deploy, /Run: bash scripts\\/provision-|printf '\\*:demo-site'|set AUTH_MODE.*open/);\nconst runbook = fs.readFileSync('docs/deployment/01-deploy.md', 'utf8');\nassert.doesNotMatch(runbook, /Status:\\*\\* verified|## The one safe path|bash scripts\\/provision-|printf '\\*:demo-site'|open.*one-line.*rollback/);\nassert.match(runbook, /W08/);\nconsole.log('PASS: four scripts parse; three exact literal refusal bodies; deploy executable logic unchanged; operative recovery guidance retired. Source-only, no target script executed.');\n\nNODE",
+      "runtime": "Installed Node source assertions and /bin/bash --noprofile --norc -n with empty PATH; scripts parsed only, never invoked.",
+      "workload": "Exactly three literal refusal bodies, four shell syntax parses, unchanged deploy executable lines and narrow runbook guidance checks; worker scoped git diff --check five owned files. No runtime suite/compiler needed.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W08.01-K2",
+      "required": true,
+      "criterion_ids": [
+        "W08.01-C3"
+      ],
+      "command": "Independent frozen W08.01 actual source/admission-diff/pins/full worker proof review and exact K1 once; record review.json.",
+      "runtime": "Independent source-only inspection plus same four syntax-only parses; no target script execution.",
+      "workload": "All C1-C3 and authority/residual coverage; inspect worker scoped whitespace without repeating it.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "decision",
+      "target_id": "D01",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future authorized demo/customer separation.",
+      "rationale": "Retirement does not choose topology or approve demo schema on customer stamps."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D08",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Approved customer/brand/environment/region resource ownership.",
+      "rationale": "No target/account/resource or desired-state authority is invented."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D07",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved identity onboarding/SSO.",
+      "rationale": "No account seeding, credential replacement or new onboarding contract."
+    }
+  ],
+  "preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W08.01/plan-v1.md",
+      "sha256": "2d87bc75cdebbe2d3dbff585cafed7c30c95a3a7a3644600625e2df9d8893c1e"
+    },
+    "contract_digest": "01667e6ac0c7aef478be358c99941b12080c71ccf3b9398171f8adfb5a152871",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-08T23:16:14.085Z",
+      "plan_sha256": "2d87bc75cdebbe2d3dbff585cafed7c30c95a3a7a3644600625e2df9d8893c1e",
+      "rationale": "Existing local mandate and independent Astra/xhigh source challenge support explicit dangerous-script retirement, not an invented provisioning solution; smallest source-only checks."
+    }
+  },
+  "assignments": {
+    "implementer": "w0801-worker",
+    "independent_reviewer": "w0801-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement five-path source containment, freeze exact proof, independent review and lead disposition."
+  },
+  "blocked": null,
+  "acceptance_history": []
+}

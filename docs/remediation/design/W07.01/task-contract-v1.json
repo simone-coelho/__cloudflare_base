@@ -1,0 +1,137 @@
+{
+  "id": "W07.01",
+  "package_id": "W07",
+  "title": "Withdraw raw subject analytics and entry payload logs",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Bounded W07 future-write containment: withdraw eight subject-bearing AE writes in tracking, pixel, webhook and Optimizely routers; remove blanket request URL and raw queue payload/error logs at the Worker entry, and raw error objects in those routers and global error middleware. Preserve dispatcher/Optimizely domain effects, response and queue semantics, health/ledger aggregate measurement. Correct erasure receipts for historical AE/log destinations without claiming deletion or full privacy acceptance.",
+  "read_paths": [
+    "src",
+    "scripts/remediation",
+    "docs/architecture",
+    "docs/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/routes/tracking.ts",
+    "src/routes/pixel.ts",
+    "src/routes/webhook.ts",
+    "src/routes/optimizely.ts",
+    "src/index.ts",
+    "src/middleware/error.ts",
+    "src/identity/erase.ts",
+    "src/telemetry.boundary.test.ts",
+    "src/index.api-boundary.test.ts",
+    "src/routes/identity.test.ts",
+    "docs/remediation/evidence/W07.01"
+  ],
+  "non_goals": [
+    "No scoring, ledger schema/producer/consumer, business dispatch, consent or route-auth policy, SDK, dataset/provisioning, retention or historical deletion change; no new replacement telemetry pipeline.",
+    "Other EventDispatcher/OptimizelyService/scene-generation/WebSocket/scheduled/route log paths and public error-response contents remain unaccepted W07 scope; no all-logs-clean, nothing-written-under-refusal, full erasure/W07/finding/gate/customer/SLO/release or earlier-proof reclosure claim.",
+    "No real network, deployment/cloud/resource/credential/customer-data operations, operational scripts, staging/commit/push, cleanup, broad test framework or unrelated changes."
+  ],
+  "criteria": [
+    {
+      "id": "W07.01-C1",
+      "description": "All eight actual mounted route writers never access AE with absent/throwing bindings, including synthetic refused-consent input. Existing dispatcher/Optimizely effects, successful response shapes, batch continuation and pixel success/error GIF/cache behavior survive; malformed input retains existing responses. Health and ledger aggregate writes remain unchanged. Historical AE and logs are unconditionally named notReached after existing ODP without changing erasure operations or promising retention/deletion.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W07.01-C2",
+      "description": "Actual Worker entry requests with synthetic path/query/request-ID data emit no blanket URL logs; default queue bodies, scene result fields, ledger failure detail and queue catch error contents are not logged at index sites, preserving acknowledgements/retries. Selected router and global error logs use fixed labels only; response/error and residual service log limits are explicit.",
+      "required_evidence_kinds": [
+        "integration_test",
+        "design_review"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W07.01-C3",
+      "description": "Independent frozen source/baseline/assertion/evidence review and targeted K1/K2 reruns, inspected actual application noEmit and relevant source/config/lock/proof identity confirm bounded remediation and protected prior changes; no duplicate broad matrix or full application/runtime attestation.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W07.01-K1",
+      "required": true,
+      "criterion_ids": [
+        "W07.01-C1",
+        "W07.01-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/telemetry.boundary.test.ts src/routes/identity.test.ts src/ledger/ledger.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest, actual Hono routers/decoder/erasure/ledger modules over synthetic stores, with intercepted business-service seams in compact telemetry fixture; no external or deployed delivery proof.",
+      "workload": "Eight removed AE writers with fail-on-access binding, preserved dispatch/Optimizely calls and errors, batch continuation/pixel GIF; fixed router/global error log controls, unchanged health and ledger aggregate controls, existing identity erasure with unconditional historical destinations.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W07.01-K2",
+      "required": true,
+      "criterion_ids": [
+        "W07.01-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts --maxWorkers=1 --minWorkers=1 -t W07.01",
+      "runtime": "Existing esbuild/Miniflare actual workerd entry fixture with synthetic working bindings and outbound blocked; targeted W07 cases only, not deployed runtime or full old W01 proof reclosure.",
+      "workload": "Repair and select existing /api-info control under W07.01; add bounded raw path/query/header and default/scene/ledger/catch queue logging checks with preserved ack/retry semantics. Do not execute unrelated operational workflows or expand native infrastructure.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W07.01-K3",
+      "required": true,
+      "criterion_ids": [
+        "W07.01-C1",
+        "W07.01-C2",
+        "W07.01-C3"
+      ],
+      "command": "Independent frozen W07.01 source/baseline/assertion/evidence review and K1/K2 reruns; inspect actual application noEmit TypeScript, owned diff/protected sources and relevant artifact identity; retain exact results and bounded verdict in review-v1.md.",
+      "runtime": "Independent source and declared synthetic Node/workerd review; inspect worker compiler output with task-temporary build metadata, no duplicate compile or installed-runner inventory.",
+      "workload": "All C1-C3, all eight removals and domain semantics, raw-log callsite scope, historical receipt truthfulness and preserved aggregate measurement; retain historical, service-log, consent, graph, customer and deployed limits.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "contract_digest": "84682822f3ab95696f62a6a18042900ab840b2c89173386351083334a409bd6c",
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0202-worker",
+    "independent_reviewer": "w0202-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "unrecorded",
+    "contract_digest": null,
+    "configuration": "",
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement bounded W07.01 after lead admission; preserve full W07/D06/history/environment/other-log gaps."
+  }
+}

@@ -1,4 +1,6 @@
 export interface Env {
+  /** Exact deployment boundary. Missing/invalid values refuse all entry points. */
+  DEPLOYMENT_PROFILE?: 'customer' | 'demo';
   ASSETS: Fetcher;   // static-assets binding (public/) for server-side reads — see wrangler.toml [assets]
   BROWSER?: Fetcher; // Browser Rendering (headless Chromium) for the /__shot verification route
   /** Shared secret for /__shot. UNSET DISABLES THE ROUTE ENTIRELY — see src/routes/shot.ts. */
@@ -33,6 +35,8 @@ export interface Env {
    * The number itself is Tapestry's privacy team's to agree.
    */
   LEDGER_RETENTION_DAYS?: string;
+  /** Exact true opts producers into managed recovery; deploy recognizing consumers/eraser first. */
+  LEDGER_RECOVERY_ENABLED?: string;
   /**
    * Where the platform posts an alert when its five-minute self-check fails or recovers (src/ops/monitor.ts):
    * any URL that accepts a JSON post, a chat webhook or an on-call tool. A secret. Absent means the result is
@@ -49,27 +53,41 @@ export interface Env {
   DB: D1Database;
   /** Operator accounts (doc 30) live in D1 behind src/auth/store; a test hands its own store in here. Never set on a stamp. */
   ACCOUNTS?: import('@/auth/store').AccountStore;
+  /** Test-only authority store; deployed authority uses the same D1 database. */
+  AUTHORITY?: import('@/auth/authority').AuthorityStore;
+  /** Explicit JSON array of human account IDs; never inferred from admin roles or tenant grants. */
+  STAMP_OWNER_SUBJECTS?: string;
+  /** Disabled when absent. Explicit pre-provisioned OIDC providers and secret references, never discovery/JIT grants. */
+  OPERATOR_OIDC?: string;
 
   /**
    * Stamp tenancy (CW1). JSON:
    *   { "provisioned": ["coach","kate-spade"],
    *     "hosts": { "shop.katespade.com": "kate-spade" } }
-   * Absent or malformed means the default brand only, which is the safe reading
-   * of an unconfigured stamp rather than the permissive one.
+   * Undefined retains legacy Coach-only operation. An explicit manifest is the
+   * complete provisioned set; malformed configuration refuses requests/jobs.
+   * Retain tenants with pending work until authorized retirement/recovery.
    */
   TENANTS?: string;
+  /** Explicit per-tenant/per-category approved lifetimes. No implicit defaults. */
+  // Explicit per-category policy; telemetry.* is separate from behavioral
+  // external.*. Local descriptors/access references do not attest deployment.
+  RETENTION?: string;
+  /** Exact source/DLQ identities and explicit unknown-owner policy; no defaults. */
+  LEDGER_RECOVERY_CONFIG?: string;
 
   /**
-   * Whether every shopper action is also written to D1 `demo_events`.
+   * Whether legacy demo shopper actions and checkout events may write D1 `demo_events`.
    *
    * That write exists for the demo's operator reset and for Opal's audience
    * sizing. It is also a per-request write into a single-primary SQLite from
    * every edge location, which is the exact pattern doc 22 §18.10 says must
    * never be inherited by a production decision path.
    *
-   * 'true' captures, 'false' does not. ABSENT captures only when ENVIRONMENT is
-   * not 'production', so the demo keeps working everywhere it works today and
-   * production is safe by omission rather than by someone remembering.
+   * Requires explicit AUTH_MODE='open', normalized ENVIRONMENT='development',
+   * normalized DEMO_EVENT_CAPTURE='true', and the resolved DEFAULT_TENANT.
+   * Missing/invalid values, enforced mode and every other environment/tenant
+   * disable both writers. This does not authorize real data or erase historic rows.
    */
   DEMO_EVENT_CAPTURE?: string;
 
@@ -114,7 +132,7 @@ export interface Env {
   // Secret. `tenant:key[|key2],tenant2:key3`; tenant `*` accepts the key anywhere.
   SDK_KEYS?: string;
   // CW25 — identity stitching. IDENTITY_SALT (secret) salts the shopper id; IDENTITY_SECRETS
-  // (secret, `tenant:secret[|previous],…`) makes a link require the site's signed assertion.
+  // (secret, `tenant:secret[|previous],…`) verifies the backend proof required for every link.
   IDENTITY_SALT?: string;
   IDENTITY_SECRETS?: string;
 
@@ -126,6 +144,9 @@ export interface Env {
   //                      degrading per-flag to the mock decision when a flag is absent.
   DECISION_SOURCE?: 'mock' | 'optimizely';
   ODP_API_HOST?: string;
+  /** JSON {version:1,tenants:{tenant:{fx?,odp?,telemetry?,enrichment?,search?,catalogSearch?,warehouse?}}}; see connectors/config.ts.
+   * Credentials are explicit CONNECTOR_SECRET_* binding references, never embedded values. */
+  TENANT_CONNECTORS?: string;
   ODP_PUBLIC_KEY?: string;
   OPAL_MCP_ENDPOINT?: string;
   OPTI_ID_TOKEN?: string;

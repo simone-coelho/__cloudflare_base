@@ -1,0 +1,46 @@
+{
+  "at": "2026-09-12T00:26:59.363Z",
+  "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/fan.ts src/durable-objects/DecisionRing.ts src/durable-objects/LearnStats.ts src/content/service.ts src/learn/route.ts src/learn/learn.test.ts src/learn/holdoutArms.test.ts src/content/consent.test.ts",
+  "captures": [
+    {
+      "chunk_id": "d033fb",
+      "wall_time_seconds": 1.001603578,
+      "session_id": 51470,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "c09b5c",
+      "wall_time_seconds": 5.001670271,
+      "session_id": 51470,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "7ac7bd",
+      "wall_time_seconds": 5.000642727,
+      "session_id": 51470,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "c3ffd8",
+      "wall_time_seconds": 5.001526807,
+      "session_id": 51470,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "e622f7",
+      "wall_time_seconds": 0.000002264,
+      "exit_code": 0,
+      "original_token_count": 271,
+      "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/durable-objects/LearnStats.ts\n  11:88  warning  'StatsConfig' is defined but never used  @typescript-eslint/no-unused-vars\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/holdoutArms.test.ts\n   98:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  124:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  129:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n  131:63  warning  Unexpected empty async method 'setAlarm'  @typescript-eslint/no-empty-function\n\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  110:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  111:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  111:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 8 problems (0 errors, 8 warnings)\n\n"
+    }
+  ],
+  "session": 51470,
+  "exit_code": 0,
+  "drained": true,
+  "errors": 0,
+  "warnings": 8
+}

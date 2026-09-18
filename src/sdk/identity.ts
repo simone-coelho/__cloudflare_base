@@ -57,6 +57,11 @@ export function mintSessionId(host: Host): string {
   return `s-${host.now().toString(36).toUpperCase()}${host.uuid().replace(/-/g, '').slice(0, 6).toUpperCase()}`;
 }
 
+/** Explicit identity changes rotate attribution, independently of profile authority. */
+export function rotateBrowsingSession(host: Host, key = DEFAULT_SESSION_KEY): void {
+  try { host.storage.set(key, JSON.stringify({ id: `s-${host.uuid()}`, at: host.now() })); } catch { /* unavailable storage */ }
+}
+
 /**
  * How this page load arrived: captured once from the current document and sent
  * with every action, because the client cannot know which event will be the

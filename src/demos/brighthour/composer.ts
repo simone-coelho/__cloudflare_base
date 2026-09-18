@@ -2032,6 +2032,6 @@ export async function writeDecisionRows(
       rows.map((row) => stmt.bind(...BH_DECISION_COLUMNS.map((col) => row[col] ?? null)))
     );
   } catch (err) {
-    console.error('writeDecisionRows failed (non-fatal):', err);
+    console.error('writeDecisionRows failed (non-fatal)');
   }
 }

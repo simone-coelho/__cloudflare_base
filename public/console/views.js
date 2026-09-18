@@ -1,3 +1,4 @@
+/* eslint-env browser */
 // public/console/views.js
 // ---------------------------------------------------------------------------
 // The views. Each one registers itself with the shell, owns its own data, and
@@ -7,7 +8,7 @@
 //   Lift       the grid: one pooled row per item, paged; an item opens its cells
 //   Slots      every slot on every page, what is set on it and what it has learned
 //   Dials      the learn document for this slot, and for the brand
-//   Proposals  what the daily cycle proposes, to apply or reject
+//   Proposals  historical records, read-only and unverified
 //   Erasures   the tombstones the ledger honours, and the rewrite
 //
 // The two rules that shape every table here: cells are a DRILL-DOWN and never
@@ -43,17 +44,13 @@
 
   // ═══════════════════════════════════════════════════════════ Work ══════════
   const work = { proposals: null, erasures: null, loaded: false, denied: false };
-  const awaiting = () => (work.proposals ? work.proposals.filter((p) => p.status === 'proposed').length : null);
   const noEvidence = () => C.slotList().filter((s) => !s.evidence || !s.evidence.items).length;
   const held = () => C.slotList().reduce((n, s) => n + (s.controls || 0), 0);
 
   C.view({
     id: 'work', group: 'Attention', title: 'Work', heading: 'What needs a person',
     hint: 'Counts, and where to go. The engine runs without any of this; these are the decisions it will not take on its own.',
-    badge: () => {
-      const a = awaiting();
-      return (a || 0) + S.refusals.length || null;
-    },
+    badge: () => S.refusals.length || null,
     async enter() {
       work.loaded = false;
       const [props, eras] = await Promise.all([C.v1('/learn/proposals'), C.v1('/ledger/erasures')]);
@@ -69,7 +66,7 @@
         h('div', { class: 'why' }, why),
         to ? h('div', { class: 'go' }, h('a', { href: to }, 'Open')) : null);
       host.append(h('div', { class: 'queue' },
-        q(awaiting(), 'Proposals awaiting a decision', 'The daily cycle proposed a weight change with its evidence. Nothing moves until a person applies it.', C.href('proposals'), true),
+        q(work.proposals ? work.proposals.length : null, 'Historical proposals listed', 'Read-only, unverified records. Autonomy is unavailable; this bounded listing is not a complete audit trail.', C.href('proposals')),
         q(S.refusals.length, 'Saves refused, in this browser', 'A change this browser tried that the platform would not take. They are not stored; they are gone when you close the tab.', S.refusals.length ? C.href('work') : null, true),
         q(noEvidence(), 'Slots with nothing learned yet', 'Configured, but no snapshot has been published for them. A slot publishes about thirty seconds after the first decision it serves.', C.href('slots')),
         q(held(), 'Items a person is holding', 'Frozen at a lift, or rejected so the learned lift is ignored. Each one is a merchandiser overruling the evidence, on purpose.', C.href('slots')),
@@ -79,7 +76,7 @@
       host.append(card('What this page cannot count yet',
         'Doc 28 asks for one route that answers the whole queue. Until it exists this page counts what the listings it can already read will tell it, and says so rather than guessing.',
         h('div', { class: 'body' }, h('div', { class: 'kv' },
-          h('span', { class: 'k' }, 'Counted here'), h('span', { class: 'v' }, 'proposals awaiting a decision, erasures pending, slots with nothing learned, items held by a person'),
+          h('span', { class: 'k' }, 'Counted here'), h('span', { class: 'v' }, 'historical proposals listed, erasures pending, slots with nothing learned, items held by a person'),
           h('span', { class: 'k' }, 'Waiting on the platform'), h('span', { class: 'v' }, 'saves refused across every operator rather than this browser, and slots whose evidence has gone stale'),
         ))));
       if (S.refusals.length) {
@@ -96,6 +93,11 @@
 
   async function loadLift(cursor) {
     const st = lift.st;
+    const scope = S.scope;
+    const authority = await C.content('/learn');
+    if (scope !== S.scope) return;
+    lift.authored = authority.ok ? C.authored(authority.data) : null;
+    lift.document = authority.ok ? authority.data.document : null;
     if (!S.slot) { st.data = null; return; }
     st.loading = true; C.render();
     const item = S.params.item || '';
@@ -132,15 +134,15 @@
 
   /** Freeze, reject or clear, on one item or on a selection: read, patch, write, in one revision. */
   async function setControls(items, control) {
-    const cur = await C.content('/learn');
-    const doc = copy(cur.data.document || {});
+    if (!lift.document || !lift.authored) { S.errors = ['Learning authority unavailable; controls are not writable.']; C.render(); return; }
+    const doc = copy(lift.document);
     doc.slots = doc.slots || {};
     const d = (doc.slots[S.slot] = doc.slots[S.slot] || {});
     d.items = d.items || {};
     for (const item of items) { if (control) d.items[item] = control; else delete d.items[item]; }
     if (!Object.keys(d.items).length) delete d.items;
     const what = control ? (control.mode === 'freeze' ? `froze ${plural(items.length, 'item')} at their current lift` : `rejected the learned lift on ${plural(items.length, 'item')}`) : `cleared the control on ${plural(items.length, 'item')}`;
-    const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: doc, note: `${what} in ${S.slot}` });
+    const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: doc, note: `${what} in ${S.slot}` }, lift.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     lift.chosen.clear();
     C.flash(`${what[0].toUpperCase()}${what.slice(1)} in ${S.slot}, as learn revision ${fmt(res.data.revision)}.`);
@@ -149,10 +151,10 @@
 
   async function resetItem(item, name) {
     if (!window.confirm(`Discard the evidence for ${name} in ${S.slot} and start again from the prior?`)) return;
-    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/items/reset`, 'POST', { slot: S.slot, item, brand: S.brand });
+    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/items/reset`, 'POST', { slot: S.slot, item, brand: S.brand }, lift.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     C.flash(res.data.had
-      ? `Evidence for ${name} discarded and the snapshot republished, recorded as revision ${fmt(res.data.revision)}.`
+      ? `Evidence for ${name} discarded; snapshot publication status is reported separately, recorded as revision ${fmt(res.data.revision)}.`
       : `${name} had no evidence in this slot; recorded as revision ${fmt(res.data.revision)}.`);
     await loadLift(lift.st.cursors[lift.st.at]);
   }
@@ -167,7 +169,7 @@
 
   C.view({
     id: 'lift', group: 'This slot', title: 'What it has learned', heading: 'What this slot has learned',
-    hint: 'One row per piece: how often it was shown, how often that paid off, and the lift that follows. The server cuts the page; opening a piece shows the contexts it was shown in.',
+    hint: 'One row per piece: its admitted exposure basis, weighted credits, and the ranking multiplier. The server cuts the page; opening a piece shows the contexts it was shown in.',
     async enter() {
       lift.st.cursors = [null]; lift.st.at = 0; lift.chosen.clear();
       await loadLift(null);
@@ -208,6 +210,7 @@
 
       const line = [
         `reward ${words(meta.reward)}`,
+        `basis ${meta.measurementBasis || 'served-v1'} (rendered means client-reported, not visibility proof)`,
         meta.objective && meta.objective !== 'unit' ? `weighed by ${meta.objective}` : '',
         `prior strength ${fmt(meta.n0)}`,
         `evidence threshold ${fmt(meta.nMin)}`,
@@ -218,10 +221,10 @@
         ...(item ? [] : [{ key: 'pick', label: '' }]),
         { key: 'name', label: 'Piece', sortable: true },
         ...(item ? [{ key: 'key', label: 'Context', sortable: true }] : []),
-        { key: 'n', label: 'Shown', sym: 'n', num: true, sortable: true, title: 'How many times this piece was shown, decayed so that older evidence counts less' },
-        { key: 's', label: 'Paid off', sym: 's', num: true, sortable: true, title: 'How many of those led to the outcome this slot learns against, weighed by its objective' },
-        { key: 'p_hat', label: 'Rate', sym: 'p̂', num: true, sortable: true, title: 'Paid off over shown, pulled toward the slot’s own rate while the evidence is thin' },
-        { key: 'p0', label: 'The slot’s rate', sym: 'p₀', num: true, sortable: true, title: 'What this slot achieves in the same context, whatever it shows' },
+        { key: 'n', label: 'Exposures', sym: 'n', num: true, sortable: true, title: 'Decayed admitted exposures on this snapshot’s served or rendered basis' },
+        { key: 's', label: 'Weighted credit', sym: 's', num: true, sortable: true, title: 'How many of those led to the outcome this slot learns against, weighed by its objective' },
+        { key: 'p_hat', label: 'Credit / exposure', sym: 'p̂', num: true, sortable: true, title: 'Smoothed weighted credit per exposure, toward the selected compatible prior target; not always a probability' },
+        { key: 'p0', label: 'Slot credit / exposure', sym: 'p₀', num: true, sortable: true, title: 'What this slot achieves in the same context, whatever it shows' },
         { key: 'lift', label: 'Lift', sym: 'p̂ / p₀', num: true, sortable: true, title: 'The rate over the slot’s rate, clamped. Above 1 is better than the slot’s average' },
         { key: 'evidence', label: 'Evidence', sym: 'n / (n + n₀)', num: true, sortable: true, title: 'How much of the rate is live observation rather than the prior' },
         { key: 'act', label: 'Held by a person' },
@@ -269,8 +272,8 @@
   });
 
   function downloadPage(rows, item) {
-    const head = ['item', 'your_id', 'title', 'context', 'shown_n', 'paid_off_s', 'rate_p_hat', 'slot_rate_p0', 'lift', 'prior_strength_n0', 'evidence', 'held'];
-    const out = [head, ...rows.map((r) => [r.item, r.customer_item_id || '', r.title || '', r.key, r.n, r.s, r.p_hat, r.p0, r.lift, r.n0, r.evidence, r.control || ''])];
+    const head = ['item', 'your_id', 'title', 'context', 'measurement_basis', 'objective', 'exposures_n', 'weighted_credit_s', 'credit_per_exposure_p_hat', 'slot_credit_per_exposure_p0', 'lift', 'prior_strength_n0', 'evidence', 'held'];
+    const out = [head, ...rows.map((r) => [r.item, r.customer_item_id || '', r.title || '', r.key, r.measurementBasis || 'served-v1', r.objective || 'unit', r.n, r.s, r.p_hat, r.p0, r.lift, r.n0, r.evidence, r.control || ''])];
     download(`lift-${S.scope}-${S.slot}${item ? `-${item}` : ''}.csv`, csv(out));
   }
 
@@ -286,7 +289,7 @@
         const body = page.slots.map((s) => h('tr', {},
           h('td', {},
             h('button', { class: 'link', onclick: () => C.go('lift', { slot: s.slot }) }, s.slot),
-            s.pinned ? h('div', { class: 'itemid' }, `pinned to ${s.pinned}`) : null),
+            s.pinnedPieceIds?.length ? h('div', { class: 'itemid' }, `Pinned first: ${JSON.stringify(s.pinnedPieceIds)}; ${s.rankedCapacity} ranked positions`) : s.pinned ? h('div', { class: 'itemid' }, `pinned to ${s.pinned}`) : null),
           h('td', { class: 'num' }, fmt(s.take)),
           h('td', { class: 'num' }, fmt(s.pieces)),
           h('td', {}, s.dimensions && s.dimensions.length ? s.dimensions.join(', ') : 'none weighted'),
@@ -294,7 +297,7 @@
           h('td', {}, words(s.reward), s.objective && s.objective !== 'unit' ? h('div', { class: 'itemid' }, `weighed by ${s.objective}`) : null),
           h('td', { class: 'num' }, dec(s.gamma)),
           h('td', {}, words(s.exploration)),
-          h('td', {}, words(s.autonomy)),
+          h('td', {}, `unavailable · stored ${words(s.autonomy) || 'configured'} (dormant)`),
           h('td', { class: 'num' }, s.controls ? fmt(s.controls) : '—'),
           h('td', {}, s.evidence === undefined ? 'not asked' : s.evidence === null ? 'nothing yet'
             : `${plural(s.evidence.items, 'piece')}, ${plural(Math.round(s.evidence.events), 'event')}`),
@@ -309,7 +312,7 @@
             { key: 'reward', label: 'Learns against' },
             { key: 'gamma', label: 'Trust', sym: 'γ', num: true, title: 'How much of the learned lift is applied: 0 shows it and changes nothing' },
             { key: 'exploration', label: 'Exploring' },
-            { key: 'autonomy', label: 'Autonomy' },
+            { key: 'autonomy', label: 'Autonomy (unavailable)' },
             { key: 'controls', label: 'Held', num: true },
             { key: 'evidence', label: 'Learned so far' },
           ], body)));
@@ -350,6 +353,7 @@
     dl.failed = res.ok ? '' : (res.status === 401 || res.status === 403
       ? 'Sign in at the top right to read this brand\u2019s settings. These are the defaults.'
       : `Could not read the learn document (${res.status || 'no answer'}). These are the defaults.`);
+    dl.authored = res.ok ? C.authored(data) : null;
     dl.doc = data.document || { holdout: { share: 0.05, salt: '', arms: ['default'] } };
     dl.draft = copy(dl.doc);
     dl.revision = data.revision || 0;
@@ -357,11 +361,12 @@
     dl.errors = [];
   }
   async function saveDials(note) {
-    const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note });
+    const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note }, dl.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
+    dl.authored = C.authored(res.data);
     dl.doc = res.data.document; dl.draft = copy(dl.doc); dl.revision = res.data.revision; dl.source = 'stored';
     document.getElementById('note').value = '';
-    C.flash(`Saved as learn revision ${fmt(res.data.revision)}. Live now, with no deployment.`);
+    C.flash(`Saved as learn revision ${fmt(res.data.revision)}. Published; serving refreshes within the documented 30-second read bound.`);
     await C.loadSlots();
   }
 
@@ -378,7 +383,7 @@
   }
   function sel(value, options, onChange, path) {
     const el = h('select', { class: changed(path).trim() || null, 'data-focus-key': path, disabled: !C.canEdit() || null },
-      ...options.map(([v, label]) => h('option', { value: v, selected: String(v) === String(value) || null }, label)));
+      ...options.map(([v, label, disabled]) => h('option', { value: v, disabled: disabled || null, selected: String(v) === String(value) || null }, label)));
     el.addEventListener('change', () => onChange(el.value));
     return el;
   }
@@ -399,36 +404,26 @@
         gamma === 0 ? 'Shadow: learning is visible and inert.' : `A lift of 1.4 becomes ×${dec(Math.pow(1.4, gamma))} on the score.`),
       dial('What counts as paying off', 'The outcome this slot learns against. One per slot; the others still land in the ledger and can be reported on.',
         sel(d.reward || 'click', REWARDS.map((r) => [r, words(r)]), (v) => { d.reward = v; scheduleCheck(); }, `${base}.reward`)),
-      dial('What a success is worth', 'Unit counts each one the same. Revenue weighs it by the order value, margin by the margin the feed gives. Revenue and margin need a reward that carries a value: a purchase, or an add to bag.',
+      dial('What a success is worth', 'Unit counts each one the same. Revenue weighs it by the order value, margin by the feed margin, falling back to value when absent. Revenue and margin need a reward that carries a value: a purchase, or an add to bag.',
         sel(d.objective || 'unit', [['unit', 'unit'], ['revenue', 'revenue'], ['margin', 'margin']], (v) => { if (v === 'unit') delete d.objective; else d.objective = v; scheduleCheck(); }, `${base}.objective`)),
+      dial('Measurement basis', 'Absent means legacy served-v1. Rendered-v1 counts authenticated client render acknowledgments, not polls or proof of human visibility. Changing a populated basis requires the existing reviewed reset/publication flow; counters and priors never merge.',
+        sel(d.measurementBasis || 'served-v1', [['served-v1', 'legacy served'], ['rendered-v1', 'client-reported rendered']], (v) => { d.measurementBasis = v; scheduleCheck(); }, `${base}.measurementBasis`)),
       h('div', { class: 'subhead' }, 'Trying things it has not tried'),
-      dial('How it explores', 'Rotation shows the least-observed piece on a share of decisions. Thompson samples each piece’s rate and ranks on the sample. Epsilon picks uniformly. Every exploring decision is flagged on its receipt.',
-        sel((d.exploration || {}).mode || 'off', [['off', 'off'], ['rotation', 'rotation'], ['thompson', 'thompson'], ['epsilon', 'epsilon']], (v) => {
+      dial('How it explores', 'Exploration is off by default. Rotation shows the least-observed piece on a hashed share; epsilon picks uniformly. Thompson is unsupported and stored settings are dormant.',
+        sel(d.exploration?.mode === 'thompson' ? '' : d.exploration?.mode || 'off', [...(d.exploration?.mode === 'thompson' ? [['', 'Stored Thompson — inactive; choose a replacement', true]] : []), ['off', 'off'], ['rotation', 'rotation'], ['epsilon', 'epsilon']], (v) => {
           if (v === 'off') delete d.exploration;
           else d.exploration = { mode: v, share: (d.exploration || {}).share ?? 0.1, floor: (d.exploration || {}).floor ?? 50 };
           scheduleCheck();
         }, `${base}.exploration.mode`)),
-      d.exploration ? dial('How often', 'The share of this slot’s decisions kept for exploring.',
+      d.exploration?.mode === 'thompson' ? h('pre', { class: 'dormant-exploration' }, JSON.stringify(d.exploration, null, 2)) : null,
+      d.exploration && d.exploration.mode !== 'thompson' ? dial('How often', 'The configured share used by the existing rule; not a measured exposure guarantee.',
         num(d.exploration.share, (v) => { d.exploration.share = v ?? 0; scheduleCheck(); }, `${base}.exploration.share`, { min: 0, max: 1, step: 0.01 }),
-        `${pct(d.exploration.share)} of decisions`) : null,
-      d.exploration ? dial('Until it has seen', 'Observations below which a piece counts as under-observed and is worth showing again.',
+        `${pct(d.exploration.share)} configured share`) : null,
+      d.exploration && d.exploration.mode !== 'thompson' ? dial('Until it has seen', 'Observations below which a piece counts as under-observed and is worth showing again.',
         num(d.exploration.floor, (v) => { d.exploration.floor = v ?? 0; scheduleCheck(); }, `${base}.exploration.floor`, { min: 0, step: 1 })) : null,
-      h('div', { class: 'subhead' }, 'How much it may change on its own'),
-      dial('Autonomy', 'Configured: the weights are what a person set. Assisted: the daily cycle proposes one bounded move with its evidence and a person applies or rejects it. Autonomous: the same move is applied within the bounds, as a new revision with the evidence in its note.',
-        sel((d.autonomy || {}).mode || 'configured', [['configured', 'configured'], ['assisted', 'assisted'], ['autonomous', 'autonomous']], (v) => {
-          if (v === 'configured') delete d.autonomy;
-          else d.autonomy = { mode: v, step: (d.autonomy || {}).step ?? 0.05, min: (d.autonomy || {}).min ?? 0, max: (d.autonomy || {}).max ?? 1, pinned: (d.autonomy || {}).pinned ?? [], minN: (d.autonomy || {}).minN ?? 500 };
-          scheduleCheck();
-        }, `${base}.autonomy.mode`)),
-      d.autonomy ? dial('The most one weight may move', 'Per cycle. Small steps and a daily cadence are what make it reversible.',
-        num(d.autonomy.step, (v) => { d.autonomy.step = v ?? 0.05; scheduleCheck(); }, `${base}.autonomy.step`, { min: 0.01, max: 1, step: 0.01 })) : null,
-      d.autonomy ? dial('The range it may not leave', 'The hard floor and ceiling for any weight.',
-        h('div', {}, num(d.autonomy.min, (v) => { d.autonomy.min = v ?? 0; scheduleCheck(); }, `${base}.autonomy.min`, { min: 0, max: 1, step: 0.05 }),
-                     num(d.autonomy.max, (v) => { d.autonomy.max = v ?? 1; scheduleCheck(); }, `${base}.autonomy.max`, { min: 0, max: 1, step: 0.05 }))) : null,
-      d.autonomy ? dial('Before it may act at all', 'Exposures this slot must have seen before a cycle may move anything.',
-        num(d.autonomy.minN, (v) => { d.autonomy.minN = v ?? 500; scheduleCheck(); }, `${base}.autonomy.minN`, { min: 1, step: 1 })) : null,
-      d.autonomy ? dial('Weights it may never touch', 'Comma separated. A dimension a merchandiser has committed to stays where they put it.',
-        txt((d.autonomy.pinned || []).join(', '), (v) => { d.autonomy.pinned = v.split(',').map((x) => x.trim()).filter(Boolean); scheduleCheck(); }, `${base}.autonomy.pinned`, 'occasion, line')) : null,
+      h('div', { class: 'subhead' }, 'Autonomy unavailable'),
+      h('div', { class: 'msg note' }, 'Stored settings are dormant. Cycles and proposal changes are disabled.'),
+      h('pre', { class: 'dormant-autonomy' }, JSON.stringify(d.autonomy || { mode: 'configured' }, null, 2)),
       h('div', { class: 'subhead' }, 'Their own model, on this slot'),
       dial('How much this slot trusts it', 'Their model’s score joins the base score as a driver named external, at this weight. 0 switches the term off for this slot. The model itself is configured for the whole brand, below.',
         num((d.external || {}).weight, (v) => { if (v === undefined || v === 0) delete d.external; else d.external = { weight: v }; scheduleCheck(); }, `${base}.external.weight`, { min: 0, max: 1, step: 0.05 }),
@@ -522,8 +517,8 @@
   // ══════════════════════════════════════════════════════ Proposals ══════════
   const props = { list: null, error: '' };
   C.view({
-    id: 'proposals', group: 'Attention', title: 'Proposals', heading: 'What the cycle proposes',
-    hint: 'A slot in assisted mode gets one bounded move a day, with the evidence behind it. Nothing moves until a person applies it.',
+    id: 'proposals', group: 'Attention', title: 'Proposals', heading: 'Historical proposals',
+    hint: 'Autonomy is unavailable. These records are read-only and unverified; this bounded listing is not a complete audit trail.',
     async enter() {
       const res = await C.v1('/learn/proposals');
       props.list = res.ok ? res.data.proposals || [] : null;
@@ -532,32 +527,20 @@
     render(host) {
       if (props.error) { host.append(h('div', { class: 'msg note' }, props.error)); return; }
       const list = (props.list || []).slice().reverse();
-      if (!list.length) { host.append(h('div', { class: 'empty' }, 'No proposals. A slot in assisted mode gets one from the daily cycle once it has seen enough exposures.')); return; }
+      if (!list.length) { host.append(h('div', { class: 'empty' }, 'No historical proposals returned. Autonomy is unavailable.')); return; }
       for (const p of list.slice(0, 40)) {
         const ev = (p.evidence || [])[0];
         host.append(card(`${p.slot} · ${p.dimension}`, null, h('div', { class: 'body' },
           h('div', { class: 'kv' },
             h('span', { class: 'k' }, 'Proposed'), h('span', { class: 'v' }, `${p.dimension} from ${dec(p.from)} to ${dec(p.to)}`),
-            h('span', { class: 'k' }, 'Because'), h('span', { class: 'v' }, ev ? `${ev.dimension} separates outcomes by ${dec(ev.spread)}, over ${plural(Math.round(p.exposures), 'exposure')}` : `${plural(Math.round(p.exposures), 'exposure')}`),
-            h('span', { class: 'k' }, 'Status'), h('span', { class: 'v' }, `${p.status} · ${p.mode} · ${when(p.at)}`),
+            h('span', { class: 'k' }, 'Stored evidence (unverified)'), h('span', { class: 'v' }, ev ? `${ev.dimension} spread ${dec(ev.spread)}, ${plural(Math.round(p.exposures), 'exposure')} recorded` : `${plural(Math.round(p.exposures), 'exposure')}`),
+            h('span', { class: 'k' }, 'Stored status (unverified)'), h('span', { class: 'v' }, `${p.status} · ${p.mode} · ${when(p.at)}`),
             ...(p.note ? [h('span', { class: 'k' }, 'Note'), h('span', { class: 'v' }, p.note)] : []),
           ),
-          p.status !== 'proposed' ? null : h('div', { style: 'margin-top:8px' },
-            h('button', { class: 'small', disabled: !C.canEdit(), onclick: () => decide(p.id, 'apply') }, 'Apply it'), ' ',
-            h('button', { class: 'small warn', disabled: !C.canEdit(), onclick: () => decide(p.id, 'reject') }, 'Reject it')),
         )));
       }
     },
   });
-  async function decide(id, decision) {
-    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/proposals/${encodeURIComponent(id)}/${decision}`, 'POST', {});
-    if (!res.ok || res.data.ok === false) { C.render(); return; }
-    C.flash(decision === 'apply' ? `Applied, as slots revision ${fmt(res.data.revision)}.` : 'Rejected. The weights did not move.');
-    const again = await C.v1('/learn/proposals');
-    props.list = again.ok ? again.data.proposals || [] : props.list;
-    C.render();
-  }
-
   // ═══════════════════════════════════════════════════════ Erasures ══════════
   const er = { pending: null, retentionDays: 0, error: '' };
   C.view({

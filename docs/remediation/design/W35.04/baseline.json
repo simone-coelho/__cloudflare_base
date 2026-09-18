@@ -1,0 +1,33 @@
+{
+  "task_id": "W35.04",
+  "at": "2026-09-16T00:33:56.429Z",
+  "basis": "Source-confirmed design reproduction against actual modules plus the retained actual-module test that currently expects stale post-reset and post-retention grant reuse.",
+  "defects": [
+    "Capabilities have no per-grant identity or durable revocation state; same-profile devices can receive indistinguishable authority.",
+    "DO detach returns fresh anonymous authority without revoking the presented grant or its sockets.",
+    "Reset, retention and internal erasure delete the state/fence, allowing an old anonymous credential to recreate the object and restart linking.",
+    "Completed-link retry mints a fresh recognized credential, so revoking only a returned token would be bypassable.",
+    "Heartbeat and push paths do not revalidate durable authority; deferred ODP receipt push is outside the object serialization boundary."
+  ],
+  "reproduction": {
+    "command": "node node_modules/vitest/vitest.mjs run src/routes/realtime.sdkContract.test.ts -t 'contains unbound/corrupt/forwarded/refused alarms and preserves consent, signed adoption, reset and retention' --maxWorkers=1 --minWorkers=1",
+    "exit": 0,
+    "result": "1 passed; 62 skipped. The passing assertion explicitly expects the same old grant to write after /reset and again after retention deleteAll, confirming the stale-authority behavior rather than the remedy."
+  },
+  "files": {
+    "src/identity/sessionCapability.ts": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49",
+    "src/identity/consentContinuity.ts": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af",
+    "src/identity/link.ts": "dea9305e971ca2913fee2c70f4d23d3404e7044addded63bcafe33bb69e94978",
+    "src/routes/identity.ts": "ba760b40f7939cf96f2d8ca485b3b469f34a60260745f22857e40dccafe2be9c",
+    "src/routes/realtime.ts": "44461c20846ee114884eac1d96b60bbf384fe15277070b982877e00e1e11c679",
+    "src/durable-objects/ShopperReflex.ts": "9693e8071e14a5ffc3ca5e75a198ff0e7e40e3a3d39b3fd26f35c520e322c444",
+    "src/routes/realtime.sdkContract.test.ts": "452940cea677fad2a6294ae48fbf51ccccc12198fd7c0e6d04f8e0d869458a63"
+  },
+  "static_baseline": {
+    "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/identity/sessionCapability.ts src/identity/consentContinuity.ts src/identity/link.ts src/routes/identity.ts src/routes/realtime.ts src/durable-objects/ShopperReflex.ts src/routes/realtime.sdkContract.test.ts",
+    "exit": 0,
+    "result": "0 errors, 113 warnings; final bytes may not add warning signatures."
+  },
+  "rollback": "Reviewed inverse only of W35.04 deltas atop the recorded hashes; preserve all unrelated dirty work. Persisted authority/transition records require compatibility review before code rollback.",
+  "limitations": "Local DO grant authority only. No current session-host strong revocation, production legacy-token migration, prepared-transfer erasure race, full W35/F14, deployment, native/customer/SLO or release claim."
+}

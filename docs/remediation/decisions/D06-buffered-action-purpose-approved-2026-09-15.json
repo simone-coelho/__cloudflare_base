@@ -1,0 +1,18 @@
+{
+  "id": "D06-BUFFERED-ACTION-PURPOSE-APPROVED-2026-09-15",
+  "at": "2026-09-15T18:12:52.048Z",
+  "kind": "bounded_user_choice",
+  "approved_by": "User in current conversation",
+  "user_selection": "Age-decayed interest + measurement (Recommended)",
+  "supersedes_question": {
+    "path": "docs/remediation/decisions/D06-buffered-action-purpose-2026-09-15.json",
+    "sha256": "764f707e5c6696036dbd0550949878eac1358ec02cff855bce33f0e9792fd1ea"
+  },
+  "scope": "Explicitly buffered browser/app actions: occurrence-time-decayed current interest plus eligible original-time measurement.",
+  "constraints": [
+    "Neither fresh visits, last_activity, ODP recent activity nor today-region attribution from delayed receipt.",
+    "Explicit purpose marker; existing live actions retain arrival-stamped affinity. No blanket event-age cutoff; server clock remains authoritative for evaluation and prevents clock amplification.",
+    "Existing ownership/consent/erasure eligibility applies; no resurrection or new retention, historical reconstruction, experiment lifecycle, generation reset or deployment approval."
+  ],
+  "remaining": "Full D06 privacy/retention/erasure and D04/W24 scientific/configuration/reconstruction choices remain pending. This answers the bounded purpose question only."
+}

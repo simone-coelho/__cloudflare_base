@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-12T11:30:43.655Z",
+  "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/route.ts src/learn/fan.ts src/durable-objects/DecisionRing.ts",
+  "captures": [
+    {
+      "chunk_id": "b25ec7",
+      "wall_time_seconds": 1.001059999,
+      "session_id": 58770,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "c7fcb2",
+      "wall_time_seconds": 0.000001902,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  ],
+  "session_id": 58770,
+  "exit_code": 0,
+  "drained": true,
+  "errors": 0,
+  "warnings": 0
+}

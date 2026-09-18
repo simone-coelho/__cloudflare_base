@@ -1,0 +1,97 @@
+{
+  "before": {
+    "id": "W39",
+    "canonical": {
+      "gate_scope": "G0 unsafe runbook / G4 handoff",
+      "full_scope": "Quarantine/fix unsafe setup and unscoped seed commands; separate demo/customer assets/schema, review published backups, repair fresh-clone instructions and index. Test the actual seed order and repeat runs, scoped recovery and provenance. Untrack/remove user-owned or historical artifacts only under a reviewed authorized cleanup; this reconciliation deletes none.",
+      "finding_refs": "F35/F09; N27",
+      "sizing_owner": "S dangerous subset → M reproducible handoff; D"
+    },
+    "title": "Safe setup, seeds and handoff",
+    "gates": [
+      "G0",
+      "G4"
+    ],
+    "source_findings": [
+      "F35",
+      "F09",
+      "N27"
+    ],
+    "proposed_owner": "D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W39",
+    "canonical": {
+      "gate_scope": "G0 unsafe runbook / G4 handoff",
+      "full_scope": "Quarantine/fix unsafe setup and unscoped seed commands; separate demo/customer assets/schema, review published backups, repair fresh-clone instructions and index. Test the actual seed order and repeat runs, scoped recovery and provenance. Untrack/remove user-owned or historical artifacts only under a reviewed authorized cleanup; this reconciliation deletes none.",
+      "finding_refs": "F35/F09; N27",
+      "sizing_owner": "S dangerous subset → M reproducible handoff; D"
+    },
+    "title": "Safe setup, seeds and handoff",
+    "gates": [
+      "G0",
+      "G4"
+    ],
+    "source_findings": [
+      "F35",
+      "F09",
+      "N27"
+    ],
+    "proposed_owner": "D",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W39-SEED-CONTAINMENT",
+          "description": "Retire unsafe emitter and preserve shared references; targeted instructions withdrawn, full schema/assets/fresh-clone/recovery and cleanup remain canonical W39."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W39-SEED-CONTAINMENT",
+          "task_id": "W39.01",
+          "task_criterion_id": "W39.01-C1"
+        },
+        {
+          "criterion_id": "W39-SEED-CONTAINMENT",
+          "task_id": "W39.01",
+          "task_criterion_id": "W39.01-C2"
+        },
+        {
+          "criterion_id": "W39-SEED-CONTAINMENT",
+          "task_id": "W39.01",
+          "task_criterion_id": "W39.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W39.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

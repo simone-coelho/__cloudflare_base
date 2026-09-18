@@ -1028,18 +1028,179 @@ function esc(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// src/content/typeAffinity.ts
+var reserved = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]);
+var unsafe = /[\x00-\x1f\x7f-\x9f<>]/;
+var safe = (value) => typeof value === "string" && value.length > 0 && value.length <= 64 && value.trim() === value && !unsafe.test(value) && !reserved.has(value);
+function contentTypeValues(piece) {
+  const values = Object.prototype.hasOwnProperty.call(piece.tags, "contentType") ? piece.tags.contentType : [piece.type];
+  if (!Array.isArray(values) || values.length < 1 || values.length > 8) return null;
+  const seen = /* @__PURE__ */ new Set();
+  for (const value of values) {
+    if (!safe(value) || seen.has(value)) return null;
+    seen.add(value);
+  }
+  return values;
+}
+
+// src/content/slotConstraints.ts
+function compileSlotConstraints(slot, extended = true) {
+  const offLimits = slot.offLimits === true;
+  const ids = new Set(slot.excludedPieceIds);
+  const types = extended && slot.allowedTypes !== void 0 ? new Set(slot.allowedTypes) : null;
+  const tags = /* @__PURE__ */ new Map();
+  if (extended) for (const pair of slot.excludedTags ?? []) {
+    let values = tags.get(pair.dimension);
+    if (!values) {
+      values = /* @__PURE__ */ new Set();
+      tags.set(pair.dimension, values);
+    }
+    values.add(pair.value);
+  }
+  return {
+    offLimits,
+    active: offLimits || ids.size > 0 || types !== null || tags.size > 0,
+    reason(piece, id = piece?.id) {
+      if (offLimits) return "off_limits";
+      if (id !== void 0 && ids.has(id)) return "excluded";
+      if (!piece) return null;
+      if (types && !types.has(piece.type)) return "type_not_allowed";
+      for (const dimension in piece.tags) {
+        if (!Object.hasOwn(piece.tags, dimension)) continue;
+        const values = tags.get(dimension), held = piece.tags[dimension];
+        if (values && Array.isArray(held) && held.some((value) => values.has(value))) return "excluded_tag";
+      }
+      const formats = tags.get("contentType");
+      if (formats && !Object.hasOwn(piece.tags, "contentType") && contentTypeValues(piece)?.some((value) => formats.has(value))) return "excluded_tag";
+      return null;
+    }
+  };
+}
+
 // src/reflex/contentCompose.ts
+var HISTORICAL_PINS = /* @__PURE__ */ Symbol("historical-pins");
+var HISTORICAL_GOVERNANCE = /* @__PURE__ */ Symbol("historical-slot-governance");
+var HISTORICAL_GOVERNANCE_V1 = /* @__PURE__ */ Symbol("historical-slot-governance-v1");
 var round3 = (n) => Math.round(n * 1e3) / 1e3;
-function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, adjust) {
+function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, adjust, explore, historicalPins, historicalGovernance, rankingSlots) {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? "live") === "live");
+  const rank = new Map(pieces.map((p, i) => [p.id, i]));
   const used = /* @__PURE__ */ new Set();
   const out = [];
   const candidates = {};
+  const reserved2 = /* @__PURE__ */ new Map();
+  const resolvedPins = /* @__PURE__ */ new Map();
+  const pinDiagnostics = [];
+  const prefixes = /* @__PURE__ */ new Map();
+  if (!historicalPins) {
+    for (const slot of slots) if (slot.pinnedPieceIds) {
+      prefixes.set(slot, {
+        ids: [...slot.pinnedPieceIds],
+        take: slot.take,
+        pieces: [],
+        ...slot.diversity ? { diversity: { ...slot.diversity } } : {},
+        seeds: []
+      });
+    }
+  }
+  const refusedPrefixes = /* @__PURE__ */ new Set();
+  const prefixOwnedPieces = /* @__PURE__ */ new Set();
+  const prefixCatalog = /* @__PURE__ */ new Map();
+  if (prefixes.size) {
+    for (const piece of live) if (!prefixCatalog.has(piece.id)) prefixCatalog.set(piece.id, piece);
+  }
+  const offLimits = /* @__PURE__ */ new Set();
+  const gates = /* @__PURE__ */ new Map();
+  const forbidden = /* @__PURE__ */ new Map();
+  if (historicalGovernance !== HISTORICAL_GOVERNANCE) for (const slot of slots) {
+    const gate = compileSlotConstraints(slot, historicalGovernance !== HISTORICAL_GOVERNANCE_V1);
+    if (!gate.active) continue;
+    gates.set(slot, gate);
+    if (gate.offLimits) {
+      offLimits.add(slot);
+      continue;
+    }
+    const captured = /* @__PURE__ */ new Map();
+    for (const piece of live) {
+      const reason = gate.reason(piece);
+      if (reason) captured.set(piece, reason);
+    }
+    forbidden.set(slot, captured);
+  }
+  {
+    for (const slot of slots) {
+      const prefix = prefixes.get(slot);
+      if (prefix) {
+        const malformed = Boolean(slot.pinnedPieceId) || prefix.ids.length > 50 || prefix.ids.length > prefix.take || new Set(prefix.ids).size !== prefix.ids.length || prefix.ids.some((id) => typeof id !== "string" || !id.length);
+        let invalid = malformed;
+        for (const [pinIndex, id] of prefix.ids.entries()) {
+          const piece = prefixCatalog.get(id), ownerSlot2 = reserved2.get(id);
+          const blocked2 = piece ? offLimits.has(slot) ? "off_limits" : forbidden.get(slot)?.get(piece) : gates.get(slot)?.reason(void 0, id);
+          const reason2 = blocked2 ?? (malformed ? "invalid_take" : !piece ? "missing_or_ineligible" : !piece.slotTypes.includes(slot.slot) ? "slot_type" : ownerSlot2 !== void 0 ? "duplicate_pin" : null);
+          if (reason2) {
+            invalid = true;
+            pinDiagnostics.push({
+              slot: slot.slot,
+              pinnedPieceId: id,
+              pinIndex,
+              reason: reason2,
+              ...ownerSlot2 !== void 0 ? { ownerSlot: ownerSlot2 } : {}
+            });
+          }
+          if (piece) prefix.pieces.push({ ...piece });
+        }
+        if (invalid) refusedPrefixes.add(slot);
+        else for (const piece of prefix.pieces) {
+          reserved2.set(piece.id, slot.slot);
+          prefixOwnedPieces.add(prefixCatalog.get(piece.id));
+          if (prefix.diversity) prefix.seeds.push(...piece.tags[prefix.diversity.dimension] ?? []);
+        }
+        continue;
+      }
+      if (!slot.pinnedPieceId) continue;
+      const p = live.find((piece) => piece.id === slot.pinnedPieceId);
+      const blocked = p ? offLimits.has(slot) ? "off_limits" : forbidden.get(slot)?.get(p) : gates.get(slot)?.reason(void 0, slot.pinnedPieceId);
+      if (blocked) {
+        pinDiagnostics.push({ slot: slot.slot, pinnedPieceId: slot.pinnedPieceId, reason: blocked });
+        continue;
+      }
+      if (historicalPins === HISTORICAL_PINS) continue;
+      const ownerSlot = reserved2.get(slot.pinnedPieceId);
+      const reason = slot.take !== 1 ? "invalid_take" : !p ? "missing_or_ineligible" : !p.slotTypes.includes(slot.slot) ? "slot_type" : ownerSlot !== void 0 ? "duplicate_pin" : null;
+      if (reason) {
+        pinDiagnostics.push({
+          slot: slot.slot,
+          pinnedPieceId: slot.pinnedPieceId,
+          reason,
+          ...reason === "duplicate_pin" ? { ownerSlot } : {}
+        });
+      } else if (p) {
+        reserved2.set(p.id, slot.slot);
+        resolvedPins.set(slot, p);
+      }
+    }
+  }
   let order = 0;
   for (const slot of slots) {
-    if (slot.pinnedPieceId) {
-      const p = live.find((x) => x.id === slot.pinnedPieceId);
-      if (p) {
+    if (offLimits.has(slot)) continue;
+    const prefix = prefixes.get(slot);
+    if (refusedPrefixes.has(slot)) continue;
+    if (prefix) for (const p of prefix.pieces) {
+      used.add(p.id);
+      out.push({
+        contentId: p.id,
+        customerContentId: p.customerContentId,
+        type: p.type,
+        slot: slot.slot,
+        order: order++,
+        score: 0,
+        strategy: "tenant-pinned",
+        explain: { drivers: [], note: "required pinned prefix position \u2014 ranking never ran for this piece" }
+      });
+    }
+    if (!prefix && slot.pinnedPieceId) {
+      const p = historicalPins === HISTORICAL_PINS ? live.find((x) => x.id === slot.pinnedPieceId) : resolvedPins.get(slot);
+      if (p && !forbidden.get(slot)?.has(p)) {
         used.add(p.id);
         candidates[slot.slot] = [{ contentId: p.id, score: 0 }];
         out.push({
@@ -1055,7 +1216,10 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       }
       continue;
     }
-    const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !used.has(p.id));
+    const remaining = prefix ? prefix.take - prefix.ids.length : slot.take;
+    if (prefix && remaining <= 0 || rankingSlots && !rankingSlots.has(slot.slot)) continue;
+    const excluded = forbidden.get(slot);
+    const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !used.has(p.id) && !reserved2.has(p.id) && !prefixOwnedPieces.has(p));
     const scored = eligible.map((p) => {
       const drivers = [];
       let score = 0;
@@ -1066,24 +1230,47 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
           const a = affinity.dims[dim2]?.[v] ?? 0;
           if (a <= 0) continue;
           score += a * w;
-          drivers.push({ dim: dim2, value: v, a, weight: w });
+          drivers.push(dim2, v, a, w);
         }
       }
       if (slot.prefer?.test(p)) {
         score += slot.prefer.bonus;
-        drivers.push({ dim: "completes", value: slot.prefer.label, a: 1, weight: slot.prefer.bonus });
+        drivers.push("completes", slot.prefer.label, 1, slot.prefer.bonus);
       }
-      drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       if (adjust) {
         const adjusted = adjust(p, slot.slot, score);
         if (Number.isFinite(adjusted) && adjusted >= 0) score = adjusted;
       }
       return { p, score, drivers };
-    }).sort((x, y) => y.score - x.score || x.p.id.localeCompare(y.p.id));
+    }).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
+    if (explore && scored.length > 1) {
+      const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
+      if (pick?.ranking) {
+        const order2 = new Map(pick.ranking.map((id, i) => [id, i]));
+        scored.sort((x, y) => (order2.get(x.p.id) ?? 1e9) - (order2.get(y.p.id) ?? 1e9));
+      } else if (pick?.first) {
+        const i = scored.findIndex((s) => s.p.id === pick.first);
+        if (i > 0) scored.unshift(...scored.splice(i, 1));
+      }
+    }
     candidates[slot.slot] = scored.slice(0, Math.max(0, candidateLimit)).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
-    let taken = 0;
-    for (const s of scored) {
-      if (taken >= slot.take) break;
+    const diversity = prefix ? prefix.diversity : slot.diversity;
+    const rule = diversity && diversity.max >= 1 && diversity.dimension ? diversity : null;
+    const seen = /* @__PURE__ */ new Map();
+    if (prefix && rule) for (const value of prefix.seeds) seen.set(value, (seen.get(value) ?? 0) + 1);
+    const yielded = [];
+    let pendingSkips = [];
+    const serve = (s, diversity2) => {
+      const drivers = [];
+      for (let i = 0; i < s.drivers.length; i += 4) {
+        drivers.push({
+          dim: s.drivers[i],
+          value: s.drivers[i + 1],
+          a: s.drivers[i + 2],
+          weight: s.drivers[i + 3]
+        });
+      }
+      drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       const cold = s.score <= 0;
       used.add(s.p.id);
       out.push({
@@ -1094,12 +1281,33 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         order: order++,
         score: round3(s.score),
         strategy: cold ? "default" : "affinity",
-        explain: { drivers: s.drivers.slice(0, 4), ...cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {} }
+        explain: { drivers: drivers.slice(0, 4), ...cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {}, ...diversity2 ? { diversity: diversity2 } : {} }
       });
+    };
+    let taken = 0;
+    for (const s of scored) {
+      if (taken >= (prefix ? remaining : slot.take)) break;
+      if (rule) {
+        const values = s.p.tags[rule.dimension] ?? [];
+        if (values.some((v) => (seen.get(v) ?? 0) >= rule.max)) {
+          yielded.push(s);
+          pendingSkips.push(s.p.id);
+          continue;
+        }
+        for (const v of values) seen.set(v, (seen.get(v) ?? 0) + 1);
+      }
+      const skipped = pendingSkips;
+      pendingSkips = [];
+      serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(", ")} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : void 0);
+      taken += 1;
+    }
+    for (const s of yielded) {
+      if (taken >= (prefix ? remaining : slot.take)) break;
+      serve(s, { dimension: rule.dimension, max: rule.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule.max} per ${rule.dimension}: nothing else was eligible` });
       taken += 1;
     }
   }
-  return { decisions: out, candidates };
+  return { decisions: out, candidates, ...pinDiagnostics.length ? { pinDiagnostics } : {} };
 }
 function composeContent(pieces, affinity, slots) {
   return composeContentDetailed(pieces, affinity, slots).decisions;

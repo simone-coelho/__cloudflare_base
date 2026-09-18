@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Env } from '@/types/env';
-import { EventDispatcher } from '@/services/EventDispatcher';
+import { EventDispatcher, dispatchForResponse } from '@/services/EventDispatcher';
 import { OptimizelyService } from '@/services/OptimizelyService';
 
 const webhook = new Hono<{ Bindings: Env }>();
@@ -34,21 +34,11 @@ webhook.post('/optimizely', async (c) => {
     };
 
     const dispatcher = new EventDispatcher(c.env);
-    await dispatcher.dispatch(transformedEvent);
+    const delivery = await dispatchForResponse(dispatcher, transformedEvent);
 
-    await c.env.ANALYTICS.writeDataPoint({
-      blobs: [
-        JSON.stringify(transformedEvent),
-        'webhook',
-        'optimizely',
-      ],
-      doubles: [transformedEvent.timestamp],
-      indexes: [transformedEvent.user.anonymousId],
-    });
-
-    return c.json({ success: true, eventId: transformedEvent.eventId });
+    return c.json({ ...delivery.result, eventId: transformedEvent.eventId }, delivery.httpStatus);
   } catch (error) {
-    console.error('Optimizely webhook error:', error);
+    console.error('Optimizely webhook error');
     return c.json({ error: 'Failed to process webhook' }, 400);
   }
 });
@@ -66,10 +56,10 @@ webhook.post('/optimizely-datafile', async (c) => {
       if (!ok) return c.json({ error: 'invalid signature' }, 401);
     }
     const { revision, flags } = await new OptimizelyService(c.env).refreshDatafileCache();
-    console.log(`Datafile webhook: cache refreshed to revision ${revision} (${flags} flags)`);
+    console.log('Datafile webhook: cache refreshed; flags', flags);
     return c.json({ success: true, revision, flags });
   } catch (error) {
-    console.error('Optimizely datafile webhook error:', error);
+    console.error('Optimizely datafile webhook error');
     return c.json({ error: 'Failed to refresh datafile' }, 500);
   }
 });
@@ -107,21 +97,11 @@ webhook.post('/segment', async (c) => {
     };
 
     const dispatcher = new EventDispatcher(c.env);
-    await dispatcher.dispatch(transformedEvent);
+    const delivery = await dispatchForResponse(dispatcher, transformedEvent);
 
-    await c.env.ANALYTICS.writeDataPoint({
-      blobs: [
-        JSON.stringify(transformedEvent),
-        'webhook',
-        'segment',
-      ],
-      doubles: [transformedEvent.timestamp],
-      indexes: [transformedEvent.user.userId || transformedEvent.user.anonymousId],
-    });
-
-    return c.json({ success: true, eventId: transformedEvent.eventId });
+    return c.json({ ...delivery.result, eventId: transformedEvent.eventId }, delivery.httpStatus);
   } catch (error) {
-    console.error('Segment webhook error:', error);
+    console.error('Segment webhook error');
     return c.json({ error: 'Failed to process webhook' }, 400);
   }
 });
@@ -146,21 +126,11 @@ webhook.post('/custom', async (c) => {
     };
 
     const dispatcher = new EventDispatcher(c.env);
-    await dispatcher.dispatch(transformedEvent);
+    const delivery = await dispatchForResponse(dispatcher, transformedEvent);
 
-    await c.env.ANALYTICS.writeDataPoint({
-      blobs: [
-        JSON.stringify(transformedEvent),
-        'webhook',
-        source,
-      ],
-      doubles: [transformedEvent.timestamp],
-      indexes: [transformedEvent.user.anonymousId],
-    });
-
-    return c.json({ success: true, eventId: transformedEvent.eventId });
+    return c.json({ ...delivery.result, eventId: transformedEvent.eventId }, delivery.httpStatus);
   } catch (error) {
-    console.error('Custom webhook error:', error);
+    console.error('Custom webhook error');
     return c.json({ error: 'Failed to process webhook' }, 400);
   }
 });

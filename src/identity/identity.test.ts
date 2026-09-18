@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';
 import { secretsFor, signAssertion, verifyAssertion } from '@/identity/assertion';
 import { IdentityStore } from '@/identity/store';
+import { validateIdentityMaterial } from '@/identity/material.mjs';
 
 class FakeKV {
   store = new Map<string, string>();
@@ -15,6 +16,45 @@ class FakeKV {
   async delete(key: string) { this.store.delete(key); }
   async list(o?: { prefix?: string }) { const p = o?.prefix ?? ''; return { keys: [...this.store.keys()].filter((k) => k.startsWith(p)).map((name) => ({ name })) }; }
 }
+
+describe('W03.07 backend identity authority', () => {
+  it('rejects wildcard multi-tenant proof and invalid registries, preserving named rotation and explicit compatibility', async () => {
+    const now = Date.now(), exp = Math.floor(now / 1000) + 300;
+    const claim = { visitorId: 'vis-synthetic', accountId: 'same-account', exp };
+    const keys = { shared: 'Shared0123456789ABCDEFGHijklmnopqrs', current: 'Current0123456789ABCDefghIJKLMNOP',
+      previous: 'Previous0123456789ABCDEFGhijkLMNOP', other: 'Other0123456789ABCDEFGHijklMNOPQRS' };
+    const env = { AUTH_MODE: 'enforced' as const, TENANTS: JSON.stringify({ provisioned: ['meridian', 'harbor'] }),
+      IDENTITY_SALT: 'Salt0123456789ABCDEFGHijklmnopqrs',
+      IDENTITY_SECRETS: `*:${keys.shared},meridian:${keys.current}|${keys.previous},harbor:${keys.other}` };
+    for (const tenant of ['meridian', 'harbor']) {
+      const assertion = await signAssertion(keys.shared, tenant, claim.visitorId, claim.accountId, exp);
+      expect((await verifyAssertion(env, tenant, { ...claim, assertion }, now)).ok).toBe(false);
+      expect((await verifyAssertion({ ...env, TENANTS: 'invalid' }, tenant, { ...claim, assertion }, now)).ok).toBe(false);
+      expect((await verifyAssertion({ ...env, AUTH_MODE: 'open' }, tenant, { ...claim, assertion }, now)).ok).toBe(true);
+      expect((await verifyAssertion({ ...env, TENANTS: JSON.stringify({ provisioned: [tenant] }) }, tenant, { ...claim, assertion }, now)).ok).toBe(true);
+    }
+    for (const secret of [keys.current, keys.previous]) {
+      const assertion = await signAssertion(secret, 'meridian', claim.visitorId, claim.accountId, exp);
+      expect(await verifyAssertion(env, 'meridian', { ...claim, assertion }, now)).toEqual({ ok: true, assurance: 'signed' });
+      expect((await verifyAssertion(env, 'harbor', { ...claim, assertion }, now)).ok).toBe(false);
+    }
+  });
+});
+
+describe('W04.03 identity material readiness', () => {
+  it('requires safe full-tenant material and salt without changing deterministic configured identities', async () => {
+    const secret = '0123456789ABCdefghijkLMNOPqrstUVWX', salt = 'ZYXwvutsRQPONmlkjIHGFedcba98765432';
+    const env = { DEPLOYMENT_PROFILE: 'customer' as const, AUTH_MODE: 'open' as const,
+      IDENTITY_SECRETS: `meridian:${secret},harbor:${salt}`, IDENTITY_SALT: salt };
+    expect([...validateIdentityMaterial(env, ['meridian', 'harbor']).keys()]).toEqual(['meridian', 'harbor']);
+    expect(await shopperIdFor(env, 'meridian', 'synthetic')).toBe(await shopperIdFor({ IDENTITY_SALT: salt }, 'meridian', 'synthetic'));
+    for (const changed of [{ IDENTITY_SALT: '' }, { IDENTITY_SALT: 'short' }, { IDENTITY_SECRETS: `meridian:${secret}` },
+      { IDENTITY_SECRETS: `meridian:${secret},meridian:${salt},harbor:${salt}` }, { IDENTITY_SECRETS: `*:${secret}` }]) {
+      expect(() => validateIdentityMaterial({ ...env, ...changed }, ['meridian', 'harbor'])).toThrow('Identity material unavailable');
+    }
+    await expect(shopperIdFor({ ...env, IDENTITY_SALT: '' }, 'meridian', 'synthetic')).rejects.toThrow('Identity material unavailable');
+  });
+});
 
 describe('the shopper id', () => {
   it('is deterministic, opaque, and in its own format', async () => {
@@ -55,9 +95,12 @@ describe('the assertion', () => {
   const exp = Math.floor(nowMs / 1000) + 300;
   const claim = { visitorId: 'vis-1', accountId: 'acct-1001', exp };
 
-  it('is not required for a tenant with no secret, and the record says so', async () => {
-    const v = await verifyAssertion({}, 'coach', { visitorId: 'vis-1', accountId: 'acct-1001' }, nowMs);
-    expect(v).toEqual({ ok: true, assurance: 'site' });
+  it('requires configured backend proof even when verification material is absent or unusable', async () => {
+    for (const material of [undefined, '', '   ', 'unparseable', 'coach: | ', 'other:key', 42]) {
+      const env = { IDENTITY_SECRETS: material } as unknown as { IDENTITY_SECRETS?: string };
+      expect(await verifyAssertion(env, 'coach', { visitorId: 'vis-1', accountId: 'acct-1001' }, nowMs))
+        .toEqual({ ok: false, reason: 'identity verification not configured' });
+    }
   });
 
   it('is required once the tenant has a secret', async () => {

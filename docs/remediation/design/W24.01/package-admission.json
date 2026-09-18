@@ -1,0 +1,109 @@
+{
+  "before": {
+    "id": "W24",
+    "canonical": {
+      "gate_scope": "G1 collection / G3 serving",
+      "full_scope": "Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment.",
+      "finding_refs": "F19/F08; N17",
+      "sizing_owner": "S safe incompatibility rejection/reset → M/L rebuild/units contract; OL + DS/C"
+    },
+    "title": "Versioned learning and money semantics",
+    "gates": [
+      "G1",
+      "G3"
+    ],
+    "source_findings": [
+      "F19",
+      "F08",
+      "N17"
+    ],
+    "proposed_owner": "OL + DS/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W24",
+    "canonical": {
+      "gate_scope": "G1 collection / G3 serving",
+      "full_scope": "Version accumulation semantics separately from estimator/presentation settings; authorized generation transition with no stale oscillation or mixed cached snapshots. Implement reset as explicit containment or trustworthy rebuild/promote from retained events. Define reward filter, revenue/margin/currency/refund behavior and denominator transitions; test old callers and partial deployment.",
+      "finding_refs": "F19/F08; N17",
+      "sizing_owner": "S safe incompatibility rejection/reset → M/L rebuild/units contract; OL + DS/C"
+    },
+    "title": "Versioned learning and money semantics",
+    "gates": [
+      "G1",
+      "G3"
+    ],
+    "source_findings": [
+      "F19",
+      "F08",
+      "N17"
+    ],
+    "proposed_owner": "OL + DS/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W24-FORWARD",
+          "description": "Reject incompatible accumulation writes and avoid mixed live cached snapshots; estimator-only changes separate."
+        },
+        {
+          "id": "W24-GENERATIONS",
+          "description": "Authorized generation transition, clean-origin proof, stale/old binaries and partial deployment control; not delivered here."
+        },
+        {
+          "id": "W24-RECOVERY",
+          "description": "Explicit authorized reset containment or trustworthy retained-event rebuild/promote of item and slot history; not delivered here."
+        },
+        {
+          "id": "W24-SEMANTICS",
+          "description": "Learning attribution/reward filter, denominators, revenue/margin/currency/refund/prior units contract; not delivered here."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W24-FORWARD",
+          "task_id": "W24.01",
+          "task_criterion_id": "W24.01-C1"
+        },
+        {
+          "criterion_id": "W24-FORWARD",
+          "task_id": "W24.01",
+          "task_criterion_id": "W24.01-C2"
+        },
+        {
+          "criterion_id": "W24-FORWARD",
+          "task_id": "W24.01",
+          "task_criterion_id": "W24.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W24.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

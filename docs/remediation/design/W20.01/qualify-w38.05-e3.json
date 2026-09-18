@@ -1,0 +1,382 @@
+{
+  "before": {
+    "id": "W38.05-E3",
+    "task_id": "W38.05",
+    "check_id": "W38.05-K3",
+    "criterion_ids": [
+      "W38.05-C1",
+      "W38.05-C2",
+      "W38.05-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W38.05/review.json",
+      "sha256": "32cbd749d6b58530f46a5e4818c22375c25040c683cf2df0f4c1c23bea9d328c"
+    },
+    "at": "2026-09-13T13:46:27.285Z",
+    "limitations": "Composer explanation-work optimization only; full W38/F32/F08/N07, whole-catalog/scoring/candidate-sort costs, concurrent/native/request/browser SLOs and customer capacity remain open. Packed primitive snapshots still scale with admitted scoring input; reduced driver objects/sorts are not heap-byte measurements. Preserve final scoring, candidates, ties, callbacks, pins, exploration, diversity, receipts/replay and existing unusual numeric behavior. No top-k pruning, model/retrieval/sharding, envelope/retention cutover or customer-policy change. Input guards remain implemented; W38.04 broad prior-byte proof is prospectively qualified for its composer dependency with history retained. No deploy/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external authority.",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/content/decide.test.ts src/content/merchandisingSeam.test.ts src/content/inventoryDiversity.test.ts src/learn/phase3.test.ts -t 'W38.05|returns exactly the decisions|records the ranked candidates|honours the candidate limit|emits the delivery contract|the default arm serves the defaults|at γ = 1 a strong lift|the combined boost is clamped|sits before the lift|at most max per value|relaxes rather than leave|w_ext × score joins|W27.02 replays coupled' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct frozen Astra/xhigh source and fixed14/paired measurement once; reuse static.",
+    "workload": "Actual output/trace/work/timing parity on frozen bytes; no broad/native/customer qualification.",
+    "result": "pass",
+    "artifact_digest": "d961de6e10f0af87c36c6624dfa06ac1750bdab25425b6da3993169c70154fef",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "f8032721bc8205ae21a3e862d3a75bb3516e88ff42ad41ff7895f3864eb619c8",
+      "configuration": "Composer explanation-work optimization only; full W38/F32/F08/N07, whole-catalog/scoring/candidate-sort costs, concurrent/native/request/browser SLOs and customer capacity remain open. Packed primitive snapshots still scale with admitted scoring input; reduced driver objects/sorts are not heap-byte measurements. Preserve final scoring, candidates, ties, callbacks, pins, exploration, diversity, receipts/replay and existing unusual numeric behavior. No top-k pruning, model/retrieval/sharding, envelope/retention cutover or customer-policy change. Input guards remain implemented; W38.04 broad prior-byte proof is prospectively qualified for its composer dependency with history retained. No deploy/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external authority.",
+      "files": [
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "output",
+          "sha256": "d4e4ba1f889939e71f096c771437da92354f03102baf9d348604a8b9f18dcf34"
+        },
+        {
+          "path": "src/reflex/contentCompose.test.ts",
+          "role": "output",
+          "sha256": "10c663c2555d816eeb988e705f5b660b265851d9b19992c8a8054f37a74a834c"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+        },
+        {
+          "path": "src/content/decide.test.ts",
+          "role": "source",
+          "sha256": "56946e6ad16abec73520f0dfe79003ec280cc272a062d744b8c766489cb6af6f"
+        },
+        {
+          "path": "src/content/merchandisingSeam.test.ts",
+          "role": "source",
+          "sha256": "083968330562f2249ba7fcea1b06fb920a7af431b9354220598e68201cd67b73"
+        },
+        {
+          "path": "src/content/inventoryDiversity.test.ts",
+          "role": "source",
+          "sha256": "7fc426419ee9eed15b41f47ab0758e70eb420f4fc019dcdce1dc140431124c74"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "role": "source",
+          "sha256": "5bb9d165bca35887b40309015becb7ab2683008799118adf2be6d2192c4051d2"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "source",
+          "sha256": "659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/priors.ts",
+          "role": "source",
+          "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/reflex/merchandising.ts",
+          "role": "source",
+          "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+        },
+        {
+          "path": "src/services/JourneyStage.ts",
+          "role": "source",
+          "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/33-adversarial-audit-brief.md",
+          "role": "source",
+          "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.04/acceptance.md",
+          "role": "source",
+          "sha256": "7cf05b7ce159d355eb8da48757eb5919bf62a8da6ae70568a7eeb98896086cf3"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.04/worker.json",
+          "role": "source",
+          "sha256": "beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.05/worker.json",
+          "role": "output",
+          "sha256": "3e19bf5e4fb428eba3720399942f0fc3cd479f6fe934d89d47b601e4a7c81538"
+        },
+        {
+          "path": "docs/remediation/design/W38.05/plan.md",
+          "role": "configuration",
+          "sha256": "d2b1d81a8313019fb2e6295722c85b95323040a1211c8114111e40b4bd3ff517"
+        },
+        {
+          "path": "docs/remediation/design/W38.05/baseline.json",
+          "role": "configuration",
+          "sha256": "bcc7f9d575cdbb8167ddd6f52e186d0c67c7246b5dcb1f6f1dbb4c6b0a2bcbdd"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.05/admission.json",
+          "role": "configuration",
+          "sha256": "9f328214dffe9c05d70f082078ab9e3e63fe8146abecb59f14a26e774da7c675"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.05/source-freeze.json",
+          "sha256": "1a5d6ce6f3252bdb4aa35698c1b045973c933249eead38dc2976fb95d14eded6",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.05/source-deltas.json",
+          "sha256": "2d185b8ef23c005a846b6e6a039cf1771a60be501c64a910ca21e6fe37fcd138",
+          "role": "configuration"
+        }
+      ],
+      "digest": "d961de6e10f0af87c36c6624dfa06ac1750bdab25425b6da3993169c70154fef"
+    }
+  },
+  "after": {
+    "id": "W38.05-E3",
+    "task_id": "W38.05",
+    "check_id": "W38.05-K3",
+    "criterion_ids": [
+      "W38.05-C1",
+      "W38.05-C2",
+      "W38.05-C3"
+    ],
+    "kind": "design_review",
+    "claim": "source_confirmed",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W38.05/review.json",
+      "sha256": "32cbd749d6b58530f46a5e4818c22375c25040c683cf2df0f4c1c23bea9d328c"
+    },
+    "at": "2026-09-13T13:46:27.285Z",
+    "limitations": "Composer explanation-work optimization only; full W38/F32/F08/N07, whole-catalog/scoring/candidate-sort costs, concurrent/native/request/browser SLOs and customer capacity remain open. Packed primitive snapshots still scale with admitted scoring input; reduced driver objects/sorts are not heap-byte measurements. Preserve final scoring, candidates, ties, callbacks, pins, exploration, diversity, receipts/replay and existing unusual numeric behavior. No top-k pruning, model/retrieval/sharding, envelope/retention cutover or customer-policy change. Input guards remain implemented; W38.04 broad prior-byte proof is prospectively qualified for its composer dependency with history retained. No deploy/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external authority.",
+    "command": "node node_modules/vitest/vitest.mjs run src/reflex/contentCompose.test.ts src/content/decide.test.ts src/content/merchandisingSeam.test.ts src/content/inventoryDiversity.test.ts src/learn/phase3.test.ts -t 'W38.05|returns exactly the decisions|records the ranked candidates|honours the candidate limit|emits the delivery contract|the default arm serves the defaults|at γ = 1 a strong lift|the combined boost is clamped|sits before the lift|at most max per value|relaxes rather than leave|w_ext × score joins|W27.02 replays coupled' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Distinct frozen Astra/xhigh source and fixed14/paired measurement once; reuse static.",
+    "workload": "Actual output/trace/work/timing parity on frozen bytes; no broad/native/customer qualification.",
+    "result": "pass",
+    "artifact_digest": "d961de6e10f0af87c36c6624dfa06ac1750bdab25425b6da3993169c70154fef",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "f8032721bc8205ae21a3e862d3a75bb3516e88ff42ad41ff7895f3864eb619c8",
+      "configuration": "Composer explanation-work optimization only; full W38/F32/F08/N07, whole-catalog/scoring/candidate-sort costs, concurrent/native/request/browser SLOs and customer capacity remain open. Packed primitive snapshots still scale with admitted scoring input; reduced driver objects/sorts are not heap-byte measurements. Preserve final scoring, candidates, ties, callbacks, pins, exploration, diversity, receipts/replay and existing unusual numeric behavior. No top-k pruning, model/retrieval/sharding, envelope/retention cutover or customer-policy change. Input guards remain implemented; W38.04 broad prior-byte proof is prospectively qualified for its composer dependency with history retained. No deploy/cloud/install/emitted-build/provision/seed/credential/customer-data/destructive/commit/push/external authority.",
+      "files": [
+        {
+          "path": "src/reflex/contentCompose.ts",
+          "role": "output",
+          "sha256": "d4e4ba1f889939e71f096c771437da92354f03102baf9d348604a8b9f18dcf34"
+        },
+        {
+          "path": "src/reflex/contentCompose.test.ts",
+          "role": "output",
+          "sha256": "10c663c2555d816eeb988e705f5b660b265851d9b19992c8a8054f37a74a834c"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "role": "source",
+          "sha256": "a0894b2de861e99a233b97eb716c75a766c132ec12525ea5922e0e9f494bd76b"
+        },
+        {
+          "path": "src/content/decide.test.ts",
+          "role": "source",
+          "sha256": "56946e6ad16abec73520f0dfe79003ec280cc272a062d744b8c766489cb6af6f"
+        },
+        {
+          "path": "src/content/merchandisingSeam.test.ts",
+          "role": "source",
+          "sha256": "083968330562f2249ba7fcea1b06fb920a7af431b9354220598e68201cd67b73"
+        },
+        {
+          "path": "src/content/inventoryDiversity.test.ts",
+          "role": "source",
+          "sha256": "7fc426419ee9eed15b41f47ab0758e70eb420f4fc019dcdce1dc140431124c74"
+        },
+        {
+          "path": "src/learn/phase3.test.ts",
+          "role": "source",
+          "sha256": "5bb9d165bca35887b40309015becb7ab2683008799118adf2be6d2192c4051d2"
+        },
+        {
+          "path": "src/learn/replay.ts",
+          "role": "source",
+          "sha256": "659f5599dac0dcc8fb79e30ee699aca9acb30884daa83db9a6f568766f423b5a"
+        },
+        {
+          "path": "src/learn/explore.ts",
+          "role": "source",
+          "sha256": "9aeb426b820e19797e5a6ee0f547918797ae368ea33bea32b4ba6205cdac9fda"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/priors.ts",
+          "role": "source",
+          "sha256": "da7a1a88bb3ddadd91a1dcad5c13311f4e7a1655bfeec3dd353766808e98c1ad"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "role": "source",
+          "sha256": "7cba75da9c1b0a38f2e98a1d9396ed46f1b1759cc29130c5fc227d8688b3a7d8"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/content/lifecycle.ts",
+          "role": "source",
+          "sha256": "cb9ebd16053ba959fb62b5ed78a389a0bafd88d3f512ef30bc3920f9b3a796bd"
+        },
+        {
+          "path": "src/reflex/merchandising.ts",
+          "role": "source",
+          "sha256": "4930803114cf1624bcfa6e3118132f433d6a589ef7ae09061735bd47da442c48"
+        },
+        {
+          "path": "src/services/JourneyStage.ts",
+          "role": "source",
+          "sha256": "ab38b26eb5aee48e8de4421ddbd1039cb42258649c56791e2c58768819d33331"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/33-adversarial-audit-brief.md",
+          "role": "source",
+          "sha256": "21bf8293c2109df30ea7cc93eac8dc83b45f38046f823b8efe2108e6d79a4028"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.04/acceptance.md",
+          "role": "source",
+          "sha256": "7cf05b7ce159d355eb8da48757eb5919bf62a8da6ae70568a7eeb98896086cf3"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.04/worker.json",
+          "role": "source",
+          "sha256": "beb3cff790b7e52ba84e926aaaf0e6f13d02638b9dc6a3bd8b6cc0983c25b757"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "package-lock.json",
+          "role": "source",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.05/worker.json",
+          "role": "output",
+          "sha256": "3e19bf5e4fb428eba3720399942f0fc3cd479f6fe934d89d47b601e4a7c81538"
+        },
+        {
+          "path": "docs/remediation/design/W38.05/plan.md",
+          "role": "configuration",
+          "sha256": "d2b1d81a8313019fb2e6295722c85b95323040a1211c8114111e40b4bd3ff517"
+        },
+        {
+          "path": "docs/remediation/design/W38.05/baseline.json",
+          "role": "configuration",
+          "sha256": "bcc7f9d575cdbb8167ddd6f52e186d0c67c7246b5dcb1f6f1dbb4c6b0a2bcbdd"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.05/admission.json",
+          "role": "configuration",
+          "sha256": "9f328214dffe9c05d70f082078ab9e3e63fe8146abecb59f14a26e774da7c675"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.05/source-freeze.json",
+          "sha256": "1a5d6ce6f3252bdb4aa35698c1b045973c933249eead38dc2976fb95d14eded6",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W38.05/source-deltas.json",
+          "sha256": "2d185b8ef23c005a846b6e6a039cf1771a60be501c64a910ca21e6fe37fcd138",
+          "role": "configuration"
+        }
+      ],
+      "digest": "d961de6e10f0af87c36c6624dfa06ac1750bdab25425b6da3993169c70154fef"
+    }
+  }
+}

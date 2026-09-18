@@ -1,31 +1,34 @@
-// Bundles the Meridian engine modules for the browser.
-//
-// The composer ships to the client so a slot repaints the instant a frame lands,
-// with no network round trip. Bundling the SAME TypeScript the worker imports —
-// rather than maintaining a JS twin — is what keeps the explain record the room
-// reads identical to the arithmetic that actually chose the item.
-//
-//   node scripts/build-meridian.mjs
-import * as esbuild from 'esbuild';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+// The demo engine uses the same authored TypeScript as the Worker. Import-safe;
+// --check compares exact bytes without replacing a caller's dirty bundle.
+import { build as esbuild } from 'esbuild';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createHash } from 'node:crypto';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-
-const result = await esbuild.build({
-  entryPoints: [join(ROOT, 'src/demos/meridian/client-engine.ts')],
-  outfile: join(ROOT, 'public/meridian/engine.bundle.js'),
-  bundle: true,
-  format: 'esm',
-  target: 'es2022',
-  platform: 'browser',
-  minify: false,          // readable on purpose: an engineer in the room may open it
-  sourcemap: false,
-  legalComments: 'none',
-  alias: { '@': join(ROOT, 'src') },
-  logLevel: 'info',
-  metafile: true,
-});
-
-const out = Object.values(result.metafile.outputs)[0];
-console.log(`engine.bundle.js  ${(out.bytes / 1024).toFixed(1)} KB`);
+const ROOT = fileURLToPath(new URL('../', import.meta.url));
+export const MERIDIAN_OUTPUT = 'public/meridian/engine.bundle.js';
+export function meridianBuildOptions(root = ROOT) {
+  return { absWorkingDir: root, entryPoints: ['src/demos/meridian/client-engine.ts'], outfile: MERIDIAN_OUTPUT,
+    bundle: true, format: 'esm', target: 'es2022', platform: 'browser', minify: false,
+    sourcemap: false, legalComments: 'none', alias: { '@': resolve(root, 'src') },
+    logLevel: 'silent', metafile: true, write: false };
+}
+export async function buildMeridian({ root = ROOT, write = false, build = esbuild, plugins = [] } = {}) {
+  return build({ ...meridianBuildOptions(root), write, plugins });
+}
+export async function verifyMeridian({ root = ROOT, build = esbuild, plugins = [] } = {}) {
+  const result = await buildMeridian({ root, build, plugins }), actual = await readFile(resolve(root, MERIDIAN_OUTPUT));
+  const expected = result.outputFiles?.[0]?.contents;
+  if (result.outputFiles?.length !== 1 || !expected || !actual.equals(Buffer.from(expected))) {
+    const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+    throw new Error(`Generated asset mismatch: ${MERIDIAN_OUTPUT}; retained=${hash(actual)}; generated=${expected ? hash(expected) : 'missing'}`);
+  }
+  return result;
+}
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+  const args = process.argv.slice(2);
+  if (args.length && (args.length !== 1 || args[0] !== '--check')) throw new Error('Use build-meridian.mjs [--check]');
+  const result = args.length ? await verifyMeridian() : await buildMeridian({ write: true });
+  console.log(`${MERIDIAN_OUTPUT}: ${args.length ? 'exact nonwriting match; ' : ''}${Object.values(result.metafile.outputs)[0].bytes} bytes`);
+}

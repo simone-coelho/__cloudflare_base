@@ -1,0 +1,39 @@
+{
+  "at": "2026-09-12T03:10:56.762Z",
+  "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/durable-objects/DecisionRing.ts src/learn/learn.test.ts",
+  "captures": [
+    {
+      "chunk_id": "6110dd",
+      "wall_time_seconds": 1.001682015,
+      "session_id": 73453,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "2b0467",
+      "wall_time_seconds": 5.001150582,
+      "session_id": 73453,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "9e1771",
+      "wall_time_seconds": 5.004770277,
+      "session_id": 73453,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "b7738f",
+      "wall_time_seconds": 0.00000375,
+      "exit_code": 0,
+      "original_token_count": 100,
+      "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  259:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  260:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  260:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+    }
+  ],
+  "session_id": 73453,
+  "exit_code": 0,
+  "drained": true,
+  "errors": 0,
+  "warnings": 3
+}

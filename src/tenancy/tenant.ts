@@ -96,6 +96,8 @@ export interface TenantSignals {
   explicit?: string | null;
   /** The `X-Tenant` header, for server-to-server callers. */
   header?: string | null;
+  /** Every explicit WebSocket query selector; duplicates must agree too. */
+  query?: readonly string[];
   /** The request host, for brands on their own domain. */
   host?: string | null;
   /** host -> tenant, supplied by stamp configuration. */
@@ -119,33 +121,32 @@ export interface TenantSignals {
 /**
  * Resolve which brand a request belongs to.
  *
- * Precedence is explicit, then header, then host. An unrecognised or malformed
- * value resolves to the DEFAULT TENANT rather than throwing or inventing one:
- * the failure mode of a bad tenant id must be "you got Coach", never "you got
- * another brand's data" and never a 500 on the decision path.
+ * All supplied selectors must agree on a provisioned tenant. A bad selector
+ * cannot disappear into the default namespace. Only absence of every selector
+ * permits the legacy default, and only when that tenant is actually provisioned.
  */
 export function resolveTenant(signals: TenantSignals): TenantId {
-  // Absent list means "only the default is provisioned". An EMPTY list means the
-  // same, rather than "nothing is allowed", because a stamp that serves nobody is
-  // never what an operator meant to configure.
-  const allowed = new Set<TenantId>(
-    signals.provisioned && signals.provisioned.length > 0 ? signals.provisioned : [DEFAULT_TENANT],
-  );
-  allowed.add(DEFAULT_TENANT);
-  const ok = (t: string): t is TenantId => isValidTenantId(t) && allowed.has(t);
-
-  const explicit = normalize(signals.explicit);
-  if (ok(explicit)) return explicit;
-
-  const header = normalize(signals.header);
-  if (ok(header)) return header;
-
+  const provisioned = signals.provisioned === undefined ? [DEFAULT_TENANT] : signals.provisioned;
+  if (!Array.isArray(provisioned) || !provisioned.length || !provisioned.every(isValidTenantId)) throw new TenantResolutionError();
+  const allowed = new Set<TenantId>(provisioned);
+  const selections = [signals.explicit, signals.header, ...(signals.query ?? [])];
   const host = normalize(signals.host);
-  if (host && signals.hostMap) {
-    const mapped = normalize(signals.hostMap[host]);
-    if (ok(mapped)) return mapped;
+  if (host && signals.hostMap && Object.hasOwn(signals.hostMap, host)) selections.push(signals.hostMap[host]);
+  let selected: TenantId | undefined;
+  for (const value of selections) {
+    if (value === undefined || value === null) continue;
+    const tenant = normalize(value);
+    if (!isValidTenantId(tenant) || !allowed.has(tenant) || (selected !== undefined && tenant !== selected)) throw new TenantResolutionError();
+    selected = tenant;
   }
-  return DEFAULT_TENANT;
+  if (selected !== undefined) return selected;
+  if (allowed.has(DEFAULT_TENANT)) return DEFAULT_TENANT;
+  throw new TenantResolutionError();
+}
+
+/** Deliberately excludes caller values from the failure message. */
+export class TenantResolutionError extends Error {
+  constructor() { super('Tenant unavailable'); this.name = 'TenantResolutionError'; }
 }
 
 function normalize(v: string | null | undefined): string {

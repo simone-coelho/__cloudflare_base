@@ -80,7 +80,7 @@ Treating content the way the platform already treats product: as a catalog of it
 - **Transparent and configurable.** Every weight, decay horizon, and threshold is visible and editable by Tapestry's team, versioned, and effective immediately. Tapestry's data scientists can inject their own math, as priors and as derived weights.
 - **An explain record behind every decision.** The drivers, the scores, the context, exportable. Not a black box.
 
-**Performance.** First paint is served from a snapshot endpoint, so there is no flash of default content. In-session decisions are computed at the edge in milliseconds and delivered over a persistent connection. Cross-session memory re-seeds in under a second.
+**Performance.** The local first-party server bridge resolves the same current grant before HTML; safely embedded private bootstrap plus matching SDK/DOM adoption avoids repaint. Client-only hydration/refresh can show defaults first. Real customer SSR/browser/no-flash and latency acceptance remain open. In-session decisions are computed at the edge in milliseconds and delivered over a persistent connection. Cross-session memory re-seeds in under a second.
 
 **Value to Tapestry:** content placement today is manually curated and largely static, and it is tuned for the identified visitor. This makes every content slot work harder against demonstrated intent, for the anonymous majority as well as the known customer, with no additional operational lift from the merchandising team.
 
@@ -170,7 +170,7 @@ These dates depend on both sides. Stated up front so the plan is real rather tha
 | 5 | Staging origins and network review, including WebSocket access | Before the integration kit |
 | 6 | Conversion and order event, one integration point, required for outcome learning | With integration |
 | 7 | ODP instance decision for the pilot brand. The engine runs standalone if this lands later. | Flexible |
-| 8 | Security review inputs, if more than API-key and SSO-backed operator access is required | Before the integration kit |
+| 8 | Customer IdP/application, explicit subject links/memberships/account modes and security policy; configurable OIDC is locally implemented, disabled pending activation and customer acceptance | Before the integration kit |
 | 9 | Front-end integration capacity between the integration kit and the November freeze | The critical dependency |
 
 ---

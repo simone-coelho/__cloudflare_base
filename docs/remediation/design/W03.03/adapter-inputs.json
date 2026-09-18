@@ -1,0 +1,32 @@
+{
+  "at": "2026-09-09T20:07:01.886Z",
+  "task_id": "W03.03",
+  "reason": "Read-only extra actual adapter inputs consumed by existing tool-token fixture; no additional implementation scope or checks.",
+  "pins": [
+    {
+      "path": "scripts/dev-token.mjs",
+      "sha256": "816f4975c78a87c94b8f97b065211b2057e336e0bc30aa574afd4fcd776dcaae",
+      "role": "source"
+    },
+    {
+      "path": "scripts/console-operator.mjs",
+      "sha256": "790f64c8e137764e8e902f60feab1381c68b8a82e702f22aa8dc753b71fc08d0",
+      "role": "source"
+    },
+    {
+      "path": "scripts/holdout-proof.mjs",
+      "sha256": "37468d11045f80b7e0bf2ea45ffd937bfaa0339969ddb78cf21ed892f31ffe4d",
+      "role": "source"
+    },
+    {
+      "path": "scripts/identity-proof.mjs",
+      "sha256": "fc6772f6cca45f85196b8e10283a2a47a9c248ea4d23dcd923c44dac95121246",
+      "role": "source"
+    },
+    {
+      "path": "scripts/rehearse-storefront.sh",
+      "sha256": "d1ce1ed02688f13a821991fd25d62d024c70e1100bcdf76b97c233297bfb5bf8",
+      "role": "source"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "at": "2026-09-10T18:15:29Z",
+  "entry_board": {
+    "check": {
+      "session_id": 1277,
+      "exit_status": 0,
+      "drained": true
+    },
+    "status": {
+      "session_id": 6374,
+      "exit_status": 0,
+      "drained": true
+    },
+    "journal": 805,
+    "notes": 9073
+  },
+  "case": "Source-confirmed implicit/unknown target fallback before work; default CLI env omission. No deployment executed.",
+  "owned": [
+    {
+      "path": "scripts/deploy.sh",
+      "absent": false,
+      "sha256": "14ad032bf8e7f3a9398a7e703def34e62fd41689be085449a8a710e5deb633c2",
+      "content_gzip_base64": "H4sIAAAAAAAAA91WzW4bNxC+71OM10aUCF0p7qmQ6wCGJTRF/BPIUQLDdgxqOaslxCXXHK4UtS6QS28pUKAFChQtekuLPlaeoI9QkLurlVSnSNGeqouw5Mw3Mx+/GXJ7qzsWqjtmlAYBoYUIg2Bw8vzz4enJ8eDk2f7Ol7u9iGPCCmm/CgKMUw3hH7/8+Br6mEu9EGoCVsPOig+gmgmjVYbKdjqdMAi2YVgosIscIU4xni5hvv/G7SgPstz1PirPwFROpU+FIoWyaCqEdz/9tgQoN9ac3dIyOpKlZeBff28Cu431mEjeraxw6fPd2/WaD6UueCKZQXihzRRNiSISuIBwlZAQ9iEkyyZCTUK42gObogoAALbhQEGhEiElchAcpNZTAimmCO5zH8JPK8fo3eu3j0LvC7HOHLlgU2ZBsQzJL+eSxZhqydEQZAVZUNqCNSIHmwrq+JAigYnBHKLBDbReXlL7vuC3nFk2ZoTXgj+4pPb+JbWbwC2YG6YmEk3H6kyupO9+1UH8/AYqexAEHGPHC4dxUSaRGz0TJLRC3lvP02DGhAKh4ALVrFOBXHXCjQgAMFLEEgSJExYvGsgqpkErDPI98EYcyX1FZJnFddsyIkGOirvvFw8/AaY49B/urkZ9JSzs+s9E+L9aHuNCSN7L0AgumIJ79zZ2iE+9fc0acK8aiCJUs5qlAOV7hJIbzYvYCq02tTKqhdKYbHJ5UwiDwBSw3NVc2jalz7WZJlLP92oSUVmzgFwLZQmckisW/6lWmow+WC4rRfwrxTQ4/1/RNDUGKAkrPTw1SGhm6JsfXwmyLjNUiTYx8ijTHCETRK6Jp7iopmvlPCy1wsGiYspGFOvczyBUVtgFZMyiEUz6Kj07d/CxSkcNfIaxQRu5sQSyyolrJH+qMzQiWcCMyQLpoyo26LlCQ6nIQRswKJGRUyLjQiHdObcORs8eXx+f9gfQ3od2WNcc/r34RAJbDcPkE/U5wsePuhxnXVVICbdVoBtohWf9J9dPBudnYWsDal3LTTqClgfgpeyOpgapI4qSC3fdauVHs29MNCtKWtPwB5+VQuS01v6EcWE2lV2PgffFO3vPcf9V/hxjb7PRB+toiMB1TF2DGXLBnIy7w8FB/3jQyTgk2kBcGOMuNF+YB2aFTbURdrGJ2nTYSpf9N80WJCJYPiy+ri778qLdeOHEOsslWsdvEcdIlBRSLrb8U+czLE+9xEQOo+FR0B88PTo9H/SvR8Oj/Z37y8DzVLNMLCWnoZVam1Ov27142b1qX3ZKYdBlh+OsBbeQIuMQ7T4onxlbEH0B4c4q+vqlUb9d3nwL57owlc6cAtmMCcnGEoHZHqxDrBARNm+1H2BEmBQSck024g077jnCFKdebbzCrGVCwh2/CJ4LnLsml5EVblToCd3hP52BG12+SaNoLEr5HR4cPh44kCO3HrM4RWe2AhAXRq5X1U2RSZs2CRy6cQjVqmuMgsLgTwK1dE0RCwAA"
+    }
+  ],
+  "pins": [
+    {
+      "path": "scripts/deploy.sh",
+      "sha256": "14ad032bf8e7f3a9398a7e703def34e62fd41689be085449a8a710e5deb633c2",
+      "role": "output"
+    },
+    {
+      "path": "scripts/provision-stamp.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/provision-staging.sh",
+      "sha256": "af6496efe76ad61dd6320577dbc6b05f6dfd70f3000af203a3a38e903ceff1f6",
+      "role": "source"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "sha256": "4b785e29f143e237160941f15853a406f75412d8dba8620838671d2aaba03d34",
+      "role": "source"
+    },
+    {
+      "path": "docs/deployment/01-deploy.md",
+      "sha256": "15a9ccce4b52e763f7752284ad155f145e2584aa4dcb83c66c7f3c04a45c35ee",
+      "role": "source"
+    },
+    {
+      "path": "package.json",
+      "sha256": "de81fedfffbe479706ef0e33320e5d27ef327cad45c0f671f62402e321a6c61c",
+      "role": "source"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha256": "3d21c9a0ed61e4cd5b93c31e7846e898471f5c280ab443bfb19317cf45f0bcaa",
+      "role": "source"
+    },
+    {
+      "path": "node_modules/wrangler/package.json",
+      "sha256": "b1e3f375a29c680bad5ae7e12fbc4ed66471c5f0d6e6e7b4d09014e5e8e2f7f8",
+      "role": "source"
+    },
+    {
+      "path": "node_modules/wrangler/wrangler-dist/cli.js",
+      "sha256": "8641bcc9571c41b63b3ad2bbdd7d3c52cafc125cf8d5d86b14ae3bad4fcb1889",
+      "role": "source"
+    }
+  ]
+}

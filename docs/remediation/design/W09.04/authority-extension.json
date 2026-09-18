@@ -1,0 +1,251 @@
+{
+  "before": {
+    "mode": "local_remediation_authorized",
+    "local_engine_changes": true,
+    "local_authorization": {
+      "actor_id": "g0-user",
+      "at": "2026-09-06T23:27:46.881Z",
+      "description": "User Approved local decision-independent G0 code remediation, starting with unused API removal. Reuse for admitted in-scope fixes; excludes deployment, real credentials/customer data, customer-policy decisions, staging/commit/push and unrelated/destructive operations. Bounded W11.01 local catalog publication added by separately dated scope_extensions record; original at is original mandate inception only. Bounded W09.01 local oversized-ledger containment added by separately dated scope_extensions record. Bounded W09.02 local retry-safe recovery added by separately dated scope_extensions record. Bounded W09.03 local consumer acknowledgement correction added by separately dated scope_extensions record.",
+      "record": {
+        "path": "docs/remediation/evidence/W01.02/authorization.md",
+        "sha256": "67f30789c71bff1f416497106ee6d3760f53630d93eebdcbeff648ff37d55f70"
+      },
+      "scope_task_ids": [
+        "W01.02",
+        "W11.01",
+        "W09.01",
+        "W09.02",
+        "W09.03"
+      ],
+      "scope_package_ids": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W12",
+        "W13",
+        "W14",
+        "W21",
+        "W29",
+        "W34",
+        "W37",
+        "W39"
+      ],
+      "allowed_actions": [
+        "local_engine_changes",
+        "local_checks"
+      ],
+      "scope_extensions": [
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T02:35:49Z",
+          "scope_task_ids": [
+            "W11.01"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W11.01/authorization.md",
+            "sha256": "fa6ccf17fc51448be5163686c8d66ea90d8794340996d35b7ac4b459143c6696"
+          },
+          "description": "User continue accepts explicit local W11 safe-publication offer, without deployment."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T21:44:10Z",
+          "scope_task_ids": [
+            "W09.01"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.01/authorization.md",
+            "sha256": "bc09288022fdc9bd6134a81898d2feec2a321fbdb6678d79543a29d09a3b867e"
+          },
+          "description": "User yes approves specifically offered local oversized-ledger W09.01 containment, not full W09."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T22:44:01Z",
+          "scope_task_ids": [
+            "W09.02"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.02/authorization.md",
+            "sha256": "ef15cf8189d281c65ed5a3f67ea7551d64633acc24429ecc3783142bf01cddc2"
+          },
+          "description": "User yes approves bounded local retry-safe ledger recovery including duplicate prevention and erasure safeguards; no deployment/new cloud resources."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T23:55:00.053Z",
+          "scope_task_ids": [
+            "W09.03"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.03/authorization.md",
+            "sha256": "d8955ba2dd0cd370d1292bc29ace3b2eb9c4fd4602deeed531c5ad14e84f262d"
+          },
+          "description": "User continue accepts explicit remaining local consumer-loss offer; bounded malformed-envelope and per-message acknowledgement correction only."
+        }
+      ]
+    },
+    "deployment": false,
+    "model": "gpt-6-astra",
+    "efforts": [
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "max_active_tasks": 1,
+    "design_authorization": {
+      "actor_id": "w01-user",
+      "at": "2026-09-06T21:29:15Z",
+      "scope_task_ids": [
+        "W01.01"
+      ],
+      "allowed_actions": [
+        "source_inspection",
+        "task_documentation_and_tracking",
+        "independent_source_review",
+        "local_read_only_checks"
+      ],
+      "record": {
+        "path": "docs/remediation/evidence/W01.01/authorization.md",
+        "sha256": "99ba9e72bf83297e940eb23cce1a80f52dd6e00c4a8c88a410b649115bac7bf7"
+      },
+      "description": "User's go accepted the bounded source-only W01.01 offer. Legacy framework_only mode retains no-engine-write permission; this record is specific design authority, not a customer decision or local implementation mandate."
+    }
+  },
+  "after": {
+    "mode": "local_remediation_authorized",
+    "local_engine_changes": true,
+    "local_authorization": {
+      "actor_id": "g0-user",
+      "at": "2026-09-06T23:27:46.881Z",
+      "description": "User Approved local decision-independent G0 code remediation, starting with unused API removal. Reuse for admitted in-scope fixes; excludes deployment, real credentials/customer data, customer-policy decisions, staging/commit/push and unrelated/destructive operations. Bounded W11.01 local catalog publication added by separately dated scope_extensions record; original at is original mandate inception only. Bounded W09.01 local oversized-ledger containment added by separately dated scope_extensions record. Bounded W09.02 local retry-safe recovery added by separately dated scope_extensions record. Bounded W09.03 local consumer acknowledgement correction added by separately dated scope_extensions record. Bounded W09.04 downstream acknowledgement correction added by dated extension.",
+      "record": {
+        "path": "docs/remediation/evidence/W01.02/authorization.md",
+        "sha256": "67f30789c71bff1f416497106ee6d3760f53630d93eebdcbeff648ff37d55f70"
+      },
+      "scope_task_ids": [
+        "W01.02",
+        "W11.01",
+        "W09.01",
+        "W09.02",
+        "W09.03",
+        "W09.04"
+      ],
+      "scope_package_ids": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W12",
+        "W13",
+        "W14",
+        "W21",
+        "W29",
+        "W34",
+        "W37",
+        "W39"
+      ],
+      "allowed_actions": [
+        "local_engine_changes",
+        "local_checks"
+      ],
+      "scope_extensions": [
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T02:35:49Z",
+          "scope_task_ids": [
+            "W11.01"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W11.01/authorization.md",
+            "sha256": "fa6ccf17fc51448be5163686c8d66ea90d8794340996d35b7ac4b459143c6696"
+          },
+          "description": "User continue accepts explicit local W11 safe-publication offer, without deployment."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T21:44:10Z",
+          "scope_task_ids": [
+            "W09.01"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.01/authorization.md",
+            "sha256": "bc09288022fdc9bd6134a81898d2feec2a321fbdb6678d79543a29d09a3b867e"
+          },
+          "description": "User yes approves specifically offered local oversized-ledger W09.01 containment, not full W09."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T22:44:01Z",
+          "scope_task_ids": [
+            "W09.02"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.02/authorization.md",
+            "sha256": "ef15cf8189d281c65ed5a3f67ea7551d64633acc24429ecc3783142bf01cddc2"
+          },
+          "description": "User yes approves bounded local retry-safe ledger recovery including duplicate prevention and erasure safeguards; no deployment/new cloud resources."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-11T23:55:00.053Z",
+          "scope_task_ids": [
+            "W09.03"
+          ],
+          "record": {
+            "path": "docs/remediation/evidence/W09.03/authorization.md",
+            "sha256": "d8955ba2dd0cd370d1292bc29ace3b2eb9c4fd4602deeed531c5ad14e84f262d"
+          },
+          "description": "User continue accepts explicit remaining local consumer-loss offer; bounded malformed-envelope and per-message acknowledgement correction only."
+        },
+        {
+          "actor_id": "g0-user",
+          "at": "2026-09-12T00:26:59.363Z",
+          "scope_task_ids": [
+            "W09.04"
+          ],
+          "record": {
+            "path": "docs/remediation/design/W09.04/authorization.md",
+            "sha256": "ea62f66a56ab1522fa27cdf8095b6d2731324276894efecb8207cf4fb8a45543"
+          },
+          "description": "Continue bounded local learning-write acknowledgements, no non-idempotent retries or external operations."
+        }
+      ]
+    },
+    "deployment": false,
+    "model": "gpt-6-astra",
+    "efforts": [
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "max_active_tasks": 1,
+    "design_authorization": {
+      "actor_id": "w01-user",
+      "at": "2026-09-06T21:29:15Z",
+      "scope_task_ids": [
+        "W01.01"
+      ],
+      "allowed_actions": [
+        "source_inspection",
+        "task_documentation_and_tracking",
+        "independent_source_review",
+        "local_read_only_checks"
+      ],
+      "record": {
+        "path": "docs/remediation/evidence/W01.01/authorization.md",
+        "sha256": "99ba9e72bf83297e940eb23cce1a80f52dd6e00c4a8c88a410b649115bac7bf7"
+      },
+      "description": "User's go accepted the bounded source-only W01.01 offer. Legacy framework_only mode retains no-engine-write permission; this record is specific design authority, not a customer decision or local implementation mandate."
+    }
+  }
+}

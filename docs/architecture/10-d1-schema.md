@@ -31,11 +31,8 @@ The chat/tool surface is **one guarded read-only tool**: Opal's `queryData` — 
 
 ## Operations
 
-```bash
-# local
-npx wrangler d1 migrations apply coach-demo-db --local
-for f in migrations/seed/seed_*.sql; do npx wrangler d1 execute coach-demo-db --local --file "$f"; done
-# remote: same commands with --remote
-```
+The legacy `scripts/seed-d1.mjs` generator is retired. The former apply-all seed loop and remote rerun instructions remain withdrawn. Retained synthetic fixtures `seed_001.sql` through `seed_010.sql` add missing primary keys and preserve conflicting rows without validating their values or related data. They are not an approved merge into populated/customer databases or a recovery workflow; this mixed migration chain is not an approved customer setup workflow. Scoped setup and seed ownership remain pending W08/W39; see [the remediation entry point](../remediation/README.md).
+
+`seed_011_geo.sql` adds missing shared geo references while preserving existing primary-key rows, including their values and provenance. It still resets its prefix-scoped Coach cohort. This change does not repair previously lost or incorrect references or validate the complete migration/seed sequence. Recovery requires a reviewed reference-only plan and an authorized target; replaying all of `0008_meridian_geo_cohort.sql` also resets Meridian first-party rows.
 
 Demo-run hygiene: `POST /operator/events/reset` clears **only** `demo_events` (synthetic history is never touched).

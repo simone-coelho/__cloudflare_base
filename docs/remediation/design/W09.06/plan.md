@@ -1,0 +1,25 @@
+# W09.06 — isolated retry-exhaustion destinations
+
+Scope: add one `dead_letter_queue` declaration to each existing consumer in `wrangler.toml`: events → events-dead-letter, events-staging → events-staging-dead-letter, events-production → events-production-dead-letter. Preserve batch100 / timeout3 / concurrency6 / retries2, existing producers, retired provisioning scripts and the actual ledger consumer. No DLQ consumer/producer binding, automatic replay, raw R2 quarantine or new runtime route.
+
+Ownership: /root/w0906_worker alone edits wrangler.toml, src/index.api-boundary.test.ts, docs/deployment/01-deploy.md and its assigned worker.json. Root owns governance/admission/integration; /root/w0906_review independently reviews. Both delegates are gpt-6-astra/xhigh, no subdelegation.
+
+Baseline/design case: current three consumers lack DLQ declarations; actual index.queue/consumeLedger already retry malformed ledger envelopes positionally while acknowledging successful siblings. Installed Wrangler 4.105.0 maps dead_letter_queue to Miniflare deadLetterQueue. Miniflare 4.20260625.0 transfers exhausted bodies but its consumerless queue silently accepts/discards and its backlog is in-memory. This task proves routing/forwarding, not retention or durable recovery. Fresh existing-fixture lint: zero errors/warnings, captures7e6044/61fc91 exit0/drained. Entry board check/status VALID1729, exit0/drained. W08.04 overlapping exact proof must be qualified before editing; its accepted history and retired scripts remain preserved. W22.04 does not overlap.
+
+Acceptance: C1 all three exact isolated mappings, six distinct names, unchanged delivery knobs and no DLQ consume/produce/redrive or provisioning revival. C2 one representative native broker topology using actual worker.queue: malformed version2 ledger body attempts1,2,3 then full original body reaches the configured test-only DLQ observer once; a valid sibling writes one native R2 record, attempts1 only and never DLQs. Deny outbound network, use only synthetic in-memory bindings, inspect sanitized app logs. Acknowledge the test-only collector only after observation. C3 existing controls and scoped static checks pass, independent exact-artifact review passes and documentation truthfully marks activation/operational prerequisites pending.
+
+Fixture: extend the existing in-memory wrapper with native queue delegation without changing existing fetch behavior; reuse its bundle. Read actual manifest via installed Wrangler experimental_readRawConfig with explicit path and useRedirectIfAvailable:false. Assert configuration for all three environments, run only the default representative native topology with parsed batch100/timeout3/retries2 (collector timeout0), and dispose in finally. No native concurrency proof. One grouped W09.06 case, no new suite or broad matrix.
+
+Fixed3 worker and independent reviewer command:
+`node node_modules/vitest/vitest.mjs run src/index.api-boundary.test.ts -t 'W09\.06|W09\.03 maps mixed ledger|W07\.01 preserves successful ledger' --maxWorkers=1 --minWorkers=1`
+
+Static command (worker once, reviewer may reuse exact final bytes):
+`node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/index.api-boundary.test.ts && git diff --check -- wrangler.toml src/index.api-boundary.test.ts docs/deployment/01-deploy.md`
+
+Compiler1536MiB reuses the existing concrete768MiB OOM accommodation. Expand checks only for a concrete defect; record superseding runs rather than overwriting failures.
+
+Deployment doc: a short pending-activation note only. Separately authorized queue creation and access/retention/erasure/alerts/recovery ownership remain required. Cloudflare's finite consumerless DLQ retention is not permanent recovery or an approved customer retention policy: https://developers.cloudflare.com/queues/configuration/dead-letter-queues/ (read2026-09-14). No claim real queues exist or deployment is safe merely because local configuration passes.
+
+Residuals: producer rejection, intentionally acknowledged non-ledger/handled scene failures, consumerless retention/restart durability, deployed topology/resource existence, privacy/access/retention/erasure decisions, monitoring, manual reconciliation/replay, partial/legacy duplication, full W09/W22/F16/N10 closure and release remain open. DLQ declarations/forwarding alone never close the parent recovery scope. Customer-neutral relevance, latency, explainability and trustworthy measurement remain the North Star; no Tapestry-specific runtime branching.
+
+Rollback: root reverses only this task's three-file diff from pinned baseline, preserving inherited worktree changes and all failure/history records. No commit/push/install/emitted build/deploy/provision/cloud mutation/credentials/customer-data/destructive operations. Root freezes exact source/evidence after checks, independent reviewer inspects actual deltas and repeats fixed3 once, then root records bounded disposition and durable next action.

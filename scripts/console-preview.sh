@@ -39,8 +39,13 @@ DB="coach-demo-db"
 CMD="${1:-start}"
 
 health() { curl -s -m 3 -o /dev/null -w '%{http_code}' "http://localhost:$PORT/health" 2>/dev/null; }
-signin() { curl -s -m 10 -X POST "http://localhost:$PORT/auth/login" -H 'content-type: application/json' \
-             -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" 2>/dev/null; }
+signin() {
+  local preview_response
+  preview_response="$(curl -fsS -m 10 -w '\n%{http_code}' -X POST "http://localhost:$PORT/auth/login" -H 'content-type: application/json' -H "X-Tenant: $SCOPE" \
+    -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" 2>/dev/null)" || return 1
+  [ "${preview_response##*$'\n'}" = "200" ] || return 1
+  printf '%s' "${preview_response%$'\n'*}"
+}
 
 stop_it() {
   local found=""
@@ -122,12 +127,51 @@ node scripts/console-operator.mjs "http://localhost:$PORT" "$EMAIL" "$PASSWORD" 
 }
 
 # 4. The data, unless it is already there.
-if curl -s -m 10 "http://localhost:$PORT/content/learn?scope=$SCOPE" | grep -q '"source":"stored"'; then
+if ! preview_login="$(signin)"; then
+  echo "Could not authenticate the preview; refusing to seed." >&2
+  exit 1
+fi
+if ! preview_token="$(printf '%s' "$preview_login" | node -e '
+  try {
+    const token = JSON.parse(require("node:fs").readFileSync(0, "utf8")).accessToken;
+    if (typeof token !== "string" || !token.trim() || /[\r\n]/.test(token)) process.exit(1);
+    process.stdout.write(token);
+  } catch { process.exit(1); }
+')"; then
+  echo "Preview sign-in did not return an access token; refusing to seed." >&2
+  exit 1
+fi
+unset preview_login
+if ! preview_document="$(curl -fsS -m 10 -w '\n%{http_code}' --get --data-urlencode "scope=$SCOPE" "http://localhost:$PORT/content/learn" \
+  -H "Authorization: Bearer $preview_token" -H "X-Tenant: $SCOPE" 2>/dev/null)"; then
+  echo "Could not read the authenticated learn document; refusing to seed." >&2
+  exit 1
+fi
+if [ "${preview_document##*$'\n'}" != "200" ]; then
+  echo "Learn document HTTP status was not successful; refusing to seed." >&2
+  exit 1
+fi
+preview_document="${preview_document%$'\n'*}"
+if ! preview_source="$(printf '%s' "$preview_document" | node -e '
+  try {
+    const source = JSON.parse(require("node:fs").readFileSync(0, "utf8")).source;
+    if (source !== "stored" && source !== "compiled-default") process.exit(1);
+    process.stdout.write(source);
+  } catch { process.exit(1); }
+')"; then
+  echo "Learn document JSON/source was not recognized; refusing to seed." >&2
+  exit 1
+fi
+unset preview_document
+if [ "$preview_source" = "stored" ]; then
   echo "▸ $SCOPE is already seeded, so skipping the slow part."
 else
   echo "▸ Seeding $SCOPE: a catalog, four slots, sixty visitors, their clicks, and a day report."
   echo "  About three minutes, most of it waiting for the ledger queue to drain."
-  node scripts/holdout-proof.mjs "http://localhost:$PORT" --scope "$SCOPE" 2>&1 | sed 's/^/  /'
+  if ! OPERATOR_TOKEN="$preview_token" node scripts/holdout-proof.mjs "http://localhost:$PORT" --scope "$SCOPE"; then
+    echo "Preview seeding failed." >&2
+    exit 1
+  fi
 fi
 
 cat <<EOF

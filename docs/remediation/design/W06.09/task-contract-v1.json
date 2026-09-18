@@ -1,0 +1,149 @@
+{
+  "id": "W06.09",
+  "package_id": "W06",
+  "title": "Discover older subject-owned session records in resumable erasure pages",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Bounded scan-first local erasure of older tenant session records owned by selected/base/current-linked subjects, beyond user pointers and remembered own sessions, including pointer-captured canonical sessions absent from the base.",
+  "read_paths": [
+    "src/identity",
+    "src/routes/identity.ts",
+    "src/routes/identity.test.ts",
+    "src/tenancy",
+    "src/services",
+    "src/ledger",
+    "src/durable-objects",
+    "src/types/env.ts",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/identity/erase.ts",
+    "src/routes/identity.test.ts",
+    "docs/remediation/evidence/W06.09/worker.json"
+  ],
+  "non_goals": [
+    "No transactional KV snapshot, new index/service, cross-store deletion epoch, approved D03/D06 policy, previous-account-only or forward-target ownership, D1/telemetry/log/external erasure or full W06/finding/customer/gate/release/SLO acceptance.",
+    "Preserve exact pending v1/v2/v3 plans/cursors and protected dirty worktree. No serving/scoring changes, broad suite/new harness, deploy/cloud/credentials/customer data/commit/push/destructive operation or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W06.09-C1",
+      "description": "Fresh v4 recognized/anonymous erasure finds older session records by actual userId plus frozen base/current-link ownership witnesses, across bounded tenant pages saved before deletion. Old canonical/base-visitor/current extra sessions are erased; other tenants/owners and previous-account-only records remain. Pointer-captured canonical sessions omitted from session listing are still cleaned. Do not follow forwardTo, identity or anonymousId as ownership.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.09-C2",
+      "description": "At most one32-key identity page and one32-key session page per call; bounded saved session capsules and shared32 attempted cleanup steps. Recover page/root/step/compaction ambiguity without relisting saved observations, retain actor/cutoff, validate malformed/foreign/nonprogressing state and exact owner/session witnesses. Exact pending v1/v2/v3 numeric plans remain; honest session-only batch/cumulative receipts and raw child compaction.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.09-C3",
+      "description": "Independent final actual-source/admission-diff/manifest and complete worker proof review, exact K1 once; inspect compiler/scoped whitespace without rerun. Verify C1-C2 side effects and explicit visibility/concurrency/retention/performance/destination limits; reuse valid unchanged dependency inspection without old-task closure.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.09-K1",
+      "required": true,
+      "criterion_ids": [
+        "W06.09-C1",
+        "W06.09-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest with actual identity route, erasure, SessionManager and existing synthetic KV/R2/DO seams; no network.",
+      "workload": "One existing identity fixture: older owned sessions beyond pointers, nondefault tenant isolation/current ownership, bounded scan-before-delete, retry/corruption/compaction and exact legacy plans; worker app noEmit and scoped whitespace.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.09-K2",
+      "required": true,
+      "criterion_ids": [
+        "W06.09-C3"
+      ],
+      "command": "Independent frozen W06.09 actual source and complete worker proof review; verify relevant pins, exact K1 once and write review.json.",
+      "runtime": "Independent local actual-source review and same synthetic route/storage fixture.",
+      "workload": "C1-C3 ownership/page/checkpoint/compaction/legacy/receipt review against exact admission diffs; inspect worker compiler/scoped whitespace without broad suite or rerun.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W06.08",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing bounded v3 identity discovery and exact captured plans; historical accepted source baseline.",
+      "rationale": "Extend fresh jobs while preserving old schemas/cursors. New task checks changed behavior; does not reaccept historical whole-task proof."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved transactional cross-store authority.",
+      "rationale": "Paging and root CAS are not a KV snapshot or concurrent erasure fence."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Future approved retention/re-entry and destination policy.",
+      "rationale": "Keep current local progress and cutoff semantics without deciding new privacy policy."
+    }
+  ],
+  "preflight": {
+    "status": "approved",
+    "plan": {
+      "path": "docs/remediation/design/W06.09/plan-v1.md",
+      "sha256": "23b3c2f22797541dd2c6b9aef8c488d3c73b32b901cb1d9d7d24c380609bcb65"
+    },
+    "contract_digest": "7d617cefde829351bd67708c4ae613531e1e55aea5779a729a169026dc8fc2d5",
+    "approval": {
+      "actor_id": "w01-lead",
+      "at": "2026-09-08T22:03:04.478Z",
+      "plan_sha256": "23b3c2f22797541dd2c6b9aef8c488d3c73b32b901cb1d9d7d24c380609bcb65",
+      "rationale": "Standing local G0 mandate; source-confirmed older-session gap, independent Astra/xhigh ownership/cursor challenge; bounded change and existing fixture only."
+    }
+  },
+  "assignments": {
+    "implementer": "w0609-worker",
+    "independent_reviewer": "w0609-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded"
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement approved W06.09 v4 bounded session discovery in erase.ts and existing route fixture, then focused worker checks and independent frozen review. Root alone records acceptance."
+  }
+}

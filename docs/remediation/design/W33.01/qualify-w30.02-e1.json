@@ -1,0 +1,510 @@
+{
+  "before": {
+    "id": "W30.02-E1",
+    "task_id": "W30.02",
+    "check_id": "W30.02-K1",
+    "criterion_ids": [
+      "W30.02-C1",
+      "W30.02-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W30.02/review.json",
+      "sha256": "1cfed096755e55c6dfbd569bb89665dd5378de10d7154055496ea58f6f08b1ec"
+    },
+    "at": "2026-09-12T18:40:27.662Z",
+    "limitations": "Bounded JSON report and two operator-view coverage propagation, not full W30/F17/F18/F25/N08/N23 reconstruction, delivery completeness, actual capacity, seven-day history, historical repair or customer/release acceptance. Missing metadata and maturity remain unknown; unadvanced rings do not prove every credit wrong. No new maturity/business/privacy policy, favorable inference or alteration of counts. Legacy hours.horizonMs remains a historical compatibility value, not a minimum guarantee; direct ledger/history and CSV/external downstream exports remain qualified. W30.01 temporal attribution and prior W06/W21/W23/W26/W28 fixes remain implemented/history retained; overlapping current proof is explicitly qualified. No serving-path I/O, new module/infrastructure/schema, deployment/cloud/resource/credential/customer-data repair, external messages, contract amendment, destructive/commit/push authority.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts -t 'W30.02|W30.01|W21 hourly reports|W21 retains repeated credits|W21 rejects invalid|W21 legacy report|measurement shows raw attribution' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest, actual report and mounted Hono day/window routes with synthetic R2, two real JS views in JSDOM.",
+    "workload": "Fixed12: four new grouped W30.02 plus three W30.01 and five existing W21/diagnostic cases.",
+    "result": "pass",
+    "artifact_digest": "5103323d945bedef5506a3dc21d8893e7df6b6eaeee5439783191f657e57efd1",
+    "status": "current",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "6cd0933c2623458aa4bb626f58ba47baffef5e70c33a8d91611069346485c5d3",
+      "configuration": "Bounded JSON report and two operator-view coverage propagation, not full W30/F17/F18/F25/N08/N23 reconstruction, delivery completeness, actual capacity, seven-day history, historical repair or customer/release acceptance. Missing metadata and maturity remain unknown; unadvanced rings do not prove every credit wrong. No new maturity/business/privacy policy, favorable inference or alteration of counts. Legacy hours.horizonMs remains a historical compatibility value, not a minimum guarantee; direct ledger/history and CSV/external downstream exports remain qualified. W30.01 temporal attribution and prior W06/W21/W23/W26/W28 fixes remain implemented/history retained; overlapping current proof is explicitly qualified. No serving-path I/O, new module/infrastructure/schema, deployment/cloud/resource/credential/customer-data repair, external messages, contract amendment, destructive/commit/push authority.",
+      "files": [
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "output",
+          "sha256": "0f7cb03abfca3202fb02b49588049163c18d007c7bfd47e9598ca9237b4638da"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "output",
+          "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "role": "output",
+          "sha256": "d015e70f0c319252e0f207eeb83581ab098878f0c10ffdb0078ac30fe445c2eb"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "role": "source",
+          "sha256": "292ca971dc99e718b24b3a3d51050fbd955e0eccd6bf6d135091bfa0b2daea91"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F17.md",
+          "role": "source",
+          "sha256": "84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F18.md",
+          "role": "source",
+          "sha256": "f4305909762cdb691c46ae8f9db55b560bf19fc60b8a37b5c202da95fe934bb9"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F25.md",
+          "role": "source",
+          "sha256": "2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-operations-and-delivery.md",
+          "role": "source",
+          "sha256": "4f3a01b78cc611aacf8d710bff4f45e264906b1b15a4be0ed4a2d484f67e3cae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-learning-and-statistics.md",
+          "role": "source",
+          "sha256": "0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "docs/architecture/31-load-test-2026-09-05.md",
+          "role": "source",
+          "sha256": "3b0cd44153dea07a8ce40ddd50db02cd14774812bffdbaf44a16c381d0f1c174"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "role": "output",
+          "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+        },
+        {
+          "path": "public/learning.js",
+          "role": "output",
+          "sha256": "6dbb1b51969b9fbd4a78347ac7ab95657bbe17f7f728b872d6c66cf5fcc189f7"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "role": "output",
+          "sha256": "060a3b660d63b0153a54870c32febccb70660d7385331724be177a5718d9f80f"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "role": "output",
+          "sha256": "444982a16266fb3730b8b3e4c3938221139868c6f5f87ab79507e49c83beee59"
+        },
+        {
+          "path": "src/console/learning.render.test.ts",
+          "role": "output",
+          "sha256": "263870bad5e492eb385b66da6873aaddde6aa459b27e578c63ede948084156c3"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "role": "output",
+          "sha256": "0d73029c63e1db90d4edb569e09f15baf82b6a04af3c5c27936a2cfc9d9912ce"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "4d54d4f34e1c3633cdd087c8cf277137a68f3b0088378e032778f19f413a74af"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "4d890aa841d57e07d8b00eb46f65217b2287274655c02e1c9e0231c20a4128ae"
+        },
+        {
+          "path": "public/console/shell.js",
+          "role": "source",
+          "sha256": "6ed7abd4a5d20226109d12910f003645fd22620d116d2caead344b9b85d7916e"
+        },
+        {
+          "path": "public/console/views.js",
+          "role": "source",
+          "sha256": "07c8117069971e7b491ca07fa1ec6cefd64b18aa9f16fb27402f60687ce9c70c"
+        },
+        {
+          "path": "public/operator-session.js",
+          "role": "source",
+          "sha256": "b7a943cbc3611f1f7e2b5a96aed19142f8a73df36abece2dd814a2bda0754869"
+        },
+        {
+          "path": "public/legacy/learning.html",
+          "role": "source",
+          "sha256": "eeff0154dcab52b19ee19f836b6660fc4c858a121df6b160080b4d2784d49220"
+        },
+        {
+          "path": "public/console/index.html",
+          "role": "source",
+          "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+        },
+        {
+          "path": "src/measure/window.test.ts",
+          "role": "source",
+          "sha256": "b69787b506109c77d6a6b171e188370dc4a8e65bf6606858074db7c6508ac48b"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.02/worker.json",
+          "role": "output",
+          "sha256": "c56c4601902097db969b68a1853a7b667f287aa66baf26f677875463bfb7d766"
+        },
+        {
+          "path": "docs/remediation/design/W30.02/plan.md",
+          "role": "configuration",
+          "sha256": "434972b0c90d25f95b96747c438b80cd5dfe8cdd82f43c5a7686871bad06611c"
+        },
+        {
+          "path": "docs/remediation/design/W30.02/baseline.json",
+          "role": "configuration",
+          "sha256": "29768357626aa4a5f17cfd8c9352cce3371fee08a296fc14f2a775dfcb137ddf"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.02/admission.json",
+          "role": "configuration",
+          "sha256": "fc55c300779432915d979f575f97ed7a03034de62f88dd323eeb5f5bd2261862"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.02/source-freeze.json",
+          "sha256": "cb4627f4819afcec0b8e1d8db5cd360e0b1eb28df95bbb3b8a83c70cfd9f2655",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.02/source-deltas.json",
+          "sha256": "9dd75bee7c627d038adb9416c7300613bda6cfa553eb288d76aff23348b898d3",
+          "role": "configuration"
+        }
+      ],
+      "digest": "5103323d945bedef5506a3dc21d8893e7df6b6eaeee5439783191f657e57efd1"
+    }
+  },
+  "after": {
+    "id": "W30.02-E1",
+    "task_id": "W30.02",
+    "check_id": "W30.02-K1",
+    "criterion_ids": [
+      "W30.02-C1",
+      "W30.02-C2"
+    ],
+    "kind": "runtime_test",
+    "claim": "local_runtime",
+    "actor_id": "w1405-reviewer",
+    "run_id": "/root/w1405_safety_review",
+    "file": {
+      "path": "docs/remediation/evidence/W30.02/review.json",
+      "sha256": "1cfed096755e55c6dfbd569bb89665dd5378de10d7154055496ea58f6f08b1ec"
+    },
+    "at": "2026-09-12T18:40:27.662Z",
+    "limitations": "Bounded JSON report and two operator-view coverage propagation, not full W30/F17/F18/F25/N08/N23 reconstruction, delivery completeness, actual capacity, seven-day history, historical repair or customer/release acceptance. Missing metadata and maturity remain unknown; unadvanced rings do not prove every credit wrong. No new maturity/business/privacy policy, favorable inference or alteration of counts. Legacy hours.horizonMs remains a historical compatibility value, not a minimum guarantee; direct ledger/history and CSV/external downstream exports remain qualified. W30.01 temporal attribution and prior W06/W21/W23/W26/W28 fixes remain implemented/history retained; overlapping current proof is explicitly qualified. No serving-path I/O, new module/infrastructure/schema, deployment/cloud/resource/credential/customer-data repair, external messages, contract amendment, destructive/commit/push authority.",
+    "command": "node node_modules/vitest/vitest.mjs run src/learn/hourly.test.ts src/learn/report.test.ts src/console/learning.render.test.ts src/console/console.render.test.ts -t 'W30.02|W30.01|W21 hourly reports|W21 retains repeated credits|W21 rejects invalid|W21 legacy report|measurement shows raw attribution' --maxWorkers=1 --minWorkers=1",
+    "runtime": "Installed Node/Vitest, actual report and mounted Hono day/window routes with synthetic R2, two real JS views in JSDOM.",
+    "workload": "Fixed12: four new grouped W30.02 plus three W30.01 and five existing W21/diagnostic cases.",
+    "result": "pass",
+    "artifact_digest": "5103323d945bedef5506a3dc21d8893e7df6b6eaeee5439783191f657e57efd1",
+    "status": "revalidation_required",
+    "superseded_by": null,
+    "artifact_basis": {
+      "status": "recorded",
+      "contract_digest": "6cd0933c2623458aa4bb626f58ba47baffef5e70c33a8d91611069346485c5d3",
+      "configuration": "Bounded JSON report and two operator-view coverage propagation, not full W30/F17/F18/F25/N08/N23 reconstruction, delivery completeness, actual capacity, seven-day history, historical repair or customer/release acceptance. Missing metadata and maturity remain unknown; unadvanced rings do not prove every credit wrong. No new maturity/business/privacy policy, favorable inference or alteration of counts. Legacy hours.horizonMs remains a historical compatibility value, not a minimum guarantee; direct ledger/history and CSV/external downstream exports remain qualified. W30.01 temporal attribution and prior W06/W21/W23/W26/W28 fixes remain implemented/history retained; overlapping current proof is explicitly qualified. No serving-path I/O, new module/infrastructure/schema, deployment/cloud/resource/credential/customer-data repair, external messages, contract amendment, destructive/commit/push authority.",
+      "files": [
+        {
+          "path": "src/learn/hourly.ts",
+          "role": "output",
+          "sha256": "0f7cb03abfca3202fb02b49588049163c18d007c7bfd47e9598ca9237b4638da"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "role": "output",
+          "sha256": "a3076610088b9842ad70e070d4fb6074cb523feca975e5770b40f64cc1db39a7"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "role": "source",
+          "sha256": "b134ab151a83076d3d335cfa6aadf6e6efe5d245007b46c209255864870a10d5"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "role": "source",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "role": "output",
+          "sha256": "d015e70f0c319252e0f207eeb83581ab098878f0c10ffdb0078ac30fe445c2eb"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "role": "source",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "role": "source",
+          "sha256": "47e89e32bfa3c5c3fb192e4ed323d276e2469c838f7a2de3de0648f77d049c4a"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "role": "source",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "role": "source",
+          "sha256": "5f8f00ffc3e0ab409f3afe1f2b7445ecdb646124f8a232e7d85dccb588b839e1"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "role": "source",
+          "sha256": "463ccbbda14e316c549dad62096fd1844d282bf7e66defe90ec681376d6c5143"
+        },
+        {
+          "path": "src/content/types.ts",
+          "role": "source",
+          "sha256": "26dd645dada44dc82cfecb4771e9e70410e0a944252dd8e6b3ab4ff572ccf7df"
+        },
+        {
+          "path": "src/durable-objects/DecisionRing.ts",
+          "role": "source",
+          "sha256": "292ca971dc99e718b24b3a3d51050fbd955e0eccd6bf6d135091bfa0b2daea91"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "role": "source",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F17.md",
+          "role": "source",
+          "sha256": "84988b39ff5f6357e77863c745d6ff802f0082841c41002c0daf8a01d38825ae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F18.md",
+          "role": "source",
+          "sha256": "f4305909762cdb691c46ae8f9db55b560bf19fc60b8a37b5c202da95fe934bb9"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/F25.md",
+          "role": "source",
+          "sha256": "2df7e31bcb8c571e4d16128ae63cd143c35acac9bbdd15cd13a7c8a46a5a7e39"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-operations-and-delivery.md",
+          "role": "source",
+          "sha256": "4f3a01b78cc611aacf8d710bff4f45e264906b1b15a4be0ed4a2d484f67e3cae"
+        },
+        {
+          "path": "docs/architecture/35-verification-reports/sweep-learning-and-statistics.md",
+          "role": "source",
+          "sha256": "0074a47ddb6e1e54a5ee3314925d20c1685fe6fcd3d5f340c7578855bb4b9a9a"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "role": "source",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818"
+        },
+        {
+          "path": "docs/architecture/31-load-test-2026-09-05.md",
+          "role": "source",
+          "sha256": "3b0cd44153dea07a8ce40ddd50db02cd14774812bffdbaf44a16c381d0f1c174"
+        },
+        {
+          "path": "tsconfig.json",
+          "role": "source",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782"
+        },
+        {
+          "path": "vitest.config.ts",
+          "role": "source",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc"
+        },
+        {
+          "path": ".eslintrc.json",
+          "role": "source",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39"
+        },
+        {
+          "path": "package.json",
+          "role": "source",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "role": "output",
+          "sha256": "53d5fb34c50540a1f8e1d449efed0fe91e034945d51bfa92cb8743fc739c5822"
+        },
+        {
+          "path": "public/learning.js",
+          "role": "output",
+          "sha256": "6dbb1b51969b9fbd4a78347ac7ab95657bbe17f7f728b872d6c66cf5fcc189f7"
+        },
+        {
+          "path": "public/console/views-measure.js",
+          "role": "output",
+          "sha256": "060a3b660d63b0153a54870c32febccb70660d7385331724be177a5718d9f80f"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "role": "output",
+          "sha256": "444982a16266fb3730b8b3e4c3938221139868c6f5f87ab79507e49c83beee59"
+        },
+        {
+          "path": "src/console/learning.render.test.ts",
+          "role": "output",
+          "sha256": "263870bad5e492eb385b66da6873aaddde6aa459b27e578c63ede948084156c3"
+        },
+        {
+          "path": "src/console/console.render.test.ts",
+          "role": "output",
+          "sha256": "0d73029c63e1db90d4edb569e09f15baf82b6a04af3c5c27936a2cfc9d9912ce"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "role": "output",
+          "sha256": "4d54d4f34e1c3633cdd087c8cf277137a68f3b0088378e032778f19f413a74af"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "role": "source",
+          "sha256": "4d890aa841d57e07d8b00eb46f65217b2287274655c02e1c9e0231c20a4128ae"
+        },
+        {
+          "path": "public/console/shell.js",
+          "role": "source",
+          "sha256": "6ed7abd4a5d20226109d12910f003645fd22620d116d2caead344b9b85d7916e"
+        },
+        {
+          "path": "public/console/views.js",
+          "role": "source",
+          "sha256": "07c8117069971e7b491ca07fa1ec6cefd64b18aa9f16fb27402f60687ce9c70c"
+        },
+        {
+          "path": "public/operator-session.js",
+          "role": "source",
+          "sha256": "b7a943cbc3611f1f7e2b5a96aed19142f8a73df36abece2dd814a2bda0754869"
+        },
+        {
+          "path": "public/legacy/learning.html",
+          "role": "source",
+          "sha256": "eeff0154dcab52b19ee19f836b6660fc4c858a121df6b160080b4d2784d49220"
+        },
+        {
+          "path": "public/console/index.html",
+          "role": "source",
+          "sha256": "e9f422c3bbbcf4be743e23c9be5d893aaef0fc016f1447712bcd7ec35b30b6c3"
+        },
+        {
+          "path": "src/measure/window.test.ts",
+          "role": "source",
+          "sha256": "b69787b506109c77d6a6b171e188370dc4a8e65bf6606858074db7c6508ac48b"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.02/worker.json",
+          "role": "output",
+          "sha256": "c56c4601902097db969b68a1853a7b667f287aa66baf26f677875463bfb7d766"
+        },
+        {
+          "path": "docs/remediation/design/W30.02/plan.md",
+          "role": "configuration",
+          "sha256": "434972b0c90d25f95b96747c438b80cd5dfe8cdd82f43c5a7686871bad06611c"
+        },
+        {
+          "path": "docs/remediation/design/W30.02/baseline.json",
+          "role": "configuration",
+          "sha256": "29768357626aa4a5f17cfd8c9352cce3371fee08a296fc14f2a775dfcb137ddf"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.02/admission.json",
+          "role": "configuration",
+          "sha256": "fc55c300779432915d979f575f97ed7a03034de62f88dd323eeb5f5bd2261862"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.02/source-freeze.json",
+          "sha256": "cb4627f4819afcec0b8e1d8db5cd360e0b1eb28df95bbb3b8a83c70cfd9f2655",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.02/source-deltas.json",
+          "sha256": "9dd75bee7c627d038adb9416c7300613bda6cfa553eb288d76aff23348b898d3",
+          "role": "configuration"
+        }
+      ],
+      "digest": "5103323d945bedef5506a3dc21d8893e7df6b6eaeee5439783191f657e57efd1"
+    }
+  }
+}

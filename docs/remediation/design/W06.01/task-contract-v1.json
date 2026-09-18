@@ -1,0 +1,160 @@
+{
+  "id": "W06.01",
+  "package_id": "W06",
+  "title": "Durable erasure discovery, retries and honest receipts",
+  "kind": "implementation",
+  "state": "draft",
+  "scope": "Preserve exact erasure discovery before destructive steps; durably resume bounded per-target local cleanup on the existing operator POST and existing storage, with honest partial/physical-destination status.",
+  "read_paths": [
+    "src",
+    "docs/architecture",
+    "docs/remediation",
+    "scripts/remediation",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/identity/erase.ts",
+    "src/identity/store.ts",
+    "src/ledger/erasure.ts",
+    "src/routes/identity.ts",
+    "src/routes/identity.test.ts",
+    "src/ledger/erasure.test.ts",
+    "docs/remediation/evidence/W06.01/worker.md",
+    "docs/remediation/evidence/W06.01/worker-checks.json"
+  ],
+  "non_goals": [
+    "Partial W06/F04/F06/F18/N05/N12/N13 and customer35 section4 first-party identity/erasure/warehouse deletion only. No full W06/finding/gate/customer/release acceptance; no replay barrier/epoch, concurrent ingestion/new-generation cross-store transaction, uncapped/orphan discovery, CACHE/seen/D1/historic telemetry/external reconciliation or physical rewrite completion.",
+    "Same normalized original selector resumes a pending local job; no cross-selector/person-wide job coordination, automatic scheduler or new endpoint/queue/binding. Pending necessary recovery records and minimal completion metadata do not approve D01/D03/D06 topology, authority or retention policy. Customer/privacy approval remains required before real data.",
+    "Four production paths and two existing suites only. No general SessionManager/ShopperReflex/index/SDK/scorer changes, infrastructure validation programme, extra suite/build or broad matrix. Reuse unchanged dependency assurance without whole-task reacceptance. No stage/commit/push/deploy/cloud/credentials/customer-data/destructive/unrelated operations or subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W06.01-C1",
+      "description": "Strict tenant-bound durable job under existing R2 erasures namespace, keyed by SHA256 of normalized exact original request selector; validate stored schema/tenant/selector/targets. Persist immutable discovered IDs, exact session/pointer/link targets, original actor/cutoff and configured destinations before any deletion. Reject inconsistent requested IDs/current relinks or corrupt/read-failed discovery before effects. Conditional create and ETag-guarded per-object checkpoints; lost/ambiguous/failed checkpoint stops executor. Same selector resumes pending after links/pointers disappear; completed local job becomes minimal non-profile checkpoint metadata and a later explicit request starts fresh discovery/cutoff. Never erase pending discovery or reset progress to mask errors. Bounded maximum32 attempted work steps per invocation, with visible manual continuation; no cross-store or cross-selector transaction claim.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.01-C2",
+      "description": "Delete only captured tenant-scoped targets with strict direct KV operations, not error-swallowing SessionManager helpers. Clean both configured profile hosts independent of current REFLEX_HOST; validate actual ShopperReflex and DecisionRing reset acknowledgments. Frozen required binding loss remains failure, not unbound success. Check target/current-link compatibility before destructive work and remove known links only after corresponding local target work is checkpointed. Separate tombstone and ring stages; strict same-or-earlier-cutoff tombstone retries retain counts/done_through and actor, genuinely later erasure restarts the window. Preserve direct ledger-helper compatibility except truthful failure. Response distinguishes local completion/pending/error and overall complete:false; legacy erased:[] until physical/external erasure proven, separate local-completed/target status. Failed stages/read/write/conflict never ok:true;200 only local completion,202 bounded continuation,409 conflict,503 storage/destination failure. Explicit unbound/historical/orphan/cache/D1/physical/replay/external limits; no raw payload/error logging.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W06.01-C3",
+      "description": "Existing identity-route and ledger-erasure suites only: meaningful actual destination deletion, both bound profile hosts, two non-default tenant separation, discovery/read/create/checkpoint/ambiguous-write/CAS failures, reconstructed same-selector retry after lost keys, conflicting initial/resumed links, bound work continuation, fixed original cutoff and completed-job fresh erase. Extend existing FakeR2 with conditional metadata semantics; use actual reset classes where practical and label synthetic seams. Worker exact K1, app noEmit and scoped before/current diff; independent exact K1 once plus actual frozen source/full available evidence/local import graph/pins. Qualify W05.08 shared-input proof before edits, preserve implementation/history. No native/deployed/SLO or full historical-task assurance.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W06.01-K1",
+      "required": true,
+      "criterion_ids": [
+        "W06.01-C1",
+        "W06.01-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/routes/identity.test.ts src/ledger/erasure.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; actual Hono/identity/ledger/reset code with synthetic tenant KV/R2/DO state and conditional-write seams. No external network.",
+      "workload": "Two existing relevant suites only, grouped recovery/partial/positive cases and their existing identity/ledger regressions. Worker app noEmit and scoped diff; local bounded-work counts, not engine latency.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W06.01-K2",
+      "required": true,
+      "criterion_ids": [
+        "W06.01-C3"
+      ],
+      "command": "Independent frozen W06.01 actual before/final source and complete available worker proof review, exact K1 once, relevant local import graph and physical pins; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review; source-confirmed and local synthetic only.",
+      "workload": "C1-C3, persistence before deletion, resumable exact targets, checkpoint/error honesty and fixed cutoff, both-host/tenant compatibility; app compiler/scoped diff inspected without rerun. No broad or deployed qualification.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W05.08",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing implemented shopper/tenant/consent boundaries; unchanged interfaces only, prior whole-task proof becomes historical on changed imports.",
+      "rationale": "Relevant existing identity tests rerun. No need to retest unchanged preference/scorer/SDK paths solely to refresh whole-task labels."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W04.02",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Existing implemented shopper/tenant/consent boundaries; unchanged interfaces only, prior whole-task proof becomes historical on changed imports.",
+      "rationale": "Relevant existing identity tests rerun. No need to retest unchanged preference/scorer/SDK paths solely to refresh whole-task labels."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D01",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Pending customer topology, transactional authority and privacy/necessary-record lifecycle decisions.",
+      "rationale": "Bounded local manually resumable erasure fixes do not approve these policies, concurrent ingestion/replay protection or release."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Pending customer topology, transactional authority and privacy/necessary-record lifecycle decisions.",
+      "rationale": "Bounded local manually resumable erasure fixes do not approve these policies, concurrent ingestion/replay protection or release."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Pending customer topology, transactional authority and privacy/necessary-record lifecycle decisions.",
+      "rationale": "Bounded local manually resumable erasure fixes do not approve these policies, concurrent ingestion/replay protection or release."
+    }
+  ],
+  "preflight": {
+    "status": "pending",
+    "plan": null,
+    "contract_digest": null,
+    "approval": null
+  },
+  "assignments": {
+    "implementer": "w0601-worker",
+    "independent_reviewer": "w0601-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "contract_digest": null,
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "pending"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Implement admitted durable erasure retry scope; freeze source and worker proof for independent review."
+  }
+}

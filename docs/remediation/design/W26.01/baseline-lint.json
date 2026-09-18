@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-12T12:51:35.751Z",
+  "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/learn/policy.ts src/learn/learn.test.ts src/learn/hourly.test.ts",
+  "captures": [
+    {
+      "chunk_id": "016b3c",
+      "wall_time_seconds": 1.000746942,
+      "session_id": 24928,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "chunk_id": "3d0bc5",
+      "wall_time_seconds": 0.000002637,
+      "exit_code": 0,
+      "original_token_count": 100,
+      "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/learn/learn.test.ts\n  440:62  warning  '_key' is defined but never used   @typescript-eslint/no-unused-vars\n  441:36  warning  '_url' is defined but never used   @typescript-eslint/no-unused-vars\n  441:50  warning  '_init' is defined but never used  @typescript-eslint/no-unused-vars\n\n✖ 3 problems (0 errors, 3 warnings)\n\n"
+    }
+  ],
+  "session_id": 24928,
+  "drained": true,
+  "exit_code": 0,
+  "errors": 0,
+  "warnings": 3
+}

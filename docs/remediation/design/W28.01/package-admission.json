@@ -1,0 +1,121 @@
+{
+  "before": {
+    "id": "W28",
+    "canonical": {
+      "gate_scope": "G2 surface / G3 enablement",
+      "full_scope": "Withdraw unsupported Thompson offers across validator/UI/kit, or repair share/context/prior/reward/control/cooldown/propensity semantics and validate policy quality. Share zero means no exploration-induced reorder. Unit rewards with repeated successes require valid modeling too. Document true defaults.",
+      "finding_refs": "F23; N25",
+      "sizing_owner": "S withdrawal → M/L evaluated exploration; OL + DS/C"
+    },
+    "title": "Exploration contract and policy quality",
+    "gates": [
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F23",
+      "N25"
+    ],
+    "proposed_owner": "OL + DS/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "unscoped",
+      "criteria": [],
+      "coverage": [],
+      "task_ids": [],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W28",
+    "canonical": {
+      "gate_scope": "G2 surface / G3 enablement",
+      "full_scope": "Withdraw unsupported Thompson offers across validator/UI/kit, or repair share/context/prior/reward/control/cooldown/propensity semantics and validate policy quality. Share zero means no exploration-induced reorder. Unit rewards with repeated successes require valid modeling too. Document true defaults.",
+      "finding_refs": "F23; N25",
+      "sizing_owner": "S withdrawal → M/L evaluated exploration; OL + DS/C"
+    },
+    "title": "Exploration contract and policy quality",
+    "gates": [
+      "G2",
+      "G3"
+    ],
+    "source_findings": [
+      "F23",
+      "N25"
+    ],
+    "proposed_owner": "OL + DS/C",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W28-OFFERS",
+          "description": "Withdraw unsupported Thompson public validator/UI/kit offers, or an independently accepted repaired contract."
+        },
+        {
+          "id": "W28-LIVE",
+          "description": "Effective live withdrawal, share zero no exploration-induced reorder and retained configuration compatibility."
+        },
+        {
+          "id": "W28-REPLAY",
+          "description": "Truthful old/new deterministic history and operator metadata across withdrawal."
+        },
+        {
+          "id": "W28-DEFAULTS",
+          "description": "Document true shipped defaults and undelivered exploration capabilities without customer-scope amendment."
+        },
+        {
+          "id": "W28-QUALITY",
+          "description": "Before re-enablement, agreed valid share/context/prior/reward/control/cooldown/propensity semantics including repeated unit successes and evaluated policy quality; external/customer acceptance distinct."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W28-OFFERS",
+          "task_id": "W28.01",
+          "task_criterion_id": "W28.01-C1"
+        },
+        {
+          "criterion_id": "W28-OFFERS",
+          "task_id": "W28.01",
+          "task_criterion_id": "W28.01-C2"
+        },
+        {
+          "criterion_id": "W28-LIVE",
+          "task_id": "W28.01",
+          "task_criterion_id": "W28.01-C1"
+        },
+        {
+          "criterion_id": "W28-REPLAY",
+          "task_id": "W28.01",
+          "task_criterion_id": "W28.01-C2"
+        },
+        {
+          "criterion_id": "W28-DEFAULTS",
+          "task_id": "W28.01",
+          "task_criterion_id": "W28.01-C3"
+        }
+      ],
+      "task_ids": [
+        "W28.01"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

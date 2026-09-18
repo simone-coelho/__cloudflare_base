@@ -1,0 +1,155 @@
+{
+  "id": "W05.06",
+  "package_id": "W05",
+  "title": "SDK refusal before collection and transport, with safe default delivery",
+  "kind": "implementation",
+  "state": "in_progress",
+  "scope": "Maintain explicit/acknowledged consent separately from SDK identity recovery; stop refused behavior before collection, serialization and transport across all SDK capture paths, clear dwell/dedupe on withdrawal, and preserve default content plus deliberate owned preference changes using existing server contracts.",
+  "read_paths": [
+    "src",
+    "scripts/build-sdk.mjs",
+    "scripts/remediation",
+    "docs/architecture",
+    "docs/remediation",
+    "public/sdk",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "node_modules"
+  ],
+  "write_paths": [
+    "src/sdk/core.ts",
+    "src/sdk/emit.ts",
+    "src/sdk/listen.ts",
+    "src/sdk/host.ts",
+    "src/sdk/core.test.ts",
+    "src/sdk/emit.test.ts",
+    "src/sdk/listen.test.ts",
+    "src/routes/realtime.sdkContract.test.ts",
+    "src/sdk/README.md",
+    "public/sdk/edge-personalization.esm.js",
+    "public/sdk/edge-personalization.js",
+    "docs/remediation/evidence/W05.06/worker.md",
+    "docs/remediation/evidence/W05.06/worker-checks.json"
+  ],
+  "non_goals": [
+    "Partial W05/F05/F10/N06/N11/N12 only: do not decide global absent-state/necessary-record retention, privacy, D03/D06, transactional or cross-tab withdrawal/revocation, server already-admitted effects, customer terms or release. Preserve existing absent-state compatibility; retained false cannot be upgraded by unknown/error/cookie true or ordinary acknowledgments.",
+    "Four production SDK files only plus existing fixtures, concise SDK note and two generated public bundles; no server/DO/shared consent/identity algorithm/dispatcher/scorer or new protocol, framework, harness, infrastructure or whole-history test programme. No types.ts change needed.",
+    "No staging/commit/push/deploy/cloud/resources/credentials/customer-data/destructive/unrelated actions. Root alone owns tracker/journal/source-of-truth/acceptance; worker no subdelegation."
+  ],
+  "criteria": [
+    {
+      "id": "W05.06-C1",
+      "description": "SDK keeps live false-only tracking/personalization state after session.consent acknowledgment and through identity/recovery/failures; cookie false restricts immediately, true never releases. send gates before await/payload/envelope/serialization and after awaits; no behavior transport (including keepalive/beacon), browsing attribution writes or behavioral sent/receipt/update callbacks under known refusal. Entry signals and browser href/search/referrer are lazy, not read at construction or by refused helpers. Emit explicit payload spreads/page URL, dataLayer mapping/replay/entry access and declarative attributes are guarded; refused events are dropped, not later replayed. Active refusal persists by existing endpoint/tenant marker mechanism when required, without weakening W05.01 continuity or treating listenOnly as a global kill switch. Consenting capture and tracking-true/personalization-false measurement stay operative.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.06-C2",
+      "description": "Process refusal before callbacks from existing session.consent, action consent and snapshot sources.consent carriers; ordinary/stale true acknowledgments never enable. Recognize only exact currently owned /realtime/session/{profileSessionId}/preferences POST: submitted false restricts before await/failure, enable only explicitly requested true fields after successful matching current-session acknowledgment. Protect identity/consent request epochs against stale/ABA replies; partial responses cannot release unrelated switches. On accepted deliberate true expire only corresponding old false cookie mirror (Max-Age=0), recheck and remain restrictive if false persists; no new opt-in retention policy. Preserve necessary identity and default hydration/subscriptions; omit behavioral channel/browsing attribution and carry existing false-only snapshot hints under refusal. Invalidate dwell/dedupe on withdrawal and identity changes, keep detached callbacks inert and handle synchronous observers safely. Extend existing actual SDK/both-host boundary plus core/emit/listen fixtures; retain positive controls and unchanged identify/session regressions.",
+      "required_evidence_kinds": [
+        "integration_test"
+      ],
+      "minimum_claim": "local_synthetic"
+    },
+    {
+      "id": "W05.06-C3",
+      "description": "Rebuild both served SDK entrypoints with existing script; smoke actual ESM and IIFE exports for refusal/no payload reads and positive sending. Worker fixed six-suite K1, app/SDK noEmit and scoped diff; independent exact K1 once plus actual before/final source/full evidence/bundle smoke/pin and relevant local import graph review. Separate lead accepts bounded SDK behavior only. Preserve W05.05 exact acceptance and qualify overlapping proof before edits; retain baseline four fixture failures, any rework and clear limitations/handoff, without reaccepting old whole-task contracts.",
+      "required_evidence_kinds": [
+        "design_review"
+      ],
+      "minimum_claim": "source_confirmed"
+    }
+  ],
+  "checks": [
+    {
+      "id": "W05.06-K1",
+      "required": true,
+      "criterion_ids": [
+        "W05.06-C1",
+        "W05.06-C2"
+      ],
+      "command": "node node_modules/vitest/vitest.mjs run src/sdk/core.test.ts src/sdk/emit.test.ts src/sdk/listen.test.ts src/sdk/identify.test.ts src/sdk/session.test.ts src/routes/realtime.sdkContract.test.ts --maxWorkers=1 --minWorkers=1",
+      "runtime": "Installed Node/Vitest; existing SDK and actual Hono/crypto/SessionManager/ShopperReflex synthetic both-host boundary, no real network/deployed claim.",
+      "workload": "Six existing suites only: grouped refusal/capture/lazy reads/all-switch/transition/stale preference/default/dwell/synchronous cleanup cases and unchanged identity/session positive regressions. Worker app and SDK noEmit, normal SDK build, actual ESM/IIFE refusal+positive smoke and scoped diff; no new harness file.",
+      "result": "not_run",
+      "evidence_ids": []
+    },
+    {
+      "id": "W05.06-K2",
+      "required": true,
+      "criterion_ids": [
+        "W05.06-C3"
+      ],
+      "command": "Independent frozen W05.06 actual before/final source/baseline/fixtures/full worker evidence review, exact K1 rerun and actual ESM/IIFE refusal+positive smoke; inspect app/SDK noEmit, build/scoped diff and relevant local import graph/pins; retain review-v1.md.",
+      "runtime": "Independent local frozen artifact review; no browser-native/deployed/SLO/infrastructure qualification.",
+      "workload": "C1-C3. Confirm collection guard precedes data reads and callbacks, false retention/re-enable ordering and default/positive delivery; preserve historical overlap and full W05/D03/D06/customer/release limitations.",
+      "result": "not_run",
+      "evidence_ids": []
+    }
+  ],
+  "dependencies": [
+    {
+      "target_type": "task",
+      "target_id": "W05.05",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented generic-route consent and existing both-host boundary; preserve exact acceptance historically before shared SDK/boundary input changes.",
+      "rationale": "Existing helpers and fixtures are reused, not automatically full-contract reaccepted."
+    },
+    {
+      "target_type": "task",
+      "target_id": "W05.01",
+      "kind": "informs",
+      "origin": "proposed",
+      "consumed_output": "Implemented refusal-only recovery and existing owned session/link/detach response carriers.",
+      "rationale": "Focused SDK/identity regressions cover affected behavior, not the historical full task contract."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D03",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Unresolved transactional/global privacy, absent-state and necessary-record lifecycle decisions.",
+      "rationale": "Bounded explicit/acknowledged refusal and current owned preferences do not approve those decisions."
+    },
+    {
+      "target_type": "decision",
+      "target_id": "D06",
+      "kind": "informs",
+      "origin": "source_explicit",
+      "consumed_output": "Unresolved transactional/global privacy, absent-state and necessary-record lifecycle decisions.",
+      "rationale": "Bounded explicit/acknowledged refusal and current owned preferences do not approve those decisions."
+    }
+  ],
+  "preflight": {
+    "status": "not_recorded"
+  },
+  "assignments": {
+    "implementer": "w0506-worker",
+    "independent_reviewer": "w0506-reviewer",
+    "lead": "w01-lead"
+  },
+  "artifact": {
+    "status": "not_recorded",
+    "configuration": null,
+    "files": [],
+    "digest": null
+  },
+  "acceptance_history": [],
+  "independent_review": {
+    "status": "not_requested"
+  },
+  "lead_signoff": {
+    "status": "pending"
+  },
+  "blocked": null,
+  "handoff": {
+    "status": "pending",
+    "resume_path": "docs/remediation/RESUME.md",
+    "next_action": "Sole Astra/xhigh worker implements declared SDK files, checks fixed contract and returns frozen candidate for independent review."
+  }
+}

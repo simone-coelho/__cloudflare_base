@@ -149,7 +149,6 @@ export function paintLayout(order, { duration = 700, easing = DEFAULT_EASING, ro
 }
 
 function release(el, duration, easing, delay = 0) {
-  let timer;
   function cleanup() {
     clearTimeout(timer);
     el.removeEventListener('transitionend', done);
@@ -165,7 +164,7 @@ function release(el, duration, easing, delay = 0) {
   }
   el.addEventListener('transitionend', done);
   // A section hidden mid-flight fires no transitionend; never leave a stale transform behind.
-  timer = setTimeout(cleanup, duration + delay + 150);
+  const timer = setTimeout(cleanup, duration + delay + 150);
   el.style.transition = `transform ${duration}ms ${easing} ${delay}ms`;
   el.style.transform = '';
 }

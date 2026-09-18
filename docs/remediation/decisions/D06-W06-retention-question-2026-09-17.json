@@ -1,0 +1,15 @@
+{
+  "id": "D06-W06-RETENTION-QUESTION-2026-09-17",
+  "at": "2026-09-17T04:07:16.134Z",
+  "kind": "bounded_user_question",
+  "question": "For W06 retention, should agents build explicit per-category settings and block new policy-dependent capture/replay until approved values are configured? Existing data and erasure/recovery barriers would not be automatically deleted. Your 30-day consent choice would remain separate. Alternatively, provide the approved retention periods you want enforced.",
+  "suggested_answer": "Explicit per-category settings; fail closed when unset",
+  "state": "unanswered; preselected option is not approval",
+  "reason": "Read-only whole-W06 preparation distinguishes current technical TTLs and scan horizons from approved physical retention. Local erasure/concurrency/checkpoint/destination-status code can proceed separately; full retention lifecycle requires approved category policy.",
+  "constraints": [
+    "W05 explicit-choice30days is only the minimal necessary consent/refusal instruction; it does not authorize behavioral retention or expire security/erasure witnesses.",
+    "Do not infer90day ledger scan horizon as physical retention, invent a global event-age cutoff, delete historical data or discard unfinished recovery/suppression state.",
+    "This question changes no active W05 admission or implementation authority; W06 remains read-only preparation until W05 independent local review.",
+    "Concrete periods, actual destination inventory, historical AE/log/tenantless D1 disposition and separately authorized live cleanup/proof remain unresolved."
+  ]
+}

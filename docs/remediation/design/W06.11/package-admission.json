@@ -1,0 +1,466 @@
+{
+  "before": {
+    "id": "W06",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Durable erasure job with preserved discovery, per-object checkpoints and honest destination status; both hosts, orphans, caches/rings/seen, D1, telemetry/logs and external reconciliation. Server-enforced deletion epoch/replay barrier prevents stale-cookie and delayed/concurrent ingestion resurrection. Retention and physical progress must be tested; operator Set-Cookie alone is not a subject-browser remedy.",
+      "finding_refs": "F04/F06/F18; N05/N12/N13",
+      "sizing_owner": "M/L; OL/D + S/P"
+    },
+    "title": "Durable erasure and replay barrier",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F04",
+      "F06",
+      "F18",
+      "N05",
+      "N12",
+      "N13"
+    ],
+    "proposed_owner": "OL/D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W06-LOCAL-RETRY",
+          "description": "Durable exact discovered-target recovery for the existing operator erasure's bounded immediate local stages; truthful partial/local versus physical/external status. Full W06 replay/epoch/concurrent ingestion, uncapped/orphan discovery, CACHE/seen/D1/history/external/physical rewrite/lifecycle/accountability and D03/D06 acceptance remain uncovered."
+        },
+        {
+          "id": "W06-LEDGER-REPLAY",
+          "description": "Persistent strict tenant/visitor ledger erasure barrier after physical rewrite, with delayed pre-cutoff queue records suppressed before R2 persistence and malformed barrier/carrier state failed closed. Shopper generations, concurrent cross-store fencing, ring/online learning and approved retention remain uncovered."
+        },
+        {
+          "id": "W06-PHYSICAL-PROGRESS",
+          "description": "Bounded restartable physical ledger scan enforces the per-invocation object cap within dense days and persists per-object mutation intent/progress with honest counters. Retention policy, concurrent cross-store authority and all other destinations remain uncovered."
+        },
+        {
+          "id": "W06-KNOWN-CACHE",
+          "description": "Durable version-compatible deletion of exact known tenant-scoped subject profile and override CACHE keys through the existing bounded job. Email aliases, in-memory caches, orphan discovery, concurrent writers, stale-cookie generations, ring/seen, D1 and external destinations remain uncovered."
+        },
+        {
+          "id": "W06-RING-CUTOFF",
+          "description": "Stored decision-ring projection, index and in-object append/outcome retained-cutoff suppression; physical read cleanup and cross-store concurrent authority remain open."
+        },
+        {
+          "id": "W06-SEEN-CUTOFF",
+          "description": "Per-fold persisted seen membership cutoff cleanup with valid post-cutoff witnesses, legacy uncertainty and safe date/state failure behavior; historical aggregates and other erasure destinations remain open."
+        },
+        {
+          "id": "W06-CAPPED-LINK-DISCOVERY",
+          "description": "Scan-first resumable discovery and bounded local cleanup of currently owned visitor links beyond the inverse list cap, including remembered sessions; linkless orphans, transactional visibility, previous-account history and other destinations remain open."
+        },
+        {
+          "id": "W06-OLDER-SESSION-DISCOVERY",
+          "description": "Bounded durable local discovery/cleanup of older session records by actual owned userId plus frozen current identity witnesses; pointer-captured canonical SID recovery and legacy cursor compatibility. Invisible/concurrent/former-link ownership, epochs and other destinations remain open."
+        },
+        {
+          "id": "W06-FUTURE-D1-CAPTURE",
+          "description": "Disable both request-driven unscoped D1 writers except explicit open/development/default-tenant demo opt-in; no historical erasure or full W06 acceptance."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W06-LOCAL-RETRY",
+          "task_id": "W06.01",
+          "task_criterion_id": "W06.01-C1"
+        },
+        {
+          "criterion_id": "W06-LOCAL-RETRY",
+          "task_id": "W06.01",
+          "task_criterion_id": "W06.01-C2"
+        },
+        {
+          "criterion_id": "W06-LOCAL-RETRY",
+          "task_id": "W06.01",
+          "task_criterion_id": "W06.01-C3"
+        },
+        {
+          "criterion_id": "W06-LEDGER-REPLAY",
+          "task_id": "W06.02",
+          "task_criterion_id": "W06.02-C1"
+        },
+        {
+          "criterion_id": "W06-LEDGER-REPLAY",
+          "task_id": "W06.02",
+          "task_criterion_id": "W06.02-C2"
+        },
+        {
+          "criterion_id": "W06-LEDGER-REPLAY",
+          "task_id": "W06.02",
+          "task_criterion_id": "W06.02-C3"
+        },
+        {
+          "criterion_id": "W06-PHYSICAL-PROGRESS",
+          "task_id": "W06.03",
+          "task_criterion_id": "W06.03-C1"
+        },
+        {
+          "criterion_id": "W06-PHYSICAL-PROGRESS",
+          "task_id": "W06.03",
+          "task_criterion_id": "W06.03-C2"
+        },
+        {
+          "criterion_id": "W06-PHYSICAL-PROGRESS",
+          "task_id": "W06.03",
+          "task_criterion_id": "W06.03-C3"
+        },
+        {
+          "criterion_id": "W06-KNOWN-CACHE",
+          "task_id": "W06.04",
+          "task_criterion_id": "W06.04-C1"
+        },
+        {
+          "criterion_id": "W06-KNOWN-CACHE",
+          "task_id": "W06.04",
+          "task_criterion_id": "W06.04-C2"
+        },
+        {
+          "criterion_id": "W06-KNOWN-CACHE",
+          "task_id": "W06.04",
+          "task_criterion_id": "W06.04-C3"
+        },
+        {
+          "criterion_id": "W06-RING-CUTOFF",
+          "task_id": "W06.06",
+          "task_criterion_id": "W06.06-C1"
+        },
+        {
+          "criterion_id": "W06-RING-CUTOFF",
+          "task_id": "W06.06",
+          "task_criterion_id": "W06.06-C2"
+        },
+        {
+          "criterion_id": "W06-RING-CUTOFF",
+          "task_id": "W06.06",
+          "task_criterion_id": "W06.06-C3"
+        },
+        {
+          "criterion_id": "W06-SEEN-CUTOFF",
+          "task_id": "W06.07",
+          "task_criterion_id": "W06.07-C1"
+        },
+        {
+          "criterion_id": "W06-SEEN-CUTOFF",
+          "task_id": "W06.07",
+          "task_criterion_id": "W06.07-C2"
+        },
+        {
+          "criterion_id": "W06-SEEN-CUTOFF",
+          "task_id": "W06.07",
+          "task_criterion_id": "W06.07-C3"
+        },
+        {
+          "criterion_id": "W06-CAPPED-LINK-DISCOVERY",
+          "task_id": "W06.08",
+          "task_criterion_id": "W06.08-C1"
+        },
+        {
+          "criterion_id": "W06-CAPPED-LINK-DISCOVERY",
+          "task_id": "W06.08",
+          "task_criterion_id": "W06.08-C2"
+        },
+        {
+          "criterion_id": "W06-CAPPED-LINK-DISCOVERY",
+          "task_id": "W06.08",
+          "task_criterion_id": "W06.08-C3"
+        },
+        {
+          "criterion_id": "W06-OLDER-SESSION-DISCOVERY",
+          "task_id": "W06.09",
+          "task_criterion_id": "W06.09-C1"
+        },
+        {
+          "criterion_id": "W06-OLDER-SESSION-DISCOVERY",
+          "task_id": "W06.09",
+          "task_criterion_id": "W06.09-C2"
+        },
+        {
+          "criterion_id": "W06-OLDER-SESSION-DISCOVERY",
+          "task_id": "W06.09",
+          "task_criterion_id": "W06.09-C3"
+        },
+        {
+          "criterion_id": "W06-FUTURE-D1-CAPTURE",
+          "task_id": "W06.10",
+          "task_criterion_id": "W06.10-C1"
+        },
+        {
+          "criterion_id": "W06-FUTURE-D1-CAPTURE",
+          "task_id": "W06.10",
+          "task_criterion_id": "W06.10-C2"
+        },
+        {
+          "criterion_id": "W06-FUTURE-D1-CAPTURE",
+          "task_id": "W06.10",
+          "task_criterion_id": "W06.10-C3"
+        }
+      ],
+      "task_ids": [
+        "W06.01",
+        "W06.02",
+        "W06.03",
+        "W06.04",
+        "W06.05",
+        "W06.06",
+        "W06.07",
+        "W06.08",
+        "W06.09",
+        "W06.10"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  },
+  "after": {
+    "id": "W06",
+    "canonical": {
+      "gate_scope": "G0",
+      "full_scope": "Durable erasure job with preserved discovery, per-object checkpoints and honest destination status; both hosts, orphans, caches/rings/seen, D1, telemetry/logs and external reconciliation. Server-enforced deletion epoch/replay barrier prevents stale-cookie and delayed/concurrent ingestion resurrection. Retention and physical progress must be tested; operator Set-Cookie alone is not a subject-browser remedy.",
+      "finding_refs": "F04/F06/F18; N05/N12/N13",
+      "sizing_owner": "M/L; OL/D + S/P"
+    },
+    "title": "Durable erasure and replay barrier",
+    "gates": [
+      "G0"
+    ],
+    "source_findings": [
+      "F04",
+      "F06",
+      "F18",
+      "N05",
+      "N12",
+      "N13"
+    ],
+    "proposed_owner": "OL/D + S/P",
+    "closure_kind": "full_scope",
+    "cannot_close_findings": [],
+    "scope_status": "open",
+    "decomposition": {
+      "status": "partial",
+      "criteria": [
+        {
+          "id": "W06-LOCAL-RETRY",
+          "description": "Durable exact discovered-target recovery for the existing operator erasure's bounded immediate local stages; truthful partial/local versus physical/external status. Full W06 replay/epoch/concurrent ingestion, uncapped/orphan discovery, CACHE/seen/D1/history/external/physical rewrite/lifecycle/accountability and D03/D06 acceptance remain uncovered."
+        },
+        {
+          "id": "W06-LEDGER-REPLAY",
+          "description": "Persistent strict tenant/visitor ledger erasure barrier after physical rewrite, with delayed pre-cutoff queue records suppressed before R2 persistence and malformed barrier/carrier state failed closed. Shopper generations, concurrent cross-store fencing, ring/online learning and approved retention remain uncovered."
+        },
+        {
+          "id": "W06-PHYSICAL-PROGRESS",
+          "description": "Bounded restartable physical ledger scan enforces the per-invocation object cap within dense days and persists per-object mutation intent/progress with honest counters. Retention policy, concurrent cross-store authority and all other destinations remain uncovered."
+        },
+        {
+          "id": "W06-KNOWN-CACHE",
+          "description": "Durable version-compatible deletion of exact known tenant-scoped subject profile and override CACHE keys through the existing bounded job. Email aliases, in-memory caches, orphan discovery, concurrent writers, stale-cookie generations, ring/seen, D1 and external destinations remain uncovered."
+        },
+        {
+          "id": "W06-RING-CUTOFF",
+          "description": "Stored decision-ring projection, index and in-object append/outcome retained-cutoff suppression; physical read cleanup and cross-store concurrent authority remain open."
+        },
+        {
+          "id": "W06-SEEN-CUTOFF",
+          "description": "Per-fold persisted seen membership cutoff cleanup with valid post-cutoff witnesses, legacy uncertainty and safe date/state failure behavior; historical aggregates and other erasure destinations remain open."
+        },
+        {
+          "id": "W06-CAPPED-LINK-DISCOVERY",
+          "description": "Scan-first resumable discovery and bounded local cleanup of currently owned visitor links beyond the inverse list cap, including remembered sessions; linkless orphans, transactional visibility, previous-account history and other destinations remain open."
+        },
+        {
+          "id": "W06-OLDER-SESSION-DISCOVERY",
+          "description": "Bounded durable local discovery/cleanup of older session records by actual owned userId plus frozen current identity witnesses; pointer-captured canonical SID recovery and legacy cursor compatibility. Invisible/concurrent/former-link ownership, epochs and other destinations remain open."
+        },
+        {
+          "id": "W06-FUTURE-D1-CAPTURE",
+          "description": "Disable both request-driven unscoped D1 writers except explicit open/development/default-tenant demo opt-in; no historical erasure or full W06 acceptance."
+        },
+        {
+          "id": "W06-TRUTHFUL-OPERATOR-RING-READS",
+          "description": "Truthful scoped operator history using existing point-in-time erasure projection; broader W06/N13 and customer/privacy obligations remain open."
+        }
+      ],
+      "coverage": [
+        {
+          "criterion_id": "W06-LOCAL-RETRY",
+          "task_id": "W06.01",
+          "task_criterion_id": "W06.01-C1"
+        },
+        {
+          "criterion_id": "W06-LOCAL-RETRY",
+          "task_id": "W06.01",
+          "task_criterion_id": "W06.01-C2"
+        },
+        {
+          "criterion_id": "W06-LOCAL-RETRY",
+          "task_id": "W06.01",
+          "task_criterion_id": "W06.01-C3"
+        },
+        {
+          "criterion_id": "W06-LEDGER-REPLAY",
+          "task_id": "W06.02",
+          "task_criterion_id": "W06.02-C1"
+        },
+        {
+          "criterion_id": "W06-LEDGER-REPLAY",
+          "task_id": "W06.02",
+          "task_criterion_id": "W06.02-C2"
+        },
+        {
+          "criterion_id": "W06-LEDGER-REPLAY",
+          "task_id": "W06.02",
+          "task_criterion_id": "W06.02-C3"
+        },
+        {
+          "criterion_id": "W06-PHYSICAL-PROGRESS",
+          "task_id": "W06.03",
+          "task_criterion_id": "W06.03-C1"
+        },
+        {
+          "criterion_id": "W06-PHYSICAL-PROGRESS",
+          "task_id": "W06.03",
+          "task_criterion_id": "W06.03-C2"
+        },
+        {
+          "criterion_id": "W06-PHYSICAL-PROGRESS",
+          "task_id": "W06.03",
+          "task_criterion_id": "W06.03-C3"
+        },
+        {
+          "criterion_id": "W06-KNOWN-CACHE",
+          "task_id": "W06.04",
+          "task_criterion_id": "W06.04-C1"
+        },
+        {
+          "criterion_id": "W06-KNOWN-CACHE",
+          "task_id": "W06.04",
+          "task_criterion_id": "W06.04-C2"
+        },
+        {
+          "criterion_id": "W06-KNOWN-CACHE",
+          "task_id": "W06.04",
+          "task_criterion_id": "W06.04-C3"
+        },
+        {
+          "criterion_id": "W06-RING-CUTOFF",
+          "task_id": "W06.06",
+          "task_criterion_id": "W06.06-C1"
+        },
+        {
+          "criterion_id": "W06-RING-CUTOFF",
+          "task_id": "W06.06",
+          "task_criterion_id": "W06.06-C2"
+        },
+        {
+          "criterion_id": "W06-RING-CUTOFF",
+          "task_id": "W06.06",
+          "task_criterion_id": "W06.06-C3"
+        },
+        {
+          "criterion_id": "W06-SEEN-CUTOFF",
+          "task_id": "W06.07",
+          "task_criterion_id": "W06.07-C1"
+        },
+        {
+          "criterion_id": "W06-SEEN-CUTOFF",
+          "task_id": "W06.07",
+          "task_criterion_id": "W06.07-C2"
+        },
+        {
+          "criterion_id": "W06-SEEN-CUTOFF",
+          "task_id": "W06.07",
+          "task_criterion_id": "W06.07-C3"
+        },
+        {
+          "criterion_id": "W06-CAPPED-LINK-DISCOVERY",
+          "task_id": "W06.08",
+          "task_criterion_id": "W06.08-C1"
+        },
+        {
+          "criterion_id": "W06-CAPPED-LINK-DISCOVERY",
+          "task_id": "W06.08",
+          "task_criterion_id": "W06.08-C2"
+        },
+        {
+          "criterion_id": "W06-CAPPED-LINK-DISCOVERY",
+          "task_id": "W06.08",
+          "task_criterion_id": "W06.08-C3"
+        },
+        {
+          "criterion_id": "W06-OLDER-SESSION-DISCOVERY",
+          "task_id": "W06.09",
+          "task_criterion_id": "W06.09-C1"
+        },
+        {
+          "criterion_id": "W06-OLDER-SESSION-DISCOVERY",
+          "task_id": "W06.09",
+          "task_criterion_id": "W06.09-C2"
+        },
+        {
+          "criterion_id": "W06-OLDER-SESSION-DISCOVERY",
+          "task_id": "W06.09",
+          "task_criterion_id": "W06.09-C3"
+        },
+        {
+          "criterion_id": "W06-FUTURE-D1-CAPTURE",
+          "task_id": "W06.10",
+          "task_criterion_id": "W06.10-C1"
+        },
+        {
+          "criterion_id": "W06-FUTURE-D1-CAPTURE",
+          "task_id": "W06.10",
+          "task_criterion_id": "W06.10-C2"
+        },
+        {
+          "criterion_id": "W06-FUTURE-D1-CAPTURE",
+          "task_id": "W06.10",
+          "task_criterion_id": "W06.10-C3"
+        },
+        {
+          "criterion_id": "W06-TRUTHFUL-OPERATOR-RING-READS",
+          "task_id": "W06.11",
+          "task_criterion_id": "W06.11-C1"
+        },
+        {
+          "criterion_id": "W06-TRUTHFUL-OPERATOR-RING-READS",
+          "task_id": "W06.11",
+          "task_criterion_id": "W06.11-C2"
+        },
+        {
+          "criterion_id": "W06-TRUTHFUL-OPERATOR-RING-READS",
+          "task_id": "W06.11",
+          "task_criterion_id": "W06.11-C3"
+        }
+      ],
+      "task_ids": [
+        "W06.01",
+        "W06.02",
+        "W06.03",
+        "W06.04",
+        "W06.05",
+        "W06.06",
+        "W06.07",
+        "W06.08",
+        "W06.09",
+        "W06.10",
+        "W06.11"
+      ],
+      "approval": null
+    },
+    "independent_review": {
+      "status": "not_requested"
+    },
+    "lead_signoff": {
+      "status": "pending"
+    }
+  }
+}

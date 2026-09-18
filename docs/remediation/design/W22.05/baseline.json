@@ -1,0 +1,1237 @@
+{
+  "task_id": "W22.05",
+  "at": "2026-09-15T13:24:58.390Z",
+  "entry_journal": 1790,
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\n\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){\n  process.argv=[process.execPath,file,command];\n  const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);\n  await import(entry.href);\n  write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;\n  if(process.exitCode!==0)break;\n}\n'",
+    "initial": {
+      "chunk_id": "c51b40",
+      "wall_time_seconds": 1.000930188,
+      "session_id": 62796,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "a952a5",
+        "wall_time_seconds": 5.000650998,
+        "session_id": 62796,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "a068ef",
+        "wall_time_seconds": 5.001229046,
+        "session_id": 62796,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "c6da92",
+        "wall_time_seconds": 0.000001897,
+        "exit_code": 0,
+        "original_token_count": 654,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=123, closed=1; evidence records=365\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.04 — Continue W30 late/mutable-event remediation by concrete processing scenario, not a universal event-age cutoff. Preserve accepted interrupted-work recovery. Read the existing recorded late-event scenario decision and actual ledger/hourly/online/lifecycle sources, identify the next coherent in-scope fix using retained input and the lifecycle/configuration actually present; do not invent an experiment lifecycle. Distinguish receiving a valid delayed event from repairing already-completed aggregates and updating current affinity; do not auto-clear changed pending state or invent extra personal retention. Root supplies concrete options for any D04/D06/W24 business/retention decision. Full dependent-hour/historical reconstruction, customer/SLO and release remain open; no external operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 25410\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=123, closed=1; evidence records=365\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W30.04 — Continue W30 late/mutable-event remediation by concrete processing scenario, not a universal event-age cutoff. Preserve accepted interrupted-work recovery. Read the existing recorded late-event scenario decision and actual ledger/hourly/online/lifecycle sources, identify the next coherent in-scope fix using retained input and the lifecycle/configuration actually present; do not invent an experiment lifecycle. Distinguish receiving a valid delayed event from repairing already-completed aggregates and updating current affinity; do not auto-clear changed pending state or invent extra personal retention. Root supplies concrete options for any D04/D06/W24 business/retention decision. Full dependent-hour/historical reconstruction, customer/SLO and release remain open; no external operations.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 25410\n"
+      }
+    ]
+  },
+  "lint_baseline": {
+    "initial": {
+      "chunk_id": "64840f",
+      "wall_time_seconds": 1.001358603,
+      "session_id": 26627,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "ef55ab",
+        "wall_time_seconds": 5.001890678,
+        "session_id": 26627,
+        "original_token_count": 0,
+        "output": ""
+      },
+      {
+        "chunk_id": "b03023",
+        "wall_time_seconds": 0.000002179,
+        "exit_code": 1,
+        "original_token_count": 2543,
+        "output": "\n/mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base/src/routes/realtime.sdkContract.test.ts\n   118:129  warning  Unexpected empty method 'passThroughOnException'  @typescript-eslint/no-empty-function\n  1552:30   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1553:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1554:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1557:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1560:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1571:40   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1599:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1618:95   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1624:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1625:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1662:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1674:173  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1682:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1683:76   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1713:22   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1714:24   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1715:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1723:36   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1731:93   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1744:55   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1745:57   warning  Unexpected empty arrow function                   @typescript-eslint/no-empty-function\n  1751:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1778:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1840:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1844:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1845:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1846:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1859:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1877:47   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  1923:21   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1927:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1930:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1933:17   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  1933:37   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2025:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2029:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2030:61   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2031:72   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2047:56   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2050:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2054:53   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2062:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2070:25   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2088:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2094:60   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2107:71   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2114:100  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2132:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2139:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2156:110  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2162:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2163:57   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2164:68   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2175:52   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2176:26   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2176:109  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2177:58   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2180:54   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2191:74   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2193:119  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2208:50   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2213:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2215:48   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2238:112  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2244:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2245:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2246:70   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2249:90   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2297:44   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2348:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2361:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2384:69   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2399:101  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2406:65   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2444:153  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2478:55   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2503:46   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2513:42   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2530:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2532:77   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2544:64   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2548:73   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2561:49   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2564:41   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2569:130  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2572:114  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2583:59   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2614:75   warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2615:71   warning  Unexpected empty method 'set'                     @typescript-eslint/no-empty-function\n  2632:125  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n  2635:122  warning  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any\n\n✖ 94 problems (0 errors, 94 warnings)\n\nESLint found too many warnings (maximum: 0).\n"
+      }
+    ]
+  },
+  "lint_warnings": [
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 118,
+      "column": 129,
+      "message": "Unexpected empty method 'passThroughOnException'",
+      "rule": "@typescript-eslint/no-empty-function",
+      "source": "return app.request(request, undefined, env, { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() {}, props: {} });"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1552,
+      "column": 30,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const preferencePath = (g: any) => `/realtime/session/${g.sessionId}/preferences`;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1553,
+      "column": 21,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const reads = (g: any) => [`/realtime/personalization/${g.subject}`, `/realtime/segments/${g.subject}`, '/realtime/reflex'];"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1554,
+      "column": 54,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const record = (f: ReturnType<typeof boundary>, g: any, host: string): any => host === 'session'"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1554,
+      "column": 74,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const record = (f: ReturnType<typeof boundary>, g: any, host: string): any => host === 'session'"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1557,
+      "column": 56,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const behavior = (f: ReturnType<typeof boundary>, g: any, host: string) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1560,
+      "column": 58,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const warm = async (f: ReturnType<typeof boundary>, g: any) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1571,
+      "column": 40,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "function neutral(path: string, body: any) {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1599,
+      "column": 72,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect(r.status).toBe(200); const body = await r.json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1618,
+      "column": 95,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else { const r = await f.call(reads(g)[0], g.capability); expect((await r.json() as any).config.segments).toContain('W0508_OWNED'); }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1624,
+      "column": 44,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect((await internal.json() as any).affinity.dims.line.Tabby).toBeGreaterThan(0);"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1625,
+      "column": 50,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "Object.defineProperty((item.shopper as any).affinity, 'reflex', { get() { throw new Error('private projection forbidden'); } });"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1662,
+      "column": 49,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else { expect((await positive.json() as any).config.featureFlags).toEqual({}); expect(record(f, cold, host)).toEqual({}); }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1674,
+      "column": 173,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "if (failure === 'read') { f.sessions.failRead = true; f.faults.read = true; if (host === 'do') (f.objects.get(shopperObjectName('meridian', g.subject))!.shopper as any).loaded = false; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1682,
+      "column": 93,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "if (failure === 'malformed') { item.data.set('consent', null); (item.shopper as any).consent = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1683,
+      "column": 76,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else { item.data.set('forwardTo', 'unowned'); (item.shopper as any).forwardTo = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1713,
+      "column": 22,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const metric = (g: any, consent?: unknown) => ({ userId: g.subject, eventKey: 'synthetic-purchase', userAttributes: { plan: 'synthetic' }, eventTags: { value: 7 }, ...(consent === undefined ? {} : { consent }) });"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1714,
+      "column": 24,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const decision = (g: any, consent?: unknown) => ({ userId: g.subject, experiments: ['experiment', '__proto__', 'constructor'], features: ['feature', '__proto__', 'constructor'], ...(consent === undefined ? {} : { consent }) });"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1715,
+      "column": 58,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const warm = async (f: ReturnType<typeof boundary>, g: any) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1723,
+      "column": 17,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const sent: any[] = [], calls: any[] = [];"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1723,
+      "column": 36,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const sent: any[] = [], calls: any[] = [];"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1731,
+      "column": 93,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const creation = vi.spyOn(optimizelySdk, 'createInstance').mockImplementation((options: any) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1744,
+      "column": 55,
+      "message": "Unexpected empty arrow function",
+      "rule": "@typescript-eslint/no-empty-function",
+      "source": "vi.spyOn(console, 'log').mockImplementation(() => {});"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1745,
+      "column": 57,
+      "message": "Unexpected empty arrow function",
+      "rule": "@typescript-eslint/no-empty-function",
+      "source": "vi.spyOn(console, 'error').mockImplementation(() => {});"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1751,
+      "column": 26,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const neutral = (body: any, tracking: boolean, personalization: boolean) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1778,
+      "column": 70,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect(d.status).toBe(200); const body = await d.json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1840,
+      "column": 114,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "if (failure === 'read') { f.sessions.failRead = true; f.faults.read = true; if (item) (item.shopper as any).consent = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1844,
+      "column": 59,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else if (failure === 'owner') (item!.shopper as any).affinity.shopperId = 'victim';"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1845,
+      "column": 61,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else if (failure === 'forward') (item!.shopper as any).forwardTo = 'other-object';"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1846,
+      "column": 72,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else { item!.data.set('consent', failure); (item!.shopper as any).consent = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1859,
+      "column": 75,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const f = boundary(selected), requests: Array<{ path: string; body: any }> = [], reads: string[] = [];"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1877,
+      "column": 47,
+      "message": "Unexpected empty method 'set'",
+      "rule": "@typescript-eslint/no-empty-function",
+      "source": "cookie: { get: () => null, set: () => {} },"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1923,
+      "column": 21,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const event = (g: any, id = '00000000-0000-4000-8000-000000000001') => ({ eventId: id, eventType: 'track', event: 'synthetic-purchase', source: 'synthetic', timestamp: 1,"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1927,
+      "column": 58,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const warm = async (f: ReturnType<typeof boundary>, g: any) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1930,
+      "column": 53,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const state = (f: ReturnType<typeof boundary>, g: any, host: string) => host === 'session'"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1933,
+      "column": 17,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const sent: any[] = [], queued: any[] = [];"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 1933,
+      "column": 37,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const sent: any[] = [], queued: any[] = [];"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2025,
+      "column": 114,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "if (failure === 'read') { f.sessions.failRead = true; f.faults.read = true; if (item) (item.shopper as any).consent = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2029,
+      "column": 59,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else if (failure === 'owner') (item!.shopper as any).affinity.shopperId = 'victim';"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2030,
+      "column": 61,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else if (failure === 'forward') (item!.shopper as any).forwardTo = 'other-object';"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2031,
+      "column": 72,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else { item!.data.set('consent', failure); (item!.shopper as any).consent = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2047,
+      "column": 56,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const snapshot = (f: ReturnType<typeof boundary>, g: any, query = '', cookie?: string) => f.call("
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2050,
+      "column": 58,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const warm = async (f: ReturnType<typeof boundary>, g: any) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2054,
+      "column": 53,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const state = (f: ReturnType<typeof boundary>, g: any, host: string) => host === 'session'"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2062,
+      "column": 69,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const sent: Record<'ring' | 'exposure' | 'analytics' | 'queue', any[]> = { ring: [], exposure: [], analytics: [], queue: [] };"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2070,
+      "column": 25,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "function neutral(out: any, tracking: boolean) {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2088,
+      "column": 48,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const out = await response.json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2094,
+      "column": 60,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect(out.records[0].explain.drivers.some((v: any) => v.dim === 'line' && v.value === 'Tabby')).toBe(true);"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2107,
+      "column": 71,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "clear(); const holdout = await (await snapshot(f, g)).json() as any; await f.drain();"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2114,
+      "column": 100,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "Object.defineProperty((f.objects.get(shopperObjectName('meridian', g.subject))!.shopper as any).affinity, 'reflex', { get() { throw new Error('private computation forbidden'); } });"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2132,
+      "column": 54,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect((await (await snapshot(f, g)).json() as any).records[0].item_id).toBe('b'); await f.drain();"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2139,
+      "column": 90,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const out = await (await snapshot(cold, grant, '&trackingConsent=true')).json() as any; await cold.drain();"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2156,
+      "column": 110,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "if (failure === 'read') { f.sessions.failRead = true; f.faults.read = true; if (item) (item.shopper as any).consent = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2162,
+      "column": 57,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "} else if (failure === 'owner') (item!.shopper as any).affinity.shopperId = 'not-owner';"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2163,
+      "column": 57,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else if (failure === 'forward') (item!.shopper as any).forwardTo = 'other-object';"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2164,
+      "column": 68,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else { item!.data.set('consent', failure); (item!.shopper as any).consent = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2175,
+      "column": 52,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const sort = (f: ReturnType<typeof boundary>, g: any, extra: Record<string, unknown> = {}, cookie?: string) => f.call('/sort', g.capability, { userId: g.subject, sessionId: g.sessionId, candidates: feed, ...extra }, 'meridian', cookie);"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2176,
+      "column": 26,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const neutral = (body: any) => { expect(body.order).toEqual(['A', 'B', 'C']); expect(body.items.every((v: any) => v.score === 0 && v.drivers.length === 0)).toBe(true); };"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2176,
+      "column": 109,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const neutral = (body: any) => { expect(body.order).toEqual(['A', 'B', 'C']); expect(body.items.every((v: any) => v.score === 0 && v.drivers.length === 0)).toBe(true); };"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2177,
+      "column": 58,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const warm = async (f: ReturnType<typeof boundary>, g: any) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2180,
+      "column": 54,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const stored = (f: ReturnType<typeof boundary>, g: any, host: string) => host === 'session'"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2191,
+      "column": 74,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect(res.status).toBe(200); const body = await res.json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2193,
+      "column": 119,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else { expect(body.order).toEqual(affinity ? ['B', 'A', 'C'] : ['A', 'B', 'C']); expect(body.items.find((v: any) => v.id === 'B').drivers.length).toBeGreaterThan(0); }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2208,
+      "column": 50,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect((await (await sort(f, g)).json() as any).order).toEqual(['B', 'A', 'C']);"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2213,
+      "column": 42,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect((await ordinary.json() as any).affinity).toBeNull();"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2215,
+      "column": 48,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "Object.defineProperty((item.shopper as any).affinity, 'reflex', { get() { throw new Error('private reflex must not be computed'); } });"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2238,
+      "column": 112,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "if (failure === 'read') { x.sessions.failRead = true; x.faults.read = true; if (item) (item.shopper as any).consent = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2244,
+      "column": 59,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "} else if (failure === 'owner') (item!.shopper as any).affinity.shopperId = 'not-owner';"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2245,
+      "column": 59,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else if (failure === 'forward') (item!.shopper as any).forwardTo = 'other-object';"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2246,
+      "column": 70,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "else { item!.data.set('consent', failure); (item!.shopper as any).consent = undefined; }"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2249,
+      "column": 90,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect(res.status).toBeGreaterThanOrEqual(400); const body = await res.json() as any; expect(body).not.toHaveProperty('items');"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2297,
+      "column": 44,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const body = await res.json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2348,
+      "column": 75,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect(result.status).toBe(200); expect((await result.json() as any).consent.tracking).toBe(true);"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2361,
+      "column": 46,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect((await response.json() as any).consent.tracking).toBe(tracking); await f.drain();"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2384,
+      "column": 69,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect(res.status).toBe(200); expect((await res.json() as any).consent.tracking).toBe(false);"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2399,
+      "column": 101,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "if (host === 'do') (f.objects.get(shopperObjectName('meridian', g.subject))!.shopper as any).consent = undefined;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2406,
+      "column": 65,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "item.data.set('consent', failure); (item.shopper as any).consent = undefined;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2444,
+      "column": 153,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const boot = await (await f.call('/v1/meridian/identity/session', undefined, { visitorId: victim.subject, sessionId: victim.sessionId })).json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2478,
+      "column": 55,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const analyticsBody = await analytics.json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2503,
+      "column": 46,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const person = (await linked.json() as any).session;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2513,
+      "column": 42,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const data = await res.json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2530,
+      "column": 73,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect(response.status).toBe(200); return (await response.json() as any).session;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2532,
+      "column": 77,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const assertEmpty = (f: ReturnType<typeof boundary>, host: string, grant: any, consent: { tracking: boolean; personalization: boolean }) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2544,
+      "column": 64,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const signIn = async (f: ReturnType<typeof boundary>, grant: any, accountId: string) => {"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2548,
+      "column": 73,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect(response.status).toBe(200); return (await response.json() as any).session;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2561,
+      "column": 49,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const fresh = (await response.json() as any).session;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2564,
+      "column": 41,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "expect((await resumed.json() as any).session.consent).toEqual(consent);"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2569,
+      "column": 130,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const analytics = await (await f.call(`/realtime/session/${linked.sessionId}/analytics`, linked.capability)).json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2572,
+      "column": 114,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const enabled = await (await f.call('/v1/meridian/identity/session', linked.capability, {})).json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2583,
+      "column": 59,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const cookieFresh = (await cookieDetached.json() as any).session;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2614,
+      "column": 75,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const f = boundary(selected), requests: Array<{ path: string; body: any }> = []; let failDetach = false;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2615,
+      "column": 71,
+      "message": "Unexpected empty method 'set'",
+      "rule": "@typescript-eslint/no-empty-function",
+      "source": "const host = memoryHost({ cookie: { get: () => null, set: () => {} }, location: { protocol: 'https:', host: 'owned.invalid', hostname: 'owned.invalid', href: 'https://owned.invalid/', search: '' },"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2632,
+      "column": 125,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const recovered = await (await f.call('/v1/meridian/identity/session', core.headers()[SHOPPER_HEADER], {})).json() as any;"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "line": 2635,
+      "column": 122,
+      "message": "Unexpected any. Specify a different type",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "source": "const linked = await (await f.call('/v1/meridian/identity/session', core.headers()[SHOPPER_HEADER], {})).json() as any;"
+    }
+  ],
+  "source_case": "Root dfba06/e5ac5a/cce9a5 confirms required EventSchema timestamp overwritten by both tracking endpoints; real dispatcher forwards nested occurrence value and separately timestamps its envelope. Existing validator enforces representation, not age. No failed runtime baseline claimed.",
+  "reads": [
+    "84356f",
+    "137686",
+    "8b8a9b",
+    "48f71d",
+    "ac2ded",
+    "028eef",
+    "84075e",
+    "dfba06",
+    "e5ac5a",
+    "cce9a5",
+    "8944e9",
+    "55e7ee",
+    "9edb0c"
+  ],
+  "owned_before": [
+    {
+      "path": "src/routes/tracking.ts",
+      "sha256": "39444f23d98951a63f7f59610b81372e04ddd3629c74f00cfbbafa1ca052af45",
+      "gzip_base64": "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"
+    },
+    {
+      "path": "src/routes/realtime.sdkContract.test.ts",
+      "sha256": "aa63295913a03571db0c76f5c9e812f79f959fee840b21988038a614e916f21d",
+      "gzip_base64": "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"
+    },
+    {
+      "path": "docs/api/01-rest-endpoints.md",
+      "sha256": "7c743981716415a810870888626ae7554a4fbd6b2ea1e70e1fbc4c188225319b",
+      "gzip_base64": "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"
+    }
+  ],
+  "protected": [
+    {
+      "path": "src/events/actionTypes.ts",
+      "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+      "role": "source"
+    },
+    {
+      "path": "src/types/events.ts",
+      "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb",
+      "role": "source"
+    },
+    {
+      "path": "src/types/env.ts",
+      "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+      "role": "source"
+    },
+    {
+      "path": "src/services/EventDispatcher.ts",
+      "sha256": "8205adb855e120afe83bb33944114483428a3289401efe8ac89bebb7c8094b1a",
+      "role": "source"
+    },
+    {
+      "path": "src/services/SessionManager.ts",
+      "sha256": "5c87e159b7ca41da139ccef931fbec82cd2013f22f35bb46d0fcec2ffa8823db",
+      "role": "source"
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db",
+      "role": "source"
+    },
+    {
+      "path": "src/identity/sessionCapability.ts",
+      "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49",
+      "role": "source"
+    },
+    {
+      "path": "src/identity/consentContinuity.ts",
+      "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af",
+      "role": "source"
+    },
+    {
+      "path": "src/content/consent.ts",
+      "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930",
+      "role": "source"
+    },
+    {
+      "path": "src/tenancy/middleware.ts",
+      "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8",
+      "role": "source"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+      "role": "source"
+    },
+    {
+      "path": "src/tenancy/objects.ts",
+      "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67",
+      "role": "source"
+    },
+    {
+      "path": "src/middleware/error.ts",
+      "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b",
+      "role": "source"
+    },
+    {
+      "path": "src/auth/signingConfig.mjs",
+      "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+      "role": "source"
+    },
+    {
+      "path": "src/utils/context.ts",
+      "sha256": "64969bfb7d22959c072ac2a3425861f20658a502b3590c7205b050cb96231475",
+      "role": "source"
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b",
+      "role": "source"
+    },
+    {
+      "path": "src/routes/identity.ts",
+      "sha256": "ba760b40f7939cf96f2d8ca485b3b469f34a60260745f22857e40dccafe2be9c",
+      "role": "source"
+    },
+    {
+      "path": "src/telemetry.boundary.test.ts",
+      "sha256": "287b65e4535b287d904bcdf6c08f8f687828438a74953b454b2250d414131dba",
+      "role": "source"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "b161958178f76cf997210fd4c4c139671cc26b1fe87a947f6103199c8834eabf",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/hourly.ts",
+      "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc",
+      "role": "source"
+    },
+    {
+      "path": "src/ledger/erasure.ts",
+      "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+      "role": "source"
+    },
+    {
+      "path": "package.json",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+      "role": "source"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+      "role": "source"
+    },
+    {
+      "path": ".eslintrc.json",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+      "role": "source"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+      "role": "source"
+    },
+    {
+      "path": "vitest.config.ts",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+      "role": "source"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/22-outcome-learning-design.md",
+      "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+      "role": "source"
+    }
+  ],
+  "accepted_dependencies": [
+    {
+      "task_id": "W30.04",
+      "artifact_digest": "06ebd99f0713be56d6a44856b866baba5defc76ac1eb7346a8ea6e10603e3c43",
+      "files": [
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/hourly.test.ts",
+          "sha256": "274cba6686958c77ef609d0a9444ff8d1c20d45e90f34edadb60c00947c906e7",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/report.test.ts",
+          "sha256": "f69b3c6787e30c8a3b78ca5a34da21aa5d2e7a3eb334a915d1f1c8e381da593c",
+          "role": "output"
+        },
+        {
+          "path": "docs/kit/02-api-reference.md",
+          "sha256": "35c9e52b0515ab177b2dd2d0581f5aeb63786873d66eb6d3b42655ebe7f16248",
+          "role": "output"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "da430a5a8ed02dca4a9e5db3b925f2e3dbe341265defd465d2e2e71eccac4027",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/policy.ts",
+          "sha256": "2820d3a2d8bdb13469688ddf8b064a0b59bbcc29a3234747c5b1d4a467157e98",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/stats.ts",
+          "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/rows.ts",
+          "sha256": "5c19962711e953860134d0a9918e1df5d2afa1e97758eab68278bbb4109c3060",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/route.ts",
+          "sha256": "3566d3698ed123c0d14035146371b73920a3e3616f7b3f88f72e47dac071cbad",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/receipts.ts",
+          "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c",
+          "role": "source"
+        },
+        {
+          "path": "src/measure/window.ts",
+          "sha256": "3aae86085cb5a461a10c8925732e86e0a6507d9065af9c66e376349247282b70",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/consume.ts",
+          "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/enqueue.ts",
+          "sha256": "7874967b3c197812b16aad956f71bf1e93881984ef7ea84f7bba5dcb21b4b156",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/productSort.ts",
+          "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322",
+          "role": "source"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+          "role": "source"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da",
+          "role": "source"
+        },
+        {
+          "path": "src/config/versionedStore.ts",
+          "sha256": "79ab0558374506abb89f1af998faa46f4d9984224f0cf2015cd68a2b0953ee9f",
+          "role": "source"
+        },
+        {
+          "path": "src/config/publication.ts",
+          "sha256": "f27ad8317ed830b1500eb1fcdcd7178b6dad36daf22c4b5024ab11f42ae7241f",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/store.ts",
+          "sha256": "a5dda24c06e5a773de3262702faadcd4b614e3cd0f85edc11f9e2902eafe742a",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "sha256": "67e9511393c4aa6f6d45bbb575631b6b00d5a23df3812912915c278666af2ae5",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "src/index.ts",
+          "sha256": "b161958178f76cf997210fd4c4c139671cc26b1fe87a947f6103199c8834eabf",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.04/worker.json",
+          "sha256": "9a30ad34d00e5594bbf09e80d07841e4fbca94f19045f0724a3c779db666f71f",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W30.04/plan.md",
+          "sha256": "9fa2b02642cc99a274e702ed2a0c379769f0ebe16b95d585e753f0364227bbd3",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W30.04/baseline.json",
+          "sha256": "bdace88b4c66c34474b53c02af9d93503d9fc0919acb4ed9709abb40e919dfa2",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.04/admission.json",
+          "sha256": "05b222b9829afc034d54cf2528087babda5a387a75be0ceda58a05e639b4e003",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.04/source-freeze.json",
+          "sha256": "c1df4bdba527e91037c9bd22ebca9bb8c854407a0af810d7cbe205f5f45fd41e",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.04/source-deltas.json",
+          "sha256": "14a3283cc02d17c55d0e5790df8dabe87584d782b62d2c72e103b18ec3c16a17",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W30.04/design-clarification.json",
+          "sha256": "084ca03689b938fe486764c4567ed032653e35dbd47c38e3e7263e62ab5d852a",
+          "role": "configuration"
+        }
+      ],
+      "review": {
+        "path": "docs/remediation/evidence/W30.04/review.json",
+        "sha256": "815315b2d3cf17d56c4146b910c9b7aa0295e736bf0a2ff4cecbfa194a07ba44"
+      },
+      "all_pins_unchanged": true
+    }
+  ],
+  "hourly_boundary": "Root/independent investigator confirmed completed-hour input basis not retained, carry-in eviction and erased raw inputs versus preserved aggregate counters prevent safe blind historical refold. This is not a global age-policy blocker. Do not alter W30.04 or claim generic tracking is the hourly ledger.",
+  "worktree": "Inherited dirty/untracked/deleted files and four unrelatedPNG images retained; no implementation source edits before admission."
+}

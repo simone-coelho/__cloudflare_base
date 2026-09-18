@@ -394,24 +394,24 @@ painted and a product decision joined; the engine does not yet score on it.
 
 ## 7 · Exploration
 
-Without exploration a new asset never accumulates evidence and can never win. With too much, the
-merchandiser's curated ranking is diluted. Both the share and the mechanism are per-slot configuration.
+Exploration is off in the shipped default. An eligible new asset can still win the ordinary ranking;
+neither enabling exploration nor setting a floor guarantees it will accumulate evidence. The supported
+mechanisms and their configured share are per-slot settings, not an evaluated exposure-rate guarantee.
 
 | Setting | Values | Default |
 |---|---|---|
-| `mode` | `rotation`, `thompson`, `epsilon`, `off` | `rotation` |
-| `share` | Fraction of decisions in this slot reserved for exploration | 0.10 |
-| `floor` | Observations below which an item is considered under-observed | 50 |
-| `cooldown` | Minimum time between exploration picks of the same item for one visitor | Session |
+| `mode` | `rotation`, `epsilon`, `off`; Thompson is withdrawn | `off` |
+| `share` | Configured share used by the selected supported rule | No active share; UI initializes 0.10 when explicitly enabled |
+| `floor` | Observations below which rotation considers an item under-observed | UI initializes 50 when explicitly enabled |
+| `cooldown` | Not implemented or offered as a guarantee | None |
 
 **Rotation** is deterministic: a share of the slot's decisions serves the eligible item with the fewest
 observations. Which decisions fall in that share is a hash of the visitor, the slot and the hour, the same
-way the holdout assigns arms, so the configured share is realized with no shared counter, which would be
+way the holdout assigns arms, without a shared counter, which would be
 a single writer on the decision path (built 2026-09-03; an earlier draft said "every k-th decision"). The
-receipt shows the bucket and the observation count that made the pick. It is the default because it is
-the easiest to explain. **Thompson** samples each item's rate from its posterior and ranks by the sample;
-it explores more intelligently and its explain record shows the sampled value alongside the mean, so it
-is still readable; the sample is seeded from the decision's own coordinates, so a replay reproduces it.
+receipt shows the bucket and the observation count that made the pick. **Thompson is unsupported**:
+new writes reject it and live decisions ignore retained Thompson dials. Its old seeded sampler remains
+only for explicitly identified historical replay, not as an evaluated statistical or reward policy.
 **Epsilon** is uniform random at the configured share, from the same bucket.
 
 Every exploration pick is flagged in the decision record. Exploration outcomes feed learning like any
@@ -523,6 +523,8 @@ reads; the console shows the sentence under the arm table.
 
 ## 11 · Autonomy per slot
 
+Current implementation status (W29 remediation): cycle generation and all proposal apply/reject mutations are withdrawn at runtime, including cron and both consoles. Stored modes remain dormant; authenticated history is read-only, unverified and not guaranteed complete. The design and customer commitment below remain open delivery requirements, not currently enabled capabilities or permission to launch assisted/autonomous mode.
+
 The scope appendix commits to per-slot weight mixing that can adjust itself from outcomes, logged,
 reversible, and pinnable. Here is what that means precisely.
 
@@ -583,6 +585,8 @@ Every field below is present on every decision. Example, for the worked case in 
 A person can read this. A script can recompute it.
 
 ### 12.2 The learning console
+
+Current availability: autonomy mode/bounds editing and proposal actions described below are withdrawn under W29. Historical settings and records are retained; unrelated manual tuning, learning and item controls are not disabled by that withdrawal.
 
 Per tenant, brand and slot:
 
@@ -791,8 +795,8 @@ recovered.
    marketing team may prefer click for awareness slots and purchase for late-journey slots.
 2. **Affinity cell definition.** Leading interest above its entry threshold is the proposed cut. A team may
    prefer the top two, or a coarser grouping.
-3. **Exploration default.** Rotation is proposed for legibility; a data science team may prefer Thompson
-   from the start.
+3. **Exploration policy.** The shipped default is off. Enabling an evaluated policy is a separate decision;
+   the withdrawn Thompson implementation is not an available alternative.
 4. **Whether `no_learning` is a standing arm or a periodic study.** Standing gives a continuous number and
    costs a small slice of traffic.
 

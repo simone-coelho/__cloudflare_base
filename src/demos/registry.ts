@@ -20,7 +20,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DEFAULT_REFLEX_CONFIG, type ReflexConfig } from '@/reflex/core';
-import { readReflexConfigRevision } from '@/reflex/configStore';
+import { readReflexConfigRevision, reflexScopeForTenant, compiledDefaultFor } from '@/reflex/configStore';
+import type { PublicationPin } from '@/config/publication';
+import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import type { Env } from '@/types/env';
 import { CatalogService, type Product } from '@/services/CatalogService';
 
@@ -86,6 +88,11 @@ export function audgenMarkerFor(surface: DemoSurface): string {
 /** Audience-key namespace for this surface ('' for coach — keys are unchanged). */
 export function audienceKeyPrefixFor(surface: DemoSurface): string {
   return AUDIENCE_KEY_PREFIXES[surface] ?? AUDIENCE_KEY_PREFIXES[DEFAULT_SURFACE];
+}
+
+/** Customer namespaces already live in their tenant store; demo hints cannot rename their keys. */
+export function tenantAudienceKeyPrefix(tenant: TenantId, surface: DemoSurface): string {
+  return tenant === DEFAULT_TENANT ? audienceKeyPrefixFor(surface) : '';
 }
 
 // ── Late-bound brighthour modules ────────────────────────────────────────────
@@ -155,6 +162,22 @@ export async function resolveReflexConfigRevision(
   return { config: await reflexConfigFor(surface), revision: 0 };
 }
 
+/** Production config authority is the tenant. Demo hints apply only to Coach. */
+export async function resolveTenantReflexConfigRevision(
+  env: Env, tenant: TenantId, surface: DemoSurface = DEFAULT_SURFACE, nowMs = Date.now(), pin?: PublicationPin,
+): Promise<ResolvedReflexConfig> {
+  const scope = reflexScopeForTenant(tenant, surface);
+  const stored = await readReflexConfigRevision(env, scope, nowMs, pin);
+  if (stored) return { config: stored.config, revision: stored.revision };
+  return { config: await compiledDefaultFor(scope), revision: 0 };
+}
+
+export async function resolveTenantReflexConfig(
+  env: Env, tenant: TenantId, surface: DemoSurface = DEFAULT_SURFACE,
+): Promise<ReflexConfig> {
+  return (await resolveTenantReflexConfigRevision(env, tenant, surface)).config;
+}
+
 /**
  * Reflex-scorable products for a surface. `nowMs` is only consulted by surfaces
  * whose catalog is time-materialized (brighthour's offer windows); coach ignores it.
@@ -191,4 +214,12 @@ export async function catalogServiceFor(surface: DemoSurface, nowMs?: number): P
   const svc = new CatalogService(products);
   _catalogServices.set(surface, { epochMs, svc });
   return svc;
+}
+
+/** Demo product catalogs belong only to the default tenant, regardless of surface hints. */
+export async function resolveTenantCatalog(
+  tenant: TenantId, surface: DemoSurface = DEFAULT_SURFACE,
+): Promise<CatalogService | null> {
+  if (tenant !== DEFAULT_TENANT) return null;
+  return catalogServiceFor(surface);
 }

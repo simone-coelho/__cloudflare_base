@@ -1,0 +1,592 @@
+{
+  "task_id": "W23.02",
+  "at": "2026-09-15T17:11:51.343Z",
+  "plan": {
+    "path": "docs/remediation/design/W23.02/plan.md",
+    "sha256": "7701d5e67cadd7efb2cbe396ae395d3bdb3ebe470efefb51c08a72b5add1af07"
+  },
+  "source_case": "Source-confirmed counter rewind: reversed unit frames one tau apart produce 2/e instead of 1+1/e; no new failed runtime baseline claimed. Internal server-stamped async ordering, not browser-clock policy. Missing/coerced/zero regional timestamps can manufacture receipt time.",
+  "owned_before": [
+    {
+      "path": "src/reflex/regionTrend.ts",
+      "sha256": "e32bf1887ad7c9d7eb4a5fbdf6a78639f76a5927fefc9b88a327875385434f16",
+      "gzip_base64": "H4sIAAAAAAAAA+VaX2/cOJJ/96eoLAZpKVGr7dnDAqdO2+dNnIw3iR3YnrlbGIZNS+xurtWkQFLd7uk0sE+LvdfBfoP5DId9mLfd93yI+SSHIilKrZYTY2/u7mGDIGlRVLFYrPrVPw4GoGQ6kHSc0/uBpBMm+IWkPIu12hkM4Oe//PGf4S9u9ezozfHpyeE7uDg7Onl1fPIGfv7jXyBjM8oVExz2QIxBTymglJSWy8g8CU7hPeEZpQVwMqMZECM5Lnif04nQjNzmNIFfpYJryjUQnkEhRVamWoFGWTM+ASEhZ3c0A8ZBT4kGexa/ipAWGY8ZZ3rZzySbUx4BFxrYuK+nlPdprmgM72g2oRL2/rWnIBWzGdOaZpBRxSY8AnpP01IjI/HOYIAkP4iizInGjZHJRNIJ0VSB4PkyhqM5lUtQqZA0AzpHpseEKyBws8rYLII5yUu6vgEtynSK1BjXwkhDTUVRUNlTTpwgbv9AUx3BYsrSKdxRWigIziLQIRRUWkoguP2YzChSy8n3y35GU7IExudEMsK1mVBQqQQnOcxpqoWEUlEVwYLpKRDIBUcJTIVk3wsew8XUELMMQFHe5kxNKe6CCzkjOfueZqA4KdRUaNAC3n43NKtkNGXmxAuipyApyZQ5EqRWz59KUU5w3YLKPlMiJ5pCStIpNSd8m1OeKWAaCC754ez49Cxxssc/n36CEby9NtNgAEH18zl8+hHIdbXTEOwfTheVbOHTTz//55/3IqB8QiY0w+c//bBbEf77j5fZ1eX8CkYQ7MHPf/4BPv0U/u2vNUn3+jl8+ulvf1VTIum11TX7wvF40SFupoDTOZWwkKheHLSI4bwgUlGnrgqkyHMoi8QNwM9/+gHJpaLkWi7xETVKLgWnEaDSZXj6BGaMs1k5c+pmpkegBBAYM6k0FIRxjcZBkJwjvqAwJXMKt0TSfAmKUg5KszwHUVCuKs2QlORQSCYkSKKnVOJx4qK3OeF38T8Tzu2wWSGkBr0sKKzgiM9hDWMpZtD7twEOqgHl896wmrcCpr4jOcsuKCdcH2fN6TiULu3/uvkNHY9pqtmcniOGRHa1M+NjjrhFThy5QPjwBOMBTu4Nd3bovaGTCq60w5Hri8Nvr9+fwwi+/hd4Br/Zrf7Z293dHXZ+8f7wP66/O3z37dH59Yejs+tXx+9hBL/+unvy0Yfz43enJzCCPdr/dWuOcQjXLw9ffnN0fXHxzvLxm93r7aXfvDv97eG7a4d9I+g96w1Rvb5hSgvJUtRDD7wKZuyeZmDlZ1AjozOBwFtQg19LkHRGGIeSG6ilmaGGKI2IELlP+7ei5BmMJZlRVS1AQU+ZggnlVJrl4s6Nvzk6OTo7vLDsPiCc84vDi6Prt0e/xx0Zj5XMv24cFOOayjFJKbyh4h27Q81yBn+QgNISHdxH4GWeD53pvhQZbb+D9c7O4NkzuPn2vH/y+5sIf9xE6BnxrRGIxxGSo99lCK1zVM8IUoE4JB39GJ4NKvbGJU+No7Ov3tLl6TiYUJF4dt36H6HkGR0zTrOwzdtqB5xQUkTWCRUHccXMwQH0emGsJZsFYazFtwjTL4miQTjcAWBjCJ6kIUiqS8mtGDw16anVgvkSQUdIwgHcfLVK1/2vVnJ9Awmkw5315gk6Fk/HuIxdodpZvcXRfiU1VeRMB71+L7zcvUI27HhLLYwKvKVLpGk1sCIVQWsNpH1TqUzy1cpOXydfrezE9U2LtnXXJ2RGfyHqW1owIzqdUmWi3HM0tcAEIQmU/I6LBa+s6sFVE7gVIqeEG6Uwp2vDmI8fDa6JsQtrnoxG0LMb6vnjH5Nc0fr8jbHDyH1BFKwaJnvgmRo6ppojlq16BNYN5bAgUpOC0WjUYfNPn7YB3sk83MFg4ulTePLEOdunTx1Rh1dI0P30r9xUfFVpjjPqf8eY1sTLNh5DPKQqAUkWQNK0nCFmCalMVFgH3UYsTWOusebMLHCuEerwIOq9JtUxbO0XBbR5ulZkzfPFkYzNVAJnNBUye1Gpwdaj92f7+/iRCV1UAryc3VKJI2WRYYRzqOvBpjiY8mFpZiVhgl6awRkEY4xWRJ6XhQqNb8BghvF+LRsTuyk70wSPqJzdsrLKXsWuv7S0cjqneQI9+6YHH6HncMf8nuTiluS9R4sIYE6lMmvUQ/JLx2Gn2pMwknn8B+sOT2Yk9ho9KqxsnoPaaiKWy6shLDxvUO8H1uZs0U9NhdIKUiLRVzkjtynQrFTaYpAxB5LqkuSQllJSrvsNg7WG0n2ex3xClbbs0XttUo0Njh91vO3DbR1t5Y9foVLaXNNbKo26ErKeqhO2qMrq6oCn0ymTosiXhvdAoS0nTcOObFCTNDYXgSblewWjzcgwTLYAwQLsAkZwYo4nZuo1ptE0METjRQgH4H5CAruVr17AixHsIpo/sW/d8cc55RM99Uhu2K2RHDEDRnY0xgd8hbYZOK+J9YMNgqFh07kQjd+YRXVsUC9Euprx0qxRrXJbpndUo2/EJS7NV+ipR7Bah82JhaRzGLn5l47mVXMGchuYaQetiN2MRhWzyok8RCGF8BwWlkqLNIxgBTg38R9ajwQwGMBLUkDGlGY81RbVW1CfAJ2z1PqIBSV3VOnI46EWwMUibjB/R5fI/6k1EnwKLD9OCChTHHWHBvsPpwXVMSCQ6WptGJklLnevnkSQC9SiY26rMEM3u3G2d3i2OD80oS8OoVNvSdUJ7A5JtmU7NBxTeIGLIRW7Jh02GRrCGtZu9YzmVNPqENwkd744Z13HAiuI41hZe0KtiTwOW2W1T/Ac9qImHr8nehrPyL21y9i/qZkP8YCbKGFcl6/rRFDIkmNFTMOn/4qMFzPH2+nJIMgpySgGxHthJ1RUxZfTcSdUcOFROWq7kAdQI6p814aDvOyZ0R6qdOXUwqTDiboQfutzaT5drVsIcGmKZ/bErlBjnPZSriWjKqihI6x00gXFpd7yZs59+XU2V3LyR8rLrqWcrdSq/6DSUpuwc7Hwquo+sQq7P2rl0CGye+kxwWiRxAQ1oC5fD2Hg8vZKWS2xpjGLUoc14F4alBsh5WFbt5uuzkqwHmnG8vjGPjUjehy1T04Xuo1jwzC27MEpWwQyqmIPG5ydjgNZGcmWNvsZXfrT1rfLnpnfu2oonlvqgXkPKqBF3y6tkC29m5H76gQRB3YjBBL3jaVicycVNlAXP0IH2vZfhq/qIB0RrPwcucVbvDjC8YwUQXA5j+D+yuR7+LOhU8E9DJDPsKVbV5alhqaY9T1cnZczE3GfAUmlUMqDizKRDRYL+r5OnADxlQdTrGJaVRXPyNcz7SuCpYqu4oOJ5atjUkFBJCrZ5uFdfSn5/AJgbYDgPwxZ6AadTxjBbkP18bGlUgWqkdnLRjSznWQX1dYiKJzFhW0VqRzRCApnd8ONxb0mNmyvqA0x3MbBLyh8EcstDBSlCa8c5mxEVi2MRZ3sIFqZhMXBFgYGgRs9OLDB1JbmPuDCmzC3FcrXsu3EssYRNj0jQvrnEMvXxeE14X3GIdCN1CbPTYVxiD0O2xbAnshCGTfv+gSEoV48oiy9leG8JvyYH/OixHpyO0/5QvFu+PmErWEiVYrzmklq8zTf8uqpigq4yoUrblR52SHMmFKYJ90yk3tHfoaEBWWTqbYFSi76oujEhDFu8qxuugaUzxP4wNK7F0d8HkGvClawAN3bj4ChQJKGcMIEPkgxY4q+mAuW7Tdt3NViNsqehkA8oaKuTFI+j5vrmBykXRSy37nSkJnhyH/8aJmK66zJzd1ImkxJaNenTo7nWFIl8rkra1q2XcLXzHBHj1X/BJp81sbg1WGDtQiVwjEfmTTePnCxsIkLwn3THSpd3mKA1BJYPKE62Bpk2WspZljIDOqaZtDFX1h5T59XlrfxmOp0GvSmWhcqGbjOfN/UOgfMyKYXeeCaUT0VWQK9D6fnF70IpiaQVgmsoPfStp37F8uC9hLoYb7NUiPJwR8UlmvWEdyKbJnA785PT2JrY2y8tFlyGFk4CmP0ikFgfLC3tAhaA9bpQmrqG6vmrjqPfL0JM2eUZKBYRi3SbDRiHwEj//vds+4ykWF75SOIlm8dft5ld1VdavovsaFsaoywAlIXycDVrDcdvO+juOK/6UaPTPP4PSl86lAT3cdjaKMSlnByhv7CUDezgzABBBhMb/E5TnNKZBAOkV2iljxttlmIZ2kL0UwXDaHsS3HOZiBTgVzXfpugd2e6ElWDImgZWo0yU4ZO3m4FzfeOLj0i4runT5EB6OPEmGh40dEE9GiGc8x5VMHT5w5n5BtA9lBt4X8EAUFvacDFLFKxFUHPmGkYYnegi+SwNjhPzY3vPBiOuQSxjUSbBFBcRkSq4sUpIUYOdua62ZFyQrBOdQdsKRRxQWlrBLYjT7m5OkHnLKM8pUnDu0aA11lMfO0CbjuCxKo4O4abGeNHJrK5QRdb3R0x9wnM04QKSEWeYaomtbknEsMJin8xpRyJcYE1iAlMiYJbvDfgK/EmxkMiVV9Wm5h+p+HAOxS+238/UtvdQUbg91XXLbipA73CjJOLRRC2jcGAz7Yh5CTLqEzgUEqyfLFqV+2/UPdYY13h8qqyCKcdDtAt6bgo1TRYbQacjSbAZjWyyp5GdUcyaBilXaaa9MS3j8LOxZJaN6pVfb9h7dO+7i83OvT1965H4T5HG86JqpC8IeKGZTRSAaWpyYPskps5NHoFGIG17jY01gaIJHwhgotFQyxPkEQ7VUL2bMXVex385Xdk6LkkoD57v0ZVmUX6+F1VA9wf1Tro8Q3XaiXTdmjDeaOt2ztM/++O+hdx8uaKyitb1EcNwFsXL7ZaSt3jVW8Ju0smwfhGLGBWup5P3RHBO10lwlRByV0Ce0apCBopwctsGLkuiMxgF7HfN1sq4KwbpwhvHflFTma3GXktZFB9m9gdbedMEdz9Fg+v4XNdirTyFQG36nYRwNXz61TYFYc8xwcHmESHzW/I9nSfOPulno+A1E77DmvghkvYh104qB4S2Gs4oWayfYdX6+7guacYbmfbXd0/Q5ditPOYTrDvJDqBt7PLv//44GW8jmt4UXcLfONCnkkjzH08oWEmMjZmNOtUAWORh+7+6GPUwDJBtn1DVVfs+mhz32FSC3CjPebHL3v42Cg5bTR1MF49p9rJdz+4rKuOpjbcUqtmVdK8r7bg3l+FLXXFRlvdr2n2zGDkZXwQVwUgWK0jc0+norvxavg/qdPPkQ+33e1tduwsvNqqVxGrXH13CKjgQdGsMNlxHJZ+uFnDJ2hN3dUq8o9W7E1z8jNFe9uGcpy1q01n9toDBKnEBrHrGokCCwDmVkSp6f9hOtiBD2/n75jSCI6QM6UDUWiTbReSjtl9HWWlpVRC1hfd1o3obWUUsI7QuKl7VBMRTJjS16mYFdjo85eOOojuQ6OobaLkRjRb1aTGQKqI1tzWrkNsRm3NzgzXl3PNPXVLBvRUqI1rOO0I2JyYrRY9Pgj+TGi7qnmr5l/6VLlx4aIZ8lrhd6V/vV4j9UM5N4j6QBd9nBVtIyyva4p4K0hsogWZUB/ZBT5xQ1dd3cgiyqtKGBtNqXQkcmv5OLndTUbqsYUow7ENZO9ifKhCa0thZOduqAsc1KxDYifY6bZAs5iynEJghxrC8QJu9SW8lBpsIicGv5C9TSD1tUd8F6ucpeZOwZjdVwhRh5+NO2Ob12frKmPMeJqXGVXmamIjFLZ3C8x92JySsb+FPqbYdXZquR2Md+ba3Fwu+WKyvRE2Y51gO7e2gfhWau2YswdpYvoKFt3VjuVLnyW1Szat49gP2j7NRF9uhfoSQrqRcKmq7zKs1zKpfRoBOp+gHkWBpCH6isurMAJ1FdpqQrP/4ZMw0/4xnRBPoFKHtqCLUgdb5ukIhVG7AtnZM6sl6xnw6Z9NnerW36OW39C6LzPh+36d30c+l2zy0l1SGzY9YgPv8CzqozDONbyKatusFMmV1o37/G9ibYNoyTUAAA=="
+    },
+    {
+      "path": "src/durable-objects/RegionTrend.ts",
+      "sha256": "8365708da95a830834f5837375e96f2948e6aec79acefe7a55767a4a6cd1f350",
+      "gzip_base64": "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"
+    },
+    {
+      "path": "src/reflex/regionTrend.test.ts",
+      "sha256": "26ad2ef699a42bf0cc02444bbe4afbb528d3ed4c44bb7ffe4104289b1d549a1a",
+      "gzip_base64": "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"
+    }
+  ],
+  "protected": [
+    {
+      "path": "src/reflex/core.ts",
+      "sha256": "c521ea56b3f6f33e8e9eb66afcdb575a80c772b7f363ac43b0497dfb361db01c",
+      "role": "source"
+    },
+    {
+      "path": "src/reflex/identityMerge.ts",
+      "sha256": "c1146456aa253780dc7ac1022b29e84aa96f1d13163fd5d4d0cf21cec9cce508",
+      "role": "source"
+    },
+    {
+      "path": "src/events/actionTypes.ts",
+      "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+      "role": "source"
+    },
+    {
+      "path": "src/services/RealtimeSegmentEngine.ts",
+      "sha256": "9dfec44e96b4bcbaeac12042bebb1d12dbf71614a1d42c31349449baa474b424",
+      "role": "source"
+    },
+    {
+      "path": "src/durable-objects/ShopperReflex.ts",
+      "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db",
+      "role": "source"
+    },
+    {
+      "path": "src/routes/realtime.ts",
+      "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b",
+      "role": "source"
+    },
+    {
+      "path": "src/identity/history.ts",
+      "sha256": "e4f6e8376da232790ce60fbca442eb5ff7ec6d16c180f6211d5964d24e444ed7",
+      "role": "source"
+    },
+    {
+      "path": "src/types/env.ts",
+      "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+      "role": "source"
+    },
+    {
+      "path": "src/tenancy/tenant.ts",
+      "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+      "role": "source"
+    },
+    {
+      "path": "src/learn/stats.ts",
+      "sha256": "c4f1df0ee23fbbe8a5490d121b5f40bf6923a5a69f1f9981235b87cc225ce96c",
+      "role": "source"
+    },
+    {
+      "path": "package.json",
+      "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+      "role": "source"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+      "role": "source"
+    },
+    {
+      "path": ".eslintrc.json",
+      "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+      "role": "source"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+      "role": "source"
+    },
+    {
+      "path": "vitest.config.ts",
+      "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+      "role": "source"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/16-edge-affinity-reflex.md",
+      "sha256": "b30b96e1edb2ee468742b180c0dba544d3f21ddb30cb2404f62e12509605de43",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+      "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+      "role": "source"
+    },
+    {
+      "path": "docs/architecture/35-verification-reports/F18.md",
+      "sha256": "f4305909762cdb691c46ae8f9db55b560bf19fc60b8a37b5c202da95fe934bb9",
+      "role": "source"
+    },
+    {
+      "path": "docs/remediation/decisions/D06-W30-late-event-scenarios-2026-09-14.json",
+      "sha256": "51f81f18cc3c8cdc9a697c68bab22efc55b175922ee70e92ac3a2084a3166b72",
+      "role": "source"
+    }
+  ],
+  "accepted_dependencies": [
+    {
+      "task_id": "W09.08",
+      "artifact_digest": "6e643f5ff488f5b0f2ed54afc51115e081884a9805d55dcd0c436755c734ad01",
+      "files": [
+        {
+          "path": "src/ledger/enqueue.ts",
+          "sha256": "831800f7fca3659943a6d78f3f0152d880c232d7222b1f2ba544b5799f235ae9",
+          "role": "output"
+        },
+        {
+          "path": "src/ledger/ledger.test.ts",
+          "sha256": "68b79fdc39420542e928be9ec73f6ff5a5ad498c564fdf4be907d64d739ea7e9",
+          "role": "output"
+        },
+        {
+          "path": "src/ledger/writer.ts",
+          "sha256": "9df429473a429a6d11a1c084445b5ab0281c4c4bf9b7e1bff2b618734177397d",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/consume.ts",
+          "sha256": "3158a84ed3f1a44fed68eff31030702bbd83873d792805bd0be240bd3c35be78",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/delivery.ts",
+          "sha256": "e0696053dcb4f15e56dcea44989a5b92c82cb69e5c26505787c4e13685f2dadf",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/records.ts",
+          "sha256": "3ead491c580f8a85b67c58c54670dc1d60bcb524f3c7ddfa5701a32af5cc706e",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/productSort.ts",
+          "sha256": "f7f9476e1ae60f2d34456670dd1b162020d73d020df01602fe8773466c315322",
+          "role": "source"
+        },
+        {
+          "path": "src/content/decide.ts",
+          "sha256": "27dbb0e1a85e654ab8eb617c3c3f583de61ad401293dc7299376a99b25a9b556",
+          "role": "source"
+        },
+        {
+          "path": "src/content/kinds.ts",
+          "sha256": "62ec7240fafa9d23e3a84d0382b7c019ae15a06b38c09fbfa1d7860a2969bf7f",
+          "role": "source"
+        },
+        {
+          "path": "src/content/types.ts",
+          "sha256": "29d4284e88142b49882914791632beb3acc44527fb02cfb08b9062cce8c54ab5",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/report.ts",
+          "sha256": "da430a5a8ed02dca4a9e5db3b925f2e3dbe341265defd465d2e2e71eccac4027",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/receipts.ts",
+          "sha256": "e86a6a128180acc2aa7f361ff733e7c0be612bba6df8bfe821fa6edcb004c67c",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/fan.ts",
+          "sha256": "fa812eaaf86cfcc4fcd5a0d3e37cf21df013839f90ab783f1fd65d29a74e06b0",
+          "role": "source"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/decisions.ts",
+          "sha256": "39f5b6c23cfd786348a24d8192eb42beee628cb0ee92a6874342146c4b54f2da",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.08/worker.json",
+          "sha256": "9b40b42aecfed1cd5fc427cbac7f2a83feb439fa593cb7a79dae2a3af91aab98",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W09.08/plan.md",
+          "sha256": "bf65ebc518b82bf23d12ad9e05ec9fa0e3ed4a6ce0639a026b3bbeb02bc0a2eb",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W09.08/baseline.json",
+          "sha256": "c6d1a4449bdb065f37ec4dd4ff455ca40a19539c5e03efd6bb218273b3a08bff",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.08/admission.json",
+          "sha256": "15cb94b5e7cbaf39ff80c073b9e1ede18b0b457e7a6debf1269e84b40c695b42",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.08/source-freeze.json",
+          "sha256": "4340306afd6c9882f952c2d41e46b0d8fa1a07a092d6e78777274b1c9fe332aa",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W09.08/source-deltas.json",
+          "sha256": "4a9ce3b8e61599b569f225f4cc6b7bcbf78ffc2ec53dd08c6a7c59f60704ad73",
+          "role": "configuration"
+        }
+      ],
+      "review": {
+        "path": "docs/remediation/evidence/W09.08/review.json",
+        "sha256": "364f7c4c64acf7b1eb8b676c0185b59fa3ff1866b41cc2fd4bdb2a6a88d8d012"
+      }
+    },
+    {
+      "task_id": "W22.06",
+      "artifact_digest": "10937364913882ed5f15f0789f2e988d86ed0b860d2f535dd359a0e4026f0d1b",
+      "files": [
+        {
+          "path": "src/services/EventDispatcher.ts",
+          "sha256": "0ec061525195f86549e52533db06bb2d7ccda1f4629666e3d54475ab028a24b7",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/tracking.ts",
+          "sha256": "deb10557fe584019956f500f88ea9382a441826bda9aa3e536f8bfa261643772",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/webhook.ts",
+          "sha256": "cd2ae7d9828119354b998a2638b63ddc5777fb9ed08b75ac11e3ef7749e540cb",
+          "role": "output"
+        },
+        {
+          "path": "src/routes/realtime.sdkContract.test.ts",
+          "sha256": "48e33a9bc83df2bd84d55364dc16f5922f9adef49c08ecc1bc367a178ed03292",
+          "role": "output"
+        },
+        {
+          "path": "src/telemetry.boundary.test.ts",
+          "sha256": "6d3e3e4cb884418d038773ce1c93674d74dabe08f625b8e62d1bec516d38a1fa",
+          "role": "output"
+        },
+        {
+          "path": "src/services/telemetry.boundary.test.ts",
+          "sha256": "c8cbef1082bc82bbcb458d197a1aff738daf953f8ce6450a5c8457c702093d74",
+          "role": "output"
+        },
+        {
+          "path": "src/index.api-boundary.test.ts",
+          "sha256": "8dd867f1298f266eafbe8132aec05e456c19e86d3b58c79d8dbca7948eac92b0",
+          "role": "output"
+        },
+        {
+          "path": "docs/api/01-rest-endpoints.md",
+          "sha256": "b68d4bd9f36a605942b40919baeb5cb22a35f780cd8e93c4153d99141220d95a",
+          "role": "output"
+        },
+        {
+          "path": "src/events/actionTypes.ts",
+          "sha256": "24a2006c61a6eae90b8bed0ac9d1272e15601a9db740bec81c9107be28c723e3",
+          "role": "source"
+        },
+        {
+          "path": "src/types/events.ts",
+          "sha256": "6affdf9f414cf3ce31181d37ff4a1747ab77794a380b4a3d275b4097e434cffb",
+          "role": "source"
+        },
+        {
+          "path": "src/types/env.ts",
+          "sha256": "222fc027404619211d8725fdf3f004f631c92881afcc63f9462dbce2de4701ab",
+          "role": "source"
+        },
+        {
+          "path": "src/services/SessionManager.ts",
+          "sha256": "5c87e159b7ca41da139ccef931fbec82cd2013f22f35bb46d0fcec2ffa8823db",
+          "role": "source"
+        },
+        {
+          "path": "src/durable-objects/ShopperReflex.ts",
+          "sha256": "697e6770924496aed2375de40afd2ac27442084945a877814f166647a68b47db",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/sessionCapability.ts",
+          "sha256": "e9becf1aa1e3b8b1cb79d11d8184c6b72e5bba0e5bde300b5a346e0af9b91f49",
+          "role": "source"
+        },
+        {
+          "path": "src/identity/consentContinuity.ts",
+          "sha256": "504570e2f2eba270a4e9fb78da8f084db6ee71efe0317e94ed48d4be802d43af",
+          "role": "source"
+        },
+        {
+          "path": "src/content/consent.ts",
+          "sha256": "38726f78c608535229929df3a89c2275b7b0e23bdee62f9d3eebe21cc5c09930",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/middleware.ts",
+          "sha256": "bbe3029ae1a1e6110435c7650bb2f21329ac7636e8a67fc2092f809576c5a5a8",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/tenant.ts",
+          "sha256": "7313c01854827e9f4f560e1da119d7e3772ab11132a1d0a77c28bba708466be3",
+          "role": "source"
+        },
+        {
+          "path": "src/tenancy/objects.ts",
+          "sha256": "e14094302255a6b157efd7a0bc284c7c9105cd6f48d8f8d35f3d681ce65b2c67",
+          "role": "source"
+        },
+        {
+          "path": "src/middleware/error.ts",
+          "sha256": "511781c9d9ad0e7d92f8403f0a1ce6e35b3a9cb7b8929e82cc47e6557c2ca80b",
+          "role": "source"
+        },
+        {
+          "path": "src/auth/signingConfig.mjs",
+          "sha256": "82d740178da6c5fb2d6fa26fa76de1242d7ffdda7e6764c79181f89d81963084",
+          "role": "source"
+        },
+        {
+          "path": "src/utils/context.ts",
+          "sha256": "64969bfb7d22959c072ac2a3425861f20658a502b3590c7205b050cb96231475",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/realtime.ts",
+          "sha256": "f1f6bdb55f033e4c158caef04c3878e44941eb2f7f47af5f806e45ec6612326b",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/identity.ts",
+          "sha256": "ba760b40f7939cf96f2d8ca485b3b469f34a60260745f22857e40dccafe2be9c",
+          "role": "source"
+        },
+        {
+          "path": "src/index.ts",
+          "sha256": "b161958178f76cf997210fd4c4c139671cc26b1fe87a947f6103199c8834eabf",
+          "role": "source"
+        },
+        {
+          "path": "src/learn/hourly.ts",
+          "sha256": "57aec2d534231ed9a874ede189145fb36d0efe5a90c51138195d2e1f6cf957fc",
+          "role": "source"
+        },
+        {
+          "path": "src/ledger/erasure.ts",
+          "sha256": "0fb3d8b3b0e2e0f5c4947995dbb0ac072aa4e772dbac1b0ddf2af365fdff0a1f",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "sha256": "c64e613c6a40b67d7a48fb074abd0fb17231453f06fd98d5d9fbb52d65e462c3",
+          "role": "source"
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "e291087cd4d03f1cebabc3d357cf99de2fcf56560f645c0681e9be91e7f8641f",
+          "role": "source"
+        },
+        {
+          "path": ".eslintrc.json",
+          "sha256": "419f28413170c1cbbbffd0b8474c948a3dd8b0896ee4dee63da09e1cd3d17d39",
+          "role": "source"
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "727f746bde977608d363635adba711c8623524325cd2e77a7fe7968128c17782",
+          "role": "source"
+        },
+        {
+          "path": "vitest.config.ts",
+          "sha256": "e1556b06e8edf8b7a9f343fd39e4106906ebd7ed22df13658cf08b92fa1efbbc",
+          "role": "source"
+        },
+        {
+          "path": "wrangler.toml",
+          "sha256": "85804e88d5abd5d7c1cc6b77065bf3b7dd1ad46ca4c2f9c45b3def6bf59f6923",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/35-audit-verification-and-source-of-truth.md",
+          "sha256": "5ab5f66c6f79e702535e09e13e0489a790b1c3aeae6ca683ea6baeafe5edc4c4",
+          "role": "source"
+        },
+        {
+          "path": "docs/architecture/22-outcome-learning-design.md",
+          "sha256": "bc8e25f0afba86f412057648f06f0b2b0c370fa215cdbeca579f093a73e4b818",
+          "role": "source"
+        },
+        {
+          "path": "src/middleware/edgeAccess.ts",
+          "sha256": "4500c2098c95214108a1f25ee59ad19197b246d2df09196d1ec8db72c821e342",
+          "role": "source"
+        },
+        {
+          "path": "src/services/OptimizelyService.ts",
+          "sha256": "97b7e40f98e2775e3e2b6d7caed0f32e5d0fe1c30a96d4ac5041a62dd4f01951",
+          "role": "source"
+        },
+        {
+          "path": "src/routes/pixel.ts",
+          "sha256": "aec450c2f1c33d0f10a121b05d814a278631db038cb69b7f119dad9dc2cab9be",
+          "role": "source"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.06/worker.json",
+          "sha256": "66af1a8a2f4115891c437f66d145f5fe1f5a99eba3cf75ac30ad7b83027b169e",
+          "role": "output"
+        },
+        {
+          "path": "docs/remediation/design/W22.06/plan.md",
+          "sha256": "75169999a046b99f3d70fdba012b9d1a94c38387d5cdcf6bce7f525f77db42d5",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/design/W22.06/baseline.json",
+          "sha256": "6c18c7d890bebb6184b7ca96255d1828f373dd12fe1e19e5a67bd2e29c731588",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.06/admission.json",
+          "sha256": "d3d3768cab77f3f752d30dc1ad1b321f1e4cda822c782a4a2fe578de73f1845b",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.06/source-freeze.json",
+          "sha256": "ddf88b5f81a8f13a0be8474068754d6ff90622c6c5aee66719bff65f9ef30649",
+          "role": "configuration"
+        },
+        {
+          "path": "docs/remediation/evidence/W22.06/source-deltas.json",
+          "sha256": "46c684e5529d038548973f28908c80d3313801e230ccaec82742567e5e9ae965",
+          "role": "configuration"
+        }
+      ],
+      "review": {
+        "path": "docs/remediation/evidence/W22.06/review.json",
+        "sha256": "ddf64016cb4a7400624f3202ba317aea294e5e00fca4a7c410cd3b407b745e33"
+      }
+    }
+  ],
+  "entry_board": {
+    "command": "node --max-old-space-size=1536 --input-type=module -e 'import fs from '\\''node:fs'\\'';import{syncBuiltinESMExports}from'\\''node:module'\\'';import{resolve}from'\\''node:path'\\'';import{pathToFileURL}from'\\''node:url'\\'';\nconst cache=new Map();let cacheBytes=0;\nfor(const name of ['\\''realpathSync'\\'','\\''statSync'\\'']){const original=fs[name],memo=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(memo.has(key))return memo.get(key);const result=original.apply(this,args);memo.set(key,result);return result;};}\nconst read=fs.readFileSync;fs.readFileSync=function(...args){const key=JSON.stringify(args);if(cache.has(key))return cache.get(key);const result=read.apply(this,args),size=typeof result==='\\''string'\\''?Buffer.byteLength(result):result.length;if(size<=33554432){while(cacheBytes+size>536870912&&cache.size){const[first,item]=cache.entries().next().value;cache.delete(first);cacheBytes-=typeof item==='\\''string'\\''?Buffer.byteLength(item):item.length;}cache.set(key,result);cacheBytes+=size;}return result;};for(const name of ['\\''realpathSync'\\'','\\''statSync'\\'','\\''readFileSync'\\'']){const original=fs[name],failures=new Map();fs[name]=function(...args){const key=JSON.stringify(args);if(failures.has(key))throw failures.get(key);try{return original.apply(this,args);}catch(error){failures.set(key,error);throw error;}};}syncBuiltinESMExports();\nconst write=process.stdout.write.bind(process.stdout);let notes=0;process.stdout.write=(value,...args)=>{const lines=String(value).split('\\''\\n'\\''),out=lines.filter(line=>{if(line.startsWith('\\''NOTE '\\'')){notes++;return false;}return true;}).join('\\''\\n'\\'');return write(out,...args);};\nconst file=resolve('\\''scripts/remediation/board.mjs'\\''),url=pathToFileURL(file);\nfor(const command of ['\\''check'\\'','\\''status'\\'']){process.argv=[process.execPath,file,command];const entry=new URL(url);entry.searchParams.set('\\''invocation'\\'',command);await import(entry.href);write('\\''\\nBOARD '\\''+command+'\\'' exit_status '\\''+process.exitCode+'\\''; NOTE count '\\''+notes+'\\''\\n'\\'');notes=0;if(process.exitCode!==0)break;}'",
+    "initial": {
+      "chunk_id": "f332bb",
+      "wall_time_seconds": 1.001282634,
+      "session_id": 93157,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "969636",
+        "wall_time_seconds": 0.000001913,
+        "exit_code": 0,
+        "original_token_count": 664,
+        "output": "Tracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=125, closed=2; evidence records=374\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.08 — Return to the remaining W22/W30 late-data attribution and reconstruction work. Read the recorded D06-W30-late-event-scenarios clarification, current src/routes/realtime.ts action/emitOutcome path, both live hosts and src/identity/history.ts historical weighting before admitting the next coherent fix. Distinguish preserving a valid delayed event from treating it as fresh affinity/trend activity and rebuilding completed reports. Reuse the implemented timestamp, interrupted-fold and delivery remedies; do not add a blanket age cutoff, blind refold, extra personal retention or invented experiment lifecycle. Surface only concrete scenario-specific owner choices before changing those semantics. W09.08 and W22.06 remain accepted; no feature activation, customer-data recovery or external operations are authorized.\nNo task, finding, package or gate was changed by this command.\n\nBOARD check exit_status 0; NOTE count 26176\nTracker VALID | mode=local_remediation_authorized\nPackages: 41; scope open=41\nDecomposition: partial=35, unscoped=6\nFindings/register: 65; open=61, alias=2, unresolved=1, assurance_only=1\nTasks: reopened=125, closed=2; evidence records=374\nGates: G0=not_assessed, G1=not_assessed, G2=not_assessed, G3=not_assessed, G4=not_assessed\nHuman decisions: pending=10; release=not_authorized\nResume: W09.08 — Return to the remaining W22/W30 late-data attribution and reconstruction work. Read the recorded D06-W30-late-event-scenarios clarification, current src/routes/realtime.ts action/emitOutcome path, both live hosts and src/identity/history.ts historical weighting before admitting the next coherent fix. Distinguish preserving a valid delayed event from treating it as fresh affinity/trend activity and rebuilding completed reports. Reuse the implemented timestamp, interrupted-fold and delivery remedies; do not add a blanket age cutoff, blind refold, extra personal retention or invented experiment lifecycle. Surface only concrete scenario-specific owner choices before changing those semantics. W09.08 and W22.06 remain accepted; no feature activation, customer-data recovery or external operations are authorized.\nNo task, finding, package or gate was changed by this command.\n\nBOARD status exit_status 0; NOTE count 26176\n"
+      }
+    ]
+  },
+  "entry_git": {
+    "initial": {
+      "chunk_id": "376091",
+      "wall_time_seconds": 1.000173324,
+      "session_id": 34692,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "b0c7ca",
+        "wall_time_seconds": 0.000001767,
+        "exit_code": 0,
+        "original_token_count": 1839,
+        "output": " M .eslintrc.json\n M .github/workflows/ci.yml\n D data/optimizely-cache.db-shm\n D data/optimizely-cache.db-wal\n M docs/PS-Implementation-Delivery-Guide.md\n M docs/api/01-rest-endpoints.md\n M docs/architecture/10-d1-schema.md\n M docs/architecture/20-scope-truth-ledger.md\n M docs/architecture/22-outcome-learning-design.md\n M docs/architecture/25-identity-stitching.md\n M docs/architecture/31-load-test-2026-09-05.md\n M docs/architecture/35-audit-verification-and-source-of-truth.md\n M docs/content-personalization-design-tapestry.html\n M docs/deployment/01-deploy.md\n M docs/kit/01-integration-guide.md\n M docs/kit/02-api-reference.md\n M docs/kit/03-payload-schemas.md\n M docs/kit/04-staging-connection.md\n M examples/usage-examples.js\n M migrations/seed/seed_001.sql\n M migrations/seed/seed_002.sql\n M migrations/seed/seed_003.sql\n M migrations/seed/seed_004.sql\n M migrations/seed/seed_005.sql\n M migrations/seed/seed_006.sql\n M migrations/seed/seed_007.sql\n M migrations/seed/seed_008.sql\n M migrations/seed/seed_009.sql\n M migrations/seed/seed_010.sql\n M migrations/seed/seed_011_geo.sql\n M package.json\n M public/console/shell.js\n M public/console/views-config.js\n M public/console/views-measure.js\n M public/console/views.js\n M public/learning.js\n M public/meridian/engine.bundle.js\n M public/meridian/meridian.js\n M public/operator-session.js\n M public/sdk/edge-personalization.esm.js\n M public/sdk/edge-personalization.js\n M public/storefront.js\n M public/tuning.js\n M scripts/acceptance-run.mjs\n M scripts/console-operator.mjs\n M scripts/console-preview.sh\n M scripts/deploy.sh\n M scripts/dev-token.mjs\n M scripts/holdout-proof.mjs\n M scripts/identity-proof.mjs\n M scripts/import-content.mjs\n M scripts/operator-seed.mjs\n M scripts/provision-staging.sh\n M scripts/provision-stamp.sh\n M scripts/rehearse-storefront.sh\n M scripts/seed-coach-content.mjs\n M scripts/seed-d1.mjs\n M scripts/setup.sh\n M scripts/verify-origin.sh\n M src/auth/store.ts\n M src/config/versionedStore.test.ts\n M src/config/versionedStore.ts\n M src/connectors/DecisionProvider.ts\n M src/connectors/index.ts\n M src/console/console.render.test.ts\n M src/console/learning.render.test.ts\n M src/content/consent.test.ts\n M src/content/consent.ts\n M src/content/decide.ts\n M src/content/import.test.ts\n M src/content/import.ts\n M src/content/kinds.ts\n M src/content/service.ts\n M src/content/types.ts\n M src/demos/brighthour/composer.ts\n M src/demos/brighthour/offerDesk.ts\n M src/demos/meridian/MeridianReflex.ts\n M src/demos/meridian/receipts.test.ts\n M src/demos/registry.ts\n M src/durable-objects/DecisionRing.ts\n M src/durable-objects/LearnStats.ts\n M src/durable-objects/PersonalizationWebSocket.ts\n M src/durable-objects/RateLimiter.ts\n M src/durable-objects/RegionTrend.ts\n M src/durable-objects/ShopperReflex.ts\n M src/durable-objects/StateManager.ts\n M src/events/actionTypes.ts\n M src/identity/assertion.ts\n M src/identity/erase.ts\n M src/identity/history.ts\n M src/identity/identity.test.ts\n M src/identity/link.ts\n M src/index.ts\n M src/learn/cycle.ts\n M src/learn/explore.ts\n M src/learn/fan.ts\n M src/learn/holdoutArms.test.ts\n M src/learn/hourly.test.ts\n M src/learn/hourly.ts\n M src/learn/learn.test.ts\n M src/learn/phase2.test.ts\n M src/learn/phase3.test.ts\n M src/learn/policy.ts\n M src/learn/priors.ts\n M src/learn/queue.ts\n M src/learn/replay.ts\n M src/learn/report.test.ts\n M src/learn/report.ts\n M src/learn/route.ts\n M src/learn/rows.ts\n M src/learn/stats.ts\n M src/ledger/consume.ts\n M src/ledger/enqueue.ts\n M src/ledger/erasure.test.ts\n M src/ledger/erasure.ts\n M src/ledger/ledger.test.ts\n M src/ledger/records.ts\n M src/ledger/writer.ts\n M src/measure/window.test.ts\n M src/measure/window.ts\n M src/middleware/auth.ts\n M src/middleware/edgeAccess.test.ts\n M src/middleware/edgeAccess.ts\n M src/middleware/error.ts\n M src/ops/monitor.test.ts\n M src/ops/monitor.ts\n M src/reflex/configStore.test.ts\n M src/reflex/configStore.ts\n M src/reflex/contentCompose.test.ts\n M src/reflex/contentCompose.ts\n M src/reflex/contentTelemetry.test.ts\n M src/reflex/contentTelemetry.ts\n M src/reflex/core.ts\n M src/reflex/odpLoop.test.ts\n M src/reflex/regionTrend.test.ts\n M src/reflex/regionTrend.ts\n M src/reflex/shopperReflex.consent.test.ts\n M src/reflex/shopperReflex.identity.test.ts\n M src/routes/ai.ts\n M src/routes/aiScene.ts\n D src/routes/api.ts\n M src/routes/auth.test.ts\n M src/routes/auth.ts\n M src/routes/cdp.ts\n M src/routes/config.ts\n M src/routes/content.test.ts\n M src/routes/content.ts\n M src/routes/decisions.ts\n M src/routes/demoEventCapture.test.ts\n M src/routes/funnel.ts\n M src/routes/health.ts\n M src/routes/identity.test.ts\n M src/routes/identity.ts\n M src/routes/live.ts\n M src/routes/liveOps.ts\n M src/routes/operator.ts\n M src/routes/optimizely.ts\n M src/routes/pixel.ts\n M src/routes/realtime.sdkContract.test.ts\n M src/routes/realtime.ts\n M src/routes/sort.test.ts\n M src/routes/sort.ts\n M src/routes/tracking.ts\n M src/routes/webhook.ts\n M src/sdk/README.md\n M src/sdk/core.test.ts\n M src/sdk/core.ts\n M src/sdk/emit.test.ts\n M src/sdk/emit.ts\n M src/sdk/host.ts\n M src/sdk/identify.test.ts\n M src/sdk/identify.ts\n M src/sdk/identity.ts\n M src/sdk/listen.test.ts\n M src/sdk/listen.ts\n M src/sdk/session.test.ts\n M src/sdk/testHost.ts\n M src/sdk/types.ts\n M src/services/CDPService.ts\n M src/services/EventDispatcher.ts\n M src/services/FeatureVariableManager.ts\n M src/services/OptimizelyService.ts\n M src/services/RealtimeSegmentEngine.ts\n M src/services/SessionManager.identity.test.ts\n M src/services/SessionManager.ts\n M src/services/odpLoop.ts\n M src/services/sceneGen.ts\n M src/services/sessionDefer.test.ts\n M src/tenancy/d1.test.ts\n M src/tenancy/middleware.test.ts\n M src/tenancy/middleware.ts\n M src/tenancy/tenant.test.ts\n M src/tenancy/tenant.ts\n M src/types/env.ts\n M tsconfig.json\n M wrangler.toml\n?? AGENTS.md\n?? docs/Affinity-Outcome-Learning-Design.html\n?? docs/architecture/34-independent-adversarial-audit.md\n?? docs/architecture/35-reconciliation-evidence/\n?? docs/architecture/36-remediation-governance-and-execution.md\n?? docs/handover/04-engine-extraction-plan.md\n?? docs/handover/05-engine-file-review-register.md\n?? docs/remediation/\n?? examples/images/2026-09-14_14-41-28.png\n?? examples/images/2026-09-14_14-51-01.png\n?? examples/images/2026-09-14_15-11-00.png\n?? examples/images/2026-09-14_15-12-27.png\n?? migrations/0011_operator_audit_tenant.sql\n?? scripts/lib/\n?? scripts/operator-seed.test.mjs\n?? scripts/remediation/\n?? scripts/seed-d1.test.mjs\n?? src/auth/loginBudget.ts\n?? src/auth/signing-config.boundary.test.ts\n?? src/auth/signingConfig.mjs\n?? src/auth/subjectAudit.ts\n?? src/config/input.ts\n?? src/config/publication.ts\n?? src/content/catalogDiagnostics.ts\n?? src/content/enrichment.ts\n?? src/content/enrichmentPublication.ts\n?? src/content/slotConstraints.ts\n?? src/content/slotDiagnostics.ts\n?? src/content/typeAffinity.ts\n?? src/identity/consentContinuity.ts\n?? src/identity/profileEnrichment.ts\n?? src/identity/sessionCapability.ts\n?? src/index.api-boundary.test.ts\n?? src/ledger/delivery.ts\n?? src/ledger/productSort.ts\n?? src/middleware/auth.claims-boundary.test.ts\n?? src/middleware/auth.refresh-boundary.test.ts\n?? src/middleware/operatorAuth.ts\n?? src/reflex/searchCandidates.ts\n?? src/services/demoEventCapture.ts\n?? src/services/telemetry.boundary.test.ts\n?? src/telemetry.boundary.test.ts\n"
+      }
+    ]
+  },
+  "lint_baseline": {
+    "command": "node --max-old-space-size=512 node_modules/eslint/bin/eslint.js src/reflex/regionTrend.ts src/durable-objects/RegionTrend.ts src/reflex/regionTrend.test.ts --max-warnings 0",
+    "initial": {
+      "chunk_id": "9f85c4",
+      "wall_time_seconds": 1.001068398,
+      "session_id": 34949,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "polls": [
+      {
+        "chunk_id": "c28813",
+        "wall_time_seconds": 0.000001799,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    ]
+  },
+  "limitations": "Source inspection and lint/board only; no product runtime baseline or deployed measurements. Preserve all inherited changes including four unrelated PNGs."
+}

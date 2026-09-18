@@ -45,6 +45,73 @@ export interface ChannelSignals {
   siteHost?: string | null;
 }
 
+/** The same bounded input contract at HTTP, socket and snapshot boundaries. */
+export const ENTRY_QUERY_LIMIT = 4096;
+const ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, referrer: 2048, siteHost: 253 } as const;
+export function validEntry(value: unknown, hostOnly = false): value is ChannelSignals | undefined {
+  if (value === undefined) return true;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return Object.entries(value).every(([key, v]) => Object.hasOwn(ENTRY_LIMITS, key)
+    && (v === undefined || (typeof v === 'string' && v.length <= ENTRY_LIMITS[key as keyof typeof ENTRY_LIMITS]
+      && (!hostOnly || key !== 'referrer' || v === '' || (v.length <= 253 && hostOf(v) === v.toLowerCase())))));
+}
+
+/** Request channel is a vocabulary, never a free-form statistics key. */
+export function entryChannelOf(value: unknown): EntryChannel | null {
+  if (typeof value !== 'string') return null;
+  const channel = value.trim().toLowerCase();
+  return ['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'].includes(channel) ? channel as EntryChannel : null;
+}
+
+function observedChannel(entry?: ChannelSignals): EntryChannel | undefined {
+  return validEntry(entry) && entry && Object.values(entry).some(v => typeof v === 'string')
+    ? classifyEntryChannel(entry) : undefined;
+}
+
+/** Snapshot URLs carry host-only referrers; raw URL/path/query is never sent. */
+export function snapshotEntry(entry: ChannelSignals): string | undefined {
+  const referrer = typeof entry.referrer === 'string' ? hostOf(entry.referrer) : entry.referrer;
+  if (entry.referrer && !referrer) return undefined;
+  const value = { ...entry, ...(entry.referrer === undefined ? {} : { referrer }) };
+  if (!validEntry(value, true) || !Object.values(value).some(v => typeof v === 'string')) return undefined;
+  const json = JSON.stringify(value);
+  return json.length <= ENTRY_QUERY_LIMIT ? json : undefined;
+}
+
+export interface VisitContext { visitCount?: number; lastVisitAt?: number; entryChannel?: EntryChannel }
+export function validVisitContext(value: unknown): value is VisitContext {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const v = value as VisitContext;
+  return (v.visitCount === undefined || (Number.isSafeInteger(v.visitCount) && v.visitCount >= 1))
+    && (v.lastVisitAt === undefined || (Number.isSafeInteger(v.lastVisitAt) && v.lastVisitAt >= 0))
+    && (v.entryChannel === undefined || entryChannelOf(v.entryChannel) === v.entryChannel);
+}
+
+/** Only an accepted live event uses this candidate; readers use projectVisit. */
+export function liveVisit(previous: VisitContext | null | undefined, lastSeen: number | null | undefined, now: number, entry?: ChannelSignals): VisitContext {
+  const prior = previous && validVisitContext(previous) ? previous : undefined;
+  const opening = isNewVisit(lastSeen, now);
+  return { visitCount: nextVisitCount(prior?.visitCount, lastSeen, now),
+    lastVisitAt: opening ? now : prior?.lastVisitAt ?? now,
+    entryChannel: (!opening ? prior?.entryChannel : undefined) ?? observedChannel(entry) };
+}
+
+/** Stable, non-mutating view: an unknown legacy count is not evidence of visit 1. */
+export function projectVisit(previous: VisitContext | null | undefined, lastSeen: number | null | undefined, now: number, entry?: ChannelSignals): { visitNumber: number | null; entryChannel: EntryChannel | null } {
+  const prior = previous && validVisitContext(previous) ? previous : undefined;
+  const known = prior?.visitCount !== undefined && typeof lastSeen === 'number' && Number.isFinite(lastSeen) && lastSeen >= 0;
+  return { visitNumber: known ? nextVisitCount(prior.visitCount, lastSeen, now) : null,
+    entryChannel: (!isNewVisit(lastSeen, now) ? prior?.entryChannel : undefined) ?? observedChannel(entry) ?? null };
+}
+
+/** Existing link policy: sum known counts, take entry from the later visit start. */
+export function mergeVisits(base?: VisitContext | null, from?: VisitContext | null): VisitContext {
+  const a = base && validVisitContext(base) ? base : undefined, b = from && validVisitContext(from) ? from : undefined;
+  const later = (b?.lastVisitAt ?? 0) > (a?.lastVisitAt ?? 0) ? b : a;
+  return { visitCount: (a?.visitCount ?? 0) + (b?.visitCount ?? 0) || undefined,
+    lastVisitAt: later?.lastVisitAt, entryChannel: later?.entryChannel };
+}
+
 // -- Visit boundaries -------------------------------------------------------
 
 /** True when enough idle time has passed that this request begins a new visit. */
@@ -116,7 +183,10 @@ function hostOf(referrer: string): string {
 }
 
 const matches = (host: string, needles: string[]) =>
-  needles.some((n) => host === n.replace(/\.$/, '') || host.includes(n));
+  needles.some((n) => {
+    const domain = n.replace(/\.$/, '');
+    return host === domain || host.endsWith(`.${domain}`);
+  });
 
 /**
  * Classify the visit's entry into one of doc 22's six channels.
@@ -137,6 +207,13 @@ export function classifyEntryChannel(signals: ChannelSignals): EntryChannel {
   const source = norm(signals.utmSource);
 
   if (medium !== '') {
+    // Meta's default campaign builder commonly emits utm_medium=cpc. The
+    // source disambiguates that declaration before the generic paid-search
+    // medium table; otherwise a Facebook click poisons the paid-search cell.
+    if (PAID_SEARCH_MEDIUMS.has(medium)
+      && (matches(source, SOCIAL_HOSTS) || SOCIAL_HOSTS.some((h) => source.startsWith(h.replace(/\.$/, ''))))) {
+      return 'paid_social';
+    }
     if (PAID_SEARCH_MEDIUMS.has(medium)) return 'paid_search';
     if (PAID_SOCIAL_MEDIUMS.has(medium)) return 'paid_social';
     if (EMAIL_MEDIUMS.has(medium)) return 'email';
