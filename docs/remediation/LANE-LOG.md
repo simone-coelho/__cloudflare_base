@@ -34,7 +34,7 @@ Dated, append-only. The lead writes it; agents read it. Newest entries at the bo
 | R10 | 2026-09-18 | BASE batches update stale tests to the remedy contract and are measured by the shrinking residual, not by units. In a BASE batch a specifier may change setup and fixtures freely; an assertion may change only with a comment on the line above citing the witness (document 35 clause, settled decision, or the product line that defines the contract). The reviewer FAILs any assertion change without a cited witness and any change that weakens a guard, grants a legacy permission, re-admits a KV fallback or lowers an entropy check. A test the specifier believes reveals a real product regression stays RED and is named with the unit to declare. |
 | R11 | 2026-09-18 | Product regressions found in the W01–W15 area are units named `<W>.BASE.<nn>` under the owning W, with the existing red test as their specification unless the reviewer finds it dishonest. |
 | R12 | 2026-09-18 | Agents cannot write report files; the final message is the report and the lead saves it into the evidence directory. Briefs no longer ask for REPORT.md. |
-| R9 | 2026-09-18 | Project role files under `.claude/agents/` are discovered only at session start. In the session that created them, lanes are dispatched through the general-purpose agent on Opus with the role file as the mandatory first read; from the next session the `rem-*` types are used directly. The dependency symlink `node_modules` is excluded via `.git/info/exclude` so every worktree reports a clean porcelain status. |
+| R9 | 2026-09-18 | Project role files under `.claude/agents/` are discovered only at session start. In the session that created them, lanes are dispatched through the general-purpose agent on Opus with the role file as the mandatory first read; the `rem-*` types became available later in the same session (from 19:10) and are used from then on. The dependency symlink `node_modules` is excluded via `.git/info/exclude` so every worktree reports a clean porcelain status. |
 
 ## Lanes
 
@@ -43,8 +43,8 @@ Dated, append-only. The lead writes it; agents read it. Newest entries at the bo
 | L0 | TOOLS-1 score tool, ratchet, CI wiring, tsconfig include | rem-implementer (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/tools` · `rem/tools-score` · `5b0b0ae` | dispatched 2026-09-18 18:50 |
 | L1 | W16-B1 (C2 visit/channel, 9 units) | rem-specifier (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/spec` · `rem/w16-c2-spec` · `5b0b0ae` | dispatched 2026-09-18 18:50 |
 | L2 | BASE triage of the 238 baseline failures | rem-reviewer TRIAGE (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/triage` · detached at `5b0b0ae` | **done 19:11**; report at `_evidence/BASE/triage/REPORT.md` |
-| L3 | BASE-2 stale consent/retention/identity fixtures (groups C, D-part, F; 43 failures, 6 files) | rem-specifier | `/home/simonecoelho/rem/base2` · `rem/base-2-consent-fixtures` · lane-log commit | briefed |
-| L4 | BASE-1a stale publication/precondition fixtures in `realtime.sdkContract.test.ts` (groups A, B, J-part; 72 failures, 1 file) | rem-specifier | `/home/simonecoelho/rem/base1a` · `rem/base-1a-sdkcontract` · lane-log commit | briefed |
+| L3 | BASE-2 stale consent/retention/identity fixtures (groups C, D-part, F; 43 failures, 6 files) | rem-specifier | `/home/simonecoelho/rem/base2` · `rem/base-2-consent-fixtures` · `7a83faa` | dispatched 2026-09-18 19:13 (`rem-specifier` type) |
+| L4 | BASE-1a stale publication/precondition fixtures in `realtime.sdkContract.test.ts` (groups A, B, J-part; 72 failures, 1 file) | rem-specifier | `/home/simonecoelho/rem/base1a` · `rem/base-1a-sdkcontract` · `7a83faa` | dispatched 2026-09-18 19:13 (`rem-specifier` type) |
 
 ## Batches
 
