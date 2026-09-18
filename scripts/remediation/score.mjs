@@ -52,10 +52,33 @@ export function readResults(report) {
     failed: failing.length,
     failingNames: [...new Set(failing.map(t => t.fullName))].sort(),
     failingFiles: new Set(failing.map(t => t.file)).size,
+    // A file that failed to collect reports no assertions at all: its tests are
+    // missing from the denominator and its failures from the ratchet.
+    collectionFailures: (Array.isArray(report?.testResults) ? report.testResults : [])
+      .filter(file => (!Array.isArray(file?.assertionResults) || file.assertionResults.length === 0)
+        && (file?.status === 'failed' || nonempty(file?.message)))
+      .map(file => String(file?.name ?? '(unnamed file)')).sort(),
   };
 }
 
-export const matchTests = (id, tests) => tests.filter(t => t.fullName.includes(`unit:${id}`));
+const ID_CHAR = /[0-9A-Za-z._]/;
+
+/**
+ * `unit:<id>` matches only at an id boundary, on both sides: `unit:W16.C2.1`
+ * never matches `unit:W16.C2.10`, `unit:W16.C2.01` never matches
+ * `unit:W16.C2.010`, and `xunit:W16.C2.01` is not this unit either.
+ */
+export function matchTests(id, tests) {
+  const needle = `unit:${id}`;
+  return tests.filter(t => {
+    for (let at = t.fullName.indexOf(needle); at !== -1; at = t.fullName.indexOf(needle, at + 1)) {
+      const before = at === 0 ? '' : t.fullName[at - 1];
+      const after = t.fullName[at + needle.length] ?? '';
+      if (!ID_CHAR.test(before) && !ID_CHAR.test(after)) return true;
+    }
+    return false;
+  });
+}
 
 /**
  * A unit is green only when at least one test matched and every matched test
@@ -74,8 +97,11 @@ export function readUnits(path) {
   const rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.units) ? parsed.units : null;
   if (!rows) throw new Error(`${path} must be an array of unit rows`);
   const byId = new Map();
-  for (const row of rows) {
-    if (!nonempty(row?.id) || byId.has(row.id)) continue;
+  for (const [index, row] of rows.entries()) {
+    // A dropped row silently shrinks the denominator, so the file is refused.
+    if (!row || typeof row !== 'object' || Array.isArray(row)) throw new Error(`row ${index} is not an object`);
+    if (!nonempty(row.id)) throw new Error(`row ${index} has no "id"`);
+    if (byId.has(row.id)) throw new Error(`row ${index} repeats id ${row.id}`);
     byId.set(row.id, { id: row.id, w: nonempty(row?.w) ? row.w.trim() : String(row.id).split('.')[0] });
   }
   return { rows: [...byId.values()].sort((a, b) => a.id.localeCompare(b.id)), sha256: sha256(raw) };
@@ -275,6 +301,16 @@ export function run(argv, out = process.stdout, err = process.stderr) {
     raw = readFileSync(fromPath);
     results = readResults(JSON.parse(raw.toString('utf8')));
   } catch (error) { err.write(`Unreadable vitest report ${fromPath}: ${error.message}\n`); return 1; }
+  if (results.total === 0) {
+    err.write(`Refusing ${fromPath}: the report collected no tests, so a zero-failure score would be a fiction.\n`);
+    return 1;
+  }
+  if (results.collectionFailures.length > 0) {
+    for (const file of results.collectionFailures) err.write(`Test file produced no results: ${file}\n`);
+    err.write(`Refusing ${fromPath}: ${results.collectionFailures.length} test file(s) failed to collect, so their ` +
+      'tests are absent from the count and their failures from the ratchet.\n');
+    return 1;
+  }
   try { baseline = readBaseline(baselinePath); }
   catch (error) { err.write(`Unreadable baseline ${baselinePath}: ${error.message}\n`); return 1; }
 
@@ -284,20 +320,27 @@ export function run(argv, out = process.stdout, err = process.stderr) {
   if (options.actions.has('--write-baseline')) {
     const note = options.note ?? baseline?.note;
     if (!nonempty(note)) { err.write('--note "<text>" is required for a new baseline\n'); return 1; }
-    const grown = baseline !== null && results.failingNames.length > baseline.failures.length;
-    if (grown && !options.allowGrow) {
-      err.write(`Refusing to grow the baseline from ${baseline.failures.length} to ${results.failingNames.length} ` +
-        'failures; pass --allow-grow "<reason>" if the growth is owed and explained.\n');
+    // The list may only lose entries. A same-length swap still ADDS a failure,
+    // so growth is judged name by name, never by length.
+    const known = new Set(baseline?.failures ?? []);
+    const added = baseline === null ? [] : results.failingNames.filter(name => !known.has(name));
+    const removed = baseline === null ? 0 : baseline.failures.filter(name => !results.failingNames.includes(name)).length;
+    if (added.length > 0 && !options.allowGrow) {
+      for (const name of added) err.write(`NOT IN THE COMMITTED BASELINE: ${name}\n`);
+      err.write(`Refusing to add ${added.length} failing test(s) to the baseline of ${baseline.failures.length} ` +
+        `(${results.failingNames.length} now failing); the list may only lose entries. Pass --allow-grow "<reason>" ` +
+        'if the addition is owed and explained.\n');
       return 1;
     }
     const next = buildBaseline({
       failures: results.failingNames, fromSha256, commit: headOf(root), note,
-      allowGrowReason: grown ? options.allowGrow : null,
+      allowGrowReason: added.length > 0 ? options.allowGrow : null,
     });
     mkdirSync(dirname(baselinePath), { recursive: true });
     writeFileSync(baselinePath, `${JSON.stringify(next, null, 2)}\n`);
     out.write(`Wrote ${label(root, baselinePath)}: ${next.failures.length} failing tests` +
-      `${next.allow_grow_reason ? ` (grown: ${next.allow_grow_reason})` : ''}\n`);
+      `${added.length ? ` (+${added.length} added, authorised: ${next.allow_grow_reason})` : ''}` +
+      `${removed ? ` (-${removed} no longer failing)` : ''}\n`);
     baseline = next;
   }
 

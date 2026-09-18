@@ -34,10 +34,16 @@ jobs:
         run: node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false
       - name: SDK typecheck
         run: node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit
+      # The score tool judges every later step, so its own proof runs first.
+      - name: Score tool proof
+        run: node --test scripts/remediation/score.test.mjs
       # The suite is red at the checkpoint baseline (ruling R3): the ratchet below
-      # is the judge, not this step's exit code. It fails on any failing test that
-      # is absent from docs/remediation/baseline-failures.json, and that list may
-      # only shrink. When it reaches zero this flag goes with it.
+      # is the judge of RED TESTS, not this step's exit code. It fails on any
+      # failing test absent from docs/remediation/baseline-failures.json, and that
+      # list may only lose entries. When it reaches zero this flag goes with it.
+      # A CRASHED suite does not slip past: the report lands in a fresh runner
+      # temp directory each run, and the ratchet refuses a missing, unparseable,
+      # empty or uncollected report rather than scoring it as zero failures.
       - name: Suite
         continue-on-error: true
         run: node node_modules/vitest/vitest.mjs run src --maxWorkers=1 --minWorkers=1 --reporter=default --reporter=json --outputFile="$VITEST_JSON"

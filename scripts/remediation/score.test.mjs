@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -222,6 +222,24 @@ test('unit:TOOLS.02 score.mjs --write derives SCORE.md from the vitest report an
   // Refusal leg: counts asserted inside units.json are ignored, not trusted.
   assert.ok(!text.includes('Units 5/5'), 'a row claiming green does not make a red unit green');
   assert.ok(!text.includes('/999'), 'the stored numTotalTests in the report is ignored');
+
+  // Refusal leg (hole 5): a row the tool cannot read is never dropped in silence,
+  // which would shrink the denominator; the whole file is refused, by row index.
+  const typoed = workspace({ units: [{ id: 'W20.C1.01', w: 'W20' }, { w: 'W20', criterion: 'C1', outcome: 'id key typoed' }] });
+  const typo = score(['--from', from, '--root', typoed, '--typecheck', 'green', '--write']);
+  assert.equal(typo.code, 1, 'a row with no id must refuse the whole file');
+  assert.match(typo.err, /row 1 has no "id"/);
+  assert.equal(existsSync(join(typoed, 'docs', 'remediation', 'SCORE.md')), false, 'nothing is written on a refusal');
+
+  const duplicated = workspace({ units: [{ id: 'W20.C1.01', w: 'W20' }, { id: 'W20.C1.01', w: 'W21' }] });
+  const duplicate = score(['--from', from, '--root', duplicated, '--typecheck', 'green', '--write']);
+  assert.equal(duplicate.code, 1, 'a repeated id would shrink the denominator just as quietly');
+  assert.match(duplicate.err, /row 1 repeats id W20\.C1\.01/);
+
+  const notAnObject = workspace({ units: [{ id: 'W20.C1.01', w: 'W20' }, 'W20.C1.02'] });
+  const malformed = score(['--from', from, '--root', notAnObject, '--typecheck', 'green', '--write']);
+  assert.equal(malformed.code, 1);
+  assert.match(malformed.err, /row 1 is not an object/);
 });
 
 test('unit:TOOLS.03 score.mjs --check re-derives the score and refuses a hand-edited SCORE.md', () => {
@@ -299,7 +317,7 @@ test('unit:TOOLS.04 --check-ratchet refuses a failure outside the baseline and -
   // Refusal leg 2: a longer list is refused unless the growth is explained.
   const grow = score(['--from', regressed, '--root', dir, '--write-baseline', '--note', 'fixture baseline']);
   assert.equal(grow.code, 1);
-  assert.match(grow.err, /Refusing to grow the baseline from 2 to 3/);
+  assert.match(grow.err, /Refusing to add 1 failing test\(s\) to the baseline of 2/);
   assert.deepEqual(JSON.parse(readFileSync(baselinePath(dir), 'utf8')).failures, ['a failing', 'b failing']);
 
   const allowed = score(['--from', regressed, '--root', dir, '--write-baseline', '--note', 'fixture baseline',
@@ -308,6 +326,33 @@ test('unit:TOOLS.04 --check-ratchet refuses a failure outside the baseline and -
   const grown = JSON.parse(readFileSync(baselinePath(dir), 'utf8'));
   assert.deepEqual(grown.failures, ['a failing', 'b failing', 'c newly failing']);
   assert.equal(grown.allow_grow_reason, 'owner accepted: new leg lands red pending W20');
+
+  // Refusal leg 3 (hole 1, laundering): a SAME-LENGTH swap still adds a failure.
+  // Growth is judged name by name, so an equal count is no longer a way past it.
+  const swapBaseline = { note: 'fixture baseline', failures: ['a failing', 'b failing'] };
+  const swapDir = workspace({ units: [], baseline: swapBaseline });
+  const swapped = reportPath(swapDir, [
+    { name: 'a failing', status: 'failed' },
+    { name: 'z newly failing', status: 'failed' },
+    { name: 'passing', status: 'passed' },
+  ]);
+  const swapRatchet = score(['--from', swapped, '--root', swapDir, '--check-ratchet']);
+  assert.equal(swapRatchet.code, 1, 'the swapped-in failure is outside the baseline');
+  assert.ok(swapRatchet.err.includes('NEW FAILURE outside the baseline: z newly failing'), swapRatchet.err);
+
+  const laundered = score(['--from', swapped, '--root', swapDir, '--write-baseline', '--note', 'fixture baseline']);
+  assert.equal(laundered.code, 1, 'a same-length swap must be refused, not written');
+  assert.ok(laundered.err.includes('NOT IN THE COMMITTED BASELINE: z newly failing'), laundered.err);
+  assert.deepEqual(JSON.parse(readFileSync(baselinePath(swapDir), 'utf8')).failures, swapBaseline.failures,
+    'the committed list is untouched by a refused write');
+
+  const swapAllowed = score(['--from', swapped, '--root', swapDir, '--write-baseline', '--note', 'fixture baseline',
+    '--allow-grow', 'owner accepted: b fixed, z owed under W21']);
+  assert.equal(swapAllowed.code, 0, swapAllowed.err);
+  const afterSwap = JSON.parse(readFileSync(baselinePath(swapDir), 'utf8'));
+  assert.deepEqual(afterSwap.failures, ['a failing', 'z newly failing']);
+  assert.equal(afterSwap.allow_grow_reason, 'owner accepted: b fixed, z owed under W21',
+    'the authorisation is recorded in the file it authorised');
 
   // Shrinking needs no permission, and the tool says the list can shrink.
   const fixed = reportPath(workspaceFile(dir, 'fixed'), [{ name: 'a failing', status: 'failed' }]);
@@ -319,6 +364,30 @@ test('unit:TOOLS.04 --check-ratchet refuses a failure outside the baseline and -
   assert.deepEqual(shrunk.failures, ['a failing']);
   assert.equal(shrunk.note, 'fixture baseline', 'the note is preserved when it is not restated');
   assert.equal(shrunk.allow_grow_reason, null, 'a shrink clears the growth reason');
+
+  // Refusal leg 4 (hole 4): an unusable report is refused, never scored as zero
+  // failing. A crashed suite must not read as a clean one.
+  const emptyReport = join(dir, 'empty-report.json');
+  writeFileSync(emptyReport, JSON.stringify({ numTotalTests: 0, numFailedTests: 0, success: true, testResults: [] }));
+  const empty = score(['--from', emptyReport, '--root', dir, '--check-ratchet']);
+  assert.equal(empty.code, 1, 'a report that collected nothing must be refused');
+  assert.match(empty.err, /collected no tests/);
+  assert.equal(score(['--from', emptyReport, '--root', dir, '--typecheck', 'green', '--write']).code, 1,
+    'and it cannot be written into a score either');
+
+  const crashed = join(dir, 'crashed-report.json');
+  writeFileSync(crashed, JSON.stringify({ testResults: [
+    { name: 'src/units/W16/b1.unit.test.ts', status: 'failed', message: 'Cannot find module ./missing', assertionResults: [] },
+    { name: 'src/services/other.test.ts', status: 'passed', message: '',
+      assertionResults: [{ fullName: 'a failing', status: 'failed', failureMessages: [] }] },
+  ] }));
+  const uncollected = score(['--from', crashed, '--root', dir, '--check-ratchet']);
+  assert.equal(uncollected.code, 1, 'a file that failed to collect hides its tests from the ratchet');
+  assert.ok(uncollected.err.includes('src/units/W16/b1.unit.test.ts'), uncollected.err);
+  assert.match(uncollected.err, /failed to collect/);
+
+  assert.equal(score(['--from', join(dir, 'no-such-report.json'), '--root', dir, '--check-ratchet']).code, 1,
+    'a missing report is refused, not treated as a clean run');
 
   // A check that regenerates its own input cannot fail, so the pair is refused.
   assert.equal(score(['--from', fixed, '--root', dir, '--write-baseline', '--check-ratchet']).code, 2);
@@ -359,6 +428,34 @@ test('unit:TOOLS.05 a unit with no test is unspecified and a skipped or todo tes
   assert.deepEqual(unitStatus('X.02', tests), { status: 'unspecified', matched: 0 });
   assert.deepEqual(unitStatus('X.01', tests), { status: 'red', matched: 2 });
   assert.deepEqual(unitStatus('X.01', [tests[0]]), { status: 'green', matched: 1 });
+
+  // Refusal leg (hole 2): the id must end at a boundary, or a shorter id
+  // swallows a longer one and another unit's test confers green.
+  const ten = [{ fullName: 'unit:W16.C2.10 only leg', status: 'passed' }];
+  assert.deepEqual(unitStatus('W16.C2.1', ten), { status: 'unspecified', matched: 0 },
+    'unit:W16.C2.1 must not match unit:W16.C2.10');
+  assert.deepEqual(unitStatus('W16.C2.10', ten), { status: 'green', matched: 1 });
+  assert.deepEqual(unitStatus('W16.C2.01', [{ fullName: 'unit:W16.C2.010 leg', status: 'passed' }]),
+    { status: 'unspecified', matched: 0 });
+  assert.deepEqual(unitStatus('W16.C2.01', [{ fullName: 'xunit:W16.C2.01 leg', status: 'passed' }]),
+    { status: 'unspecified', matched: 0 });
+  assert.deepEqual(unitStatus('W16.C2.01', [{ fullName: 'unit:W16.C2.01 leg', status: 'passed' }]),
+    { status: 'green', matched: 1 });
+  assert.deepEqual(unitStatus('W16.C2.01', [{ fullName: 'describe > unit:W16.C2.01 > it holds', status: 'passed' }]),
+    { status: 'green', matched: 1 });
+
+  // The same boundary through the CLI, on the score the lead reads.
+  const boundaryDir = workspace({
+    units: [{ id: 'W16.C2.1', w: 'W16' }, { id: 'W16.C2.10', w: 'W16' }],
+    baseline: { note: 'fixture', failures: [] },
+  });
+  const boundaryFrom = reportPath(boundaryDir, [{ name: 'unit:W16.C2.10 only leg', status: 'passed' }]);
+  const boundary = score(['--from', boundaryFrom, '--root', boundaryDir, '--typecheck', 'green', '--write']);
+  assert.equal(boundary.code, 0, boundary.err);
+  const boundaryText = readFileSync(join(boundaryDir, 'docs', 'remediation', 'SCORE.md'), 'utf8');
+  assert.ok(boundaryText.includes('| W16.C2.1 | unspecified | 0 |'), boundaryText);
+  assert.ok(boundaryText.includes('| W16.C2.10 | green | 1 |'), boundaryText);
+  assert.ok(boundaryText.includes('Units 1/2 · W closed 0/26'), boundaryText);
 });
 
 // ---------------------------------------------------------------------------
@@ -393,6 +490,7 @@ test('unit:TOOLS.06 CI runs the gate commands in order on every push and pull re
     '--max-old-space-size=4096',
     '--noEmit --incremental false --composite false',
     '-p src/sdk/tsconfig.json --noEmit',
+    'node --test scripts/remediation/score.test.mjs',
     'vitest.mjs run src',
     '--maxWorkers=1 --minWorkers=1',
     '--reporter=default --reporter=json',
@@ -421,6 +519,22 @@ test('unit:TOOLS.06 CI runs the gate commands in order on every push and pull re
   const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
   assert.equal(pkg.scripts.score, 'node scripts/remediation/score.mjs');
   assert.equal(inOrder(pkg.scripts.gate, required.filter(c => c !== 'npm ci')), null, 'npm run gate runs the same gate');
+
+  // Refusal leg (hole 6): nothing may run the score without first running the
+  // score tool's own proof, in CI and locally alike.
+  assert.equal(inOrder(gate.text, ['node --test scripts/remediation/score.test.mjs', 'score.mjs --from']), null,
+    'CI proves the tool before it trusts the tool');
+  assert.equal(inOrder(pkg.scripts.gate, ['node --test scripts/remediation/score.test.mjs', 'score.mjs --from']), null,
+    'so does the local gate');
+
+  // Refusal leg (hole 3): the local gate must not read a report from a previous
+  // run, and must not discard the suite's exit code.
+  assert.ok(pkg.scripts.gate.includes('mktemp'), 'the report goes to a fresh path each run');
+  assert.ok(!pkg.scripts.gate.includes('cfbase-gate-vitest.json'), 'no fixed, never-cleared report path');
+  assert.ok(!pkg.scripts.gate.includes('|| true'), 'the suite exit is not swallowed');
+  assert.ok(pkg.scripts.gate.includes('VITEST_STATUS=$?'), 'the suite exit is captured');
+  assert.match(pkg.scripts.gate, /\[ "\$VITEST_STATUS" -le 1 \]/, 'and a crash (any exit above 1) fails the gate');
+  assert.match(gate.text, /runner\.temp/, 'CI writes the report to a fresh runner temp path');
 
   // Negative control: the ordered-subsequence check must be able to fail.
   assert.notEqual(inOrder([...required].reverse().join(' '), required), null);
