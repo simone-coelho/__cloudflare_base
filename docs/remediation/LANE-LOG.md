@@ -31,6 +31,9 @@ Dated, append-only. The lead writes it; agents read it. Newest entries at the bo
 | R6 | 2026-09-18 | Builder checkouts under `/home/simonecoelho/rem/<lane>` with `node_modules` symlinked to `_deps`; evidence under `/home/simonecoelho/rem/_evidence/<batch>/<role>/`, mirrored by the lead to `C:\Users\LAH\Documents\Remediation-Evidence\cloudflare_base\`. |
 | R7 | 2026-09-18 | W16 is decomposed by admitted criterion: batch 1 = C2 visit/channel (9 units). C3–C8 follow in order. W16.01's K1–K10 checks are superseded by units plus the gate; its 59 owned paths are the granted scope for W16 implementers. C10 (live) stays open. |
 | R8 | 2026-09-18 | The twelve stale `.claude/worktrees/agent-*` worktrees from August are pre-existing user material: untouched. |
+| R10 | 2026-09-18 | BASE batches update stale tests to the remedy contract and are measured by the shrinking residual, not by units. In a BASE batch a specifier may change setup and fixtures freely; an assertion may change only with a comment on the line above citing the witness (document 35 clause, settled decision, or the product line that defines the contract). The reviewer FAILs any assertion change without a cited witness and any change that weakens a guard, grants a legacy permission, re-admits a KV fallback or lowers an entropy check. A test the specifier believes reveals a real product regression stays RED and is named with the unit to declare. |
+| R11 | 2026-09-18 | Product regressions found in the W01–W15 area are units named `<W>.BASE.<nn>` under the owning W, with the existing red test as their specification unless the reviewer finds it dishonest. |
+| R12 | 2026-09-18 | Agents cannot write report files; the final message is the report and the lead saves it into the evidence directory. Briefs no longer ask for REPORT.md. |
 | R9 | 2026-09-18 | Project role files under `.claude/agents/` are discovered only at session start. In the session that created them, lanes are dispatched through the general-purpose agent on Opus with the role file as the mandatory first read; from the next session the `rem-*` types are used directly. The dependency symlink `node_modules` is excluded via `.git/info/exclude` so every worktree reports a clean porcelain status. |
 
 ## Lanes
@@ -39,7 +42,9 @@ Dated, append-only. The lead writes it; agents read it. Newest entries at the bo
 |---|---|---|---|---|
 | L0 | TOOLS-1 score tool, ratchet, CI wiring, tsconfig include | rem-implementer (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/tools` · `rem/tools-score` · `5b0b0ae` | dispatched 2026-09-18 18:50 |
 | L1 | W16-B1 (C2 visit/channel, 9 units) | rem-specifier (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/spec` · `rem/w16-c2-spec` · `5b0b0ae` | dispatched 2026-09-18 18:50 |
-| L2 | BASE triage of the 238 baseline failures | rem-reviewer TRIAGE (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/triage` · detached at `5b0b0ae` | dispatched 2026-09-18 18:50 |
+| L2 | BASE triage of the 238 baseline failures | rem-reviewer TRIAGE (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/triage` · detached at `5b0b0ae` | **done 19:11**; report at `_evidence/BASE/triage/REPORT.md` |
+| L3 | BASE-2 stale consent/retention/identity fixtures (groups C, D-part, F; 43 failures, 6 files) | rem-specifier | `/home/simonecoelho/rem/base2` · `rem/base-2-consent-fixtures` · lane-log commit | briefed |
+| L4 | BASE-1a stale publication/precondition fixtures in `realtime.sdkContract.test.ts` (groups A, B, J-part; 72 failures, 1 file) | rem-specifier | `/home/simonecoelho/rem/base1a` · `rem/base-1a-sdkcontract` · lane-log commit | briefed |
 
 ## Batches
 
@@ -60,7 +65,22 @@ Units: `TOOLS.01` tsconfig include so plain `tsc --noEmit` is green; `TOOLS.02` 
 | W16.C2.09 | Vocabulary validation: `validEntry`/`entryChannelOf` reject values outside the six-value channel vocabulary and hosts that are not valid hostnames; oversize query strings beyond `ENTRY_QUERY_LIMIT` are refused, not truncated into a wrong channel. | logic |
 
 ### BASE — the baseline residual
-Triage first (L2). Then units under the owning W, named from the triage, smallest cluster first.
+Triage (L2, 2026-09-18) measured the 29 failing files serially on `5b0b0ae`: 238 of 786 tests fail, identical to the parallel set; **zero flaky**. Groups by shared cause (full table in `_evidence/BASE/triage/REPORT.md`):
+
+| Group | Cause (remedy the stale tests predate) | Count | Owning W | Honest fix |
+|---|---|---|---|---|
+| A | Publication authority is the only configuration authority; fixtures lack a published head or use an R2 double that violates the put/get contract | 96 | W11 (demo files also W37) | test fixtures seed a publication head |
+| C | Consent fail-closed; legacy preferences grant nothing | 35 | W05 | test fixtures establish explicit consent |
+| B | Configuration writes need `If-Match` + `Idempotency-Key` preconditions | 29 | W11 | test calls carry the preconditions |
+| E | Shopper routes are owner-dispatched; fixtures lack the `SHOPPER_REFLEX` binding or drive a sub-router off the real path | 18 | W04 + W35 | tests bind the namespace and drive the mounted app |
+| F | Identity material required at readiness | 6 | W02 | fixture supplies synthetic safe material |
+| D | Retention policy registry required before a first record | 5 | W06 | fixture supplies the registry |
+| G | The three W16 draft edits (search-host prefix tokens, paid_social cell key) | 3 | W16 | product fix, already W16.C2.01–.03 |
+| I | Stale DO/socket doubles lack `transaction` and `close` | 3 | W35 | doubles updated |
+| H | Console heading "Exposures" replaced "Shown" | 2 | W26 | tests updated to the exposure unit |
+| J | Residue not yet attributed; contains one candidate REAL fail-open regression (`index.api-boundary.test.ts:2004`, W01.04: `/track/event` answers 200 where 503 is required) | 41 | mixed; the regression is W09 with W01 | read per clause; the regression is a product unit `W09.BASE.01` once isolated |
+
+Plan: BASE-2 (L3) and BASE-1a (L4) run now in disjoint files. BASE-1b (shopperReflex.*, routes/identity, routes/sort, auth.refresh-boundary, routeEscape, api-boundary B-part, brands: groups A/B/E/I/D-part) and BASE-1c (brighthour, learn, console, telemetry, freshFatigue, regionTrend: groups A/H/J-learn) follow when L3/L4 return. `W09.BASE.01` is briefed to an implementer once the score tool exists so the ratchet can be run.
 
 ## Commits
 
