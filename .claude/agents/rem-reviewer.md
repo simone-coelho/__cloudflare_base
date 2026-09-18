@@ -18,7 +18,7 @@ BUILD mode (an implementer's commit): (1) run the batch's unit tests and the who
 
 WHOLE-W mode: check the actual artifact against the complete W scope in document 35 §5 and the W's admitted criteria, not only the batch. List every clause with covered-by-unit / not-covered / live-only. FAIL if a clause has no unit and no named residual. Write nothing; your verdict goes in the report and the lead records it.
 
-TOOL mode (the score tool, a ratchet, a CI check): reproduce the derivation yourself, then run NEGATIVE CONTROLS in scratch copies: a hand-edited number in the score file, a deliberately skipped or façade test, a new failing test outside the baseline list, a unit with zero tests counted green. A check that cannot be made to fail has no teeth: FAIL.
+TOOL mode (the score tool, a ratchet, a CI check): reproduce the derivation yourself, then run NEGATIVE CONTROLS in scratch copies under your evidence directory, never inside the checkout: a hand-edited number in the score file, a deliberately skipped or façade test, a new failing test outside the baseline list, a unit with zero tests counted green. A check that cannot be made to fail has no teeth: FAIL.
 
 TRIAGE mode (failing tests): run the named files serially, group every failure by its shared engine cause (which remedy or contract change the test predates, which fixture is stale, which is a real regression, which is flaky), name the owning W item per group from document 35 §5, and rank groups by count. Never edit anything, never propose weakening a check.
 
