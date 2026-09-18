@@ -49,19 +49,22 @@ Dated, append-only. The lead writes it; agents read it. Newest entries at the bo
 
 | Lane | Batch | Role / agent | Checkout · branch · base | State |
 |---|---|---|---|---|
-| L0 | TOOLS-1 score tool, ratchet, CI wiring, tsconfig include | rem-implementer (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/tools` · `rem/tools-score` · `5b0b0ae` | **built `6f1a028` 19:29**: 6/6 tool tests, plain tsc green, SCORE.md `Units 0/0 · W closed 0/26 · suite 1616/1854 · residual 238 in 29 files · typecheck GREEN`; residuals 1–6 in its REPORT.md; TOOL review next |
+| L0 | TOOLS-1 score tool, ratchet, CI wiring, tsconfig include | rem-implementer (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/tools` · `rem/tools-score` · `5b0b0ae` | **built `6f1a028` 19:29**: 6/6 tool tests, plain tsc green, SCORE.md `Units 0/0 · W closed 0/26 · suite 1616/1854 · residual 238 in 29 files · typecheck GREEN`; residuals 1–6 in its REPORT.md; **rework `39c6d5f` 20:25** closes the six review holes with refusal legs (6/6); residual TOOLS.07 named (a title citing another unit id at a boundary still matches; anchor the id to the describe title); second TOOL review running |
 | L5 | W16-B1 specification pass | rem-reviewer SPECIFICATION | `/home/simonecoelho/rem/triage` · detached at `84f07c7` | first pass done 19:46 (8 HONEST, C2.08 FAÇADE, 8 corrections); **second pass on `c98cb02` dispatched 20:08** |
-| L6 | TOOLS-1 tool review with negative controls | rem-reviewer TOOL | `/home/simonecoelho/rem/review-tools` · detached at `6f1a028` | **done 19:50**: TOOLS.01/.02/.03/.06 PASS, TOOLS.04/.05 FAIL; six holes (length-based ratchet growth, unbounded id matcher, stale gate report path, empty report not fail-closed, silent drop of id-less rows, tool tests never run); implementer reworking, second review to follow |
+| L6 | TOOLS-1 tool review with negative controls | rem-reviewer TOOL | `/home/simonecoelho/rem/review-tools` · detached at `6f1a028` | **done 19:50**: TOOLS.01/.02/.03/.06 PASS, TOOLS.04/.05 FAIL; six holes (length-based ratchet growth, unbounded id matcher, stale gate report path, empty report not fail-closed, silent drop of id-less rows, tool tests never run); **second review on `39c6d5f` dispatched 20:28** |
 | L1 | W16-B1 (C2 visit/channel, 9 units) | rem-specifier (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/spec` · `rem/w16-c2-spec` · `5b0b0ae` | **spec `f1072cc` → R14 `84f07c7` → corrections 1–8 `c98cb02` 20:05** (integration merged at `9c2b65e`): 15 tests, 10 RED, public-route legs added under R19; one ruled TS2339 on `Core.entrySessionId` (R21); second specification pass (L5) running |
 | L2 | BASE triage of the 238 baseline failures | rem-reviewer TRIAGE (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/triage` · detached at `5b0b0ae` | **done 19:11**; report at `_evidence/BASE/triage/REPORT.md` |
 | L3 | BASE-2 stale consent/retention/identity fixtures (groups C, D-part, F; 43 failures, 6 files) | rem-specifier | `/home/simonecoelho/rem/base2` · `rem/base-2-consent-fixtures` · `7a83faa` | dispatched 2026-09-18 19:13 (`rem-specifier` type) |
 | L4 | BASE-1a stale publication/precondition fixtures in `realtime.sdkContract.test.ts` (groups A, B, J-part; 72 failures, 1 file) | rem-specifier | `/home/simonecoelho/rem/base1a` · `rem/base-1a-sdkcontract` · `7a83faa` | **committed `f6b0213` 20:15**: 72 → 47 failing, 25 fixed, 0 new; 3 witnessed assertion changes; 5 suspected regressions proposed (W37.BASE.01, W05.BASE.01/.02, W04.BASE.01, W26.BASE.01); 47 owed in two families (snapshot `records`/`cell` reads; W37.0x/W03.07 tenant configuration). Review L7 next. |
-| L7 | BASE-1a honesty review of the diff | rem-reviewer BUILD | `/home/simonecoelho/rem/review-base1a` · detached at `f6b0213` | briefed 20:20 |
+| L7 | BASE-1a honesty review of the diff | rem-reviewer BUILD | `/home/simonecoelho/rem/review-base1a` · detached at `f6b0213` | dispatched 20:28 |
 
 ## Batches
 
 ### TOOLS-1 — score tool, ratchet, CI wiring
 Units: `TOOLS.01` tsconfig include so plain `tsc --noEmit` is green; `TOOLS.02` `scripts/remediation/score.mjs --from <vitest.json>` derives SCORE.md; `TOOLS.03` `--check` refuses a hand-edited SCORE.md; `TOOLS.04` `--check-ratchet` refuses a failure outside `baseline-failures.json` and refuses a grown list; `TOOLS.05` a unit with zero tests is never green; `TOOLS.06` CI runs the gate commands and the score check. Tool units are proven by `scripts/remediation/score.test.mjs` (node:test) and the reviewer's negative controls, not by product tests.
+
+### TOOLS-2 — owed
+`TOOLS.07` anchor unit matching to the `describe` title (`ancestorTitles` contains exactly `unit:<id>`), not a substring of `fullName`; remove the CI `Suite` step's `continue-on-error` when the baseline reaches zero; re-prove `verified-package`.
 
 ### W16-B1 — C2 visit and entry channel (witness: document 35 §5 W16; HANDOFF-2026-09-18 §5 C2; `src/services/visit.ts` vocabulary; F13)
 | Unit | Ruled outcome | Legs |
