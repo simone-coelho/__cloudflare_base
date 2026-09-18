@@ -58,7 +58,8 @@ Dated, append-only. The lead writes it; agents read it. Newest entries at the bo
 | L4 | BASE-1a stale publication/precondition fixtures in `realtime.sdkContract.test.ts` (groups A, B, J-part; 72 failures, 1 file) | rem-specifier | `/home/simonecoelho/rem/base1a` · `rem/base-1a-sdkcontract` · `7a83faa` | **committed `f6b0213` 20:15**: 72 → 47 failing, 25 fixed, 0 new; 3 witnessed assertion changes; 5 suspected regressions proposed (W37.BASE.01, W05.BASE.01/.02, W04.BASE.01, W26.BASE.01); 47 owed in two families (snapshot `records`/`cell` reads; W37.0x/W03.07 tenant configuration). Review L7 next. |
 | L7 | BASE-1a honesty review of the diff | rem-reviewer BUILD | `/home/simonecoelho/rem/review-base1a` · detached at `f6b0213` | dispatched 20:28 |
 | L8 | W16-B1 build (nine C2 units) | rem-implementer | `/home/simonecoelho/rem/build-w16b1` · `rem/w16-c2-build` · `6811049` (= spec `a50478d` + integration `d44f7e8`, `units.json` resolved to the spec rows) | dispatched 20:58 |
-| L9 | BASE-2 honesty review of the diff | rem-reviewer BUILD | `/home/simonecoelho/rem/review-base2` · detached at `7925c4e` | briefed 20:58 |
+| L9 | BASE-2 honesty review of the diff | rem-reviewer BUILD | `/home/simonecoelho/rem/review-base2` · detached at `7925c4e` | dispatched 21:00 |
+| L10 | Lead validation: first serial whole-suite run on the integration head `d44f7e8` to regenerate SCORE.md and the baseline from a serial run | lead | `/home/simonecoelho/rem/lead-validate` · detached at `d44f7e8` | running 21:00 |
 
 ## Batches
 
