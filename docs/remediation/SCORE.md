@@ -29,7 +29,7 @@ _None._
 |---|---|
 | units | docs/remediation/units.json |
 | units sha256 | 37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570 |
-| reviews | docs/remediation/reviews (absent) |
+| reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
 
@@ -39,7 +39,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-baseline-7b01c14.json (outside the checkout) |
-| vitest report sha256 | 1c5234cd1912625722ffb21982ef21e129c238b3961c6080538bcd62925d4ca6 |
-| commit | 5b0b0ae8edf20318f68963c34cffe0dd5c25c3e9 |
-| generated | 2026-09-18T23:13:41.048Z |
+| vitest report | vitest-serial.json (outside the checkout) |
+| vitest report sha256 | 9ac47c1cc92d9c46e2f6b558a99e598fe75bcfd96dec619fdb0e59994a4465d8 |
+| commit | 3d92ed43f34472efe3c178dc50d9168d50e0a507 |
+| generated | 2026-09-18T23:59:02.466Z |

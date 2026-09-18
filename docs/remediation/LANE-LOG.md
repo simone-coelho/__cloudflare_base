@@ -59,7 +59,7 @@ Dated, append-only. The lead writes it; agents read it. Newest entries at the bo
 | L7 | BASE-1a honesty review of the diff | rem-reviewer BUILD | `/home/simonecoelho/rem/review-base1a` · detached at `f6b0213` | dispatched 20:28 |
 | L8 | W16-B1 build (nine C2 units) | rem-implementer | `/home/simonecoelho/rem/build-w16b1` · `rem/w16-c2-build` · `6811049` (= spec `a50478d` + integration `d44f7e8`, `units.json` resolved to the spec rows) | dispatched 20:58 |
 | L9 | BASE-2 honesty review of the diff | rem-reviewer BUILD | `/home/simonecoelho/rem/review-base2` · detached at `7925c4e` | dispatched 21:00 |
-| L10 | Lead validation: first serial whole-suite run on the integration head `d44f7e8` to regenerate SCORE.md and the baseline from a serial run | lead | `/home/simonecoelho/rem/lead-validate` · detached at `d44f7e8` | running 21:00 |
+| L10 | Lead validation: first serial whole-suite run on the integration head `d44f7e8` to regenerate SCORE.md and the baseline from a serial run | lead | `/home/simonecoelho/rem/lead-validate` · detached at `d44f7e8` | **done 21:15**: 1616/1854, 238 failing in 29 files, identical set to the parallel baseline (0 serial-only, 0 parallel-only), 623 s; ratchet 0 outside; `SCORE.md` and `baseline-failures.json` regenerated from this serial run and committed on the integration branch |
 
 ## Batches
 

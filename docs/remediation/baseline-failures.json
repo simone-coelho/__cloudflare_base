@@ -1,8 +1,8 @@
 {
-  "generated": "2026-09-18T23:13:40.959Z",
-  "commit": "5b0b0ae8edf20318f68963c34cffe0dd5c25c3e9",
-  "vitest_sha256": "1c5234cd1912625722ffb21982ef21e129c238b3961c6080538bcd62925d4ca6",
-  "note": "parallel run on 7b01c14; L2 serial triage supersedes",
+  "generated": "2026-09-18T23:59:02.184Z",
+  "commit": "3d92ed43f34472efe3c178dc50d9168d50e0a507",
+  "vitest_sha256": "9ac47c1cc92d9c46e2f6b558a99e598fe75bcfd96dec619fdb0e59994a4465d8",
+  "note": "serial run (--maxWorkers=1) on integration head d44f7e8, lead validation 2026-09-18; supersedes the parallel run on 7b01c14",
   "allow_grow_reason": null,
   "failures": [
     " CDP/ODP/session/realtime log boundaries reaches authenticated malformed handlers and preserves successful relay despite nonfatal capture error",
