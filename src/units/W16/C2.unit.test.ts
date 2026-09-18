@@ -23,6 +23,7 @@ import {
 
 import type { Env } from '@/types/env';
 import realtimeRoutes from '@/routes/realtime';
+import { decisionRoutes } from '@/routes/decisions';
 import { tenantMiddleware } from '@/tenancy/middleware';
 import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import { newAnonymousSession, verifySessionCapability, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
@@ -209,7 +210,8 @@ function boundary(host: string) {
   };
   env.SHOPPER_REFLEX = ns as unknown as DurableObjectNamespace;
   const app = new Hono<{ Bindings: Env }>();
-  app.use('*', tenantMiddleware()); app.route('/realtime', realtimeRoutes);
+  // R19: the routes production serves, mounted as `src/index.ts` mounts them.
+  app.use('*', tenantMiddleware()); app.route('/realtime', realtimeRoutes); app.route('/v1', decisionRoutes);
   const call = async (path: string, capability?: string, body?: unknown, tenant = TENANT) => {
     await configureRetention();
     const request = new Request(`https://synthetic.invalid${path}`, {
@@ -237,12 +239,23 @@ interface HostFixture {
   f: ReturnType<typeof boundary>;
   grant: Awaited<ReturnType<typeof newAnonymousSession>>;
   principal: SessionCapability;
-  /** The real content decision path: `serveContentDecisions` over this host's env. */
+  /**
+   * R19: the mounted route production serves — `GET /v1/:tenant/decisions/snapshot`
+   * behind `requireShopper`, which enforces `ENTRY_QUERY_LIMIT` and
+   * `validEntry(…, true)` and forwards to the shopper's owner before deciding.
+   */
+  snapshot: (request?: { entry?: ChannelSignals; channel?: string | null }) => Promise<{ status: number; ok: unknown; decisions: unknown }>;
+  /**
+   * The same decision one layer in, because no public route exposes the cell:
+   * `/v1/:tenant/decisions/snapshot` omits `cell` and `records` in offer mode
+   * (`src/routes/decisions.ts:478`). Named `host-internal` per R19; the missing
+   * public observable is the `residual` on each row in units.json.
+   */
   decide: (request?: { entry?: ChannelSignals; channel?: string | null }) => Promise<{ channel: string; visit_bucket: string }>;
   /** A real accepted page view through the mounted app, on whichever host this fixture runs. */
   action: (entry?: ChannelSignals) => Promise<number>;
   /** The SDK-visible hydrate projection (`GET /realtime/reflex`). */
-  projection: () => Promise<{ visitNumber: number | null; entryChannel: string | null } | null | undefined>;
+  projection: () => Promise<unknown>;
 }
 
 async function hostFixture(host: 'session' | 'do'): Promise<HostFixture> {
@@ -272,6 +285,15 @@ async function hostFixture(host: 'session' | 'do'): Promise<HostFixture> {
     await f.drain();
     return { channel: out.cell.channel, visit_bucket: out.cell.visit_bucket };
   };
+  const snapshot = async (request: { entry?: ChannelSignals; channel?: string | null } = {}) => {
+    const query = `?page=home&visitorId=${grant.subject}&sessionId=${grant.sessionId}`
+      + (request.entry === undefined ? '' : `&entry=${encodeURIComponent(JSON.stringify(request.entry))}`)
+      + (request.channel == null ? '' : `&channel=${encodeURIComponent(request.channel)}`);
+    const response = await f.call(`/v1/${TENANT}/decisions/snapshot${query}`, grant.capability);
+    const body = await response.clone().json().catch(() => ({})) as { ok?: unknown; decisions?: unknown };
+    await f.drain();
+    return { status: response.status, ok: body.ok, decisions: body.decisions };
+  };
   const action = async (entry?: ChannelSignals) => {
     const response = await f.call('/realtime/action', grant.capability, {
       type: 'page_view', source: 'sdk', userId: grant.subject, sessionId: grant.sessionId,
@@ -283,9 +305,9 @@ async function hostFixture(host: 'session' | 'do'): Promise<HostFixture> {
   const projection = async () => {
     const response = await f.call('/realtime/reflex', grant.capability);
     expect(response.status, await response.clone().text()).toBe(200);
-    return ((await response.json()) as { visit?: { visitNumber: number | null; entryChannel: string | null } | null }).visit;
+    return ((await response.json()) as { visit?: unknown }).visit;
   };
-  return { f, grant, principal, decide, action, projection };
+  return { f, grant, principal, snapshot, decide, action, projection };
 }
 
 /** The paid-social arrival the customer's Cross-Channel Awareness row describes. */
@@ -351,11 +373,14 @@ describe('unit:W16.C2.04', () => {
     // Nothing known at all: no channel, and no invented visit 1 on the read path.
     expect(projectVisit(undefined, undefined, T0)).toEqual({ visitNumber: null, entryChannel: null });
     expect(projectVisit(null, null, T0)).toEqual({ visitNumber: null, entryChannel: null });
-    // Lead ruling R14: an empty or invalid site host carries no page-view
-    // evidence, so the SDK's all-empty placeholder stays unknown. `direct`
-    // needs a present, valid site host with an empty or same-site referrer.
-    expect(projectVisit(null, null, T0, { utmMedium: '', utmSource: '', referrer: '', siteHost: '' }))
-      .toEqual({ visitNumber: null, entryChannel: null });
+    // Lead ruling R14, both halves: a site host that is empty OR not a valid
+    // hostname carries no page-view evidence, so the entry stays unknown —
+    // including the SDK's all-empty placeholder. `direct` needs a present,
+    // valid site host with an empty or same-site referrer.
+    for (const siteHost of ['', 'https://shop.coach.com/', `${SITE}/cart`, 'not a host']) {
+      expect(projectVisit(null, null, T0, { utmMedium: '', utmSource: '', referrer: '', siteHost }), `siteHost ${JSON.stringify(siteHost)}`)
+        .toEqual({ visitNumber: null, entryChannel: null });
+    }
     // An unrecognized medium or source is not evidence of a direct arrival.
     const prior = { visitCount: 2, lastVisitAt: T0, entryChannel: undefined };
     for (const entry of [{ utmMedium: 'wombat-unrecognized' }, { utmSource: 'some-unknown-affiliate' },
@@ -372,7 +397,19 @@ describe('unit:W16.C2.04', () => {
     expect(liveVisit(prior, T0, T0 + VISIT_GAP_MS, { referrer: '', siteHost: SITE }).entryChannel).toBe('direct');
   });
 
-  it('host: an unrecognized arrival leaves the decision cell unknown on both hosts, with no fabricated visit 1', async () => {
+  it('host: the mounted snapshot route serves an unrecognized arrival instead of refusing it, on both hosts', async () => {
+    for (const host of ['session', 'do'] as const) {
+      const h = await hostFixture(host);
+      // An unrecognized campaign tag is a well-formed arrival context: the
+      // public boundary must accept and decide on it. Refusing it at the door
+      // is not a way to keep the entry unknown.
+      expect(await h.snapshot({ entry: UNKNOWN_ENTRY }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+      expect(await h.action(UNKNOWN_ENTRY), host).toBe(200);
+      expect(await h.snapshot({ entry: UNKNOWN_ENTRY }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+    }
+  });
+
+  it('host-internal: an unrecognized arrival leaves the decision cell unknown on both hosts, with no fabricated visit 1', async () => {
     for (const host of ['session', 'do'] as const) {
       const h = await hostFixture(host);
       // Cold shopper, nothing owned: neither dimension may be invented.
@@ -387,11 +424,26 @@ describe('unit:W16.C2.04', () => {
 });
 
 describe('unit:W16.C2.05', () => {
-  it('host: an established owned entry channel beats a request-supplied fallback channel on both hosts', async () => {
+  it('host: the mounted snapshot route serves a request channel, valid or not, on both hosts', async () => {
     for (const host of ['session', 'do'] as const) {
       const h = await hostFixture(host);
-      // With nothing owned, the bounded request fallback is all there is.
+      // The channel is a bounded fallback the public route accepts and
+      // neutralises internally; it is never a reason to refuse the decision.
+      for (const channel of ['email', 'not-a-channel', 'coach-spring-campaign']) {
+        expect(await h.snapshot({ channel }), `${host} ${channel}`).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+      }
+      expect(await h.action(PAID_SOCIAL_ENTRY), host).toBe(200);
+      expect(await h.snapshot({ channel: 'email' }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+    }
+  });
+
+  it('host-internal: an established owned entry channel beats a request-supplied fallback channel on both hosts', async () => {
+    for (const host of ['session', 'do'] as const) {
+      const h = await hostFixture(host);
+      // With nothing owned, the bounded request fallback is all there is — and
+      // a fallback outside the six-value vocabulary is not a channel at all.
       expect(await h.decide({ channel: 'email' }), host).toEqual({ channel: 'email', visit_bucket: 'unknown' });
+      expect(await h.decide({ channel: 'not-a-channel' }), host).toEqual({ channel: 'unknown', visit_bucket: 'unknown' });
       // The visit's real entry is established by an accepted event.
       expect(await h.action(PAID_SOCIAL_ENTRY), host).toBe(200);
       // From here the caller cannot relabel the visit, by channel or by a later
@@ -403,6 +455,11 @@ describe('unit:W16.C2.05', () => {
   });
 });
 
+// The rollover clauses of this unit (the next visit number at the boundary, and
+// both dimensions unchanged inside the gap) are GREEN AT SPEC: `projectVisit`
+// already advances the read-time boundary. Only the "freshly classified entry
+// channel" clause is RED, on the same SEARCH_HOSTS matcher as W16.C2.01. The
+// green clauses are the regression guard around the fix.
 describe('unit:W16.C2.06', () => {
   it('logic: after VISIT_GAP_MS the next read yields the next visit number and a freshly classified channel; inside the gap both are unchanged', () => {
     const prior = { visitCount: 3, lastVisitAt: T0, entryChannel: 'email' as EntryChannel };
@@ -421,7 +478,25 @@ describe('unit:W16.C2.06', () => {
     expect(prior).toEqual({ visitCount: 3, lastVisitAt: T0, entryChannel: 'email' });
   });
 
-  it('host: both hosts roll the visit over at read time and classify the new arrival', async () => {
+  it('host: the mounted snapshot route serves the returning arrival on both sides of the gap, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of ['session', 'do'] as const) {
+        clock.mockReturnValue(T0);
+        const h = await hostFixture(host);
+        expect(await h.action(PAID_SOCIAL_ENTRY), host).toBe(200);
+        // A read is a read on both sides of the boundary: the public route
+        // serves the return visit without a fresh event and without refusing
+        // the new arrival context.
+        clock.mockReturnValue(T0 + VISIT_GAP_MS - 1);
+        expect(await h.snapshot({ entry: SEARCH_ENTRY }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+        clock.mockReturnValue(T0 + VISIT_GAP_MS);
+        expect(await h.snapshot({ entry: SEARCH_ENTRY }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+      }
+    } finally { clock.mockRestore(); }
+  });
+
+  it('host-internal: both hosts roll the visit over at read time and classify the new arrival', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
     try {
       for (const host of ['session', 'do'] as const) {
@@ -442,25 +517,41 @@ describe('unit:W16.C2.06', () => {
 });
 
 describe('unit:W16.C2.07', () => {
-  it('host: the SessionManager path and the ShopperReflex path report the same visit number and entry channel, in the decision cell and in the SDK-visible projection', async () => {
+  /** One identical event sequence per host: a paid-social arrival, then a second page view inside the same visit. */
+  async function sameSequence(host: 'session' | 'do', clock: { mockReturnValue: (value: number) => unknown }) {
+    clock.mockReturnValue(T0);
+    const h = await hostFixture(host);
+    expect(await h.action(PAID_SOCIAL_ENTRY), host).toBe(200);
+    clock.mockReturnValue(T0 + 60_000);
+    expect(await h.action(), host).toBe(200);
+    return h;
+  }
+
+  it('host: the SDK-visible hydrate snapshot carries the same visit number and entry channel on both hosts', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
     try {
-      const seen: Record<string, { cell: { channel: string; visit_bucket: string }; projection: unknown }> = {};
+      const seen: Record<string, unknown> = {};
+      for (const host of ['session', 'do'] as const) seen[host] = await (await sameSequence(host, clock)).projection();
+      // R20: the public snapshot carries the `projectVisit` shape. The Durable
+      // Object's internal `projection=content` shape
+      // ({ visitCount, lastVisitAt, entryChannel, lastSeen }) stays internal and
+      // never crosses the SDK boundary.
       for (const host of ['session', 'do'] as const) {
-        clock.mockReturnValue(T0);
-        const h = await hostFixture(host);
-        // One identical event sequence per host: a paid-social arrival, then a
-        // second page view inside the same visit.
-        expect(await h.action(PAID_SOCIAL_ENTRY), host).toBe(200);
-        clock.mockReturnValue(T0 + 60_000);
-        expect(await h.action(), host).toBe(200);
-        seen[host] = { cell: await h.decide(), projection: await h.projection() };
+        expect(seen[host], host).toEqual({ visitNumber: 1, entryChannel: 'paid_social' });
       }
+      expect(seen.session).toEqual(seen.do);
+    } finally { clock.mockRestore(); }
+  });
+
+  it('host-internal: the SessionManager path and the ShopperReflex path put the same visit number and entry channel on the decision cell', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      const seen: Record<string, { channel: string; visit_bucket: string }> = {};
+      for (const host of ['session', 'do'] as const) seen[host] = await (await sameSequence(host, clock)).decide();
       // The ruled values for that sequence: the visit the shopper is actually in,
       // and the channel she actually arrived on.
       for (const host of ['session', 'do'] as const) {
-        expect(seen[host]!.cell, host).toEqual({ channel: 'paid_social', visit_bucket: '1' });
-        expect(seen[host]!.projection, host).toEqual({ visitNumber: 1, entryChannel: 'paid_social' });
+        expect(seen[host], host).toEqual({ channel: 'paid_social', visit_bucket: '1' });
       }
       expect(seen.session).toEqual(seen.do);
     } finally { clock.mockRestore(); }
@@ -472,7 +563,14 @@ describe('unit:W16.C2.08', () => {
     const f = testHost();
     const core = createCore({ tenant: 'coach' }, f.host);
     expect(await core.ready()).toBe(true);
-    const named = () => (core as unknown as { entrySessionId?: string }).entrySessionId;
+    // R18: `entrySessionId` is a public read-only member of the `Core` interface
+    // (`src/sdk/core.ts:80-116`, beside `readonly entry`), exposed in the
+    // regenerated `public/sdk` bundles. It names the browsing session that
+    // produced the CACHED entry signals, so a getter returning the current
+    // session id does not satisfy it — the rollover step below distinguishes the
+    // two. Read directly, with no cast: until the member exists this unit is RED
+    // at runtime and the app typecheck reports the ruled missing member.
+    const named = () => core.entrySessionId;
 
     // The arrival this page load actually carries, and the session that produced it.
     expect(core.entry).toEqual({ utmMedium: 'paid_social', utmSource: 'tiktok', referrer: 'https://www.tiktok.com/', siteHost: 'shop.example' });
@@ -508,13 +606,19 @@ describe('unit:W16.C2.08', () => {
     expect(named()).toBe(core.sessionId);
 
     // 3. Browsing-session rollover: an idle gap mints the next browsing session,
-    // and the entry belongs to that session, not to the previous one.
+    // and the entry belongs to the session that produced it, not to the new one.
     const before = core.sessionId;
     arrive('?utm_source=google&utm_medium=organic', 'https://www.google.com/');
     f.tick(DEFAULT_SESSION_IDLE_MS + 1);
+    // Read first, before anything asks for the session id: the cached entry is
+    // still the previous session's, so entrySessionId still names it. A member
+    // that simply returns the current browsing session fails here.
+    expect(named()).toBe(before);
+    // The next entry read notices the rollover, clears the cache and recomputes
+    // from the document that is current now.
+    expect(core.entry).toEqual({ utmMedium: 'organic', utmSource: 'google', referrer: 'https://www.google.com/', siteHost: 'shop.example' });
     const after = core.sessionId;
     expect(after).not.toBe(before);
-    expect(core.entry).toEqual({ utmMedium: 'organic', utmSource: 'google', referrer: 'https://www.google.com/', siteHost: 'shop.example' });
     expect(named()).toBe(after);
   });
 });
