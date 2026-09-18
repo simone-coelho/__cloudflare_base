@@ -31,14 +31,15 @@ Dated, append-only. The lead writes it; agents read it. Newest entries at the bo
 | R6 | 2026-09-18 | Builder checkouts under `/home/simonecoelho/rem/<lane>` with `node_modules` symlinked to `_deps`; evidence under `/home/simonecoelho/rem/_evidence/<batch>/<role>/`, mirrored by the lead to `C:\Users\LAH\Documents\Remediation-Evidence\cloudflare_base\`. |
 | R7 | 2026-09-18 | W16 is decomposed by admitted criterion: batch 1 = C2 visit/channel (9 units). C3–C8 follow in order. W16.01's K1–K10 checks are superseded by units plus the gate; its 59 owned paths are the granted scope for W16 implementers. C10 (live) stays open. |
 | R8 | 2026-09-18 | The twelve stale `.claude/worktrees/agent-*` worktrees from August are pre-existing user material: untouched. |
+| R9 | 2026-09-18 | Project role files under `.claude/agents/` are discovered only at session start. In the session that created them, lanes are dispatched through the general-purpose agent on Opus with the role file as the mandatory first read; from the next session the `rem-*` types are used directly. The dependency symlink `node_modules` is excluded via `.git/info/exclude` so every worktree reports a clean porcelain status. |
 
 ## Lanes
 
 | Lane | Batch | Role / agent | Checkout · branch · base | State |
 |---|---|---|---|---|
-| L0 | TOOLS-1 score tool, ratchet, CI wiring, tsconfig include | rem-implementer | `/home/simonecoelho/rem/tools` · `rem/tools-score` · method commit | briefed |
-| L1 | W16-B1 (C2 visit/channel, 9 units) | rem-specifier | `/home/simonecoelho/rem/spec` · `rem/w16-c2-spec` · method commit | briefed |
-| L2 | BASE triage of the 238 baseline failures | rem-reviewer (TRIAGE) | `/home/simonecoelho/rem/triage` · detached at method commit | briefed |
+| L0 | TOOLS-1 score tool, ratchet, CI wiring, tsconfig include | rem-implementer (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/tools` · `rem/tools-score` · `5b0b0ae` | dispatched 2026-09-18 18:50 |
+| L1 | W16-B1 (C2 visit/channel, 9 units) | rem-specifier (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/spec` · `rem/w16-c2-spec` · `5b0b0ae` | dispatched 2026-09-18 18:50 |
+| L2 | BASE triage of the 238 baseline failures | rem-reviewer TRIAGE (general-purpose/Opus, role file first) | `/home/simonecoelho/rem/triage` · detached at `5b0b0ae` | dispatched 2026-09-18 18:50 |
 
 ## Batches
 
@@ -67,4 +68,4 @@ Triage first (L2). Then units under the owning W, named from the triage, smalles
 |---|---|
 | `7b01c14` | Checkpoint: worktree exactly as found (product, docs, scripts). |
 | `7260f02` | Frozen evidence and tracker. |
-| (this) | Method takeover: METHOD.md, agents, AGENTS.md, LANE-LOG.md, RESUME.md. |
+| `5b0b0ae` | Method takeover: METHOD.md, agents, AGENTS.md, LANE-LOG.md, RESUME.md. |
