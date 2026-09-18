@@ -2,59 +2,44 @@
 
 These instructions govern work on the content/personalization remediation programme in document 35. They do not authorize unrelated changes or external operations.
 
-The user's latest explicit instructions take precedence. Where older execution documents conflict with the standing agreement below, apply this agreement while preserving document 35's full original requirements.
+The user's latest explicit instructions take precedence. On 2026-09-18 the user transferred the lead to a Claude session and ordered the delegated-agent method that succeeded on another codebase. That method is written in [docs/remediation/METHOD.md](docs/remediation/METHOD.md) and is the law for execution. Where older execution documents (document 36, the frozen tracker, older handoffs, earlier versions of this file) conflict with METHOD.md, METHOD.md applies while document 35's full original W01–W41 requirements are preserved.
 
-## Standing execution agreement — 2026-09-16
+## Standing execution agreement — 2026-09-18 (method takeover)
 
-- The lead delegates all product implementation to agents and coordinates independent review; the lead does not implement engine fixes. The lead retains ownership of the existing execution records.
-- Complete the original W01–W41 items in their original order and full scope, preserving existing fixes. Do not silently reduce scope, skip a blocked item, substitute a roadmap, or treat a completed subtask as a completed W item. Surface the exact blocker and required owner decision.
-- The user explicitly authorized continuing W02–W41 local implementation in order after each item's independent local review, leaving live acceptance open and batching deployment-dependent checks at the end. A live-only acceptance dependency does not block the next local item. Reuse this mandate without asking again per item; it does not authorize deployment, cloud/resource mutation, credential operations or full acceptance without evidence.
-- Before every delegation, change of direction, or completion report, check the current W item's complete requirements and these instructions. Each assignment identifies the W scope, exclusive file ownership and focused acceptance checks. A distinct reviewer checks the actual artifact against the whole W requirement before full-item acceptance.
-- Keep documentation to essential, concise admission, completion, handoff and real-issue records in the existing system. Do not create another tracker, framework or documentation programme. Documentation and test counts are not implementation progress.
-- Use the smallest sufficient checks and reuse valid evidence. Broaden testing only for a concrete defect, affected dependency or documented requirement, stating the reason. Do not run broad CI pipelines routinely for small changes.
-- Deliver coherent implementation batches. Do not automatically commit, merge, push or deploy individual fixes; those operations require their applicable separate authority.
-- On every resume or context change, reread this agreement and the latest checkpoint. Keep the actual active W item, assigned agents, unfinished requirements, review failures and exact next action in the existing records. Report only completion supported by evidence; a deadline does not justify claiming unfinished work is done.
+- The lead delegates all product implementation, test writing and review to agents. The lead never implements, never writes tests, never reviews. The lead names batches, writes briefs, sequences checkouts, validates by re-running the score on the exact commit, keeps `docs/remediation/LANE-LOG.md` and writes every process lesson into `.claude/agents/rem-*.md` the same hour.
+- Complete the original W16–W41 items in order and full scope, preserving existing fixes. W01–W15 keep their retained local dispositions in the frozen records; a regression found in their area becomes a unit under the owning W. Do not silently reduce scope, skip a blocked item, or treat a completed unit as a completed W item. Surface the exact blocker and the required owner decision.
+- The unit of work, the definition of done, the score, the ratchet, the batch loop and the gate are defined in METHOD.md §3–§7. Progress is the derived score line, never a count typed by anyone.
+- Standing user mandate (2026-09-16, reused without asking again): continue local implementation W16–W41 in order after each item's independent review; batch live acceptance at the end. It does not authorize deployment, cloud/resource mutation, credential operations, customer-data operations or full acceptance without evidence.
+- Commits on lane branches and the integration branch are part of the method. Push, pull request and auto-merge authority is recorded in LANE-LOG.md when the user grants it; until then a batch stops at "ready to push".
+- Documentation is limited to METHOD.md, `units.json`, `SCORE.md`, `baseline-failures.json`, `reviews/<W>.json`, LANE-LOG.md and a short RESUME.md. No other tracker, framework or documentation programme.
+- Use the smallest sufficient checks: the batch's units plus the gate. Broaden only for a concrete defect or a documented requirement, stating the reason.
 
 ## Read before remediation work
 
-1. Read [the execution entry point](docs/remediation/README.md).
-2. Read [the governance protocol](docs/architecture/36-remediation-governance-and-execution.md) and [the resume checkpoint](docs/remediation/RESUME.md).
-3. The lead runs `node scripts/remediation/board.mjs check` and `node scripts/remediation/board.mjs status` at session bootstrap and relevant task admission/acceptance checkpoints. Reuse the result while relevant inputs are unchanged; workers do not duplicate these checks. Conversation-only turns and unrelated documentation edits do not require another run.
-4. Read the assigned task, its complete parent W scope in document 35, linked findings/requirements, and applicable source. Do not substitute an agent summary for these instructions or the acceptance contract.
+1. [docs/remediation/METHOD.md](docs/remediation/METHOD.md).
+2. [docs/remediation/LANE-LOG.md](docs/remediation/LANE-LOG.md): rulings, lanes in flight, authority, baseline.
+3. [Document 35](docs/architecture/35-audit-verification-and-source-of-truth.md) §5 for the active W item and its linked findings; [HANDOFF-2026-09-18](docs/handover/HANDOFF-2026-09-18.md) §5–§8 for the W16 detail, the W17–W41 starting map, settled decisions and open owner decisions.
 
-If the checker reports source drift or inconsistent state, reconcile it before changing implementation. A valid tracker is not a passing engine, customer acceptance, or release approval.
+The old board check (`scripts/remediation/board.mjs`) and the 27 MB tracker are frozen history and are not run or edited at bootstrap. Agents read only what their brief names.
 
 ## Agent policy and ownership
 
-- The user requires all delegated agents to use **gpt-6-astra** with **xhigh, max, or ultra** reasoning. Never silently fall back to a weaker model/effort. Escalate if the requested configuration is unavailable.
-- The lead owns task admission, dependency and integration coordination, the existing execution records, source-of-truth maintenance and final acceptance. Assign product edits and integration fixes to workers; coordination does not authorize the lead to implement them.
-- A worker owns only its explicitly assigned task files. Independent reviewers inspect the actual artifact and evidence; an implementer cannot independently verify its own work.
-- Use one active implementation/integration task by default. Read-only investigation and independent review may run in parallel. Do not allow overlapping file ownership or concurrent edits to governance records.
-- Subagents must not create further delegations unless the lead explicitly assigns that authority, still subject to the same model/effort policy.
+- Delegated agents are the three project roles in `.claude/agents/`: `rem-specifier`, `rem-implementer`, `rem-reviewer`, on Claude Opus at xhigh effort; Fable 5.1 is the escalation model for a unit whose second build fails. This replaces the earlier gpt-6-astra requirement (user direction 2026-09-18). Never silently fall back to a weaker model or effort.
+- One writer per checkout, ever. The specifier owns `src/units/**` and `docs/remediation/units.json` for its batch; the implementer owns the product paths its brief grants; the reviewer owns nothing. The lead alone edits governance files, in the control checkout on `/mnt/c`.
+- Builders and reviewers never run inside the control checkout. Subagents do not delegate further.
 
 ## Measure before, verify after
 
-### Throughput and North Star — standing user direction, 2026-09-07
-
-- Prioritize implemented remediation against document 35 and the customer-neutral engine's relevance, latency, explainability and trustworthy measurement. Documentation and test counts are not product progress.
-- Keep plans, evidence and handoffs concise. Reuse the existing tracker and checks; do not create another framework, infrastructure-validation programme or broad test matrix for a small change.
-- Set the smallest sufficient acceptance checks before coding. Expand only for a concrete defect, affected dependency or documented requirement, with an explicit reason. Prefer coherent in-scope fixes to repeatedly revisiting the same source for tiny edits.
-- Preserve independent review, truthful evidence and required safety checks. Reuse valid accepted dependency assurance where the task contract permits; never hide stale proof, backdate execution or call housekeeping a new remedy.
-
-Before each coherent implementation assignment, keep one concise preflight in the existing task record: scope, relevant baseline/reproduction or justified design case, acceptance criteria, dependencies/decisions, test/measurement plan, rollback and lead approval. Reuse unchanged scope and valid dependency evidence; do not create separate documents for each field or restart preflight for every small edit.
-
-After implementation, preserve exact artifact identity, checks and results, limitations, independent review, lead disposition and handoff. Missing, failed, skipped or stale required evidence is not a pass. Record rework and superseding validation rather than rewriting history.
-
-Task completion, verified containment, verified W-package scope, finding closure, contractual acceptance and release approval are different states. Do not automatically promote one into another. In particular, W36 does not close F14, gamma zero is not a learning-ingestion kill switch, and a helper test is not customer or deployed-runtime acceptance.
+- The baseline at checkpoint `7b01c14` is recorded in LANE-LOG.md: 238 failing tests in 29 files, app typecheck green only with the no-composite flags. The gate ratchets from there; a batch never adds a failure and names what it did not fix.
+- Every lead report starts with the derived score line. Documentation, test counts and tracker validity are not product progress. Never invent an ETA, a live acceptance or a completed feature.
+- Unit completion, W item closure, finding closure, gate acceptance and release approval are different states. A green unit is not customer or deployed-runtime acceptance. W36 does not close F14; gamma zero is not a learning-ingestion kill switch.
 
 ## Authority and safety
 
-Current authority is recorded in the tracker and checkpoint. Framework setup alone does not authorize engine fixes. Once the user grants a bounded implementation mandate, record and reuse it; do not ask again for every already authorized local step.
+Deployment, cloud/resource mutation, credential rotation, destructive cleanup, customer-data operations, external messages and customer-scope amendments require their own applicable authority. Agents cannot approve a customer, privacy or business decision by voting among themselves. The settled decisions in HANDOFF-2026-09-18 §7 are not reopened; the open owner decisions in §8 are not invented.
 
-Deployment, cloud/resource mutation, credential rotation, destructive cleanup, customer-data operations, external messages and customer-scope amendments require their own applicable authority. Agents cannot approve a customer/privacy/business decision by voting among themselves.
-
-Preserve pre-existing worktree changes. Never restore/delete unrelated files, commit/push, or invoke provisioning/deploy/seed scripts merely to make a check green. Keep credentials and customer records out of evidence.
+Preserve pre-existing worktree material. The owner's settings deny `git checkout`, `git reset` and `git stash`; agents also never use `git restore`, `git switch`, `git rm`, `rm -rf`, installs or process kills. Never invoke provisioning, deploy or seed scripts to make a check green. Keep credentials and customer records out of evidence.
 
 ## Durable handoff
 
-Update the existing tracker/journal and RESUME.md when execution state, assignments, evidence, decisions or the next action actually change. Before yielding, switching ownership or starting a fresh context, ensure those records are current; unchanged state needs no new entry or repeated history. Keep failures and unresolved requirements visible. Only the lead marks task/package acceptance after independent evidence has been checked.
+The lead updates LANE-LOG.md whenever lanes, commits, rulings or authority change, and keeps RESUME.md to a few lines pointing at METHOD.md and LANE-LOG.md. A new lead starts from those two files and the score, not from chat recollection. Unresolved requirements and named residuals stay visible in LANE-LOG.md.
