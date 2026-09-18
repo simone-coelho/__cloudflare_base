@@ -15,6 +15,9 @@ import type { AudienceDef } from '@/connectors/types';
 import { KvAudienceStore } from '@/connectors/AudienceStore';
 import { SessionManager } from '@/services/SessionManager';
 import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import { runOwnerOperation } from '@/identity/sessionAuthority';
+import { consentInstruction, CONSENT_LIFETIME_MS } from '@/content/consent';
+import type { RetentionCategory, RetentionPolicy } from '@/retention';
 
 class FakeKV {
   store = new Map<string, string>();
@@ -36,6 +39,18 @@ const audience = (key: string, name: string): AudienceDef => ({
   evaluation: 'realtime', source: 'catalog', createdAt: 0, status: 'published',
 });
 
+const BRANDS = [DEFAULT_TENANT, 'kate-spade', 'stuart-weitzman'];
+
+/**
+ * SYNTHETIC per-brand test registry, not an approved retention period. An
+ * explicit per-category policy is a precondition of a first record
+ * (`src/retention.ts:39`, `:72-89`; `src/services/SessionManager.ts:304`), and
+ * the registry is itself per tenant, which is part of what this file measures.
+ */
+const SYNTHETIC_POLICY: RetentionPolicy = { id: 'isolation-fixture-synthetic', revision: 1, durationMs: 365 * 86400_000, basis: 'admitted', renewal: 'new-record-only' };
+const SYNTHETIC_RETENTION = JSON.stringify({ version: 1, tenants: Object.fromEntries(BRANDS.map((tenant) => [tenant,
+  Object.fromEntries((['profile', 'identity', 'ledger', 'online', 'hourly'] as RetentionCategory[]).map((category) => [category, SYNTHETIC_POLICY]))])) });
+
 let cache: FakeKV;
 let sessions: FakeKV;
 let env: Env;
@@ -43,8 +58,26 @@ let env: Env;
 beforeEach(() => {
   cache = new FakeKV();
   sessions = new FakeKV();
-  env = { CACHE: cache, SESSIONS: sessions } as unknown as Env;
+  env = { CACHE: cache, SESSIONS: sessions, TENANTS: JSON.stringify({ provisioned: BRANDS }), RETENTION: SYNTHETIC_RETENTION } as unknown as Env;
 });
+
+/**
+ * Tracking is off until an explicit choice and a stored `preferences` boolean
+ * grants nothing (`src/content/consent.ts:139-152`, `:156-163`;
+ * `src/services/SessionManager.ts:298-322`; settled decision
+ * `docs/remediation/decisions/D06-W05-explicit-choice-approved-2026-09-16.json`).
+ * The consent record is scoped to ONE brand and ONE subject, which is why the
+ * per-brand writes below each run under their own owner operation.
+ */
+const held = <T>(tenant: string, subject: string, work: () => Promise<T>): Promise<T> => {
+  const chosenAt = Date.now() - 1000;
+  const consent = consentInstruction({
+    version: 1, tenant, subject, revision: 'isolation-fixture-explicit-choice',
+    tracking: { value: true, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS },
+    personalization: { value: true, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS },
+  });
+  return runOwnerOperation({}, env, work, sessions, undefined, async () => consent);
+};
 
 describe('audiences are isolated per brand', () => {
   it('two brands can hold the SAME audience key without colliding', async () => {
@@ -110,31 +143,31 @@ describe('sessions are isolated per brand', () => {
     const coach = new SessionManager(env, { tenant: DEFAULT_TENANT });
     const ks = new SessionManager(env, { tenant: 'kate-spade' });
 
-    await coach.createOrUpdateSession('s1', 'u1', { segments: ['coach_seg'] });
-    await ks.createOrUpdateSession('s1', 'u1', { segments: ['spade_seg'] });
+    await held(DEFAULT_TENANT, 'u1', () => coach.createOrUpdateSession('s1', 'u1', { segments: ['coach_seg'] }));
+    await held('kate-spade', 'u1', () => ks.createOrUpdateSession('s1', 'u1', { segments: ['spade_seg'] }));
 
     expect((await coach.getSession('s1'))!.segments).toEqual(['coach_seg']);
     expect((await ks.getSession('s1'))!.segments).toEqual(['spade_seg']);
   });
 
   it('writes the DEFAULT tenant to the keys it has always used', async () => {
-    await new SessionManager(env, { tenant: DEFAULT_TENANT }).createOrUpdateSession('s1', 'u1', {});
+    await held(DEFAULT_TENANT, 'u1', () => new SessionManager(env, { tenant: DEFAULT_TENANT }).createOrUpdateSession('s1', 'u1', {}));
     expect([...sessions.store.keys()].sort()).toEqual(['session:s1', 'user:u1']);
   });
 
   it('namespaces every other brand', async () => {
-    await new SessionManager(env, { tenant: 'kate-spade' }).createOrUpdateSession('s1', 'u1', {});
+    await held('kate-spade', 'u1', () => new SessionManager(env, { tenant: 'kate-spade' }).createOrUpdateSession('s1', 'u1', {}));
     expect([...sessions.store.keys()].sort()).toEqual(['t:kate-spade:session:s1', 't:kate-spade:user:u1']);
   });
 
   it('the user lookup does not cross brands', async () => {
-    await new SessionManager(env, { tenant: 'kate-spade' }).createOrUpdateSession('s-ks', 'shared-user', {});
+    await held('kate-spade', 'shared-user', () => new SessionManager(env, { tenant: 'kate-spade' }).createOrUpdateSession('s-ks', 'shared-user', {}));
     expect(await new SessionManager(env, { tenant: DEFAULT_TENANT }).getSessionByUserId('shared-user')).toBeNull();
   });
 
   it('deleting a session in one brand leaves the other intact', async () => {
-    await new SessionManager(env, { tenant: DEFAULT_TENANT }).createOrUpdateSession('s1', 'u1', {});
-    await new SessionManager(env, { tenant: 'kate-spade' }).createOrUpdateSession('s1', 'u1', {});
+    await held(DEFAULT_TENANT, 'u1', () => new SessionManager(env, { tenant: DEFAULT_TENANT }).createOrUpdateSession('s1', 'u1', {}));
+    await held('kate-spade', 'u1', () => new SessionManager(env, { tenant: 'kate-spade' }).createOrUpdateSession('s1', 'u1', {}));
 
     await new SessionManager(env, { tenant: 'kate-spade' }).deleteSession('s1');
     // The deleted one is gone...
@@ -147,8 +180,8 @@ describe('sessions are isolated per brand', () => {
   it('the visit count is per brand, which is what makes visit 2 mean anything', async () => {
     // A shopper's second visit to Coach is not her second visit to Kate Spade.
     const coach = new SessionManager(env, { tenant: DEFAULT_TENANT });
-    await coach.createOrUpdateSession('s1', 'u1', {});
-    const ks = await new SessionManager(env, { tenant: 'kate-spade' }).createOrUpdateSession('s1', 'u1', {});
+    await held(DEFAULT_TENANT, 'u1', () => coach.createOrUpdateSession('s1', 'u1', {}));
+    const ks = await held('kate-spade', 'u1', () => new SessionManager(env, { tenant: 'kate-spade' }).createOrUpdateSession('s1', 'u1', {}));
     expect(ks.metadata.visitCount).toBe(1);
   });
 });

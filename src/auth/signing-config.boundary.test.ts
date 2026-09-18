@@ -9,8 +9,58 @@ import { healthRoutes } from '@/routes/health';
 import { configRoutes } from '@/routes/config';
 import { jwt, type AuthContext } from '@/middleware/auth';
 import { sdkKey, operatorWrites } from '@/middleware/edgeAccess';
-import { invalidateConfigCache } from '@/reflex/configStore';
+import { invalidateConfigCache, reflexScopeForTenant, REFLEX_KIND } from '@/reflex/configStore';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
+import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
+import { initializePublicationSet, pinPublication, type PublicationBaseline } from '@/config/publication';
+
+/**
+ * Minimal R2 double honouring the strengthened put/get contract
+ * (`src/config/publication.ts:89-101`, `:293-295`): `get` reports etag/size/body,
+ * `put` returns key/size/etag and honours the conditional headers. Copied in
+ * shape from the working double at `src/routes/realtime.sdkContract.test.ts:88-110`.
+ */
+class FixtureR2 {
+  data = new Map<string, string>();
+  versions = new Map<string, number>();
+  metadata = new Map<string, Record<string, string> | undefined>();
+  async get(key: string) {
+    const raw = this.data.get(key);
+    if (raw === undefined) return null;
+    return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length,
+      customMetadata: this.metadata.get(key), body: new Response(raw).body, text: async () => raw, json: async () => JSON.parse(raw) as unknown };
+  }
+  async put(key: string, raw: string, options?: { onlyIf?: { etagMatches?: string; etagDoesNotMatch?: string } | Headers; customMetadata?: Record<string, string> }) {
+    const old = this.data.has(key) ? 'v' + this.versions.get(key) : null, condition = options?.onlyIf;
+    const absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';
+    const match = condition instanceof Headers ? condition.get('If-Match') : condition?.etagMatches;
+    if (absent && old !== null || match != null && match !== old && match !== JSON.stringify(old)) return null;
+    this.data.set(key, raw); this.versions.set(key, (this.versions.get(key) ?? 0) + 1); this.metadata.set(key, { ...options?.customMetadata });
+    return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length };
+  }
+  async delete(key: string) { this.data.delete(key); }
+  async list(options: { prefix?: string; cursor?: string; limit?: number } = {}) {
+    const names = [...this.data.keys()].filter((k) => k.startsWith(options.prefix ?? '')).sort(), start = Number(options.cursor ?? 0), end = start + (options.limit ?? 1000);
+    return { objects: names.slice(start, end).map((key) => ({ key })), truncated: end < names.length, ...(end < names.length ? { cursor: String(end) } : {}) };
+  }
+}
+
+/**
+ * Configuration publication is the only configuration authority, and a write
+ * needs an authored head to stand on (`src/config/publication.ts:379-397`,
+ * `:439-441`). This is the explicit test-authored W11 baseline the working
+ * fixtures use (`src/routes/realtime.sdkContract.test.ts:112-126`), never a
+ * re-admitted KV fallback.
+ */
+const seedPublication = (env: Env, tenant: string) => {
+  const baseline = (kind: PublicationBaseline['kind'], value: unknown, scope = tenant): PublicationBaseline =>
+    ({ kind, scope, revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value } });
+  return initializePublicationSet(env, [
+    baseline(REFLEX_KIND, DEFAULT_REFLEX_CONFIG, reflexScopeForTenant(tenant)),
+    baseline(CONTENT_KIND, { pieces: [] }), baseline(SLOTS_KIND, { pages: {} }),
+    baseline(LEARN_KIND, { holdout: { share: 0, salt: 'fixture', arms: ['default'] } }),
+  ], '0:' + crypto.randomUUID());
+};
 
 const CONFIG = { JWT_SECRET: 'w0202-synthetic-signing-material-32bytes', JWT_ISSUER: 'w0202', JWT_AUDIENCE: 'w0202' };
 const PLACEHOLDER = 'development-secret-key-change-in-production';
@@ -41,11 +91,22 @@ function fixture(overrides: Record<string, unknown> = {}) {
     const value = Reflect.get(target, key);
     return typeof value === 'function' ? (...args: unknown[]) => { calls.push(`ACCOUNTS.${String(key)}`); return Reflect.apply(value, target, args); } : value;
   } });
+  // AUTH_MODE 'enforced' makes identity material a readiness prerequisite
+  // (src/identity/material.mjs:4-6, :31-40; src/routes/health.ts:69-71). Synthetic
+  // per-tenant material and salt that satisfy safeIdentitySecret unchanged: 32+
+  // bytes, trimmed, no separator characters, 8+ distinct characters, no published
+  // placeholder token. Nothing about the signing checks this file owns is relaxed.
   const bindings = { ...CONFIG, AUTH_MODE: 'enforced', SDK_KEYS: 'acme:synthetic-sdk', ACCOUNTS: accounts,
+    IDENTITY_SECRETS: 'acme:w0202-synthetic-identity-material-7Kq9Zx',
+    IDENTITY_SALT: 'w0202-synthetic-identity-salt-4Rm8Wv',
     RATE_LIMITER: { idFromName: (name: string) => name, get: () => ({ fetch: async () => Response.json({
       allowed: true, remaining: 9, resetTime: Math.floor(Date.now() / 60_000) * 60_000 + 60_000,
     }) }) },
     TENANTS: JSON.stringify({ provisioned: ['acme'], operatorGrants: { [USER.id]: ['acme'] } }),
+    // Configuration publication is the only configuration authority
+    // (src/config/publication.ts:19, :150-152). The bucket is untracked by the
+    // proxy below because this file's subject is the signing boundary.
+    STORAGE: new FixtureR2(),
     CACHE: {
       async get(key: string, type?: string) { calls.push('CACHE.get'); const value = values.get(key); return value === undefined ? null : type === 'json' ? JSON.parse(value) : type === 'stream' ? new Response(value).body : value; },
       async put(key: string, value: string) { calls.push('CACHE.put'); values.set(key, value); },
@@ -148,9 +209,24 @@ describe('signing configuration at real authentication boundaries', () => {
     const renewed = await refresh.json() as { accessToken: string };
     expect((await f.request('/auth/me', bearer(renewed.accessToken))).status).toBe(200);
     const scope = 'acme';
-    expect((await f.request('/config/reflex?scope='+scope, { ...json({ config: { ...DEFAULT_REFLEX_CONFIG, K: 7 } }, renewed.accessToken), method: 'PUT' })).status).toBe(200);
-    expect(await (await f.request('/config/reflex?scope='+scope, bearer(renewed.accessToken))).json()).toMatchObject({ revision: 1, config: { K: 7 } });
-    expect(f.calls.filter((call) => call === 'CACHE.put')).toHaveLength(3);
+    // The authored write now stands on the fixture's published baseline and
+    // carries the If-Match/Idempotency-Key preconditions the write contract
+    // requires (src/config/publication.ts:66-73, :76-88, :379-397).
+    await seedPublication(f.env, 'acme');
+    const pin = await pinPublication(f.env, 'acme');
+    const authored = json({ config: { ...DEFAULT_REFLEX_CONFIG, K: 7 } }, renewed.accessToken);
+    const preconditions = { 'If-Match': `"1/${pin.revision}/${pin.digest}"`, 'Idempotency-Key': '1:' + crypto.randomUUID() };
+    expect((await f.request('/config/reflex?scope='+scope, { ...authored, method: 'PUT', headers: { ...authored.headers, ...preconditions } })).status).toBe(200);
+    // Revision 2, because the fixture's own authored baseline is revision 1 and
+    // the revision counter never rewinds (src/config/publication.ts:368-370).
+    expect(await (await f.request('/config/reflex?scope='+scope, bearer(renewed.accessToken))).json()).toMatchObject({ revision: 2, config: { K: 7 } });
+    // The three compatibility CACHE writes are no longer where a configuration
+    // write lands: publication is the only configuration authority
+    // (src/config/publication.ts:19, :150-152; src/config/versionedStore.ts:92-94),
+    // so the durability check reads the published set the route just advanced.
+    const after = await pinPublication(f.env, 'acme');
+    expect(after.refs['reflex:' + reflexScopeForTenant('acme')]!.revision).toBe(2);
+    expect(after.revision).toBeGreaterThan(pin.revision);
     const before = f.snapshot(); f.calls.length = 0; f.bindingReads.length = 0;
     expect((await f.request('/auth/me', bearer(tokens.refreshToken))).status).toBe(401);
     expect(f.calls).toEqual([]); expect(f.bindingReads).toEqual([]); expect(f.snapshot()).toBe(before);

@@ -20,6 +20,9 @@ import { SessionManager } from '@/services/SessionManager';
 import { RealtimeSegmentEngine } from '@/services/RealtimeSegmentEngine';
 import { newAnonymousSession } from '@/identity/sessionCapability';
 import { admitOwnerPrincipal, runOwnerOperation } from '@/identity/sessionAuthority';
+import { consentInstruction, CONSENT_LIFETIME_MS, type Consent } from '@/content/consent';
+import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import type { RetentionCategory, RetentionPolicy } from '@/retention';
 
 /** A KV whose writes take as long as we say, so "did it wait?" is answerable. */
 class SlowKV {
@@ -48,50 +51,89 @@ class SlowKV {
   async list() { return { keys: [] }; }
 }
 
+/**
+ * SYNTHETIC test registry, not an approved retention period. A first record
+ * needs an explicit per-category policy (`src/retention.ts:39`, `:72-89`;
+ * `src/services/SessionManager.ts:304`); shape from
+ * `src/index.api-boundary.test.ts:34-37`.
+ */
+const SYNTHETIC_POLICY: RetentionPolicy = { id: 'defer-fixture-synthetic', revision: 1, durationMs: 365 * 86400_000, basis: 'admitted', renewal: 'new-record-only' };
+const SYNTHETIC_RETENTION = JSON.stringify({ version: 1, tenants: { [DEFAULT_TENANT]:
+  Object.fromEntries((['profile', 'identity', 'ledger', 'online', 'hourly'] as RetentionCategory[]).map((category) => [category, SYNTHETIC_POLICY])) } });
+
 let kv: SlowKV;
+let env: Env;
 let mgr: SessionManager;
 
 beforeEach(() => {
   kv = new SlowKV();
-  mgr = new SessionManager({ SESSIONS: kv } as unknown as Env);
+  env = { SESSIONS: kv, CACHE: kv, RETENTION: SYNTHETIC_RETENTION } as unknown as Env;
+  mgr = new SessionManager(env);
 });
 
+/**
+ * The subject's explicit owner-issued choice. A `preferences` boolean on the
+ * profile grants nothing (`src/content/consent.ts:139-152`, `:156-163`; settled
+ * decision `docs/remediation/decisions/D06-W05-explicit-choice-approved-2026-09-16.json`),
+ * so the only thing that makes a behavioral write lawful is this record, carried
+ * by the owner operation every shopper route runs inside
+ * (`src/identity/sessionCapability.ts:175`).
+ */
+const choice = (subject: string, tracking: boolean, personalization = tracking): Consent => {
+  const chosenAt = Date.now() - 1000;
+  return consentInstruction({
+    version: 1, tenant: DEFAULT_TENANT, subject, revision: 'defer-fixture-explicit-choice',
+    tracking: { value: tracking, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS },
+    personalization: { value: personalization, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS },
+  });
+};
+const held = <T>(subject: string, tracking: boolean, work: () => Promise<T>): Promise<T> =>
+  runOwnerOperation({}, env, work, kv, undefined, async () => choice(subject, tracking));
+
 it('W04.02 a verified fresh SID survives deferred writes without restoring cookie/profile authority', async () => {
-  const env = { SESSIONS: kv, CACHE: kv, JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
-  const principal = await newAnonymousSession(env, 'coach');
+  const signing = { SESSIONS: kv, CACHE: kv, RETENTION: SYNTHETIC_RETENTION,
+    JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
+  const principal = await newAnonymousSession(signing, 'coach');
   const owner = {};
-  await runOwnerOperation(owner, env, async () => {
+  await runOwnerOperation(owner, signing, async () => {
   admitOwnerPrincipal(owner, principal);
-  const engine = new RealtimeSegmentEngine(env, {} as never, { principal });
+  const engine = new RealtimeSegmentEngine(signing, {} as never, { principal });
   kv.delayMs = 50;
   const pending: Promise<unknown>[] = [];
+  // The subject HAS chosen both purposes; the request's cookie withdraws
+  // tracking. Cookies only restrict, never enable (src/services/SessionManager.ts:424).
   const cookies = 'opt_session_id=victim; opt_user_id=victim; opt_segments=PRIVATE; opt_engagement_score=999; opt_tracking_consent=false';
   const first = await engine.getOrCreateSessionFromCookies(cookies, principal.subject, p => pending.push(p), principal.sessionId);
-  // Current owned consent persists the necessary refusal before answering;
-  // this is not a behavioral write that may be left behind the response.
-  expect(kv.putsFinished).toBe(1); expect(pending).toEqual([]); expect(first.sessionId).toBe(principal.sessionId);
+  // The restricted request is answered and NOTHING of it is written: no profile,
+  // no pointer (src/services/RealtimeSegmentEngine.ts:1069-1075 "No behavioral
+  // creation or pointer"; src/services/SessionManager.ts:326-331). Persisting the
+  // necessary refusal is the owner's own record, not a session-host write
+  // (src/durable-objects/ShopperReflex.ts:1623-1631).
+  expect(kv.putsStarted).toBe(0); expect(kv.putsFinished).toBe(0); expect(pending).toEqual([]); expect(first.sessionId).toBe(principal.sessionId);
   expect(kv.store.has(`user:${principal.subject}`)).toBe(false);
-  expect(JSON.parse(kv.store.get(`session:${principal.sessionId}`)!)).toMatchObject({ attributes: {}, segments: [] });
+  expect(kv.store.has(`session:${principal.sessionId}`)).toBe(false);
   expect(first.sessionData.segments).not.toContain('PRIVATE'); expect(first.sessionData.preferences.trackingConsent).toBe(false);
   const second = await engine.getOrCreateSessionFromCookies(cookies, principal.subject, p => pending.push(p), principal.sessionId);
   expect(second.sessionId).toBe(first.sessionId);
   await Promise.all(pending);
-  expect(kv.store.has(`session:${principal.sessionId}`)).toBe(true); expect(kv.store.has('session:victim')).toBe(false);
-  }, kv);
+  // Same rule after the deferred work drains: still nothing of the restricted
+  // request, and the cookie's victim session was never touched.
+  expect(kv.store.has(`session:${principal.sessionId}`)).toBe(false); expect(kv.store.has('session:victim')).toBe(false);
+  }, kv, undefined, async () => choice(principal.subject, true));
 });
 
 describe('CW37: the session write leaves the decision path', () => {
   it('sends the record and its pointer together rather than one after the other', async () => {
     kv.delayMs = 40;
     const started = Date.now();
-    await mgr.createOrUpdateSession('s1', 'v1', { segments: ['a'] });
+    await held('v1', true, () => mgr.createOrUpdateSession('s1', 'v1', { segments: ['a'] }));
     const took = Date.now() - started;
     expect(kv.putsFinished).toBe(2);
     // Two 40 ms writes in sequence cannot finish in under 80 ms; together they can.
     expect(took).toBeLessThan(75);
   });
 
-  it('returns before the writes finish when it is given somewhere to put them', async () => {
+  it('returns before the writes finish when it is given somewhere to put them', async () => held('v1', true, async () => {
     kv.delayMs = 50;
     const deferred: Promise<unknown>[] = [];
     const data = await mgr.createOrUpdateSession('s1', 'v1', { segments: ['a'] }, undefined, (p) => { deferred.push(p); });
@@ -108,33 +150,36 @@ describe('CW37: the session write leaves the decision path', () => {
     await Promise.all(deferred);
     expect(kv.putsFinished).toBe(2);
     expect(JSON.parse(kv.store.get('session:s1') as string).segments).toEqual(['a']);
-  });
+  }));
 
-  it('still waits when nobody asked it not to, so every existing caller is unchanged', async () => {
+  it('still waits when nobody asked it not to, so every existing caller is unchanged', async () => held('v1', true, async () => {
     kv.delayMs = 20;
     await mgr.createOrUpdateSession('s1', 'v1', { segments: ['a'] });
     expect(kv.putsFinished).toBe(2);
     expect(kv.store.has('session:s1')).toBe(true);
-  });
+  }));
 
-  it('defers the consent refusal the same way, and still records it', async () => {
+  it('defers the consent refusal the same way, and still records it', async () => held('v1', false, async () => {
     kv.delayMs = 30;
     const deferred: Promise<unknown>[] = [];
-    await mgr.createOrUpdateSession('s1', 'v1', {
-      preferences: { trackingConsent: false, personalizationEnabled: true, cookieConsent: true },
-    }, undefined, (p) => { deferred.push(p); });
+    const answer = await mgr.createOrUpdateSession('s1', 'v1', {}, undefined, (p) => { deferred.push(p); });
     expect(kv.putsFinished).toBe(0);
     await Promise.all(deferred);
-    expect(JSON.parse(kv.store.get('session:s1') as string).preferences.trackingConsent).toBe(false);
-  });
+    // A refused request has no behavioral write to defer at all: it neither
+    // creates nor refreshes a profile or its pointer
+    // (src/services/SessionManager.ts:326-331). The refusal itself is recorded
+    // as the owner's own separate record, not in the profile
+    // (src/durable-objects/ShopperReflex.ts:1623-1631; D06-W05-EXPLICIT-CHOICE-
+    // APPROVED-2026-09-16), and it is what the caller is answered with.
+    expect(kv.putsStarted).toBe(0);
+    expect(deferred).toEqual([]);
+    expect([...kv.store.keys()]).toEqual([]);
+    expect(answer.preferences.trackingConsent).toBe(false);
+  }));
 });
 
 describe('CW37: a visit is never split across two sessions', () => {
-  const engine = () => new RealtimeSegmentEngine(
-    { SESSIONS: kv, CACHE: kv } as unknown as Env,
-    {} as never,
-    { tenant: 'coach' },
-  );
+  const engine = () => new RealtimeSegmentEngine(env, {} as never, { tenant: DEFAULT_TENANT });
 
   it('reuses the id the browser presents when the record cannot be read yet', async () => {
     // The shape deferring produces: the cookie names a session whose write has
@@ -167,7 +212,7 @@ describe('CW37: a visit is never split across two sessions', () => {
     await Promise.all(deferred);
   });
 
-  it('names the session after the one the client is already carrying', async () => {
+  it('names the session after the one the client is already carrying', async () => held('v1', true, async () => {
     // CW39. The SDK sends its browsing session on the snapshot. Two requests
     // arriving together both carry it, so both land on one session instead of
     // each inventing its own and counting one visit as two.
@@ -179,7 +224,7 @@ describe('CW37: a visit is never split across two sessions', () => {
     // The second request joined the first one's session instead of starting a
     // second. That is the whole property: one visit, one session.
     expect(b.isNewSession).toBe(false);
-  });
+  }));
 
   it('lets the browser\'s own cookie win over the client\'s, since that is the older claim', async () => {
     const e = engine();
