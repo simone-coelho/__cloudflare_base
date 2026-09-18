@@ -244,7 +244,8 @@ interface HostFixture {
    * behind `requireShopper`, which enforces `ENTRY_QUERY_LIMIT` and
    * `validEntry(…, true)` and forwards to the shopper's owner before deciding.
    */
-  snapshot: (request?: { entry?: ChannelSignals; channel?: string | null }) => Promise<{ status: number; ok: unknown; decisions: unknown }>;
+  snapshot: (request?: { entry?: ChannelSignals; channel?: string | null })
+    => Promise<{ status: number; ok: unknown; state: unknown; decisions: unknown }>;
   /**
    * The same decision one layer in, because no public route exposes the cell:
    * `/v1/:tenant/decisions/snapshot` omits `cell` and `records` in offer mode
@@ -286,13 +287,18 @@ async function hostFixture(host: 'session' | 'do'): Promise<HostFixture> {
     return { channel: out.cell.channel, visit_bucket: out.cell.visit_bucket };
   };
   const snapshot = async (request: { entry?: ChannelSignals; channel?: string | null } = {}) => {
-    const query = `?page=home&visitorId=${grant.subject}&sessionId=${grant.sessionId}`
+    // No visitorId/sessionId selectors: the route reads the shopper from the
+    // capability (`principal.subject` / `principal.sessionId`).
+    const query = '?page=home'
       + (request.entry === undefined ? '' : `&entry=${encodeURIComponent(JSON.stringify(request.entry))}`)
       + (request.channel == null ? '' : `&channel=${encodeURIComponent(request.channel)}`);
     const response = await f.call(`/v1/${TENANT}/decisions/snapshot${query}`, grant.capability);
-    const body = await response.clone().json().catch(() => ({})) as { ok?: unknown; decisions?: unknown };
+    const body = await response.clone().json().catch(() => ({})) as { ok?: unknown; decisions?: unknown[]; sources?: { state?: unknown } };
     await f.drain();
-    return { status: response.status, ok: body.ok, decisions: body.decisions };
+    // `state` is the host that actually answered (src/content/service.ts:109,
+    // returned at src/routes/decisions.ts:477); `decisions` is how many the
+    // route returned, so an empty set cannot pass for a served page.
+    return { status: response.status, ok: body.ok, state: body.sources?.state, decisions: body.decisions?.length };
   };
   const action = async (entry?: ChannelSignals) => {
     const response = await f.call('/realtime/action', grant.capability, {
@@ -320,6 +326,11 @@ const SEARCH_ENTRY: ChannelSignals = { utmMedium: '', utmSource: '', referrer: '
  * must stay unknown.
  */
 const UNKNOWN_ENTRY: ChannelSignals = { utmMedium: 'wombat-unrecognized' };
+
+/** What `documentChanges` publishes for /home: one hero slot, take 1, one live piece. */
+const HOME_DECISIONS = 1;
+/** The ruled public-route answer for a served home page on the host under test. */
+const served = (host: 'session' | 'do') => ({ status: 200, ok: true, state: host, decisions: HOME_DECISIONS });
 
 // ---------------------------------------------------------------------------
 
@@ -403,9 +414,9 @@ describe('unit:W16.C2.04', () => {
       // An unrecognized campaign tag is a well-formed arrival context: the
       // public boundary must accept and decide on it. Refusing it at the door
       // is not a way to keep the entry unknown.
-      expect(await h.snapshot({ entry: UNKNOWN_ENTRY }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+      expect(await h.snapshot({ entry: UNKNOWN_ENTRY }), host).toEqual(served(host));
       expect(await h.action(UNKNOWN_ENTRY), host).toBe(200);
-      expect(await h.snapshot({ entry: UNKNOWN_ENTRY }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+      expect(await h.snapshot({ entry: UNKNOWN_ENTRY }), host).toEqual(served(host));
     }
   });
 
@@ -430,10 +441,10 @@ describe('unit:W16.C2.05', () => {
       // The channel is a bounded fallback the public route accepts and
       // neutralises internally; it is never a reason to refuse the decision.
       for (const channel of ['email', 'not-a-channel', 'coach-spring-campaign']) {
-        expect(await h.snapshot({ channel }), `${host} ${channel}`).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+        expect(await h.snapshot({ channel }), `${host} ${channel}`).toEqual(served(host));
       }
       expect(await h.action(PAID_SOCIAL_ENTRY), host).toBe(200);
-      expect(await h.snapshot({ channel: 'email' }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+      expect(await h.snapshot({ channel: 'email' }), host).toEqual(served(host));
     }
   });
 
@@ -489,9 +500,9 @@ describe('unit:W16.C2.06', () => {
         // serves the return visit without a fresh event and without refusing
         // the new arrival context.
         clock.mockReturnValue(T0 + VISIT_GAP_MS - 1);
-        expect(await h.snapshot({ entry: SEARCH_ENTRY }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+        expect(await h.snapshot({ entry: SEARCH_ENTRY }), host).toEqual(served(host));
         clock.mockReturnValue(T0 + VISIT_GAP_MS);
-        expect(await h.snapshot({ entry: SEARCH_ENTRY }), host).toEqual({ status: 200, ok: true, decisions: expect.any(Array) });
+        expect(await h.snapshot({ entry: SEARCH_ENTRY }), host).toEqual(served(host));
       }
     } finally { clock.mockRestore(); }
   });
