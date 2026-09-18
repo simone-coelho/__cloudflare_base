@@ -57,7 +57,7 @@ import { linkVisitor } from '@/identity/link';
 import { type ProfileRow, readEnrichment } from '@/identity/profileEnrichment';
 import { eraseSubject, erasureJobKey } from '@/identity/erase';
 import { outcomeFromAction, parseId, type OutcomeRecord } from '@/ledger/records';
-import { initializePublication, initializePublicationSet, pinPublication, publishSet, type PublicationBaseline } from '@/config/publication';
+import { initializePublication, initializePublicationSet, pinPublication, publicationScope, publishSet, type PublicationBaseline } from '@/config/publication';
 import { VISIT_GAP_MS } from '@/services/visit';
 import { shopperIdFor } from '@/identity/shopperId';
 import * as odpLoop from '@/services/odpLoop';
@@ -122,6 +122,13 @@ async function fixturePublication(env: Env, tenant: string, changes: Publication
   const result = await publishSet(env, changes.map(change => ({ kind: change.kind, scope: change.scope, request: change.revision.value, candidate: () => change.revision.value })),
     { actor: 'synthetic-fixture', expectedRevision: revision, expectedPublication: { revision: pin.revision, digest: pin.digest }, operationId: revision + ':' + crypto.randomUUID() });
   expect(result.ok).toBe(true);
+}
+// Every configuration write is preconditioned on the authored document revision
+// and the coherent publication identity (src/config/publication.ts:66-73, :76-88).
+async function fixtureMeta(env: Env, kind: { name: string }, scope: string, actor: string) {
+  const pin = await pinPublication(env, publicationScope(kind, scope)), revision = pin.refs[kind.name + ':' + scope]!.revision;
+  return { actor, expectedRevision: revision, expectedPublication: { revision: pin.revision, digest: pin.digest },
+    operationId: revision + ':' + crypto.randomUUID() };
 }
 function boundary(host = 'session') {
   const cache = new BoundaryKV(), sessions = new BoundaryKV(), effects: string[] = [];
@@ -812,10 +819,11 @@ describe.each(['session', 'do'])('W05.10 explicit timed authority on %s', host =
       put: async (key: string, text: string, options?: R2PutOptions) => { const condition = options?.onlyIf;
         if (condition instanceof Headers ? documents.has(key) : condition && condition.etagMatches !== documents.get(key)?.etag) return null;
         const etag = String(++revision); documents.set(key, { text, etag }); return { key, etag, size: text.length }; } } as unknown as R2Bucket;
-    await initializePublication(f.env, CONTENT_KIND, 'meridian', { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
-      { id: 'public', customerContentId: 'cms-public', type: 'editorial', title: 'Public', tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' } }] } }, '0:' + crypto.randomUUID());
-    expect((await write(f.env, SLOTS_KIND, 'meridian', { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } }, { actor: 'fixture' })).ok).toBe(true);
-    expect((await write(f.env, LEARN_KIND, 'meridian', { holdout: { share: 0, salt: '', arms: ['default'] }, slots: { hero: { gamma: 1 } } }, { actor: 'fixture' })).ok).toBe(true);
+    await fixturePublication(f.env, 'meridian', [
+      { kind: CONTENT_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
+        { id: 'public', customerContentId: 'cms-public', type: 'editorial', title: 'Public', tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' } }] } } },
+      { kind: SLOTS_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } } } },
+      { kind: LEARN_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { holdout: { share: 0, salt: '', arms: ['default'] }, slots: { hero: { gamma: 1 } } } } }]);
     const raw = (path: string, body: string) => f.app.request('https://synthetic.invalid' + path, { method: 'POST',
       headers: { [SHOPPER_HEADER]: g.capability, 'X-Tenant': g.tenant, 'Content-Type': 'application/json' }, body }, f.env);
     const rejectedContexts: Array<{ legacy?: boolean; query?: string; tenant?: unknown; duplicateTenant?: boolean }> = [
@@ -997,6 +1005,7 @@ describe.each(['session', 'do'])('W05.10 explicit timed authority on %s', host =
   it('starts OFF, permits a cold necessary-only explicit choice, and enforces all four combinations without cookie authority', async () => {
     for (const tracking of [false, true]) for (const personalization of [false, true]) {
       const f = boundary(host), grant = await newAnonymousSession(f.env, 'meridian');
+      await fixturePublication(f.env, 'meridian');
       const action = { type: 'product_view', userId: grant.subject, sessionId: grant.sessionId, source: 'sdk', data: { line: 'Tabby' } };
       expect((await f.call('/realtime/action', grant.capability, action)).status).toBe(200);
       const item = f.objects.get(shopperObjectName('meridian', grant.subject))!;
@@ -1049,6 +1058,7 @@ describe.each(['session', 'do'])('W05.10 explicit timed authority on %s', host =
   });
   it('rechecks the choice at the actual post-config behavioral commit', async () => {
     const f = boundary(host), grant = await newAnonymousSession(f.env, 'meridian');
+    await fixturePublication(f.env, 'meridian');
     expect((await explicitChoice(f, grant, true, true)).response.status).toBe(200);
     const item = f.objects.get(shopperObjectName('meridian', grant.subject))!, now = Date.now(), deadline = now + 10000;
     const record = structuredClone(item.data.get('consent')) as ConsentInstruction;
@@ -1056,8 +1066,11 @@ describe.each(['session', 'do'])('W05.10 explicit timed authority on %s', host =
     item.data.set('consent', record); item.shopper = new ShopperReflex(item.state, f.env);
     let release!: () => void, entered!: () => void;
     const held = new Promise<void>(resolve => { release = resolve; }), reached = new Promise<void>(resolve => { entered = resolve; });
-    const get = f.cache.get.bind(f.cache);
-    f.cache.get = async (key, type) => { if (key.startsWith('reflex:config:')) { entered(); await held; } return get(key, type); };
+    // Configuration is served by the publication authority, never by the retained
+    // KV copy (src/config/publication.ts:19; src/reflex/configStore.ts:408-415):
+    // hold the in-flight request at the actual configuration read.
+    const storage = f.env.STORAGE as unknown as BoundaryR2, read = storage.get.bind(storage);
+    storage.get = async (key: string) => { if (key.startsWith('config-publication/')) { entered(); await held; } return read(key); };
     const before = structuredClone(item.data), kvBefore = [...f.sessions.data];
     const pending = f.call('/realtime/action', grant.capability, { type: 'page_view', userId: grant.subject, sessionId: grant.sessionId, source: 'sdk', data: {} });
     await reached;
@@ -1072,6 +1085,7 @@ describe('W04.03 serialized shopper authority', () => {
   it('preserves trusted coarse edge geography through both owner-dispatched action hosts without accepting body/header geo or refusal effects', async () => {
     for (const host of ['session', 'do']) {
       const f = boundary(host), g = await newAnonymousSession(f.env, 'meridian'), frames: Array<{ name: string; frame: IngestFrame }> = [];
+      await fixturePublication(f.env, 'meridian');
       expect((await explicitChoice(f, g, true, true)).response.status).toBe(200);
       f.env.REGION_TREND = { idFromName: (name: string) => name, get: (name: string) => ({ fetch: async (url: RequestInfo, init?: RequestInit) => {
         frames.push({ name, frame: await new Request(url, init).json() as IngestFrame }); return Response.json({ ok: true });
@@ -1087,6 +1101,9 @@ describe('W04.03 serialized shopper authority', () => {
     }
   });
   const warm = async (f: ReturnType<typeof boundary>, g: any) => {
+    // Configuration publication is the only configuration authority; a provisioned
+    // tenant fixture carries a published head (src/config/publication.ts:19, :204-206).
+    await fixturePublication(f.env, g.tenant);
     if (!storedConsent(f.objects.get(shopperObjectName(g.tenant, g.subject))?.data.get('consent')).instruction) expect((await explicitChoice(f, g, true, true)).response.status).toBe(200);
     return f.call('/realtime/action', g.capability, { userId: g.subject, sessionId: g.sessionId, type: 'page_view', source: 'sdk', data: {} });
   };
@@ -1166,10 +1183,11 @@ describe('W04.03 serialized shopper authority', () => {
             const etag = String(++revision); documents.set(key, { text, etag }); return { key, etag, size: text.length };
           },
         } as unknown as R2Bucket;
-        await initializePublication(f.env, CONTENT_KIND, 'meridian', { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
-          { id: 'a', customerContentId: 'cms-a', type: 'editorial', title: 'A', tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' } }] } }, '0:' + crypto.randomUUID());
-        expect((await write(f.env, SLOTS_KIND, 'meridian', { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } }, { actor: 'fixture' })).ok).toBe(true);
-        expect((await write(f.env, LEARN_KIND, 'meridian', { holdout: { share: 0, salt: '', arms: ['default'] }, slots: { hero: { gamma: 1 } } }, { actor: 'fixture' })).ok).toBe(true);
+        await fixturePublication(f.env, 'meridian', [
+          { kind: CONTENT_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
+            { id: 'a', customerContentId: 'cms-a', type: 'editorial', title: 'A', tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' } }] } } },
+          { kind: SLOTS_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } } } },
+          { kind: LEARN_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { holdout: { share: 0, salt: '', arms: ['default'] }, slots: { hero: { gamma: 1 } } } } }]);
         const namespace = (kind: string) => ({ idFromName: (name: string) => name, get: () => ({ fetch: async (url: string, init?: RequestInit) => {
           if (expired) afterExpiry.push(kind + ':' + new URL(url).pathname);
           return Response.json({}, { status: init?.method === 'POST' ? 200 : 404 });
@@ -1418,17 +1436,10 @@ describe('W35.03 recoverable identity transfer', () => {
       // Actual controller: freeze H, then expose an H+1 canonical session under
       // the old receipt. Registered sources finish first, but no KV copy is deleted.
       invalidateCache(); const f = boundary('do'), old = await warm(f), linked = await link(f, old);
-      const records = new Map<string, string>(), versions = new Map<string, number>();
-      const storage = {
-        get: async (key: string) => records.has(key) ? { text: async () => records.get(key)!, etag: String(versions.get(key)) } : null,
-        put: async (key: string, body: string, options?: { onlyIf?: Headers | R2Conditional }) => {
-          const current = records.has(key) ? String(versions.get(key)) : null;
-          const condition = options?.onlyIf, absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';
-          const match = condition instanceof Headers ? condition.get('If-Match') : condition?.etagMatches;
-          if ((absent && current !== null) || (match != null && match !== (condition instanceof Headers ? JSON.stringify(current) : current))) return null;
-          records.set(key, body); versions.set(key, (versions.get(key) ?? 0) + 1); return { etag: String(versions.get(key)) };
-        },
-      };
+      const bucket = new BoundaryR2(), records = bucket.data;
+      // readObject/put require whole-object results (src/config/publication.ts:225-237, :295).
+      const storage = { get: (key: string) => bucket.get(key), put: (key: string, body: string, options?: R2PutOptions) => bucket.put(key, body, options),
+        delete: (key: string) => bucket.delete(key), list: (options: { prefix?: string }) => bucket.list(options) };
       f.env.STORAGE = storage as unknown as R2Bucket;
       const key = await erasureJobKey('meridian', { shopperId: linked.shopperId }), put = storage.put.bind(storage);
       const stop = vi.spyOn(storage, 'put').mockImplementation(async (path, body, options) => {
@@ -1540,17 +1551,10 @@ describe('W35.03 recoverable identity transfer', () => {
     // The same protocol through the actual erasure controller, including >50 sources.
     try {
       for (const phase of ['wide', 'barrier', 'source', 'ack', 'page', 'root', 'repeat-source', 'post-cutoff']) {
-        invalidateCache(); const f = boundary('do'), records = new Map<string, string>(), versions = new Map<string, number>();
-        const storage = { get: async (key: string) => records.has(key) ? { text: async () => records.get(key)!, etag: 'v' + versions.get(key) } : null,
-          put: async (key: string, body: string, options?: { onlyIf?: Headers | R2Conditional }) => {
-            const current = records.has(key) ? 'v' + versions.get(key) : null, condition = options?.onlyIf;
-            if (condition instanceof Headers ? (condition.get('If-None-Match') === '*' && current !== null)
-              || (condition.has('If-Match') && condition.get('If-Match') !== JSON.stringify(current))
-              : (condition?.etagDoesNotMatch === '*' && current !== null) || (condition?.etagMatches !== undefined && condition.etagMatches !== current)) return null;
-            records.set(key, body); versions.set(key, (versions.get(key) ?? 0) + 1); return { etag: 'v' + versions.get(key) };
-          }, delete: async (key: string) => { records.delete(key); },
-          list: async ({ prefix }: { prefix: string }) => ({ objects: [...records.keys()].filter(key => key.startsWith(prefix)).map(key => ({ key })), truncated: false }),
-        };
+        invalidateCache(); const f = boundary('do'), bucket = new BoundaryR2(), records = bucket.data;
+        // readObject/put require whole-object results (src/config/publication.ts:225-237, :295).
+        const storage = { get: (key: string) => bucket.get(key), put: (key: string, body: string, options?: R2PutOptions) => bucket.put(key, body, options),
+          delete: (key: string) => bucket.delete(key), list: (options: { prefix?: string }) => bucket.list(options) };
         f.env.STORAGE = storage as unknown as R2Bucket;
         const target = await shopperIdFor(f.env, 'meridian', 'w3503-person'); await internal(f, target, '/identity/export');
         const destination = item(f, target), sources: Grant[] = [];
@@ -2260,9 +2264,13 @@ describe('W35.02 visit context', () => {
     put: async (key: string, text: string, options?: R2PutOptions) => { const condition = options?.onlyIf;
       if (condition instanceof Headers ? docs.has(key) : condition && condition.etagMatches !== docs.get(key)?.etag) return null;
       const etag = String(++revision); docs.set(key, { text, etag }); return { key, etag, size: text.length }; } } as unknown as R2Bucket;
-    await initializePublication(f.env, CONTENT_KIND, 'meridian', { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
-      { id: 'a', customerContentId: 'cms-a', type: 'editorial', title: 'A', tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' } }] } }, '0:' + crypto.randomUUID());
-    expect((await write(f.env, SLOTS_KIND, 'meridian', { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } }, { actor: 'fixture' })).ok).toBe(true);
+    await fixturePublication(f.env, 'meridian', [
+      { kind: CONTENT_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
+        { id: 'a', customerContentId: 'cms-a', type: 'editorial', title: 'A', tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' } }] } } },
+      { kind: SLOTS_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } } } }]);
+    // Consent is fail-closed: an explicit stored choice precedes every tracked
+    // effect (src/content/consent.ts:139-152).
+    await positiveChoice(f, g);
     const queued: Array<{ records?: Array<{ cell: unknown }> }> = [];
     f.env.EVENT_QUEUE = { send: async (v: { records?: Array<{ cell: unknown }> }) => { queued.push(v); } } as unknown as Queue;
     const state = () => host === 'session' ? f.sessions.data.get(tenantKey('meridian', `session:${g.sessionId}`))
@@ -2278,11 +2286,16 @@ describe('W35.02 visit context', () => {
     try {
       for (const host of ['session', 'do']) {
         const f = await fixture(host), before = f.state();
+        // Private replay inputs no longer travel on a shopper snapshot: `records`
+        // is served only inside a trusted synthetic operation
+        // (src/routes/decisions.ts:478; src/content/service.ts:314-318). The cell the
+        // engine actually used is read from the ledger fan-out the request performs.
         const cell = async (entry?: unknown, extra = '') => { const queued = f.queued.length; const r = await f.snapshot(entry, extra); expect(r.status).toBe(200);
-          const out = await r.json() as { cell: { channel: string; visit_bucket: string }; records: Array<{ cell: unknown }> };
-          expect(out.records).toHaveLength(1); expect(out.records[0]!.cell).toEqual(out.cell); await f.drain();
-          if (extra.includes('trackingConsent=false')) expect(f.queued).toHaveLength(queued);
-          else expect(f.queued.at(-1)?.records?.[0]?.cell).toEqual(out.cell); return out.cell; };
+          const out = await r.json() as { cell?: unknown; records?: unknown; decisions: unknown[] };
+          expect(out.records).toBeUndefined(); await f.drain();
+          expect(f.queued).toHaveLength(queued + 1);
+          const written = f.queued.at(-1)!.records!; expect(written).toHaveLength(1);
+          return written[0]!.cell as { channel: string; visit_bucket: string }; };
         expect(await cell(paid)).toMatchObject({ channel: 'paid_social', visit_bucket: 'unknown' }); expect(f.state()).toBe(before);
         const cold = await f.call(`/realtime/personalization/${f.g.subject}`, f.g.capability);
         expect(cold.status).toBe(200); expect(cold.headers.get('set-cookie')).toBeNull(); expect(f.state()).toBe(before);
@@ -2301,7 +2314,9 @@ describe('W35.02 visit context', () => {
         const legacyState = f.state(); expect(await cell()).toMatchObject({ channel: 'unknown', visit_bucket: 'unknown' }); expect(f.state()).toBe(legacyState);
         expect((await f.call('/realtime/action', f.g.capability, event(f.g, paid))).status).toBe(200); await f.drain();
         const live = f.state(); expect(await cell(direct)).toMatchObject({ channel: 'paid_social', visit_bucket: '1' });
-        expect(await cell(direct, '&channel=email')).toMatchObject({ channel: 'email', visit_bucket: '1' }); expect(f.state()).toBe(live);
+        // HANDOFF-2026-09-18 §5 C2: an established owned visit entry channel takes
+        // precedence over a request-supplied fallback channel (src/content/service.ts:241).
+        expect(await cell(direct, '&channel=email')).toMatchObject({ channel: 'paid_social', visit_bucket: '1' }); expect(f.state()).toBe(live);
         const legacyRead = await f.call(`/realtime/personalization/${f.g.subject}`, f.g.capability);
         expect(legacyRead.headers.get('set-cookie')).toBeNull(); expect(f.state()).toBe(live);
         expect(decide.mock.calls.at(-1)?.[3]).toMatchObject({ visit_number: 1, visit_bucket: '1', entry_channel: 'paid_social' });
@@ -2328,7 +2343,11 @@ describe('W35.02 visit context', () => {
         }
         expect((await f.snapshot({ referrer: 'https://private.invalid/path?secret=1' })).status).toBe(400);
         const refused = await cell(paid, '&personalizationEnabled=false'); expect(refused).toMatchObject({ channel: 'paid_social', visit_bucket: 'unknown' });
-        expect(await cell(paid, '&trackingConsent=false')).toMatchObject({ channel: 'unknown', visit_bucket: 'unknown' });
+        // With tracking withheld the engine writes nothing about the request, so no
+        // cell is produced at all (src/content/service.ts:320-322 `write`).
+        const withheld = f.queued.length;
+        expect((await f.snapshot(paid, '&trackingConsent=false')).status).toBe(200); await f.drain();
+        expect(f.queued).toHaveLength(withheld);
       }
     } finally { vi.restoreAllMocks(); }
   });
@@ -2381,9 +2400,14 @@ async function bufferedBoundary(host: string, tenant = 'meridian', profileDurati
     const policy = JSON.parse(f.env.RETENTION!); policy.tenants[tenant].profile.durationMs = profileDurationMs; f.env.RETENTION = JSON.stringify(policy);
   }
   const retention = retentionBirth(f.env, tenant, 'profile', now, now), externalRetention = await externalRetentionBirths(f.env, tenant, now, now);
-  const g = await newAnonymousSession(f.env, tenant); await positiveChoice(f, g);
   const config: ReflexConfig = { ...DEFAULT_REFLEX_CONFIG, version: 'w2207', tauMs: tau, K: 1, thetaIn: 0.6, thetaOut: 0.45,
     dimensions: [{ key: 'line', source: 'line' }], eventAttributes: 'event-when-unknown', weights: { ...DEFAULT_REFLEX_CONFIG.weights, purchase: 5 } };
+  // Publication is the only configuration authority; the retained KV copy below is
+  // compatibility history, never a fallback (src/config/publication.ts:19;
+  // src/reflex/configStore.ts:408-415).
+  await fixturePublication(f.env, tenant, [{ kind: REFLEX_KIND, scope: reflexScopeForTenant(tenant),
+    revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: config } }]);
+  const g = await newAnonymousSession(f.env, tenant); await positiveChoice(f, g);
   f.cache.data.set(`reflex:config:${reflexScopeForTenant(tenant)}:current`, JSON.stringify({ revision: 1, at: 1, actor: 'fixture', note: '', value: config }));
   const enrichment = readEnrichment({ version: 1, sources: { crm: { at: now - tau, fields: {}, audiences: { vip: 'Synthetic authorized audience' } } } })!;
   const reflex = { v: 1 as const, configVersion: 'w2207', dims: { line: { Tabby: { s: 2, t: now - 10_000 }, Old: { s: 5, t: now - 10 * tau } } }, audiences: [audienceKey('line', 'Old')] };
@@ -3278,15 +3302,19 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
             const etag = String(++revision); documents.set(key, { text, etag }); return { key, etag, size: text.length };
           } } as unknown as R2Bucket;
         for (const tenant of Object.keys(tenants)) {
-          expect((await writeReflexConfig(f.env, reflexScopeForTenant(tenant), { ...DEFAULT_REFLEX_CONFIG, version: 'w0307-' + tenant,
-            dimensions: [{ key: 'taste', source: 'line' }], weights: { product_view: 2 }, tauMs: 1000, K: 1, thetaIn: 0.4, thetaOut: 0.2,
-            eventAttributes: 'event-when-unknown' }, { actor: 'synthetic' })).ok).toBe(true);
+          // One coherent published set per tenant; legacy KV is never an authority
+          // fallback (src/config/publication.ts:19; src/reflex/configStore.ts:408-415).
+          await fixturePublication(f.env, tenant, [
+            { kind: REFLEX_KIND, scope: reflexScopeForTenant(tenant), revision: { revision: 1, at: 1, actor: 'synthetic', note: '', value: { ...DEFAULT_REFLEX_CONFIG, version: 'w0307-' + tenant,
+              dimensions: [{ key: 'taste', source: 'line' }], weights: { product_view: 2 }, tauMs: 1000, K: 1, thetaIn: 0.4, thetaOut: 0.2,
+              eventAttributes: 'event-when-unknown' } } },
+            { kind: CONTENT_KIND, scope: tenant, revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
+              { id: 'a', customerContentId: 'cms-a', type: 'editorial', title: 'A', tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' } },
+            ] } } },
+            { kind: SLOTS_KIND, scope: tenant, revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } } } },
+          ]);
           await getConnectors(f.env, tenant).audiences.createAudience({ key: 'local_late', name: 'Late only', description: 'Synthetic', source: 'manual',
             status: 'published', evaluation: 'realtime', createdAt: Date.now(), conditions: { attribute: 'journey_stage', operator: 'eq', value: 'late' } });
-          await initializePublication(f.env, CONTENT_KIND, tenant, { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
-            { id: 'a', customerContentId: 'cms-a', type: 'editorial', title: 'A', tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' } },
-          ] } }, '0:' + crypto.randomUUID());
-          expect((await write(f.env, SLOTS_KIND, tenant, { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } }, { actor: 'fixture' })).ok).toBe(true);
         }
         const a = await newAnonymousSession(f.env, 'meridian');
         const b = await issueSessionCapability(f.env, { tenant: 'brighthour', subject: a.subject, sessionId: a.sessionId, kind: 'anonymous' });
@@ -3448,10 +3476,11 @@ describe('W37.06 tenant-owned audience names and legacy ODP boundary', () => {
         Object.assign(f.env, { TENANTS: JSON.stringify({ provisioned: ['coach', 'meridian', 'brighthour'] }),
           ODP_API_HOST: 'https://odp.synthetic.invalid', ODP_PUBLIC_KEY: 'synthetic-only' });
         for (const tenant of ['meridian', 'brighthour']) {
-          expect((await writeReflexConfig(f.env, reflexScopeForTenant(tenant), {
+          // Publication is the only configuration authority (src/config/publication.ts:19).
+          await fixturePublication(f.env, tenant, [{ kind: REFLEX_KIND, scope: reflexScopeForTenant(tenant), revision: { revision: 1, at: 1, actor: 'synthetic', note: '', value: {
             ...DEFAULT_REFLEX_CONFIG, version: `w3706-${tenant}`, dimensions: [{ key: 'taste', source: 'line' }],
             weights: { product_view: 2 }, tauMs: 1000, K: 1, thetaIn: 0.4, thetaOut: 0.2, eventAttributes: 'event-when-unknown',
-          }, { actor: 'synthetic' })).ok).toBe(true);
+          } } }]);
           await getConnectors(f.env, tenant).audiences.createAudience({ key: 'line_tabby_affinity', name: 'Customer-authored same-name audience',
             description: 'Synthetic owner rule', status: 'published', evaluation: 'realtime', source: 'manual', createdAt: Date.now(),
             conditions: { attribute: 'product_views', operator: 'gte', value: 1 } });
@@ -3523,10 +3552,11 @@ describe('W37.05 tenant-owned demo catalog boundary', () => {
   const specs = [{ tenant: 'meridian', dim: 'taste', value: 'customer-red' }, { tenant: 'brighthour', dim: 'mood', value: 'customer-blue' }];
   const configure = async (f: ReturnType<typeof boundary>, eventAttributes: 'catalog-only' | 'event-when-unknown') => {
     f.env.TENANTS = JSON.stringify({ provisioned: ['coach', ...specs.map(s => s.tenant)] });
-    for (const s of specs) expect((await writeReflexConfig(f.env, reflexScopeForTenant(s.tenant), {
+    // Publication is the only configuration authority (src/config/publication.ts:19).
+    for (const s of specs) await fixturePublication(f.env, s.tenant, [{ kind: REFLEX_KIND, scope: reflexScopeForTenant(s.tenant), revision: { revision: 1, at: 1, actor: 'synthetic', note: '', value: {
       ...DEFAULT_REFLEX_CONFIG, version: `w3705-${s.tenant}`, dimensions: [{ key: s.dim, source: 'line' }],
       weights: { product_view: 2 }, tauMs: 1000, K: 1, thetaIn: 0.4, thetaOut: 0.2, eventAttributes,
-    }, { actor: 'synthetic' })).ok).toBe(true);
+    } } }]);
   };
   const event = (g: Grant, productId: string, line: string, surface: string) => ({
     userId: g.subject, sessionId: g.sessionId, type: 'product_view', source: surface === 'coach' ? 'coach-storefront' : 'brighthour', surface,
@@ -3667,7 +3697,11 @@ describe('W37.04 tenant-owned runtime configuration', () => {
     for (const s of specs) {
       const cfg: ReflexConfig = { ...DEFAULT_REFLEX_CONFIG, version: `w3704-${s.tenant}`, tauMs: s.tau, K: s.K,
         thetaIn: 0.4, thetaOut: 0.2, weights: { content_click: s.weight }, dimensions: [{ key: s.dim, source: s.dim }] };
-      expect((await writeReflexConfig(f.env, reflexScopeForTenant(s.tenant), cfg, { actor: 'synthetic' })).ok).toBe(true);
+      // Publication is the only configuration authority (src/config/publication.ts:19):
+      // the tenant's coherent baseline exists before its own authored revision.
+      await fixturePublication(f.env, s.tenant);
+      expect((await writeReflexConfig(f.env, reflexScopeForTenant(s.tenant), cfg,
+        await fixtureMeta(f.env, REFLEX_KIND, reflexScopeForTenant(s.tenant), 'synthetic'))).ok).toBe(true);
     }
     f.cache.calls.length = 0;
   };
@@ -3718,9 +3752,9 @@ describe('W37.04 tenant-owned runtime configuration', () => {
           expect(resolver).toHaveBeenCalledTimes(host === 'do' ? 2 : 1);
           const pieces = [{ id: 'a', customerContentId: 'cms-a', title: 'A', type: 'editorial', tags: { taste: ['red'], mood: ['plain'] }, slotTypes: ['hero'] },
             { id: 'b', customerContentId: 'cms-b', title: 'B', type: 'editorial', tags: { taste: ['dull'], mood: ['blue'] }, slotTypes: ['hero'] }];
-          expect((await write(f.env, CONTENT_KIND, g.tenant, { pieces }, { actor: 'synthetic' })).ok).toBe(true);
-          expect((await write(f.env, SLOTS_KIND, g.tenant, { pages: { home: [{ slot: 'hero', take: 1, weights: { [s.dim]: 1 } }] } }, { actor: 'synthetic' })).ok).toBe(true);
-          expect((await write(f.env, LEARN_KIND, g.tenant, { holdout: { share: 0, salt: 'synthetic', arms: ['default'] } }, { actor: 'synthetic' })).ok).toBe(true);
+          expect((await write(f.env, CONTENT_KIND, g.tenant, { pieces }, await fixtureMeta(f.env, CONTENT_KIND, g.tenant, 'synthetic'))).ok).toBe(true);
+          expect((await write(f.env, SLOTS_KIND, g.tenant, { pages: { home: [{ slot: 'hero', take: 1, weights: { [s.dim]: 1 } }] } }, await fixtureMeta(f.env, SLOTS_KIND, g.tenant, 'synthetic'))).ok).toBe(true);
+          expect((await write(f.env, LEARN_KIND, g.tenant, { holdout: { share: 0, salt: 'synthetic', arms: ['default'] } }, await fixtureMeta(f.env, LEARN_KIND, g.tenant, 'synthetic'))).ok).toBe(true);
           const content = await f.call(`/v1/${g.tenant}/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}`, g.capability, undefined, g.tenant);
           expect(content.status).toBe(200);
           expect(await content.json()).toMatchObject({ sources: { config: { label: `w3704-${g.tenant}+r2`, revision: 2 } },
@@ -4583,7 +4617,7 @@ describe('W05.08 owned preferences and reads', () => {
   it('persists only cold refusal instructions, merges omitted-cookie switches and permits deliberate enable without stale mirrors', async () => {
     for (const host of ['session', 'do']) {
       try {
-        const f = boundary(host), io = observe(f);
+        const f = boundary(host); await fixturePublication(f.env, 'meridian'); const io = observe(f);
         const absent = await newAnonymousSession(f.env, 'meridian');
         expect((await f.call(preferencePath(absent), absent.capability, prefs(true, true))).status).toBe(200);
         expect(f.sessions.data.size).toBe(0);
@@ -5181,9 +5215,9 @@ describe('W05.04 owned content decisions', () => {
     } as unknown as R2Bucket;
     const pieces = ['Rogue', 'Tabby'].map((line, i) => ({ id: i ? 'b' : 'a', customerContentId: `cms-${i ? 'b' : 'a'}`, type: 'editorial', title: line, tags: { line: [line] }, slotTypes: ['hero'], lifecycle: { status: 'live' as const } }));
     const revision = <T>(value: T) => ({ revision: 1, at: 1, actor: 'synthetic', note: '', value });
-    await initializePublication(f.env, CONTENT_KIND, 'meridian', revision({ pieces }), '0:' + crypto.randomUUID());
-    expect((await write(f.env, SLOTS_KIND, 'meridian', { pages: { home: [{ slot: 'hero', take: 1, weights: { line: 1 } }] } }, { actor: 'synthetic' })).ok).toBe(true);
-    expect((await write(f.env, LEARN_KIND, 'meridian', { holdout: { share: 0, salt: 'synthetic', arms: ['default'] } }, { actor: 'synthetic' })).ok).toBe(true);
+    await fixturePublication(f.env, 'meridian', [{ kind: CONTENT_KIND, scope: 'meridian', revision: revision({ pieces }) },
+      { kind: SLOTS_KIND, scope: 'meridian', revision: revision({ pages: { home: [{ slot: 'hero', take: 1, weights: { line: 1 } }] } }) },
+      { kind: LEARN_KIND, scope: 'meridian', revision: revision({ holdout: { share: 0, salt: 'synthetic', arms: ['default'] } }) }]);
     const sent: Record<'ring' | 'exposure' | 'analytics' | 'queue', any[]> = { ring: [], exposure: [], analytics: [], queue: [] };
     const ns = (kind: 'ring' | 'exposure') => ({ idFromName: (n: string) => n, get: () => ({ fetch: async (_u: unknown, init?: RequestInit) => {
       sent[kind].push(JSON.parse(String(init?.body ?? '{}'))); return Response.json({ ok: true });
@@ -5229,7 +5263,7 @@ describe('W05.04 owned content decisions', () => {
         expect(f.effects.filter(v => v.startsWith('object:'))).toHaveLength(2);
         expect(f.cache.calls.some(v => v.startsWith('get:lift:'))).toBe(tracking && personalization);
       }
-      expect((await write(f.env, LEARN_KIND, 'meridian', { holdout: { share: 1, salt: 'synthetic', arms: ['default'] } }, { actor: 'synthetic', expectedRevision: 1, operationId: '1:' + crypto.randomUUID() })).ok).toBe(true);
+      expect((await write(f.env, LEARN_KIND, 'meridian', { holdout: { share: 1, salt: 'synthetic', arms: ['default'] } }, await fixtureMeta(f.env, LEARN_KIND, 'meridian', 'synthetic'))).ok).toBe(true);
       clear(); const holdout = await (await snapshot(f, g)).json() as any; await f.drain();
       expect(holdout.arm).toBe('default'); expect(holdout.records[0].item_id).toBe('a'); expect(holdout.records[0].explain.note ?? '').not.toContain('shopper');
       expect(holdout.cell.affinity).not.toBeNull(); expect(holdout.cell.stage).not.toBe('unknown'); expect(holdout.cell.channel).toBe('email'); expect(holdout.cell.region).toBe('US-NY');
@@ -5344,7 +5378,7 @@ describe('W05.03 consent-safe product sorting', () => {
 
   it('is behavior-read-only when cold and fails closed on strict state, necessary-write and ownership errors even with false hints', async () => {
     for (const host of ['session', 'do']) {
-      const f = boundary(host), g = await newAnonymousSession(f.env, 'meridian');
+      const f = boundary(host), g = await newAnonymousSession(f.env, 'meridian'); await fixturePublication(f.env, 'meridian');
       const cold = await sort(f, g, { consent: { tracking: true } }); expect(cold.status).toBe(200); neutral(await cold.json());
       expectColdOff(f, g); expect(f.effects.filter(v => v.startsWith('object:'))).toHaveLength(1);
       expect(f.sessions.calls.filter(v => v.startsWith('put:'))).toEqual([]); expect(f.effects.filter(v => v.startsWith('store:'))).toEqual(['store:grantAuthority']);
@@ -5912,24 +5946,13 @@ describe('W04.03 history metadata owner ordering', () => {
   };
   const setup = async (host: string) => {
     invalidateCache();
-    const f = boundary(host), records = new Map<string, string>(), versions = new Map<string, number>();
+    const f = boundary(host), storage = new BoundaryR2(), records = storage.data;
     f.env.TENANTS = JSON.stringify({ provisioned: ['coach', 'meridian', 'harbor'] });
     f.env.IDENTITY_SECRETS = 'meridian:backend-proof,harbor:backend-proof';
-    f.env.STORAGE = {
-      get: async (key: string) => records.has(key) ? { text: async () => records.get(key)!, etag: 'v' + versions.get(key) } : null,
-      put: async (key: string, body: string, options?: { onlyIf?: Headers | R2Conditional }) => {
-        const current = records.has(key) ? 'v' + versions.get(key) : null, condition = options?.onlyIf;
-        const absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';
-        const match = condition instanceof Headers ? condition.get('If-Match') : condition?.etagMatches;
-        if ((absent && current !== null) || (match != null && match !== (condition instanceof Headers ? JSON.stringify(current) : current))) return null;
-        records.set(key, body); versions.set(key, (versions.get(key) ?? 0) + 1);
-        return { etag: 'v' + versions.get(key) };
-      },
-      delete: async (key: string) => { records.delete(key); },
-      list: async ({ prefix }: { prefix: string }) => ({
-        objects: [...records.keys()].filter(key => key.startsWith(prefix)).map(key => ({ key })), truncated: false,
-      }),
-    } as unknown as R2Bucket;
+    // The publication authority reads and writes whole R2 objects: readObject
+    // requires key/etag/size/body and put requires key/etag/size
+    // (src/config/publication.ts:225-237, :295). Reuse the file's complete double.
+    f.env.STORAGE = storage as unknown as R2Bucket;
     const mint = async (tenant = 'meridian') => {
       const visitor = await newAnonymousSession(f.env, tenant), accountId = 'w0403-history-person';
       await positiveChoice(f, visitor);
