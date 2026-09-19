@@ -668,7 +668,11 @@ describe('unit:W21.C1.01', () => {
     //   ln(1.5) = 0.4054651081081644, SE = sqrt(0.955/18000 + 0.97/600) = 0.04086223466995194,
     //   z·SE = 0.08008850828092974, low = +0.3845519698419917, high = +0.625074427691418.
     // F25 §5.5 prints the same low as 38.46 % against the shipped 41.33 %.
-    const reading = measureHoldout.compareArms({ n: 20_000, s: 600 }, { n: 400_000, s: 18_000 }).targets;
+    // R108(1): the rungs are the CALLER's, supplied here exactly as the corrected
+    // arrangements at src/measure/holdout.test.ts:174-207 supply them, because a
+    // call with none answers the withheld reading W21.C1.04's logic leg rules.
+    const reading = measureHoldout.compareArms({ n: 20_000, s: 600 }, { n: 400_000, s: 18_000 },
+      { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).targets;
     expect(reading?.relativeLow, 'F25 §5.5/§7.3 — the published target reading is the Katz low end, +38.46 %, not the divided interval\'s +41.33 %')
       .toBeCloseTo(0.3845519698419917, 10);
     expect(reading?.standing, 'F25 §5.5 — +38.46 % is under the +40 % target and over the +10 % minimum, so the rung is the minimum')
