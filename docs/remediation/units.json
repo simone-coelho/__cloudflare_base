@@ -150,5 +150,60 @@
     "status": "specified",
     "batch": "BASE-D1",
     "declared_from": " W37.04 tenant-owned runtime configuration fails explicitly on missing/invalid/outage tenant config before behavior/link/import, preserving refusal and retention"
+  },
+  {
+    "id": "W16.C5.01",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "For one event sequence the SessionManager path, the ShopperReflex path, the SDK-visible projection, the LearnStats cell stage and the content decision report one consistent stage: the shared vocabulary word where the engine reports it and the persisted token via PERSISTED_STAGE where it is stored or projected; both hosts agree.",
+    "legs": ["host", "host-internal"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; rulings R29 (shared vocabulary exploring|thinking|deciding; persisted cell token and learning key unchanged) and R32(2) (one mapping point PERSISTED_STAGE, exploring→early, thinking→mid, deciding→late); tapestry_requirements.txt line 148; src/learn/stats.ts:34 levelKeys; src/routes/realtime.ts:442 (the session host omits journeyStage while it personalizes) and src/durable-objects/ShopperReflex.ts:1608 (the object host answers with the internal token)",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "No shopper-facing route exposes the stored stage, the decision record, its cell or the exposures the slot learning object receives: the mounted snapshot runs in offer mode, where captureRecords is empty (src/content/service.ts:317) and records are omitted from the body (src/routes/decisions.ts:479), so a served decision reaches LEARN_STATS only through the render-offer redemption path. Those observables are on the host-internal leg (R19); the missing public observable is a decision receipt that names the stage and the exposures it produced."
+  },
+  {
+    "id": "W16.C5.02",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "A stage-only change (no new behavioral event) sends exactly the allowed ODP stage projection: one captured POST to the configured ODP host /v3/profiles whose attributes are the configured identity plus the configured profile mappings and nothing else — the stage projection, the configured line value and the configured leading-line mapping — with no affinity dimension beyond the configured mapping and no other ODP call.",
+    "legs": ["host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; src/services/odpLoop.ts upsertOdpProfile (:407-449, the /v3/profiles wire shape [{attributes}]) and its configured profile mapping branch (:434-438); src/connectors/config.ts odpSchema profile mapping (dimension/value, dimension, journey); the call is captured at the fetch boundary the code uses (ownerFetch, src/identity/sessionAuthority.ts:292), never live",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "Two readings this specification takes and the specification pass must rule on: (a) the stage-only change is the read-time visit boundary, where the visit-local counters start from zero (W16.C4.02) and the stage becomes the first stage with no new event; (b) the ODP wire value of journey_stage is the persisted grammar reached through PERSISTED_STAGE, because it is an external published grammar mirrored 1:1 with the customer RTS conditions (ODP_MIRRORED_AUDIENCES late_journey_ready_to_buy; src/services/odpLoop.ts header), exactly like the cell token R29 keeps."
+  },
+  {
+    "id": "W16.C5.03",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "A stage-only change creates zero fabricated behavioral events: no outcome or ledger queue message, no decision-ring append, no learning exposure, no ODP /v3/events forward and no regional activity, while a real event in the same fixture reaches all of them.",
+    "legs": ["host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; src/ledger/enqueue.ts producer via src/routes/realtime.ts emitOutcome (:194-211); src/reflex/regionTrend.ts:153-163 fanInRegionTrend; src/learn/fan.ts:277-345 fanDecisions (ring append and exposures); src/services/odpLoop.ts:353-400 forwardEventToOdp",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "Behavior records are not observable in this fixture: captureBehavior refuses under the demo profile without ledger recovery (src/ledger/behavior.ts:21) and the legacy D1 demo capture is restricted to the default tenant in development (src/services/demoEventCapture.ts:5-12), so the unit measures the ledger queue, the ring, the exposures, the ODP forward and the region object."
+  },
+  {
+    "id": "W16.C5.04",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "A stage-only change renews no retention: the shopper record's stored retention stamp and its expiresAt are unchanged to the millisecond and no retention alarm is rearmed, while a record born later in the same fixture carries a later expiry.",
+    "legs": ["host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; src/retention.ts:19-25 and :88-92 (renewal is new-record-only; a birth is the only way an expiry moves) and :130-136 captureRetention; HANDOFF-2026-09-18 §7 settled retention decision; document 35 §2 F13 (\"Activity can renew state retention, so latched for exactly a month is not an exact bound\")",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "Only the object host arms its own alarms, so the alarm half of the assertion is measured on the ShopperReflex host; the session host is measured on the stored stamp alone."
+  },
+  {
+    "id": "W16.C5.05",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "A buffered action delivered a week late contributes age-decayed interest (the engine's own closed form for a touch at its original time) and an eligible historical outcome record carrying that original time and its own browsing session, and creates no fresh visit, no recent ODP activity and no regional activity on arrival.",
+    "legs": ["host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; HANDOFF-2026-09-18 §7 settled decision on buffered events (\"may contribute age-decayed interest plus eligible historical measurement… must not create fresh visits/recent ODP activity/regional activity on arrival\") and the Late history decision (no universal age cutoff inferred from delivery delay); src/reflex/bufferedAction.ts:45-68; src/reflex/identityMerge.ts:101-126 applyHistorical; src/reflex/core.ts:233 effectiveScore; src/ledger/records.ts:253-279 outcomeFromAction (ts is the action's own timestamp)",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "GREEN-AT-SPEC at 7c8ba8f on both hosts: the buffered path already applies the age-decayed touch, emits the historical outcome and touches neither the visit clock, the ODP ring nor the region object. The unit is the regression guard for that settled decision while C4/C5 change the same paths; its controls (live events do reach ODP and the region object, and do build the ring) fail loudly if the measurement ever goes vacuous."
   }
 ]
