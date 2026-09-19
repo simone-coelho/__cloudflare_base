@@ -5,13 +5,13 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 9/9 · W closed 0/26 (W16–W41) · suite 1700/1869 · residual 169 in 23 files · typecheck GREEN
+Units 15/15 · W closed 0/26 (W16–W41) · suite 1707/1876 · residual 169 in 23 files · typecheck GREEN
 
 ## W items
 
 | W | Declared | Green | Closed | Review | Review sha |
 |---|---|---|---|---|---|
-| W16 | 9 | 9 | no | — | — |
+| W16 | 15 | 15 | no | — | — |
 
 ## Units
 
@@ -26,6 +26,12 @@ Units 9/9 · W closed 0/26 (W16–W41) · suite 1700/1869 · residual 169 in 23 
 | W16.C2.07 | green | 2 |
 | W16.C2.08 | green | 1 |
 | W16.C2.09 | green | 1 |
+| W16.C2.10 | green | 1 |
+| W16.C2.11 | green | 1 |
+| W16.C2.12 | green | 1 |
+| W16.C2.13 | green | 2 |
+| W16.C2.14 | green | 1 |
+| W16.C2.15 | green | 1 |
 
 ## Failing tests outside the baseline
 
@@ -36,8 +42,8 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | c783fcbcc0b9ce498a6592347b81a6810e78a117aad97c4e3aeb3e74bb17f8d6 |
-| reviews | docs/remediation/reviews |
+| units sha256 | 962a062edf2c0f52990586bd24eff6d3c25a68a1b7ac6f21188549f3ac7f0cd5 |
+| reviews | docs/remediation/reviews (absent) |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
 
@@ -47,7 +53,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | a4e8a089596966147981e9b7aef68777fc7b7bd03d273d30cc50d4cd0ce3e9a7 |
-| commit | 1b92df9340bd6f77060c99837d5c59b80a529b03 |
-| generated | 2026-09-19T01:07:27.056Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | e31c060e4e889c71bfe23a30c030c362334e108a6a6cba0720d77452086737e6 |
+| commit | 05751ac4f56c64f67cc26b265e181703946a8408 |
+| generated | 2026-09-19T02:05:18.483Z |
