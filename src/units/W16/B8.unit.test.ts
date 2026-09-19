@@ -230,6 +230,22 @@ const IMPORT_NAMED_LINE = 'Rogue';
 const IMPORT_VOCABULARY_REASON = 'out_of_vocabulary';
 /** The reason a row that really carries no registry attribute keeps (unchanged). */
 const IMPORT_NO_TOUCH_REASON = 'no registry attribute on the row';
+/**
+ * RULED MEMBER (R21, R76(c)): the AUDITED token for the same refusal.
+ *
+ * Under `AUTH_MODE === 'enforced'` every import row's skip reason is mapped
+ * through `fixedHistoryReasons` (`src/auth/subjectAudit.ts:152-157`) into the
+ * closed set `historySkipReasonSchema` (`src/auth/store.ts:74-75`) before the
+ * subject-audit record is written; a reason with no mapping makes
+ * `historySkipReasonSchema.parse(undefined)` throw, and the whole import is
+ * answered 503 `outcome_unknown` with `operationMayHaveApplied: true`
+ * (`subjectAudit.ts:248`, `:258-264`) even though it applied cleanly. The
+ * audited token is the SAME WORD as the report's reason, so an operator reading
+ * the receipt and an auditor reading the record are reading one vocabulary.
+ */
+const IMPORT_VOCABULARY_AUDIT_TOKEN = 'out_of_vocabulary';
+/** The audited token the attribute-less row already has (`subjectAudit.ts:155`). */
+const IMPORT_NO_TOUCH_AUDIT_TOKEN = 'no_registry_touch';
 /** A value on a dimension the catalogue names, that it does not name. */
 const IMPORT_UNNAMED_CATEGORY = 'Home Fragrance';
 /** An attribute the registry names no dimension for at all. */
@@ -422,7 +438,7 @@ class UnitR2 {
  */
 type ObjectFault = { match: string; kind: '5xx' | 'throw' | 'unreadable' } | null;
 
-function boundary(host: 'session' | 'do', options: { odp?: boolean } = {}) {
+function boundary(host: 'session' | 'do', options: { odp?: boolean; enforcedAuth?: boolean } = {}) {
   const cache = new UnitKV(), sessions = new UnitKV();
   const pending: Promise<unknown>[] = [];
   const queued: Array<{ record?: Record<string, unknown> }> = [];
@@ -434,6 +450,11 @@ function boundary(host: 'session' | 'do', options: { odp?: boolean } = {}) {
     IDENTITY_SECRETS: `${TENANT}:backend-proof,${OTHER_TENANT}:backend-proof`,
     TENANTS: JSON.stringify({ provisioned: [OTHER_TENANT, TENANT], operatorGrants: { 'w16-b8-operator': [OTHER_TENANT, TENANT] } }),
     ACCOUNTS: memoryStore(),
+    // W16.C8.11's enforced leg: the audited operator arrangement the merged
+    // suites use (`src/routes/identity.test.ts:228`,
+    // `src/routes/realtime.sdkContract.test.ts:2801`) — real operator principal,
+    // the repository's own in-memory account/audit store, nothing stubbed.
+    ...(options.enforcedAuth ? { AUTH_MODE: 'enforced', IDENTITY_SALT: 'w16b8-Synthetic-Identity-Salt-0123456789' } : {}),
     ...(options.odp ? { TENANT_CONNECTORS: JSON.stringify({ version: 1, tenants: { [TENANT]: { odp: ODP_CONFIGURATION } } }),
       CONNECTOR_SECRET_MERIDIAN_ODP: 'synthetic-odp-public-key' } : {}),
     PERSONALIZATION_WEBSOCKET: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
@@ -616,9 +637,9 @@ interface SessionAnswer {
   continuity: ContinuityReport | undefined; cookies: string[]; bodyText: string;
 }
 
-async function hostFixture(host: 'session' | 'do', options: { odp?: boolean; continuity?: unknown | null } = {}) {
+async function hostFixture(host: 'session' | 'do', options: { odp?: boolean; continuity?: unknown | null; enforcedAuth?: boolean } = {}) {
   invalidateCache(); invalidateLiftCache(); invalidateConfigCache();
-  const f = boundary(host, { odp: options.odp });
+  const f = boundary(host, { odp: options.odp, enforcedAuth: options.enforcedAuth });
   await f.configureRetention();
   await fixturePublication(f.env, TENANT, options.continuity ?? null);
   invalidateCache(); invalidateConfigCache();
@@ -722,7 +743,16 @@ async function hostFixture(host: 'session' | 'do', options: { odp?: boolean; con
     return established;
   };
 
-  return { f, host, operator, identitySession, choose, action, hydrate, rawHydrate, snapshot, importRows, newShopper };
+  /** `GET /v1/:tenant/audit` — the operator page the subject-audit record is read from (R19). */
+  const auditEntries = async () => {
+    const response = await f.call(`/v1/${TENANT}/audit?limit=100`, { headers: { Authorization: `Bearer ${operator}` } });
+    const text = await response.clone().text();
+    const body = (() => { try { return JSON.parse(text) as { entries?: unknown[] }; } catch { return {}; } })();
+    await f.drain();
+    return { status: response.status, text, entries: (body.entries ?? []) as Array<{ detail?: Record<string, unknown> }> };
+  };
+
+  return { f, host, operator, identitySession, choose, action, hydrate, rawHydrate, snapshot, importRows, newShopper, auditEntries };
 }
 
 /** Both hosts answer the same page, so every assertion names the host it measured. */
@@ -1508,6 +1538,66 @@ describe('unit:W16.C8.11', () => {
           `${host}: W16.C8.11 control — the applied row really reached her profile`).toEqual([IMPORT_NAMED_LINE, 'Tabby'].sort());
         expect.soft(after.category,
           `${host}: W16.C8.11 — and the row the vocabulary refused built no taste on the dimension it named`).toEqual(['Handbags']);
+      }
+    } finally { clock.mockRestore(); }
+  });
+
+  it('host: the same three-row import under ENFORCED auth is answered, with the same report, and the subject-audit record carries the audited token for the vocabulary refusal, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        clock.mockReturnValue(T0);
+        // R76(c): the SAME import, on a tenant whose operator traffic is
+        // audited — the arrangement the merged suites use
+        // (`src/routes/identity.test.ts:228`,
+        // `src/routes/realtime.sdkContract.test.ts:2801`): a real operator
+        // principal with an admin service token and a tenant grant, and the
+        // repository's own in-memory account/audit store.
+        const h = await hostFixture(host, { enforcedAuth: true });
+        const her = await h.newShopper({ clock, events: [VIEW_TABBY_QUILTED_HANDBAG] });
+
+        clock.mockReturnValue(T0 + STEP_MS);
+        const imported = await h.importRows([
+          { visitorId: her.subject, action: 'purchase', at: T0 - 2 * DAY_MS, product: { category: IMPORT_UNNAMED_CATEGORY } },
+          { visitorId: her.subject, action: 'purchase', at: T0 - 2 * DAY_MS, product: { ...IMPORT_NON_REGISTRY_ATTRIBUTE } },
+          { visitorId: her.subject, action: 'purchase', at: T0 - 2 * DAY_MS, product: { line: IMPORT_NAMED_LINE } },
+        ]);
+
+        // 1. THE IMPORT IS ANSWERED. A row the catalogue vocabulary refused is
+        //    an ordinary, expected outcome of an import — never a reason to tell
+        //    the operator the whole operation's outcome is unknown and may or
+        //    may not have applied.
+        expect.soft(imported.status,
+          `${host}: W16.C8.11 — an import containing a vocabulary-refused row is ANSWERED under enforced auth: ${imported.text.slice(0, 300)}`).toBe(200);
+        expect.soft(imported.body.ok, `${host}: W16.C8.11 — with a well-formed report`).toBe(true);
+
+        // 2. …and it is the SAME report the unaudited path gives, to the row.
+        expect.soft(imported.body.skipped,
+          `${host}: W16.C8.11 — the audited path reports exactly what the open path reports`)
+          .toEqual([{ index: 0, reason: IMPORT_VOCABULARY_REASON }, { index: 1, reason: IMPORT_NO_TOUCH_REASON }]);
+        expect.soft(imported.body.applied, `${host}: W16.C8.11 — and the placed row is still applied`).toBe(1);
+
+        // 3. THE AUDIT RECORD NAMES THE REFUSAL. Read through the operator page
+        //    the platform serves for exactly this (`GET /v1/:tenant/audit`,
+        //    R19), so the auditor and the operator read one vocabulary.
+        const page = await h.auditEntries();
+        expect(page.status, `${host}: the fixture's own audit page must be readable: ${page.text.slice(0, 200)}`).toBe(200);
+        const skippedMembers = page.entries
+          .map(entry => entry.detail as { operation?: unknown; phase?: unknown; selector?: { kind?: unknown; members?: unknown } } | undefined)
+          .filter(detail => detail?.operation === 'identity_import' && detail.selector?.kind === 'history_results')
+          .flatMap(detail => (detail!.selector!.members ?? []) as Array<{ kind?: unknown; ordinal?: unknown; reason?: unknown }>)
+          .filter(member => member.kind === 'skipped')
+          .map(member => ({ ordinal: member.ordinal, reason: member.reason }))
+          .sort((a, b) => Number(a.ordinal) - Number(b.ordinal));
+        expect.soft(skippedMembers,
+          `${host}: W16.C8.11 — the subject-audit record carries the audited token for the vocabulary refusal, beside the one the attribute-less row already has`)
+          .toEqual([{ ordinal: 0, reason: IMPORT_VOCABULARY_AUDIT_TOKEN }, { ordinal: 1, reason: IMPORT_NO_TOUCH_AUDIT_TOKEN }]);
+
+        // 4. LIVE CONTROL on the same audited page: the import really was
+        //    recorded as the operation it is, so an empty read above could
+        //    never pass for a clean audit.
+        expect(page.entries.some(entry => (entry.detail as { operation?: unknown } | undefined)?.operation === 'identity_import'),
+          `${host}: W16.C8.11 control — the import really was audited`).toBe(true);
       }
     } finally { clock.mockRestore(); }
   });
