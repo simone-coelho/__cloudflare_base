@@ -286,5 +286,390 @@
     "status": "specified",
     "batch": "BASE-1b",
     "residual": "Measured GREEN-AT-SPEC at c0973ad+rework: the engine already refuses all six malformed envelopes and already withholds the vector from an absent or refusing choice."
+  },
+  {
+    "id": "W16.C3.01",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "A published, versioned, per-slot seed rule set maps a context signal (entry channel, campaign term, referrer network) to canonical customer-neutral tags with a weight; for a cold shopper at gamma zero the decision ranks candidates carrying the seeded tags above equal-base candidates without them.",
+    "legs": [
+      "logic",
+      "host",
+      "host-internal"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; docs/architecture/tapestry_requirements.txt line 153 Cross-Channel Awareness (\"Ad creative, search keywords, audience segment, influencer style all inform on-site experience from first page\"); src/reflex/contentCompose.ts:258-263. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "No public route exposes a decision receipt: GET|POST /v1/:tenant/decisions/snapshot returns `decisions` (contentId, score) but returns `records` only inside a synthetic operation (src/routes/decisions.ts:478), so every record-level clause is a host-internal leg. Owed to the whole-W review. The campaign-term signal also needs ChannelSignals.utmTerm: the bounded arrival contract carries no search keyword today, so the public route answers 401 for it (src/routes/decisions.ts:403); that boundary widening is bounded by unit W16.C3.09 and is owed to src/services/visit.ts and src/sdk/core.ts."
+  },
+  {
+    "id": "W16.C3.02",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Seeds apply only to the slot they are published for; a slot with no rule set is unaffected by another slot's rules.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2"
+  },
+  {
+    "id": "W16.C3.03",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Absent rule set: no contextual influence, the base order stands; nothing is invented.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16 (\"absent ... rules fail closed\"); the catalogue-order tie rule at src/reflex/contentCompose.ts:149. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "The absent-rule-set clauses are assertions of absence, so the unit's discriminating control is in the same `it`: the identical arrival with a published rule set must move the ranking, and that control is the RED assertion."
+  },
+  {
+    "id": "W16.C3.04",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Invalid rule (unknown canonical tag, malformed or out-of-range weight, unknown signal, or a signal VALUE outside its vocabulary): the rule set is refused at publication; a rule set that became invalid after publication is ignored whole at decision time with a diagnostic, never partially applied, and only for the slot that owns it.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; src/content/kinds.ts validateSlotCatalog (publication) versus parseSlotCatalog (retained reads) and its `pages.<page>[<i>]` error addresses; the pinDiagnostics precedent in src/reflex/contentCompose.ts. An unknown canonical tag is a tag whose dimension the slot does not weight, because nothing it names can reach the score (src/reflex/contentCompose.ts:259); R30(5) adds the value vocabularies: the six entry-channel words (src/services/visit.ts entryChannelOf) and a known network's registrable domain (SEARCH_HOSTS/SOCIAL_HOSTS, matched by the dot-boundary rule at src/services/visit.ts:233). Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "The publication refusal is driven through publishSet, the same library every authoring route writes through (src/config/publication.ts:336); the authoring HTTP route itself is not exercised. The serving half is the public decisions route on both hosts."
+  },
+  {
+    "id": "W16.C3.05",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "A draft or unpublished rule set never influences a decision.",
+    "legs": [
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16 (\"unpublished rules fail closed\"); the authored-but-uncommitted state of the publication head (src/config/publication.ts publishSet/finish: the pending set is reserved before the authority recheck commits it) and pinPublication, which serves only head.committed. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "The draft is produced through the real publication path by refusing the authority recheck at the commit step, which is the only authored-but-uncommitted state this publication authority has; a console draft store does not exist. The test reads the reserved pending document out of the head object and asserts it carries the drafted rule set before it asserts the served ranking, so the unit cannot degrade into the absent-rule-set case."
+  },
+  {
+    "id": "W16.C3.06",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Seeds are distinct from learned weighting: with gamma above zero the learned lift still applies on top of the seeded base, and seeds never change learned statistics or a receipt's learned-influence field.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; docs/architecture/22-outcome-learning-design.md §6 (lift^gamma on the base score) as implemented at src/content/decide.ts:190-203; the receipt's LiftApplied field (src/content/types.ts:169-185). Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2"
+  },
+  {
+    "id": "W16.C3.07",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Seeds are not a global floor: a candidate whose final pre-lift base after merchandising is exactly zero stays exactly zero whatever the seeds.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C7 (\"compute contextual influence from final pre-lift base after merchandising; exactly zero stays zero. Receipts cannot claim multiplicative learned ranking influence that did not occur. No W25/W32 model redesign or global floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §3 N20; docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; docs/handover/HANDOFF-2026-09-18.md §8 D09 (\"do not force a leave-one-out model or global score floor\"); the merchandising multiplier and its explicit minBoost floor (src/reflex/merchandising.ts:110-134, src/content/kinds.ts:224-226). Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "R30(2): the unit pins the clause at both ends of the multiplier — a boost of 0 records exactly 0 and a boost of 0.5 records exactly half — so it cannot be satisfied by a special case at zero."
+  },
+  {
+    "id": "W16.C3.08",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "Versioning: publishing a new rule-set version takes effect for subsequent decisions, each receipt names the rule-set version it used, and rollback to the previous version restores the previous ranking.",
+    "legs": [
+      "host",
+      "host-internal"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C3 (\"explicit published/versioned per-slot context-to-canonical-tag seeds operate before learned lift at gamma zero; invalid, absent or unpublished rules fail closed; these are not learned weighting or a global score floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §2 F13 (\"current context fields alone do not guarantee seeded influence at gamma zero\") and §5 W16; src/config/publication.ts publishSet and src/config/versionedStore.ts rollback (the rollback republishes the target revision's value under its own new revision, so the restored ranking carries revision 3). R30(4): the version a receipt names is versions.slots, already stamped at src/content/decide.ts:306. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "No public route exposes a decision receipt: GET|POST /v1/:tenant/decisions/snapshot returns `decisions` (contentId, score) but returns `records` only inside a synthetic operation (src/routes/decisions.ts:478), so every record-level clause is a host-internal leg. Owed to the whole-W review. The public payload already carries the same integer as versions.slots, and the host leg asserts it there; the host-internal leg asserts it on the record beside the contribution."
+  },
+  {
+    "id": "W16.C3.09",
+    "w": "W16",
+    "criterion": "C3",
+    "outcome": "The campaign term is a bounded arrival field and nothing else: a term beyond its bound is refused at the boundary rather than truncated, a term never changes the classified entry channel, and a term is never persisted to the shopper record, the cell key or the ODP payload.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md ruling R30(3) (utmTerm is in scope as a bounded arrival field, bound 256 like utmSource); docs/architecture/tapestry_requirements.txt line 153 (\"search keywords ... inform on-site experience from first page\"); src/services/visit.ts ENTRY_LIMITS/validEntry/snapshotEntry/classifyEntryChannel and ruling R14's evidence rule; doc 22 §5.4's five cell dimensions as built by src/learn/stats.ts levelKeys; src/services/odpLoop.ts:426-443 (the ODP payload is projected from stored affinity dimensions, journey stage and the vuid). Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "The ODP payload is covered transitively: the unit asserts the keyword is in nothing the host stored, and the ODP projection reads only that stored state. The live ODP call itself is the admitted K3 check, not this unit. The stored-state dump is JSON over the DO storage map, the session KV and the cache KV; a value held only inside a nested Map would not be seen."
+  },
+  {
+    "id": "W16.C7.01",
+    "w": "W16",
+    "criterion": "C7",
+    "outcome": "Contextual influence is computed from the final pre-lift base after merchandising; exactly zero base stays zero; the receipt for such a candidate never claims multiplicative learned influence.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C7 (\"compute contextual influence from final pre-lift base after merchandising; exactly zero stays zero. Receipts cannot claim multiplicative learned ranking influence that did not occur. No W25/W32 model redesign or global floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §3 N20; the order base -> merchandising -> lift at src/content/decide.ts:184-203 and \"each term is itemised as the delta it caused\" at src/content/decide.ts:118; the receipt prose at src/learn/receipts.ts:63-68. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics. Ruled arithmetic (R30(2)): a rule contributes rule.weight x slot.weights[tag.dimension] to every eligible piece carrying that canonical tag, in the base, before merchandising (the slot's own multiply, src/reflex/contentCompose.ts:258-263), rounded to three decimals; the contextual contribution recorded on the receipt is that delta as it lands in the final pre-lift base after merchandising, so a merchandising boost of 0 records exactly 0 and a boost of 0.5 records exactly half.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "No public route exposes a decision receipt: GET|POST /v1/:tenant/decisions/snapshot returns `decisions` (contentId, score) but returns `records` only inside a synthetic operation (src/routes/decisions.ts:478), so every record-level clause is a host-internal leg. Owed to the whole-W review. The receipt-honesty clause is asserted on the logic leg through the record and src/learn/receipts.ts; the public host leg asserts only the exactly zero score the route serves. The ruled honest representation is explain.lift.applied, the delta the learned lift actually caused, in the same form as the stage, freshness and fatigue terms; R30(4) also pins the prose, so the candidate the lift moved says \"applied at trust\" and the candidate it could not move never does. Both candidates in the fixture carry a real learned lift (1.5 and 1.2) so the claim is about honesty, not about an absent estimate."
+  },
+  {
+    "id": "W16.C7.02",
+    "w": "W16",
+    "criterion": "C7",
+    "outcome": "Receipts record the contextual contribution and its rule-set version separately from learned lift; a decision with no seed rule and gamma zero records both as absent.",
+    "legs": [
+      "host",
+      "host-internal"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B2 table and rulings R19/R21/R30; docs/handover/HANDOFF-2026-09-18.md §5 C7 (\"compute contextual influence from final pre-lift base after merchandising; exactly zero stays zero. Receipts cannot claim multiplicative learned ranking influence that did not occur. No W25/W32 model redesign or global floor\"); docs/architecture/35-audit-verification-and-source-of-truth.md §3 N20; src/content/types.ts DecisionRecord.explain (regional/external/merchandising/stage/freshness/fatigue are each itemised separately) and src/learn/receipts.ts. R30(4): the rule-set version is versions.slots. Ruled vocabulary (R21/R30(1), absent from the code and named in the specifier report): SlotStrategy.seeds: SeedRule[] carried by the already published and versioned `slots` document kind (src/content/kinds.ts SLOTS_KIND, src/config/publication.ts publishSet, src/config/versionedStore.ts rollback) and NOT gated behind governanceVersion, like merchandising, stage, freshness, fatigue and diversity (src/content/kinds.ts:218-259), because retained reads go through validateStored -> parseSlotCatalog with the governance the document declares; SeedRule { signal: entry_channel|campaign_term|referrer_network; value; tags: {dimension,value}[]; weight 0..1 }, where an entry_channel value is one of the six channel words and a referrer_network value is a known network's registrable domain matched with the classifier's dot-boundary rule (R30(5), src/services/visit.ts:233); DecideInput.entry: ChannelSignals; ChannelSignals.utmTerm bounded at 256 like utmSource (R30(3)); DecisionRecord.explain.contextual { applied, drivers } with NO version of its own (R30(4): the rule-set version a receipt names is versions.slots, stamped at src/content/decide.ts:306); DecisionRecord.explain.lift.applied; ContentDecisionSet.seedDiagnostics.",
+    "status": "specified",
+    "batch": "W16-B2",
+    "residual": "No public route exposes a decision receipt: GET|POST /v1/:tenant/decisions/snapshot returns `decisions` (contentId, score) but returns `records` only inside a synthetic operation (src/routes/decisions.ts:478), so every record-level clause is a host-internal leg. Owed to the whole-W review. The ranking half is asserted through the mounted route (leg host); the receipt half is host-internal. The absent case is fixtured with no seed rule set, gamma zero AND no lift snapshot, so it does not reopen doc 22 §6's settled shadow receipt, which shows a computed lift at gamma zero and says it was not applied."
+  },
+  {
+    "id": "W17.L1.01",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Declarative click and commerce listeners are owned: binding twice to the same element leaves exactly one live listener; detach removes it; a click after detach emits zero events. Measured on real jsdom elements: one live click registration on the [data-op-content] element and on the [data-op-track] button after two declarative() binds, one content_click carrying the served receipt and one add_to_cart carrying the button's own attributes for one click each, zero registrations and zero live observers after the detach handles are released, and no transport call from a later click.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34; docs/architecture/35-verification-reports/F34.md §2A (mount→detach→mount gives content_click 2 and add_to_cart 2 for one click each; two listener sites, :109 and :117), §2C (the Map-backed fake element conceals it) and §3 (\"Register removable listener functions\" needs removeEventListener on ElementLike); docs/handover/HANDOFF-2026-09-18.md §6 row W17; the documented detach contract at src/sdk/emit.ts:40-41; fixture taxonomy docs/architecture/tapestry_requirements.txt lines 113-122 and 529-532",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: the transport clause 'a click after detach emits zero events' is already green (the inactive-callback guard in declarative()); the unit is RED on the live-registration count, which is the ownership document 35 requires and the guard does not give."
+  },
+  {
+    "id": "W17.L1.02",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "dataLayer wrapper ownership: the page's dataLayer push is wrapped once (one mapped push is one event, and the layer's existing history is replayed once however many attachments the page made); releasing one attachment while another is live keeps capture running; releasing the last attachment restores the page's original push function by identity; a push after that emits zero events and still reaches the page's own array with every entry.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34; docs/handover/HANDOFF-2026-09-16.md §6, the actual-module reproduction: \"before {A:1,B:1}, after detaching A and pushing again {A:1,B:1}; B should be 2. A's teardown restores an older push, removing B's still-active wrapper\"; docs/architecture/35-verification-reports/F34.md §2G (attaching twice double-captures and replays history a second time; after a full teardown the layer is left instrumented by a discarded client); the documented contract at src/sdk/emit.ts:42-43 (\"Returns a detach function that restores it\"), docs/kit/01-integration-guide.md §4 and src/sdk/README.md; GA4 payload shapes docs/kit/03-payload-schemas.md and src/sdk/emit.ts GA4_MAPPING",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: 'a push after the last release emits zero events' is already green through the inactive guard; RED on the replay count, the double capture, the lost capture after the first release and the push identity. The HANDOFF-2026-09-16 §6 shape with two LIVE clients on one page layer is unit W17.L1.02b: this unit's single client with two attachments does not by itself stop an implementation reading \"wrapped once\" as one handler per layer."
+  },
+  {
+    "id": "W17.L1.02b",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Two live clients on one page share the page's dataLayer without taking it from each other: while both are attached one push is one event for each client (HANDOFF-2026-09-16 §6 \"{A:1,B:1}\"); after one client releases its attachment the other, which never asked to stop, still captures the next push exactly once and only under its own source (§6 \"B should be 2\"); the page's own push function comes back by identity only when the last attachment is released, and a push after that emits zero transport calls while still reaching the page's array.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/handover/HANDOFF-2026-09-16.md §6, the actual-module reproduction run against the real modules: \"Observed SDK result: before {A:1,B:1}, after detaching A and pushing again {A:1,B:1}; B should be 2. A's teardown restores an older push, removing B's still-active wrapper. This is the actual W17 shared-lifecycle failure, not merely a missing test\"; docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 and §2 F34; docs/architecture/35-verification-reports/F34.md §2G; src/sdk/emit.ts:175-181 (the captured-original restore); src/sdk/testHost.ts:95-99 (the grant-recovery session path on which both clients stay current, measured by the W17-B1 specification pass, probes P1-P3)",
+    "status": "specified",
+    "batch": "W17-B1"
+  },
+  {
+    "id": "W17.L1.03",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Rendered observers are torn down on detach: one painted element observed through both documented paths (the declarative scan and the rendered(slot, contentId, element) renderer callback) is watched by exactly one live observer and one on-screen cycle is exactly one content_dwell carrying the served receipt and the measured ms; after detach no observer watches it and an intersection reaches no transport; a remount observes it once again, with one dwell per cycle attributed to the mounted client.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34; docs/architecture/35-verification-reports/F34.md §2A (observers_created 2 / observers_live 1), §2B (re-scan without detach duplicates impressions and leaks observers), §2D (listen.rendered()'s observer is never released) and §2E (a duplicated outcome moves the learned lift, so one observation per rendered element is a measurement requirement); docs/handover/HANDOFF-2026-09-18.md §6 row W17 (retain the existing observer teardown); src/sdk/listen.ts:270-288 and src/sdk/emit.ts:118-132 (the two observation sites); src/sdk/host.ts:12-24 (the observer port the page provides)",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: the post-detach clauses (no observer watching, no transport from an intersection) are green today; RED on the duplicate observation and the duplicate dwell, at the mount and again after the remount."
+  },
+  {
+    "id": "W17.L1.04",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Changed DOM attributes rebind: when a bound element's slot or piece attributes change in place (the hero node is re-rendered to carry the craft story; the call to action is re-rendered to sell another product), the next interaction emits the new identity — contentId cnt_craft_story, slot story and that piece's served receipt, and label pdp-cta with productId COACH-ROGUE-25 — and never the stale one. An element naming a piece the engine never chose still produces no content event.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34; docs/architecture/35-verification-reports/F34.md §6: \"A DOM node whose data-op-content changes in place keeps its first click listener and will keep reporting the old content id. Only a real removeEventListener fixes that\" — the reason the bind-once guard is named an emergency fix and not the end state; docs/handover/HANDOFF-2026-09-18.md §6 row W17 (changed-attribute rebinding); src/sdk/README.md:66 and docs/kit/01-integration-guide.md §4 (declarative attributes alone cannot mint an offer, so the unchosen piece stays unreportable); src/sdk/emit.ts:109-147 (attributes read once at bind time)",
+    "status": "specified",
+    "batch": "W17-B1"
+  },
+  {
+    "id": "W17.L1.05",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Either teardown order — the core torn down before the declarative and dataLayer handles, or the handles before the core — leaves no live click listener on any bound element, no live observer, and the page's own dataLayer push restored by identity; a click, a commerce push and the pending dwell of an element that was on screen at teardown produce no transport call afterwards.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34 (\"either teardown order\"); docs/architecture/35-verification-reports/F34.md §2G (order-dependent restore) and §2A; docs/handover/HANDOFF-2026-09-18.md §6 row W17; src/sdk/index.ts:42 (destroy() is listen.destroy() then core.disconnect()); src/sdk/listen.ts:340 and src/sdk/emit.ts:153,181 (the three teardown entry points)",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: in both orders the transport is already silent and the single wrapper is restored; RED in both orders on the click registrations the SDK leaves on the page's elements."
+  },
+  {
+    "id": "W17.L1.06",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Detach, remount and new clients: after the mounted client's handles are released and it is destroyed, a new client on the same page owns exactly one set of listeners and one wrapper — one click and one dataLayer push are one event each, both carrying the new client's source — the discarded client's pending dwell never emits, and when the new client detaches no registration and no wrapper is left on the page.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34 (detach/remount, new clients, pending callbacks); docs/architecture/35-verification-reports/F34.md §2A (\"a WeakMap at module scope, not per-Emit, so it also holds when an SPA builds a fresh client per mount\" — the guard document 35 refuses as closure) and §2G; docs/handover/HANDOFF-2026-09-16.md §6; docs/handover/HANDOFF-2026-09-18.md §6 row W17",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: attribution to the new client and the silence of the discarded client are already green; RED on the two live click registrations the remount leaves on each element and on the registrations left after the new client detaches."
+  },
+  {
+    "id": "W17.L1.07",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Tenant and identity switch: after the documented sign-in (identify() carrying the person's shopper id), a click and a dataLayer push are one event each and carry the person's id, from exactly one live listener per element; after the page tears the client down and mounts a client for another tenant on the same elements, every event carries the new tenant and that tenant's shopper, again from exactly one live listener, and none carries the old identity or tenant.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34 (identity/tenant switches); docs/handover/HANDOFF-2026-09-18.md §6 row W17; docs/kit/01-integration-guide.md §5 and src/sdk/README.md (\"on success the browser carries the person's shopper id as its visitor id from then on, every later event and decision is the person's\"); src/sdk/identify.ts:79-109 and src/sdk/core.ts:408-423 (the identity generation transition); src/sdk/emit.ts:150-152 (the current generation/consent handling of declarative bindings)",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: the transport identity and tenant clauses are already green — the consent notification at the end of the transition re-runs the declarative scan — but it re-binds without unbinding, so the unit is RED on the live-registration count after the sign-in and after the tenant switch."
+  },
+  {
+    "id": "W17.L1.08",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Zero events after full detach: on a page that mounted twice and released its handles in mount order, after the full detach no click registration, no live observer and no SDK wrapper remains (the page's own push is restored by identity), and clicks, commerce clicks, dataLayer pushes, observer intersections and the armed periodic refresh timer produce zero transport calls of any kind over a settled tick past that interval, while the page's own array still receives its own pushes.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34 (\"zero events after full detach\", \"pending callbacks\"); docs/architecture/35-verification-reports/F34.md §2G (\"after the integrator has fully torn everything down the layer is left instrumented, closed over a client the page has discarded, and still posting\"); docs/handover/HANDOFF-2026-09-16.md §6; src/sdk/listen.ts:339-340 (the periodic refresh timer and its clearInterval)",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification (corrected after the specification pass, probe P6): the post-detach transport clause is GREEN today — the wrapper a discarded client leaves on the page produces zero transport calls because the inactive-callback guard at src/sdk/emit.ts:162 fires — so the RED is the two click registrations left on the page's elements and the leftover wrapper (the page's own push is not restored). The earlier claim that the first post-detach push drives POST /identity/session was a fixture artifact of a session override that minted a fresh grant per call; that override is gone (corrections C1/C2)."
+  },
+  {
+    "id": "W16.C4.01",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "The journey stage derives from ONE published, versioned threshold set over visit-local counters, using the one shared stage vocabulary JOURNEY_STAGES = ['exploring','thinking','deciding'] in that order. R32(1): the threshold set is the `journey` block of the already-published, tenant-scoped REFLEX_KIND document both hosts and the content decision read, and every revision carries its own stamped version identity. The thresholds are data, not constants: the same counters under two published sets give two stages. The reflex validator refuses, returning EVERY error and naming the journey block, a stage word outside the vocabulary, stages out of vocabulary order, a threshold on the first stage, a fractional or negative threshold, a counter the visit does not keep, a stage with no threshold and an empty set.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 01 and rulings R32(1)/R29; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"Versioned journey thresholds and one shared stage vocabulary use visit-local counters separate from cumulative durable taste\"); docs/architecture/tapestry_requirements.txt line 148 Journey Awareness (\"exploring (seeing) → thinking → deciding\"); docs/architecture/35-audit-verification-and-source-of-truth.md §5 W16 and §2 F13; src/reflex/configStore.ts:293 stampVersion and REFLEX_KIND for the per-revision version identity",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "Ruled missing exports (R21), RED on import: JOURNEY_STAGES, DEFAULT_JOURNEY_THRESHOLDS, journeyStageFrom, visitJourneyCounters, PERSISTED_STAGE in src/services/JourneyStage.ts; ruled missing member ReflexConfig.journey. R29 keeps the legacy prose word `considering` (STAGE_WORDS, src/services/JourneyStage.ts:31, and contextOf, src/learn/receipts.ts:34) and its four assertions as a W16 whole-item residual for a later R10 update, and keeps the persisted cell token `early|mid|late` and the learning key `s=mid`; W16.C4.08 guards that grammar."
+  },
+  {
+    "id": "W16.C4.02",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Visit-local counters are separate from cumulative durable taste. They accumulate inside one visit (three Coach PDP views, one cross-category, one with dwell) and start from zero in the next: a new visit reached past VISIT_GAP_MS resets the journey to the vocabulary's first stage while the visit number increments to 2 and the shopper's accumulated affinity is preserved to two decimals, and the first interaction of the new visit is the first, not the fourth. Both hosts agree.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 02; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"New visits reset local journey.\" and \"Visit number and cumulative durable taste remain\"); docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition; document 35 §5 W16 (\"journey/new-visit/post-purchase reset, days/weeks memory\"); src/services/visit.ts VISIT_GAP_MS and the read-time rollover established by unit W16.C2.06",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "The visit-local counters themselves are exposed by no shopper-facing route, so the host leg measures them through the stage the SDK-visible hydrate reports (GET /realtime/reflex). R32(4): the published fourteen-day reflex tauMs is accepted customer-neutral fixture data; the shipped 60 s default (src/reflex/core.ts:202) is the subject of W16.C8.01."
+  },
+  {
+    "id": "W16.C4.03",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "A purchase is the deciding current-event signal: after two interactions the shopper is still at the first stage under the published thresholds, and the personalization decision computed for the purchase event ITSELF reports 'deciding' (update.data.journeyStage) on both hosts, so the purchase is counted on its own decision and not only on the one after it.",
+    "legs": [
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 03; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"A purchase remains the deciding current-event signal and truthful ODP/receipt input\") and the admission-r1 preflight correction on purchase timing; src/routes/realtime.ts:270-283 and src/durable-objects/ShopperReflex.ts:1255, where the same value is handed to upsertOdpProfile as the ODP-bound stage input",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "Two halves of the admitted sentence are not measured here. (1) ODP: the asserted value is exactly the one both hosts pass to upsertOdpProfile as journey_stage, but no ODP network call is driven; the exact ODP stage-only payload proof is admitted check K3 under criterion C5 (HANDOFF §5 point 5). (2) Receipt: no content decision is ever computed ON the purchase event (the purchase's own decision is the personalization update), so no receipt can say 'deciding' for it; W16.C4.05's host-internal leg instead measures the record and receipt of the decision before the purchase ('thinking') and of the next decision after it ('exploring'), so no receipt claims a stage its counters do not support."
+  },
+  {
+    "id": "W16.C4.04",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Reset ordering after a purchase: the purchase decision reports 'deciding' and its attribution is captured first (R32(3): the purchase outcome for orderId coach-order-1 reached the ledger producer before the next decision was asked for), and only then are the persisted visit-local counters reset, so the NEXT personalization decision starts from reset counters at the vocabulary's first stage, inside the SAME visit (visit number unchanged) and with the cumulative taste the purchase itself grew, never discarded. The reset is real: the interaction after the purchase is the first, and the third one after it moves the stage again. Both hosts.",
+    "legs": [
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 04 and ruling R32(3); docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"only after that decision and attribution are captured are persisted visit-local journey counters reset for the next personalization decision. Visit number and cumulative durable taste remain.\"); document 35 §5 W16; src/routes/realtime.ts:194-212 (emitOutcome → outcomeFromAction → enqueueOutcome) and src/ledger/records.ts:253-278 for the outcome the order produces",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "The counters and the reset are measured through the SDK-visible hydrate and the captured outcome, because no shopper-facing route exposes the persisted counters. The outcome record carries no stage (src/ledger/records.ts:262-273), so what is proved is that the attribution was captured before the reset, not that the outcome names the stage. A purchase delivered later as a buffered action is not asserted here; the buffered rule is specified at the counter reducer in W16.C4.06."
+  },
+  {
+    "id": "W16.C4.05",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Threshold versioning on the reflex document (R32(1)): with the baseline published, three interactions derive 'thinking' and the decision names the version it used (sources.journey = { version 'w16-b4-fixture', revision 1, reason null }, equal to sources.config, because initializePublicationSet stores the baseline unstamped); publishing the next revision changes the derivation for subsequent decisions with no new event (the same counters derive 'exploring'; sources.journey names 'w16-b4-fixture+r2' and revision 2); an invalid threshold block is refused at publication with errors naming the journey fault and the stage word, and the last published version keeps deciding; with no journey block EVER published the routes still answer 200 and the COMPILED DEFAULT set decides (R49, 2026-09-19): the three interactions of the visit reach 'thinking' exactly as they do under the published baseline, and sources.journey names the compiled default's own version (the version field of the compiled default reflex configuration, DEFAULT_REFLEX_CONFIG.version), revision 0 because no published revision supplied it, and a diagnostic naming the compiled default it used. Fail-closed is unchanged where a tenant has spoken: an invalid publication still keeps the last published block in force. Every decision record and its receipt carry journey = { stage, version }, before a purchase ('thinking') and after it ('exploring'). Both hosts.",
+    "legs": [
+      "host",
+      "host-internal"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 05 and ruling R32(1); docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (versioned thresholds) and §5 point 3 C3 (\"Invalid, absent or unpublished rules fail closed\") applied to the journey block; src/config/publication.ts conditional r2 publication authority and :465-469 (the baseline is stored unstamped); src/routes/decisions.ts:312 (the receipts route reads the same records through receiptOf) and the DecisionSources block in src/content/service.ts, which already names the catalog, slots, learn and reflex versions a decision used; ruling R49 (2026-09-19, from the W16-B4 build review's P1e/P1g measurement: fail-closed-to-first-stage collapses the learning ladder to s=early and disables the W18.01 slot stage rule for every untuned tenant, a regression against the pre-change engine), which makes DEFAULT_JOURNEY_THRESHOLDS the set an untuned tenant runs on exactly as the rest of DEFAULT_REFLEX_CONFIG is its compiled default",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "R19 residual: no shopper-facing route exposes the decision record or its receipt (src/routes/decisions.ts:479 omits cell and records in offer mode; GET /v1/:tenant/visitors/:visitorId/receipts needs an operator JWT and a DECISION_RING binding), so the record and receiptOf are driven in process inside the real owner invocation while the public half is asserted on sources.journey. R32(5), accepted for this batch: a threshold set that becomes invalid or unreadable AFTER publication (fail closed to the last readable revision) is not driven; only publication-time refusal and nothing-published are. The diagnostic's exact wording is not pinned, only that it names the journey thresholds and the compiled default (R49). The compiled default's reported version is asserted as DEFAULT_REFLEX_CONFIG.version, the version of the configuration the compiled set travels with; no separate journey-version constant is ruled or imported."
+  },
+  {
+    "id": "W16.C4.06",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Cold start: absent, null or empty counters derive the vocabulary's first stage without inventing an interaction; on the compiled default threshold set the third interaction of the visit moves the stage past the first (Time to Relevance); and an explicitly buffered delivery of the same action, or of a purchase, counts as no interaction of the current visit (the counters come back unchanged and the stage does not move under a set that turns on the fourth interaction) while the same action delivered live counts as one and does move it.",
+    "legs": [
+      "logic"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 06; docs/architecture/tapestry_requirements.txt line 147 Time to Relevance (\"3 clicks—site adapts third interaction onwards\"); docs/handover/HANDOFF-2026-09-18.md §7 settled decision D06-buffered-action-purpose (\"explicitly buffered browser/app actions may contribute age-decayed interest plus eligible historical measurement. They must not create fresh visits/recent ODP activity/regional activity on arrival\"); document 35 §5 W16 (\"contextual cold-start behavior\") and HANDOFF §5 point 8 C8 (\"first/third sparse interactions\"); the buffered wire shape at src/reflex/bufferedAction.ts:18-31",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "The exact numbers inside DEFAULT_JOURNEY_THRESHOLDS are not pinned: only the two points the witnesses determine are asserted (nothing counted is the first stage; the third interaction is past the first stage), and the host legs use the fixture's own published thresholds. The mounted POST /realtime/action buffered path (src/reflex/bufferedAction.ts) is not driven here; this unit specifies the rule at the visit-local counter reducer."
+  },
+  {
+    "id": "W16.C4.07",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Both hosts derive the same stage for the same event sequence (three interactions, then a purchase, then the decision after it) and the SDK-visible hydrate projection GET /realtime/reflex carries that stage as one of the three shared vocabulary words on both hosts: 'thinking' while browsing, 'deciding' on the purchase decision, 'exploring' on the decision after the post-purchase reset.",
+    "legs": [
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 07 and ruling R29; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (one shared stage vocabulary) and §5 point 5 C5 (\"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree\"); ruling R20 for the hydrate as the SDK-visible projection; docs/architecture/tapestry_requirements.txt line 148",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "Measured today: the session host omits journeyStage from the hydrate whenever it personalizes (src/routes/realtime.ts:442 emits the field only when consent refuses) while the object host answers with the internal token (src/durable-objects/ShopperReflex.ts:1608), so the two hosts disagree at the SDK boundary. This unit fixes the projection, not the internal token. Full C5 stage parity (LearnStats, the buffered path and the ODP payload) is a later batch."
+  },
+  {
+    "id": "W16.C4.08",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "R32(2): the persisted grammar is unchanged by C4. One explicit mapping point PERSISTED_STAGE = { exploring: 'early', thinking: 'mid', deciding: 'late' } carries the reported vocabulary into the stored token: the decision cell still carries `mid`, the learning ladder key is still `c=…|v=…|s=mid` (src/learn/stats.ts:34), and the W18.01 slot stage rule still fires on that cell (src/content/decide.ts:128) with the same demote (-0.2) and favour (+0.1) and the same slot order. The mounted routes serve the shared word for the same shopper on both hosts while the record keeps the token.",
+    "legs": [
+      "logic",
+      "host",
+      "host-internal"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 08 and rulings R32(2)/R29 (\"The persisted cell token early|mid|late and the learning key s=mid are a persisted grammar and stay (W24)\"); the W16-B4 specification-pass finding (2): src/content/service.ts:244 → src/content/cell.ts:70 asStage accepts only early|mid|late, so routing the new word into shopper.stage would silently switch the slot stage rule off and collapse the learning stage key; src/content/stage.test.ts for the rule's existing arithmetic",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "R19: the cell and the learning ladder key are exposed by no shopper-facing route, so the guard runs as a host-internal leg beside a public host leg that only proves the same shopper is still served and reports the shared word. The prose word `considering` in explain.stage.visitor and in contextOf is deliberately NOT asserted here: R29 keeps it until the R10 prose unification."
+  },
+  {
+    "id": "W16.C8.01",
+    "w": "W16",
+    "criterion": "C8",
+    "outcome": "Days/weeks memory (R32(4), amended by R50, first C8 unit): the memory horizon the product ships and the one the mounted host publishes to the SDK must still hold the interest that drove a shopper's last decision after 7 and after 14 days — above the engine's own prune floor ε, which is what forgetting means here (src/reflex/core.ts apply step 2) — while still fading; and this holds in EVERY dimension the shipped default remembers her in, each read at the effective horizon the engine itself would use for it (spec?.tauMs ?? config.tauMs, src/reflex/core.ts dimParams), so a per-dimension tauMs override in the shipped default (priceBand) is held to the same 7- and 14-day memory instead of standing still at a demo cadence (R50(a),(c)). The logic leg reads DEFAULT_REFLEX_CONFIG.dimensions; the host leg reads the horizon each host publishes on the hydrate, top level and per dimension (config.dims), and asserts the hydrate publishes a per-dimension horizon for every dimension the shipped default tunes on its own. A real return past the visit boundary still ranks the remembered piece first (the catalogue's own first piece is a different line) and renews no retention.",
+    "legs": [
+      "logic",
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row W16.C8.01 and ruling R32(4); docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (\"Picks up where you left off, remembers what you were considering\"); document 35 §5 W16 (\"days/weeks memory\"); HANDOFF-2026-09-18.md §5 point 8 C8 (\"day7/day14 return/restart without renewal\"); src/reflex/core.ts:202 (the shipped 60 s tauMs) and the prune floor epsilon; ruling R50 (2026-09-19) amending R42: per-dimension tauMs overrides in the shipped default scale with the horizon (priceBand = 2.5 x the top-level tau), audience hysteresis follows the horizon with no separate tau, and this unit is widened to every dimension including the overrides at 7 and 14 days",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "Measured and blocked: a return after 7 or 14 days cannot be driven through the mounted routes at all today. A shopper capability lives at most SHOPPER_MAX_AGE (24 h, src/identity/sessionCapability.ts:14) and the shopper object admits only the exact grants already in its stored authority (src/durable-objects/ShopperReflex.ts:1769-1770), with a new grant adoptable only when no authority exists; measured on both hosts, every request at T0+7d with a fresh or refreshed capability for the same subject answers 401 \"Shopper session unavailable\", and the only path that adds a grant to an existing authority is the recognized identity transfer (:2449). Readmitting a returning anonymous shopper is criterion C6 (the rotating recognition descriptor, unimplemented and disabled by HANDOFF §7), not this unit. The host leg therefore drives the reachable return (past VISIT_GAP_MS, inside the grant's life) and applies the 7- and 14-day horizon to the memory the host actually publishes (the hydrate's config.tauMs, cross-checked against the affinity the host itself answered with). The end-to-end 7/14-day return is owed to C6 and to the live acceptance batch. Per-dimension horizons are a public observable and need no host-internal leg: both hosts already publish config.dims[key].tauMs on GET /realtime/reflex (src/routes/realtime.ts and ShopperReflex.handleSnapshot), so the host leg reads them there; only the shipped dimensions the fixture's own product touches are exercised, which under extractTouches is every dimension of the shipped registry."
   }
 ]

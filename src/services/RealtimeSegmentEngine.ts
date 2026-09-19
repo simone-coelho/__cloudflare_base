@@ -34,7 +34,7 @@ import { enrichmentInputs } from '@/identity/profileEnrichment';
 import { consentOf, consentFromCookies, intersectConsent, refusalHints, personalizes, withConsent, type Consent } from '@/content/consent';
 import { FeatureVariableManager, type FeatureVariableResult } from './FeatureVariableManager';
 import { priceBandOf, type CatalogService, type Product } from './CatalogService';
-import { deriveStage } from './JourneyStage';
+import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce } from './JourneyStage';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
 import {
   getConnectors,
@@ -490,6 +490,20 @@ export class RealtimeSegmentEngine {
       applyEventToAttributes(newAttributes, event, catalogService);
       const newEngagementScore = calculateEngagementScore(newAttributes);
 
+      // 2.1 W16 C4: the journey of THIS VISIT, counted beside the cumulative
+      // attributes above. The boundary is read from the STORED lastSeen for the
+      // same reason the visit number is (SessionManager: an incoming lastSeen
+      // would close the gap it is measured against), and the purchase that
+      // counts in its own decision closes the journey for the next one.
+      const newJourney = advanceVisitJourney(sessionData.journey, stored?.metadata.lastSeen, now, event);
+      // R29: the word the engine REPORTS, from the tenant's published thresholds.
+      const journeyThresholds = journeyThresholdsInForce(reflexConfig);
+      const journeyWord = journeyStageFrom(newJourney.counters, journeyThresholds);
+      // What the previous derivation reported, so a stage change is a trigger
+      // exactly as a segment change is.
+      const priorWord = journeyStageFrom(
+        journeyCountersNow(sessionData.journey, stored?.metadata.lastSeen, now), journeyThresholds);
+
       // 2.5 Edge Affinity Reflex (doc 16): decayed per-dimension affinity via the
       // pure core. State rides the session in P0 (relocates into the DO in P2).
       // The ENGINE clock is authoritative — client timestamps are advisory only.
@@ -526,7 +540,7 @@ export class RealtimeSegmentEngine {
 
       if (!personalizes(consent)) {
         sessionData = await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
-          ...sessionData, attributes: newAttributes, surface,
+          ...sessionData, attributes: newAttributes, surface, journey: newJourney,
           reflex: reflex ? reflex.state : sessionData.reflex,
           metadata: { ...sessionData.metadata, engagementScore: newEngagementScore },
         }, event.entry, undefined, ownedSnapshot);
@@ -595,7 +609,9 @@ export class RealtimeSegmentEngine {
 
       // 4. Detect what actually changed (segments OR journey stage) — either is a trigger.
       const segmentsChanged = hasSegmentChanges(sessionData.segments, newSegments);
-      const stageChanged = sessionData.metadata.journeyStage !== journeyStage;
+      // Either grammar moving is a personalization trigger: the stored audience
+      // attribute, or the reported journey word the SDK paints (W16 C4).
+      const stageChanged = sessionData.metadata.journeyStage !== journeyStage || priorWord !== journeyWord;
 
       if (!segmentsChanged && !stageChanged) {
         // No personalization change — persist the accrued attributes/activity and stop.
@@ -603,6 +619,7 @@ export class RealtimeSegmentEngine {
           ...sessionData,
           attributes: newAttributes,
           surface,
+          journey: newJourney,
           reflex: reflex ? reflex.state : sessionData.reflex,
           odpContext: odp.odpContext,
           odpSeed,
@@ -623,6 +640,7 @@ export class RealtimeSegmentEngine {
         ...sessionData,
         attributes: newAttributes,
         surface,
+        journey: newJourney,
         reflex: reflex ? reflex.state : sessionData.reflex,
         odpContext: odp.odpContext,
         odpSeed,
@@ -651,7 +669,9 @@ export class RealtimeSegmentEngine {
           featureVariables: personalizationConfig.featureVariables,
           recommendations: personalizationConfig.recommendations,
           sortOrder: personalizationConfig.sortOrder,
-          journeyStage,
+          // R29: what the SDK paints is the shared vocabulary; the stored
+          // `metadata.journeyStage` above keeps the persisted grammar.
+          journeyStage: journeyWord,
           // Live affinity payload for the Affinity Instrument (dims use original
           // catalog value names; changed = this event's explain records).
           affinity: reflex

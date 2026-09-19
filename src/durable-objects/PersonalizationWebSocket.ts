@@ -18,7 +18,13 @@ export interface PersonalizationUpdate {
     decisions?: Record<string, Decision>;
     recommendations?: any[];
     sortOrder?: string[];
-    journeyStage?: 'early' | 'mid' | 'late';
+    /**
+     * W16 C4 (R29): the journey stage in the vocabulary the engine REPORTS —
+     * exploring | thinking | deciding. The persisted grammar (early | mid | late)
+     * stays on the stored record, the cell and the learning ladder key, and the
+     * two are bridged by the single mapping point PERSISTED_STAGE.
+     */
+    journeyStage?: import('@/services/JourneyStage').JourneyWord;
     audienceWentLive?: { key: string; name: string };
     /** Edge Affinity Reflex (doc 16): live per-dimension scores + memberships
         + the explain records for this event — feeds the Affinity Instrument. */

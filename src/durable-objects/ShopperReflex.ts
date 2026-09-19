@@ -91,7 +91,7 @@ import {
 } from '@/reflex/core';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
-import { deriveStage, stageFromCounters } from '@/services/JourneyStage';
+import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, stageFromCounters, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
 import {
   RETAIL_SIGNAL_DEFAULTS,
   applyEventToAttributes,
@@ -105,7 +105,6 @@ import {
   mapActionToOdp,
   projectOdpState,
   projectedOdpSegments,
-  projectedOdpStage,
   mergeOdpState,
   odpEnabled,
   refreshOdpSeedIfDue,
@@ -151,6 +150,13 @@ export interface PipelineRecord extends VisitContext {
   attributes: Record<string, any>;
   segments: string[];
   journeyStage: 'early' | 'mid' | 'late';
+  /**
+   * W16 C4: the counters of the CURRENT VISIT the reported journey stage is
+   * derived from, beside the cumulative `attributes` above and separate from
+   * the durable taste vector in the `affinity` record. Absent on records
+   * written before this field; those start their journey from zero.
+   */
+  journey?: VisitJourney;
   /** DO-held session id. No longer what the ODP vuid derives from — see visitorId. */
   sessionId: string;
   /**
@@ -641,10 +647,13 @@ export class ShopperReflex {
           if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, journeyStage: null });
           requireConsentPurpose(consent, 'personalization');
           if (this.affinity) pinProfileRetention(this.env, this.affinity, principal.tenant);
+          const at = Date.now();
           return json({ ok: true, consent,
-            affinity: this.affinity ? reflexSnapshot(this.affinity.reflex, Date.now(), cfg) : null,
-            journeyStage: await projectedOdpStage(this.env, principal.tenant, this.affinity, this.pipeline?.segments ?? [],
-              this.pipeline?.attributes ?? {}, this.pipeline?.journeyStage ?? null),
+            affinity: this.affinity ? reflexSnapshot(this.affinity.reflex, at, cfg) : null,
+            // W16 C4 / R29: the content decision reads the shared word here and
+            // maps it to the persisted cell token through PERSISTED_STAGE; the
+            // same derivation the SDK hydrate answers with.
+            journeyStage: journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, at), journeyThresholdsInForce(cfg)),
             visit: this.pipeline ? { visitCount: this.pipeline.visitCount, lastVisitAt: this.pipeline.lastVisitAt,
               entryChannel: this.pipeline.entryChannel, lastSeen: this.affinity?.lastSeen } : null,
           });
@@ -1159,6 +1168,14 @@ export class ShopperReflex {
     };
     const journeyStage = personalizes(consent) || aff.odpSeed.some(s => !odp.odpSeed.includes(s)) ? deriveStage(qualCtx) : pipe.journeyStage;
     ctxAttrs.journey_stage = journeyStage;
+    // W16 C4: the journey of THIS VISIT, counted beside the cumulative
+    // attributes. The boundary is the stored lastSeen, exactly as liveVisit
+    // reads it below, and the purchase that counts in its own decision closes
+    // the journey so the NEXT decision starts again from zero (R32(3)).
+    const newJourney = advanceVisitJourney(pipe.journey, this.affinity?.lastSeen, now, event);
+    const journeyThresholds = journeyThresholdsInForce(cfg);
+    const journeyWord = journeyStageFrom(newJourney.counters, journeyThresholds);
+    const priorWord = journeyStageFrom(journeyCountersNow(pipe.journey, this.affinity?.lastSeen, now), journeyThresholds);
     // Reflex scores are computed FRESH into the context (they decay by construction —
     // never persisted), so store-published affinity audiences can gte them.
     if (reflex) Object.assign(ctxAttrs, reflexAttributes(reflex.state, now, cfg));
@@ -1222,7 +1239,9 @@ export class ShopperReflex {
       new Set([...localSegments, ...reflexAudiences, ...odpSeed, ...external.audiences])
     ) : projectedSegments;
     const segmentsChanged = hasSegmentChanges(pipe.segments, newSegments);
-    const stageChanged = pipe.journeyStage !== journeyStage;
+    // Either grammar moving is a personalization trigger: the stored audience
+    // attribute, or the reported journey word the SDK paints (W16 C4).
+    const stageChanged = pipe.journeyStage !== journeyStage || priorWord !== journeyWord;
 
     // 6. Derive candidates without publishing them to readers.
     const nextAffinity: AffinityRecord = {
@@ -1241,6 +1260,7 @@ export class ShopperReflex {
       attributes,
       segments: newSegments,
       journeyStage,
+      journey: newJourney,
       sessionId: pipe.sessionId,
       visitorId: pipe.visitorId,
       firstSeen: pipe.firstSeen,
@@ -1253,7 +1273,7 @@ export class ShopperReflex {
     let update: PersonalizationUpdate | null = null;
     if (personalizes(consent) && (segmentsChanged || stageChanged)) {
       update = await this.buildUpdate(connectors, now, event.source, reflex, engagementScore, cfg, tenant, undefined,
-        { affinity: nextAffinity, pipeline: nextPipeline });
+        { affinity: nextAffinity, pipeline: nextPipeline, journeyWord });
     }
 
     // 8. Publish only after the coalesced write resolves. Later output/alarm
@@ -1300,7 +1320,9 @@ export class ShopperReflex {
     cfg: ReflexConfig,
     tenant: TenantId,
     principal?: SessionCapability,
-    candidate?: { affinity: AffinityRecord; pipeline: PipelineRecord; segmentsProjected?: boolean },
+    candidate?: { affinity: AffinityRecord; pipeline: PipelineRecord; segmentsProjected?: boolean;
+      /** W16 C4: the stage THIS event's own decision was made in, which a purchase moves before it closes the journey. */
+      journeyWord?: JourneyWord },
   ): Promise<PersonalizationUpdate> {
     requireConsentPurpose(await this.consentNow(), 'personalization');
     const aff = candidate?.affinity ?? this.affinity!;
@@ -1368,7 +1390,11 @@ export class ShopperReflex {
         featureVariables,
         recommendations,
         sortOrder,
-        journeyStage: pipe.journeyStage,
+        // R29: the frame carries the shared vocabulary. An event's own decision
+        // names the stage that event reached; every other caller (a manual
+        // segment change, an alarm, a snapshot) projects the visit at read time.
+        journeyStage: candidate?.journeyWord
+          ?? journeyStageFrom(journeyCountersNow(pipe.journey, aff.lastSeen, now), journeyThresholdsInForce(cfg)),
         // Live affinity payload for the Affinity Instrument: dims (original catalog
         // value names) + memberships + this event's EXPLAIN records (§12 glass box)
         // + the ODP-confirmed subset — the exact shape the request path pushes.
@@ -1622,10 +1648,14 @@ export class ShopperReflex {
             odpConfirmed: (await projectOdpState(this.env, tenant, this.affinity)).odpSeed,
           }
         : null,
-      // CW29: the stage this object last derived, so the content decision can
-      // put it on the cell without recomputing from counters it does not hold.
-      journeyStage: allowed ? await projectedOdpStage(this.env, tenant, this.affinity, this.pipeline?.segments ?? [],
-        this.pipeline?.attributes ?? {}, this.pipeline?.journeyStage ?? null) : null,
+      // W16 C4 / R29: the journey stage in the shared vocabulary, derived from
+      // THIS VISIT's counters against the tenant's published journey thresholds
+      // — identically on the session host (src/routes/realtime.ts, GET /reflex).
+      // The content decision maps it to the persisted cell token through the one
+      // mapping point rather than recomputing it.
+      journeyStage: allowed
+        ? journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, now), journeyThresholdsInForce(cfg))
+        : null,
       visit: allowed ? projectVisit(this.pipeline, this.affinity?.lastSeen, now) : null,
       // CW31: the switches the content decision and the outcome path honour.
       consent,

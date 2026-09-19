@@ -1,5 +1,54 @@
 /* edge-personalization SDK v0.2.0 — one package: core (identity, transport), emit (four capture paths), listen (decisions). */
 
+// src/services/visit.ts
+var VISIT_GAP_MS = 30 * 60 * 1e3;
+var ENTRY_QUERY_LIMIT = 4096;
+var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 };
+var ENTRY_TERM_LIMIT = ENTRY_LIMITS.utmTerm;
+function parsed(value) {
+  try {
+    return new URL(value.includes("://") ? value : `https://${value}`);
+  } catch {
+    return null;
+  }
+}
+function authorityHost(value) {
+  if (value === "" || /[/\\?#@\s]/.test(value)) return "";
+  const url = parsed(value);
+  if (!url) return "";
+  if (url.pathname !== "/" || url.search !== "" || url.hash !== "" || url.username !== "" || url.password !== "") return "";
+  const separator = value.indexOf(":", value.startsWith("[") ? value.indexOf("]") + 1 : 0);
+  if (separator !== -1 && !/^[0-9]+$/.test(value.slice(separator + 1))) return "";
+  return url.hostname;
+}
+function rootStripped(host) {
+  return host.endsWith(".") ? host.slice(0, -1) : host;
+}
+function isHostname(value) {
+  const host = authorityHost(value);
+  return host !== "" && host.length <= ENTRY_LIMITS.siteHost;
+}
+function hostField(key, hostOnly) {
+  return key === "siteHost" || hostOnly && key === "referrer";
+}
+function validEntry(value, hostOnly = false) {
+  if (value === void 0) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.entries(value).every(([key, v]) => Object.hasOwn(ENTRY_LIMITS, key) && (v === void 0 || typeof v === "string" && v.length <= ENTRY_LIMITS[key] && (!hostField(key, hostOnly) || v === "" || isHostname(v))));
+}
+function snapshotEntry(entry) {
+  const referrer = typeof entry.referrer === "string" ? hostOf(entry.referrer) : entry.referrer;
+  if (entry.referrer && !referrer) return void 0;
+  const value = { ...entry, ...entry.referrer === void 0 ? {} : { referrer } };
+  if (!validEntry(value, true) || !Object.values(value).some((v) => typeof v === "string")) return void 0;
+  const json = JSON.stringify(value);
+  return json.length <= ENTRY_QUERY_LIMIT ? json : void 0;
+}
+function hostOf(referrer) {
+  const url = referrer === "" ? null : parsed(referrer);
+  return url ? rootStripped(url.hostname.toLowerCase()) : "";
+}
+
 // src/sdk/identity.ts
 var DEFAULT_VISITOR_KEY = "opt_visitor_id";
 var YEAR_SECONDS = 60 * 60 * 24 * 365;
@@ -41,14 +90,22 @@ function rotateBrowsingSession(host, key = DEFAULT_SESSION_KEY) {
   }
 }
 function entrySignals(host) {
-  let utmMedium = "", utmSource = "";
+  let utmMedium = "", utmSource = "", utmTerm = "";
   try {
     const usp = new URLSearchParams(host.location?.search ?? "");
     utmMedium = usp.get("utm_medium") ?? "";
     utmSource = usp.get("utm_source") ?? "";
+    utmTerm = usp.get("utm_term") ?? "";
+    if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = "";
   } catch {
   }
-  return { utmMedium, utmSource, referrer: host.referrer ?? "", siteHost: host.location?.hostname ?? "" };
+  return {
+    utmMedium,
+    utmSource,
+    ...utmTerm ? { utmTerm } : {},
+    referrer: host.referrer ?? "",
+    siteHost: host.location?.hostname ?? ""
+  };
 }
 
 // src/sdk/wire.ts
@@ -133,8 +190,51 @@ function resolveConfig(c, host) {
 function contentInteraction(type, data) {
   return [data.action, data.eventName, data.event, type].map((name) => typeof name === "string" ? name.trim() : "").find((name) => ["content_impression", "content_click", "content_dwell", "video_complete"].includes(name));
 }
+function createPageBindings() {
+  const listeners = /* @__PURE__ */ new Set();
+  const observed = /* @__PURE__ */ new Map();
+  return {
+    addListener(el, type, handler) {
+      let released = false;
+      const off = () => {
+        if (released) return;
+        released = true;
+        listeners.delete(off);
+        el.removeEventListener?.(type, handler);
+      };
+      listeners.add(off);
+      el.addEventListener(type, handler);
+      return off;
+    },
+    addObserver(dom, el, cb) {
+      if (observed.has(el)) return null;
+      let released = false;
+      let detach = void 0;
+      const off = () => {
+        if (released) return;
+        released = true;
+        if (observed.get(el) === off) observed.delete(el);
+        detach?.();
+      };
+      observed.set(el, off);
+      const stop = dom.observe(el, cb);
+      if (released) {
+        stop();
+        return off;
+      }
+      detach = stop;
+      return off;
+    },
+    observes: (el) => observed.has(el),
+    release() {
+      for (const off of [...listeners]) off();
+      for (const off of [...observed.values()]) off();
+    }
+  };
+}
 function createCore(config, host) {
   const cfg = resolveConfig(config, host);
+  const bindings = createPageBindings();
   let visitorId = "", sessionId = "", anonId = "";
   let generation = 0;
   let eventSequence = 0;
@@ -1177,6 +1277,7 @@ function createCore(config, host) {
   return {
     config: cfg,
     host,
+    bindings,
     get entry() {
       return entryOf();
     },
@@ -1272,6 +1373,24 @@ var GA4_MAPPING = {
     return { type: "purchase", data: { orderId: String(x.transaction_id ?? ""), value: Number(x.value ?? 0), currency: x.currency ?? "USD", items } };
   }
 };
+var layerRegistries = /* @__PURE__ */ new WeakMap();
+function layerRegistryFor(layer) {
+  const existing = layerRegistries.get(layer);
+  if (existing && layer.push === existing.wrapper) return existing;
+  const original = layer.push;
+  const registry = {
+    original,
+    attached: existing?.attached ?? /* @__PURE__ */ new Map(),
+    wrapper: function(...args) {
+      const result = original.apply(layer, args);
+      for (const entry of args) for (const attachment of [...registry.attached.values()]) attachment.handle(entry);
+      return result;
+    }
+  };
+  layer.push = registry.wrapper;
+  layerRegistries.set(layer, registry);
+  return registry;
+}
 function createEmit(core, listen) {
   const host = core.host;
   const track = async (type, input = {}) => {
@@ -1290,21 +1409,16 @@ function createEmit(core, listen) {
   };
   const withItem = (type) => (productId, attrs = {}) => core.send(type, () => ({ productId, ...attrs }));
   const withContent = (type) => (contentId, slot, attrs = {}) => track(type, () => ({ contentId, slot, ...attrs }));
-  function declarative(opts = {}) {
-    if (core.config.listenOnly) return () => {
-    };
-    const dom = opts.dom ?? host.dom;
-    if (!dom) return () => {
-    };
-    const dwellMinMs = opts.dwellMinMs ?? 1e3;
-    const offs = [];
+  const scans = /* @__PURE__ */ new Map();
+  function scan(dom, dwellMinMs) {
+    const holds = [];
     const seen = /* @__PURE__ */ new Set();
     let detached = false, installed = false, binding = 0;
     const stop = () => {
       binding++;
       installed = false;
       seen.clear();
-      for (const off of offs.splice(0)) off();
+      for (const off of holds.splice(0)) off();
     };
     const start = () => core.capture(() => {
       if (detached || installed) return;
@@ -1313,25 +1427,29 @@ function createEmit(core, listen) {
       const permitted = () => core.trackingAllowed && !detached && current === binding;
       for (const el of dom.querySelectorAll("[data-op-content]")) {
         if (!permitted()) return;
-        const contentId = el.getAttribute("data-op-content") ?? "";
-        const slot = el.getAttribute("data-op-slot") ?? "unknown";
-        if (!contentId) continue;
+        if (!el.getAttribute("data-op-content")) continue;
         const decisionId = el.getAttribute("data-op-decision-id");
-        const attrs = {
-          contentId,
-          slot,
-          ...decisionId !== null ? { decisionId } : {},
-          ...el.getAttribute("data-op-type") ? { contentType: el.getAttribute("data-op-type") } : {}
+        const shown = () => {
+          const contentId = el.getAttribute("data-op-content") ?? "";
+          if (!contentId) return null;
+          const contentType = el.getAttribute("data-op-type");
+          return {
+            contentId,
+            slot: el.getAttribute("data-op-slot") ?? "unknown",
+            ...decisionId !== null ? { decisionId } : {},
+            ...contentType ? { contentType } : {}
+          };
         };
         let shownAt = null;
-        const off = dom.observe(el, (visible) => {
-          if (!permitted()) {
+        const off = core.bindings.addObserver(dom, el, (visible) => {
+          const attrs = shown();
+          if (!permitted() || !attrs) {
             shownAt = null;
             return;
           }
           if (visible) {
             if (shownAt === null) shownAt = host.now();
-            const key = `${slot}:${contentId}`;
+            const key = `${String(attrs.slot)}:${String(attrs.contentId)}`;
             if (!seen.has(key)) {
               seen.add(key);
               void track("content_impression", attrs);
@@ -1344,29 +1462,31 @@ function createEmit(core, listen) {
           if (ms >= dwellMinMs) void track("content_dwell", { ...attrs, ms });
         });
         if (!permitted()) {
-          off();
+          off?.();
           return;
         }
-        offs.push(off);
-        el.addEventListener("click", () => {
-          if (permitted()) void track("content_click", attrs);
-        });
+        if (off) holds.push(off);
+        holds.push(core.bindings.addListener(el, "click", () => {
+          const attrs = permitted() ? shown() : null;
+          if (attrs) void track("content_click", attrs);
+        }));
       }
       for (const el of dom.querySelectorAll("[data-op-track]")) {
         if (!permitted()) return;
-        const type = el.getAttribute("data-op-track") ?? "";
-        if (!(type in WIRE)) continue;
-        const label = el.getAttribute("data-op-label");
-        const productId = el.getAttribute("data-op-product");
+        if (!(String(el.getAttribute("data-op-track") ?? "") in WIRE)) continue;
         const decisionId = el.getAttribute("data-op-decision-id");
-        el.addEventListener("click", () => {
+        holds.push(core.bindings.addListener(el, "click", () => {
           if (!permitted()) return;
+          const type = el.getAttribute("data-op-track") ?? "";
+          if (!(type in WIRE)) return;
+          const label = el.getAttribute("data-op-label");
+          const productId = el.getAttribute("data-op-product");
           void track(type, {
             ...label ? { label } : {},
             ...productId ? { productId } : {},
             ...decisionId !== null ? { decisionId } : {}
           });
-        });
+        }));
       }
     });
     const consentOff = core.onConsentChange(() => {
@@ -1375,48 +1495,77 @@ function createEmit(core, listen) {
     });
     const generationOff = core.on("generation", stop);
     start();
-    return () => {
+    return { refs: 0, detach: () => {
       detached = true;
       consentOff();
       generationOff();
       stop();
+    } };
+  }
+  function declarative(opts = {}) {
+    if (core.config.listenOnly) return () => {
+    };
+    const dom = opts.dom ?? host.dom;
+    if (!dom) return () => {
+    };
+    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1e3);
+    scans.set(dom, attachment);
+    attachment.refs++;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (--attachment.refs > 0) return;
+      if (scans.get(dom) === attachment) scans.delete(dom);
+      attachment.detach();
     };
   }
   function dataLayer(opts = {}) {
     const layer = opts.layer ?? host.dataLayer;
     if (!layer) return () => {
     };
-    let detached = false;
-    const mapping = { ...GA4_MAPPING, ...opts.mapping ?? {} };
-    const handle = (entry) => core.capture(() => {
-      if (detached) return;
-      if (!entry || typeof entry !== "object") return;
-      const e = entry;
-      const name = typeof e.event === "string" ? e.event : null;
-      if (!name) return;
-      const m = mapping[name];
-      if (!m) return;
-      let mapped = null;
-      try {
-        mapped = m(e);
-      } catch {
-        mapped = null;
-      }
-      if (mapped) void track(mapped.type, mapped.data);
-    });
-    const replayLength = opts.replay !== false && core.trackingAllowed ? layer.length : 0;
-    if (replayLength) core.capture(() => {
-      if (!detached) for (let i = 0; i < replayLength; i++) handle(layer[i]);
-    });
-    const original = layer.push;
-    layer.push = function(...args) {
-      const r = original.apply(layer, args);
-      for (const a of args) handle(a);
-      return r;
-    };
+    const registry = layerRegistryFor(layer);
+    let attachment = registry.attached.get(core);
+    const fresh = attachment === void 0;
+    if (!attachment) {
+      const mapping = { ...GA4_MAPPING, ...opts.mapping ?? {} };
+      const own = { refs: 0, live: true, handle: (entry) => core.capture(() => {
+        if (!own.live) return;
+        if (!entry || typeof entry !== "object") return;
+        const e = entry;
+        const name = typeof e.event === "string" ? e.event : null;
+        if (!name) return;
+        const m = mapping[name];
+        if (!m) return;
+        let mapped = null;
+        try {
+          mapped = m(e);
+        } catch {
+          mapped = null;
+        }
+        if (mapped) void track(mapped.type, mapped.data);
+      }) };
+      attachment = own;
+      registry.attached.set(core, own);
+    }
+    const held = attachment;
+    held.refs++;
+    if (fresh) {
+      const replayLength = opts.replay !== false && core.trackingAllowed ? layer.length : 0;
+      if (replayLength) core.capture(() => {
+        if (held.live) for (let i = 0; i < replayLength; i++) held.handle(layer[i]);
+      });
+    }
+    let released = false;
     return () => {
-      detached = true;
-      layer.push = original;
+      if (released) return;
+      released = true;
+      if (--held.refs > 0) return;
+      held.live = false;
+      if (registry.attached.get(core) === held) registry.attached.delete(core);
+      if (registry.attached.size) return;
+      if (layer.push === registry.wrapper) layer.push = registry.original;
+      if (layerRegistries.get(layer) === registry) layerRegistries.delete(layer);
     };
   }
   return {
@@ -1435,54 +1584,6 @@ function createEmit(core, listen) {
     dataLayer,
     rendered: (slot, contentId, el, decisionId) => listen.rendered(slot, contentId, el, decisionId)
   };
-}
-
-// src/services/visit.ts
-var VISIT_GAP_MS = 30 * 60 * 1e3;
-var ENTRY_QUERY_LIMIT = 4096;
-var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, referrer: 2048, siteHost: 253 };
-function parsed(value) {
-  try {
-    return new URL(value.includes("://") ? value : `https://${value}`);
-  } catch {
-    return null;
-  }
-}
-function authorityHost(value) {
-  if (value === "" || /[/\\?#@\s]/.test(value)) return "";
-  const url = parsed(value);
-  if (!url) return "";
-  if (url.pathname !== "/" || url.search !== "" || url.hash !== "" || url.username !== "" || url.password !== "") return "";
-  const separator = value.indexOf(":", value.startsWith("[") ? value.indexOf("]") + 1 : 0);
-  if (separator !== -1 && !/^[0-9]+$/.test(value.slice(separator + 1))) return "";
-  return url.hostname;
-}
-function rootStripped(host) {
-  return host.endsWith(".") ? host.slice(0, -1) : host;
-}
-function isHostname(value) {
-  const host = authorityHost(value);
-  return host !== "" && host.length <= ENTRY_LIMITS.siteHost;
-}
-function hostField(key, hostOnly) {
-  return key === "siteHost" || hostOnly && key === "referrer";
-}
-function validEntry(value, hostOnly = false) {
-  if (value === void 0) return true;
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  return Object.entries(value).every(([key, v]) => Object.hasOwn(ENTRY_LIMITS, key) && (v === void 0 || typeof v === "string" && v.length <= ENTRY_LIMITS[key] && (!hostField(key, hostOnly) || v === "" || isHostname(v))));
-}
-function snapshotEntry(entry) {
-  const referrer = typeof entry.referrer === "string" ? hostOf(entry.referrer) : entry.referrer;
-  if (entry.referrer && !referrer) return void 0;
-  const value = { ...entry, ...entry.referrer === void 0 ? {} : { referrer } };
-  if (!validEntry(value, true) || !Object.values(value).some((v) => typeof v === "string")) return void 0;
-  const json = JSON.stringify(value);
-  return json.length <= ENTRY_QUERY_LIMIT ? json : void 0;
-}
-function hostOf(referrer) {
-  const url = referrer === "" ? null : parsed(referrer);
-  return url ? rootStripped(url.hostname.toLowerCase()) : "";
 }
 
 // src/sdk/listen.ts
@@ -1737,7 +1838,7 @@ function createListen(core, opts = {}) {
     }
     const ack = paint.ack ?? await paint.pending ?? null;
     if (!ack || !active()) return null;
-    if (el && host.dom && !paint.observed) {
+    if (el && host.dom && !paint.observed && !core.bindings.observes(el)) {
       paint.observed = true;
       const { renderOffer: _offer, ...data } = paint.envelope.data;
       void _offer;
@@ -1752,7 +1853,7 @@ function createListen(core, opts = {}) {
         observers.delete(stop);
       };
       observers.add(stop);
-      off = host.dom.observe(el, (visible) => {
+      const release = core.bindings.addObserver(host.dom, el, (visible) => {
         if (stopped || !active()) {
           stop();
           return;
@@ -1767,6 +1868,7 @@ function createListen(core, opts = {}) {
         if (ms >= dwellMinMs) void outcome("content_dwell", contentId, slot, { ...data, ms });
         stop();
       });
+      if (release) off = release;
       if (stopped) off();
     }
     return ack;
@@ -2122,9 +2224,12 @@ function createClient(config, host = browserHost(), options = {}) {
     logout: () => identity.logout(),
     connect: () => core.connect(),
     disconnect: () => core.disconnect(),
+    // Whichever order a page tears down in, nothing of the SDK is left on it:
+    // the listeners and observations this client owns go back too (W17).
     destroy: () => {
       listen.destroy();
       core.disconnect();
+      core.bindings.release();
     },
     on: (event, fn) => core.on(event, fn)
   };

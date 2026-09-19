@@ -24,3 +24,5 @@ Non-negotiables:
 - Write no tracker, ledger, handoff or governance record. Your output is code, the commit and the facts below.
 
 Report facts only, in this order: the score line from `score.mjs` on your head (or "score tool not built" and the by-hand comparison); the commit sha (and PR URL); the exact changed paths; each gate step with its log path and result; units green; units you could not close and the exact reason; residuals you are naming as owed work; any rule you breached. Never claim PASS; the reviewer judges and the lead validates.
+
+- Process lesson (2026-09-19): never wait on a process with `pgrep -f <pattern>` from a shell whose own command line contains the pattern; that loop never exits and cannot be killed by an agent. Run the command in the foreground, or have it write a marker file when it ends and wait on the file.
