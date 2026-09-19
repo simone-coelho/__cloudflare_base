@@ -399,6 +399,26 @@ export function readTimeStageChange(
   return from === to ? null : { from, to };
 }
 
+/**
+ * THE STORED STAGE (W16 C5.09, R85(b)). One function, so every host, every path
+ * and every surface that needs her stage in the PERSISTED grammar asks the same
+ * question of the same state: the counters of the CURRENT visit — read at
+ * `nowMs`, so a visit that has ended takes its counters with it exactly as
+ * `journeyCountersNow` and `projectVisit` do — against the threshold set in
+ * force, carried across by the one mapping point `PERSISTED_STAGE` (R32(2)).
+ *
+ * It reads NO segment. The older cumulative rule (`stageFromCounters`) let an
+ * audience pin a stage ahead of the counts, which is why losing a seed used to
+ * move a stored stage; under this derivation a seed a tenant no longer confirms
+ * cannot move her journey, because her journey is what she did in this visit.
+ */
+export function storedJourneyStage(
+  journey: unknown, lastSeenMs: number | null | undefined, nowMs: number,
+  document: { journey?: unknown } | null | undefined,
+): JourneyStage {
+  return PERSISTED_STAGE[journeyStageFrom(journeyCountersNow(journey, lastSeenMs, nowMs), journeyThresholdsInForce(document))];
+}
+
 /** The stored journey after one delivered event, from whichever host took it. */
 export function advanceVisitJourney(
   stored: unknown, lastSeenMs: number | null | undefined, nowMs: number, event: unknown,

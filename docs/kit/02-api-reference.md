@@ -114,6 +114,24 @@ Release note: the object host's `dropped: "unknown_product"` answer now also fir
 product we do not hold and whose every attribute value your catalogue refuses, not only for an event
 that carried an unknown id and no attributes at all; it carries the same `signals` naming the id.
 
+Release note (journey stage on the ODP profile): the `journey_stage` attribute written to your ODP
+profile is the **persisted** token (`early | mid | late`) on both hosts and on every path — the event
+path and the read-time stage projection. Until now the session host's event path wrote the reported
+word (`exploring | thinking | deciding`) instead, which no mirrored audience condition matches; that
+is corrected. The stored stage, the decision cell, the learning ladder key and this attribute are now
+one derivation: the stage the engine reports for the CURRENT VISIT, carried into the persisted
+grammar. **Owner-visible consequence:** the purchase event itself is sent as the `late` token — the
+truthful input at the moment she buys — and the first projection after the post-purchase reset carries
+`early`, so an audience keyed on `late` (for example `late_journey_ready_to_buy`) no longer keeps a
+shopper after she has bought and started a new visit. The reported word the SDK paints is unchanged.
+
+The same change reaches the **local** `journey_stage` audience attribute your own published conditions
+are evaluated against: it was the cumulative rule over her whole history, and it is now the same
+per-visit derivation as the stored stage and the ODP token. A condition on `journey_stage == "late"`
+therefore matches during the visit she buys in and stops matching on her next visit, instead of
+matching forever afterwards. One derivation now stands behind every place that name appears; nothing
+here changes the persisted tokens themselves, which stay `early | mid | late`.
+
 The same vocabulary and the same `signals` apply to every door an interaction can arrive by, not only
 the live one: an explicitly buffered action (`"processing": "buffered"`) is answered with `signals` of
 its own, and a content interaction and a historical import row are measured against the same published
@@ -296,6 +314,14 @@ There is **no shipped default**: the mode, the window and the covered purpose ar
 A return presents the proof on the same route, normally with **no** `X-Shopper-Session` header (the one exception is the `unavailable` retry above): `{ continuity: { proof, operationId } }` in direct mode, or the cookie plus `{ continuity: { operationId } }` in broker mode. `operationId` is a UUID the caller keeps beside the proof: the exact retry of a lost answer is honoured once from one deterministic successor receipt, with the same subject, the same generation, the same grant and the same successor proof. A second retry, a different operation on a consumed proof, a tampered or unknown proof, another tenant's proof, another transport's proof, a proof issued under a previous configuration revision, and a proof past its own fixed expiry are all a **cold shopper**: a brand-new anonymous subject served the catalogue's own order. The expired capability is never extended; recognition answers a new bounded capability on the shopper's existing browsing session.
 
 Logout (`detach`), session reset, link and erase each retire the descriptor, a withdrawn choice makes a descriptor issued before it cold, and the owner object holds only the digest, the generation and the fixed expiry — never the proof. The SDK keeps a direct-mode proof in its own tenant-scoped store under `opt_shopper_continuity:<endpoint>:<tenant>` and presents it on a cold start; in broker mode it holds none and sends none.
+
+**Whoever holds a recognition proof is recognized as its subject.** The proof is a bearer credential:
+it is bound to the tenant, the transport, the covered purpose, the configuration revision, the
+generation and its own fixed expiry, and to nothing about the device or the browser that presents it.
+Anyone who obtains it — from storage, from a log, from a shared machine — is answered as the shopper it
+names, until it is spent, expires or is retired. Protect it exactly as you protect a session
+credential: never log it, never put it in a URL, never copy it between devices, and retire it
+(`detach`, session reset, link, erase) when the browser should stop being that shopper.
 
 Activation is a tenant decision. Nothing in the platform publishes a mode, a window or a covered purpose, and the retention approval a continuity credential needs is per purpose: a 30-day session consent record authorizes none.
 
