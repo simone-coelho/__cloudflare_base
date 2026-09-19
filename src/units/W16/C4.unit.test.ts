@@ -51,7 +51,7 @@ import {
 import { admitOwnerPrincipal, runOwnerOperation } from '@/identity/sessionAuthority';
 import { shopperObjectName } from '@/tenancy/objects';
 import { storedConsent, type ConsentInstruction } from '@/content/consent';
-import { apply as reflexApply, effectiveScore, snapshot as reflexSnapshot, DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
+import { apply as reflexApply, effectiveScore, extractTouches, snapshot as reflexSnapshot, DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { initializePublicationSet, pinPublication, publishSet, type PublicationBaseline } from '@/config/publication';
 import { invalidateCache } from '@/config/versionedStore';
@@ -332,7 +332,14 @@ async function explicitChoice(f: ReturnType<typeof boundary>, grant: Awaited<Ret
 /** What the SDK-visible hydrate (`GET /realtime/reflex`) returns on either host. */
 interface Hydrate {
   journeyStage?: unknown;
-  config?: { tauMs?: number };
+  /**
+   * The horizon the host publishes to the SDK, top level and per dimension —
+   * the numbers the client's own drain animation decays each bar at
+   * (src/routes/realtime.ts GET /realtime/reflex `config.dims`, and the same
+   * block from ShopperReflex.handleSnapshot on the object host). W16.C8.01
+   * reads the per-dimension horizon here (R50(c)).
+   */
+  config?: { tauMs?: number; dims?: Record<string, { tauMs?: number }> };
   visit?: { visitNumber: number | null; entryChannel: string | null } | null;
   affinity?: { dims?: Record<string, Record<string, number>> } | null;
 }
@@ -677,7 +684,7 @@ describe('unit:W16.C4.04', () => {
 });
 
 describe('unit:W16.C4.05', () => {
-  it('host: a new threshold version applies to subsequent decisions, an invalid set is refused, and nothing published fails closed to the first stage, on both hosts', async () => {
+  it('host: a new threshold version applies to subsequent decisions, an invalid set is refused, and with nothing ever published the compiled default decides and names itself, on both hosts', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
     try {
       for (const host of ['session', 'do'] as const) {
@@ -731,9 +738,21 @@ describe('unit:W16.C4.05', () => {
           config: { label: 'w16-b4-fixture+r2', revision: 2 } });
       }
 
-      // Nothing published at all: the reflex document carries no journey block.
-      // The engine serves, derives the vocabulary's first stage and says why.
-      // It never invents a threshold.
+      // NOTHING EVER PUBLISHED: the reflex document carries no journey block.
+      //
+      // R10 update, witness R49 (2026-09-19, from the W16-B4 build review's
+      // P1e/P1g measurement): an untuned tenant is not a tenant with a broken
+      // publication. The compiled default set DEFAULT_JOURNEY_THRESHOLDS
+      // decides — exactly as the REST of DEFAULT_REFLEX_CONFIG (τ, K, the
+      // thresholds, the dimension registry) is the compiled default an untuned
+      // tenant runs on — so three interactions reach the SECOND stage of the
+      // vocabulary here too, and the learning ladder and the slot stage rule
+      // keep working for every tenant that has tuned nothing. The engine still
+      // invents nothing: it names the compiled default it used, at revision 0,
+      // because no revision of the tenant's document supplied it.
+      //
+      // Fail-closed is unchanged where a tenant HAS spoken: the invalid-set
+      // clause above still keeps the last published block in force.
       for (const host of ['session', 'do'] as const) {
         clock.mockReturnValue(T0);
         const h = await hostFixture(host, { journey: null });
@@ -742,15 +761,28 @@ describe('unit:W16.C4.05', () => {
           expect((await h.action(event)).status, `${host}: unpublished thresholds must not refuse an event`).toBe(200);
         }
         clock.mockReturnValue(T0 + 2 * STEP_MS);
-        expect((await h.hydrate()).journeyStage, `${host}: fail closed to the first stage`).toBe('exploring');
-        expect(await h.snapshot(), `${host}: served, with no threshold version used and a diagnostic that names the journey thresholds`)
+        // The compiled default moves the stage at the third interaction
+        // (DEFAULT_JOURNEY_THRESHOLDS, tapestry_requirements.txt line 147), so
+        // the three interactions of this visit reach 'thinking' here.
+        expect(DEFAULT_JOURNEY_THRESHOLDS.stages.find((s) => s.stage === 'thinking')?.anyOf.interactions,
+          'the compiled default moves the stage at the third interaction (tapestry line 147)').toBe(3);
+        expect((await h.hydrate()).journeyStage, `${host}: R49 — with nothing published the compiled default decides, so the third interaction moves the stage`).toBe('thinking');
+        const served = await h.snapshot();
+        expect(served, `${host}: served, with the compiled default named as the set that decided, at revision 0`)
           // R10, lead addendum from the W16-B4 specification pass 2: the hero slot carries no stage rule
           // and neither piece a journeyStageFit, so nothing in C4 changes the served piece
           // (src/content/decide.ts:128-130 — `hasStage` is false); with one view each the Rogue piece,
           // first in the catalogue, is the one the engine serves with nothing published either.
           .toEqual({ status: 200, ok: true, state: host, decisions: HOME_DECISIONS, first: 'rogue-editorial',
-            journey: { version: null, revision: 0, reason: expect.stringMatching(/journey/i) },
+            // R49: the version a receipt names here is the COMPILED DEFAULT's
+            // own version — the version field of the compiled default reflex
+            // configuration the set travels with — never the tenant's document
+            // version, which did not supply the thresholds, and never null now
+            // that a set decided. Revision 0: no published revision supplied it.
+            journey: { version: DEFAULT_REFLEX_CONFIG.version, revision: 0, reason: expect.stringMatching(/default/i) },
             config: { label: 'w16-b4-fixture', revision: 1 } });
+        const reason = (served.journey as { reason: string }).reason;
+        expect(reason, `${host}: the diagnostic says WHICH set decided — the journey thresholds of the compiled default`).toMatch(/journey/i);
       }
     } finally { clock.mockRestore(); }
   });
@@ -960,7 +992,28 @@ describe('unit:W16.C8.01', () => {
       (state, _view, index) => reflexApply(state, { action: 'product_view', touches: [{ dim: 'line', value: 'Tabby' }] },
         T0 + index * STEP_MS, config as never).state, undefined)!;
 
-  it("logic: the shipped memory horizon still holds a shopper's interest after 7 and after 14 days", () => {
+  /**
+   * One product of her visit in the customer's own taxonomy, carrying a value
+   * for EVERY dimension the shipped default scores — the Tabby shoulder bag she
+   * viewed, met through this fixture's editorial content (the catalogue here
+   * serves editorial pieces). R50(c): the memory horizon is the product's, so
+   * every dimension she is remembered in is held to it, not only the line.
+   */
+  const HER_PRODUCT = {
+    id: 'CH-TABBY-26', line: 'Tabby', category: 'Handbags', subcategory: 'Shoulder Bags',
+    silhouette: 'shoulder', occasion: ['work', 'everyday'], price_usd: 395, contentType: 'editorial',
+  };
+  /** The same three views, through the engine's own touch extraction, in every dimension. */
+  const rememberedEverywhere = (config: typeof DEFAULT_REFLEX_CONFIG) =>
+    THREE_TABBY_VIEWS.reduce<ReturnType<typeof reflexApply>['state'] | undefined>(
+      (state, _view, index) => reflexApply(state, { action: 'product_view', touches: extractTouches(HER_PRODUCT, config) },
+        T0 + index * STEP_MS, config).state, undefined)!;
+  /** The engine's own rule for the horizon a dimension runs on (src/reflex/core.ts, dimParams). */
+  const effectiveTau = (spec: { tauMs?: number }, config: { tauMs: number }) => spec.tauMs ?? config.tauMs;
+  /** Her interest in one dimension, as the state holds it: the first value that dimension carries. */
+  const interestIn = (state: ReturnType<typeof reflexApply>['state'], dim: string) => Object.entries(state.dims[dim] ?? {})[0];
+
+  it("logic: the shipped memory horizon still holds a shopper's interest after 7 and after 14 days, in every dimension it remembers her in", () => {
     // tapestry_requirements.txt line 152, Return Visit Recognition: "Picks up
     // where you left off, remembers what you were considering"; document 35 §5
     // W16 "days/weeks memory". The compiled default is what an untuned tenant
@@ -980,9 +1033,35 @@ describe('unit:W16.C8.01', () => {
     expect(remembered(14), 'W16.C8.01: and after 14 days').toBeGreaterThan(DEFAULT_REFLEX_CONFIG.epsilon);
     // A memory horizon, not a freeze: it fades, it does not vanish.
     expect(remembered(14)).toBeLessThan(remembered(0));
+
+    // R50(c) (2026-09-19): the horizon is the PRODUCT's memory, not one field's.
+    // Every dimension the shipped default remembers her in is held to it, and a
+    // per-dimension `tauMs` override is that dimension's OWN horizon — so each
+    // is read at the effective τ the engine itself would use, `spec?.tauMs ??
+    // config.tauMs` (src/reflex/core.ts, dimParams). R50(a): the shipped
+    // override scales with the top-level horizon rather than standing still at
+    // a demo cadence, so a dimension cannot be forgotten while the rest is
+    // remembered.
+    const everywhere = rememberedEverywhere(DEFAULT_REFLEX_CONFIG);
+    expect(DEFAULT_REFLEX_CONFIG.dimensions.some((spec) => spec.tauMs !== undefined),
+      'R50(a): the shipped default carries at least one per-dimension horizon of its own, and this unit holds it to the same memory').toBe(true);
+    for (const spec of DEFAULT_REFLEX_CONFIG.dimensions) {
+      const tauMs = effectiveTau(spec, DEFAULT_REFLEX_CONFIG);
+      const held = interestIn(everywhere, spec.key);
+      expect(held, `her own product touches the shipped dimension "${spec.key}", so the interest held there is real`).toBeDefined();
+      const [value, entry] = held!;
+      expect(effectiveScore(entry, T0 + 7 * DAY_MS, tauMs),
+        `W16.C8.01: after 7 days the shipped horizon of dimension "${spec.key}" (effective τ ${tauMs} ms, value "${value}") still holds the interest that drove her last decision, above the engine's own prune floor`)
+        .toBeGreaterThan(DEFAULT_REFLEX_CONFIG.epsilon);
+      expect(effectiveScore(entry, T0 + 14 * DAY_MS, tauMs),
+        `W16.C8.01: and after 14 days for dimension "${spec.key}" (effective τ ${tauMs} ms)`)
+        .toBeGreaterThan(DEFAULT_REFLEX_CONFIG.epsilon);
+      // Still a horizon, not a freeze, in every dimension.
+      expect(effectiveScore(entry, T0 + 14 * DAY_MS, tauMs), `"${spec.key}" fades`).toBeLessThan(effectiveScore(entry, T0, tauMs));
+    }
   });
 
-  it('host: the memory horizon the mounted host publishes carries her interest across days, and a return renews nothing, on both hosts', async () => {
+  it('host: the memory horizon the mounted host publishes carries her interest across days in every dimension, and a return renews nothing, on both hosts', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
     try {
       for (const host of ['session', 'do'] as const) {
@@ -1016,6 +1095,27 @@ describe('unit:W16.C8.01', () => {
           `${host}: W16.C8.01 — the horizon this host publishes must still hold her interest after 7 days, above the engine's prune floor`)
           .toBeGreaterThan(config.epsilon);
         expect(effectiveScore(entry, T0 + 14 * DAY_MS, config.tauMs), `${host}: and after 14 days`).toBeGreaterThan(config.epsilon);
+
+        // R50(c): every dimension this host remembers her in, at the horizon
+        // THIS HOST publishes for that dimension. The hydrate publishes the
+        // per-dimension overrides beside the top-level τ precisely so the
+        // client decays each bar at its true rate, so a dimension's own horizon
+        // is a public observable and is held to the same 7- and 14-day memory.
+        const everywhere = rememberedEverywhere({ ...DEFAULT_REFLEX_CONFIG, tauMs: published!.tauMs! });
+        for (const spec of DEFAULT_REFLEX_CONFIG.dimensions) {
+          if (spec.tauMs !== undefined) {
+            expect(typeof published?.dims?.[spec.key]?.tauMs,
+              `${host}: the hydrate publishes the horizon of dimension "${spec.key}", which the shipped default tunes on its own (R50(a))`).toBe('number');
+          }
+          const publishedTau = published?.dims?.[spec.key]?.tauMs ?? published!.tauMs!;
+          const held = interestIn(everywhere, spec.key);
+          expect(held, `${host}: her own product touches the shipped dimension "${spec.key}"`).toBeDefined();
+          expect(effectiveScore(held![1], T0 + 7 * DAY_MS, publishedTau),
+            `${host}: W16.C8.01 — the horizon this host publishes for dimension "${spec.key}" (τ ${publishedTau} ms) must still hold her interest after 7 days, above the engine's prune floor`)
+            .toBeGreaterThan(config.epsilon);
+          expect(effectiveScore(held![1], T0 + 14 * DAY_MS, publishedTau),
+            `${host}: and after 14 days for dimension "${spec.key}"`).toBeGreaterThan(config.epsilon);
+        }
 
         // A real return, past the visit boundary: she picks up where she left
         // off, and browsing on the return renews nothing (the retained-data
