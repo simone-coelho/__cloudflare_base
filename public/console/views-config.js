@@ -276,8 +276,67 @@
       h('div', { class: 'help' }, 'Advisory only, not atomic activation or guaranteed delivery. Scheduled pins remain authorable; runtime rechecks eligibility and never fills a refused pin arbitrarily.'));
   };
   const rules = { doc: null, draft: null, revision: 0, errors: [], checking: false, timer: null,
-    scope: '', load: 0, validation: 0, dimensions: [], registryError: '', pins: null, activation: null, exclusionEditors: new Map() };
+    scope: '', load: 0, validation: 0, dimensions: [], registryError: '', pins: null, activation: null, exclusionEditors: new Map(), labels: new Map() };
   const editorErrors = () => [...rules.exclusionEditors.values()].flatMap(fields => [...fields.values()].map(editor => editor.error)).filter(Boolean);
+
+  // ── A refusal in the words of the screen that was refused ──────────────────
+  // The validator answers in the language of the payload schema: the document
+  // path it refused and the rule it broke ("pages.home[0].stage.inStage:
+  // outOfStage | inStage, number 0..1"). That is not the language of the person
+  // editing this screen. `rules.labels` is filled by the render itself, one
+  // entry per control it draws, keyed by the path the validator would name for
+  // that control, so a refusal is worded with the very label printed above the
+  // field it is about and the two can never drift apart. It is one mapping for
+  // every control, with no case for any particular rule. A path this render did
+  // not draw keeps the platform's own sentence: an error is reworded or shown
+  // verbatim, never hidden, and the save stays blocked either way.
+  const pathValue = (root, path) => {
+    let node = root;
+    for (const step of String(path).split('.')) {
+      const name = step.replace(/\[\d+\]/g, ''), indices = step.match(/\[\d+\]/g) || [];
+      if (name) {
+        if (node === null || typeof node !== 'object' || !Object.hasOwn(node, name)) return undefined;
+        node = node[name];
+      }
+      for (const index of indices) {
+        const i = Number(index.slice(1, -1));
+        if (!Array.isArray(node) || i >= node.length) return undefined;
+        node = node[i];
+      }
+    }
+    return node;
+  };
+  /**
+   * The refused value, exactly as it stands in the draft: a number as typed, a
+   * string quoted so that spaces are visible, and a block of settings as its own
+   * labelled lines. Anything the screen cannot name part by part is left out
+   * rather than printed as raw JSON; the field itself is on the screen above.
+   */
+  function valueWords(value, path) {
+    if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '';
+    if (typeof value === 'string') return JSON.stringify(value);
+    if (typeof value === 'boolean') return String(value);
+    if (value === null || typeof value !== 'object') return '';
+    const parts = [];
+    for (const [key, child] of Object.entries(value)) {
+      const label = rules.labels.get(`${path}.${key}`), words = valueWords(child, `${path}.${key}`);
+      if (!label || !words) return '';
+      parts.push(`${label} ${words}`);
+    }
+    return parts.join('; ');
+  }
+  function refusalLine(error) {
+    const text = String(error), cut = text.indexOf(': '), path = cut > 0 ? text.slice(0, cut) : '';
+    const label = path ? rules.labels.get(path) : undefined;
+    if (!label) return h('li', {}, text);
+    const detail = text.slice(cut + 2), value = pathValue(rules.draft, path), shown = valueWords(value, path);
+    const several = shown !== '' && value !== null && typeof value === 'object';
+    return h('li', {},
+      several ? `${label}: this cannot be saved as it stands (${detail}). It reads: ${shown}.`
+        : shown ? `${label}: ${shown} is not a value this setting takes (${detail}).`
+          : `${label}: this cannot be saved as it stands (${detail}).`,
+      h('div', { class: 'itemid' }, text));
+  }
   const strategyOf = (doc) => {
     for (const [page, list] of Object.entries((doc && doc.pages) || {})) {
       const i = (list || []).findIndex((x) => x.slot === S.slot);
@@ -332,6 +391,21 @@
     rules.errors = [];
     C.render();
   }
+  /**
+   * What the platform's own answer says about publication, in the operator's
+   * words. A saved revision is not yet a serving one: the answer names the
+   * published version and the publication identity the serving side will read,
+   * and this says both, exactly as the Interests save does above. When the
+   * answer carries no confirmed publication — no publication identity of the
+   * shape `C.authored` admits, or no version label — it says that instead of
+   * claiming a publication that was never acknowledged.
+   */
+  const publicationWords = (data) => {
+    const version = data && typeof data.version === 'string' ? data.version.trim() : '';
+    return version && C.authored(data)
+      ? `Published as ${version}; serving refreshes within 30 seconds.`
+      : 'Publication unconfirmed: the answer named no published version for this revision, so serving may still read the previous one. Check the publication status before authoring another change.';
+  };
   async function saveRules(note) {
     if (!rules.draft || rules.scope !== S.scope || rules.checking || rules.errors.length || editorErrors().length) return;
     const scope = rules.scope, request = rules.load, generation = rules.validation;
@@ -339,7 +413,7 @@
     if (scope !== S.scope || request !== rules.load || generation !== rules.validation) return;
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     document.getElementById('note').value = '';
-    C.flash(`Saved as slots revision ${fmt(res.data.revision)}. Pin feedback is advisory; delivery is checked at runtime.`);
+    C.flash(`Saved as slots revision ${fmt(res.data.revision)}. ${publicationWords(res.data)} Pin feedback is advisory; delivery is checked at runtime.`);
     await Promise.all([loadRules({ report: res.data.pinDiagnostics || null, revision: res.data.revision }), C.loadSlots()]);
   }
   /** How many settings differ, so the bar says "3 changes" and not "1 change" for any edit at all. */
@@ -383,15 +457,29 @@
       if (!found) { host.append(h('div', { class: 'empty' }, `${S.slot} is not in the slot document for this brand.`)); return; }
       const st = found.strategy;
       C.dirty({ count: ruleChanged(), checking: rules.checking, blocked: rules.errors.length > 0, save: saveRules, discard: () => { rules.draft = copy(rules.doc); rules.errors = []; rules.exclusionEditors.clear(); ruleCheck(); } });
-      if (rules.errors.length) host.append(h('div', { class: 'msg err' }, 'This change cannot be saved:', h('ul', {}, ...rules.errors.map((e) => h('li', {}, String(e))))));
-      host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' }, `${S.slot} on ${found.page}, from revision ${fmt(rules.revision)} of the slot document.`,
+      // The path the validator names for this slot, and the words this screen
+      // shows for it. Every control below registers itself here as it is drawn.
+      const at = `pages.${found.page}[${found.i}]`, slotWords = `${S.slot} on ${found.page}`;
+      rules.labels = new Map([[at, slotWords], [`pages.${found.page}.${S.slot}`, slotWords]]);
+      const named = (fields, label) => {
+        for (const field of Array.isArray(fields) ? fields : [fields]) if (field) rules.labels.set(`${at}.${field}`, label);
+        return label;
+      };
+      // Filled once every control has named itself, so the refusal can speak of
+      // them; it is appended here so that it stays above the settings it names.
+      const refused = rules.errors.length ? h('div', { class: 'msg err' }, 'This change cannot be saved:') : null;
+      if (refused) host.append(refused);
+      host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' }, `${slotWords}, from revision ${fmt(rules.revision)} of the slot document.`,
         ' ', h('a', { class: 'link', href: C.href('history') }, 'History and rollback')));
 
-      const n = (label, help, value, onChange, key, opts, derived) => trow({ name: label, help, value, changed: false, key, unit: (opts || {}).unit, min: (opts || {}).min, max: (opts || {}).max, step: (opts || {}).step, derived, onChange });
+      // `path` is the control's own place in the slot document — the name the
+      // validator will use if it refuses it — so each control is registered by
+      // the same call that draws it and its label is written once.
+      const n = (label, help, value, onChange, key, opts, derived) => trow({ name: named((opts || {}).path, label), help, value, changed: false, key, unit: (opts || {}).unit, min: (opts || {}).min, max: (opts || {}).max, step: (opts || {}).step, derived, onChange });
 
       host.append(card('What this slot shows',
         st.offLimits ? 'Off-limits: no piece is selected; pin and ranking settings are dormant.' : 'Pins occupy the first positions in exact order. If any required prefix pin fails, the whole slot is refused: no shifted positions or arbitrary replacement.',
-        n('Pieces shown at once', 'Total capacity, including pinned first positions and the ranked remainder.', st.take, (v) => { st.take = v ?? 1; ruleCheck(); }, 'take', { min: 1, step: 1, unit: 'pieces' }),
+        n('Pieces shown at once', 'Total capacity, including pinned first positions and the ranked remainder.', st.take, (v) => { st.take = v ?? 1; ruleCheck(); }, 'take', { min: 1, step: 1, unit: 'pieces', path: 'take' }),
         h('div', { class: 'kv' }, h('span', { class: 'k' }, 'Pinned'), h('span', { class: 'v' }, st.offLimits ? `${JSON.stringify(st.pinnedPieceIds ?? st.pinnedPieceId ?? [])}; dormant while off-limits` : st.pinnedPieceIds ? `${JSON.stringify(st.pinnedPieceIds)} first; ${Math.max(0, st.take - st.pinnedPieceIds.length)} ranked positions` : st.pinnedPieceId ? `${st.pinnedPieceId}: the engine does not rank this slot at all` : 'nothing pinned; the engine ranks the slot'))));
 
       const scope = rules.scope, draft = rules.draft;
@@ -427,15 +515,15 @@
       const pinEditor = jsonEditor('pinnedPieceId', 'governance.pin', null, 'Pins must be a valid JSON string, ordered array or null to clear.', true);
       host.append(card('Hard slot controls',
         'These gates apply on every arm before pins, scoring and diversity. No decision leaves the site’s existing default in place; no fallback asset is selected.',
-        h('div', { class: 'dial' }, h('div', {}, h('div', { class: 'name' }, 'Off-limits'), h('div', { class: 'help' }, 'No engine candidates, decisions or records. Pin and ranking settings remain stored but dormant.')), off),
+        h('div', { class: 'dial' }, h('div', {}, h('div', { class: 'name' }, named('offLimits', 'Off-limits')), h('div', { class: 'help' }, 'No engine candidates, decisions or records. Pin and ranking settings remain stored but dormant.')), off),
         st.offLimits ? h('div', { class: 'msg note' }, 'Off-limits: the pin and all ranking settings below are dormant. Re-enabling must pass current pin validation.') : null,
-        h('div', { class: 'name' }, 'Pinned internal piece IDs (JSON string, array or null)'), pinEditor,
+        h('div', { class: 'name' }, named(['pinnedPieceId', 'pinnedPieceIds'], 'Pinned internal piece IDs (JSON string, array or null)')), pinEditor,
         h('div', { class: 'help' }, 'Exact IDs, including spaces and escapes. A string keeps the single-pin take-1 contract; an ordered array pins the first positions, up to 50 distinct nonempty IDs and no more than total take. [] or null clears. This editor never changes take automatically. One invalid required prefix pin refuses the whole slot; tag/type conflicts are catalog warnings and runtime refusals, not replacements.'),
-        h('div', { class: 'name' }, 'Excluded internal piece IDs (JSON array)'), excluded,
+        h('div', { class: 'name' }, named('excludedPieceIds', 'Excluded internal piece IDs (JSON array)')), excluded,
         h('div', { class: 'help' }, 'Exact internal catalog IDs, not customer IDs or tags. No trimming or case conversion. Up to 1000 distinct IDs of 1–1024 UTF-16 units; [] clears. An active pin cannot name an excluded ID.'),
-        h('div', { class: 'name' }, 'Excluded tags (JSON pair array)'), tagEditor,
+        h('div', { class: 'name' }, named('excludedTags', 'Excluded tags (JSON pair array)')), tagEditor,
         h('div', { class: 'help' }, 'Any exact {"dimension":"…","value":"…"} match excludes a piece. Up to 1000 distinct pairs; both strings 1–1024 UTF-16 units. [] clears. No vocabulary, trimming or case conversion. Explicit own tags match literally; only absent contentType uses the safe rendering-type fallback on every arm.'),
-        h('div', { class: 'name' }, 'Allowed rendering types (JSON array or null)'), typeEditor,
+        h('div', { class: 'name' }, named('allowedTypes', 'Allowed rendering types (JSON array or null)')), typeEditor,
         h('div', { class: 'help' }, 'Matches piece.type exactly, not tags.contentType. Use 1–1000 distinct strings of 1–1024 UTF-16 units; [] is invalid, null removes the limit. Saved controls apply when the serving worker reads that revision; caches may still hold an earlier revision.')));
 
       const unregistered = Object.keys(st.weights).filter(key => !rules.dimensions.includes(key));
@@ -444,44 +532,48 @@
         st.pinnedPieceId || st.pinnedPieceIds?.length ? h('div', { class: 'msg note' }, 'These weights apply only to the ranked remainder, never to pinned positions. Fully pinned or off-limits slots keep them dormant.') : null,
         rules.registryError ? h('div', { class: 'msg note' }, rules.registryError) : null,
         ...rules.dimensions.map((key, index) => n(`Weight on ${key}`, '0 is off; 1 counts the full interest strength. Clearing the field sets 0.',
-          st.weights[key] ?? 0, value => { st.weights[key] = value ?? 0; ruleCheck(); }, `weight:${index}`, { min: 0, max: 1, step: 0.05 })),
+          st.weights[key] ?? 0, value => { st.weights[key] = value ?? 0; ruleCheck(); }, `weight:${index}`, { min: 0, max: 1, step: 0.05, path: `weights.${key}` })),
         unregistered.length ? h('div', { class: 'msg note' },
           'Stored weights outside the loaded registry are read-only here. They are preserved, not activated or removed by this editor; only matching dimensions in decision inputs can contribute.',
-          ...unregistered.map(key => h('div', { class: 'kv' }, h('span', { class: 'k' }, key), h('span', { class: 'v' }, dec(st.weights[key]))))) : null));
+          ...unregistered.map(key => h('div', { class: 'kv' }, h('span', { class: 'k' }, named(`weights.${key}`, key)), h('span', { class: 'v' }, dec(st.weights[key]))))) : null));
 
-      host.append(ruleCard('Where the shopper is in her journey',
+      host.append(ruleCard(named('stage', 'Where the shopper is in her journey'),
         'A piece carries the stages it is made for. This rule can demote a different-stage match or add a bonus for the shopper’s stage; it does not change eligibility.',
         Boolean(st.stage), (on) => toggle('stage', on, { outOfStage: 0.5, inStage: 0.2 }, st),
-        st.stage ? n('A piece for another stage is worth', 'Multiplies its score before later terms such as freshness. 1 is neutral; 0 zeros this part of the score, not eligibility. Clearing sets 1.', st.stage.outOfStage ?? 1, (v) => { st.stage.outOfStage = v ?? 1; ruleCheck(); }, 'stage.out', { min: 0, max: 1, step: 0.05 }, `${pct(st.stage.outOfStage ?? 1)} of what it would otherwise score`) : null,
-        st.stage ? n('A piece for her stage gets a bonus of', 'Added to its score, not multiplied. 0 is off; 1 adds a whole point and can outweigh other signals. Clearing sets 0.', st.stage.inStage ?? 0, (v) => { st.stage.inStage = v ?? 0; ruleCheck(); }, 'stage.in', { min: 0, max: 1, step: 0.05 }, `+${dec(st.stage.inStage ?? 0)} added to its score`) : null));
+        st.stage ? n('A piece for another stage is worth', 'Multiplies its score before later terms such as freshness. 1 is neutral; 0 zeros this part of the score, not eligibility. Clearing sets 1.', st.stage.outOfStage ?? 1, (v) => { st.stage.outOfStage = v ?? 1; ruleCheck(); }, 'stage.out', { min: 0, max: 1, step: 0.05, path: 'stage.outOfStage' }, `${pct(st.stage.outOfStage ?? 1)} of what it would otherwise score`) : null,
+        st.stage ? n('A piece for her stage gets a bonus of', 'Added to its score, not multiplied. 0 is off; 1 adds a whole point and can outweigh other signals. Clearing sets 0.', st.stage.inStage ?? 0, (v) => { st.stage.inStage = v ?? 0; ruleCheck(); }, 'stage.in', { min: 0, max: 1, step: 0.05, path: 'stage.inStage' }, `+${dec(st.stage.inStage ?? 0)} added to its score`) : null));
 
-      host.append(ruleCard('How fresh the piece is',
+      host.append(ruleCard(named('freshness', 'How fresh the piece is'),
         'New work earns a bonus that halves as it ages, from the date the piece says it became current.',
         Boolean(st.freshness), (on) => toggle('freshness', on, { weight: 0.2, halfLifeDays: 14 }, st),
-        st.freshness ? n('The bonus, on the day it is published', 'Added to the score, then halved every half-life.', st.freshness.weight, (v) => { st.freshness.weight = v ?? 0; ruleCheck(); }, 'fresh.w', { min: 0, max: 1, step: 0.05 }) : null,
-        st.freshness ? n('The bonus halves every', 'Days. After this long a piece keeps half its bonus, after twice as long a quarter.', st.freshness.halfLifeDays, (v) => { st.freshness.halfLifeDays = v ?? 14; ruleCheck(); }, 'fresh.h', { min: 1, step: 1, unit: 'days' }) : null));
+        st.freshness ? n('The bonus, on the day it is published', 'Added to the score, then halved every half-life.', st.freshness.weight, (v) => { st.freshness.weight = v ?? 0; ruleCheck(); }, 'fresh.w', { min: 0, max: 1, step: 0.05, path: 'freshness.weight' }) : null,
+        st.freshness ? n('The bonus halves every', 'Days. After this long a piece keeps half its bonus, after twice as long a quarter.', st.freshness.halfLifeDays, (v) => { st.freshness.halfLifeDays = v ?? 14; ruleCheck(); }, 'fresh.h', { min: 1, step: 1, unit: 'days', path: 'freshness.halfLifeDays' }) : null));
 
-      host.append(ruleCard('How often she has already seen it',
+      host.append(ruleCard(named('fatigue', 'How often she has already seen it'),
         'A piece she has been served repeatedly is worth less to her than one she has not. The count comes from her own ring of recent decisions.',
         Boolean(st.fatigue), (on) => toggle('fatigue', on, { weight: 0.3, windowHours: 24, cap: 3 }, st),
-        st.fatigue ? n('The penalty, at the cap', 'Taken off the score when she has seen it the capped number of times.', st.fatigue.weight, (v) => { st.fatigue.weight = v ?? 0; ruleCheck(); }, 'fat.w', { min: 0, max: 1, step: 0.05 }) : null,
-        st.fatigue ? n('Counting the last', 'Hours. Anything older than this does not count against the piece.', st.fatigue.windowHours, (v) => { st.fatigue.windowHours = v ?? 24; ruleCheck(); }, 'fat.win', { min: 1, step: 1, unit: 'hours' }) : null,
-        st.fatigue ? n('The most times counted', 'Past this the penalty stops growing.', st.fatigue.cap, (v) => { st.fatigue.cap = v ?? 3; ruleCheck(); }, 'fat.cap', { min: 1, step: 1, unit: 'times' }) : null));
+        st.fatigue ? n('The penalty, at the cap', 'Taken off the score when she has seen it the capped number of times.', st.fatigue.weight, (v) => { st.fatigue.weight = v ?? 0; ruleCheck(); }, 'fat.w', { min: 0, max: 1, step: 0.05, path: 'fatigue.weight' }) : null,
+        st.fatigue ? n('Counting the last', 'Hours. Anything older than this does not count against the piece.', st.fatigue.windowHours, (v) => { st.fatigue.windowHours = v ?? 24; ruleCheck(); }, 'fat.win', { min: 1, step: 1, unit: 'hours', path: 'fatigue.windowHours' }) : null,
+        st.fatigue ? n('The most times counted', 'Past this the penalty stops growing.', st.fatigue.cap, (v) => { st.fatigue.cap = v ?? 3; ruleCheck(); }, 'fat.cap', { min: 1, step: 1, unit: 'times', path: 'fatigue.cap' }) : null));
 
-      host.append(ruleCard('How much of one thing it may show',
+      host.append(ruleCard(named('diversity', 'How much of one thing it may show'),
         'A slot that takes several pieces can fill with one category. This holds a ceiling on how many of them may share a value, and the piece over the limit yields to the next one.',
         Boolean(st.diversity), (on) => toggle('diversity', on, { dimension: 'category', max: 2 }, st),
         st.diversity ? h('div', { class: 'dial' },
-          h('div', {}, h('div', { class: 'name' }, 'Counted on'), h('div', { class: 'help' }, 'Which interest the ceiling applies to: at most so many pieces sharing one of its values.')),
+          h('div', {}, h('div', { class: 'name' }, named('diversity.dimension', 'Counted on')), h('div', { class: 'help' }, 'Which interest the ceiling applies to: at most so many pieces sharing one of its values.')),
           (() => { const el = h('input', { class: 'txt', 'data-focus-key': 'div.dim', disabled: !C.canEdit() || null }); el.value = st.diversity.dimension || ''; el.addEventListener('input', () => { st.diversity.dimension = el.value.trim(); ruleCheck(); }); return el; })()) : null,
-        st.diversity ? n('At most', 'Pieces sharing one value of that interest.', st.diversity.max, (v) => { st.diversity.max = v ?? 2; ruleCheck(); }, 'div.max', { min: 1, step: 1, unit: 'pieces' }) : null));
+        st.diversity ? n('At most', 'Pieces sharing one value of that interest.', st.diversity.max, (v) => { st.diversity.max = v ?? 2; ruleCheck(); }, 'div.max', { min: 1, step: 1, unit: 'pieces', path: 'diversity.max' }) : null));
 
-      host.append(ruleCard('Season, promotion and margin',
+      host.append(ruleCard(named('merchandising', 'Season, promotion and margin'),
         'The merchandising multipliers. Each is the item’s own signal times the weight set here, itemised on the receipt as the score it moved. Their product is clamped, so a multiplier tilts a page and never reorders it on its own.',
         Boolean(st.merchandising), (on) => toggle('merchandising', on, { season: 0, promotion: 0, margin: 0, maxBoost: 2, minBoost: 0.5 }, st),
-        ...(st.merchandising ? ['season', 'promotion', 'margin'].map((k) => n(`Weight on ${k}`, `How much the item’s own ${k} signal moves its score. 0 switches this term off; a negative weight demotes, which is an ordinary merchandising wish.`, st.merchandising[k], (v) => { st.merchandising[k] = v ?? 0; ruleCheck(); }, `merch.${k}`, { min: -1, max: 1, step: 0.05 })) : []),
-        st.merchandising ? n('The most they may raise a score', 'The ceiling on all three together.', st.merchandising.maxBoost, (v) => { st.merchandising.maxBoost = v ?? 2; ruleCheck(); }, 'merch.max', { min: 1, step: 0.1, unit: '×' }) : null,
-        st.merchandising ? n('The most they may lower it', 'The floor on all three together. Zeroing a piece is a block, which is a different layer on purpose.', st.merchandising.minBoost, (v) => { st.merchandising.minBoost = v ?? 0.5; ruleCheck(); }, 'merch.min', { min: 0, max: 1, step: 0.05 }) : null));
+        ...(st.merchandising ? ['season', 'promotion', 'margin'].map((k) => n(`Weight on ${k}`, `How much the item’s own ${k} signal moves its score. 0 switches this term off; a negative weight demotes, which is an ordinary merchandising wish.`, st.merchandising[k], (v) => { st.merchandising[k] = v ?? 0; ruleCheck(); }, `merch.${k}`, { min: -1, max: 1, step: 0.05, path: `merchandising.${k}` })) : []),
+        st.merchandising ? n('The most they may raise a score', 'The ceiling on all three together.', st.merchandising.maxBoost, (v) => { st.merchandising.maxBoost = v ?? 2; ruleCheck(); }, 'merch.max', { min: 1, step: 0.1, unit: '×', path: 'merchandising.maxBoost' }) : null,
+        st.merchandising ? n('The most they may lower it', 'The floor on all three together. Zeroing a piece is a block, which is a different layer on purpose.', st.merchandising.minBoost, (v) => { st.merchandising.minBoost = v ?? 0.5; ruleCheck(); }, 'merch.min', { min: 0, max: 1, step: 0.05, path: 'merchandising.minBoost' }) : null));
+
+      // Every control on this screen has now named itself, so the refusal above
+      // can be written in their words.
+      if (refused) refused.append(h('ul', {}, ...rules.errors.map((e) => refusalLine(e))));
     },
   });
 })();

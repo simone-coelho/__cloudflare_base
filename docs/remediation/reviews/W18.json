@@ -1,0 +1,8 @@
+{
+  "w": "W18",
+  "verdict": "PASS",
+  "sha": "d78b8140f28386b07a8027da72629bd560c6d947",
+  "date": "2026-09-19",
+  "reviewer_report": "/home/simonecoelho/rem/_evidence/W18/reviewer-whole/REPORT.md",
+  "scope": "local scope of document 35 §5 row W18 (operator controls: stage defaults, ranges and empty-value semantics against the real validator, the numeric per-slot dimension editor with readback, version and rollback feedback, the weight-change walkthrough without reload as an engineering proof, safe off values and the later score terms); nine units W18.O1.01–O4.03 green; whole-item review PASS with a clause-by-clause table against the W18 row and F26; the customer's own walkthrough, deployed propagation and release acceptance stay OPEN and batched at the end (F29; R68(d)); residuals R1–R12 of the report are recorded in LANE-LOG ruling R78"
+}

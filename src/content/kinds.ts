@@ -22,6 +22,33 @@ function stampLabel(base: string | undefined, fallback: string, revision: number
 
 // ── content ─────────────────────────────────────────────────────────────────
 
+/**
+ * Every field name `validatePiece` reads: the published content piece
+ * (kit 03 "The content piece"). This is the validator's own closed set — a name
+ * outside it is carried by no stored piece, so a write answer names it on the
+ * advisory diagnostics channel instead of dropping it without a word (F27 §5.4).
+ * The feed adapter's accepted spellings are this set plus its aliases
+ * (`FEED_FIELD_ALIASES`, src/content/import.ts); nothing else is a field.
+ */
+export const PIECE_FIELDS: ReadonlySet<string> = new Set(['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime',
+  'tags', 'slotTypes', 'lifecycle', 'window', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
+  'featuredProductIds', 'inStock']);
+
+/**
+ * One offending value a refusal names, so a content team can find the row it
+ * came from and not only read the accepted vocabulary back. Bounded and
+ * printable, like every other authored value this document reports.
+ */
+function quoted(value: unknown): string {
+  const text = typeof value === 'string' ? value
+    : typeof value === 'number' || typeof value === 'boolean' || value === null ? String(value) : typeof value;
+  const printable = [...text.slice(0, 64)].map((ch) => {
+    const code = ch.codePointAt(0)!;
+    return code < 0x20 || (code >= 0x7f && code <= 0x9f) ? ' ' : ch;
+  }).join('');
+  return `'${printable}'${text.length > 64 ? '\u2026' : ''}`;
+}
+
 /** A stage in either vocabulary, as Tapestry's word; null when it is neither. */
 export function stageWordOf(v: unknown): StageWord | null {
   if (v === 'explore') return 'exploring';
@@ -97,7 +124,14 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
   if (p.journeyStageFit !== undefined) {
     const raw = Array.isArray(p.journeyStageFit) ? p.journeyStageFit : null;
     const words = raw?.map(stored ? storedStageWordOf : stageWordOf);
-    if (!raw || !raw.length || !words || words.some((w) => w === null)) errors.push(`${at}.journeyStageFit: non-empty array of exploring | considering | deciding (early | mid | late${stored ? '' : ' | explore | consider | decide'} also accepted)`);
+    if (!raw || !raw.length || !words || words.some((w) => w === null)) {
+      // W19 F2.01: name the words the feed actually sent that this vocabulary
+      // cannot read, beside the vocabulary itself; the accepted list alone never
+      // says which row of the export has to be fixed.
+      const unusable = raw ? raw.filter((_, index) => words![index] === null).map(quoted) : [];
+      errors.push(`${at}.journeyStageFit: non-empty array of exploring | considering | deciding (early | mid | late${stored ? '' : ' | explore | consider | decide'} also accepted)`
+        + (unusable.length ? `; unusable: ${unusable.slice(0, 5).join(', ')}${unusable.length > 5 ? ', …' : ''}` : ''));
+    }
     else journeyStageFit = [...new Set(words as StageWord[])];
   }
   if (p.freshnessDate !== undefined && !(isStr(p.freshnessDate) && Number.isFinite(Date.parse(p.freshnessDate)))) errors.push(`${at}.freshnessDate: ISO 8601 date-time`);
