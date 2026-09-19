@@ -135,10 +135,17 @@ Both capture paths return a detach function, and the SDK owns what it put on the
   and attachments capture from it, each live client sees the page's push once, and the page's own `push`
   function is restored — by identity — only when the last attachment has been released. Releasing one
   attachment never removes another's capture. A client that attaches twice replays the layer's history once.
+- **A tag manager that wraps `push` after the SDK did keeps working.** A consent tool, GTM or Tealium that
+  wraps the layer later and calls through to what it found stays in the chain and sees each push once; the
+  SDK wraps the layer again so it still sees the page's pushes, and the wrapper it laid before that only
+  forwards from then on, so one push is still exactly one event for each live client. The last release
+  hands back whatever the page's own chain was — the foreign wrapper, not the function under it.
 - **Either teardown order is clean.** `client.destroy()` releases the listeners and observations the
   client still holds, so `destroy()` before the detach functions and the detach functions before
   `destroy()` both leave the page with no live listener, wrapper, observer or pending callback, and
-  nothing reaches the transport afterwards. Detaching twice is a no-op.
+  nothing reaches the transport afterwards. It releases the client's declarative scans and its tag-layer
+  capture too, so a page that kept none of the detach functions still gets its own `push` back when that
+  client held the last attachment. Detaching twice is a no-op.
 - **An identity or tenant change rebinds.** After a sign-in, a sign-out or a new client for another
   tenant, the element carries one listener again and later events carry only the new identity.
 

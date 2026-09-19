@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 36/42 · W closed 0/26 (W16–W41) · suite 1819/1904 · residual 85 in 10 files · typecheck GREEN
+Units 39/45 · W closed 0/26 (W16–W41) · suite 1822/1907 · residual 85 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -16,7 +16,7 @@ Units 36/42 · W closed 0/26 (W16–W41) · suite 1819/1904 · residual 85 in 10
 | W09 | 1 | 0 | no | — | — |
 | W11 | 1 | 0 | no | — | — |
 | W16 | 26 | 26 | no | — | — |
-| W17 | 9 | 9 | no | — | — |
+| W17 | 12 | 12 | no | — | — |
 | W37 | 1 | 0 | no | — | — |
 
 ## Units
@@ -64,6 +64,9 @@ Units 36/42 · W closed 0/26 (W16–W41) · suite 1819/1904 · residual 85 in 10
 | W17.L1.06 | green | 1 |
 | W17.L1.07 | green | 1 |
 | W17.L1.08 | green | 1 |
+| W17.L1.09 | green | 1 |
+| W17.L1.10 | green | 1 |
+| W17.L1.11 | green | 1 |
 | W37.BASE.01 | red | 1 |
 
 ## Failing tests outside the baseline
@@ -75,7 +78,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 3ccb1c662ac9f0953828254728fbd15f8f5f28f38ec80c6e776b82211eff4623 |
+| units sha256 | b0b33ac5ea74c22ce8f2881610a88286ef95fda588a982c84f092395c34f1797 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -86,7 +89,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | 03ec2ba49a82d288560e5c9bf741b6fd780d2df98d277e628fa35b6471118a7e |
-| commit | 36a3ae82ccaec2925d01fee75777e223a54b8239 |
-| generated | 2026-09-19T05:36:20.954Z |
+| vitest report | suite.json (outside the checkout) |
+| vitest report sha256 | 0033369c823d81487d96335eb9d483648e7e5c74e0cdf0fb7481cec5c455a170 |
+| commit | 8baa1f3ecfa3dbcc250bfb38024a1a3f158949f6 |
+| generated | 2026-09-19T09:26:14.855Z |

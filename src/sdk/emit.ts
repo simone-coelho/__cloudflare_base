@@ -41,6 +41,12 @@ export interface Emit {
   declarative(opts?: DeclarativeOptions): () => void;
   /** Wrap a dataLayer's push. Returns a detach function that restores it. */
   dataLayer(opts?: DataLayerOptions): () => void;
+  /**
+   * Release every attachment this client laid on the page — its declarative
+   * scans and its tag-layer capture — whether or not the page kept the detach
+   * functions. What `client.destroy()` runs (src/sdk/teardown.ts).
+   */
+  release(): void;
   rendered: Listen['rendered'];
 }
 
@@ -75,20 +81,32 @@ export const GA4_MAPPING: DataLayerMapping = {
 };
 
 /**
- * One wrapper per page tag layer, however many clients and attachments capture
- * from it. The page's `push` is wrapped when the first attachment arrives and
- * its own function is handed back only when the last one is released, so
- * releasing one attachment can never remove another's — the defect
- * HANDOFF-2026-09-16 §6 reproduced ("A's teardown restores an older `push`,
- * removing B's still-active wrapper") and F34 §2G recorded. The layer is the
- * page's, not a client's, so this registry is keyed by the array itself; it
- * holds no page, tenant or customer state of its own.
+ * One capturing wrapper per page tag layer, however many clients and
+ * attachments capture from it. The page's `push` is wrapped when the first
+ * attachment arrives and its own function is handed back only when the last one
+ * is released, so releasing one attachment can never remove another's — the
+ * defect HANDOFF-2026-09-16 §6 reproduced ("A's teardown restores an older
+ * `push`, removing B's still-active wrapper") and F34 §2G recorded. The layer
+ * is the page's, not a client's, so this registry is keyed by the array itself;
+ * it holds no page, tenant or customer state of its own.
+ *
+ * A tag manager, a consent tool or any other foreign script may wrap `push`
+ * again after the SDK did, and ordinarily calls through to what it found. The
+ * SDK then wraps the layer once more, so it still sees the pushes that now
+ * arrive through the foreign wrapper; the wrapper it laid before is marked
+ * superseded and, because foreign code closed over it and it cannot be taken
+ * out of the chain, it only forwards from then on. Exactly one wrapper of the
+ * SDK's dispatches, so one push stays one capture for each attachment however
+ * many times the layer has been re-wrapped.
  */
 interface LayerAttachment { handle: (entry: unknown) => void; refs: number; live: boolean }
 interface LayerRegistry {
   original: (...items: unknown[]) => number;
   wrapper: (...items: unknown[]) => number;
+  /** The layer's attachments, shared by every wrapper the SDK has laid on it. */
   attached: Map<object, LayerAttachment>;
+  /** A superseded wrapper forwards the push and never dispatches it. */
+  superseded: boolean;
 }
 const layerRegistries = new WeakMap<object, LayerRegistry>();
 
@@ -97,12 +115,16 @@ function layerRegistryFor(layer: unknown[]): LayerRegistry {
   if (existing && layer.push === existing.wrapper) return existing;
   // Either nothing has wrapped this layer yet, or something outside the SDK
   // replaced `push` after we did; in both cases the function now on the layer
-  // is the one a release has to put back.
+  // is the one a release has to put back, and the wrapper laid before it must
+  // stop dispatching: a foreign wrapper that calls through keeps it live in the
+  // chain, and two dispatching wrappers over one layer report every push twice.
+  if (existing) existing.superseded = true;
   const original = layer.push as (...items: unknown[]) => number;
   const registry: LayerRegistry = {
-    original, attached: existing?.attached ?? new Map<object, LayerAttachment>(),
+    original, superseded: false, attached: existing?.attached ?? new Map<object, LayerAttachment>(),
     wrapper: function (this: unknown[], ...args: unknown[]): number {
       const result = original.apply(layer, args);
+      if (registry.superseded) return result;
       for (const entry of args) for (const attachment of [...registry.attached.values()]) attachment.handle(entry);
       return result;
     },
@@ -110,6 +132,25 @@ function layerRegistryFor(layer: unknown[]): LayerRegistry {
   layer.push = registry.wrapper;
   layerRegistries.set(layer, registry);
   return registry;
+}
+
+/**
+ * Give up one client's capture of a layer. The page's own `push` comes back, by
+ * identity, only when the layer has no attachment left, and only from the
+ * wrapper that is actually on the layer — never an older one a foreign script
+ * has since wrapped, whose restore would remove that script's work.
+ */
+function releaseLayerAttachment(layer: unknown[], attached: Map<object, LayerAttachment>, owner: object, held: LayerAttachment): void {
+  held.live = false;
+  held.refs = 0;
+  if (attached.get(owner) !== held) return;
+  attached.delete(owner);
+  if (attached.size) return;
+  const registry = layerRegistries.get(layer);
+  if (!registry || registry.attached !== attached) return;
+  registry.superseded = true;
+  if (layer.push === registry.wrapper) layer.push = registry.original;
+  layerRegistries.delete(layer);
 }
 
 export function createEmit(core: Core, listen: Listen): Emit {
@@ -229,13 +270,23 @@ export function createEmit(core: Core, listen: Listen): Emit {
     };
   }
 
+  /** Every layer this client captures from, with the release that hands it back. */
+  const layerHolds = new Map<unknown[], () => void>();
+  function releaseLayer(layer: unknown[]): void {
+    const hold = layerHolds.get(layer);
+    if (!hold) return;
+    layerHolds.delete(layer);
+    hold();
+  }
+
   function dataLayer(opts: DataLayerOptions = {}): () => void {
     const layer = opts.layer ?? host.dataLayer;
     if (!layer) return () => {};
     const registry = layerRegistryFor(layer);
+    const attached = registry.attached;
     // One capture per client per layer: a client that attaches twice reports
     // the page's push once, and each live client reports it once (F34 §2G).
-    let attachment = registry.attached.get(core);
+    let attachment = attached.get(core);
     const fresh = attachment === undefined;
     if (!attachment) {
       const mapping: DataLayerMapping = { ...GA4_MAPPING, ...(opts.mapping ?? {}) };
@@ -252,10 +303,13 @@ export function createEmit(core: Core, listen: Listen): Emit {
         if (mapped) void track(mapped.type, mapped.data);
       }) };
       attachment = own;
-      registry.attached.set(core, own);
+      attached.set(core, own);
     }
     const held = attachment;
     held.refs++;
+    // The layer-wide release, so `client.destroy()` gives the page its push
+    // back even when the page kept none of the detach functions.
+    layerHolds.set(layer, () => releaseLayerAttachment(layer, attached, core, held));
     if (fresh) {
       const replayLength = opts.replay !== false && core.trackingAllowed ? layer.length : 0;
       if (replayLength) core.capture(() => { if (held.live) for (let i = 0; i < replayLength; i++) held.handle(layer[i]); });
@@ -264,14 +318,21 @@ export function createEmit(core: Core, listen: Listen): Emit {
     return () => {
       if (released) return;
       released = true;
-      if (--held.refs > 0) return;
-      held.live = false;
-      if (registry.attached.get(core) === held) registry.attached.delete(core);
-      if (registry.attached.size) return;
+      if (held.refs > 0) held.refs--;
+      if (held.refs > 0) return;
       // The last attachment hands the page its own function back, by identity.
-      if (layer.push === registry.wrapper) layer.push = registry.original;
-      if (layerRegistries.get(layer) === registry) layerRegistries.delete(layer);
+      releaseLayer(layer);
     };
+  }
+
+  /** What `client.destroy()` runs: every attachment this client laid, released. */
+  function release(): void {
+    for (const [dom, attachment] of [...scans]) {
+      if (scans.get(dom) === attachment) scans.delete(dom);
+      attachment.refs = 0;
+      attachment.detach();
+    }
+    for (const layer of [...layerHolds.keys()]) releaseLayer(layer);
   }
 
   return {
@@ -288,6 +349,7 @@ export function createEmit(core: Core, listen: Listen): Emit {
     custom: (name, data = {}) => track('custom', () => ({ event: name, ...data })),
     declarative,
     dataLayer,
+    release,
     rendered: (slot: string, contentId: string, el?: ElementLike, decisionId?: string) => listen.rendered(slot, contentId, el, decisionId),
   };
 }
