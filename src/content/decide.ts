@@ -15,7 +15,7 @@ import { isEligibleAt } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { explorationPick, HISTORICAL_EXPLORATION, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
-import { personalizingArm, type DecisionInputs, type ExternalTerm, type ItemControl, type StageRule, type StageWord } from './types';
+import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
 import { STAGE_WORDS } from '@/services/JourneyStage';
 import { isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { HISTORICAL_CONTENT_TYPES, withContentTypeAffinity } from './typeAffinity';
@@ -141,7 +141,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // The `default` arm is the site's own defaults: no personalization, so the
   // composer sees no signal. Pins still apply — they are merchandising
   // authority, not personalization, and the holdout must not remove them.
-  const affinity = personalizingArm(i.arm) ? (i.affinity ?? NO_SIGNAL) : NO_SIGNAL;
+  const affinity = i.arm === 'default' ? NO_SIGNAL : (i.affinity ?? NO_SIGNAL);
   const specs: ContentSlotSpec[] = i.slots.map((s) => ({
     slot: s.slot, take: s.take, weights: s.weights,
     ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
@@ -156,7 +156,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
   // Keep the site's default diversity/order unchanged as well as its zero scores.
-  const projectTypes = personalizingArm(i.arm) && historicalContentTypes !== HISTORICAL_CONTENT_TYPES;
+  const projectTypes = i.arm !== 'default' && historicalContentTypes !== HISTORICAL_CONTENT_TYPES;
   const eligible: ContentPiece[] = [], byId = new Map<string, ContentPiece>();
   for (const original of i.pieces) {
     const piece = projectTypes ? withContentTypeAffinity(original) : original;
@@ -171,10 +171,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const liftOf = new Map<string, LiftApplied>();
   // Doc 22 §10: `default` sees no personalization at all; `no_learning` is personalized with γ = 0 and
   // no exploration, the arm that separates what stage one contributes from what stage two adds.
-  const learning = !personalizingArm(i.arm) ? null : i.arm === 'no_learning' && i.learning ? { ...i.learning, gammaOf: () => 0, exploreOf: undefined } : i.learning ?? null;
+  const learning = i.arm === 'default' ? null : i.arm === 'no_learning' && i.learning ? { ...i.learning, gammaOf: () => 0, exploreOf: undefined } : i.learning ?? null;
   // Phase 3 (doc 22 §9): their model's term, w_ext × score, added to the base
   // score before the lift and itemized like every other driver.
-  const ext = personalizingArm(i.arm) ? i.external ?? null : null;
+  const ext = i.arm === 'default' ? null : i.external ?? null;
   const extOf = new Map<string, { score: number; weight: number; contribution: number }>();
   // Scope §1.5 (ledger 20 row 6): season, promotion and margin as clamped multipliers on the
   // merchandised base, after affinity and their model, before the lift. Item properties only, so
@@ -188,7 +188,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // fit on the piece, the dials on the slot; a piece outside the stage is multiplied down, a piece
   // inside it gets the bonus. Personalization, so never on the default arm, and off when the stage is
   // unknown: an unknown stage is recorded as such, never guessed, and a guess would demote by accident.
-  const visitorStage: StageWord | null = personalizingArm(i.arm) && i.cell.stage && i.cell.stage !== 'unknown' ? STAGE_WORDS[i.cell.stage] : null;
+  const visitorStage: StageWord | null = i.arm !== 'default' && i.cell.stage && i.cell.stage !== 'unknown' ? STAGE_WORDS[i.cell.stage] : null;
   const stageRules = new Map<string, StageRule>(i.slots.flatMap((s) => (s.stage && ((s.stage.outOfStage ?? 1) < 1 || (s.stage.inStage ?? 0) > 0) ? [[s.slot, s.stage] as const] : [])));
   const hasStage = visitorStage !== null && stageRules.size > 0;
   const stageOf = new Map<string, { visitor: StageWord; fit: StageWord[]; applied: number; inside: boolean }>();
@@ -198,8 +198,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // itemised as the delta they caused. The served counts travel on the record's inputs for the replay.
   const freshRules = new Map(i.slots.flatMap((s) => (s.freshness && s.freshness.weight > 0 ? [[s.slot, s.freshness] as const] : [])));
   const fatigueRules = new Map(i.slots.flatMap((s) => (s.fatigue && s.fatigue.weight > 0 ? [[s.slot, s.fatigue] as const] : [])));
-  const hasFresh = personalizingArm(i.arm) && freshRules.size > 0;
-  const hasFatigue = personalizingArm(i.arm) && fatigueRules.size > 0 && Boolean(i.served);
+  const hasFresh = i.arm !== 'default' && freshRules.size > 0;
+  const hasFatigue = i.arm !== 'default' && fatigueRules.size > 0 && Boolean(i.served);
   const freshOf = new Map<string, { ageDays: number; decay: number; applied: number }>();
   const fatigueOf = new Map<string, { served: number; windowHours: number; applied: number }>();
   const dateOf = (p: ContentPiece): number | null => {
@@ -216,7 +216,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // on the holdout's default arm.
   const seedRules = new Map<string, SeedRule[]>();
   const seedDiagnostics: SeedDiagnostic[] = [];
-  if (personalizingArm(i.arm)) for (const s of i.slots) {
+  if (i.arm !== 'default') for (const s of i.slots) {
     if (s.seeds === undefined) continue;
     const checked = validateSeedRules(s.seeds, s.weights);
     if (!checked.ok) { seedDiagnostics.push({ slot: s.slot, reason: 'invalid_rule_set' }); continue; }
@@ -383,7 +383,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // What the region contributed to this decision: Σ over the piece's tags of λ·share·w.
   const regionalOf = (d: { contentId: string; slot: string; strategy?: string }): (RegionalBlend & { contribution: number }) | null => {
     if (!historicalPins && d.strategy === 'tenant-pinned') return null;
-    const reg = i.regional; if (!reg || !personalizingArm(i.arm)) return null;
+    const reg = i.regional; if (!reg || i.arm === 'default') return null;
     const piece = byId.get(d.contentId), spec = specOf.get(d.slot);
     if (!piece || !spec) return null;
     let contribution = 0;
@@ -439,7 +439,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         return { slot: slot.slot, lift: snapshot?.version ?? 0, prior: snapshot?.priorVersion ?? 0 };
       }),
     },
-    ...(i.regional && personalizingArm(i.arm) ? { regional_share: plain(i.regional.share) as NonNullable<DecisionInputs['regional_share']> } : {}),
+    ...(i.regional && i.arm !== 'default' ? { regional_share: plain(i.regional.share) as NonNullable<DecisionInputs['regional_share']> } : {}),
     ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
     ...(hasFatigue && i.served ? { served: plain(i.served) } : {}),
   };
@@ -490,7 +490,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   return {
     tenant: i.tenant, brand: i.brand, page: i.page, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
     arm: i.arm, cell: i.cell, versions: { ...i.versions }, config_label: i.configLabel,
-    regional: i.regional && personalizingArm(i.arm) ? (({ share: _s, ...rest }) => rest)(i.regional) : null,
+    regional: i.regional && i.arm !== 'default' ? (({ share: _s, ...rest }) => rest)(i.regional) : null,
     decisions, records, ...(pinDiagnostics ? { pinDiagnostics } : {}),
     ...(shortTakes.length ? { shortTakes } : {}),
     ...(seedDiagnostics.length ? { seedDiagnostics } : {}),

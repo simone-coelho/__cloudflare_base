@@ -30,13 +30,18 @@ import { ledgerOperationHeld, ledgerOperationOwners, ledgerUnderOwners, prepareL
  *
  * It is an annotation, never a condition of the write: a tenant whose learn
  * document cannot be read, or a visitor whose anchor cannot be resolved, simply
- * produces a record without the block. A record is never lost over it, and a
- * record whose own arm says the visitor was not eligible is never given one.
+ * produces a record without the block. A record is never lost over it.
+ *
+ * WHAT THIS CANNOT SEE, and what the kit says beside it: consent is owned state
+ * the queue does not hold, so an outcome recorded for a visitor who has since
+ * withdrawn personalization carries the enrollment her anchor still resolves to
+ * rather than `ineligible`. The consumer does not invent a consent read; the
+ * eligibility of a population is read from the arm-tagged DECISION records,
+ * which carry what she was actually served under.
  */
 async function stampOutcomeEnrollment(env: Env, messages: readonly CapturedMessage[]): Promise<void> {
   const pending = messages.filter(m => m.type === 'outcome'
-    && (m.record as { experiment?: unknown }).experiment === undefined
-    && (m.record as { arm?: unknown }).arm !== 'ineligible');
+    && (m.record as { experiment?: unknown }).experiment === undefined);
   if (!pending.length) return;
   const { LEARN_KIND } = await import('@/content/kinds');
   const { readPublication } = await import('@/config/publication');

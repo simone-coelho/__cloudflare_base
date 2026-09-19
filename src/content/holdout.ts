@@ -75,6 +75,23 @@ export function enrollmentFor(input: {
 }
 
 /**
+ * W21 E1.02 (F07 §1.4, ruling R108): the provenance of a shopper who is NOT in
+ * the experiment. She is served exactly what the control arm is served, and her
+ * records say `ineligible` rather than `default`, so consent traffic is never
+ * counted as a randomised control. No anchor is resolved and no bucket is
+ * drawn, because she is not randomised at all; `anchorGeneration` is the only
+ * generation the platform mints.
+ */
+export function ineligibleEnrollment(input: { tenant: string; brand: string; holdout: HoldoutConfig; saltVersion: number }): EnrollmentProvenance {
+  return {
+    id: experimentIdFor(input.tenant, input.brand, input.holdout.salt || input.brand),
+    saltVersion: input.saltVersion,
+    arm: 'ineligible',
+    anchorGeneration: 1,
+  };
+}
+
+/**
  * W21 E1.01 (F07 §1.2, §2.2, §7(b)): the shopper's PERSISTENT enrollment anchor.
  *
  * The arm used to be recomputed on every request from whatever id the browser

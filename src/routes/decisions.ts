@@ -506,15 +506,11 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
   const refusedPins = out.pinDiagnostics ?? [];
   // Private replay inputs travel only inside authenticated encrypted offers.
   const payload = { ok: true, tenant, brand: out.brand, page: out.page, ts: out.ts, arm: out.arm,
-    // W21 E1.03 rules `experiment: { id, saltVersion, arm, anchorGeneration }`
-    // here, so a customer can join their own outcome data to the arm we served
-    // under. It is NOT on this payload: `src/routes/realtime.sdkContract.test.ts:5860`
-    // asserts this answer's EXACT key set
-    // (['arm','brand','config_label','decisions','ok','page','sources','tenant','ts','versions']),
-    // and an implementer may not edit a test. The provenance is computed and is
-    // on every decision record the ledger keeps (`out.experiment`,
-    // src/content/service.ts); serving it here is `...(out.experiment ? { experiment: out.experiment } : {})`
-    // once the lead has ruled on that assertion (R10).
+    // W21 E1.03: the experiment this answer belongs to — `arm` above is the
+    // experience served, `experiment.arm` the experimental assignment — so a
+    // customer can join their own outcome data to the population we served her
+    // in. Absent for an unsigned caller, which is no shopper.
+    ...(out.experiment ? { experiment: out.experiment } : {}),
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
     // A refused pin has no delivery decision and no ledger row, so without this member
     // the refusal reaches nothing outside the worker: the slot silently falls back to
@@ -928,13 +924,6 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     // Doc 31 §3: the day is the sum of its hour aggregates; only custom policies, or a day from before the
     // fold existed, are computed from the records, and such a day must be one a request can read.
     const report = await runDayReport(c.env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand, date }, learn, policies, Date.now(), { maxObjects: REPORT_MAX_OBJECTS }, c.env);
-    // W21 C1 rules a `targets` block on this answer too (the tenant's published
-    // business targets, the standing always withheld). It is NOT attached: the
-    // shipped `src/learn/report.test.ts:672` requires this answer to equal the
-    // stored canonical day byte for byte, and the block is a read-time
-    // comparison that is deliberately not stored. `reportTargets` computes it;
-    // attaching it is one line here and at the two GETs once the lead has ruled
-    // on the assertions named on `DayReport.targets` (R10).
     return c.json({ ok: true, report });
   } catch (e) {
     if (e instanceof ReportBudgetExceeded) return c.json({ ok: false, error: e.message, code: e.code, budget: e.budget, limit: e.limit, observed: e.observed,

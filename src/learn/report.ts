@@ -8,7 +8,7 @@
 // counts by arm (§10), from R2 and never from Analytics Engine. Pure
 // where it can be: `buildReport` takes records; `runReport` fetches them.
 
-import { personalizingArm, type BusinessTargets, type DecisionRecord, type LearnConfig } from '@/content/types';
+import type { DecisionRecord, LearnConfig } from '@/content/types';
 import { hidden, loadTombstones, withoutErased } from '@/ledger/erasure';
 import { requireRetention, type RetentionEnv } from '@/retention';
 import { isProductSortKey, isLearningKey, validDecisionMeasurement, type OutcomeRecord, type RewardType } from '@/ledger/records';
@@ -539,35 +539,6 @@ export const REPORT_MEASUREMENT = {
 } as const;
 
 /**
- * W21 C1 (F25 §5.2, §7.2, position 8): what a report says about the tenant's
- * own pre-set business targets. It never says one was reached. `values` are the
- * tenant's published numbers or null; `standing` is always withheld while this
- * platform publishes no inference of its own, and `reasons` says why — with
- * `source_incomplete` present exactly when the source the numbers were pooled
- * from was truncated or missing hours, so an incomplete day or window can never
- * award a standing even if the rest of this rule were ever relaxed.
- */
-export type TargetReason = 'inference_unavailable' | 'no_published_target' | 'source_incomplete';
-export interface ReportTargets {
-  version: 1;
-  source: 'published' | 'absent';
-  values: BusinessTargets | null;
-  standing: 'undecided';
-  reasons: TargetReason[];
-}
-const validTargets = (value: unknown): BusinessTargets | null =>
-  object(value) && finite(value.minimum) && finite(value.target) && finite(value.stretch)
-    ? { minimum: value.minimum, target: value.target, stretch: value.stretch } : null;
-export function reportTargets(published: BusinessTargets | null | undefined, sourceIncomplete: boolean): ReportTargets {
-  const values = validTargets(published);
-  const reasons: TargetReason[] = ['inference_unavailable'];
-  if (!values) reasons.push('no_published_target');
-  if (sourceIncomplete) reasons.push('source_incomplete');
-  reasons.sort();
-  return { version: 1, source: values ? 'published' : 'absent', values, standing: 'undecided', reasons };
-}
-
-/**
  * W21 C1.03 (F25 §5.3, §7): the per-arm DENOMINATORS, which decisions are not.
  * Within a day the figure is distinct visitors; pooled across days it is
  * visitor-days, and the basis says which, because a visitor active on two days
@@ -681,22 +652,6 @@ export interface DayReport {
   holdout: Record<string, ArmRow[]>;
   /** Empty compatibility collections. These counts cannot support experimental inference. */
   holdoutComparison: Record<string, never[]>;
-  /**
-   * W21 C1: the tenant's published business targets and why no standing is
-   * stated. Attached to the answer of the build (`POST learn/report`), which
-   * already holds the tenant's configuration, and never stored.
-   *
-   * NOT attached to the two report GETs, although the unit rules it there:
-   * reading the tenant's configuration at read time is storage I/O on that
-   * path, and three shipped assertions lock exactly what those two routes read
-   * and answer — `src/learn/report.test.ts:729`
-   * (`expect(storage.get).toHaveBeenCalledTimes(10)`),
-   * `src/learn/report.test.ts:819` (the answer must not match
-   * /UNSUPPORTED|confidence|verdict|targets|.../ — the member's own NAME) and
-   * `src/learn/report.test.ts:821` (the exact list of keys read). An
-   * implementer may not edit a test; the ruling is the lead's (R10).
-   */
-  targets?: ReportTargets;
   /** W21 C1.03: per-arm distinct visitors for the day. Null where the source predates the field. */
   armVisitors?: ArmVisitors | null;
   /** W21 C1.03: the published allocation the day was served under. Absent on a report built before it was recorded. */
@@ -751,11 +706,11 @@ export function reportCoverage(report: Pick<DayReport, 'counts' | 'hours' | 'cov
 /**
  * Withdraw historic inference at read time without rewriting the stored report.
  *
- * W21 C1: the targets block is computed HERE, from the tenant's currently
- * published configuration and this report's own completeness, and is never
- * stored: what a report is read against is a live configuration question, and a
- * stored answer would let a report keep quoting a target the tenant has since
- * changed. The counts it is read against are not touched.
+ * W21 C1 with position 8 (ruling R108): a report of ours states no business
+ * target at all — not a value, not a standing, not the vocabulary. The per-arm
+ * denominators, the published allocation and the visitor-level outcomes below
+ * are counts the customer computes their own comparison from; nothing here is
+ * read against a target.
  */
 export function diagnosticDayReport(report: DayReport): DayReport {
   const holdout = Object.fromEntries(Object.entries(report.holdout ?? {}).map(([slot, rows]) =>
@@ -841,15 +796,24 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
   // effect needs and the quantity decisions alone cannot supply (F25 §5.3).
   const armVisitorIds = new Map<string, Set<string>>();
   const visitorArms = new Map<string, Set<string>>();
+  // W21 E1.02 (R108): the arms of a report are the experimental ASSIGNMENTS,
+  // where the record carries one — so a shopper who was never drawn appears as
+  // `ineligible` and is never pooled into the randomised control. A record
+  // written before the provenance block existed is read by its served arm
+  // exactly as before and is never re-interpreted.
+  const assignmentOf = (d: DecisionRecord): string => d.experiment?.arm ?? d.arm;
+  const assignmentById = new Map<string, string>();
   for (const d of i.decisions) {
+    const assignment = assignmentOf(d);
+    if (d.experiment?.arm !== undefined && !assignmentById.has(d.decision_id)) assignmentById.set(d.decision_id, assignment);
     const counts = slotCounts.get(d.slot) ?? { arms: new Map<string, number>(), decisions: 0, explored: 0 };
-    counts.arms.set(d.arm, (counts.arms.get(d.arm) ?? 0) + 1);
-    if (explorationOpportunity(d) && personalizingArm(d.arm)) { counts.decisions++; if (d.explored) counts.explored++; }
+    counts.arms.set(assignment, (counts.arms.get(assignment) ?? 0) + 1);
+    if (explorationOpportunity(d) && d.arm !== 'default') { counts.decisions++; if (d.explored) counts.explored++; }
     slotCounts.set(d.slot, counts);
-    const enrolled = armVisitorIds.get(d.arm) ?? new Set<string>();
-    enrolled.add(d.visitor_id); armVisitorIds.set(d.arm, enrolled);
+    const enrolled = armVisitorIds.get(assignment) ?? new Set<string>();
+    enrolled.add(d.visitor_id); armVisitorIds.set(assignment, enrolled);
     const arms = visitorArms.get(d.visitor_id) ?? new Set<string>();
-    arms.add(d.arm); visitorArms.set(d.visitor_id, arms);
+    arms.add(assignment); visitorArms.set(d.visitor_id, arms);
     if (d.arm === 'personalized') {
       const st = exposures.get(d.slot) ?? emptyStats();
       recordExposure(st, d.item_id, d.cell, d.rendered?.at ?? d.ts, statsCfg); exposures.set(d.slot, st);
@@ -880,8 +844,11 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
         credits += 1;
         // Explicit selection already proved one subject-owned target. Only
         // absent-ID legacy attribution retains the global first-match lookup.
-        const arm = (Object.hasOwn(o, 'decision_id') ? ring.find(d => d.id === c.decision_id)?.arm
-          : decisionsById.get(c.decision_id)?.arm) ?? 'personalized';
+        // The subject-scoped lookup is unchanged; only the LABEL it resolves to
+        // is the assignment, and only when that same decision carried one.
+        const resolved = Object.hasOwn(o, 'decision_id') ? ring.find(d => d.id === c.decision_id)?.arm
+          : decisionsById.get(c.decision_id)?.arm;
+        const arm = (resolved === undefined ? undefined : assignmentById.get(c.decision_id)) ?? resolved ?? 'personalized';
         armCredits.set(`${c.slot}|${arm}`, (armCredits.get(`${c.slot}|${arm}`) ?? 0) + 1);
         if (arm === 'personalized') { const w = creditWeight(slotCfg[c.slot]?.objective, o); if (w > 0) recordSuccess(stateOf(c.slot), c.item, c.cell, c.reward as RewardType, c.ts, w, statsCfg); }
       }

@@ -15,7 +15,7 @@
 // An erased visitor leaves the rings at the next fold; the aggregates hold no
 // visitor id, only counts.
 
-import { personalizingArm, type DecisionRecord, type LearnConfig } from '@/content/types';
+import type { DecisionRecord, LearnConfig } from '@/content/types';
 import type { SlotLearnConfig } from './fan';
 import { hidden, loadTombstones, withoutErased, type Tombstone } from '@/ledger/erasure';
 import { isLearningKey, parseId, type OutcomeRecord, type RewardType } from '@/ledger/records';
@@ -221,7 +221,7 @@ export function foldDecisions(decs: readonly CompactDecision[], policies: readon
     hb.decisions += 1;
     const arms = (hb.arms[e.slot] ??= {});
     arms[e.arm] = (arms[e.arm] ?? 0) + 1;
-    if ((d.explorationOpportunity ?? d.position === 0) && personalizingArm(e.arm)) { const x = (hb.exploration[e.slot] ??= { decisions: 0, explored: 0 }); x.decisions += 1; if (d.explored) x.explored += 1; }
+    if ((d.explorationOpportunity ?? d.position === 0) && e.arm !== 'default') { const x = (hb.exploration[e.slot] ??= { decisions: 0, explored: 0 }); x.decisions += 1; if (d.explored) x.explored += 1; }
     // Exposures: the personalized arm only, as the fan-in records them (doc 22 §10: holdout traffic never feeds the statistics).
     if (e.arm === 'personalized') for (const p of policies) recordExposure((policyHour(hb, p).stats[e.slot] ??= emptyStats()), e.item, e.cell, e.renderedAt ?? d.ts, statsCfg);
   }

@@ -462,16 +462,6 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
   const arms = Array.isArray(h.arms) ? h.arms : null;
   if (!arms || !arms.every((a) => isStr(a) && ARMS.has(a))) errors.push('holdout.arms: array of default | no_learning');
   else if (new Set(arms).size !== arms.length) errors.push('holdout.arms: no duplicates');
-  // W21 C1.04 (F25 §5.2): the tenant's OWN pre-set business targets, as relative
-  // lift. Published configuration, never a number compiled into this platform,
-  // and ordered so a document cannot declare a target under its own minimum.
-  let targets: LearnConfig['targets'];
-  if (candidate.targets !== undefined) {
-    const t = candidate.targets;
-    if (!isRecord(t) || !isNum(t.minimum) || !isNum(t.target) || !isNum(t.stretch)) errors.push('targets: minimum, target and stretch as numbers');
-    else if (!(t.minimum <= t.target && t.target <= t.stretch)) errors.push('targets: minimum ≤ target ≤ stretch');
-    else targets = { minimum: t.minimum, target: t.target, stretch: t.stretch };
-  }
   let regional: LearnConfig['regional'];
   if (candidate.regional !== undefined) {
     const g = candidate.regional;
@@ -581,7 +571,6 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
     value: {
       ...(isStr(candidate.version) ? { version: candidate.version } : {}),
       holdout: { share: h.share as number, salt: (h.salt as string | undefined) ?? '', arms: [...(arms as LearnConfig['holdout']['arms'])] },
-      ...(targets ? { targets } : {}),
       ...(regional ? { regional } : {}),
       ...(policy ? { policy } : {}),
       ...(stats ? { stats } : {}),

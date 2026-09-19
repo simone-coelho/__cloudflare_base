@@ -137,18 +137,19 @@ export interface SlotCatalog {
   pages: Record<string, SlotStrategy[]>;
 }
 
-/**
- * W21 E1 (F07 §1.4, §7): `ineligible` is not a randomised arm. A shopper who
- * has not consented to personalization is never drawn into the experiment at
- * all: she is served the site's own defaults and recorded `ineligible`, so the
- * `default` arm holds randomised controls only and a reader can tell the two
- * populations apart. Everything that asks "may this decision personalize?"
- * asks `personalizingArm`, never `arm !== 'default'`.
- */
-export type Arm = 'personalized' | 'default' | 'no_learning' | 'ineligible';
+/** The EXPERIENCE served. Unchanged by W21: a shopper who withheld a consent switch is served the site's own defaults. */
+export type Arm = 'personalized' | 'default' | 'no_learning';
 
-/** The arms the engine may personalize under: neither the control nor the ineligible population. */
-export const personalizingArm = (arm: Arm | string): boolean => arm !== 'default' && arm !== 'ineligible';
+/**
+ * W21 E1.02 (F07 §1.4, ruling R108): the experimental ASSIGNMENT, which is not
+ * the served experience. A shopper who has not consented to personalization was
+ * never drawn into the experiment at all; she is served exactly what the
+ * `default` arm is served, and only her assignment says `ineligible`, so the
+ * control arm of any comparison holds randomised controls only. The two live in
+ * different places on purpose: `arm` on the answer and on the record is what she
+ * saw, `experiment.arm` is what she was assigned.
+ */
+export type Assignment = Arm | 'ineligible';
 
 /**
  * W21 E1 (F07 §7(b)): the shopper's enrollment in the agreed experiment, written
@@ -160,7 +161,7 @@ export interface EnrollmentProvenance {
   id: string;
   /** The revision of the published learn document the enrollment was written under. */
   saltVersion: number;
-  /** The enrolled arm. A string, because the arms are the tenant's published ones. */
+  /** The assignment: a randomised arm, or `ineligible` for a shopper who was never drawn (`Assignment`). */
   arm: string;
   /** 1 for the first anchor; only a replacement of the anchor itself advances it. Recognition does not. */
   anchorGeneration: number;
@@ -227,19 +228,9 @@ export interface SlotDials {
   external?: { weight: number };
 }
 
-/**
- * W21 C1.04 (F25 §5.2): the tenant's OWN pre-set business targets, as relative
- * lift, published in its learn document. No customer's numbers are compiled
- * into this platform; a tenant that has published none is reported as having
- * none.
- */
-export interface BusinessTargets { minimum: number; target: number; stretch: number }
-
 export interface LearnConfig {
   version?: string;
   holdout: HoldoutConfig;
-  /** F25 §5.2: this tenant's published business targets, when it has published any. */
-  targets?: BusinessTargets;
   regional?: RegionalConfig;
   policy?: LearnPolicyConfig;
   stats?: LearnStatsConfig;
