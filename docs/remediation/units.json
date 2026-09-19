@@ -93,5 +93,82 @@
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 09 and ruling R14 (the siteHost hostname contract); docs/architecture/35-verification-reports/F13.md §5.E (the channel is unvalidated free text and becomes a statistics key); docs/handover/HANDOFF-2026-09-18.md §5 C2 (\"validate vocabulary and host\"); src/services/visit.ts ENTRY_LIMITS/ENTRY_QUERY_LIMIT",
     "status": "specified",
     "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C4.01",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "The journey stage derives from ONE published, versioned threshold set (JOURNEY_KIND, an r2-published document kind whose every revision carries its own stamped version identity) over visit-local counters, using the one shared stage vocabulary JOURNEY_STAGES = ['exploring','thinking','deciding'] in that order. The thresholds are data, not constants: the same counters under two published sets give two stages. The validator refuses, returning EVERY error, a stage word outside the vocabulary, stages out of vocabulary order, a threshold on the first stage, a fractional or negative threshold, a counter the visit does not keep, and a stage with no threshold at all.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 01; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"Versioned journey thresholds and one shared stage vocabulary use visit-local counters separate from cumulative durable taste\"); docs/architecture/tapestry_requirements.txt line 149 Journey Awareness (\"exploring (seeing) → thinking → deciding\"); docs/architecture/35-audit-verification-and-source-of-truth.md §5 W16 and §2 F13 (\"Journey counters/thresholds and short decay do not establish the customer's sparse-interaction and days/weeks-memory behavior\"); src/content/kinds.ts:19-22 stampLabel and CONTENT_KIND for the per-revision version identity convention",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "Ruled missing exports (R21), each RED on import: JOURNEY_STAGES, DEFAULT_JOURNEY_THRESHOLDS, journeyStageFrom and visitJourneyCounters in src/services/JourneyStage.ts, and JOURNEY_KIND in src/content/kinds.ts. Not ruled by these units and left to a lead decision: the legacy STAGE_WORDS map (src/services/JourneyStage.ts:31) still calls the middle stage 'considering' and is asserted by src/services/JourneyStage.test.ts:47, src/content/stage.test.ts:39-42 and the receipt prose sentence contextOf (src/learn/receipts.ts:34) asserted at src/learn/receipts.test.ts:21; the persisted cell token early|mid|late and the learning ladder key 's=mid' (src/learn/stats.ts levelKeys) are persisted grammar and are not changed here."
+  },
+  {
+    "id": "W16.C4.02",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Visit-local counters are separate from cumulative durable taste. They accumulate inside one visit (three Coach PDP views, one cross-category, one with dwell) and start from zero in the next: a new visit reached past VISIT_GAP_MS resets the journey to the vocabulary's first stage while the visit number increments to 2 and the shopper's accumulated affinity is preserved to two decimals, and the first interaction of the new visit is the first, not the fourth. Both hosts agree.",
+    "legs": ["logic", "host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 02; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"New visits reset local journey.\" and \"Visit number and cumulative durable taste remain\"); docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (\"Picks up where you left off, remembers what you were considering\"); document 35 §5 W16 (\"journey/new-visit/post-purchase reset, days/weeks memory\"); src/services/visit.ts VISIT_GAP_MS and the read-time rollover established by unit W16.C2.06",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "The visit-local counters themselves are exposed by no shopper-facing route, so the host leg measures them through the stage the SDK-visible hydrate reports (GET /realtime/reflex). The fixture publishes a fourteen-day reflex tauMs because the compiled demo default (60 s, src/reflex/core.ts:202) decays a shopper's taste below the prune floor across a 30-minute visit gap, so days/weeks memory cannot be observed under it; whether the shipped default tau meets the customer's return-memory requirement is owed work under W16 C6/C8, not this unit."
+  },
+  {
+    "id": "W16.C4.03",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "A purchase is the deciding current-event signal: after two interactions the shopper is still at the first stage under the published thresholds, and the personalization decision computed for the purchase event ITSELF reports 'deciding' (update.data.journeyStage) on both hosts, so the purchase is counted on its own decision and not only on the one after it.",
+    "legs": ["host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 03; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"A purchase remains the deciding current-event signal and truthful ODP/receipt input\") and the admission-r1 preflight correction on purchase timing; src/routes/realtime.ts:270-283 and src/durable-objects/ShopperReflex.ts:1255, where the same value is handed to upsertOdpProfile as the ODP-bound stage input",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "The asserted value is exactly the one both hosts pass to upsertOdpProfile as journey_stage, but this unit drives no ODP network call: the exact ODP stage-only payload proof is admitted check K3 under criterion C5 (HANDOFF §5 point 5) and needs an ODP connector configuration this fixture deliberately does not enable. The receipt half of the truthfulness clause is specified by W16.C4.05's host-internal leg."
+  },
+  {
+    "id": "W16.C4.04",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Reset ordering after a purchase: the purchase decision and its attribution are captured first (that decision reports 'deciding'), and only then are the persisted visit-local counters reset, so the NEXT personalization decision starts from reset counters at the vocabulary's first stage, inside the SAME visit (visit number unchanged) and with the cumulative taste the purchase itself grew, never discarded. The reset is real: the interaction after the purchase is the first, and the third one after it moves the stage again. Both hosts.",
+    "legs": ["host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 04; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (\"only after that decision and attribution are captured are persisted visit-local journey counters reset for the next personalization decision. Visit number and cumulative durable taste remain.\") and the admission-r1 preflight correction on purchase timing; document 35 §5 W16 (\"journey/new-visit/post-purchase reset\")",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "Measured through the SDK-visible hydrate, because no shopper-facing route exposes the persisted counters. This unit does not assert what a purchase delivered later as a buffered action does to the reset; the buffered rule is specified at the counter reducer in W16.C4.06."
+  },
+  {
+    "id": "W16.C4.05",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Threshold versioning: with version 1 published, three interactions derive 'thinking' and the decision names the version it used (sources.journey = { version ending +r1, revision 1, reason null }); publishing version 2 changes the derivation for subsequent decisions with no new event (the same counters derive 'exploring', sources.journey names +r2 and revision 2); an invalid threshold set is refused at publication and the last published version keeps deciding; with nothing published the routes still answer 200, the stage fails closed to the vocabulary's first stage and sources.journey carries version null, revision 0 and a diagnostic naming the journey thresholds. The decision record and its receipt both carry journey = { stage, version }. Both hosts.",
+    "legs": ["host", "host-internal"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 05; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (versioned thresholds) and §5 point 3 C3 (\"Invalid, absent or unpublished rules fail closed\") applied to the journey document by the W16-B4 ruling; src/config/publication.ts conditional r2 publication authority; src/routes/decisions.ts:312 (the receipts route reads the same records through receiptOf) and the DecisionSources block in src/content/service.ts, which already names the catalog, slots, learn and reflex versions a decision used",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "R19 residual: no shopper-facing route exposes the decision record or its receipt (src/routes/decisions.ts:478 omits cell and records in offer mode; GET /v1/:tenant/visitors/:visitorId/receipts needs an operator JWT and a DECISION_RING binding), so the record and receiptOf are driven in process inside the real owner invocation while the public half is asserted on sources.journey. A threshold document that becomes unreadable or corrupt AFTER publication (fail closed to the previous readable revision) is not driven by this unit: only refusal at publication and nothing-published are. The diagnostic's exact wording is not pinned, only that it names the journey thresholds."
+  },
+  {
+    "id": "W16.C4.06",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Cold start: absent, null or empty counters derive the vocabulary's first stage without inventing an interaction; on the compiled default threshold set the third interaction of the visit moves the stage past the first (Time to Relevance); and an explicitly buffered delivery of the same action, or of a purchase, counts as no interaction of the current visit (the counters come back unchanged) while the same action delivered live counts as one.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 06; docs/architecture/tapestry_requirements.txt line 147 Time to Relevance (\"3 clicks—site adapts third interaction onwards\"); docs/handover/HANDOFF-2026-09-18.md §7 settled decision D06-buffered-action-purpose (\"explicitly buffered browser/app actions may contribute age-decayed interest plus eligible historical measurement. They must not create fresh visits/recent ODP activity/regional activity on arrival\"); document 35 §5 W16 (\"contextual cold-start behavior\") and HANDOFF §5 point 8 C8 (\"first/third sparse interactions\")",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "The exact numbers inside DEFAULT_JOURNEY_THRESHOLDS are not pinned: only the two points the witnesses determine are asserted (nothing counted is the first stage; the third interaction is past the first stage), and the host legs use the fixture's own published thresholds. The mounted POST /realtime/action buffered path (src/reflex/bufferedAction.ts) is not driven here; this unit specifies the rule at the visit-local counter reducer."
+  },
+  {
+    "id": "W16.C4.07",
+    "w": "W16",
+    "criterion": "C4",
+    "outcome": "Both hosts derive the same stage for the same event sequence (three interactions, then a purchase, then the decision after it) and the SDK-visible hydrate projection GET /realtime/reflex carries that stage as one of the three shared vocabulary words on both hosts: 'thinking' while browsing, 'deciding' on the purchase decision, 'exploring' on the decision after the post-purchase reset.",
+    "legs": ["host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B4 row 07; docs/handover/HANDOFF-2026-09-18.md §5 point 4 C4 (one shared stage vocabulary) and §5 point 5 C5 (\"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree\"); ruling R20 for the hydrate as the SDK-visible projection; docs/architecture/tapestry_requirements.txt line 149",
+    "status": "specified",
+    "batch": "W16-B4",
+    "residual": "Today the session host omits journeyStage from the hydrate whenever it personalizes (src/routes/realtime.ts:441 emits the field only when consent refuses) while the object host answers with the internal token (src/durable-objects/ShopperReflex.ts:1608), so the two hosts disagree at the SDK boundary; this unit fixes the projection, not the internal token. Full C5 stage parity (LearnStats, the buffered path and the ODP payload) is a later batch."
   }
 ]
