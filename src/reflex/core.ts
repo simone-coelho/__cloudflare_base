@@ -78,6 +78,40 @@ export interface ReflexConfig {
    * stage of the journey with a diagnostic — never an invented threshold.
    */
   journey?: import('@/services/JourneyStage').JourneyThresholds;
+  /**
+   * W16 C6 (R32(1), R48): the tenant's published anonymous return-continuity
+   * block. It rides this document for the same reason the journey thresholds
+   * do — the document is already tenant-scoped, versioned, read by both hosts
+   * and pinned into one coherent publication set, so a recognition descriptor
+   * can name the revision it was issued under without a fourth document kind.
+   *
+   * ABSENT IS THE SHIPPED STATE. There is no compiled default mode, window or
+   * covered purpose anywhere in this engine: the production values and the
+   * per-purpose retention approval are an owner decision, and an engine that
+   * has published nothing recognizes nobody. A block that is present but not
+   * COMPLETE — a transport outside the vocabulary, a window that is not a
+   * finite positive number, no covered purpose, or a retention approval that
+   * is not exactly true — also recognizes nobody. Both are fail-closed.
+   */
+  continuity?: ContinuitySettings;
+}
+
+/**
+ * W16 C6. A published return-continuity configuration.
+ *
+ * `mode` is the transport the long recognition proof takes: `direct` hands it
+ * to the caller, `broker` keeps it in the first-party cookie and never puts it
+ * in a response body. `windowMs` is the descriptor's WHOLE life, fixed at issue
+ * and never extended by browsing, renewal or rotation. `purpose` is the covered
+ * purpose the credential is bound to, and `retentionApproved` records that that
+ * purpose carries a retention approval of its own — a session consent record
+ * approves none (HANDOFF-2026-09-18 §12).
+ */
+export interface ContinuitySettings {
+  mode: 'direct' | 'broker';
+  windowMs: number;
+  purpose: string;
+  retentionApproved: boolean;
 }
 
 /** Raw per-value accumulator — s is NEVER pre-decayed; t is the last touch. */
