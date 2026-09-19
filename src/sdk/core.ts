@@ -204,6 +204,16 @@ export function createCore(config: ClientConfig, host: Host): Core {
   let expiresAt = 0;
   let bootstrapping: Promise<boolean> | null = null;
   const capabilityKey = `opt_shopper_session:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
+  // W16 C6. Direct-mode return recognition: the engine hands this browser a
+  // long proof, the browser keeps it in its own tenant-scoped store, and
+  // presents it on a cold start when it holds no capability of its own. In
+  // BROKER mode the proof belongs to the first-party broker and never to this
+  // script: nothing is kept and nothing is sent, even if a broker answers with
+  // one. The operation id is minted beside the proof and kept until the consume
+  // is answered, so a lost response is retried as the SAME consume rather than
+  // burning a second generation of her chain.
+  const continuityKey = `opt_shopper_continuity:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
+  const continuityOperationKey = `${continuityKey}:operation`;
   const refusalKey = `opt_shopper_refusal:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const refusalCookie = encodeURIComponent(refusalKey);
   const lifetime = 30 * 86400 * 1000;
@@ -549,6 +559,36 @@ export function createCore(config: ClientConfig, host: Host): Core {
     if (wanted && !transitioning) connect();
     return true;
   }
+  /** The recognition proof this browser holds, with the operation id its
+   * consume is keyed by. Absent in broker mode, by construction. */
+  function presentContinuity(): { proof: string; operationId: string } | null {
+    if (cfg.sessionBroker) return null;
+    try {
+      const proof = host.storage.get(continuityKey) ?? '';
+      if (!proof) return null;
+      let operationId = host.storage.get(continuityOperationKey) ?? '';
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(operationId)) {
+        operationId = host.uuid();
+        host.storage.set(continuityOperationKey, operationId);
+      }
+      return { proof, operationId };
+    } catch { return null; }
+  }
+  /** What the engine's own answer says to keep. A disabled answer clears it:
+   * a proof this engine will not recognize is a token nobody should hold. */
+  function keepContinuity(value: unknown): void {
+    if (cfg.sessionBroker) return;
+    const report = value as { enabled?: unknown; mode?: unknown; proof?: unknown } | null | undefined;
+    try {
+      if (report?.enabled === true && report.mode === 'direct' && typeof report.proof === 'string' && report.proof) {
+        host.storage.set(continuityKey, report.proof);
+        host.storage.set(continuityOperationKey, '');
+      } else if (report?.enabled === false) {
+        host.storage.set(continuityKey, '');
+        host.storage.set(continuityOperationKey, '');
+      }
+    } catch { /* storage unavailable; the engine still decided */ }
+  }
   function ready(transition = false): Promise<boolean> {
     consent();
     if (transitioning && !transition) return Promise.resolve(false);
@@ -604,7 +644,13 @@ export function createCore(config: ClientConfig, host: Host): Core {
         let persisted = '';
         try { persisted = host.storage.get(capabilityKey) ?? ''; } catch { /* storage unavailable */ }
         if (Object.keys(recovery).length) persisted = '';
-        const request = () => boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), { method: 'POST', credentials: 'include', headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}) }, body: JSON.stringify(Object.keys(active).length ? { consent: active } : {}) }, 16384);
+        const request = () => {
+          // Only a browser with no capability of its own is returning.
+          const returning = persisted ? null : presentContinuity();
+          return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), { method: 'POST', credentials: 'include',
+            headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}) },
+            body: JSON.stringify({ ...(Object.keys(active).length ? { consent: active } : {}), ...(returning ? { continuity: returning } : {}) }) }, 16384);
+        };
         let res = await request();
         if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
           rememberUnknownConsent();
@@ -612,13 +658,15 @@ export function createCore(config: ClientConfig, host: Host): Core {
           try { host.storage.set(capabilityKey, ''); } catch { /* storage unavailable */ }
           res = await request();
         }
-        const body = res.json as { ok?: unknown; session?: unknown } | null;
+        const body = res.json as { ok?: unknown; session?: unknown; continuity?: unknown } | null;
         if (g !== generation) return false;
         if (!res.ok || body?.ok !== true) {
           if (res.status === 401) try { host.storage.set(capabilityKey, ''); } catch { /* storage unavailable */ }
           return false;
         }
-        return adoptSession(body.session, g, 'logout');
+        const adopted = adoptSession(body.session, g, 'logout');
+        if (adopted) keepContinuity(body.continuity);
+        return adopted;
       } catch { return refuseTransition(); }
       finally {
         if (!transition) {

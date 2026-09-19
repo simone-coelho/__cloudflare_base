@@ -237,6 +237,27 @@ All under `/v1/{tenant}/identity/`. The first two take the site key; the rest ta
 
 Historical import requires an existing owned profile and live explicit tracking and personalization choices; legacy preference booleans do not authorize import. It cannot grant consent. Multiple supplied identifiers must resolve to the same subject. Missing state or consent and refused consent are reported by original row index in `skipped`, without changing profile or history counts; corrupt state and failed writes fail the request, which may follow earlier successful subject groups. Original times remain subject to erasure cutoffs and current owner-serialized import/adoption/publication barriers; independent external stores are not one global transaction.
 
+### Return recognition (anonymous continuity)
+
+`POST /v1/{tenant}/identity/session` — the call the SDK already makes on every page load — also answers one `continuity` block, and the answer is always explicit:
+
+| Answer | Meaning |
+|---|---|
+| `{ enabled: false, reason: "unpublished" }` | This tenant has published no continuity block. Nothing recognizes a returning browser, and a return after the capability expires is a brand-new anonymous shopper |
+| `{ enabled: false, reason: "incomplete" }` | A block is published but is not a configuration: a transport outside `direct`/`broker`, a window that is not a finite positive number of milliseconds, no covered purpose, or `retentionApproved` that is not exactly `true` |
+| `{ enabled: false, reason: "consent" }` | Continuity is configured, and this shopper has made no current explicit choice. Both switches must be on |
+| `{ enabled: true, mode, purpose, generation, expiresAt, revision, proof? }` | The recognition descriptor her browser should carry |
+
+There is **no shipped default**: the mode, the window and the covered purpose are published by the tenant on the versioned reflex document (`continuity: { mode, windowMs, purpose, retentionApproved }`), the same coherent publication set the weights, the decay horizon and the journey ladder ride, so `revision` names the document revision the descriptor is bound to. An incomplete block never becomes a configuration and never blocks the rest of the document.
+
+`expiresAt` is the descriptor's original fixed expiry — issue time plus `windowMs`. It never moves: not on rotation, not on browsing, not on renewal. `generation` is `1` for the first descriptor of a chain and one more per return. `proof` is present **only** in `direct` mode; in `broker` mode the long proof leaves only as the first-party `opt_shopper_continuity` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`) and the body carries none.
+
+A return presents the proof on the same route with **no** `X-Shopper-Session` header: `{ continuity: { proof, operationId } }` in direct mode, or the cookie plus `{ continuity: { operationId } }` in broker mode. `operationId` is a UUID the caller keeps beside the proof: the exact retry of a lost answer is honoured once from one deterministic successor receipt, with the same subject, the same generation, the same grant and the same successor proof. A second retry, a different operation on a consumed proof, a tampered or unknown proof, another tenant's proof, another transport's proof, a proof issued under a previous configuration revision, and a proof past its own fixed expiry are all a **cold shopper**: a brand-new anonymous subject served the catalogue's own order. The expired capability is never extended; recognition answers a new bounded capability on the shopper's existing browsing session.
+
+Logout (`detach`), session reset, link and erase each retire the descriptor, a withdrawn choice makes a descriptor issued before it cold, and the owner object holds only the digest, the generation and the fixed expiry — never the proof. The SDK keeps a direct-mode proof in its own tenant-scoped store under `opt_shopper_continuity:<endpoint>:<tenant>` and presents it on a cold start; in broker mode it holds none and sends none.
+
+Activation is a tenant decision. Nothing in the platform publishes a mode, a window or a covered purpose, and the retention approval a continuity credential needs is per purpose: a 30-day session consent record authorizes none.
+
 ### Explicit consent
 
 Both switches are OFF until explicitly chosen. `POST /realtime/session/preferences` derives the session from the current shopper capability; the legacy `POST /realtime/session/:sessionId/preferences` remains exact-current-SID guarded. Both accept optional `trackingConsent` / `personalizationEnabled` booleans plus `choice: { id, expectedRevision, grantId, iat, exp }`. The SDK supplies this metadata; direct clients obtain the current revision from `consent.instruction` (`null` if absent) and grant fields from their session descriptor. `id` is a stable 1–96 character alphanumeric/underscore/hyphen operation ID. Retry the exact operation and payload after a lost response; changed or stale operations conflict (409). Invalid choice metadata is400. A valid cold owner may choose without creating behavioral state.

@@ -463,9 +463,20 @@ export class RealtimeSegmentEngine {
       // tell two different stories about the same input.
       let signals: RecognitionSignals | undefined;
       const answer = (update: PersonalizationUpdate | null) => ({ update, sessionId: currentSessionId, sessionData, consent, ...(signals ? { signals } : {}) });
+      // A refused or consent-less action is answered from its own necessary
+      // record and has no behavioral effect, so it never needs the tenant's
+      // configuration and is served whatever state that authority is in.
       if (!consent.tracking) return answer(null);
       requireConsentPurpose(consent, 'tracking');
       if (personalizes(consent)) requireConsentPurpose(consent, 'personalization');
+      // With tracking ON every step below is a behavioral effect, and each one is
+      // governed by THIS tenant's configured runtime. Resolve that authority first
+      // so an absent, invalid or unreadable configuration publication refuses
+      // before the retention birth, the pin and the scoring, rather than scoring
+      // against a compiled default. A demo scope keeps its compiled identity, so
+      // the demo surfaces are unchanged.
+      const surface = this.surfaceOf(event);
+      const reflexConfig = await resolveTenantReflexConfig(this.env, this.tenant, surface);
       if (!stored) {
         const born = Date.now();
         sessionData.retention = retentionBirth(this.env, this.tenant, 'profile', born, born);
@@ -476,10 +487,9 @@ export class RealtimeSegmentEngine {
       // refusal. This is not transactional authority across concurrent requests.
       const ownedSnapshot = this.principal ? { sessionId: currentSessionId, data: stored ? sessionData : null } : undefined;
       // Demo hints select a catalog only inside the default tenant. Customer
-      // event attributes remain governed by the tenant's authored Reflex config.
-      const surface = this.surfaceOf(event);
+      // event attributes remain governed by the tenant's authored Reflex config,
+      // resolved above before the first behavioral effect.
       const catalogService = await this.catalogFor(surface);
-      const reflexConfig = await resolveTenantReflexConfig(this.env, this.tenant, surface);
       const audiencePrefix = tenantAudienceKeyPrefix(this.tenant, surface);
       const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
       const contentEventTouches = reflexOn && isContentAction(actionOf(event))
@@ -1105,6 +1115,13 @@ export class RealtimeSegmentEngine {
     if (this.principal) {
       assertSessionTarget(this.principal, userId, clientSessionId);
       const sessionId = this.principal.sessionId;
+      // The tenant's configuration authority governs every owned answer on this
+      // path, including a cold one and a necessary refusal, so it is resolved
+      // BEFORE the record is read: an absent, invalid or unreadable publication
+      // then refuses with its own typed error instead of serving a compiled
+      // default. A demo scope keeps its retained compiled identity by design
+      // (src/reflex/configStore.ts §1), so nothing changes for it.
+      const reflexConfig = this.tenant === DEFAULT_TENANT ? undefined : await resolveTenantReflexConfig(this.env, this.tenant);
       const { data: existing, consent } = await this.sessionManager.readOwnedConsent(sessionId, cookieHeader);
       if (existing) return { sessionId, sessionData: existing, isNewSession: false };
       if (!personalizes(consent)) {
@@ -1116,9 +1133,16 @@ export class RealtimeSegmentEngine {
       }
       // Fresh anonymous authority never restores a legacy profile or its mirrors.
       // Explicit cookie refusals may only restrict; they cannot enable tracking.
-      const reflexConfig = this.tenant === DEFAULT_TENANT ? undefined : await resolveTenantReflexConfig(this.env, this.tenant);
       const now = Date.now();
       const sessionData: SessionData = { userId,
+        // A cold owned answer is not stored, but it is still retained data under
+        // the registry's own profile policy while it is held: mint its birth from
+        // the registry exactly as the cold action path does, so pinning the
+        // profile stamp succeeds and the read serves without any write activity.
+        // No period is invented here; a tenant without a profile policy still
+        // fails closed, because retentionBirth has no default to fall back on.
+        retention: retentionBirth(this.env, this.tenant, 'profile', now, now),
+        externalRetention: externalRetentionBirths(this.env, this.tenant, now, now),
         segments: ['new_user'], attributes: {},
         metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },
         preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization, cookieConsent: true },

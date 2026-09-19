@@ -394,13 +394,22 @@ decisionRoutes.post('/:tenant/trend/rollup', operatorJwt(), async (c) => {
 
 // Validate the body/query before owner forwarding: malformed context must not
 // cause even grant adoption. Legacy GET remains guarded for existing callers.
+/**
+ * A malformed entry context is a REQUEST error, not a session refusal. It is
+ * raised only after `requireShopper` has admitted the caller, so an
+ * unauthenticated or refused caller still gets the 401 it always got, while an
+ * admitted one now reaches the route's own documented
+ * `400 'Invalid entry context'` below — unreachable for as long as this threw
+ * the access error first (ruling R46).
+ */
+class InvalidEntryContext extends Error {}
 async function snapshotContext(request: Request): Promise<Record<string, string>> {
   assertShopperSelectors(request);
   if (request.method === 'GET') {
     const context = Object.fromEntries(new URL(request.url).searchParams);
     if (context.tenant !== undefined) throw new SessionAccessError();
     if (context.entry !== undefined) {
-      try { if (context.entry.length > ENTRY_QUERY_LIMIT || !validEntry(JSON.parse(context.entry), true)) throw new Error(); } catch { throw new SessionAccessError(); }
+      try { if (context.entry.length > ENTRY_QUERY_LIMIT || !validEntry(JSON.parse(context.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
     }
     for (const key of ['trackingConsent', 'personalizationEnabled']) if (context[key] !== undefined && context[key] !== 'true' && context[key] !== 'false') throw new SessionAccessError();
     return context;
@@ -417,13 +426,19 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
     out[key] = item;
   }
   if (out.entry !== undefined) {
-    try { if (!validEntry(JSON.parse(out.entry), true)) throw new Error(); } catch { throw new SessionAccessError(); }
+    try { if (!validEntry(JSON.parse(out.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
   }
   for (const key of ['trackingConsent', 'personalizationEnabled']) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new SessionAccessError();
   return out;
 }
-decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper({ forward: false, bodyLimit: 8192, bodyTimeoutMs: 5000 }), async (c, next) => { await snapshotContext(c.req.raw); await next(); }, requireShopper(), async (c) => {
-  const context = await snapshotContext(c.req.raw);
+decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper({ forward: false, bodyLimit: 8192, bodyTimeoutMs: 5000 }), async (c, next) => {
+  try { await snapshotContext(c.req.raw); }
+  catch (error) { if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400); throw error; }
+  await next();
+}, requireShopper(), async (c) => {
+  let context: Record<string, string>;
+  try { context = await snapshotContext(c.req.raw); }
+  catch (error) { if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400); throw error; }
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const principal = shopperPrincipal(c.req.raw);

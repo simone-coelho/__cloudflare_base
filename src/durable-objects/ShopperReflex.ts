@@ -62,7 +62,7 @@ import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requir
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
 import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, stripExpiredOwnerRecovery, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type OwnerRecovery, type RecoveryInput } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
-import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';
+import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
 import { IdentityStore, type ShopperRecord } from '@/identity/store';
 import { isShopperId, isSalted } from '@/identity/shopperId';
@@ -73,6 +73,7 @@ import { ACTION_EVENT_TYPE_SET } from '@/events/actionTypes';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
+import { PublicationError } from '@/config/publication';
 import { applyProfileSnapshot, enrichmentInputs, mergeEnrichment, readEnrichment, type ImportOutcome, type ProfileEnrichment, type ProfileSnapshotRow } from '@/identity/profileEnrichment';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
 import {
@@ -196,6 +197,37 @@ const grantSchema = z.object({ tenant: z.string().refine(isValidTenantId), subje
   && (g.kind === 'recognized' ? isShopperId(g.subject) : /^vis-[0-9a-f-]{36}$/.test(g.subject)));
 const authoritySchema = z.object({ version: z.literal(1), epoch: z.string().uuid(), grants: z.record(z.string(), grantSchema) }).strict();
 type GrantAuthority = z.infer<typeof authoritySchema>;
+// ── W16 C6: anonymous return continuity ─────────────────────────────────────
+// ONE storage key, by exact name (R48(b)2). The object keeps the digest of the
+// current proof, the generation and the chain's original fixed expiry — never
+// the proof itself and never its signature — plus the one deterministic
+// successor receipt a lost response may be answered from, once.
+const CONTINUITY_KEY = 'continuity';
+/** Every key in the object's own allow-lists, widened by exact key for C6. */
+const OWNED_STATE_KEYS = ['affinity', 'pipeline', 'audienceOwner', 'consent', CONTINUITY_KEY];
+const continuityDigestSchema = z.string().regex(/^[a-f0-9]{64}$/);
+const continuityRecordSchema = z.object({
+  version: z.literal(1),
+  chain: z.string().uuid(),
+  generation: z.number().int().positive(),
+  digest: continuityDigestSchema,
+  issuedAt: identityTime,
+  expiresAt: identityTime,
+  mode: z.enum(['direct', 'broker']),
+  purpose: z.string().min(1).max(120),
+  revision: z.number().int().nonnegative(),
+  /** The subject's own browsing session: a return joins it, never invents a
+   * second one, so her retained taste is the same record on either host. */
+  sessionId: identityId,
+  /** The single lost-response receipt: the consumed digest, the operation it
+   * was consumed under, and the exact grant that answer carried. */
+  receipt: z.object({ operationId: z.string().uuid(), digest: continuityDigestSchema, grant: grantSchema }).strict().optional(),
+}).strict();
+type ContinuityRecord = z.infer<typeof continuityRecordSchema>;
+const continuitySettingsSchema = z.object({
+  mode: z.enum(['direct', 'broker']), windowMs: z.number().finite().positive(),
+  purpose: z.string().min(1).max(120), revision: z.number().int().nonnegative(),
+}).strict();
 const rotationSchema = z.object({ operation: z.enum(['detach', 'reset']), source: grantSchema, replacement: grantSchema,
   consent: consentSchema, status: z.enum(['prepared', 'complete']),
 }).strict();
@@ -522,6 +554,18 @@ export class ShopperReflex {
       if (!principal) return json({ ok: false }, 401);
       return this.handleRotation(request, principal);
     }
+    // W16 C6. Issue needs the shopper's own live capability; a consume has none
+    // by construction (her capability expired days ago), so it is an internal
+    // call from the session route, which has already verified the proof's
+    // signature, tenant, transport and configuration revision.
+    if (request.method === 'POST' && url.pathname === '/identity/continuity/issue') {
+      if (!principal) return json({ ok: false }, 401);
+      return this.handleContinuityIssue(request, principal);
+    }
+    if (request.method === 'POST' && url.pathname === '/identity/continuity/consume') {
+      if (principal || !internal) return json({ ok: false }, 401);
+      return this.handleContinuityConsume(request, internal);
+    }
 
     if (request.headers.get('Upgrade') === 'websocket') {
       return this.serialize(async () => {
@@ -560,6 +604,14 @@ export class ShopperReflex {
         }
         const consent = await this.consentNow();
         assertSessionTarget(p);
+        let tenant: TenantId;
+        try { tenant = this.audienceTenant(p); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }
+        // An owned read is an answer from THIS tenant's configured runtime, so
+        // the configuration authority is required before any answer is served,
+        // including the necessary refusal below: an absent, invalid or
+        // unreadable publication refuses here with its own typed error rather
+        // than serving a default. A demo scope keeps its compiled identity.
+        await resolveTenantReflexConfig(this.env, tenant, this.surface());
         if (!personalizes(consent)) {
           if (url.pathname === '/segments') return request.method === 'POST'
             ? json({ ok: false, error: 'Shopper consent refused segment assignment' }, 403)
@@ -568,8 +620,6 @@ export class ShopperReflex {
             config: { segments: [], featureVariables: {}, featureFlags: {}, experiments: {} }, cookiesSet: false, timestamp: now });
         }
         requireConsentPurpose(consent, 'personalization');
-        let tenant: TenantId;
-        try { tenant = this.audienceTenant(p); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }
         const connectors = getConnectors(this.env, tenant);
         if (url.pathname === '/segments') {
           if (request.method === 'POST') {
@@ -636,10 +686,15 @@ export class ShopperReflex {
         if (url.searchParams.get('projection') === 'content') {
           if (!principal) return json({ ok: false, error: 'Shopper session unavailable' }, 401);
           const consent = await this.consentNow();
+          // This projection serves decisions, so it is an answer from THIS
+          // tenant's configured runtime and the authority is required before any
+          // answer, including the refusal projection below: an absent, invalid or
+          // unreadable configuration publication refuses here with its own typed
+          // error instead of a default. A demo scope keeps its compiled identity.
+          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, this.surface());
           if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, journeyStage: null });
           requireConsentPurpose(consent, 'personalization');
           if (this.affinity) pinProfileRetention(this.env, this.affinity, principal.tenant);
-          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, this.surface());
           const at = Date.now();
           return json({ ok: true, consent,
             affinity: this.affinity ? reflexSnapshot(this.affinity.reflex, at, cfg) : null,
@@ -659,10 +714,12 @@ export class ShopperReflex {
           await this.load();
           const consent = await this.consentNow();
           const surface = resolveSurface({ surface: url.searchParams.get('surface') ?? this.surface() });
+          // As above: the sort projection serves decisions, so the configuration
+          // authority is required before any answer, refusal included.
+          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, surface);
           if (!personalizes(consent)) return json({ ok: true, consent, affinity: null, surface });
           if (this.affinity) pinProfileRetention(this.env, this.affinity, principal.tenant);
           requireConsentPurpose(consent, 'personalization');
-          const cfg = await resolveTenantReflexConfig(this.env, principal.tenant, surface);
           return json({ ok: true, consent, surface, affinity: this.affinity ? { dims: reflexSnapshot(this.affinity.reflex, Date.now(), cfg).dims } : null });
         }
         return this.handleSnapshot(principal?.tenant ?? internal!.tenant, principal);
@@ -1470,6 +1527,16 @@ export class ShopperReflex {
       await stripExpiredOwnerRecovery(this.state.storage, (tenant, subject) => this.isActualObject(tenant, subject));
       await this.pruneConsent();
       await this.scheduleConsentAlarm();
+      // W16 C6. Above the behavioral gates below, because the session host
+      // holds no affinity here and would return before reaching them. Cleanup
+      // is the chain's own original expiry: nothing is extended, nothing else
+      // of hers is touched, and an expired chain leaves no record behind.
+      const continuityState = await this.state.storage.get(CONTINUITY_KEY);
+      if (continuityState !== undefined) {
+        const chain = continuityRecordSchema.parse(continuityState);
+        if (chain.expiresAt <= Date.now()) await this.state.storage.delete(CONTINUITY_KEY);
+        else await this.armContinuityAlarm(chain.expiresAt);
+      }
       await this.load();
       const now = Date.now();
       const surface = this.surface();
@@ -1542,9 +1609,14 @@ export class ShopperReflex {
       let cfg: ReflexConfig;
       try { cfg = await resolveTenantReflexConfig(this.env, owner.tenant, surface); }
       catch (error) {
-        if (!(error instanceof ReflexConfigUnavailableError)) throw error;
+        // A configuration refusal must not cost the shopper her retention
+        // guarantee. Re-arm exactly the deadline a successful alarm would have
+        // left, write nothing else, and let the typed refusal stand so the
+        // failure is visible instead of a quiet no-op: either class counts
+        // (ruling R28), and anything untyped was never this timer's to absorb.
+        if (!(error instanceof ReflexConfigUnavailableError) && !(error instanceof PublicationError)) throw error;
         await this.scheduleProjectionAlarm(Math.max(this.affinity.lastSeen + this.retentionMs(), now + MIN_ALARM_DELAY_MS));
-        return;
+        throw error;
       }
       const res = tickReflex(this.affinity.reflex, now, cfg);
       let affinity = { ...this.affinity, reflex: res.state, configVersion: cfg.version };
@@ -1806,7 +1878,7 @@ export class ShopperReflex {
     if (!authority) {
       if (!adopt) throw new SessionAccessError();
       const prior = await this.state.storage.list();
-      const allowed = new Set(['affinity', 'pipeline', 'audienceOwner', 'consent']);
+      const allowed = new Set(OWNED_STATE_KEYS);
       if ([...prior.keys()].some(key => !allowed.has(key))
         || (prior.has('affinity') !== prior.has('pipeline'))
         || (prior.has('affinity') && (!this.affinity || !this.pipeline))
@@ -1938,6 +2010,125 @@ export class ShopperReflex {
     }
   }
 
+  // ── W16 C6: anonymous return continuity ───────────────────────────────────
+
+  private continuityDescriptorOf(record: Omit<ContinuityRecord, 'digest' | 'receipt'> & { digest?: string },
+    tenant: string, subject: string): ContinuityDescriptor {
+    return { tenant, subject, chain: record.chain, generation: record.generation, issuedAt: record.issuedAt,
+      expiresAt: record.expiresAt, mode: record.mode, purpose: record.purpose, revision: record.revision };
+  }
+
+  /** Never later than the chain's own expiry, and never past an earlier one
+   * this object already holds: cleanup is a deadline, not a lifetime. */
+  private async armContinuityAlarm(expiresAt: number): Promise<void> {
+    const alarm = await this.state.storage.getAlarm();
+    if (alarm === null || alarm > expiresAt) await this.state.storage.setAlarm(Math.max(Date.now() + 1, expiresAt));
+  }
+
+  /** The chain in force for this object, or null when there is none that the
+   * published configuration still recognizes. Never extends anything. */
+  private liveContinuity(saved: unknown, settings: z.infer<typeof continuitySettingsSchema>, now: number): ContinuityRecord | null {
+    if (saved === undefined) return null;
+    const record = continuityRecordSchema.parse(saved);
+    return record.expiresAt <= now || record.mode !== settings.mode
+      || record.revision !== settings.revision || record.purpose !== settings.purpose ? null : record;
+  }
+
+  /**
+   * Report the chain this shopper's browser should carry, minting one if the
+   * published configuration admits it and she has made a current explicit
+   * choice. Idempotent: asking again inside the window re-reports the SAME
+   * generation on the SAME original expiry and re-derives the same proof.
+   */
+  private async handleContinuityIssue(request: Request, principal: SessionCapability): Promise<Response> {
+    const settings = continuitySettingsSchema.parse(await request.json());
+    return this.serialize(async () => {
+      try {
+        await this.assertOwned(principal, undefined, false);
+        const consent = await this.consentNow();
+        // HANDOFF §12: the session consent record authorizes no credential of
+        // its own, and a recognition proof outlives the visit — so only a
+        // current explicit choice issues one.
+        if (!personalizes(consent)) return json({ ok: true, enabled: false, reason: 'consent' });
+        requireConsentPurpose(consent, 'personalization');
+        const now = Date.now();
+        let record = this.liveContinuity(await this.state.storage.get(CONTINUITY_KEY), settings, now);
+        if (!record) {
+          const fresh = { version: 1 as const, chain: crypto.randomUUID(), generation: 1, issuedAt: now,
+            expiresAt: now + Math.floor(settings.windowMs), mode: settings.mode, purpose: settings.purpose,
+            revision: settings.revision, sessionId: principal.sessionId };
+          const minted = await issueContinuityProof(this.env, this.continuityDescriptorOf(fresh, principal.tenant, principal.subject));
+          record = continuityRecordSchema.parse({ ...fresh, digest: await continuityDigest(minted) });
+          assertSessionTarget(principal);
+          await this.state.storage.put(CONTINUITY_KEY, record);
+          await this.armContinuityAlarm(record.expiresAt);
+          return json({ ok: true, enabled: true, descriptor: this.continuityDescriptorOf(record, principal.tenant, principal.subject), proof: minted });
+        }
+        const descriptor = this.continuityDescriptorOf(record, principal.tenant, principal.subject);
+        const proof = await issueContinuityProof(this.env, descriptor);
+        // The stored digest is the only thing that can say this is her chain.
+        if (await continuityDigest(proof) !== record.digest) throw new SessionAccessError();
+        await this.armContinuityAlarm(record.expiresAt);
+        return json({ ok: true, enabled: true, descriptor, proof });
+      } catch (error) { this.invalidateMirrors(); throw error; }
+    });
+  }
+
+  /**
+   * Recognize the physical subject behind a presented proof, once. The chain
+   * rotates to its next generation on its ORIGINAL expiry, a fresh ordinary
+   * capability joins the shopper's existing browsing session inside the
+   * existing authority epoch — a capability minted outside this object is
+   * refused — and the consumed generation can never be presented again.
+   */
+  private async handleContinuityConsume(request: Request, context: InternalContext): Promise<Response> {
+    const body = z.object({ proof: z.string().min(1).max(2048), operationId: z.string().uuid(),
+      settings: continuitySettingsSchema }).strict().parse(await request.json());
+    return this.serialize(async () => {
+      // Nothing here refuses the REQUEST: an unrecognized proof is a cold
+      // shopper, and the route answers her with a brand-new anonymous session.
+      const cold = () => json({ ok: true, recognized: false });
+      try {
+        await this.load();
+        this.assertInternalState(context);
+        if (await this.forwardTarget()) return cold();
+        const consent = await this.consentNow();
+        if (!personalizes(consent)) return cold();
+        const saved = await this.state.storage.get(CONTINUITY_KEY);
+        if (saved === undefined) return cold();
+        const now = Date.now();
+        const record = this.liveContinuity(saved, body.settings, now);
+        if (!record) return cold();
+        const presented = await continuityDigest(body.proof);
+        const authority = await this.grantAuthority();
+        if (!authority) return cold();
+        if (record.receipt && record.receipt.operationId === body.operationId && record.receipt.digest === presented) {
+          // The one deterministic successor receipt, answered once: the same
+          // subject, the same generation, the same grant, the same proof.
+          const { receipt, ...rest } = record;
+          const descriptor = this.continuityDescriptorOf(record, context.tenant, context.subject);
+          await this.state.storage.put(CONTINUITY_KEY, continuityRecordSchema.parse(rest));
+          return json({ ok: true, recognized: true, grant: receipt.grant, descriptor, consent,
+            proof: await issueContinuityProof(this.env, descriptor) });
+        }
+        if (presented !== record.digest) return cold();
+        const next = { ...record, generation: record.generation + 1 };
+        const descriptor = this.continuityDescriptorOf(next, context.tenant, context.subject);
+        const proof = await issueContinuityProof(this.env, descriptor);
+        const issuedAt = Math.floor(now / 1000);
+        const grant = grantSchema.parse({ tenant: context.tenant, subject: context.subject, sessionId: record.sessionId,
+          kind: 'anonymous', grantId: crypto.randomUUID(), authorityEpoch: authority.epoch,
+          iat: issuedAt, exp: issuedAt + SHOPPER_MAX_AGE });
+        authority.grants[grant.grantId] = grant;
+        const stored = continuityRecordSchema.parse({ ...next, digest: await continuityDigest(proof),
+          receipt: { operationId: body.operationId, digest: presented, grant } });
+        await this.state.storage.put({ grantAuthority: authority, [CONTINUITY_KEY]: stored });
+        await this.armContinuityAlarm(stored.expiresAt);
+        return json({ ok: true, recognized: true, grant, descriptor, consent, proof });
+      } catch (error) { this.invalidateMirrors(); throw error; }
+    });
+  }
+
   private async handleRotation(request: Request, principal: SessionCapability): Promise<Response> {
     const body = z.object({ operation: z.enum(['detach', 'reset']), consent: consentSchema }).strict().parse(await request.json());
     return this.serialize(async () => {
@@ -1991,7 +2182,11 @@ export class ShopperReflex {
           else {
             const authority = await this.assertGrant(source, false);
             delete authority.grants[source.grantId];
-            try { await this.state.storage.put({ grantAuthority: authority, [key]: complete, consent }); }
+            // W16 C6: logout retires the recognition chain BEFORE the grant it
+            // belonged to, so no window exists where the browser could come
+            // back as a shopper this device just stopped being.
+            try { await this.state.storage.delete(CONTINUITY_KEY);
+              await this.state.storage.put({ grantAuthority: authority, [key]: complete, consent }); }
             finally {
               this.closeGrants(source.grantId);
               if ((this.env.REFLEX_HOST ?? 'session') === 'session') await this.relayOperation('revoke', source.subject, source.tenant);
@@ -2075,7 +2270,7 @@ export class ShopperReflex {
         storedConsent(await this.state.storage.get('consent'));
         let authority = await this.grantAuthority();
         if (!authority) {
-          const prior = await this.state.storage.list(), allowed = new Set(['affinity', 'pipeline', 'audienceOwner', 'consent']);
+          const prior = await this.state.storage.list(), allowed = new Set(OWNED_STATE_KEYS);
           if ([...prior.keys()].some(key => !allowed.has(key))
             || (prior.has('affinity') !== prior.has('pipeline'))
             || (prior.has('affinity') && (!this.affinity || !this.pipeline))) throw new SessionAccessError();
@@ -2335,7 +2530,7 @@ export class ShopperReflex {
         }
         let authority = await this.grantAuthority();
         if (!authority) {
-          const prior = await this.state.storage.list(), allowed = new Set(['affinity', 'pipeline', 'audienceOwner', 'consent']);
+          const prior = await this.state.storage.list(), allowed = new Set(OWNED_STATE_KEYS);
           if ([...prior.keys()].some(key => !allowed.has(key)) || (prior.has('affinity') !== prior.has('pipeline'))) throw new SessionAccessError();
           authority = { version: 1, epoch: crypto.randomUUID(), grants: {} };
         }
@@ -2401,8 +2596,11 @@ export class ShopperReflex {
       const pointerKey = tenantKey(context.tenant, 'user:' + context.subject), pointerProjectionKey = 'sessionProjection:' + pointerKey;
       const forwardedPointer = forwarded ? { ...forwarded, value: result.sessionId } : undefined;
       if (principal) assertSessionTarget(principal);
-      try { await this.state.storage.put({ identityTransfer: { transfer, status: 'complete' }, forwardTo,
-        ...(forwarded ? { [projectionKey]: forwarded, [pointerProjectionKey]: forwardedPointer } : {}) }); }
+      // W16 C6: this browser is about to become a person. The anonymous
+      // recognition chain is retired first; a link never carries one forward.
+      try { await this.state.storage.delete(CONTINUITY_KEY);
+        await this.state.storage.put({ identityTransfer: { transfer, status: 'complete' }, forwardTo,
+          ...(forwarded ? { [projectionKey]: forwarded, [pointerProjectionKey]: forwardedPointer } : {}) }); }
       catch (error) { this.forwardTo = undefined; this.loaded = false; throw error; }
       this.forwardTo = forwardTo;
       if (forwarded) {
@@ -2776,7 +2974,7 @@ export class ShopperReflex {
       if (prepare) {
         if (!saved) {
           if (!authority) {
-            const prior = await this.state.storage.list(), allowed = new Set(['affinity', 'pipeline', 'audienceOwner', 'consent']);
+            const prior = await this.state.storage.list(), allowed = new Set(OWNED_STATE_KEYS);
             if ([...prior.keys()].some(key => !allowed.has(key))) throw new SessionAccessError();
             authority = { version: 1, epoch: crypto.randomUUID(), grants: {} };
           }
