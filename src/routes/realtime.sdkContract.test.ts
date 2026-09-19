@@ -2362,7 +2362,22 @@ describe('W35.02 visit context', () => {
         expect((await f.snapshot({ referrer: 'https://private.invalid/path?secret=1' })).status).toBe(400);
         const stateBeforeRefusals = f.state();
         await offer(paid, '&personalizationEnabled=false'); await offer(paid, '&trackingConsent=false');
-        expect(f.state()).toBe(stateBeforeRefusals);
+        // A withdrawal hint is a consent write, not behavioural activity: this same file pins
+        // the positive for W37.04 at :3908-3911 (a trackingConsent=false snapshot must leave the
+        // owner's stored consent matching { tracking: false }), and settled decision D06-W05
+        // makes an explicit choice the only thing that changes a consent record
+        // (docs/remediation/decisions/D06-W05-explicit-choice-approved-2026-09-16.json;
+        // src/content/consent.ts:139-152). So exactly the consent instruction may move: every
+        // other record — affinity, pipeline, grantAuthority, audienceOwner and the session
+        // projection's non-consent fields — stays byte-identical, and the instruction itself
+        // now reads both switches off. `offer` already proves neither read queued anything.
+        const withoutConsent = (state: string | undefined) => host === 'session'
+          ? JSON.stringify(Object.fromEntries(Object.entries((JSON.parse(state ?? 'null') ?? {}) as Record<string, unknown>)
+            .filter(([key]) => key !== 'preferences' && key !== 'consent')))
+          : JSON.stringify((JSON.parse(state ?? '[]') as Array<[string, unknown]>).filter(([key]) => key !== 'consent'));
+        expect(withoutConsent(f.state())).toBe(withoutConsent(stateBeforeRefusals));
+        expect(storedConsent(f.objects.get(shopperObjectName('meridian', f.g.subject))!.data.get('consent')))
+          .toEqual({ tracking: false, personalization: false });
       }
     } finally { vi.restoreAllMocks(); }
   });
@@ -3861,6 +3876,7 @@ describe('W37.04 tenant-owned runtime configuration', () => {
       const tracked = await newAnonymousSession(f.env, g.tenant); await positiveChoice(f, tracked);
       expect((await f.call('/realtime/action', tracked.capability, event(tracked), tracked.tenant)).status).toBe(200); await f.drain();
       const sessionBefore = [...f.sessions.data], objectBefore = host === 'do' ? structuredClone([...f.objects.get(shopperObjectName(g.tenant, g.subject))!.data]) : null;
+      const trackedBefore = host === 'do' ? structuredClone([...f.objects.get(shopperObjectName(tracked.tenant, tracked.subject))!.data]) : null;
       // Configuration publication is the only authority: the outage must be injected
       // there, never into the retained KV copy (src/config/publication.ts:19, :204-206;
       // src/reflex/configStore.ts:408-415).
@@ -3898,11 +3914,16 @@ describe('W37.04 tenant-owned runtime configuration', () => {
       await expect(linkVisitor(f.env, g.tenant, { visitorId: g.subject, accountId: 'unlinked-account', source: 'login', assurance: 'signed', principal: g, capability: g.capability })).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:linkVisitor`);
       expect([...f.sessions.data]).toEqual(sessionBefore);
       if (host === 'do') {
-        const item = f.objects.get(shopperObjectName(g.tenant, g.subject))!;
-        expect([...item.data]).toEqual(objectBefore); item.shopper = new ShopperReflex(item.state, f.env);
+        expect([...f.objects.get(shopperObjectName(g.tenant, g.subject))!.data]).toEqual(objectBefore);
+        // Ruling R38(a) with settled decision D06-W05: `g` never chose, so it wrote nothing
+        // and holds only `grantAuthority` (src/content/consent.ts:139-152). The owner that
+        // holds an affinity record and a retention alarm is the tracking-on shopper, so the
+        // quiet alarm is measured there.
+        const item = f.objects.get(shopperObjectName(tracked.tenant, tracked.subject))!;
+        expect([...item.data]).toEqual(trackedBefore); item.shopper = new ShopperReflex(item.state, f.env);
         const qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments');
         await item.shopper.alarm(); expect(qualified).not.toHaveBeenCalled(); qualified.mockRestore();
-        expect([...item.data]).toEqual(objectBefore);
+        expect([...item.data]).toEqual(trackedBefore);
         expect(item.alarms.at(-1)).toBe((item.data.get('affinity') as AffinityRecord).lastSeen + 30 * 86400000);
       }
       const refused = await f.call(`/v1/${g.tenant}/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}&trackingConsent=false`, g.capability, undefined, g.tenant);
@@ -5677,8 +5698,13 @@ describe('W04.02 owned shopper lane', () => {
         expect(refused.status).toBe(200);
         expect(await refused.json()).toMatchObject({ consent: { tracking: false, personalization: false } });
         const data = f.objects.get(shopperObjectName('meridian', cold.subject))!.data;
-        expect([...data.keys()].sort()).toEqual(['consent', 'grantAuthority']);
-        expect(data.get('consent')).toEqual({ tracking: false, personalization: false });
+        // Settled decision D06-W05 (docs/remediation/decisions/D06-W05-explicit-choice-approved-2026-09-16.json;
+        // src/content/consent.ts:139-152): an explicit choice is the only consent and "missing or
+        // expired records return to off", so a shopper who never chose mints no record. Only the
+        // grant authority is stored and the refusal is the projection — the representation this
+        // file already uses in `expectColdOff`.
+        expect([...data.keys()].sort()).toEqual(['grantAuthority']);
+        expect(storedConsent(data.get('consent'))).toEqual({ tracking: false, personalization: false });
         const necessary = structuredClone([...data]);
         expect((await f.call(`/realtime/segments/${cold.subject}`, cold.capability, { segment: 'refused' }, 'meridian', 'opt_tracking_consent=true; opt_personalization_enabled=true')).status).toBe(403);
         expect([...data]).toEqual(necessary);
@@ -5729,7 +5755,17 @@ describe('W04.02 owned shopper lane', () => {
         if (path.includes('/personalization/') || path.includes('/analytics')) expect(data.sessionId).toBe(person.sessionId);
         if (path.includes('/segments/') || path.includes('/personalization/')) expect(data.userId).toBe(person.subject);
         if (path === '/sort') expect(data.order).toEqual([]);
-        if (path.includes('/decisions/snapshot')) { expect(data.visitor_id).toBe(person.subject); expect(data.session_id).toBe('browsing-only'); }
+        // The snapshot payload carries exactly ok, tenant, brand, page, ts, arm, versions,
+        // config_label, decisions and sources (src/routes/decisions.ts:476-480). `visitor_id`
+        // and `session_id` are decision-record fields, and the route serves `records` only
+        // inside a trusted synthetic operation (src/routes/decisions.ts:478). This fixture
+        // publishes an empty catalog and binds no EVENT_QUEUE or DECISION_RING, so no
+        // decision record exists in process: the browsing-session attribution is owed a
+        // capture leg (the render-offer path this file's W15 fixture drives).
+        if (path.includes('/decisions/snapshot')) {
+          expect(Object.keys(data).sort()).toEqual(['arm', 'brand', 'config_label', 'decisions', 'ok', 'page', 'sources', 'tenant', 'ts', 'versions']);
+          expect(data).toMatchObject({ ok: true, tenant: 'meridian', decisions: [] });
+        }
       }
       expect((await f.call(`/realtime/reflex?userId=${anon.subject}`, anon.capability)).status).toBe(401);
       const attempted = await f.call('/v1/meridian/identity/link', anon.capability, { visitorId: anon.subject, accountId, exp, assertion });
