@@ -372,6 +372,33 @@ export function journeyCountersNow(
   return journeyCountersOf(record.counters);
 }
 
+/**
+ * THE STAGE A READ MOVES ON ITS OWN (criterion C5).
+ *
+ * Nothing happened: no event was delivered, no counter changed, no record was
+ * written. Time passed, so the visit those counters belonged to ended, and the
+ * same stored state now reports a different stage of the journey. That is a
+ * stage-only change, and it is the only kind of stage change a read can make.
+ *
+ * Pure and non-mutating, exactly like `journeyCountersNow` and `projectVisit`:
+ * the stage the stored state reported at the moment it was last written, read
+ * against the stage the very same stored state reports at `nowMs`. Equal means
+ * the read moved nothing and there is nothing to project anywhere.
+ *
+ * Both hosts ask this one function, so a stage-only change cannot mean two
+ * different things on the session path and in the shopper's own object. A host
+ * that has never written for this shopper (`lastSeenMs` absent) has no earlier
+ * stage to have moved from, and reports none.
+ */
+export function readTimeStageChange(
+  stored: unknown, lastSeenMs: number | null | undefined, nowMs: number, thresholds: unknown,
+): { from: JourneyWord; to: JourneyWord } | null {
+  if (typeof lastSeenMs !== 'number' || !Number.isFinite(lastSeenMs)) return null;
+  const from = journeyStageFrom(journeyCountersNow(stored, lastSeenMs, lastSeenMs), thresholds);
+  const to = journeyStageFrom(journeyCountersNow(stored, lastSeenMs, nowMs), thresholds);
+  return from === to ? null : { from, to };
+}
+
 /** The stored journey after one delivered event, from whichever host took it. */
 export function advanceVisitJourney(
   stored: unknown, lastSeenMs: number | null | undefined, nowMs: number, event: unknown,

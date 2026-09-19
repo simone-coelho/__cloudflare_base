@@ -1,0 +1,8 @@
+{
+  "w": "W17",
+  "verdict": "PASS",
+  "sha": "4e2ba2d412602738cfa125d603b9ed29ceb1013d",
+  "date": "2026-09-19",
+  "reviewer_report": "/home/simonecoelho/rem/_evidence/W17/reviewer-whole/REPORT.md",
+  "scope": "local scope of document 35 §5 row W17 (SDK lifecycle ownership and unbind), thirteen units W17.L1.01-.12 and .02b, merged at f00f74b and 0aeff98; live and customer acceptance stay OPEN and are batched at the end (user decision 2026-09-16); the real-browser half of the clause is the live-acceptance residual named in the report"
+}

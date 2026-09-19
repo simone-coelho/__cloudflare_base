@@ -96,7 +96,7 @@ import {
 import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
-import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, stageFromCounters, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
+import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, readTimeStageChange, stageFromCounters, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
 import {
   RETAIL_SIGNAL_DEFAULTS,
   applyEventToAttributes,
@@ -113,6 +113,7 @@ import {
   mergeOdpState,
   odpEnabled,
   refreshOdpSeedIfDue,
+  stageOnlyOdpProjection,
   updateOdpRing,
   upsertOdpProfile,
 } from '@/services/odpLoop';
@@ -1698,6 +1699,21 @@ export class ShopperReflex {
     const cfg = await resolveTenantReflexConfig(this.env, tenant, this.surface());
     const now = Date.now();
     if (principal) assertSessionTarget(principal);
+
+    // W16 C5: this read may have moved her stage on its own — the visit those
+    // counters belonged to ended while she was away. That is a stage-only
+    // change: it fabricates no event, writes nothing and renews no retained
+    // lifetime, and the single thing it is allowed to do is tell the tenant's
+    // configured destination the stage, off the response path. The session
+    // host does the identical thing in GET /realtime/reflex.
+    if (allowed && this.affinity && this.pipeline) {
+      const projection = stageOnlyOdpProjection(this.env, tenant,
+        { visitorId: this.pipeline.visitorId, sessionId: this.pipeline.sessionId },
+        reflexSnapshot(this.affinity.reflex, now, cfg),
+        readTimeStageChange(this.pipeline.journey, this.affinity.lastSeen, now, journeyThresholdsInForce(cfg)));
+      if (projection) retainOwnerWork(projection);
+    }
+
     return json({
       ok: true,
       now,

@@ -72,6 +72,7 @@ import { createCore } from '@/sdk/core';
 import { createEmit } from '@/sdk/emit';
 import { createIdentity } from '@/sdk/identify';
 import { createListen } from '@/sdk/listen';
+import { destroyClient } from '@/sdk/teardown';
 import { offeredSet, syntheticSession, testHost } from '@/sdk/testHost';
 import type { DomLike, ElementLike, RequestInitLike, ResponseLike } from '@/sdk/types';
 
@@ -278,8 +279,11 @@ function page() {
     const core = createCore({ tenant, source }, f.host);
     const listen = createListen(core, refreshMs === undefined ? {} : { refreshMs });
     const emit = createEmit(core, listen);
-    // `client.destroy()` as `src/sdk/index.ts:42` defines it.
-    return { core, listen, emit, identity: createIdentity(core), destroy: () => { listen.destroy(); core.disconnect(); } };
+    const identity = createIdentity(core);
+    // The shipped teardown itself: `createClient().destroy()` delegates to
+    // `destroyClient` (src/sdk/index.ts, src/sdk/teardown.ts), so every unit in
+    // this file tears down the way the page does. Rulings R10/R55/R60.
+    return { core, listen, emit, identity, destroy: () => destroyClient(core, listen, emit, identity) };
   };
   return { f, hero, story, teaser, cta, layer, sent, urls, client };
 }

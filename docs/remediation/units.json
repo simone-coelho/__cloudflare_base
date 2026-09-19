@@ -768,6 +768,72 @@
     "residual": "The three uncovered ingest paths named in W16.C8.03's residual (buffered, historical, content telemetry) apply here too: this unit measures the public POST /realtime/action path only. The fixture's tenant is content-only, so the product ids its catalogue names are the ones its pieces feature; a tenant with a published product catalogue is not measured."
   },
   {
+    "id": "W16.C5.01",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "For one event sequence the SessionManager path, the ShopperReflex path, the SDK-visible projection, the LearnStats cell stage and the content decision report one consistent stage: the shared vocabulary word where the engine reports it and the persisted token via PERSISTED_STAGE where it is stored or projected; both hosts agree.",
+    "legs": [
+      "host",
+      "host-internal"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; rulings R29 (shared vocabulary exploring|thinking|deciding; persisted cell token and learning key unchanged) and R32(2) (one mapping point PERSISTED_STAGE, exploring→early, thinking→mid, deciding→late); tapestry_requirements.txt line 148; src/learn/stats.ts:34 levelKeys; src/routes/realtime.ts:442 (the session host omits journeyStage while it personalizes) and src/durable-objects/ShopperReflex.ts:1608 (the object host answers with the internal token)",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "No shopper-facing route exposes the stored stage, the decision record, its cell or the exposures the slot learning object receives: the mounted snapshot runs in offer mode, where captureRecords is empty (src/content/service.ts:317) and records are omitted from the body (src/routes/decisions.ts:479), so a served decision reaches LEARN_STATS only through the render-offer redemption path. Those observables are on the host-internal leg (R19); the missing public observable is a decision receipt that names the stage and the exposures it produced. The LearnStats leg measures the exposure body the real fan (src/learn/fan.ts:340 deliverStats) delivers to a recording LEARN_STATS namespace, not the LearnStats Durable Object class. Every RED clause of this unit is a W16-B4 deliverable (C4.07 the shared word on both hosts, C4.08 PERSISTED_STAGE, C4.05 DecisionRecord.journey); the C5-specific clauses already pass today on both hosts (stored stage mid, cell stage mid, one delivered exposure row with cell stage mid, ladder key c=unknown|v=1|s=mid, an unrecognized line still an interaction, the page still served), measured by the reviewer probe-2 and by this specifier's probe with the two ruled members stubbed."
+  },
+  {
+    "id": "W16.C5.02",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "A stage-only change (no new behavioral event) sends exactly the allowed ODP stage projection: one captured POST to the configured ODP host /v3/profiles whose attributes are the configured identity plus the configured profile mappings and nothing else — the stage projection, the configured line value and the configured leading-line mapping — with no affinity dimension beyond the configured mapping and no other ODP call.",
+    "legs": [
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; src/services/odpLoop.ts upsertOdpProfile (:407-449, the /v3/profiles wire shape [{attributes}]) and its configured profile mapping branch (:434-438); src/connectors/config.ts odpSchema profile mapping (dimension/value, dimension, journey); the call is captured at the fetch boundary the code uses (ownerFetch, src/identity/sessionAuthority.ts:292), never live",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "Both readings are now ruled by the lead as R40: (a) the stage-only change is the read-time visit boundary, where the visit-local counters start from zero (W16.C4.02) and the stage becomes the first stage with no new event; (b) the ODP wire value of journey_stage stays the persisted grammar, reached through PERSISTED_STAGE, because it is an external published grammar mirrored 1:1 with the customer RTS conditions (ODP_MIRRORED_AUDIENCES late_journey_ready_to_buy; src/services/odpLoop.ts header), exactly like the cell token R29 keeps. Specification-pass correction applied: the network recorder spans the whole test, so each host iteration measures from its own hostMark; without it the second host compared the first host's vuid and no product change could satisfy it. This is the only unit of the batch with C5 product work: a profile push on a read-time stage change, on both hosts."
+  },
+  {
+    "id": "W16.C5.03",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "A stage-only change creates zero fabricated behavioral events: no outcome or ledger queue message, no decision-ring append, no learning exposure, no ODP /v3/events forward and no regional activity, while a real event in the same fixture reaches all of them.",
+    "legs": [
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; src/ledger/enqueue.ts producer via src/routes/realtime.ts emitOutcome (:194-211); src/reflex/regionTrend.ts:153-163 fanInRegionTrend; src/learn/fan.ts:277-345 fanDecisions (ring append and exposures); src/services/odpLoop.ts:353-400 forwardEventToOdp",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "GREEN-AT-SPEC-behind-W16-B4: with the C4.02 premise line neutralised the unit passes on both hosts today (measured), so its RED is W16-B4's deliverable and its own clauses are guards with live controls. The action-record clause is measured in a second arrangement of the same test where durable ledger recovery is enabled (LEDGER_RECOVERY_ENABLED true): every live interaction answers behavior.status durable and the shopper's owner stores recovery admissions (src/ledger/recovery.ts:76-77), and the stage-only change adds none. That arrangement is separate because with recovery enabled the route sends outcomes to the recovery/learning path instead of the queue (src/routes/realtime.ts:207), so the ledger-queue clause is measured in the first arrangement, where recovery is off. The legacy D1 demo capture stays unobservable (restricted to the default tenant in development, src/services/demoEventCapture.ts:5-12) and is not measured."
+  },
+  {
+    "id": "W16.C5.04",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "A stage-only change renews no retention: the shopper record's stored retention stamp and its expiresAt are unchanged to the millisecond and no retention alarm is rearmed, while a record born later in the same fixture carries a later expiry.",
+    "legs": [
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; src/retention.ts:19-25 and :88-92 (renewal is new-record-only; a birth is the only way an expiry moves) and :130-136 captureRetention; HANDOFF-2026-09-18 §7 settled retention decision; document 35 §2 F13 (\"Activity can renew state retention, so latched for exactly a month is not an exact bound\")",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "GREEN-AT-SPEC-behind-W16-B4: with the C4.02 premise line neutralised the unit passes on both hosts today (measured), so its RED is W16-B4's deliverable and its clauses are guards. Only the object host arms its own alarms, so the alarm half of the assertion is measured on the ShopperReflex host (non-empty before the read); on the session host that half is vacuous and the unit rests on the stored stamp and the later-born control record."
+  },
+  {
+    "id": "W16.C5.05",
+    "w": "W16",
+    "criterion": "C5",
+    "outcome": "A buffered action delivered a week late contributes age-decayed interest (the engine's own closed form for a touch at its original time) and an eligible historical outcome record carrying that original time and its own browsing session, and creates no fresh visit, no recent ODP activity and no regional activity on arrival.",
+    "legs": [
+      "host"
+    ],
+    "witness": "docs/remediation/LANE-LOG.md W16-B5 brief table (the lead's ruled outcomes); docs/handover/HANDOFF-2026-09-18.md §5 point 5 (C5 stage parity: \"SessionManager, ShopperReflex, projection, LearnStats, buffered action, ODP and content agree. Stage-only changes may send the exact allowed stage projection; prove the actual ODP payload/network call and zero fabricated behavioral events and zero retention renewal\") and its K3 row (\"including exact ODP stage-only call/no event/no renewal\"); document 35 §5 W16 and §2 F13/F14; HANDOFF-2026-09-18 §7 settled decision on buffered events (\"may contribute age-decayed interest plus eligible historical measurement… must not create fresh visits/recent ODP activity/regional activity on arrival\") and the Late history decision (no universal age cutoff inferred from delivery delay); src/reflex/bufferedAction.ts:45-68; src/reflex/identityMerge.ts:101-126 applyHistorical; src/reflex/core.ts:233 effectiveScore; src/ledger/records.ts:253-279 outcomeFromAction (ts is the action's own timestamp)",
+    "status": "specified",
+    "batch": "W16-B5",
+    "residual": "GREEN-AT-SPEC at 7c8ba8f on both hosts: the buffered path already applies the age-decayed touch, emits the historical outcome and touches neither the visit clock, the ODP ring nor the region object. The unit is the regression guard for that settled decision while C4/C5 change the same paths; its controls (live events do reach ODP and the region object, and do build the ring) fail loudly if the measurement ever goes vacuous. The expected decayed interest is computed with the product's own applyHistorical and snapshot at the arrival instant and pinned to six decimals; the teeth are the paired comparison decayed < asIfLive, so a late touch scored as if it were live fails the unit."
+  },
+  {
     "id": "W16.C6.01",
     "w": "W16",
     "criterion": "C6",
@@ -919,5 +985,58 @@
     "status": "specified",
     "batch": "W16-B6",
     "residual": "The fixture's KV does not simulate expiration; in production the session host's record lives SESSION_TTL_SECONDS = 30 days (src/services/SessionManager.ts:89), which covers the fourteen days measured here. A window longer than that retention is an owner decision, not specified by this unit."
+  },
+  {
+    "id": "W17.L1.09",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "`client.destroy()` alone, with no detach function ever called, leaves the page with nothing of the SDK on it: every declarative click registration is removed from the element, every observer the client owned is disconnected, and the page's own dataLayer push function is back by identity. A click, a dataLayer push and a full on-screen cycle afterwards produce zero transport calls over a settled tick, while the page's own array still receives its own pushes. Both moments: destroy after the page bound every capture path, and destroy while a dwell is being measured on a node that is still on screen.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §5 line 249 (\"Require actual ownership-aware unbind, changed attributes, new-client tests, either-order wrapper teardown and zero events after detach\"); src/sdk/README.md \"Binding and unbinding\" and docs/kit/01-integration-guide.md §4, the documented integrator contract: \"`client.destroy()` releases the listeners and observations the client still holds, so `destroy()` before the detach functions and the detach functions before `destroy()` both leave the page with no live listener, wrapper, observer or pending callback, and nothing reaches the transport afterwards\"; document 35 §2 F12/F34 and docs/architecture/35-verification-reports/F34.md §2G (a torn-down integration that leaves the layer instrumented \"closed over a client the page has discarded, and still posting\"); src/sdk/index.ts:31-45 (the composition and the shipped `destroy`, executed verbatim by the unit); _evidence/W17-B1/reviewer-build/REPORT.md finding 4 (destroy() alone had no unit because the W17-B1 harness rebuilt it as its pre-change shape)",
+    "status": "specified",
+    "batch": "W17-B2",
+    "residual": "Measured at specification, after the specification pass and ruling R55 (logs _evidence/W17-B2/specifier/logs/vitest-L2-r55.log, and the pre-R55 probe vitest-L2-probe.log for the clauses the first RED hides): RED first on the ruled-missing module at src/units/W17/L2.unit.test.ts:354 (`Cannot find module '@/sdk/teardown'`), then on the delegation pin (src/sdk/index.ts's destroy must delegate to destroyClient(core, listen, emit, identity)). Behind those, measured with the pre-R55 harness that ran the shipped destroy text verbatim: the listener and observer clauses are GREEN today — `core.bindings.release()` removes the click registrations and disconnects the observers — and the RED is (a) the page's own push is not restored (:403, `expected [Function wrapper] to be [Function push]`) because nothing in the teardown releases the layer attachment held in emit.ts's registry, and (b) the first dataLayer push after the teardown still posts (:413, one POST https://shop.example/realtime/action) because the attachment's `live` flag is cleared only by the detach function the page never called.",
+    "missing_export": "destroyClient from src/sdk/teardown.ts (ruling R55, R21). The ruled outcome is what `client.destroy()` runs, and src/sdk/index.ts cannot be imported by a unit under the app tsconfig (it pulls in src/sdk/host.ts, which needs the DOM lib: measured, 17 errors). R55 makes the teardown composition a typecheck-visible product module with no DOM types — `destroyClient(core, listen, emit, identity)` — which index.ts's destroy delegates to; the unit imports it by that name and runs it over the same four locals src/sdk/index.ts:32-35 composes. The module does not exist at specification, so it is the unit's first RED and the only permitted app typecheck error (TS2307 at src/units/W17/L2.unit.test.ts:98)."
+  },
+  {
+    "id": "W17.L1.10",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "When a foreign tag script re-wraps the page's dataLayer push after the SDK attached — and again after a second SDK attachment — every live SDK attachment captures each page push exactly once and never twice, and the foreign wrappers keep seeing every push. After the last SDK release the page's push is, by identity, the foreign wrapper the page installed last, over the page's own function, with nothing of the SDK still capturing: a later push makes zero transport calls, answers with the array's new length, and the page's array holds each push exactly once in order; a client that mounts after the whole cycle is captured exactly once too.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §5 line 249 (\"Require actual ownership-aware unbind, changed attributes, new-client tests, either-order wrapper teardown and zero events after detach\"); src/sdk/README.md \"Binding and unbinding\" and docs/kit/01-integration-guide.md §4: \"The tag layer is the page's, not the client's. `dataLayer()` wraps `push` once however many clients and attachments capture from it, each live client sees the page's push once, and the page's own `push` function is restored — by identity — only when the last attachment has been released\", and \"Detach removes, it does not merely mute … so nothing of the SDK is left\"; document 35 §2 F12/F34 and docs/architecture/35-verification-reports/F34.md §2G (the adapter duplicating capture and leaving the layer instrumented after a complete teardown); src/sdk/emit.ts:77-113 (the per-layer registry and its foreign-rewrap branch `if (existing && layer.push === existing.wrapper) return existing`); _evidence/W17-B1/reviewer-build/REPORT.md finding 3 (the unmeasured double-capture risk this unit measures)",
+    "status": "specified",
+    "batch": "W17-B2",
+    "residual": "Measured at specification: RED on the capture count only. With one foreign wrapper between two SDK attachments each live client captures the same push twice (src/units/W17/L2.unit.test.ts:471, four events where two are ruled), and with a second foreign wrapper and a third client each of the three captures it three times (nine events where three are ruled): the new registry carries the previous registry's `attached` map, so every SDK wrapper still in the page's chain delivers the same entry again. Probed with those two assertions neutralised (log _evidence/W17-B2/specifier/logs/vitest-L2-probe.log): the rest is GREEN today — the foreign wrappers each see every push once, the last release puts the page's own foreign wrapper back by identity, a later push makes zero transport calls and returns the array length, the array holds one entry per push, and a client mounting afterwards captures once. Not measurable by any test: a foreign wrapper that captured an SDK function keeps a reference to it, so \"nothing of the SDK left\" is measured as the page's observable contract (identity of `layer.push`, one entry per push, the returned length, the foreign wrappers' own view and zero transport), not as the absence of a function object from a closure the page cannot reach."
+  },
+  {
+    "id": "W17.L1.11",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "When the declarative scan and `rendered(slot, contentId, element)` both cover one painted node, the node is observed once and exactly one dwell is sent: it obeys the declarative `dwellMinMs` (an on-screen cycle under it is no dwell from either path, one over it is exactly one dwell) and carries the served receipt with the declarative attribute payload. After detach no dwell is sent from either path for the same cycle, and a remount sends exactly one again.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §5 line 249 (\"Require actual ownership-aware unbind, changed attributes, new-client tests, either-order wrapper teardown and zero events after detach\"); src/sdk/core.ts:79-88, the stated rule this unit guards: \"an element is observed once per client however many capture paths name it, so a declarative scan and a `rendered()` call over the same node produce one observation and one dwell rather than two (document 35 §5 W17; F34 §2A/§2B/§3)\", implemented at src/sdk/listen.ts:270-273 and src/sdk/core.ts:119-121; document 35 §2 F12/F34 and docs/architecture/35-verification-reports/F34.md §2B/§2D (a re-scan leaks observers, `listen.rendered()` never released its observer, and duplicated observation duplicates capture); src/sdk/README.md \"Renderer callback: `rendered(slot, contentId, element, decisionId)` admits the exact painted choice, then observes dwell\"; _evidence/W17-B1/reviewer-build/REPORT.md finding 5 (the silent precedence rule to name)",
+    "status": "specified",
+    "batch": "W17-B2",
+    "residual": "GREEN-AT-SPEC: measured green on the base commit (serial runs, logs _evidence/W17-B2/specifier/logs/vitest-L2-run1.log and vitest-L2-r55.log). It is a guard for behaviour the SDK already has, and the behaviour is defended twice. The specification reviewer ran the negative controls (_evidence/W17-B2/reviewer-spec/control-11-*.log): reversing src/sdk/listen.ts:273 (`&& !core.bindings.observes(el)`) alone leaves the unit GREEN, reversing src/sdk/core.ts:120 (`if (observed.has(el)) return null;`) alone leaves it GREEN, and reversing BOTH reds it — first at the observation count (`live observers watching the node both capture paths cover: expected 2 to be 1`, at :527 in the reviewed revision, :558 here) and then, with that assertion removed, at the dwell rule (`an on-screen cycle under the declarative threshold is no dwell from either path: expected [ { type: 'content_dwell', …(2) } ] to deeply equal []`, :537 in the reviewed revision, :568 here)."
+  },
+  {
+    "id": "W17.L1.12",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "A detach function releases only the attachment it was returned for. After the page has torn the client down with `destroy()` and mounted again on the same client with a fresh `dataLayer()`, running the stale detach from the first mount changes nothing the page can see: `layer.push` keeps the identity it had, the live attachment still captures the next push to the transport exactly once, and the page's array still holds one entry per push. The live mount's own detach still works — the page's own push comes back by identity and the transport is silent afterwards. A stale declarative detach is inert in the same way: the live scan keeps its one registration on the element and keeps reporting the click, and the live declarative detach removes it.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §5 line 249 (\"Require actual ownership-aware unbind, changed attributes, new-client tests, either-order wrapper teardown and zero events after detach\"); src/sdk/README.md \"Binding and unbinding\" and docs/kit/01-integration-guide.md §4: \"Each call returns its own detach function and the page's elements come back when the last one has run\", \"Releasing one attachment never removes another's capture\", \"Detaching twice is a no-op\"; document 35 §2 F12/F34 and docs/architecture/35-verification-reports/F34.md §2G (a release that restores the wrong thing kills a live capture silently: \"A's teardown restores an older `push`, removing B's still-active wrapper\"); _evidence/W17-B2/reviewer-build/REPORT.md finding 1 and logs/probe-d.txt (the regression this unit closes); ruling R60",
+    "status": "specified",
+    "batch": "W17-B2",
+    "residual": "Measured at specification on the W17-B2 build head 53732de (log _evidence/W17-B2/specfix/logs/after-L2.log): RED at src/units/W17/L2.unit.test.ts:667, `the page's push function after a stale data-layer detach ran: expected [Function push] to be [Function wrapper]` — the detach `emit.dataLayer()` returns ends in `releaseLayer(layer)` (src/sdk/emit.ts:318-325), which runs whichever hold is in `layerHolds` at that moment rather than its own, so the stale detach released the LIVE attachment: the page's push was handed back and the live capture died silently. The declarative clauses are GREEN today (src/sdk/emit.ts:264-270 releases through the attachment the closure was returned for), and they stand as the guard for that path."
   }
 ]
