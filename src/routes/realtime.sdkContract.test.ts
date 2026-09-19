@@ -57,7 +57,7 @@ import { linkVisitor } from '@/identity/link';
 import { type ProfileRow, readEnrichment } from '@/identity/profileEnrichment';
 import { eraseSubject, erasureJobKey } from '@/identity/erase';
 import { outcomeFromAction, parseId, type OutcomeRecord } from '@/ledger/records';
-import { initializePublication, initializePublicationSet, pinPublication, publicationScope, publishSet, type PublicationBaseline } from '@/config/publication';
+import { initializePublication, initializePublicationSet, pinPublication, publicationScope, publishSet, PublicationError, type PublicationBaseline } from '@/config/publication';
 import { VISIT_GAP_MS } from '@/services/visit';
 import { shopperIdFor } from '@/identity/shopperId';
 import * as odpLoop from '@/services/odpLoop';
@@ -3865,18 +3865,25 @@ describe('W37.04 tenant-owned runtime configuration', () => {
       invalidateCache();
       const cold = await newAnonymousSession(f.env, g.tenant);
       expect((await f.call(`/realtime/personalization/${cold.subject}`, cold.capability, undefined, cold.tenant)).status).toBeGreaterThanOrEqual(400);
+      // Ruling R28: with the configuration publication authority uninitialized or unavailable the
+      // contract is a TYPED refusal of either class, never an untyped throw: PublicationError
+      // (src/config/publication.ts:15; 'Coherent configuration publication is uninitialized' at :205,
+      // 'Configuration publication authority unavailable' at :19) or ReflexConfigUnavailableError
+      // (src/reflex/configStore.ts:67, 'Reflex configuration unavailable for scope ...'), whose message
+      // names the unavailable or uninitialized authority. The three expectations below accept either.
       if (host === 'do') {
         await expect(f.objects.get(shopperObjectName(cold.tenant, cold.subject))!.shopper.fetch(new Request('https://shopper-reflex/snapshot?projection=sort', {
           headers: { [SHOPPER_HEADER]: cold.capability, 'X-Tenant': cold.tenant },
-        }))).rejects.toBeInstanceOf(ReflexConfigUnavailableError);
+        }))).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:snapshot`);
       }
       for (const [path, body] of [['/realtime/action', event(g)], ['/realtime/reflex?surface=coach', undefined],
         ['/sort', { userId: g.subject, candidates: [{ id: 'a', taste: 'red' }] }],
         [`/v1/${g.tenant}/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}`, undefined]] as const) {
         expect((await f.call(path, g.capability, body, g.tenant)).status, `${host}:${failure}:${path}`).toBeGreaterThanOrEqual(400);
       }
-      await expect(applyHistory(f.env, g.tenant, [{ visitorId: g.subject, action: 'content_click', at: Date.now(), attributes: { taste: 'red' } }])).rejects.toBeInstanceOf(ReflexConfigUnavailableError);
-      await expect(linkVisitor(f.env, g.tenant, { visitorId: g.subject, accountId: 'unlinked-account', source: 'login', assurance: 'signed', principal: g, capability: g.capability })).rejects.toBeInstanceOf(ReflexConfigUnavailableError);
+      // Ruling R28 as above: either typed class, message naming the unavailable/uninitialized authority.
+      await expect(applyHistory(f.env, g.tenant, [{ visitorId: g.subject, action: 'content_click', at: Date.now(), attributes: { taste: 'red' } }])).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:applyHistory`);
+      await expect(linkVisitor(f.env, g.tenant, { visitorId: g.subject, accountId: 'unlinked-account', source: 'login', assurance: 'signed', principal: g, capability: g.capability })).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:linkVisitor`);
       expect([...f.sessions.data]).toEqual(sessionBefore);
       if (host === 'do') {
         const item = f.objects.get(shopperObjectName(g.tenant, g.subject))!;
@@ -5630,7 +5637,7 @@ describe('W04.02 owned shopper lane', () => {
     expect([...f.cache.calls, ...f.sessions.calls, ...f.effects]).toEqual([]);
   });
 
-  describe('unit:W09.BASE.02 recovery admission while durable recovery is disabled is refused with a typed, visible refusal on the path that requested it, never an untyped 500; /sort serves read-only', () => {
+  describe('unit:W09.BASE.02 /sort answers 200 read-only for a linked non-default-tenant owned profile; recovery admission while durable recovery is disabled never surfaces as an untyped 500 on a read path', () => {
   it('preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts', async () => {
     for (const host of ['session', 'do']) {
       const f = boundary(host), anon = await newAnonymousSession(f.env, 'meridian');

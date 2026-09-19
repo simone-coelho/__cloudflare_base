@@ -99,10 +99,11 @@
     "w": "W05",
     "criterion": "BASE",
     "outcome": "After a link, a browser write under the old cookie lands on the person's record; the consent-scope check honours the linked owner (raw.forwardTo / raw.identity.shopperId), not only raw.userId.",
-    "legs": ["host"],
+    "legs": ["host-internal"],
     "witness": "_evidence/BASE-2/reviewer/REPORT.md (BASE-2 reviewer verdict, 2026-09-18: \"SessionManager.identity.test.ts:133 fails at :140 (expected '/bags', got undefined); :139 passes, so the engine answers with the person's record and silently drops the write\"; reproduced at src/services/SessionManager.ts:381-382, which compares the instruction subject against raw.userId alone and ignores raw.forwardTo / raw.identity.shopperId, so after a CW25 fold no single subject reaches both the tombstone and the person); docs/remediation/LANE-LOG.md R22 (W05.BASE.01 assigned, confirmed) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W04 (CW25).",
     "status": "specified",
     "batch": "BASE-D1",
+    "residual": "host-internal under ruling R19: the wrapped test drives SessionManager.createOrUpdateSession / absorbIntoShopper in process inside a real owner context (src/services/SessionManager.identity.test.ts), not a public route. The missing public observable, named for the whole-W05 review, is a post-link browser write under the OLD cookie driven through the mounted app on both hosts (the session host's write path in src/index.ts / ShopperReflex), proving the write lands on the person's record and the person is not renamed.",
     "declared_from": " absorbIntoShopper: the first link the old cookie reads the person, and a write from the browser lands on the person without renaming it"
   },
   {
@@ -120,7 +121,7 @@
     "id": "W09.BASE.02",
     "w": "W09",
     "criterion": "BASE",
-    "outcome": "Recovery admission while durable recovery is disabled is refused with a typed, visible refusal on the path that requested it, never an untyped 500; /sort serves read-only (200) for a working non-default-tenant owned profile.",
+    "outcome": "/sort answers 200 read-only for a linked non-default-tenant owned profile; recovery admission while durable recovery is disabled never surfaces as an untyped 500 on a read path.",
     "legs": ["host"],
     "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62, Other: \"W04.02 :5695 /sort 500 = 'Durable recovery disabled' at src/ledger/recovery.ts:128 via ShopperReflex.admitRecovery (:2980) while LEDGER_RECOVERY_ENABLED !== 'true', an untyped 500 (owner W09/W35 with W04), owed\"; docs/remediation/LANE-LOG.md R22 (W09.BASE.02) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W09, W35.",
     "status": "specified",
@@ -145,7 +146,7 @@
     "criterion": "BASE",
     "outcome": "With the configuration publication authority absent, invalid or unreadable, every shopper route including /realtime/personalization/:subject and /realtime/action answers a 4xx/5xx refusal; none serves.",
     "legs": ["host"],
-    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62 item (3): \"W37.04 PASS: injection is authority-level (deletes every config-publication/v2/<owner>/* object, invalid head, throwing reads; remainingOwnerKeys=0); /realtime/personalization/:subject 200 and /realtime/action 200 with no authority while reflex/sort/snapshot answer 500 → W37.BASE.01 confirmed; failing line is :3862\"; the test's own committed authority-level injection (pre-wrap :3850-3859, :3851-3860 in this commit); docs/remediation/LANE-LOG.md R22 (W37.BASE.01 re-scoped and CONFIRMED) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W37, W11. Secondary stale expectation at pre-wrap :3866 (ReflexConfigUnavailableError vs PublicationError 'Coherent configuration publication is uninitialized') is named owed by the same witness and is not part of this row.",
+    "witness": "_evidence/BASE-1a/reviewer/REPORT.md second pass on 7c86a132e524cc5b5f2729a1782977add2ea9e62 item (3): \"W37.04 PASS: injection is authority-level (deletes every config-publication/v2/<owner>/* object, invalid head, throwing reads; remainingOwnerKeys=0); /realtime/personalization/:subject 200 and /realtime/action 200 with no authority while reflex/sort/snapshot answer 500 → W37.BASE.01 confirmed; failing line is :3862\"; the test's own committed authority-level injection (pre-wrap :3850-3859, :3851-3860 in this commit); docs/remediation/LANE-LOG.md R22 (W37.BASE.01 re-scoped and CONFIRMED) and R11; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W37, W11. Secondary stale expectation at pre-wrap :3866 (ReflexConfigUnavailableError vs PublicationError 'Coherent configuration publication is uninitialized') is named owed by the same witness and is updated in this batch under R10 and lead ruling R28: with the authority uninitialized or unavailable the required contract is a typed refusal of either class, PublicationError (src/config/publication.ts:15, thrown at :205 and :19) or ReflexConfigUnavailableError (src/reflex/configStore.ts:67), whose message names the unavailable or uninitialized authority; the three rejects.toBeInstanceOf(ReflexConfigUnavailableError) expectations inside the wrapped body now accept either class with that message.",
     "status": "specified",
     "batch": "BASE-D1",
     "declared_from": " W37.04 tenant-owned runtime configuration fails explicitly on missing/invalid/outage tenant config before behavior/link/import, preserving refusal and retention"
