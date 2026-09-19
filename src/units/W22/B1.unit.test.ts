@@ -139,10 +139,10 @@ import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import { newAnonymousSession, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { consumeLedger } from '@/ledger/consume';
 import { enqueueDecisions, enqueueOutcome } from '@/ledger/enqueue';
-import { captureQuarantine } from '@/ledger/quarantine';
+import { captureQuarantine, listQuarantine } from '@/ledger/quarantine';
 import { outcomeFromAction, ts36, type OutcomeRecord } from '@/ledger/records';
 import { fanDecisions, fanOutcome, ringName, statsName } from '@/learn/fan';
-import { buildHour, catchUp, DEFAULT_HORIZON_MS, hourKey, runDayReport } from '@/learn/hourly';
+import { buildHour, catchUp, DEFAULT_HORIZON_MS, hourKey, runDayReport, shardOf } from '@/learn/hourly';
 import { DEFAULT_POLICY } from '@/learn/policy';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
 import { loadDay, reportKey, runReport, type DayReport } from '@/learn/report';
@@ -256,7 +256,10 @@ class UnitR2 {
   metadata = new Map<string, Record<string, string>>();
   /** Set to make the Nth put of a call throw, as F16 §2.2 makes R2 throw mid-batch. */
   failPutFrom: ((key: string) => boolean) | null = null;
+  /** Set to make a read THROW — an unreadable object, not an absent one (F17 P3b). */
+  failGetFor: ((key: string) => boolean) | null = null;
   async get(key: string, options?: R2GetOptions) {
+    if (this.failGetFor?.(key)) throw new Error('Synthetic storage read refusal');
     const raw = this.objects.get(key); if (raw === undefined) return null;
     const bytes = new TextEncoder().encode(raw), range = options?.range;
     const selected = range && 'length' in range ? bytes.slice(0, range.length ?? bytes.length) : bytes;
@@ -302,7 +305,7 @@ interface Mounted {
   operatorToken: string;
 }
 
-async function mount(options: { queueFails?: boolean; statsStatus?: () => number | null } = {}): Promise<Mounted> {
+async function mount(options: { queueFails?: boolean; statsStatus?: () => number | null; learn?: LearnConfig } = {}): Promise<Mounted> {
   invalidateCache(); invalidateLiftCache(); invalidatePublicationCache();
   const pending: Promise<unknown>[] = [];
   const queued: unknown[] = [];
@@ -407,7 +410,7 @@ async function mount(options: { queueFails?: boolean; statsStatus?: () => number
   await initializePublicationSet(env, [
     baseline(CONTENT_KIND, W22_CATALOGUE),
     baseline(SLOTS_KIND, W22_SLOTS),
-    baseline(LEARN_KIND, W22_LEARN),
+    baseline(LEARN_KIND, options.learn ?? W22_LEARN),
     // The statistics object reads the tenant's prior document before it can
     // answer a snapshot at all (`LearnStats.ts:513-514`), so the fixture
     // publishes the empty one the engine ships.
@@ -687,11 +690,12 @@ describe('unit:W22.D1.01', () => {
  * `GET /v1/:tenant/lift?slot=hero` on the mounted app — and redelivers the
  * OUTCOME, which a client retry really does produce (the same action with the
  * same event nonce mints the same `outcome_id`, `src/ledger/records.ts:263`).
- * The `host-internal` leg (R19) keeps only the EXPOSURE hop: no public producer
- * can redeliver a `/exposures` post, because the only caller is the decision
- * path's own fan-out (`src/content/service.ts:473` → `fanDecisions`), so the
- * redelivery is made where the platform's own at-least-once retry would make
- * it. Both legs drive the REAL `DecisionRing` and `LearnStats` classes.
+ * The `host-internal` leg (R19) adds the EXPOSURE hop, which no public producer
+ * can redeliver — the only caller of `/exposures` is the decision path's own
+ * fan-out (`src/content/service.ts:473` → `fanDecisions`) — and repeats the
+ * outcome beside it across a restart of both objects, so the journal behind
+ * both hops has to be durable rather than in memory. Both legs drive the REAL
+ * `DecisionRing` and `LearnStats` classes.
  */
 describe('unit:W22.D1.02', () => {
   const slotConfig = () => ({ reward: 'click' as const, stats: DEFAULT_STATS, objective: 'unit' as const, measurementBasis: 'served-v1' as const });
@@ -853,12 +857,14 @@ describe('unit:W22.D1.03', () => {
     // mounted here as `src/index.ts:121` mounts it; `listQuarantine` reads the
     // same objects this assertion reads). A count alone would not say WHICH
     // event was refused.
-    const quarantined = [...m.storage.objects.entries()]
-      .filter(([key]) => key.startsWith('ledger-quarantine/v1/'))
-      .map(([key, body]) => ({ key, body }));
-    expect(quarantined.filter(entry => entry.body.includes(o1.outcome_id!)).length,
-      `W22.D1.03 — the refused event is named by its own logical id on the operator recovery surface, not swallowed: exactly one quarantine case carries ${o1.outcome_id} (the store held ${quarantined.length} case(s))`)
-      .toBe(1);
+    const listing = await listQuarantine(m.env, TENANT);
+    const cases = await Promise.all(listing.items.map(async entry => ({
+      id: entry.id, tenant: entry.tenant,
+      wire: (await m.storage.objects.get(`ledger-quarantine/v1/${entry.id}.json`)) ?? '',
+    })));
+    expect(cases.filter(entry => entry.tenant === TENANT && entry.wire.includes(o1.outcome_id!)).map(entry => entry.tenant),
+      `W22.D1.03 — the refused event is named by its own logical id on the operator recovery surface, in this tenant's own scope, not swallowed: exactly one quarantine case of ${TENANT} carries ${o1.outcome_id} (the listing held ${listing.items.length} case(s))`)
+      .toEqual([TENANT]);
 
     // (c) the partial batch of F16 §2.2: R2 accepts the first object of the
     //     batch and throws on the second, then the whole batch is retried.
@@ -1057,9 +1063,22 @@ describe('unit:W22.R1.02', () => {
     const v = await mount();
     const PREVIOUS = '2026-09-02';
     const previousHour = Date.UTC(2026, 8, 2, 23, 0, 0);
+    // Two shoppers of the previous day who share a shard with a shopper of the
+    // current day, so the repair really meets a shard whose `seenDate` is the
+    // newer date: that is the state `hourly.ts:289` refuses and `:316-318`
+    // would wipe. With 64 shards this is an ordinary collision, chosen here
+    // instead of being left to luck.
+    const shardOfToday = shardOf('v-tabby');
+    const sameShard = (prefix: string) => {
+      for (let n = 0; n < 512; n++) if (shardOf(`${prefix}-${n}`) === shardOfToday) return `${prefix}-${n}`;
+      throw new Error('no visitor id of this prefix shares the shard');
+    };
+    const yesterdayVisitors = [sameShard('v-yesterday-tabby'), sameShard('v-yesterday-rogue')];
+    expect(new Set([...yesterdayVisitors.map(id => shardOf(id)), shardOfToday]).size,
+      'the fixture puts the previous day\'s shoppers on the same shard as a current-day shopper').toBe(1);
     const yesterday = [
-      decision(v.env, 'v-yesterday-tabby', previousHour + 10 * 60_000, 'cnt-tabby-evening'),
-      decision(v.env, 'v-yesterday-rogue', previousHour + 20 * 60_000, 'cnt-rogue-work'),
+      decision(v.env, yesterdayVisitors[0]!, previousHour + 10 * 60_000, 'cnt-tabby-evening'),
+      decision(v.env, yesterdayVisitors[1]!, previousHour + 20 * 60_000, 'cnt-rogue-work'),
     ];
     const today = [
       decision(v.env, 'v-tabby', T12 + 60_000, 'cnt-tabby-evening'),
@@ -1069,12 +1088,15 @@ describe('unit:W22.R1.02', () => {
     ];
     await throughTheLedger(v, [...yesterday, ...today], []);
     const previousKey = [...v.storage.objects.keys()].find(key => key.startsWith(`${TENANT}/${PREVIOUS}/23/`))!;
-    const previousBody = v.storage.objects.get(previousKey)!;
-    v.storage.objects.delete(previousKey);                       // the oldest hour cannot be read yet
-    const firstPass = await fold(v, T12 + 3 * HOUR_MS);           // today's hours fold first
-    expect(firstPass.built, 'the fixture folds the current day before the previous day is repairable')
+    // UNREADABLE, not absent: the hour's own object throws on read, so the fold
+    // FAILS on it (an empty hour would simply be folded and finished with).
+    v.storage.failGetFor = (key: string) => key === previousKey;
+    const firstPass = await fold(v, T12 + 3 * HOUR_MS);           // today's hours fold; the old hour fails
+    expect(firstPass.built, 'the fixture folds the current day while the previous day\'s hour cannot be read')
       .toContain(`${DATE} ${HOUR}`);
-    v.storage.objects.set(previousKey, previousBody);             // the previous day's hour returns
+    expect(firstPass.failed, 'and that unreadable hour is a failure of the run, not an empty hour it finished with')
+      .toContain(`${PREVIOUS} 23`);
+    v.storage.failGetFor = null;                                  // the previous day's hour returns
     const repairPass = await fold(v, T12 + 3 * HOUR_MS + 60_000); // the out-of-order repair run
 
     expect(repairPass.built,
@@ -1087,7 +1109,7 @@ describe('unit:W22.R1.02', () => {
       .toBe(2);
     const currentDay = await operatorPost(v, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
     expect((currentDay.body as { report: DayReport }).report.counts.visitors,
-      'W22.R1.02 — while the current day keeps every distinct visitor it was serving before the repair (F17 P7 measured four where eight were served)')
+      'W22.R1.02 — and the repair of the older date does not cost the current day its own distinct visitors: `seen` is kept per date, so folding an older hour on a shard that has already seen a newer date never wipes what that shard counted (F17 P7 measured four visitors where eight were served; hourly.ts:316-318)')
       .toBe(4);
   });
 });
@@ -1289,21 +1311,31 @@ describe('unit:W22.A1.01', () => {
       'W22.A1.01 — while still declaring the policy window it was asked for, so the difference is visible rather than hidden')
       .toBe(PURCHASE_WINDOW_MS);
 
-    // ── the horizon tied to the credit it produced (F17 P4) ─────────────────
-    // A purchase three days after the story it followed: inside the policy's
-    // seven-day window, outside the fold's 48-hour horizon. The online path
-    // credits it; the fold cannot. Each path's declared `appliedWindowsMs`
-    // must match the credit that path actually shows, so a stamped constant
-    // cannot satisfy both.
-    const p = await mount();
-    const DECIDED_AT = ONLINE_TS - 3 * DAY_MS, BOUGHT_AT = ONLINE_TS;
+    // ── the horizon tied to the credit it produced, and DERIVED ─────────────
+    // Neither number here is the engine's default, so no stamped constant can
+    // satisfy this clause beside the one above: the tenant publishes a SIX-day
+    // purchase window (`policyOf`, src/learn/route.ts:17-20) instead of the
+    // platform's seven, and the fold is built with an explicit SEVENTY-TWO-hour
+    // ring horizon (`BuildOptions.horizonMs`, hourly.ts:678, carried on
+    // `ComputationBasis.profile.horizonMs`) instead of the default forty-eight.
+    // The purchase then falls four days after the story it followed: inside the
+    // published window, outside the fold's horizon. The online path credits it;
+    // the fold cannot; each path's declared `appliedWindowsMs` must match the
+    // credit that path actually shows.
+    const PUBLISHED_PURCHASE_MS = 6 * DAY_MS;
+    const FOLD_HORIZON_MS = 72 * HOUR_MS;
+    const publishedPolicyLearn = { ...W22_LEARN, policy: { scope: 'session', match: 'direct', credit: 'last',
+      windowsMs: { purchase: PUBLISHED_PURCHASE_MS } } } as unknown as LearnConfig;
+    const p = await mount({ learn: publishedPolicyLearn });
+    const DECIDED_AT = ONLINE_TS - 4 * DAY_MS, BOUGHT_AT = ONLINE_TS;
     const buyDate = new Date(BOUGHT_AT).toISOString().slice(0, 10);
     const decidedDate = new Date(DECIDED_AT).toISOString().slice(0, 10);
     const storyConfig = () => ({ reward: 'purchase' as const, stats: DEFAULT_STATS, objective: 'unit' as const, measurementBasis: 'served-v1' as const });
+    const publishedPolicy = { ...DEFAULT_POLICY, windowsMs: { ...DEFAULT_POLICY.windowsMs, purchase: PUBLISHED_PURCHASE_MS } };
     const story = decision(p.env, 'v-tabby', DECIDED_AT, 'cnt-tabby-evening', 'story');
     const bought = purchase(p.env, story, BOUGHT_AT, 'w22-b1-late-purchase');
     await fanDecisions(p.env, { tenant: TENANT, brand: BRAND, visitor_id: story.visitor_id, records: [story] }, storyConfig);
-    await fanOutcome(p.env, TENANT, bought, DEFAULT_POLICY, BRAND, { story: storyConfig() }, storyConfig());
+    await fanOutcome(p.env, TENANT, bought, publishedPolicy, BRAND, { story: storyConfig() }, storyConfig());
     await p.drain();
     const statsNs = p.env.LEARN_STATS!;
     const onlineAnswer = await statsNs.get(statsNs.idFromName(statsName(TENANT, BRAND, 'story'))).fetch('https://learn/snapshot');
@@ -1312,19 +1344,25 @@ describe('unit:W22.A1.01', () => {
     const onlineCredits = Math.round(onlineSnapshot!.items['cnt-tabby-evening']?.['*']?.s ?? 0);
 
     await throughTheLedger(p, [story], [bought], Date.now());
-    await buildHour(p.storage as never, TENANT, { date: decidedDate, hour: new Date(DECIDED_AT).getUTCHours() }, W22_LEARN, Date.now(), {}, p.env as never);
-    await buildHour(p.storage as never, TENANT, { date: buyDate, hour: new Date(BOUGHT_AT).getUTCHours() }, W22_LEARN, Date.now(), {}, p.env as never);
-    const foldedDay = await runDayReport(p.storage as never, { tenant: TENANT, brand: BRAND, date: buyDate }, W22_LEARN, null, Date.now(), {}, p.env as never);
+    for (const at of [DECIDED_AT, BOUGHT_AT]) {
+      await buildHour(p.storage as never, TENANT, { date: new Date(at).toISOString().slice(0, 10), hour: new Date(at).getUTCHours() },
+        publishedPolicyLearn, Date.now(), { horizonMs: FOLD_HORIZON_MS }, p.env as never);
+    }
+    const foldedDay = await runDayReport(p.storage as never, { tenant: TENANT, brand: BRAND, date: buyDate }, publishedPolicyLearn, null, Date.now(), {}, p.env as never);
     const foldedCredits = foldedDay.policies.find(row => row.role === 'learning')?.credits ?? 0;
+    expect(decidedDate < buyDate || decidedDate === buyDate,
+      'the fixture decision and its purchase are four days apart, on their own dates').toBe(true);
 
     const onlineContractLogic = snapshotContract(onlineSnapshot!) ?? absent('`attributionContract` on the online snapshot', onlineSnapshot!);
     const foldContract = dayContract(foldedDay) ?? absent('`attributionContract` on the hourly-fold day report', foldedDay);
-    expect(typeof onlineContractLogic === 'string' ? onlineContractLogic : { appliedPurchaseMs: onlineContractLogic.appliedWindowsMs.purchase, credited: onlineCredits },
-      'W22.A1.01 — the online path read seven days of ring and credited the purchase, and the horizon it declares is the one that produced that credit (F17 P4; DecisionRing.ts:21 RING_MAX_AGE_MS)')
-      .toEqual({ appliedPurchaseMs: PURCHASE_WINDOW_MS, credited: 1 });
-    expect(typeof foldContract === 'string' ? foldContract : { appliedPurchaseMs: foldContract.appliedWindowsMs.purchase, credited: foldedCredits },
-      'W22.A1.01 — the fold could read only 48 hours and shows no credit for the same purchase; it declares that horizon and never reports under the policy\'s seven-day label (F17 P4: "The engine learns from a credit the report cannot show")')
-      .toEqual({ appliedPurchaseMs: DEFAULT_HORIZON_MS, credited: 0 });
+    expect(typeof onlineContractLogic === 'string' ? onlineContractLogic
+      : { windowsMs: onlineContractLogic.windowsMs.purchase, appliedPurchaseMs: onlineContractLogic.appliedWindowsMs.purchase, credited: onlineCredits },
+      'W22.A1.01 — the online path follows the window the TENANT published, not the platform default, reads it in full from its seven-day ring and credits the purchase: the horizon it declares is the one that produced that credit (F17 P4; src/learn/route.ts:17-20 policyOf; DecisionRing.ts:21 RING_MAX_AGE_MS)')
+      .toEqual({ windowsMs: PUBLISHED_PURCHASE_MS, appliedPurchaseMs: PUBLISHED_PURCHASE_MS, credited: 1 });
+    expect(typeof foldContract === 'string' ? foldContract
+      : { windowsMs: foldContract.windowsMs.purchase, appliedPurchaseMs: foldContract.appliedWindowsMs.purchase, credited: foldedCredits },
+      'W22.A1.01 — the fold declares the window it was asked for and the horizon it was BUILT with — seventy-two hours, the option this fold actually ran under (hourly.ts:678, ComputationBasis.profile.horizonMs) — and shows no credit for the same purchase, so it never reports under the published label (F17 P4: "The engine learns from a credit the report cannot show")')
+      .toEqual({ windowsMs: PUBLISHED_PURCHASE_MS, appliedPurchaseMs: FOLD_HORIZON_MS, credited: 0 });
 
     for (const [label, contract] of [['the direct-record recomputation', recordsContract], ['the hourly fold', foldContract], ['the online path', onlineContractLogic]] as const) {
       expect(typeof contract === 'string' ? contract : Object.entries(contract.windowsMs).map(([reward, asked]) => [reward, contract.appliedWindowsMs[reward]! <= asked]),
@@ -1516,7 +1554,7 @@ describe('unit:W22.R1.05', () => {
     const listed = await operatorGet(m, `/v1/${TENANT}/ledger/batches?date=${DATE}`);
     expect(listed.status, `the export listing answers: ${JSON.stringify(listed.body).slice(0, 300)}`).toBe(200);
     const counts = exportCounts(listed.body) ?? absent('`counts` on GET /v1/:tenant/ledger/batches', listed.body);
-    expect(typeof counts === 'string' ? counts : counts,
+    expect(counts,
       'W22.R1.05 — the export listing reconciles itself with the day the platform published: four decision rows and two outcome rows on the objects, two and one distinct after dedup on the logical ids, the same two and one in the report, and they agree (document 35 §5 row W22, "durable online/R2/fold/export reconciliation"; F16 §4.4)')
       .toEqual({ rows: { decisions: 4, outcomes: 2 }, distinct: { decisions: 2, outcomes: 1 },
         report: { decisions: 2, outcomes: 1 }, agrees: true });
