@@ -137,6 +137,7 @@ import * as jose from 'jose';
 
 import { CONTENT_KIND, DEFAULT_SLOTS, LEARN_KIND, SLOTS_KIND, validateSlotCatalog } from '@/content/kinds';
 import { decideContent, type DecideInput } from '@/content/decide';
+import { isEligibleAt } from '@/content/lifecycle';
 import type { ContentDecisionSet, ContentPiece, SlotCatalog, SlotStrategy } from '@/content/types';
 import type { PinDiagnostic } from '@/reflex/contentCompose';
 import { initializePublicationSet, invalidatePublicationCache, type PublicationBaseline } from '@/config/publication';
@@ -809,10 +810,14 @@ describe('unit:W20.G1.02', () => {
         names: ['pages.home', 'story'],
       },
       {
-        // kit 03 :214 "Supplying both pin fields refuses even with []".
+        // kit 03 :214 "Supplying both pin fields refuses even with []". This is
+        // the one refusal the validator addresses by the slot's POSITION in the
+        // page rather than by its name, so that is what the operator is given
+        // and that is what this clause asserts: `pages.home[1]` is the second
+        // slot of the home page, the one the edit above touched.
         name: 'both pin fields supplied at once',
         document: edited(pages => { pages.home![1]!.pinnedPieceId = 'cnt-tabby-evening-film'; }),
-        names: ['pages.home'],
+        names: ['pages.home[1]'],
       },
     ];
 
@@ -1080,21 +1085,31 @@ describe('unit:W20.G1.04', () => {
 // ===========================================================================
 
 /**
- * A page on which EVERY adjacent pair of the documented order disagrees, so no
- * other order produces the served positions below:
+ * The documented order is
  *   lifecycle/window/stock → slotTypes → off-limits/exclusions → pins →
- *   ranking with soft diversity → the default handoff.
+ *   ranking with soft diversity → the default handoff,
+ * and this page asserts it ONLY where a wrong order changes the served
+ * positions. Eligibility (lifecycle, window, stock) and `slotTypes` are
+ * CONJUNCTIVE filters over the candidate set: a piece must pass both, so their
+ * order relative to each other is not observable in any served page and this
+ * unit does not claim it is. What each gate does decide IS observable, and each
+ * clause below bites:
  *  · feature: the pinned piece is the LOWEST-ranked eligible piece of the slot
- *    (charms, 0.37), so a pin that lost to ranking would not be first; three
- *    pieces the slot's own `slotTypes` admit are draft / expired / out of stock,
- *    so an engine that gated on slot types before eligibility would serve them;
- *    `cnt-merch-only-banner` passes every gate except `slotTypes`.
+ *    (charms, 0.37 against 1.35 and 1.27), so a pin applied after ranking would
+ *    not hold position one; three pieces the slot's own `slotTypes` admit are
+ *    draft, expired and out of stock, and each scores 1.35 here, so relaxing
+ *    any one of lifecycle, window or stock displaces a served position.
+ *  · merch: the slot-type gate alone decides this position (see the clause in
+ *    the test: two unused pieces carry the same `category: Handbags` tag, and so
+ *    the same score under this slot's weighting, and stand EARLIER in catalogue
+ *    order, which is the documented tie-break).
  *  · story: the pin names a piece the slot excludes by tag, so an engine in
  *    which a pin overrode an exclusion would serve it (kit 03 :191, :202).
  *  · promo: two pieces are admissible by slot type and both fail `allowedTypes`,
  *    so the slot is handed to the site default rather than filled.
  *  · rail: the diversity ceiling would leave two of four positions empty, so a
  *    soft preference must relax rather than leave a hole.
+ *  · legal: off-limits with a pin, so neutralising off-limits would serve it.
  */
 const PRECEDENCE_SLOTS = authorable({
   home: [
@@ -1103,6 +1118,7 @@ const PRECEDENCE_SLOTS = authorable({
       excludedTags: [{ dimension: 'occasion', value: 'evening' }], pinnedPieceIds: ['cnt-tabby-evening-film'] },
     { slot: 'promo', take: 2, weights: FEATURE_WEIGHTS, allowedTypes: ['videogram'] },
     { slot: 'rail', take: 4, weights: RAIL_WEIGHTS, diversity: { dimension: 'line', max: 1 } },
+    { slot: 'merch', take: 1, weights: { category: 1 } },
     { slot: 'legal', take: 1, weights: {}, offLimits: true, pinnedPieceIds: ['cnt-legal-notice'] },
   ],
 });
@@ -1120,9 +1136,10 @@ describe('unit:W20.G1.05', () => {
     // own default rather than filled with a piece the gate forbids.
     // rail: `line` may repeat at most once, which leaves two positions empty, so
     // the yielded pieces come back in rank order rather than leaving a hole.
+    // merch: the only piece whose `slotTypes` name this slot holds its position.
     // legal: off-limits, so it is handed to the site default with its pin dormant.
     expect(servedOf(set),
-      'W20.G1.05 — the page the documented order produces, and no other order produces it')
+      'W20.G1.05 — the page the documented order produces: every step of it whose effect a served page can show is shown here')
       .toEqual([
         'feature:cnt-charms-lookbook',
         'feature:cnt-tabby-evening-film',
@@ -1131,6 +1148,7 @@ describe('unit:W20.G1.05', () => {
         'rail:cnt-rogue-work-edit',
         'rail:cnt-rail-tabby-02',
         'rail:cnt-rail-tabby-03',
+        'merch:cnt-merch-only-banner',
       ]);
 
     // The pin occupies the first position of its slot and was not scored.
@@ -1153,11 +1171,37 @@ describe('unit:W20.G1.05', () => {
     expect(relaxed, 'W20.G1.05 — diversity is a soft preference: the yielded pieces fill the positions it would have left empty')
       .toEqual(['cnt-rail-tabby-02', 'cnt-rail-tabby-03']);
 
-    // Nothing ineligible, off-limits or outside the slot’s own types was served
-    // anywhere on the page, by rank or by pin.
+    // The slot-type gate DECIDES a position rather than merely agreeing with the
+    // ranking: the merch band holds the one piece whose `slotTypes` name it.
     const servedIds = set.decisions.map(d => d.contentId);
-    for (const forbidden of ['cnt-draft-campaign', 'cnt-expired-campaign', 'cnt-out-of-stock-campaign', 'cnt-merch-only-banner', 'cnt-legal-notice']) {
-      expect(servedIds.includes(forbidden), `W20.G1.05 — ${forbidden} passes a later gate but fails an earlier one, so it is served nowhere`).toBe(false);
+    expect(set.decisions.filter(d => d.slot === 'merch').map(d => d.contentId),
+      'W20.G1.05 — only a piece whose slotTypes name the slot may hold its position')
+      .toEqual(['cnt-merch-only-banner']);
+    // …and that clause bites, because pieces the gate excluded from this slot
+    // would otherwise have taken the position: they carry the same
+    // `category: Handbags` tag, and so the same score under this slot's single
+    // weight, and they stand earlier in catalogue order, which is the documented
+    // tie-break (`src/reflex/contentCompose.ts:149-151`, :271). Asserted as a
+    // property of the fixture, so a later edit to the catalogue cannot make this
+    // clause silently vacuous.
+    const order = W20_PIECES.map(p => p.id);
+    const keptOutOfMerch = W20_PIECES.filter(p => !p.slotTypes.includes('merch')
+      && (p.tags.category ?? []).includes('Handbags') && isEligibleAt(p, T0) && !servedIds.includes(p.id));
+    expect(keptOutOfMerch.map(p => p.id),
+      'W20.G1.05 — the pieces the slot-type gate alone keeps out of the merch band: eligible, unused, and each scoring exactly what the served banner scores')
+      .toEqual(['cnt-rogue-evening-edit', 'cnt-rail-rogue-01', 'cnt-legal-notice']);
+    expect(order.indexOf(keptOutOfMerch[0]!.id) < order.indexOf('cnt-merch-only-banner'),
+      'W20.G1.05 — and the first of them in catalogue order stands ahead of the banner, so a neutral slot-type gate would give this position to it instead')
+      .toBe(true);
+
+    // Nothing ineligible or off-limits was served anywhere on the page, by rank
+    // or by pin. Each of these bites: the three campaign pieces score 1.35 in
+    // `feature`, above the 1.27 that holds its third position, so relaxing
+    // lifecycle, window or stock displaces a served position; and the legal
+    // notice is the only piece its own slot admits, so neutralising off-limits
+    // would serve it.
+    for (const forbidden of ['cnt-draft-campaign', 'cnt-expired-campaign', 'cnt-out-of-stock-campaign', 'cnt-legal-notice']) {
+      expect(servedIds.includes(forbidden), `W20.G1.05 — ${forbidden} fails an earlier gate than the one that would admit it, so it is served nowhere`).toBe(false);
     }
   });
 });
