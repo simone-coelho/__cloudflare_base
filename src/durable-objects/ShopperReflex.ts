@@ -37,7 +37,7 @@
 //   qualification                   → getConnectors(env).segments — KvAudienceStore +
 //                                     evaluateCondition via MockSegmentProvider,
 //                                     seeded by the shared ensureAudiencesSeeded
-//   journey stage                   → deriveStage (@/services/JourneyStage)
+//   journey stage                   → storedJourneyStage (@/services/JourneyStage)
 //   ODP loop                        → updateOdpRing / refreshOdpSeedIfDue /
 //                                     forwardEventToOdp / upsertOdpProfile (@/services/odpLoop)
 //   decisions                       → getConnectors(env).decisions.decideAll over
@@ -95,7 +95,7 @@ import {
 import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
-import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, readTimeStageChange, stageFromCounters, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
+import { advanceVisitJourney, FIRST_JOURNEY_STAGE, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, PERSISTED_STAGE, readTimeStageChange, storedJourneyStage, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
 import {
   RETAIL_SIGNAL_DEFAULTS,
   applyEventToAttributes,
@@ -1241,8 +1241,6 @@ export class ShopperReflex {
       segments: pipe.profileEnrichment === undefined ? projectedSegments : [],
       ...(tenant === DEFAULT_TENANT ? { surface } : {}),
     };
-    const journeyStage = personalizes(consent) || aff.odpSeed.some(s => !odp.odpSeed.includes(s)) ? deriveStage(qualCtx) : pipe.journeyStage;
-    ctxAttrs.journey_stage = journeyStage;
     // W16 C4: the journey of THIS VISIT, counted beside the cumulative
     // attributes. The boundary is the stored lastSeen, exactly as liveVisit
     // reads it below, and the purchase that counts in its own decision closes
@@ -1251,6 +1249,15 @@ export class ShopperReflex {
     const journeyThresholds = journeyThresholdsInForce(cfg);
     const journeyWord = journeyStageFrom(newJourney.counters, journeyThresholds);
     const priorWord = journeyStageFrom(journeyCountersNow(pipe.journey, this.affinity?.lastSeen, now), journeyThresholds);
+    // W16 C5.09 (R85(b)): ONE derivation behind one name. What this object
+    // STORES for her, and what it tells the customer's own destination, is the
+    // stage the engine REPORTS for this visit, carried into the persisted
+    // grammar by the one mapping point (R32(2)) — not the older cumulative rule,
+    // which counts her whole history and so still said `late` after the purchase
+    // that closed her journey. A shopper this object may not personalize keeps
+    // whatever was stored: nothing about her is derived without that authority.
+    const journeyStage = personalizes(consent) || aff.odpSeed.some(s => !odp.odpSeed.includes(s)) ? PERSISTED_STAGE[journeyWord] : pipe.journeyStage;
+    ctxAttrs.journey_stage = journeyStage;
     // Reflex scores are computed FRESH into the context (they decay by construction —
     // never persisted), so store-published affinity audiences can gte them.
     if (reflex) Object.assign(ctxAttrs, reflexAttributes(reflex.state, now, cfg));
@@ -1407,9 +1414,12 @@ export class ShopperReflex {
     const segments = source === 'snapshot'
       ? await this.enrichedSegments(connectors, tenant, now, cfg, aff, original)
       : candidate?.segmentsProjected ? original.segments : projectedOdpSegments(original.segments, aff, odp);
-    const pipe = { ...original, segments,
-      journeyStage: aff.odpSeed.some(s => !odp.odpSeed.includes(s))
-        ? deriveStage({ userId: aff.shopperId, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...original.attributes }, segments }) : original.journeyStage };
+    // W16 C5.09 (R85(b)): a seed this tenant no longer confirms cannot move her
+    // stage. The older cumulative rule let a segment pin one ahead of the counts,
+    // so losing `ready_to_buy` moved it; the one derivation reads only the
+    // counters of the current visit, so recomputing here could only put the
+    // legacy value back.
+    const pipe = { ...original, segments };
     const surface = pipe.surface ?? DEFAULT_SURFACE;
     const surfaceCatalog = await resolveTenantCatalog(tenant, surface);
     if (principal) assertSessionTarget(principal);
@@ -1650,7 +1660,12 @@ export class ShopperReflex {
           segments: pipeline.profileEnrichment === undefined ? projectedOdpSegments(pipeline.segments, affinity, odp) : [],
           ...(owner.tenant === DEFAULT_TENANT ? { surface } : {}),
         };
-        const journeyStage = deriveStage(qualCtx);
+        // W16 C5.09 (R85(b)): the alarm writes the same stored stage the event
+        // path writes, from the same one derivation. Nothing was delivered, so
+        // the counters are the ones this visit already holds, read at `now`
+        // across whatever boundary time has crossed — the alarm invents no
+        // interaction and no threshold.
+        const journeyStage = storedJourneyStage(pipeline.journey, affinity.lastSeen, now, cfg);
         ctxAttrs.journey_stage = journeyStage;
         Object.assign(ctxAttrs, reflexAttributes(res.state, now, cfg));
         const external = enrichmentInputs(pipeline.profileEnrichment);
@@ -2847,7 +2862,6 @@ export class ShopperReflex {
     const merged = mergeReflexStates(this.affinity?.reflex, from?.reflex, now, cfg);
 
     const odp = await mergeOdpState(this.env, tenant, this.affinity, from);
-    const oldOdp = new Set([...(this.affinity?.odpSeed ?? []), ...(from?.odpSeed ?? [])]);
     const affinity: AffinityRecord = {
       retention, externalRetention,
       shopperId,
@@ -2878,7 +2892,8 @@ export class ShopperReflex {
       ...mergeVisits(this.pipeline, fromPipe),
       surface: this.pipeline?.surface ?? fromPipe?.surface,
     };
-    if (oldOdp.size) pipeline.journeyStage = deriveStage({ userId: shopperId, attributes, segments: pipeline.segments });
+    // W16 C5.09 (R85(b)): the one derivation reads no segment, so a seed this
+    // tenant no longer confirms cannot move the folded record's stage.
     return { affinity, pipeline, merged };
   }
 
@@ -2983,7 +2998,7 @@ export class ShopperReflex {
             const cfg = await resolveTenantReflexConfig(this.env, context.tenant, resolveSurface({ surface: session.surface }));
             affinity = { retention: pinProfileRetention(this.env, session, context.tenant), externalRetention: session.externalRetention, shopperId: context.subject, reflex: session.reflex ?? emptyState(cfg), odpContext: session.odpContext,
               odpSeed: session.odpSeed ?? [], odpSeedAt: session.odpSeedAt ?? 0, odpRecentEvents: session.odpRecentEvents ?? [], lastSeen: session.metadata.lastSeen, configVersion: cfg.version };
-            pipeline = { attributes: session.attributes, segments: session.segments, journeyStage: session.metadata.journeyStage ?? deriveStage(session),
+            pipeline = { attributes: session.attributes, segments: session.segments, journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE],
               sessionId: sid, visitorId: context.subject, firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount,
               visitCount: session.metadata.visitCount, lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
               surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment };
@@ -3137,7 +3152,9 @@ export class ShopperReflex {
     const currentReflex = (this.env.REFLEX_ENABLED ?? 'true') !== 'false' ? tickReflex(affinity.reflex, now, cfg).state : undefined;
     const attributes = { ...RETAIL_SIGNAL_DEFAULTS, ...pipeline.attributes };
     const context = { userId: affinity.shopperId, attributes, segments: [], ...(tenant === DEFAULT_TENANT ? { surface } : {}) };
-    attributes.journey_stage = deriveStage(context);
+    // W16 C5.09 (R85(b)): one derivation, read at `now` so this read crosses the
+    // visit boundary exactly as the snapshot and the projection do.
+    attributes.journey_stage = storedJourneyStage(pipeline.journey, affinity.lastSeen, now, cfg);
     if (currentReflex) Object.assign(attributes, reflexAttributes(currentReflex, now, cfg));
     Object.assign(attributes, external.attributes);
     const local = await connectors.segments.fetchQualifiedSegments(affinity.shopperId, context);
@@ -3429,7 +3446,7 @@ export class ShopperReflex {
             odpContext: session.odpContext, odpSeed: session.odpSeed ?? [], odpSeedAt: session.odpSeedAt ?? 0,
             odpRecentEvents: session.odpRecentEvents ?? [], lastSeen: session.metadata.lastSeen, configVersion: cfg.version };
           const pipeline: PipelineRecord = { attributes: session.attributes, segments: session.segments,
-            journeyStage: session.metadata.journeyStage ?? deriveStage(session), sessionId: grant.sessionId, visitorId: session.userId,
+            journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId: grant.sessionId, visitorId: session.userId,
             firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount, visitCount: session.metadata.visitCount,
             lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
             surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment };
@@ -3523,9 +3540,8 @@ export class ShopperReflex {
       if (!tenant || !authority || !this.isActualObject(tenant, session.userId)
         || !physical.startsWith(tenantKey(tenant, 'session:'))) throw new SessionAccessError();
       const next = prune(session, tenant); if (!next) continue;
-      if (session.odpSeed?.some(segment => !next.odpSeed?.includes(segment))) next.metadata = {
-        ...next.metadata, journeyStage: stageFromCounters(next.attributes, next.segments),
-      };
+      // W16 C5.09 (R85(b)): pruning a destination copy removes a seed, and the
+      // one derivation reads no segment, so it moves no stage.
       if (record.pending) await this.sessionProjectionStore().get(physical);
       const raw = await this.rawEnv.SESSIONS.get(physical);
       if (raw !== record.value) throw new SessionAccessError();
@@ -3534,9 +3550,9 @@ export class ShopperReflex {
     }
     if (affinity && this.affinity) {
       const segments = this.pipeline ? projectedOdpSegments(this.pipeline.segments, this.affinity, affinity) : [];
-      const pipeline = this.pipeline ? { ...this.pipeline, segments,
-        ...(this.affinity.odpSeed.some(segment => !affinity!.odpSeed.includes(segment)) ? { journeyStage: stageFromCounters(this.pipeline.attributes, segments) } : {}),
-      } : null;
+      // W16 C5.09 (R85(b)): same — a pruned seed moves no stage under the one
+      // derivation, which counts only what she did in this visit.
+      const pipeline = this.pipeline ? { ...this.pipeline, segments } : null;
       await this.state.storage.put({ affinity, pipeline }); this.affinity = affinity; this.pipeline = pipeline;
     }
     for (const update of updates) {

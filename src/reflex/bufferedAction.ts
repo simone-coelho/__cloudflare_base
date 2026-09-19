@@ -8,7 +8,7 @@ import { loadTombstone } from '@/ledger/erasure';
 import { DEFAULT_TENANT } from '@/tenancy/tenant';
 import { enrichmentInputs, type ProfileEnrichment } from '@/identity/profileEnrichment';
 import { projectOdpState } from '@/services/odpLoop';
-import { deriveStage } from '@/services/JourneyStage';
+import { FIRST_JOURNEY_STAGE, PERSISTED_STAGE, type JourneyStage } from '@/services/JourneyStage';
 import { resolveSurface, resolveTenantCatalog, resolveTenantReflexConfig, tenantAudienceKeyPrefix } from '@/demos/registry';
 import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
 import { actionOf, isContentAction, resolvedContentTouches } from './contentTelemetry';
@@ -41,6 +41,13 @@ export async function bufferedEventAllowed(env: Env, tenant: string, subject: st
 export interface BufferedProfile {
   reflex?: ReflexState; attributes: Record<string, unknown>; segments: string[];
   surface?: string; anonymousId?: string; profileEnrichment?: ProfileEnrichment; odpSeed?: string[]; odpContext?: string;
+  /**
+   * W16 C5.09 (R85(b)): the stage this profile already holds, in the persisted
+   * grammar, from the one derivation. A buffered delivery is never a fresh
+   * interaction of the visit it arrives in (settled decision
+   * D06-buffered-action-purpose), so it can move no stage and derives none.
+   */
+  journeyStage?: JourneyStage;
 }
 
 /** Current configuration and existing canonical touches; no historical policy reconstruction. */
@@ -75,7 +82,9 @@ export async function bufferedInterest(env: Env, tenant: string, event: ActionEv
   const external = enrichmentInputs(profile.profileEnrichment);
   const context = { userId: event.userId, anonymousId: profile.anonymousId, attributes: { ...profile.attributes }, segments: [] as string[],
     ...(tenant === DEFAULT_TENANT ? { surface } : {}) };
-  context.attributes.journey_stage = deriveStage(context);
+  // W16 C5.09 (R85(b)): the stage the caller already holds, never a second
+  // derivation — this delivery counted toward no journey.
+  context.attributes.journey_stage = profile.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE];
   Object.assign(context.attributes, attributesFrom(reflex, now, cfg), external.attributes);
   // Do not seed old derived names into qualification or retain them on failure.
   const local = await provider.fetchQualifiedSegments(event.userId, context);

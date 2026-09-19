@@ -1,7 +1,7 @@
 import type { Env } from '@/types/env';
 import { importUnderOwner, ownerOperationActive, sessionAuthorityKV, currentOwnerConsent, restrictOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { mergeOdpState, projectOdpState, projectedOdpSegments } from './odpLoop';
-import { deriveStage, type VisitJourney } from './JourneyStage';
+import { type VisitJourney } from './JourneyStage';
 import { tick, type ReflexChanges, type ReflexConfig, type ReflexState, type Touch } from '@/reflex/core';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { z } from 'zod';
@@ -626,7 +626,6 @@ export class SessionManager {
     }
 
     const odp = await mergeOdpState(this.env, this.tenant, base, fold);
-    const oldOdp = new Set([...(base?.odpSeed ?? []), ...(fold?.odpSeed ?? [])]);
     const data: SessionData = {
       // The person's record is the cumulative cohort of the records folded into
       // it, so it KEEPS their retention birth instead of losing it. Dropping it
@@ -656,7 +655,11 @@ export class SessionManager {
       },
       preferences: base?.preferences ?? fold?.preferences ?? { trackingConsent: false, personalizationEnabled: false, cookieConsent: true },
     };
-    if (oldOdp.size) data.metadata.journeyStage = deriveStage({ userId: shopperId, attributes: counters, segments: data.segments });
+    // W16 C5.09 (R85(b)): a seed this tenant no longer confirms cannot move her
+    // stage. The older cumulative rule let an audience pin one ahead of the
+    // counts, so losing `ready_to_buy` moved it; the one derivation reads only
+    // the counters of the current visit and no segment, so recomputing here
+    // could only put the legacy value back onto the folded record.
     if (input.consent) {
       const consent = intersectConsent(consentOf(data), input.consent);
       data.preferences = { ...data.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization };

@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 102/103 · W closed 2/26 (W16–W41) · suite 1910/1989 · residual 79 in 9 files · typecheck GREEN
+Units 109/111 · W closed 2/26 (W16–W41) · suite 1916/1998 · residual 82 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -15,10 +15,10 @@ Units 102/103 · W closed 2/26 (W16–W41) · suite 1910/1989 · residual 79 in 
 | W06 | 2 | 1 | no | — | — |
 | W09 | 1 | 1 | no | — | — |
 | W11 | 1 | 1 | no | — | — |
-| W16 | 66 | 66 | no | — | — |
+| W16 | 68 | 68 | no | — | — |
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
-| W19 | 8 | 8 | no | — | — |
+| W19 | 14 | 13 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -71,6 +71,8 @@ Units 102/103 · W closed 2/26 (W16–W41) · suite 1910/1989 · residual 79 in 
 | W16.C5.05 | green | 1 |
 | W16.C5.06 | green | 1 |
 | W16.C5.07 | green | 1 |
+| W16.C5.08 | green | 1 |
+| W16.C5.09 | green | 2 |
 | W16.C6.01 | green | 1 |
 | W16.C6.02 | green | 2 |
 | W16.C6.03 | green | 1 |
@@ -125,20 +127,28 @@ Units 102/103 · W closed 2/26 (W16–W41) · suite 1910/1989 · residual 79 in 
 | W19.F2.01 | green | 2 |
 | W19.F2.02 | green | 2 |
 | W19.F2.03 | green | 1 |
+| W19.L1.01 | green | 1 |
+| W19.L1.02 | green | 2 |
+| W19.L1.03 | green | 1 |
+| W19.P1.01 | unspecified | 0 |
+| W19.S1.01 | green | 1 |
+| W19.S1.02 | green | 1 |
 | W19.T1.01 | green | 3 |
 | W19.T1.02 | green | 2 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
 
-_None._
+-  W06.12 propagates the original profile deadline into the actual delayed relay send boundary
+-  W12.02 real native source delivery, both hosts and tenants preserve customer namespaces
+-  W14.05 typed source snapshots W14.05 consumes current typed and precomputed membership on both tenant hosts through reads, live events and restarted alarms without raw-value decision egress
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | b864f2924b1c3091d50c58acf773cbb3deb7ff23dc51a03af69c52b55d818861 |
+| units sha256 | ecb69cebae05962d5123fcba025dae090c64a346ebb4363b55744b66c8f36840 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -149,7 +159,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | ace3488ed967974e479c3827f284ec098cfbe2cda1c95046e537832d42d18c11 |
-| commit | 80db2ed00ff83d4fe2aa168d420d59599e4cdc57 |
-| generated | 2026-09-19T18:05:12.879Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | 0e5599eb64cd6c583267a3688c3b2ea0f702124e9ec60efb74afbb2b41c4eef6 |
+| commit | 2e4d386332256eb882a9cb9761f1288e1e9572d8 |
+| generated | 2026-09-19T19:07:21.097Z |
