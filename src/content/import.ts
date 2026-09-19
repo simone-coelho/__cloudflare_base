@@ -6,6 +6,7 @@
 // the route does that, so the same functions serve a file, a paste, or a pull.
 
 import type { ContentCatalog, ContentPiece } from './types';
+import { PIECE_FIELDS } from './kinds';
 import { inputLimit, inputRecords, inputTextBytes, INPUT_MAX_RECORDS, readInputText } from '@/config/input';
 
 // ── Normalization: many export shapes, one catalog shape ────────────────────
@@ -51,6 +52,62 @@ export function normalizeList(v: unknown): string[] {
 }
 
 /**
+ * The spellings a feed may use for each published field of the content piece:
+ * the names the demo catalog, a typical CMS export and the documented CSV
+ * columns use. One table, so the normalizer below and the diagnostics that name
+ * an ignored field can never disagree about what the contract lists.
+ */
+export const FEED_FIELD_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  id: ['systemId', 'contentId'],
+  customerContentId: ['cmsId', 'customerId'],
+  type: ['contentType', 'kind'],
+  renderUrl: ['url'],
+  slotTypes: ['slots'],
+  journeyStageFit: ['journey_stage_fit', 'stageFit'],
+  freshnessDate: ['freshness_date', 'publishedAt'],
+  featuredProductIds: ['featured_product_ids', 'products'],
+  inStock: ['in_stock', 'ats'],
+  lifecycle: ['status'],
+  window: ['windowFrom', 'publishAt', 'windowTo', 'expireAt'],
+};
+
+/**
+ * Every field name a feed record may carry: the published piece's own fields
+ * and the aliases above. A record key outside this set reaches no stored piece,
+ * which is what `ignoredFieldsOf` reports on the write answer.
+ */
+export const FEED_FIELDS: ReadonlySet<string> = new Set([...PIECE_FIELDS, ...Object.values(FEED_FIELD_ALIASES).flat()]);
+
+/**
+ * The keys of one raw record the published contract does not list, in the order
+ * the record carried them. The caller passes the field set ITS path accepts:
+ * the feed's aliases for an import or a pull, the validator's own closed set
+ * (`PIECE_FIELDS`) for a direct publication, which is never routed through this
+ * normalizer. Nothing is stored either way; this only says what was lost.
+ */
+export function ignoredFieldsOf(raw: unknown, accepted: ReadonlySet<string>): string[] {
+  return isRecord(raw) ? Object.keys(raw).filter(key => !accepted.has(key)) : [];
+}
+
+/**
+ * A CSV header the contract does not list, but which matches a documented
+ * column when case is ignored. Column names are matched exactly, so `Tags`
+ * reads as an unknown column and every row lands with an empty taxonomy
+ * (F27 §5.3): a defect that can be detected AS a defect, and is therefore
+ * refused at the boundary rather than imported into a silent loss.
+ */
+export function csvColumnCaseVariants(columns: readonly string[]): { column: string; expected: string }[] {
+  const exact = new Map([...FEED_FIELDS].map(name => [name.toLowerCase(), name]));
+  const found: { column: string; expected: string }[] = [];
+  for (const column of columns) {
+    if (FEED_FIELDS.has(column)) continue;
+    const expected = exact.get(column.toLowerCase());
+    if (expected !== undefined) found.push({ column, expected });
+  }
+  return found;
+}
+
+/**
  * One raw record from any source into a candidate piece. Accepts the field
  * names the demo catalog, a typical CMS export, and the CSV columns use. What
  * comes out still goes through the catalog validator; this only reshapes.
@@ -59,24 +116,24 @@ export function normalizePiece(raw: unknown): Record<string, unknown> | null {
   if (!isRecord(raw)) return null;
   const csv = csvRows.has(raw), out: Record<string, unknown> = {};
   const supplied = (key: string) => Object.hasOwn(raw, key) && !(csv && raw[key] === '');
-  const copy = (key: string, aliases: string[] = [], normalize: (v: unknown) => unknown = trimmed) => {
-    const source = [key, ...aliases].find(supplied);
+  const copy = (key: string, normalize: (v: unknown) => unknown = trimmed) => {
+    const source = [key, ...(FEED_FIELD_ALIASES[key] ?? [])].find(supplied);
     if (source !== undefined) out[key] = normalize(raw[source]);
   };
   const list = (v: unknown) => typeof v === 'string' || (Array.isArray(v) && v.every(x => typeof x === 'string')) ? normalizeList(v) : v;
-  copy('id', ['systemId', 'contentId']);
-  copy('customerContentId', ['cmsId', 'customerId']);
-  copy('type', ['contentType', 'kind']);
+  copy('id');
+  copy('customerContentId');
+  copy('type');
   for (const key of ['title', 'subtitle', 'art', 'excerpt', 'runtime']) copy(key);
-  copy('renderUrl', ['url']);
-  copy('tags', [], v => typeof v === 'string' || (isRecord(v) && Object.values(v).every(x => typeof x === 'string'
+  copy('renderUrl');
+  copy('tags', v => typeof v === 'string' || (isRecord(v) && Object.values(v).every(x => typeof x === 'string'
     || (Array.isArray(x) && x.every(value => typeof value === 'string')))) ? normalizeTags(v) : v);
-  copy('slotTypes', ['slots'], list);
-  copy('journeyStageFit', ['journey_stage_fit', 'stageFit'], list);
-  copy('freshnessDate', ['freshness_date', 'publishedAt']);
-  copy('featuredProductIds', ['featured_product_ids', 'products'], list);
-  copy('inStock', ['in_stock', 'ats'], v => stockOf(v) ?? v);
-  copy('merchandising', [], v => {
+  copy('slotTypes', list);
+  copy('journeyStageFit', list);
+  copy('freshnessDate');
+  copy('featuredProductIds', list);
+  copy('inStock', v => stockOf(v) ?? v);
+  copy('merchandising', v => {
     if (csv && typeof v === 'string') { try { return JSON.parse(v); } catch { return v; } }
     return v;
   });

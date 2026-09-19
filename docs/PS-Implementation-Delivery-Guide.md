@@ -139,6 +139,15 @@ and historical profiles are not rewritten; old receipts replay tags-only scoring
 content-type policy marker. Idless/unknown-ID compatibility is not proof of an authenticated exposure.
 Registry vocabulary, locale, inheritance and end-to-end customer feed acceptance remain separate.
 
+A feed answer is never silent about what it could not use. An accepted import or pull says how many
+stored pieces it created or altered (`changed`, counted from the stored values, so a re-import of the
+same export answers zero), and its advisory `diagnostics` name every field or column the contract
+does not list, every tag value whose spellings differ only by case, and every dimension the tenant's
+published registry does not hold — named, never rewritten. A CSV header that matches a documented
+column only when case is ignored is refused rather than imported into an empty taxonomy, as is a
+journey-stage word outside the accepted vocabulary, and both refusals name what the feed sent. This
+is feedback on one submitted feed, not registry vocabulary, case or locale normalization.
+
 ## 8. Customer prerequisites checklist (the qualification list)
 
 Score at P0; every "no" is SOW scope or a timeline risk:

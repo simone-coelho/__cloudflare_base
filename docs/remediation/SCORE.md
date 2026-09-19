@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 78/79 · W closed 1/26 (W16–W41) · suite 1871/1950 · residual 79 in 9 files · typecheck GREEN
+Units 85/87 · W closed 1/26 (W16–W41) · suite 1882/1963 · residual 81 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -17,6 +17,7 @@ Units 78/79 · W closed 1/26 (W16–W41) · suite 1871/1950 · residual 79 in 9 
 | W11 | 1 | 1 | no | — | — |
 | W16 | 59 | 59 | no | — | — |
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
+| W19 | 8 | 7 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -101,18 +102,27 @@ Units 78/79 · W closed 1/26 (W16–W41) · suite 1871/1950 · residual 79 in 9 
 | W17.L1.10 | green | 1 |
 | W17.L1.11 | green | 1 |
 | W17.L1.12 | green | 1 |
+| W19.F1.01 | green | 1 |
+| W19.F1.02 | green | 1 |
+| W19.F1.03 | green | 1 |
+| W19.F2.01 | green | 2 |
+| W19.F2.02 | green | 2 |
+| W19.F2.03 | red | 1 |
+| W19.T1.01 | green | 3 |
+| W19.T1.02 | green | 2 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
 
-_None._
+-  W15 actual read-only offers and durable rendered admission W15 polls do not capture; actual render ACK and identical retry/restart retain one original decision on both hosts and tenants
+-  unit:W19.F2.03 host: a case-variant CSV header is refused naming the column, a tag-less feed is accepted with the named empty-taxonomy warning, merge leaves known tags untouched, and the answer distinguishes accepted-with-warnings from accepted-clean
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 3e2181faaaa37da0bf92b57ed14a4cb57d04eaf58ea151e6506c72e3c6b9e328 |
+| units sha256 | 403980c14d39ca417de17efb79be3af2c643669ad6459d7715336965a78daefe |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -123,7 +133,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | 5ae27b25bdf0142532e3b9bdd6dff2ab0ed74ed4e250526aff072398531156e9 |
-| commit | 00dc1c39a3dce716e6e121e3c114e44d00f61975 |
-| generated | 2026-09-19T14:49:10.835Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | ac82dceb55606f661905555aef6a9673b460febecfa47d5b967eafdb62c821c7 |
+| commit | b3e69b8171e42541000d95d5a11c9100d90f9a1b |
+| generated | 2026-09-19T16:50:26.524Z |
