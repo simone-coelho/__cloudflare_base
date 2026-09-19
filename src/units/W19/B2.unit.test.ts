@@ -28,10 +28,13 @@
 //     region or locale | Locale on the catalog records".
 //   · docs/kit/03-payload-schemas.md:131 (`slotTypes` | yes | "The slots the
 //     piece may fill"), :138 (`featuredProductIds` "Carried and validated, never
-//     rewritten"), :159 and :278 ("This contract does not normalize registry/
-//     case/type aliases, locale, empty-taxonomy policy or product-attribute
-//     inheritance"), :255-262 (the hard slot controls: `excludedTags` as exact
-//     dimension/value pairs at `governanceVersion` 2 or 3).
+//     rewritten"), :158-159 ("This contract does not normalize registry/case/
+//     type aliases, locale, empty-taxonomy policy or product-attribute
+//     inheritance"), :161-190 (the hard slot controls) with :174-175 (a write
+//     accepts an absent marker or `governanceVersion: 1 | 2 | 3` and emits 3)
+//     and :185-188 (`excludedTags`, "at most 1000 distinct `{dimension, value}`
+//     pairs … Matching is exact and case-sensitive, without trimming, regex,
+//     aliases or inferred registry vocabulary").
 //   · docs/architecture/tapestry_requirements.txt:138, :305 ("Multi-brand
 //     rollout"), :530, :559-568 (the A.3.6 content-metadata table, which names
 //     NO locale row and whose `featured_product_ids` row is W19.P1.01's subject).
@@ -49,8 +52,9 @@
 //           (`catalog-registry-diagnostics/v1`, the existing `warnings[]` /
 //           `warningCount` shape), never refused, and because it is a function of
 //           stored documents it appears on reads as well as writes;
-//       (c) product-attribute inheritance is an OWNER decision — W19.P1.01 is a
-//           `no-witness` row in docs/remediation/units.json and has NO test here;
+//       (c) product-attribute inheritance is an OWNER decision (R71(d) in the
+//           ruling register) — W19.P1.01 is a `no-witness` row in
+//           docs/remediation/units.json and has NO test here;
 //       (d) GREEN-AT-SPEC is the honest verdict where the frozen W19/W20 work
 //           already holds, with the reversing product line named.
 //
@@ -61,9 +65,11 @@
 //      drops it (L1.01, L1.02's `fr-fr` piece, S1.02).
 //   2. Matching is EXACT, on the value and on the case, because the published
 //      contract says this contract "does not normalize registry/case/type
-//      aliases, locale" (kit 03:278) and because `excludedTags` is a list of
-//      exact pairs (kinds.ts:252-268, slotConstraints.ts:41-46). `fr-CA` and
-//      `fr-fr` are therefore NOT `fr-FR`, in the engine and in these tests.
+//      aliases, locale" (kit 03:158-159) and because `excludedTags` matching "is
+//      exact and case-sensitive, without trimming, regex, aliases or inferred
+//      registry vocabulary" (kit 03:185-188; kinds.ts:252-268,
+//      slotConstraints.ts:41-46). `fr-CA` and `fr-fr` are therefore NOT `fr-FR`,
+//      in the engine and in these tests.
 //   3. Eligibility is decided by the PUBLISHED documents only: the piece's
 //      `slotTypes` against the slot identifier, and the slot's own published
 //      exclusions. Geography is never a term in it (L1.03).
@@ -87,19 +93,45 @@
 //        'unavailable', revision, version }` — which slots document the channel
 //        compared against, in the shape the existing `diagnostics.registry`
 //        member already uses for the registry (`catalogDiagnostics.ts:14`)
-//        (unit W19.S1.01).
-//   (iii) the decision set gains `constraintDiagnostics[]` `{ slot, contentId,
-//        reason, dimension, value }` — the eligible piece a slot's published hard
-//        control refused, and the exact published pair that refused it, in the
-//        shape `pinDiagnostics` (`contentCompose.ts:96-102`) and
-//        `seedDiagnostics` (`decide.ts:167`) already use for refused
-//        configuration. `reason` is the existing `SlotConstraintReason`
-//        vocabulary (`slotConstraints.ts:18`), here `'excluded_tag'`;
-//        `dimension`/`value` are the published `excludedTags` pair itself
-//        (unit W19.L1.02). Today the composer computes exactly this set into
-//        `forbidden` (`contentCompose.ts:171-180`) and then drops it on the floor
-//        for every piece that is not a pin, so a merchandiser cannot tell a
-//        market exclusion from a missing piece.
+//        (unit W19.S1.01). DELIBERATELY three keys and no `scope`: the registry's
+//        `scope` exists because a registry may live at a demo config scope
+//        (`reflexScopeForTenant`, `configStore.ts:59-61`), while the slots
+//        document is always the catalogue tenant's own, so a `scope` here would
+//        be a fourth key that can only ever repeat the answer's own tenant.
+//   (iii) the decision set gains `constraintDiagnostics`
+//        `{ warningCount, omittedWarningCount, warnings: [{ slot, contentId,
+//        reason, dimension, value }] }` — the pieces a slot's published hard
+//        controls refused, and the exact published pair that refused each, beside
+//        `pinDiagnostics` (`contentCompose.ts:96-102`, `types.ts:427-430`) and
+//        `seedDiagnostics` (`decide.ts:167`), the shapes this repository already
+//        uses for refused configuration. `reason` is the existing
+//        `SlotConstraintReason` vocabulary (`slotConstraints.ts:18`), here
+//        `'excluded_tag'`; `dimension`/`value` are the published `excludedTags`
+//        pair itself (unit W19.L1.02).
+//        It is BOUNDED and DISCRIMINATED (ruling R77(a)):
+//          · only a piece that is OTHERWISE ELIGIBLE for that slot is named —
+//            live inside its window and in stock (`lifecycle.ts:31`) and naming
+//            the slot identifier in its `slotTypes` (`contentCompose.ts:252`) —
+//            because a piece the slot could never have served was not refused by
+//            the constraint, and naming it would flood the channel with the whole
+//            catalogue (the composer's `forbidden` map, `contentCompose.ts:172-179`,
+//            is computed over every live piece and is NOT this set);
+//          · `warnings` holds at most the first 50, in slot order then catalogue
+//            order, `warningCount` counts every refused eligible piece and
+//            `omittedWarningCount` is the difference — the cap idiom this
+//            repository already uses in both advisory channels
+//            (`catalogDiagnostics.ts:34,46`; `slotDiagnostics.ts:41,45`).
+//        Today the composer computes the refusal and drops it on the floor for
+//        every piece that is not a pin, so a merchandiser cannot tell a market
+//        exclusion from a missing piece or an exhausted take. The one PUBLIC home
+//        for refused slot configuration is `slot-pin-diagnostics/v1`
+//        (`slotDiagnostics.ts:8-17`, mounted on GET, PUT and validate of
+//        `/content/slots`, `routes/content.ts:95,210,239,288`), and it is limited
+//        to PINNED pieces (`slotDiagnostics.ts:36`); extending it to non-pinned
+//        pieces is NOT ruled in this batch (R77(b)), so the naming clause is
+//        asserted on the decision set, which is also where the brief's "the
+//        decision's record" had to move to: a refused piece is served nowhere and
+//        therefore has no record of its own (deviation, ratified as R77(a)).
 //
 // HARNESS. The authoring units (L1.01, S1.01, S1.02) drive the real mounted
 // `contentRoutes` through `src/index.ts`'s own middleware on working synthetic
@@ -182,7 +214,8 @@ const REGISTRY_WITHOUT_LOCALE = {
  */
 const FIXTURE_SLOTS = {
   version: 'w19-b2-slots',
-  // kit 03:255-262: `excludedTags` is read at governance version 2 and 3
+  // kit 03:174-175 and :185-188: a write accepts `governanceVersion: 1 | 2 | 3`
+  // and emits 3, and `excludedTags` is read from governance 2 upward
   // (`kinds.ts:244`); a stored document is interpreted with the governance it
   // declares (`kinds.ts:338`).
   governanceVersion: 3,
@@ -235,14 +268,26 @@ const GLOBAL = livePiece({ id: 'global-edit', customerContentId: 'CMS-GLOBAL', t
   tags: { line: ['Tabby'] }, slotTypes: ['market-hero', 'market-rail'], featuredProductIds: ['COA-CW620'] });
 /**
  * `fr-fr` is not `fr-FR` either: the published contract does not normalize case
- * (kit 03:278), so this piece is a different market to the engine and the
+ * (kit 03:158-159, :187), so this piece is a different market to the engine and the
  * exclusion does not reach it. W19-B1 rules the authoring-side diagnostic for
  * case variants; nothing here depends on that lane.
  */
 const LOWERCASE = livePiece({ id: 'lowercase-edit', customerContentId: 'CMS-LOWERCASE', type: 'editorial', title: 'Une Autre Orthographe',
   tags: { locale: ['fr-fr'], line: ['Rogue'] }, slotTypes: ['market-hero', 'market-rail'], featuredProductIds: ['COA-CP133'] });
 
-const MARKET_CATALOG: ContentCatalog = { version: 'w19-b2-catalog', pieces: [LONDON, PARIS, MONTREAL, GLOBAL, LOWERCASE] };
+/**
+ * Two more `fr-FR` pieces that the excluded slot could never have served anyway,
+ * so the refusal channel must NOT name either of them (R77(a), the discrimination
+ * clause). Both are inert in every ranking this file measures: `rouen-edit` names
+ * a slot type no page of this tenant's document defines, and `lyon-edit` is
+ * expired, which `lifecycle.ts:31` gates before any scoring.
+ */
+const ROUEN = livePiece({ id: 'rouen-edit', customerContentId: 'CMS-ROUEN', type: 'editorial', title: 'Rouen, Hors Creneau',
+  tags: { locale: ['fr-FR'], line: ['Tabby'] }, slotTypes: ['lookbook'] });
+const LYON: FixturePiece = { ...livePiece({ id: 'lyon-edit', customerContentId: 'CMS-LYON', type: 'editorial', title: 'Lyon, Expire',
+  tags: { locale: ['fr-FR'], line: ['Tabby'] }, slotTypes: ['market-hero', 'market-rail'] }), lifecycle: { status: 'expired' } };
+
+const MARKET_CATALOG: ContentCatalog = { version: 'w19-b2-catalog', pieces: [LONDON, PARIS, MONTREAL, GLOBAL, LOWERCASE, ROUEN, LYON] };
 
 /** COA-CW620 · Tabby Shoulder Bag 26 With Quilting, and COA-CP133 · Rogue: rows of the brand's own catalogue, named by the pieces above. */
 const VIEW_TABBY = { type: 'product_view', data: { productId: 'COA-CW620', line: 'Tabby' } };
@@ -350,6 +395,13 @@ const csvOf = (columns: string[], rows: Record<string, string>[]) =>
 
 /** The pieces the publication actually holds, straight from the store. */
 const storedPieces = async (env: Env) => (await readPublication(env, CONTENT_KIND, AUTHORING_TENANT)).value.pieces;
+
+/** One of this file's pieces as a FEED sends it: everything but the lifecycle the validator supplies. */
+const asFeed = (piece: FixturePiece): Record<string, unknown> => {
+  const copy: Record<string, unknown> = { ...piece };
+  delete copy.lifecycle;
+  return copy;
+};
 
 // ---------------------------------------------------------------------------
 // Decision harness: the real mounted app and the real ShopperReflex class in
@@ -556,36 +608,49 @@ async function hostFixture(host: 'session' | 'do') {
   return { f, grant, action, snapshot, trend };
 }
 
-/** The decision set, with the diagnostics channel this specification rules (R21, missing member iii). */
-type RuledDecisionSet = ContentDecisionSet & {
-  constraintDiagnostics?: Array<{ slot: string; contentId: string; reason: string; dimension?: string; value?: string }>;
+/**
+ * The decision set, with the diagnostics channel this specification rules
+ * (R21/R77(a), missing member iii): bounded and discriminated, in the cap idiom
+ * both existing advisory channels use (`catalogDiagnostics.ts:34,46`;
+ * `slotDiagnostics.ts:41,45`).
+ */
+type RuledConstraintDiagnostics = {
+  /** Every refused ELIGIBLE piece, across every slot of the page. */
+  warningCount: number;
+  /** `warningCount` minus the entries actually carried. */
+  omittedWarningCount: number;
+  /** At most the first 50, in slot order then catalogue order. */
+  warnings: Array<{ slot: string; contentId: string; reason: string; dimension?: string; value?: string }>;
 };
+type RuledDecisionSet = ContentDecisionSet & { constraintDiagnostics?: RuledConstraintDiagnostics };
+/** What a slot that refused nothing reports. */
+const NO_REFUSALS: RuledConstraintDiagnostics = { warningCount: 0, omittedWarningCount: 0, warnings: [] };
 
 // ===========================================================================
 
 describe('unit:W19.L1.01', () => {
   it('host: a piece tagged locale rides every write path unchanged, and the published registry alone decides whether the answer warns about the dimension', async () => {
-    // The feed's own piece. `locale` is the BTI guide's own example dimension
-    // (:202) and there is no locale FIELD anywhere: it is one tag dimension
-    // beside `line`, and the stored piece must carry it exactly.
-    const feedLondon = { id: 'london-edit', customerContentId: 'CMS-LONDON', type: 'editorial', title: 'London, After Six',
-      tags: { locale: ['en-GB'], line: ['Tabby'] }, slotTypes: ['market-hero'],
-      renderUrl: '/editorial/london-after-six', excerpt: 'Evening in town.' };
-    const feedParis = { id: 'paris-edit', customerContentId: 'CMS-PARIS', type: 'editorial', title: 'Paris, Apres Six',
-      tags: { locale: ['fr-FR'], line: ['Tabby'] }, slotTypes: ['market-hero'] };
+    // The feed's own pieces, which are the file's own `london-edit` and
+    // `paris-edit` exactly — one content id, one taxonomy, whichever unit reads
+    // them. `locale` is the BTI guide's own example dimension (:202) and there is
+    // no locale FIELD anywhere: it is one tag dimension beside `line`, and the
+    // stored piece must carry it exactly. London also carries the two display
+    // fields, so the round trip is measured on more than the required six.
+    const feedLondon = { ...asFeed(LONDON), renderUrl: '/editorial/london-after-six', excerpt: 'Evening in town.' };
+    const feedParis = asFeed(PARIS);
     const feed = [feedLondon, feedParis];
     /** What the catalogue must hold after EVERY one of the four paths, exactly. */
     const expected = [
       { ...feedLondon, lifecycle: { status: 'live' } },
       { ...feedParis, lifecycle: { status: 'live' } },
     ];
-    const columns = ['id', 'customerContentId', 'type', 'title', 'tags', 'slotTypes', 'status', 'renderUrl', 'excerpt'];
+    const columns = ['id', 'customerContentId', 'type', 'title', 'tags', 'slotTypes', 'featuredProductIds', 'status', 'renderUrl', 'excerpt'];
     const csv = csvOf(columns, [
-      { id: 'london-edit', customerContentId: 'CMS-LONDON', type: 'editorial', title: 'London, After Six',
-        tags: 'locale:en-GB;line:Tabby', slotTypes: 'market-hero', status: 'live',
+      { id: LONDON.id, customerContentId: LONDON.customerContentId, type: LONDON.type, title: LONDON.title,
+        tags: 'locale:en-GB;line:Rogue', slotTypes: 'market-hero|market-rail', featuredProductIds: 'COA-CP133', status: 'live',
         renderUrl: '/editorial/london-after-six', excerpt: 'Evening in town.' },
-      { id: 'paris-edit', customerContentId: 'CMS-PARIS', type: 'editorial', title: 'Paris, Apres Six',
-        tags: 'locale:fr-FR;line:Tabby', slotTypes: 'market-hero', status: 'live' },
+      { id: PARIS.id, customerContentId: PARIS.customerContentId, type: PARIS.type, title: PARIS.title,
+        tags: 'locale:fr-FR;line:Tabby', slotTypes: 'market-hero|market-rail', featuredProductIds: 'COA-CW620', status: 'live' },
     ]);
 
     invalidateCache();
@@ -671,7 +736,8 @@ describe('unit:W19.L1.02', () => {
 
     // 1. The French piece is not served, and every other market is — including
     //    the two values the exclusion must NOT reach, `fr-CA` and `fr-fr`
-    //    (kit 03:278: this contract does not normalize locale or case).
+    //    (kit 03:158-159 and :187: the contract does not normalize locale, and
+    //    matching is exact and case-sensitive).
     expect(excluded.decisions.map(d => d.contentId),
       'W19.L1.02 — the slot that excludes locale fr-FR serves every other market, ranked by score: the two Tabby pieces first, then the catalogue order')
       .toEqual(['montreal-edit', 'global-edit', 'london-edit', 'lowercase-edit']);
@@ -684,25 +750,60 @@ describe('unit:W19.L1.02', () => {
       .toEqual([{ contentId: 'montreal-edit', score: 0.8 }, { contentId: 'global-edit', score: 0.8 },
         { contentId: 'london-edit', score: 0 }, { contentId: 'lowercase-edit', score: 0 }]);
 
-    // 3. The same five pieces in a slot that publishes no exclusion are ranked
-    //    by score alone: the French Tabby piece leads, ahead of the English piece
-    //    the catalogue lists FIRST, so this is her taste and not document order.
+    // 3. The same five live, slot-naming pieces in a slot that publishes no
+    //    exclusion are ranked by score alone: the French Tabby piece leads,
+    //    ahead of the English piece the catalogue lists FIRST, so this is her
+    //    taste and not document order.
     const openSet = decideContent({ ...input, page: 'open', slots: open }) as RuledDecisionSet;
     expect(openSet.decisions.map(d => d.contentId),
       'W19.L1.02 — with no exclusion published the same pieces are ranked by score, the French Tabby piece included')
       .toEqual(['paris-edit', 'montreal-edit', 'global-edit', 'london-edit', 'lowercase-edit']);
     expect(openSet.decisions.map(d => d.score), 'W19.L1.02 — three Tabby pieces at 0.8, two Rogue pieces at nothing').toEqual([0.8, 0.8, 0.8, 0, 0]);
-    expect(openSet.constraintDiagnostics ?? [], 'W19.L1.02 — a slot that refuses nothing reports no refusal').toEqual([]);
+    // A control with no teeth until the ruled member exists (it passes today on
+    // the `??`), kept because it is what stops an implementation from reporting
+    // a refusal where the published document refuses nothing.
+    expect(openSet.constraintDiagnostics ?? NO_REFUSALS, 'W19.L1.02 — a slot that refuses nothing reports no refusal').toEqual(NO_REFUSALS);
 
-    // 4. THE RULED MISSING MEMBER (R21, iii). A merchandiser who asks why the
-    //    Paris piece is not on the French page must be told the published pair
-    //    that refused it, not left to guess between a market rule, a missing
-    //    piece and a take that ran out. The composer already computes exactly
-    //    this (`contentCompose.ts:171-180`) and reports it for pins only
-    //    (`pinDiagnostics`, `contentCompose.ts:96-102`).
+    // 4. THE RULED MISSING MEMBER (R21/R77(a), iii). A merchandiser who asks why
+    //    the Paris piece is not on the French page must be told the published
+    //    pair that refused it, not left to guess between a market rule, a
+    //    missing piece and a take that ran out. The composer already computes
+    //    the refusal (`contentCompose.ts:172-179`) and reports it for pins only
+    //    (`pinDiagnostics`, `contentCompose.ts:96-102`); the one public home for
+    //    refused slot configuration, `slot-pin-diagnostics/v1`
+    //    (`slotDiagnostics.ts:8-17`, `routes/content.ts:95,210,239,288`), is
+    //    limited to pins at `slotDiagnostics.ts:36`, and widening it is not ruled
+    //    in this batch (R77(b)).
+    //
+    //    DISCRIMINATED: exactly ONE entry, though the catalogue holds three
+    //    `fr-FR` pieces. `rouen-edit` names no slot type this page defines and
+    //    `lyon-edit` is expired, so neither was ever eligible for this slot and
+    //    neither was refused BY THE CONSTRAINT; naming them would report the
+    //    catalogue instead of the rule. The exact equality below is what forbids
+    //    it.
     expect(excluded.constraintDiagnostics,
-      'W19.L1.02 — the decision names the eligible piece its slot refused and the exact published exclusion that refused it')
-      .toEqual([{ slot: 'market-hero', contentId: 'paris-edit', reason: 'excluded_tag', dimension: 'locale', value: 'fr-FR' }]);
+      'W19.L1.02 — the decision names the eligible piece its slot refused and the exact published exclusion that refused it, and names no piece the slot could never have served')
+      .toEqual({ warningCount: 1, omittedWarningCount: 0,
+        warnings: [{ slot: 'market-hero', contentId: 'paris-edit', reason: 'excluded_tag', dimension: 'locale', value: 'fr-FR' }] });
+
+    // 5. BOUNDED (R77(a)). A market rule over a real catalogue refuses
+    //    thousands of pieces; an answer that carried one entry each would be an
+    //    unbounded payload on every decision. The channel carries the first 50
+    //    in catalogue order and counts the rest, which is exactly what both
+    //    existing advisory channels do (`catalogDiagnostics.ts:34,46`;
+    //    `slotDiagnostics.ts:41,45`).
+    const refusedIds = Array.from({ length: 60 }, (_, i) => `refused-${String(i).padStart(2, '0')}`);
+    const crowded = [LONDON, ...refusedIds.map(id => livePiece({ id, customerContentId: `CMS-${id.toUpperCase()}`, type: 'editorial',
+      title: `Refused ${id}`, tags: { locale: ['fr-FR'], line: ['Tabby'] }, slotTypes: ['market-hero', 'market-rail'] }))];
+    const bounded = decideContent({ ...input, pieces: crowded, slots }) as RuledDecisionSet;
+    expect(bounded.decisions.map(d => d.contentId),
+      'W19.L1.02 — the exclusion still leaves exactly the English piece to serve').toEqual(['london-edit']);
+    expect(bounded.constraintDiagnostics?.warningCount,
+      'W19.L1.02 — every refused eligible piece is counted').toBe(60);
+    expect((bounded.constraintDiagnostics?.warnings ?? []).map(warning => warning.contentId),
+      'W19.L1.02 — and at most the first fifty are named, in catalogue order').toEqual(refusedIds.slice(0, 50));
+    expect(bounded.constraintDiagnostics?.omittedWarningCount,
+      'W19.L1.02 — with the remainder counted as omitted, as both existing advisory channels do').toBe(10);
   });
 
   it('host: the French-market piece is never served in the excluded slot to any shopper on either host, while the English piece is, and the same pieces rank by score where nothing is excluded', async () => {
@@ -774,6 +875,11 @@ describe('unit:W19.L1.03', () => {
       //    in eligibility or in the ranking (`contentCompose.ts:252` filters on
       //    slotTypes and the slot's published constraints alone;
       //    `lifecycle.ts:31` gates on status, window and stock alone).
+      //    R77(d): this proves geography does not FILTER. It does not prove the
+      //    region is inert in every configuration — the population prior, the one
+      //    ranking-visible consumer of the region, is deliberately disabled in
+      //    this fixture (`FIXTURE_LEARN.regional.enabled: false`) and is a
+      //    separate W's subject.
       const british = await h.snapshot('open', GEO_BRITAIN);
       const nowhere = await h.snapshot('open');
       expect(british.ranking['market-rail'], `${host}: W19.L1.03 — a British request is served exactly the same order`).toEqual(french.ranking['market-rail']);
@@ -894,7 +1000,7 @@ describe('unit:W19.S1.01', () => {
 });
 
 describe('unit:W19.S1.02', () => {
-  it('host: the documented `slots` alias is carried on JSON and CSV import and stored as slotTypes, and a piece with no slot type is refused in the documented words', async () => {
+  it('host: the documented `slots` alias is carried on JSON import, CSV import and pull and stored as slotTypes, and a piece with no slot type is refused in the documented words', async () => {
     invalidateCache();
     const env = authoringEnv();
     await initializeAuthoring(env, { version: 'w19-b2-catalog', pieces: [] });
@@ -930,7 +1036,23 @@ describe('unit:W19.S1.02', () => {
           tags: { locale: ['fr-FR'], line: ['Rogue'] }, slotTypes: ['market-rail'], lifecycle: { status: 'live' } },
       ]);
 
-    // 3. A piece with no slot type at all is refused, in the words the guide
+    // 3. Pull, the OTHER machine path the guide names (BTI :218: "Both machine
+    //    paths accept common alternative names"), through the same adapter and
+    //    the same seam a CMS feed arrives on.
+    const pulled = { id: 'alias-pull', customerContentId: 'CMS-ALIAS-PULL', type: 'editorial', title: 'Alias On The Pulled Feed',
+      tags: { locale: ['fr-CA'], line: ['Tabby'] }, slots: ['market-hero', 'market-rail'] };
+    const remote = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ content: [pulled] })));
+    try {
+      const third = await authoringApp.request(`${H}/catalog/pull?scope=${AUTHORING_TENANT}`,
+        { method: 'POST', headers: publicationHeaders(env, auth, 3), body: JSON.stringify({ url: 'https://cms.example/alias-feed', path: 'content', mode: 'merge' }) }, env);
+      expect(third.status, await third.clone().text()).toBe(200);
+      expect((await storedPieces(env)).at(-1),
+        'W19.S1.02 — the pulled feed\'s `slots` alias is carried the same way, and stored under the canonical name')
+        .toEqual({ id: 'alias-pull', customerContentId: 'CMS-ALIAS-PULL', type: 'editorial', title: 'Alias On The Pulled Feed',
+          tags: { locale: ['fr-CA'], line: ['Tabby'] }, slotTypes: ['market-hero', 'market-rail'], lifecycle: { status: 'live' } });
+    } finally { remote.mockRestore(); }
+
+    // 4. A piece with no slot type at all is refused, in the words the guide
     //    publishes (BTI :225-235): the whole batch, naming the record and the
     //    field, and nothing is partially published.
     const before = await storedPieces(env);
@@ -939,7 +1061,7 @@ describe('unit:W19.S1.02', () => {
       { id: 'has-none', customerContentId: 'CMS-NONE', type: 'editorial', title: 'Has None', tags: { line: ['Tabby'] } },
     ];
     const third = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}`,
-      { method: 'POST', headers: publicationHeaders(env, auth, 3), body: JSON.stringify(refused) }, env);
+      { method: 'POST', headers: publicationHeaders(env, auth, 4), body: JSON.stringify(refused) }, env);
     expect(third.status, 'W19.S1.02 — a feed whose piece names no slot at all is refused').toBe(422);
     const refusal = await third.json() as CatalogAnswer;
     expect(refusal.ok, 'W19.S1.02 — the answer says so').toBe(false);
@@ -948,13 +1070,13 @@ describe('unit:W19.S1.02', () => {
       'W19.S1.02 — the refusal names the record and the field in the documented words (BTI guide :233)')
       .toContain('pieces[1].slotTypes: required non-empty string array');
 
-    // 4. …and the same for an empty CSV cell, which is the shape a real feed
+    // 5. …and the same for an empty CSV cell, which is the shape a real feed
     //    fails in. Nothing was published by either refusal.
     const emptyCsv = csvOf(['id', 'customerContentId', 'type', 'title', 'tags', 'slots'], [
       { id: 'csv-has-none', customerContentId: 'CMS-CSV-NONE', type: 'editorial', title: 'CSV Has None', tags: 'line:Tabby', slots: '' },
     ]);
     const fourth = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}&format=csv`,
-      { method: 'POST', headers: { ...publicationHeaders(env, auth, 3), 'Content-Type': 'text/csv' }, body: emptyCsv }, env);
+      { method: 'POST', headers: { ...publicationHeaders(env, auth, 4), 'Content-Type': 'text/csv' }, body: emptyCsv }, env);
     expect(fourth.status, 'W19.S1.02 — a CSV row with a blank slots cell is refused too').toBe(422);
     expect((await fourth.json() as CatalogAnswer).errors,
       'W19.S1.02 — in the same documented words').toContain('pieces[0].slotTypes: required non-empty string array');
