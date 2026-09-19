@@ -57,7 +57,7 @@ import { linkVisitor } from '@/identity/link';
 import { type ProfileRow, readEnrichment } from '@/identity/profileEnrichment';
 import { eraseSubject, erasureJobKey } from '@/identity/erase';
 import { outcomeFromAction, parseId, type OutcomeRecord } from '@/ledger/records';
-import { initializePublication, initializePublicationSet, pinPublication, publicationScope, publishSet, type PublicationBaseline } from '@/config/publication';
+import { initializePublication, initializePublicationSet, pinPublication, publicationScope, publishSet, PublicationError, type PublicationBaseline } from '@/config/publication';
 import { VISIT_GAP_MS } from '@/services/visit';
 import { shopperIdFor } from '@/identity/shopperId';
 import * as odpLoop from '@/services/odpLoop';
@@ -1056,6 +1056,7 @@ describe.each(['session', 'do'])('W05.10 explicit timed authority on %s', host =
     expect(item.data.get('grantAuthority')).toEqual(authority);
     expect(item.data.has('affinity')).toBe(false); expect(f.sessions.data.size).toBe(0);
   });
+  describe('unit:W11.BASE.01 a typed owner or consent refusal raised inside a publication storage read propagates as the 401 refusal on both hosts; it is never rewritten into a configuration-authority error', () => {
   it('rechecks the choice at the actual post-config behavioral commit', async () => {
     const f = boundary(host), grant = await newAnonymousSession(f.env, 'meridian');
     await fixturePublication(f.env, 'meridian');
@@ -1086,6 +1087,7 @@ describe.each(['session', 'do'])('W05.10 explicit timed authority on %s', host =
       await f.drain().catch(() => undefined);
     } finally { time.mockRestore(); }
     expect(item.data).toEqual(before); expect([...f.sessions.data]).toEqual(kvBefore);
+  });
   });
 });
 
@@ -2291,6 +2293,7 @@ describe('W35.02 visit context', () => {
     return { ...f, g, queued, state, snapshot };
   }
 
+  describe('unit:W06.BASE.01 a cold /realtime/personalization/:subject read on a consent-only owned record serves without write activity instead of answering 500 for a missing retention birth', () => {
   it('carries first-paint and live return context into actual both-host cells without read activity', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
     const decide = vi.spyOn(MockDecisionProvider.prototype, 'decideAll');
@@ -2359,6 +2362,7 @@ describe('W35.02 visit context', () => {
         expect(f.state()).toBe(stateBeforeRefusals);
       }
     } finally { vi.restoreAllMocks(); }
+  });
   });
 
   it('preserves object visit identity through sockets restart non-live changes merge and rejected commits', async () => {
@@ -3841,6 +3845,7 @@ describe('W37.04 tenant-owned runtime configuration', () => {
     } finally { clock.mockRestore(); }
   });
 
+  describe('unit:W37.BASE.01 with the configuration publication authority absent, invalid or unreadable, every shopper route including /realtime/personalization/:subject and /realtime/action answers a 4xx/5xx refusal; none serves', () => {
   it('fails explicitly on missing/invalid/outage tenant config before behavior/link/import, preserving refusal and retention', async () => {
     for (const host of ['session', 'do']) for (const failure of ['missing', 'invalid', 'outage']) {
       invalidateCache(); const f = boundary(host); await configured(f);
@@ -3860,18 +3865,25 @@ describe('W37.04 tenant-owned runtime configuration', () => {
       invalidateCache();
       const cold = await newAnonymousSession(f.env, g.tenant);
       expect((await f.call(`/realtime/personalization/${cold.subject}`, cold.capability, undefined, cold.tenant)).status).toBeGreaterThanOrEqual(400);
+      // Ruling R28: with the configuration publication authority uninitialized or unavailable the
+      // contract is a TYPED refusal of either class, never an untyped throw: PublicationError
+      // (src/config/publication.ts:15; 'Coherent configuration publication is uninitialized' at :205,
+      // 'Configuration publication authority unavailable' at :19) or ReflexConfigUnavailableError
+      // (src/reflex/configStore.ts:67, 'Reflex configuration unavailable for scope ...'), whose message
+      // names the unavailable or uninitialized authority. The three expectations below accept either.
       if (host === 'do') {
         await expect(f.objects.get(shopperObjectName(cold.tenant, cold.subject))!.shopper.fetch(new Request('https://shopper-reflex/snapshot?projection=sort', {
           headers: { [SHOPPER_HEADER]: cold.capability, 'X-Tenant': cold.tenant },
-        }))).rejects.toBeInstanceOf(ReflexConfigUnavailableError);
+        }))).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:snapshot`);
       }
       for (const [path, body] of [['/realtime/action', event(g)], ['/realtime/reflex?surface=coach', undefined],
         ['/sort', { userId: g.subject, candidates: [{ id: 'a', taste: 'red' }] }],
         [`/v1/${g.tenant}/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}`, undefined]] as const) {
         expect((await f.call(path, g.capability, body, g.tenant)).status, `${host}:${failure}:${path}`).toBeGreaterThanOrEqual(400);
       }
-      await expect(applyHistory(f.env, g.tenant, [{ visitorId: g.subject, action: 'content_click', at: Date.now(), attributes: { taste: 'red' } }])).rejects.toBeInstanceOf(ReflexConfigUnavailableError);
-      await expect(linkVisitor(f.env, g.tenant, { visitorId: g.subject, accountId: 'unlinked-account', source: 'login', assurance: 'signed', principal: g, capability: g.capability })).rejects.toBeInstanceOf(ReflexConfigUnavailableError);
+      // Ruling R28 as above: either typed class, message naming the unavailable/uninitialized authority.
+      await expect(applyHistory(f.env, g.tenant, [{ visitorId: g.subject, action: 'content_click', at: Date.now(), attributes: { taste: 'red' } }])).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:applyHistory`);
+      await expect(linkVisitor(f.env, g.tenant, { visitorId: g.subject, accountId: 'unlinked-account', source: 'login', assurance: 'signed', principal: g, capability: g.capability })).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:linkVisitor`);
       expect([...f.sessions.data]).toEqual(sessionBefore);
       if (host === 'do') {
         const item = f.objects.get(shopperObjectName(g.tenant, g.subject))!;
@@ -3889,6 +3901,7 @@ describe('W37.04 tenant-owned runtime configuration', () => {
       expect((await f.call(`/realtime/session/${g.sessionId}/preferences`, g.capability, { trackingConsent: false, personalizationEnabled: false }, g.tenant)).status).toBe(200);
       await f.drain();
     }
+  });
   });
 });
 
@@ -5624,6 +5637,7 @@ describe('W04.02 owned shopper lane', () => {
     expect([...f.cache.calls, ...f.sessions.calls, ...f.effects]).toEqual([]);
   });
 
+  describe('unit:W09.BASE.02 /sort answers 200 read-only for a linked non-default-tenant owned profile; recovery admission while durable recovery is disabled never surfaces as an untyped 500 on a read path', () => {
   it('preserves working non-default-tenant profiles on both hosts, signed upgrade, actual SIDs and owned operation counts', async () => {
     for (const host of ['session', 'do']) {
       const f = boundary(host), anon = await newAnonymousSession(f.env, 'meridian');
@@ -5713,6 +5727,7 @@ describe('W04.02 owned shopper lane', () => {
       expect((await f.call('/v1/meridian/identity/link', anon.capability, { visitorId: anon.subject, accountId, exp, assertion })).status).toBe(401);
       expect([...f.objects].map(([key, value]) => [key, [...value.data]])).toEqual(revoked);
     }
+  });
   });
 });
 

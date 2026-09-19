@@ -130,6 +130,7 @@ describe('absorbIntoShopper: the first link', () => {
   // instruction the write is refused and nothing lands. CW25 (document 35 §5 W04)
   // still requires the post-link write to reach the person. Unit to declare:
   // W05.BASE.01.
+  describe('unit:W05.BASE.01 after a link, a browser write under the old cookie lands on the person record; the consent-scope check honours the linked owner (forwardTo/identity.shopperId), not only raw.userId', () => {
   it('the old cookie reads the person, and a write from the browser lands on the person without renaming it', async () => {
     await device('vis-phone', 's-phone', ['Tabby', 'Tabby', 'Tabby'], T0);
     const r = await sm.absorbIntoShopper({ shopperId: SH, from: await sm.readRaw('s-phone'), fromSessionId: 's-phone', config: cfg, now: T0 + 5000 });
@@ -141,6 +142,7 @@ describe('absorbIntoShopper: the first link', () => {
     const person = await sm.readRaw(r.sessionId);
     expect(person?.attributes.last_page_path).toBe('/bags'); // it landed on the person
     expect((await sm.readRaw('s-phone'))?.attributes.last_page_path).toBeUndefined(); // not on the tombstone
+  });
   });
 });
 
