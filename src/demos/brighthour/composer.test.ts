@@ -28,6 +28,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
+import { initializePublicationSet } from '@/config/publication';
+import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
+import { REFLEX_KIND } from '@/reflex/configStore';
+import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import type { Env } from '@/types/env';
 import { loadBrighthourEvents, loadBrighthourProducts } from './catalog';
 import { MS_PER_HOUR, etMidnightForDate } from './demoClock';
 import { evaluateGates } from './offerLifecycle';
@@ -894,11 +899,52 @@ class FakeStmt {
   }
 }
 
+/**
+ * The coherent R2 publication is the only configuration authority since W11
+ * (src/config/publication.ts:19, :225-240, :271-273; versionedStore.ts:92-94;
+ * reflex/configStore.ts:408-415): there is no KV fallback and an uninitialized
+ * scope fails closed, so /live/api answers 500. This double honours the put/get
+ * contract the reader checks (publication.ts:225-237, :291-296).
+ */
+class FixtureR2 {
+  objects = new Map<string, { text: string; etag: string }>();
+  count = 0;
+  async get(key: string) {
+    const v = this.objects.get(key);
+    return v
+      ? { key, etag: v.etag, size: new TextEncoder().encode(v.text).length, body: new Response(v.text).body }
+      : null;
+  }
+  async put(key: string, text: string, options?: R2PutOptions) {
+    const condition = options?.onlyIf;
+    if (condition instanceof Headers ? this.objects.has(key) : condition && condition.etagMatches !== this.objects.get(key)?.etag) return null;
+    const etag = 'fixture-' + (++this.count);
+    this.objects.set(key, { text, etag });
+    return { key, etag, size: new TextEncoder().encode(text).length };
+  }
+}
+
+/** SYNTHETIC registry, not an approved retention period: a first record needs an
+ *  explicit per-category policy (src/retention.ts:39, :72-89); shape from
+ *  src/index.api-boundary.test.ts:34-37. */
+const DEMO_RETENTION = JSON.stringify({ version: 1, tenants: { [DEFAULT_TENANT]: Object.fromEntries(
+  ['profile', 'identity', 'ledger', 'online', 'hourly'].map((category) => [category,
+    { id: 'demo-fixture-' + category, revision: 1, durationMs: 30 * 86400_000, basis: 'admitted', renewal: 'new-record-only' }])) } });
+
 function routeEnv(overrides: Record<string, unknown> = {}) {
   return {
     CACHE: new FakeKV(),
     SESSIONS: new FakeKV(),
     DB: new FakeD1(),
+    STORAGE: new FixtureR2(),
+    TENANTS: JSON.stringify({ provisioned: [DEFAULT_TENANT] }),
+    RETENTION: DEMO_RETENTION,
+    // Synthetic signing material (src/auth/signingConfig.mjs:13-20): without it
+    // the shopper boundary answers 503 before any demo behaviour runs. Not a
+    // relaxation — the checks are unchanged, the fixture simply has material.
+    JWT_SECRET: 'brighthour-demo-synthetic-signing-material',
+    JWT_ISSUER: 'brighthour-demo',
+    JWT_AUDIENCE: 'brighthour-demo',
     ENVIRONMENT: 'test',
     CONNECTOR_MODE: 'mock',
     PERSONALIZATION_WEBSOCKET: {
@@ -907,6 +953,19 @@ function routeEnv(overrides: Record<string, unknown> = {}) {
     },
     ...overrides,
   } as unknown as Record<string, unknown>;
+}
+
+/** routeEnv plus the published demo configuration head the engine now requires:
+ *  the demo publishes its own compiled surface tuning as revision 1, under the
+ *  one publication root both demo scopes share (publication.ts:44-47). */
+async function publishedRouteEnv(overrides: Record<string, unknown> = {}) {
+  const env = routeEnv(overrides);
+  const at = Date.now();
+  await initializePublicationSet(env as unknown as Env, [
+    { kind: REFLEX_KIND, scope: 'coach', revision: { revision: 1, value: DEFAULT_REFLEX_CONFIG, actor: 'demo-fixture', note: '', at } },
+    { kind: REFLEX_KIND, scope: 'brighthour', revision: { revision: 1, value: BRIGHTHOUR_REFLEX_CONFIG, actor: 'demo-fixture', note: '', at } },
+  ], '0:' + crypto.randomUUID());
+  return env;
 }
 
 describe('POST /live/api/page + GET /live/api/decisions/export', () => {
@@ -921,7 +980,7 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
   }
 
   it('composes the page, captures one row per decision, and exports them', async () => {
-    const env = routeEnv();
+    const env = await publishedRouteEnv();
     const { status, body } = await post('/page', { visitorId: 'route-visitor-1' }, env);
 
     expect(status).toBe(200);
@@ -958,7 +1017,7 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
     const { body } = await post(
       '/page',
       { visitorId: 'route-visitor-2', missionOverride: 'mission' },
-      routeEnv()
+      await publishedRouteEnv()
     );
     expect(body.moduleCount).toBe(4);
     expect(body.sessionMission).toBe('mission');
@@ -972,7 +1031,7 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
   });
 
   it('proxies an event into the shared pipeline with the surface stamped server-side', async () => {
-    const env = routeEnv();
+    const env = await publishedRouteEnv();
     const { liveRoutes } = await import('@/routes/live');
 
     // Three brisk views of the same Kitchen item — Beat 1's arithmetic.
@@ -1065,7 +1124,7 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
     }
 
     it('serializes a same-visitor burst — never two ingestions in flight at once', async () => {
-      const env = routeEnv();
+      const env = await publishedRouteEnv();
       const seen = watchOverlap(env);
 
       const burst = await Promise.all(
@@ -1083,7 +1142,7 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
     });
 
     it('applies EVERY event in a parallel burst — the lost-update bug is gone', async () => {
-      const env = routeEnv();
+      const env = await publishedRouteEnv();
       const item = 'B412907';
       const N = 8;
 
@@ -1107,7 +1166,7 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
     });
 
     it('does not serialize DIFFERENT visitors against each other', async () => {
-      const env = routeEnv();
+      const env = await publishedRouteEnv();
       // Prime the shared one-time work (audience seeding, catalog) so the
       // measurement below is about queueing, not cold start.
       await post('/event', { visitorId: 'warm', action: 'product_view', itemId: 'B412907' }, env);
@@ -1131,7 +1190,7 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
 
   describe('POST /live/api/events (batch)', () => {
     it('accepts an array and scores every member, in order', async () => {
-      const env = routeEnv();
+      const env = await publishedRouteEnv();
       const { status, body } = await post(
         '/events',
         {
@@ -1185,7 +1244,7 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
   });
 
   it('degrades cleanly when D1 is not bound', async () => {
-    const env = routeEnv({ DB: undefined });
+    const env = await publishedRouteEnv({ DB: undefined });
     const { status, body } = await post('/page', { visitorId: 'route-visitor-3' }, env);
     expect(status).toBe(200);
     expect(body.decisions.length).toBe(8);

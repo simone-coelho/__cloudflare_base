@@ -83,7 +83,9 @@ describe('CW30 fatigue', () => {
     const record = { decision_id: 'd1', ts: NOW - DAY, page: 'home', slot: 'hero', item_id: 'a', session_id: 's', arm: 'personalized', cell: base.cell, featured_product_ids: ['P1'] };
     const ns = (delayMs: number) => ({ idFromName: (n: string) => n, get: () => ({ fetch: async () => { await new Promise((r) => setTimeout(r, delayMs)); return new Response(JSON.stringify({ ok: true, ring: [record] })); } }) }) as unknown as DurableObjectNamespace;
     const fast = await readRing({ DECISION_RING: ns(0) }, 'coach', 'v1', 200);
-    expect(fast).toEqual([{ id: 'd1', ts: NOW - DAY, page: 'home', slot: 'hero', item: 'a', session_id: 's', arm: 'personalized', cell: base.cell, products: ['P1'] }]);
+    // Witness src/learn/fan.ts:245 (ringEntryOf): every entry carries the basis it was counted on, defaulting to served-v1
+    // (document 35 §5 W26: "defined served/rendered/viewable unit"), which servedCounts then matches per slot.
+    expect(fast).toEqual([{ id: 'd1', ts: NOW - DAY, page: 'home', slot: 'hero', item: 'a', session_id: 's', arm: 'personalized', cell: base.cell, measurementBasis: 'served-v1', products: ['P1'] }]);
     expect(servedCounts(fast!, [{ slot: 'hero', fatigue: { weight: 0.3, windowHours: 168 } }], NOW)).toEqual({ hero: { a: 1 } });
     expect(await readRing({ DECISION_RING: ns(80) }, 'coach', 'v1', 20)).toBeNull();
     expect(await readRing({}, 'coach', 'v1')).toBeNull();

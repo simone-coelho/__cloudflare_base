@@ -71,7 +71,12 @@ describe('the learning policy', () => {
 describe('the statistics', () => {
   it('cells materialize five keys, coarsest first, and every key knows its parent', () => {
     const keys = levelKeys(cell);
-    expect(keys).toEqual(['*', 'c=paid social', 'c=paid social|v=1', 'c=paid social|v=1|s=unknown', 'c=paid social|v=1|s=unknown|r=US-NY', 'c=paid social|v=1|s=unknown|r=US-NY|a=occasion:evening']);
+    // R23: the cell key is built verbatim from the channel (src/learn/stats.ts:35 `c=${c}`),
+    // cellFor passes it through entryChannelOf (src/content/cell.ts:64), and entryChannelOf
+    // (src/services/visit.ts:60-64, vocabulary at :36-37) only ever yields the six-value
+    // EntryChannel vocabulary, in which the paid-social member is spelled `paid_social`;
+    // 'paid social' maps to null, so the engine can never produce that key.
+    expect(keys).toEqual(['*', 'c=paid_social', 'c=paid_social|v=1', 'c=paid_social|v=1|s=unknown', 'c=paid_social|v=1|s=unknown|r=US-NY', 'c=paid_social|v=1|s=unknown|r=US-NY|a=occasion:evening']);
     expect(parentKey(keys[4]!)).toBe(keys[3]); expect(parentKey(keys[1]!)).toBe('*'); expect(parentKey('*')).toBeNull();
   });
 
@@ -919,7 +924,10 @@ describe('the objects', () => {
       expect(response.status).toBe(200); targets.set('coach:coach:' + slot, { storage, object });
     }
     const forwarded: string[] = [];
-    const env = { STORAGE: { get: async () => null }, LEARN_STATS: { idFromName: (name: string) => name,
+    // The ring admits a record only against an explicit retention authority
+    // (src/durable-objects/DecisionRing.ts:329; src/retention.ts:39, :72-89), the
+    // same registry the records above were stamped from.
+    const env = { ...onlineFixtureEnv, STORAGE: { get: async () => null }, LEARN_STATS: { idFromName: (name: string) => name,
       get: (name: string) => ({ fetch: (url: string, init?: RequestInit) => {
         forwarded.push(name); return targets.get(name)!.object.fetch(new Request(url, init));
       } }) } } as unknown as Env;
@@ -993,7 +1001,8 @@ describe('the objects', () => {
         targets.set('coach:coach:' + row.slot, { storage, object });
       }
       const forwarded: string[] = [];
-      const env = { STORAGE: { get: async () => null }, LEARN_STATS: { idFromName: (name: string) => name,
+      // Explicit retention authority, as above (DecisionRing.ts:329; retention.ts:39, :72-89).
+      const env = { ...onlineFixtureEnv, STORAGE: { get: async () => null }, LEARN_STATS: { idFromName: (name: string) => name,
         get: (name: string) => ({ fetch: (url: string, init?: RequestInit) => {
           forwarded.push(name); return targets.get(name)!.object.fetch(new Request(url, init));
         } }) } } as unknown as Env;
@@ -1004,6 +1013,9 @@ describe('the objects', () => {
       for (const [i, slot] of ['absent', 'hero'].entries()) {
         const o = outcomeFromAction({ type: reward, userId: 'v1', sessionId: 's1', timestamp: now + 1000 + i,
           data: { slot, ...(reward === 'click' ? { contentId: 'A' } : { items: [{ productId: 'bag-1' }] }) } }, 'coach')!;
+        // The online carrier must state its retention before the ring will credit it
+        // (DecisionRing.ts:189; retention.ts:39, :72-89), as the decision rows above do.
+        o.retention = captureRetention(onlineFixtureEnv, 'coach', Math.min(o.ts, Date.now()));
         expect(o.slot).toBe(slot);
         expect(o.type).toBe(reward);
         expect(o.products).toEqual(reward === 'purchase' ? ['bag-1'] : null);
@@ -1127,7 +1139,12 @@ describe('the objects', () => {
     expect(good).toMatchObject({ version: 1, ok: true, received: 8, cutoffSkipped: 0, coalesced: 3,
       append: { received: 5, accepted: 5, duplicates: 0 }, exposures: { received: 3, processed: 3 } });
     expect(f.storage.map.get('ring')).toEqual(saved([a, b, holdout, noLearning, rail]));
-    expect(f.config.mock.calls).toHaveLength(2);
+    // The measurement-basis gate compares EVERY surviving record against its own
+    // slot's configured basis before any destination is started (src/learn/fan.ts:324;
+    // document 35 §5 W26 "defined served/rendered/viewable unit"), and the exposure
+    // bodies then read the config once per destination slot (fan.ts:329): five
+    // surviving records plus the two slots they belong to.
+    expect(f.config.mock.calls).toHaveLength(5 + 2);
     const hero = f.targets.get('coach:coach:hero')!.storage.map.get('learn') as { stats: StatsState };
     expect(hero.stats.events).toBe(2); expect(hero.stats.slot['*']!.n).toEqual({ s: 2, t: now });
     expect(JSON.stringify(hero)).not.toContain('visitor_id'); expect(JSON.stringify(hero)).not.toContain('decision_id');
@@ -1737,7 +1754,12 @@ describe('the objects', () => {
   it('the statistics object counts, arms one alarm, and publishes a versioned snapshot to KV', async () => {
     const f = boundedStats(), kv = f.cache, storage = f.storage, obj = f.object;
     const NOW = Date.now();
-    const cfg = { reward: 'click', stats: { ...DEFAULT_STATS, nMin: 1 } };
+    const cfg = { reward: 'click' as const, stats: { ...DEFAULT_STATS, nMin: 1 } };
+    // The object reads its slot configuration and priors from the coherent
+    // publication before it can publish a snapshot (src/durable-objects/LearnStats.ts:510-516;
+    // src/config/publication.ts:204-206), so the configuration these requests
+    // declare is the published one.
+    await f.learn(cfg);
     await obj.fetch(new Request('https://learn/exposures', { method: 'POST', body: JSON.stringify({ tenant: 'coach', brand: 'coach', slot: 'hero', config: cfg, exposures: Array.from({ length: 10 }, () => ({ item: 'A', cell, ts: NOW })) }) }));
     await obj.fetch(new Request('https://learn/credits', { method: 'POST', body: JSON.stringify({ tenant: 'coach', brand: 'coach', slot: 'hero', config: cfg, credits: [{ decision_id: 'd', slot: 'hero', item: 'A', cell, reward: 'click', event: 'click', ts: NOW, weight: 1 }] }) }));
     expect(storage.alarm).not.toBeNull(); expect(kv.store.size).toBe(0);
@@ -1745,7 +1767,15 @@ describe('the objects', () => {
     const snap = JSON.parse(kv.store.get(liftKey('coach', 'coach', 'hero'))!);
     expect(snap.reward).toBe('click'); expect(snap.events).toBe(10);
     expect(snap.items.A['*'].n).toBeCloseTo(10, 1); expect(snap.items.A['*'].s).toBeCloseTo(1, 1);
-    expect(JSON.stringify(snap)).not.toContain('v1');   // no visitor in the aggregate
+    // No visitor in the aggregate. The snapshot now also states the measurement
+    // basis it counted on (src/durable-objects/LearnStats.ts snapshot; the
+    // vocabulary at src/learn/fan.ts:245; document 35 §5 W26 "defined
+    // served/rendered/viewable unit"), and 'served-v1' contains the bare
+    // substring this guard used to look for, so it names the visitor identifier
+    // as a JSON value and the field name instead — a leaked visitor still fails it.
+    const published = JSON.stringify(snap);
+    expect(published).not.toContain('"v1"');
+    expect(published).not.toContain('visitor');
   });
 
   it('W09.04 reports acknowledged statistics processing and the complete ring credit cascade', async () => {
@@ -1758,9 +1788,13 @@ describe('the objects', () => {
     const exposure = { item: 'A', cell, ts: now }, credit = { item: 'A', cell, reward: 'click', ts: now, weight: 1 };
     const request = (object: LearnStats, kind: 'exposures' | 'credits', rows: unknown[]) => object.fetch(new Request('https://learn/' + kind,
       { method: 'POST', body: JSON.stringify({ tenant: 'coach', brand: 'coach', slot: 'hero', config: cfg, [kind]: rows }) }));
+    // A snapshot reads the slot configuration and priors from the coherent
+    // publication (LearnStats.ts:510-516), so these objects stand on the same
+    // published authority the rest of this suite uses — boundedConfig is `cfg`.
+    const authority = boundedStats(); await authority.request('/snapshot');
     for (const kind of ['exposures', 'credits'] as const) for (const committed of [false, true]) {
       const storage = new ClonedStorage(), state = { storage } as unknown as DurableObjectState;
-      const object = new LearnStats(state, {} as Env), row = kind === 'exposures' ? exposure : credit;
+      const object = new LearnStats(state, authority.env), row = kind === 'exposures' ? exposure : credit;
       expect(await (await request(object, kind, [row, null])).json()).toEqual({ ok: true,
         receipt: { version: 1, kind, received: 2, processed: 1, skipped: 1, alarm: 'scheduled' } });
       const before = structuredClone(storage.map.get('learn'));
@@ -1775,7 +1809,7 @@ describe('the objects', () => {
       expect(put).toHaveBeenCalledTimes(1); // No automatic replay, even after an ambiguous commit.
       const snapshot = async (obj: LearnStats) => (await (await obj.fetch(new Request('https://learn/snapshot'))).json()) as { snapshot: { items: Record<string, Record<string, { n: number; s: number }>> } };
       const expected = committed ? 2 : 1;
-      for (const obj of [object, new LearnStats(state, {} as Env)]) {
+      for (const obj of [object, new LearnStats(state, authority.env)]) {
         const snap = (await snapshot(obj)).snapshot;
         expect(kind === 'exposures' ? snap.items.A!['*']!.n : snap.items.A!['*']!.s).toBeCloseTo(expected, 3);
       }

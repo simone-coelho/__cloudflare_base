@@ -56,11 +56,14 @@ describe('the no_learning arm', () => {
   it('feeds no exposures to the statistics; only the personalized arm does', async () => {
     const posted: Array<{ name: string; path: string; body: { exposures?: unknown[] } }> = [];
     const ns = { idFromName: (n: string) => n, get: (name: string) => ({ fetch: async (url: string, init: { body: string }) => { posted.push({ name, path: new URL(url).pathname, body: JSON.parse(init.body) }); return new Response('{}'); } }) };
+    // Every online record states its retention before the fan will carry it
+    // (src/learn/fan.ts:317, :333; src/retention.ts:39, :72-89), from the same
+    // explicit registry the rest of this suite uses.
     const record = (arm: DecisionRecord['arm']): DecisionRecord => {
       const row = decideContent({ ...base, arm }).records[0]!;
-      return { ...row, decision_id: row.decision_id + ':' + arm, arm };
+      return { ...row, decision_id: row.decision_id + ':' + arm, arm, retention: captureRetention(retainedFixture, 'coach', Math.min(row.ts, Date.now())) };
     };
-    await fanDecisions({ DECISION_RING: ns as never, LEARN_STATS: ns as never, STORAGE: { get: async () => null } as never }, { tenant: 'coach', brand: 'coach', visitor_id: 'v1', records: [record('personalized'), record('no_learning'), record('default')] }, () => ({ reward: 'click', stats: DEFAULT_STATS }));
+    await fanDecisions({ ...retainedFixture, DECISION_RING: ns as never, LEARN_STATS: ns as never, STORAGE: { get: async () => null } as never } as unknown as Env, { tenant: 'coach', brand: 'coach', visitor_id: 'v1', records: [record('personalized'), record('no_learning'), record('default')] }, () => ({ reward: 'click', stats: DEFAULT_STATS }));
     const exposures = posted.filter((p) => p.path === '/exposures');
     expect(exposures).toHaveLength(1);
     expect(exposures[0]!.body.exposures).toHaveLength(1);
@@ -110,6 +113,17 @@ describe('W06.05 retained cutoff on online fan-out', () => {
       get: async (key: string) => data.get(key), put: async (key: string, value: unknown) => { data.set(key, value); },
       getAlarm: async () => null, setAlarm: async () => {},
       deleteAll: async () => { data.clear(); },
+      // The object bounds its whole saved state, credit plans included, before any
+      // save (src/durable-objects/DecisionRing.ts:368 → :499-503), and rewrites the
+      // credit generation inside a storage transaction (:210, :226); the double
+      // implements both rather than hiding the work the object really does.
+      list: async <T>({ prefix = '', limit }: { prefix?: string; limit?: number } = {}) =>
+        new Map<string, T>([...data].filter(([key]) => key.startsWith(prefix)).sort(([a], [b]) => a.localeCompare(b)).slice(0, limit) as Array<[string, T]>),
+      delete: async (key: string) => data.delete(key),
+      transaction: async <T>(run: (tx: unknown) => Promise<T>) => run({
+        get: async (key: string) => data.get(key), put: async (key: string, value: unknown) => { data.set(key, value); },
+        delete: async (key: string) => data.delete(key), list: async () => new Map(data),
+      }),
     } } as unknown as DurableObjectState, env);
     env.DECISION_RING = { idFromName: (name: string) => name, get: () => ({ fetch: async (url: string, init?: RequestInit) => {
       tomb = barrier(tenant, visitor, at); // Caller already read a definite absent barrier; delivery now resumes.
@@ -137,6 +151,14 @@ describe('W06.05 retained cutoff on online fan-out', () => {
           const data = new Map<string, any>(), state = { storage: {
             get: async (key: string) => data.get(key), put: async (key: string, value: unknown) => { data.set(key, value); },
             getAlarm: async () => null, setAlarm: async () => {}, deleteAll: async () => { data.clear(); },
+            // Same complete storage surface as above (DecisionRing.ts:499-503, :210).
+            list: async <T>({ prefix = '', limit }: { prefix?: string; limit?: number } = {}) =>
+              new Map<string, T>([...data].filter(([key]) => key.startsWith(prefix)).sort(([a], [b]) => a.localeCompare(b)).slice(0, limit) as Array<[string, T]>),
+            delete: async (key: string) => data.delete(key),
+            transaction: async <T>(run: (tx: unknown) => Promise<T>) => run({
+              get: async (key: string) => data.get(key), put: async (key: string, value: unknown) => { data.set(key, value); },
+              delete: async (key: string) => data.delete(key), list: async () => new Map(data),
+            }),
           }, waitUntil: (p: Promise<unknown>) => { pending.push(p); } } as unknown as DurableObjectState;
           item = { data, object: kind === 'ring' ? new DecisionRing(state, env) : new LearnStats(state, env) }; items.set(name, item);
         }

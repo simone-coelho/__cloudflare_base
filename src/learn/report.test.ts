@@ -18,6 +18,9 @@ import { Hono } from 'hono';
 import { SignJWT } from 'jose';
 import { tenantMiddleware } from '@/tenancy/middleware';
 import { invalidateCache } from '@/config/versionedStore';
+import { initializePublicationSet } from '@/config/publication';
+import { captureRetention, type RetentionEnv } from '@/retention';
+import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
 
 const T0 = Date.UTC(2026, 8, 3, 12, 0, 0);
 
@@ -79,19 +82,42 @@ class ReportR2 {
   async list({ prefix }: { prefix: string }) { return { objects: [...this.objects.keys()].filter(key => key.startsWith(prefix)).sort().map(key => ({ key })), truncated: false }; }
   async put(key: string, raw: string, options?: R2PutOptions) {
     await this.beforePut?.(key);
-    const before = this.objects.get(key), onlyIf = options?.onlyIf as R2Conditional | undefined;
+    const before = this.objects.get(key);
+    // The publication writer states its create-only precondition as a Headers
+    // If-None-Match and checks the returned key/size, not just the etag
+    // (src/config/publication.ts:291-296); an incomplete result is refused.
+    const rawCondition = options?.onlyIf;
+    const onlyIf: R2Conditional | undefined = rawCondition instanceof Headers
+      ? { ...(rawCondition.get('If-None-Match') === '*' ? { etagDoesNotMatch: '*' } : {}),
+        ...(rawCondition.get('If-Match') ? { etagMatches: rawCondition.get('If-Match')! } : {}) }
+      : rawCondition as R2Conditional | undefined;
     const etag = before === undefined ? null : createHash('sha256').update(before).digest('hex');
     if ((onlyIf?.etagMatches !== undefined && onlyIf.etagMatches !== etag)
       || (onlyIf?.etagDoesNotMatch === '*' && before !== undefined)
-      || (onlyIf?.etagDoesNotMatch !== undefined && onlyIf.etagDoesNotMatch === etag)) return null;
+      || (onlyIf?.etagDoesNotMatch !== undefined && onlyIf.etagDoesNotMatch !== '*' && onlyIf.etagDoesNotMatch === etag)) return null;
     this.puts.push(key); this.objects.set(key, raw);
-    return { etag: createHash('sha256').update(raw).digest('hex') };
+    return { key, etag: createHash('sha256').update(raw).digest('hex'), size: new TextEncoder().encode(raw).length };
   }
 }
-function overlayFixture() {
+/**
+ * SYNTHETIC registry, not an approved retention period. The report route admits a
+ * ledger row only against an explicit per-category policy
+ * (src/routes/decisions.ts:850 → src/learn/report.ts:887; src/retention.ts:96-99);
+ * shape from src/index.api-boundary.test.ts:34-37.
+ */
+const REPORT_RETENTION = JSON.stringify({ version: 1, tenants: { coach: Object.fromEntries(
+  ['ledger', 'online', 'hourly'].map((category) => [category,
+    { id: 'report-fixture-' + category, revision: 1, durationMs: 365 * 86400_000, basis: 'occurred', renewal: 'new-record-only' }])) } });
+const REPORT_RETENTION_ENV = { TENANTS: JSON.stringify({ provisioned: ['coach'] }), RETENTION: REPORT_RETENTION } as RetentionEnv;
+
+/** `retention` stamps every fixture row the way the ledger writer does, for the
+ *  routes that carry a retention authority into the report. */
+function overlayFixture(retention?: RetentionEnv) {
   const storage = new ReportR2(), ids = { tenant: 'coach', brand: 'coach', date: '2026-09-03' };
-  const rows = [dec('1', 'v1', 's1', T0, 'a'), dec('2', 'v2', 's2', T0 + 60_000, 'b')];
-  const event = out('v2', 's2', T0 + 120_000, 'click', 'b');
+  const stamp = <T extends { ts: number }>(row: T): T =>
+    retention ? { ...row, retention: captureRetention(retention, ids.tenant, row.ts) } : row;
+  const rows = [stamp(dec('1', 'v1', 's1', T0, 'a')), stamp(dec('2', 'v2', 's2', T0 + 60_000, 'b'))];
+  const event = stamp(out('v2', 's2', T0 + 120_000, 'click', 'b'));
   for (const row of [...rows, event]) {
     const stream = 'decision_id' in row ? 'decision' : 'outcome';
     storage.objects.set(`${hourPrefix(ids.tenant, row.ts)}/${stream}/${ts36(row.ts)}-${ts36(row.ts)}-fixture.ndjson`, JSON.stringify(row) + '\n');
@@ -99,6 +125,20 @@ function overlayFixture() {
   const key = reportKey(ids.tenant, ids.brand, ids.date), now = T0 + 4 * 3600_000;
   const custom: ReportPolicy[] = [{ ...DEFAULT_POLICY, name: 'custom-any-first', match: 'any', credit: 'first' }];
   return { storage, ids, key, now, custom };
+}
+/**
+ * The coherent R2 publication is the only configuration authority the report
+ * route reads (src/routes/decisions.ts:57-60, :844; src/config/publication.ts:204-206,
+ * :225-240): with no published head the request answers 500 before any report work.
+ * The document published here is this suite's `learn` configuration completed by
+ * the compiled default (src/content/kinds.ts:476-485) — a publication is a whole
+ * authored document, and the default attribution policy is part of it. Never a KV fallback.
+ */
+async function publishLearnConfig(storage: ReportR2, tenant: string, value: LearnConfig = { ...DEFAULT_LEARN, ...learn }): Promise<void> {
+  await initializePublicationSet({ STORAGE: storage } as unknown as Env, [
+    { kind: LEARN_KIND, scope: tenant, revision: { revision: 1, value, actor: 'report-fixture', note: '', at: T0 } },
+  ], '0:' + crypto.randomUUID());
+  storage.puts.length = 0;
 }
 function barrier() {
   let entered!: () => void, release!: () => void;
@@ -206,7 +246,10 @@ describe('the day report', () => {
     const canonical = await runReport(f.storage, f.ids, learn, null, f.now);
     const body = JSON.parse(f.storage.objects.get(f.key)!);
     expect(body._summary.computation).toEqual(canonical.computation);
-    expect(canonical.computation).toMatchObject({ version: 3, profile: { source: 'raw-day', horizonMs: null, ringCap: null },
+    // Version 4 is the recorded computation basis: it states each slot's measurement
+    // basis (src/learn/report.ts:119, type at :71, :75; document 35 §5 W26 "defined
+    // served/rendered/viewable unit"). Retained 1-3 documents stay readable as history.
+    expect(canonical.computation).toMatchObject({ version: 4, profile: { source: 'raw-day', horizonMs: null, ringCap: null },
       slots: [{ slot: 'hero', reward: 'click', objective: 'unit', tauLearnMs: stats.DEFAULT_STATS.tauLearnMs }] });
     expect(recordedComputation(canonical.computation)).toEqual(canonical.computation);
     const response = await decisionRoutes.request('https://report.test/coach/learn/report?date=' + f.ids.date + '&slot=hero', undefined, { STORAGE: f.storage } as unknown as Env);
@@ -472,11 +515,13 @@ describe('the day report', () => {
     await expect(runDayReport(stalled, ids, learn, [], T0, { maxObjects: 800 })).rejects.toBeInstanceOf(ReportInputError);
     expect(stalled.list).toHaveBeenCalledTimes(4);
 
-    const f = overlayFixture(); invalidateCache('learn', 'coach');
+    const f = overlayFixture(REPORT_RETENTION_ENV); invalidateCache('learn', 'coach');
+    await publishLearnConfig(f.storage, 'coach');
     f.storage.objects.set(f.key, 'canonical-sentinel');
     const cacheGet = vi.fn(async () => null), lists = vi.spyOn(f.storage, 'list'), gets = vi.spyOn(f.storage, 'get');
     const env = { AUTH_MODE: 'enforced', JWT_SECRET: 'w3202-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
-      TENANTS: JSON.stringify({ provisioned: ['coach'], operatorGrants: { reporter: ['coach'] } }), CACHE: { get: cacheGet }, STORAGE: f.storage } as unknown as Env;
+      TENANTS: JSON.stringify({ provisioned: ['coach'], operatorGrants: { reporter: ['coach'] } }), RETENTION: REPORT_RETENTION,
+      CACHE: { get: cacheGet }, STORAGE: f.storage } as unknown as Env;
     const token = await new SignJWT({ type: 'service', roles: ['admin'] }).setProtectedHeader({ alg: 'HS256' }).setSubject('reporter')
       .setIssuer('i').setAudience('a').setExpirationTime('5m').sign(new TextEncoder().encode(env.JWT_SECRET));
     const app = new Hono().use('*', tenantMiddleware()).route('/v1', decisionRoutes);
@@ -583,9 +628,10 @@ describe('the day report', () => {
 
   it('W33.01 authenticated custom POST cannot replace canonical GET/window across either publication completion order', async () => {
     for (const customFinishesLast of [true, false]) {
-      const f = overlayFixture(); invalidateCache('learn', 'coach');
+      const f = overlayFixture(REPORT_RETENTION_ENV); invalidateCache('learn', 'coach');
+      await publishLearnConfig(f.storage, 'coach');
       const env = { AUTH_MODE: 'enforced', JWT_SECRET: 'w3301-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
-        TENANTS: JSON.stringify({ provisioned: ['coach', 'meridian'], operatorGrants: { reporter: ['coach'] } }),
+        TENANTS: JSON.stringify({ provisioned: ['coach', 'meridian'], operatorGrants: { reporter: ['coach'] } }), RETENTION: REPORT_RETENTION,
         CACHE: { get: async () => null }, STORAGE: f.storage } as unknown as Env;
       const token = await new SignJWT({ type: 'service', roles: ['admin'] }).setProtectedHeader({ alg: 'HS256' }).setSubject('reporter')
         .setIssuer('i').setAudience('a').setExpirationTime('5m').sign(new TextEncoder().encode(env.JWT_SECRET));
