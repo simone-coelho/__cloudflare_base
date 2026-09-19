@@ -249,6 +249,7 @@ realtimeRoutes.post('/action', async (c) => {
     if (!result.dropped) emitOutcome(result.sessionId, consent);
     if (actionEvent.processing === 'buffered') return c.json({ success: true, processing: 'buffered',
       interestApplied: result.interestApplied === true, ...(result.dropped ? { dropped: result.dropped } : {}),
+      ...(result.signals ? { signals: result.signals } : {}),
       sessionId: result.sessionId, cookiesUpdated: false, consent, behavior, ...(render ? { render } : {}) });
 
     // ODP loop (doc 16 §8): forward the behavioral event to ODP OFF the response
@@ -297,6 +298,9 @@ realtimeRoutes.post('/action', async (c) => {
         success: true,
         message: 'Action processed and personalization updated',
         update: result.update,
+        // W16 C8.03: what the tenant's own catalogue could and could not place
+        // in this input, named, on the same answer both hosts return.
+        ...(result.signals ? { signals: result.signals } : {}),
         sessionId: result.sessionId,
         cookiesUpdated: result.cookieHeaders.length > 0,
         odp: odpReceipt,
@@ -309,6 +313,7 @@ realtimeRoutes.post('/action', async (c) => {
         success: true,
         message: 'Action processed, no personalization changes needed',
         ...(render ? { render } : {}),
+        ...(result.signals ? { signals: result.signals } : {}),
         sessionId: result.sessionId,
         cookiesUpdated: result.cookieHeaders.length > 0,
         odp: odpReceipt,

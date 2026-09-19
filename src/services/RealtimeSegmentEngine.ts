@@ -49,11 +49,16 @@ import {
   apply as applyReflex,
   attributesFrom as reflexAttributes,
   extractTouches,
+  needsCatalogVocabulary,
+  recognizeEvent,
   touchesForEvent,
   snapshot as reflexSnapshot,
   tick as tickReflex,
+  RECOGNIZED,
+  type RecognitionSignals,
   type ReflexResult,
 } from '@/reflex/core';
+import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
 import {
   DEFAULT_GENERATOR_CONFIG,
   generateAffinityAudiences,
@@ -421,6 +426,8 @@ export class RealtimeSegmentEngine {
 
   private async processAction(event: ActionEvent, sessionId?: string, cookieHeader?: string | null): Promise<{
     update: PersonalizationUpdate | null; sessionId: string; sessionData: SessionData; consent: Consent; interestApplied?: boolean; dropped?: string;
+    /** W16 C8.03: what this event's input named that the tenant's catalogue could not place. */
+    signals?: RecognitionSignals;
   }> {
     if (!validEntry(event.entry)) throw new SessionAccessError();
     if (this.principal) {
@@ -451,7 +458,11 @@ export class RealtimeSegmentEngine {
         }
         sessionData = { ...sessionData, preferences: { ...sessionData.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization } };
       }
-      const answer = (update: PersonalizationUpdate | null) => ({ update, sessionId: currentSessionId, sessionData, consent });
+      // W16 C8.03: what the engine could and could not place in THIS event. Set
+      // where the touches are built below, so the answer and the taste can never
+      // tell two different stories about the same input.
+      let signals: RecognitionSignals | undefined;
+      const answer = (update: PersonalizationUpdate | null) => ({ update, sessionId: currentSessionId, sessionData, consent, ...(signals ? { signals } : {}) });
       if (!consent.tracking) return answer(null);
       requireConsentPurpose(consent, 'tracking');
       if (personalizes(consent)) requireConsentPurpose(consent, 'personalization');
@@ -504,8 +515,18 @@ export class RealtimeSegmentEngine {
         const pid = data.productId ?? data.product_id ?? data.sku;
         const product = pid ? catalogService?.getProduct(String(pid)) : undefined;
         const action = actionOf(event);
+        // W16 C8.03 / R47: an event the tenant's own catalogue cannot place
+        // builds nothing, and the answer names the product it referred to. A
+        // content event is placed by the content catalogue one line above, so it
+        // never asks the product vocabulary about itself.
+        const vocabulary = contentEventTouches || !needsCatalogVocabulary(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig)
+          ? null
+          : await tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null);
+        signals = vocabulary
+          ? recognizeEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig, vocabulary)
+          : { ...RECOGNIZED };
         // Reuse precisely the personal scorer's touches for population counts.
-        const touches = contentEventTouches ?? touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig);
+        const touches = contentEventTouches ?? touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig, vocabulary ?? undefined);
         reflex = applyReflex(
           sessionData.reflex,
           {
@@ -1236,13 +1257,16 @@ export class RealtimeSegmentEngine {
     consent: Consent;
     interestApplied?: boolean;
     dropped?: string;
+    /** W16 C8.03: the input diagnostic the route answers with, on this host. */
+    signals?: RecognitionSignals;
   }> {
     if (!validEntry(event.entry) || (event.processing === 'buffered' && !this.principal)) throw new SessionAccessError();
     this.keepAlive = ctx ? (p) => { try { ctx.waitUntil(p); } catch { /* no execution context */ } } : undefined;
     const sessionId = this.principal?.sessionId ?? (await this.getOrCreateSessionFromCookies(cookieHeader, event.userId)).sessionId;
     const result = await this.processAction(event, sessionId, cookieHeader);
     if (event.processing === 'buffered') return { update: null, sessionId, cookieHeaders: [], consent: result.consent,
-      interestApplied: result.interestApplied, ...(result.dropped ? { dropped: result.dropped } : {}) };
+      interestApplied: result.interestApplied, ...(result.dropped ? { dropped: result.dropped } : {}),
+      ...(result.signals ? { signals: result.signals } : {}) };
     const cookieHeaders = personalizes(result.consent)
       ? this.sessionManager.createCookieHeaders(this.sessionManager.generateSessionCookies(result.sessionData, sessionId))
       : this.sessionManager.generateConsentCookieHeaders(result.sessionData.preferences, result.consent);
@@ -1252,6 +1276,7 @@ export class RealtimeSegmentEngine {
       sessionId,
       cookieHeaders,
       consent: result.consent,
+      ...(result.signals ? { signals: result.signals } : {}),
     };
   }
 

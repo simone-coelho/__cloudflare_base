@@ -80,14 +80,19 @@ import {
   attributesFrom as reflexAttributes,
   emptyState,
   extractTouches,
+  needsCatalogVocabulary,
+  recognizeEvent,
   touchesForEvent,
   nextCrossing,
   snapshot as reflexSnapshot,
   tick as tickReflex,
+  RECOGNIZED,
+  type RecognitionSignals,
   type ReflexConfig,
   type ReflexResult,
   type ReflexState,
 } from '@/reflex/core';
+import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
 import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, stageFromCounters, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
@@ -1058,10 +1063,22 @@ export class ShopperReflex {
     const data = event.data ?? {};
     const pid = data.productId ?? data.product_id ?? data.sku;
     const product = pid != null ? surfaceCatalog?.getProduct(String(pid)) : undefined;
+    // W16 C8.03 / R47: the vocabulary an input is measured against is the
+    // catalogue THIS tenant decides from, read once per event beside the config.
+    // A content event is placed by the content catalogue below and never asks
+    // the product vocabulary about itself.
+    const vocabulary = isContentAction(actionOf(event))
+      || !needsCatalogVocabulary(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, cfg) ? null
+      : await tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null);
+    const signals: RecognitionSignals = vocabulary
+      ? recognizeEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, cfg, vocabulary)
+      : { ...RECOGNIZED };
     // CW24: where the scope scores event-carried attributes, an unknown id with
-    // registry attributes on it is a customer's product, not an abuse attempt.
+    // registry attributes on it is a customer's product, not an abuse attempt —
+    // unless the tenant's own catalogue can place none of those attributes, in
+    // which case the input stays unknown and builds nothing (HANDOFF §12).
     const eventTouches = !product && cfg.eventAttributes === 'event-when-unknown'
-      ? touchesForEvent(data as Record<string, unknown>, undefined, cfg) : [];
+      ? touchesForEvent(data as Record<string, unknown>, undefined, cfg, vocabulary ?? undefined) : [];
     if (pid != null && !product && eventTouches.length === 0) {
       this.dropped.unknownProduct++;
       return {
@@ -1070,6 +1087,8 @@ export class ShopperReflex {
           success: true,
           message: 'Action ignored: unknown productId',
           dropped: 'unknown_product',
+          // The counter says THAT one was dropped; this names WHICH input it was.
+          signals,
           sessionId: this.pipeline?.sessionId ?? null,
           cookiesUpdated: false,
           consent,
@@ -1286,6 +1305,7 @@ export class ShopperReflex {
           ? 'Action processed and personalization updated'
           : 'Action processed, no personalization changes needed',
         ...(update ? { update } : {}),
+        signals,
         sessionId: sessionIdOut,
         cookiesUpdated: false, // identity is the stable visitor id — no session cookies on this host
         ...(odpReceipt ? { odp: odpReceipt } : {}),

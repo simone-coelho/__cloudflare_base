@@ -83,6 +83,7 @@ Response:
   "success": true,
   "message": "Action processed and personalization updated",
   "update": { "type": "personalization_update", "userId": "vis-2f1c…", "data": { "segments": ["line_tabby_affinity"], "decisions": { "hero_module": { "enabled": true, "variationKey": "affinity_hero", "variables": {} } }, "affinity": { "dims": { "line": { "Tabby": 0.71 } } }, "journeyStage": "thinking" } },
+  "signals": { "recognized": true, "unrecognized": [] },
   "sessionId": "9cb1810f-…",
   "cookiesUpdated": true,
   "odp": { "receiptId": "r-…", "type": "product", "action": "detail" }
@@ -91,6 +92,15 @@ Response:
 
 `update` is absent when nothing changed. `400` with `error: "Invalid action event format"` and
 `details` names the offending field.
+
+`signals` is the input diagnostic, on both hosts. `recognized` is false when the engine could place
+nothing this event carried against the catalogue your tenant publishes — the values your published
+content catalogue tags carry, dimension by dimension, plus any product catalogue the tenant holds —
+and `unrecognized` then names the product id it could not place, so an operator can see which input
+was ignored rather than only that one was. An event the engine cannot place builds no affinity on any
+dimension; the served order stays the catalogue's. A value on a dimension your catalogue tags nothing
+on is never called unrecognized, and a tenant that publishes no catalogue data refuses nothing. The
+object host's existing `dropped: "unknown_product"` still accompanies the id it drops.
 
 ### `GET /realtime/ws?tenant=<tenant>`
 

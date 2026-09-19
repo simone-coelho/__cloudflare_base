@@ -7,10 +7,10 @@
 import type { Env } from '@/types/env';
 import { assertOwnerScope, currentOwnerConsent, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
-import { PublicationError, pinPublication, readPinnedPublication } from '@/config/publication';
+import { PublicationError, pinPublication, readPinnedPublication, readPublication } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
-import { snapshot as reflexSnapshot, type AffinitySnapshot, type ReflexConfig } from '@/reflex/core';
+import { extractTouches, snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
 import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
@@ -28,7 +28,7 @@ import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regio
 import { currentLiftWitness, fanDecisions, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
-import type { ContentDecisionSet, SlotCatalog } from './types';
+import type { ContentDecisionSet, ContentPiece, SlotCatalog } from './types';
 import { captureRetention } from '@/retention';
 import { recoverDecisions } from '@/ledger/recovery';
 import { createRenderOffer } from './renderOffer';
@@ -196,6 +196,77 @@ async function readShopper(
   } catch {
     throw new SessionAccessError();
   }
+}
+
+// ── The tenant's own catalogue vocabulary (W16 C8.03, R47) ──────────────────
+//
+// What an ingest host is allowed to call "recognized" comes from the catalogue
+// THIS tenant decides from, never from a list written in product code: the
+// values its published content catalogue tags carry, dimension by dimension,
+// plus the ids and registry-sourced attribute values of the product catalogue
+// it holds when it holds one. It is read here, beside the decision path's own
+// read of the same document, so the two halves of the platform can never
+// disagree about what the tenant's taxonomy is.
+
+/** Any product catalogue the tenant holds, read structurally so no host type leaks in. */
+export interface CatalogVocabularySource {
+  getAllProducts(): ReadonlyArray<Record<string, unknown>>;
+}
+
+/** Keyed by the two documents it is derived from, so a republished one recomputes. */
+interface VocabularyEntry { version: string; value: CatalogVocabulary }
+const NO_CONTENT_CATALOG = {};
+const NO_PRODUCT_CATALOG = {};
+// Keyed by object identity on both axes and held weakly, so a republished
+// document simply misses and the superseded entry is collected. No TTL and no
+// explicit invalidation can go stale against it.
+const vocabularyCache = new WeakMap<object, WeakMap<object, VocabularyEntry>>();
+
+/**
+ * The vocabulary the ingest hosts measure an event against.
+ *
+ * A tenant whose content catalogue cannot be read publishes no vocabulary here,
+ * so nothing is called unrecognized and the engine behaves exactly as it did
+ * before R47. A publication outage must not turn into refused traffic on the
+ * ingest path; the decision path's own fail-closed authority over the same
+ * document is untouched by this read.
+ */
+export async function tenantCatalogVocabulary(
+  env: Env, tenant: string, config: ReflexConfig, products?: CatalogVocabularySource | null,
+): Promise<CatalogVocabulary> {
+  let document: object = NO_CONTENT_CATALOG;
+  let pieces: ReadonlyArray<Pick<ContentPiece, 'tags' | 'featuredProductIds'>> = [];
+  try {
+    const revision = await readPublication(env, CONTENT_KIND, tenant, true);
+    if (revision?.value) { document = revision.value; pieces = revision.value.pieces; }
+  } catch { /* no readable catalogue names no vocabulary; see above */ }
+  const productKey: object = products ?? NO_PRODUCT_CATALOG;
+  let byProducts = vocabularyCache.get(document);
+  if (!byProducts) { byProducts = new WeakMap<object, VocabularyEntry>(); vocabularyCache.set(document, byProducts); }
+  const cached = byProducts.get(productKey);
+  if (cached && cached.version === config.version) return cached.value;
+
+  const ids = new Set<string>();
+  const values = new Map<string, Set<string>>();
+  const name = (dim: string, value: string) => {
+    let set = values.get(dim);
+    if (!set) { set = new Set<string>(); values.set(dim, set); }
+    set.add(value);
+  };
+  for (const piece of pieces) {
+    for (const [dim, tagged] of Object.entries(piece.tags ?? {})) for (const value of tagged) name(dim, value);
+    for (const id of piece.featuredProductIds ?? []) ids.add(id);
+  }
+  for (const product of products?.getAllProducts() ?? []) {
+    const id = product.id;
+    if (typeof id === 'string' && id) ids.add(id);
+    // The same extraction the engine scores with, so a derived band on one side
+    // is the same word as the derived band on the other.
+    for (const touch of extractTouches(product, config)) name(touch.dim, touch.value);
+  }
+  const value: CatalogVocabulary = { ids, values };
+  byProducts.set(productKey, { version: config.version, value });
+  return value;
 }
 
 export async function serveContentDecisions(

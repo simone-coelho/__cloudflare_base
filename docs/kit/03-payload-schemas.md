@@ -23,6 +23,11 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `content_dwell` | the same, plus `ms`, milliseconds on screen |
 | `custom` | `event`, the real name, plus anything |
 
+An attribute value the tenant's published catalogue does not name, on a dimension that catalogue does
+name values for, places nothing: an event whose every value is outside the published vocabulary builds
+no affinity and is reported back in the answer's `signals` as unrecognized, with the product id named.
+A dimension the catalogue tags nothing on constrains nothing.
+
 ## The decision
 
 One item in snapshot `decisions[]`; the set carries its original `pageInstance`. `content_decisions` is a client-compatible historical frame, not a production delivery promise.
