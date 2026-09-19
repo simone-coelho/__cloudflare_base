@@ -32,6 +32,7 @@ import { initializePublicationSet, pinPublication, type PublicationBaseline } fr
 import { REFLEX_KIND, reflexScopeForTenant } from './configStore';
 import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
 import { storedConsent } from '@/content/consent';
+import { DEFAULT_JOURNEY_THRESHOLDS } from '@/services/JourneyStage';
 import type { RetentionPolicy } from '@/retention';
 
 const CFG = DEFAULT_REFLEX_CONFIG; // τ=60s · K=1.8 · θ 0.6/0.45 · priceBand τ=150s
@@ -194,7 +195,17 @@ const seedPublication = (env: Env, tenant: string) => {
   const baseline = (kind: PublicationBaseline['kind'], value: unknown, scope = tenant): PublicationBaseline =>
     ({ kind, scope, revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value } });
   return initializePublicationSet(env, [
-    baseline(REFLEX_KIND, DEFAULT_REFLEX_CONFIG, reflexScopeForTenant(tenant)),
+    // R10 update, witness R32(1) (W16 C4): the journey thresholds are DATA on
+    // this very document — its `journey` block — not a constant in the engine,
+    // and an unpublished block derives the first stage and nothing else. A
+    // fixture that expects a stage to MOVE must therefore publish a set, so
+    // this baseline publishes the engineering default verbatim
+    // (src/services/JourneyStage.ts DEFAULT_JOURNEY_THRESHOLDS: `thinking` at 3
+    // interactions — docs/architecture/tapestry_requirements.txt line 147,
+    // "3 clicks—site adapts third interaction onwards"; `deciding` at the first
+    // purchase — admitted criterion C4). Customer-neutral: counts of the
+    // shopper's own actions, no tenant taxonomy.
+    baseline(REFLEX_KIND, { ...DEFAULT_REFLEX_CONFIG, journey: DEFAULT_JOURNEY_THRESHOLDS }, reflexScopeForTenant(tenant)),
     baseline(CONTENT_KIND, { pieces: [] }), baseline(SLOTS_KIND, { pages: {} }),
     baseline(LEARN_KIND, { holdout: { share: 0, salt: 'fixture', arms: ['default'] } }),
   ], '0:' + crypto.randomUUID());
@@ -444,7 +455,14 @@ describe('ingest — one reducer behind both doors', () => {
     expect(update.data.segments).toContain('high_intent_tabby_browser'); // counter-based seed audience qualified too
     expect(Array.isArray(update.data.recommendations)).toBe(true);
     expect(Array.isArray(update.data.sortOrder)).toBe(true);
-    expect(update.data.journeyStage).toBe('mid');
+    // R10 update, witness R29 (W16 C4): the pushed envelope carries the stage
+    // in the shared vocabulary `exploring | thinking | deciding` (tapestry
+    // requirements line 148), not the persisted cell token. Three brisk views
+    // are three interactions of this visit, which meets the `thinking`
+    // threshold this fixture publishes on the reflex document, so the frame
+    // says the second stage of the journey. The stored grammar is unchanged:
+    // PERSISTED_STAGE maps this word back to `mid` (R32(2)).
+    expect(update.data.journeyStage).toBe('thinking');
 
     // Pushed over the DO's OWN socket with the same server timestamp (client dedupe key).
     const pushes = h.sockets[0].frames().filter((f) => f.type === 'personalization_update');
