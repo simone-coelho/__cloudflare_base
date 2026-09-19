@@ -254,6 +254,7 @@ function createCore(config, host) {
   let consentEpoch = 0;
   let activityEpoch = 0;
   let entry;
+  let entrySessionId = "";
   function onConsentChange(fn) {
     consentListeners.add(fn);
     return () => {
@@ -271,6 +272,7 @@ function createCore(config, host) {
   function consentChanged() {
     consentEpoch++;
     entry = void 0;
+    entrySessionId = "";
     notifyConsent();
   }
   async function saveRefusal(clear) {
@@ -391,8 +393,20 @@ function createCore(config, host) {
     restrict(recovery);
     saveRefusal();
   }
-  const session = () => trackingAllowed() ? currentSessionId(host) : "";
-  const entryOf = () => trackingAllowed() ? entry ??= entrySignals(host) : { utmMedium: "", utmSource: "", referrer: "", siteHost: "" };
+  const session = () => {
+    if (!trackingAllowed()) return "";
+    const current = currentSessionId(host);
+    if (entrySessionId !== current) {
+      entrySessionId = current;
+      entry = void 0;
+    }
+    return current;
+  };
+  const entryOf = () => {
+    if (!trackingAllowed()) return { utmMedium: "", utmSource: "", referrer: "", siteHost: "" };
+    session();
+    return entry ??= entrySignals(host);
+  };
   const listeners = /* @__PURE__ */ new Map();
   let updateDelivery = 0;
   function on(event, fn) {
@@ -479,6 +493,7 @@ function createCore(config, host) {
     updateEchoUnits = 0;
     updateDelivery++;
     entry = void 0;
+    entrySessionId = "";
     const reconnect = wanted;
     disconnect();
     if (g !== generation) return g;
@@ -1191,6 +1206,10 @@ function createCore(config, host) {
     get sessionId() {
       return session();
     },
+    /** Read only: naming the session never rolls one over or recomputes the entry. */
+    get entrySessionId() {
+      return entrySessionId;
+    },
     get profileSessionId() {
       return sessionId;
     },
@@ -1422,10 +1441,16 @@ function createEmit(core, listen) {
 var VISIT_GAP_MS = 30 * 60 * 1e3;
 var ENTRY_QUERY_LIMIT = 4096;
 var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, referrer: 2048, siteHost: 253 };
+function isHostname(value) {
+  return value.length <= ENTRY_LIMITS.siteHost && hostOf(value) === value.toLowerCase();
+}
+function hostField(key, hostOnly) {
+  return key === "siteHost" || hostOnly && key === "referrer";
+}
 function validEntry(value, hostOnly = false) {
   if (value === void 0) return true;
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  return Object.entries(value).every(([key, v]) => Object.hasOwn(ENTRY_LIMITS, key) && (v === void 0 || typeof v === "string" && v.length <= ENTRY_LIMITS[key] && (!hostOnly || key !== "referrer" || v === "" || v.length <= 253 && hostOf(v) === v.toLowerCase())));
+  return Object.entries(value).every(([key, v]) => Object.hasOwn(ENTRY_LIMITS, key) && (v === void 0 || typeof v === "string" && v.length <= ENTRY_LIMITS[key] && (!hostField(key, hostOnly) || v === "" || isHostname(v))));
 }
 function snapshotEntry(entry) {
   const referrer = typeof entry.referrer === "string" ? hostOf(entry.referrer) : entry.referrer;

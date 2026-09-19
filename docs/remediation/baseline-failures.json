@@ -1,8 +1,8 @@
 {
-  "generated": "2026-09-18T23:13:40.959Z",
-  "commit": "5b0b0ae8edf20318f68963c34cffe0dd5c25c3e9",
-  "vitest_sha256": "1c5234cd1912625722ffb21982ef21e129c238b3961c6080538bcd62925d4ca6",
-  "note": "parallel run on 7b01c14; L2 serial triage supersedes",
+  "generated": "2026-09-19T00:25:06.166Z",
+  "commit": "681104993575db4daf75dc06abbe3aebb5b074c6",
+  "vitest_sha256": "08e774100a830bc1aee4318a1d18b39c1e69d09c23af367bd82323cdb93f6b39",
+  "note": "serial run on the W16-B1 build head (rem/w16-c2-build); the W16 C2 entry-channel fix greens the two src/services/visit.test.ts search-referrer cases",
   "allow_grow_reason": null,
   "failures": [
     " CDP/ODP/session/realtime log boundaries reaches authenticated malformed handlers and preserves successful relay despite nonfatal capture error",
@@ -161,8 +161,6 @@
     " brighthour surface — config, catalog, and the DO gate the DO gate accepts a brighthour product id and still drops an unknown one",
     " coach resolution — the same objects and keys as before the split generates the coach audience set unprefixed and untagged — stored bytes unchanged",
     " detach clears the cookies and deletes nothing",
-    " entry channel accepts a bare host as well as a full URL",
-    " entry channel reads a search referrer as organic",
     " erase: the right to be forgotten (CW28) accepts a shopper id directly, and is idempotent",
     " erase: the right to be forgotten (CW28) forgets a person: links, both browsers’ profiles, the person’s session, and a tombstone per id",
     " event-carried attributes (CW24) is dropped as unknown while the scope is catalog-only, exactly as before",

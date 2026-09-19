@@ -48,12 +48,26 @@ export interface ChannelSignals {
 /** The same bounded input contract at HTTP, socket and snapshot boundaries. */
 export const ENTRY_QUERY_LIMIT = 4096;
 const ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, referrer: 2048, siteHost: 253 } as const;
+/** A hostname and nothing else: a URL, a path or free text does not round-trip. */
+function isHostname(value: string): boolean {
+  return value.length <= ENTRY_LIMITS.siteHost && hostOf(value) === value.toLowerCase();
+}
+/**
+ * Which fields must carry a host. `siteHost` always does: it is compared with
+ * the referrer's host, so a site host that is a URL, a path or free text cannot
+ * match and silently relabels a real external arrival as `direct`. `referrer`
+ * accepts a full URL on the live-event path, and is host-only where a boundary
+ * carries it in a query string.
+ */
+function hostField(key: string, hostOnly: boolean): boolean {
+  return key === 'siteHost' || (hostOnly && key === 'referrer');
+}
 export function validEntry(value: unknown, hostOnly = false): value is ChannelSignals | undefined {
   if (value === undefined) return true;
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   return Object.entries(value).every(([key, v]) => Object.hasOwn(ENTRY_LIMITS, key)
     && (v === undefined || (typeof v === 'string' && v.length <= ENTRY_LIMITS[key as keyof typeof ENTRY_LIMITS]
-      && (!hostOnly || key !== 'referrer' || v === '' || (v.length <= 253 && hostOf(v) === v.toLowerCase())))));
+      && (!hostField(key, hostOnly) || v === '' || isHostname(v)))));
 }
 
 /** Request channel is a vocabulary, never a free-form statistics key. */
@@ -63,9 +77,27 @@ export function entryChannelOf(value: unknown): EntryChannel | null {
   return ['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'].includes(channel) ? channel as EntryChannel : null;
 }
 
+/**
+ * R14: `direct` is a real page view on the site's own host — a present, valid
+ * `siteHost` with a referrer the document actually reported (empty or same-site).
+ * An absent referrer, or an empty or invalid site host, is missing evidence.
+ */
+function pageView(entry: ChannelSignals): boolean {
+  return typeof entry.referrer === 'string' && norm(entry.siteHost) !== '';
+}
+
+/**
+ * The channel an arrival is evidence OF, which is not the same question as the
+ * classifier's. `classifyEntryChannel` always answers with one of the six values
+ * and `direct` is its terminal fallback, so anything that STORES the answer asks
+ * first whether the arrival reports anything at all: an unrecognized campaign
+ * tag with no referrer and no site host is not evidence of a direct arrival, and
+ * unknown stays unknown (R14, unit W16.C2.04).
+ */
 function observedChannel(entry?: ChannelSignals): EntryChannel | undefined {
-  return validEntry(entry) && entry && Object.values(entry).some(v => typeof v === 'string')
-    ? classifyEntryChannel(entry) : undefined;
+  if (!validEntry(entry) || !entry || !Object.values(entry).some(v => typeof v === 'string')) return undefined;
+  const channel = classifyEntryChannel(entry);
+  return channel !== 'direct' || pageView(entry) ? channel : undefined;
 }
 
 /** Snapshot URLs carry host-only referrers; raw URL/path/query is never sent. */
@@ -159,14 +191,31 @@ export function visitBucket(visitCount: number | null | undefined): VisitBucket 
 
 const PAID_SEARCH_MEDIUMS = new Set(['cpc', 'ppc', 'paidsearch', 'paid_search', 'paid-search', 'sem', 'search_paid']);
 const PAID_SOCIAL_MEDIUMS = new Set(['paid_social', 'paidsocial', 'paid-social', 'social_paid', 'cpm', 'display', 'banner']);
+/** A click declared paid without naming the network; the source decides which paid cell it belongs to. */
+const PAID_MEDIUMS = new Set(['paid']);
 const EMAIL_MEDIUMS = new Set(['email', 'e-mail', 'e_mail', 'newsletter', 'crm']);
 const ORGANIC_MEDIUMS = new Set(['organic', 'organic_search']);
 const REFERRAL_MEDIUMS = new Set(['referral', 'affiliate', 'partner']);
 const SOCIAL_MEDIUMS = new Set(['social', 'social_media', 'sm']);
 
 const EMAIL_SOURCES = new Set(['klaviyo', 'mailchimp', 'braze', 'sfmc', 'salesforce_marketing_cloud', 'sendgrid', 'iterable', 'newsletter', 'email']);
-const SEARCH_HOSTS = ['google.', 'bing.', 'duckduckgo.', 'yahoo.', 'ecosia.', 'baidu.', 'yandex.', 'brave.', 'startpage.'];
-const SOCIAL_HOSTS = ['facebook.', 'fb.', 'instagram.', 'tiktok.', 'pinterest.', 'snapchat.', 'twitter.', 'x.com', 't.co', 'linkedin.', 'lnkd.in', 'reddit.', 'youtube.', 'threads.'];
+/**
+ * Entry networks are named by the domain they are registered under, because
+ * that is the only part of a host a stranger cannot choose. A host belongs to a
+ * network when it IS that domain or a dot-boundary subdomain of it, never when
+ * it merely contains or begins with it: `www.google.com` and `search.brave.com`
+ * are the network, `google.com.evil.example`, `notgoogle.com` and
+ * `evilgoogle.co` are not (units W16.C2.01, W16.C2.02).
+ */
+const SEARCH_HOSTS = ['google.com', 'bing.com', 'duckduckgo.com', 'yahoo.com', 'ecosia.org', 'baidu.com', 'yandex.com', 'brave.com', 'startpage.com'];
+const SOCIAL_HOSTS = ['facebook.com', 'fb.com', 'fb.me', 'meta.com', 'instagram.com', 'tiktok.com', 'pinterest.com', 'snapchat.com',
+  'twitter.com', 'x.com', 't.co', 'linkedin.com', 'lnkd.in', 'reddit.com', 'youtube.com', 'threads.net'];
+/**
+ * The same networks as a campaign DECLARES them in `utm_source`: a bare network
+ * name rather than a host. Matched exactly, so `tiktok.evil.example` is not
+ * TikTok; a source that is itself a host goes through the host rule instead.
+ */
+const SOCIAL_SOURCES = new Set(['facebook', 'fb', 'meta', 'instagram', 'tiktok', 'pinterest', 'snapchat', 'twitter', 'linkedin', 'reddit', 'youtube', 'threads']);
 
 function norm(v: string | null | undefined): string {
   return typeof v === 'string' ? v.trim().toLowerCase() : '';
@@ -182,11 +231,12 @@ function hostOf(referrer: string): string {
   }
 }
 
-const matches = (host: string, needles: string[]) =>
-  needles.some((n) => {
-    const domain = n.replace(/\.$/, '');
-    return host === domain || host.endsWith(`.${domain}`);
-  });
+/** Exact host, or a dot-boundary subdomain of it. Never a substring or a prefix. */
+const matches = (host: string, domains: string[]) =>
+  host !== '' && domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+
+/** A `utm_source` declares a social network by its name or by its own host. */
+const declaresSocial = (source: string) => source !== '' && (SOCIAL_SOURCES.has(source) || matches(source, SOCIAL_HOSTS));
 
 /**
  * Classify the visit's entry into one of doc 22's six channels.
@@ -207,14 +257,13 @@ export function classifyEntryChannel(signals: ChannelSignals): EntryChannel {
   const source = norm(signals.utmSource);
 
   if (medium !== '') {
-    // Meta's default campaign builder commonly emits utm_medium=cpc. The
-    // source disambiguates that declaration before the generic paid-search
-    // medium table; otherwise a Facebook click poisons the paid-search cell.
-    if (PAID_SEARCH_MEDIUMS.has(medium)
-      && (matches(source, SOCIAL_HOSTS) || SOCIAL_HOSTS.some((h) => source.startsWith(h.replace(/\.$/, ''))))) {
-      return 'paid_social';
-    }
-    if (PAID_SEARCH_MEDIUMS.has(medium)) return 'paid_search';
+    // Meta's default campaign builder commonly emits utm_medium=cpc, and a bare
+    // `paid` names no network at all. The declared source disambiguates both
+    // BEFORE the generic paid-search table; otherwise a Facebook click poisons
+    // the paid-search cell (unit W16.C2.03).
+    const paid = PAID_SEARCH_MEDIUMS.has(medium) || PAID_MEDIUMS.has(medium);
+    if (paid && declaresSocial(source)) return 'paid_social';
+    if (paid) return 'paid_search';
     if (PAID_SOCIAL_MEDIUMS.has(medium)) return 'paid_social';
     if (EMAIL_MEDIUMS.has(medium)) return 'email';
     if (REFERRAL_MEDIUMS.has(medium)) return 'referral';
@@ -222,11 +271,7 @@ export function classifyEntryChannel(signals: ChannelSignals): EntryChannel {
     // A bare `social` medium is ambiguous. Treat it as paid when the source is a
     // known ad platform, because that is what a campaign builder almost always
     // means by tagging it at all; otherwise it is a referral from that network.
-    if (SOCIAL_MEDIUMS.has(medium)) {
-      return matches(source, SOCIAL_HOSTS) || SOCIAL_HOSTS.some((h) => source.startsWith(h.replace(/\.$/, '')))
-        ? 'paid_social'
-        : 'referral';
-    }
+    if (SOCIAL_MEDIUMS.has(medium)) return declaresSocial(source) ? 'paid_social' : 'referral';
   }
 
   if (source !== '' && EMAIL_SOURCES.has(source)) return 'email';
