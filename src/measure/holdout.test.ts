@@ -181,10 +181,16 @@ describe('CW34: the pre-set targets', () => {
     expect(small.relative).toBeCloseTo(0.5, 2);
     expect(small.targets?.standing).toBe('on_track');
     expect(small.words).toContain('on track, the observed lift clears the minimum but the low end of the interval is');
-    // Same rates, big arms: the low end clears the target.
+    // Same rates, big arms: the low end clears the minimum, and not the target.
     const big = compareArms({ n: 20000, s: 600 }, { n: 400000, s: 18000 });
-    expect(big.targets?.standing).toBe('reached_target');
-    expect(big.words).toContain('the target is reached, the low end of the interval is +');
+    // R10/R100(b), witness F25 §7.3 (the Katz log relative interval from RAW rates) and §5.5 (this exact
+    // fixture: "shipped relative low 41.33 % … Katz low 38.46 % -> reached_minimum"). By hand at
+    // z = 1.959963984540054: p_c = 600/20000 = 0.03, p_t = 18000/400000 = 0.045, ln(1.5) = 0.4054651081,
+    // SE = sqrt(0.955/18000 + 0.97/600) = 0.0409838586, z·SE = 0.0803260527,
+    // low = exp(0.4054651081 − 0.0803260527) − 1 = +0.3845517 (r4 0.3846), high = exp(…+…) − 1 = +0.6250741.
+    // +38.46 % is under the +40 % target and over the +10 % minimum, so the rung is the minimum.
+    expect(big.targets?.standing).toBe('reached_minimum');
+    expect(big.words).toContain('the minimum is reached, the low end of the interval is +');
   });
 
   it('reaches stretch, or the minimum only, or is below', () => {
@@ -202,7 +208,11 @@ describe('CW34: the pre-set targets', () => {
   });
 
   it('accepts a tenant\u2019s own targets', () => {
-    // 3% → 3.75%: +25% observed; the low end of the relative interval is about +17% at these sizes.
+    // 3% → 3.75%: +25% observed; the low end of the relative interval is about +15.3% at these sizes.
+    // (R10/R100(b), F25 §7.3, by hand at z = 1.959963984540054: p_c = 0.03, p_t = 0.0375,
+    // ln(1.25) = 0.2231435513, SE = sqrt(0.9625/15000 + 0.97/600) = 0.0413983466, z·SE = 0.0811384905,
+    // low = +0.1534858 (r4 0.1535), high = +0.3545893. Both assertions below still hold, and 0.1535 ≥ the
+    // tenant's +15% target, so the rung is unchanged; only the comment's "+17%" was the narrow interval's.)
     const r = compareArms({ n: 20000, s: 600 }, { n: 400000, s: 15000 }, { targets: { minimum: 0.05, target: 0.15, stretch: 0.3 } });
     expect(r.targets?.relativeLow).toBeGreaterThan(0.15);
     expect(r.targets?.relativeLow).toBeLessThan(0.2);
