@@ -1090,7 +1090,11 @@ describe('unit:W16.C3.09', () => {
 
       // The bound, at the public boundary: carried at 256, refused beyond it.
       expect((await h.snapshot(arrival({ term: 'x'.repeat(TERM_LIMIT), siteHost: SITE }))).status, host).toBe(200);
-      expect((await h.snapshot(arrival({ term: 'x'.repeat(TERM_LIMIT + 1), siteHost: SITE }))).status, host).toBe(401);
+      // Rulings R46(a) and R59: an admitted caller whose `entry` is malformed gets the route's
+      // own documented refusal, 400 'Invalid entry context' (src/routes/decisions.ts); the 401
+      // this line pinned belonged to the period when that branch was dead code, and it remains
+      // the answer for a refused or unauthenticated caller, which this caller is not.
+      expect((await h.snapshot(arrival({ term: 'x'.repeat(TERM_LIMIT + 1), siteHost: SITE }))).status, host).toBe(400);
     }
   });
 });
