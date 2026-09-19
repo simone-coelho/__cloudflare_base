@@ -1538,10 +1538,10 @@
     }
     const layerHolds = /* @__PURE__ */ new Map();
     function releaseLayer(layer) {
-      const hold = layerHolds.get(layer);
-      if (!hold) return;
+      const entry = layerHolds.get(layer);
+      if (!entry) return;
       layerHolds.delete(layer);
-      hold();
+      entry.hold();
     }
     function dataLayer(opts = {}) {
       const layer = opts.layer ?? host.dataLayer;
@@ -1574,7 +1574,8 @@
       }
       const held = attachment;
       held.refs++;
-      layerHolds.set(layer, () => releaseLayerAttachment(layer, attached, core, held));
+      const hold = () => releaseLayerAttachment(layer, attached, core, held);
+      layerHolds.set(layer, { held, hold });
       if (fresh) {
         const replayLength = opts.replay !== false && core.trackingAllowed ? layer.length : 0;
         if (replayLength) core.capture(() => {
@@ -1587,7 +1588,8 @@
         released = true;
         if (held.refs > 0) held.refs--;
         if (held.refs > 0) return;
-        releaseLayer(layer);
+        if (layerHolds.get(layer)?.held === held) layerHolds.delete(layer);
+        hold();
       };
     }
     function release() {

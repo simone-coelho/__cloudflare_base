@@ -270,13 +270,19 @@ export function createEmit(core: Core, listen: Listen): Emit {
     };
   }
 
-  /** Every layer this client captures from, with the release that hands it back. */
-  const layerHolds = new Map<unknown[], () => void>();
+  /**
+   * Every layer this client captures from, with the attachment it holds there
+   * and the release that hands the layer back. The attachment is recorded
+   * beside the release so a detach function can tell its own from a later
+   * one's: a page that destroys a client and attaches again holds a detach
+   * function for an attachment that no longer exists (R60).
+   */
+  const layerHolds = new Map<unknown[], { held: LayerAttachment; hold: () => void }>();
   function releaseLayer(layer: unknown[]): void {
-    const hold = layerHolds.get(layer);
-    if (!hold) return;
+    const entry = layerHolds.get(layer);
+    if (!entry) return;
     layerHolds.delete(layer);
-    hold();
+    entry.hold();
   }
 
   function dataLayer(opts: DataLayerOptions = {}): () => void {
@@ -307,9 +313,13 @@ export function createEmit(core: Core, listen: Listen): Emit {
     }
     const held = attachment;
     held.refs++;
-    // The layer-wide release, so `client.destroy()` gives the page its push
-    // back even when the page kept none of the detach functions.
-    layerHolds.set(layer, () => releaseLayerAttachment(layer, attached, core, held));
+    // This attachment's own release, so `client.destroy()` gives the page its
+    // push back even when the page kept none of the detach functions, and so a
+    // detach function that outlived its attachment releases nothing else: it
+    // names the attachment it was handed out for, and `releaseLayerAttachment`
+    // does nothing when that one has already gone (R60).
+    const hold = (): void => releaseLayerAttachment(layer, attached, core, held);
+    layerHolds.set(layer, { held, hold });
     if (fresh) {
       const replayLength = opts.replay !== false && core.trackingAllowed ? layer.length : 0;
       if (replayLength) core.capture(() => { if (held.live) for (let i = 0; i < replayLength; i++) held.handle(layer[i]); });
@@ -320,8 +330,13 @@ export function createEmit(core: Core, listen: Listen): Emit {
       released = true;
       if (held.refs > 0) held.refs--;
       if (held.refs > 0) return;
-      // The last attachment hands the page its own function back, by identity.
-      releaseLayer(layer);
+      // The last hold on THIS attachment hands the page its own function back,
+      // by identity. A detach function from a discarded attachment changes
+      // nothing: it runs its own release, which does nothing once that
+      // attachment has gone, and the layer's current hold — a later
+      // attachment's — is left exactly where it is.
+      if (layerHolds.get(layer)?.held === held) layerHolds.delete(layer);
+      hold();
     };
   }
 
