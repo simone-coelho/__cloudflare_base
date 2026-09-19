@@ -2990,7 +2990,13 @@ describe('W14.05 typed source snapshots', () => {
       vi.restoreAllMocks();
       console.info('W14 bounded import phase', { host, phase, elapsedMs: Math.round(performance.now() - started) });
     }
-  }, 120000); // Each actual host retains the full 1000-row protocol; not a request/SLO claim.
+  // Ruling R65: this budget was tuned to an idle machine and began timing out while the test
+  // passed — measured 108 s idle, 130-172 s with four lanes running, 101.8 s (session) and
+  // 86.4 s (do) on the run that preceded this change. The bound is raised to five times the
+  // idle duration so it measures the protocol, not the machine. Every assertion is untouched;
+  // this is a per-test timeout, not a request or SLO claim, and each actual host still retains
+  // the full 1000-row protocol.
+  }, 600000);
 
   it('W14.06 strictly maps typed CSV and rejects malformed grammar, headings, cells and limits without effects while preserving behavioral CSV', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
