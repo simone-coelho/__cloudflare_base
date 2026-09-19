@@ -293,6 +293,15 @@ export interface DecisionRecord {
   customer_item_id: string;
   candidates: SlotCandidate[];
   cell: Cell;
+  /**
+   * W16 C4 (R29, R32(1)): the journey stage this decision was made in, in the
+   * shared vocabulary, and the identity of the published threshold revision
+   * that derived it (null when none was in force). `cell.stage` keeps the
+   * persisted token the learning statistics are keyed on; this is what a reader
+   * — and the shopper's own receipt — is told. Absent when the engine did not
+   * personalize, because then there is no derived stage to claim.
+   */
+  journey?: { stage: import('@/services/JourneyStage').JourneyWord; version: string | null };
   arm: Arm;
   explored: boolean;
   authority: Authority;

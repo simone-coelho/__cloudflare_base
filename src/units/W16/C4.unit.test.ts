@@ -694,7 +694,11 @@ describe('unit:W16.C4.05', () => {
         // names. The publication baseline is stored unstamped (publication.ts:465-469),
         // so revision 1 carries the document's bare version name.
         expect(await h.snapshot(), host).toEqual({ status: 200, ok: true, state: host, decisions: HOME_DECISIONS,
-          first: 'tabby-editorial', journey: { version: 'w16-b4-fixture', revision: 1, reason: null },
+          // R10, lead addendum from the W16-B4 specification pass 2: the hero slot carries no stage rule
+          // and neither piece a journeyStageFit, so nothing in C4 changes the served piece
+          // (src/content/decide.ts:128-130 — `hasStage` is false); with one view each the Rogue piece,
+          // first in the catalogue, is the one the engine serves at every revision.
+          first: 'rogue-editorial', journey: { version: 'w16-b4-fixture', revision: 1, reason: null },
           config: { label: 'w16-b4-fixture', revision: 1 } });
 
         // Publishing the next version changes the derivation for subsequent
@@ -703,7 +707,11 @@ describe('unit:W16.C4.05', () => {
         clock.mockReturnValue(T0 + 3 * STEP_MS);
         expect((await h.hydrate()).journeyStage, `${host}: version 2 needs five interactions`).toBe('exploring');
         expect(await h.snapshot(), host).toEqual({ status: 200, ok: true, state: host, decisions: HOME_DECISIONS,
-          first: 'tabby-editorial', journey: { version: 'w16-b4-fixture+r2', revision: 2, reason: null },
+          // R10, lead addendum from the W16-B4 specification pass 2: the hero slot carries no stage rule
+          // and neither piece a journeyStageFit, so nothing in C4 changes the served piece
+          // (src/content/decide.ts:128-130 — `hasStage` is false); with one view each the Rogue piece,
+          // first in the catalogue, is the one the engine serves at every revision.
+          first: 'rogue-editorial', journey: { version: 'w16-b4-fixture+r2', revision: 2, reason: null },
           config: { label: 'w16-b4-fixture+r2', revision: 2 } });
 
         // An invalid set never becomes the threshold in force: the validator
@@ -715,7 +723,11 @@ describe('unit:W16.C4.05', () => {
         clock.mockReturnValue(T0 + 4 * STEP_MS);
         expect((await h.hydrate()).journeyStage, `${host}: still version 2`).toBe('exploring');
         expect(await h.snapshot(), host).toEqual({ status: 200, ok: true, state: host, decisions: HOME_DECISIONS,
-          first: 'tabby-editorial', journey: { version: 'w16-b4-fixture+r2', revision: 2, reason: null },
+          // R10, lead addendum from the W16-B4 specification pass 2: the hero slot carries no stage rule
+          // and neither piece a journeyStageFit, so nothing in C4 changes the served piece
+          // (src/content/decide.ts:128-130 — `hasStage` is false); with one view each the Rogue piece,
+          // first in the catalogue, is the one the engine serves at every revision.
+          first: 'rogue-editorial', journey: { version: 'w16-b4-fixture+r2', revision: 2, reason: null },
           config: { label: 'w16-b4-fixture+r2', revision: 2 } });
       }
 
@@ -732,7 +744,11 @@ describe('unit:W16.C4.05', () => {
         clock.mockReturnValue(T0 + 2 * STEP_MS);
         expect((await h.hydrate()).journeyStage, `${host}: fail closed to the first stage`).toBe('exploring');
         expect(await h.snapshot(), `${host}: served, with no threshold version used and a diagnostic that names the journey thresholds`)
-          .toEqual({ status: 200, ok: true, state: host, decisions: HOME_DECISIONS, first: 'tabby-editorial',
+          // R10, lead addendum from the W16-B4 specification pass 2: the hero slot carries no stage rule
+          // and neither piece a journeyStageFit, so nothing in C4 changes the served piece
+          // (src/content/decide.ts:128-130 — `hasStage` is false); with one view each the Rogue piece,
+          // first in the catalogue, is the one the engine serves with nothing published either.
+          .toEqual({ status: 200, ok: true, state: host, decisions: HOME_DECISIONS, first: 'rogue-editorial',
             journey: { version: null, revision: 0, reason: expect.stringMatching(/journey/i) },
             config: { label: 'w16-b4-fixture', revision: 1 } });
       }

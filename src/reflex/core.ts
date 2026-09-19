@@ -69,6 +69,15 @@ export interface ReflexConfig {
    * customer's site needs: their events, their catalog, not a copy of it here.
    */
   eventAttributes?: 'catalog-only' | 'event-when-unknown';
+  /**
+   * W16 C4 (R32(1)): the tenant's published journey threshold set. It rides
+   * this document because the document is already tenant-scoped, versioned,
+   * read by both hosts and pinned into one coherent publication set, so a
+   * receipt can name the revision that derived a stage without a fourth kind.
+   * Absent means no thresholds are in force and the engine reports the first
+   * stage of the journey with a diagnostic — never an invented threshold.
+   */
+  journey?: import('@/services/JourneyStage').JourneyThresholds;
 }
 
 /** Raw per-value accumulator — s is NEVER pre-decayed; t is the last touch. */

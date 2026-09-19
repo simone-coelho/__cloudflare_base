@@ -82,7 +82,7 @@ Response:
 {
   "success": true,
   "message": "Action processed and personalization updated",
-  "update": { "type": "personalization_update", "userId": "vis-2f1c…", "data": { "segments": ["line_tabby_affinity"], "decisions": { "hero_module": { "enabled": true, "variationKey": "affinity_hero", "variables": {} } }, "affinity": { "dims": { "line": { "Tabby": 0.71 } } }, "journeyStage": "mid" } },
+  "update": { "type": "personalization_update", "userId": "vis-2f1c…", "data": { "segments": ["line_tabby_affinity"], "decisions": { "hero_module": { "enabled": true, "variationKey": "affinity_hero", "variables": {} } }, "affinity": { "dims": { "line": { "Tabby": 0.71 } } }, "journeyStage": "thinking" } },
   "sessionId": "9cb1810f-…",
   "cookiesUpdated": true,
   "odp": { "receiptId": "r-…", "type": "product", "action": "detail" }
@@ -330,6 +330,17 @@ The reflex configuration, the registry of dimensions and the engine's constants 
 shape under `/config/reflex` (`GET`, `PUT`, `PATCH`, `history`, `revisions/{n}`, `validate`,
 `rollback/{n}`); every route requires the operator access token, including merged-patch validation. The tuning page and the learning console are clients of these routes; there is no
 other way to change what the engine does.
+
+That document also carries the optional `journey` block, the thresholds the reported journey stage is
+derived from: `{ "stages": [ { "stage": "thinking", "anyOf": { "interactions": 3 } }, { "stage": "deciding",
+"anyOf": { "purchases": 1 } } ] }`. The stages are named in the order `exploring` → `thinking` → `deciding`;
+the first stage is the floor a shopper starts in and carries no threshold of its own. A rule is met when ANY
+named counter of the CURRENT VISIT reaches its whole-number threshold; the counters are `interactions`,
+`product_views`, `purchases`, `cart_adds`, `wishlist_adds` and `category_dwell_ms`. The block is validated
+with the rest of the document, so an invalid set is refused at publication and the last published revision
+keeps deciding; publish no block and the engine reports the first stage and says on the decision's
+`sources.journey.reason` that none is published. The version a decision and a receipt name is this
+document's own revision identity, because the thresholds are part of it.
 
 ## 5. Learning and transparency
 
