@@ -28,7 +28,7 @@ import { anonymousWithConsent, ownedConsent, rotateObjectSession } from '@/ident
 import { capabilityToken } from '@/identity/sessionCapability';
 import { SessionManager } from '@/services/SessionManager';
 import { assertShopperSelectors, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
-import { captureRetention } from '@/retention';
+import { captureRetention, RetentionUnavailable } from '@/retention';
 import { captureBehavior } from '@/ledger/behavior';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import { redeemRenderOffer } from '@/content/renderOffer';
@@ -441,7 +441,14 @@ realtimeRoutes.get('/reflex', async (c) => {
           ? stageOnlyOdpProjection(c.env, c.get('tenant'), { visitorId: userId, sessionId }, live!, moved)
           : null;
         if (projection) deferred!.waitUntil(projection);
-      } catch (error) { if (error instanceof SessionAccessError) throw error; }
+      } catch (error) {
+        // Only an unusable retained-data stamp is answered by skipping the
+        // projection. Everything else — an owner or consent refusal above all —
+        // is the caller's to see, and propagates.
+        if (!(error instanceof RetentionUnavailable)) throw error;
+        // Coded and non-identifying, like every other ODP diagnostic.
+        console.warn('[odp] stage projection skipped: profile retention unavailable');
+      }
     }
 
     return c.json({
