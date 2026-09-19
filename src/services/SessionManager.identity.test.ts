@@ -15,7 +15,9 @@ import { SessionManager } from '@/services/SessionManager';
 import { DEFAULT_REFLEX_CONFIG, apply, audienceKey, emptyState, snapshot, type ReflexState } from '@/reflex/core';
 import { newAnonymousSession, SessionAccessError } from '@/identity/sessionCapability';
 import { admitOwnerPrincipal, runOwnerOperation } from '@/identity/sessionAuthority';
-import { consentInstruction, CONSENT_LIFETIME_MS } from '@/content/consent';
+import { consentInstruction, CONSENT_LIFETIME_MS, type Consent } from '@/content/consent';
+import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import type { RetentionCategory, RetentionPolicy } from '@/retention';
 
 class FakeKV {
   store = new Map<string, string>();
@@ -36,16 +38,45 @@ const browse = (values: string[], at: number): ReflexState => {
   return s;
 };
 
+/**
+ * SYNTHETIC test registry, not an approved retention period. An explicit
+ * per-category policy is a precondition of a first record and of the import
+ * enrichment below (`src/retention.ts:39`, `:72-89`;
+ * `src/services/SessionManager.ts:304`); shape from
+ * `src/index.api-boundary.test.ts:34-37`.
+ */
+const SYNTHETIC_POLICY: RetentionPolicy = { id: 'identity-fixture-synthetic', revision: 1, durationMs: 365 * 86400_000, basis: 'admitted', renewal: 'new-record-only' };
+const SYNTHETIC_RETENTION = JSON.stringify({ version: 1, tenants: { [DEFAULT_TENANT]:
+  Object.fromEntries((['profile', 'identity', 'ledger', 'online', 'hourly'] as RetentionCategory[]).map((category) => [category, SYNTHETIC_POLICY])) } });
+
 let kv: FakeKV;
+let env: Env;
 let sm: SessionManager;
 
 beforeEach(() => {
   kv = new FakeKV();
-  sm = new SessionManager({ SESSIONS: kv } as unknown as Env);
+  env = { SESSIONS: kv, RETENTION: SYNTHETIC_RETENTION } as unknown as Env;
+  sm = new SessionManager(env);
 });
 
+/** One subject's explicit stored choice. Legacy `preferences` booleans grant
+ * nothing (`src/content/consent.ts:139-152`, `:156-163`; settled decision
+ * `docs/remediation/decisions/D06-W05-explicit-choice-approved-2026-09-16.json`),
+ * so a browser's own record only exists because its subject chose. */
+const choiceFor = (subject: string, tenant = DEFAULT_TENANT): Consent => {
+  const chosenAt = Date.now() - 1000;
+  return consentInstruction({
+    version: 1, tenant, subject, revision: 'identity-fixture-explicit-choice',
+    tracking: { value: true, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS },
+    personalization: { value: true, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS },
+  });
+};
+/** The owner operation carrying that one subject's record, as production runs it. */
+const held = <T>(subject: string, work: () => Promise<T>, operationEnv: Env = env): Promise<T> =>
+  runOwnerOperation({}, operationEnv, work, kv, undefined, async () => choiceFor(subject));
+
 it('W04.02 owned mode rejects pointers, forwarding renewal and repeated read/write promotion', async () => {
-  const env = { SESSIONS: kv, JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
+  const env = { SESSIONS: kv, RETENTION: SYNTHETIC_RETENTION, JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' } as unknown as Env;
   const grant = await newAnonymousSession(env, 'coach');
   const owned = new SessionManager(env, { principal: grant });
   await expect(owned.getSession(grant.sessionId)).rejects.toBeInstanceOf(SessionAccessError);
@@ -63,14 +94,14 @@ it('W04.02 owned mode rejects pointers, forwarding renewal and repeated read/wri
   await expect(owned.createOrUpdateSession(grant.sessionId, grant.subject, { segments: ['must-not-write'] })).rejects.toBeInstanceOf(SessionAccessError);
   await expect(owned.getSession('victim-session')).rejects.toBeInstanceOf(SessionAccessError);
   expect([...kv.store]).toEqual(before);
-  }, kv);
+  }, kv, undefined, async () => choiceFor(grant.subject));
 });
 
 /** A browser with a session holding a reflex vector and a few counters. */
 async function device(visitorId: string, sessionId: string, values: string[], at: number) {
-  await sm.createOrUpdateSession(sessionId, visitorId, {
+  await held(visitorId, () => sm.createOrUpdateSession(sessionId, visitorId, {
     reflex: browse(values, at), attributes: { product_views: values.length, viewed_product_line: values.at(-1) },
-  });
+  }));
   return sessionId;
 }
 
@@ -90,6 +121,15 @@ describe('absorbIntoShopper: the first link', () => {
     expect(await sm.resolveSessionIdByUserId(SH)).toBe(r.sessionId);
   });
 
+  // LEFT RED ON PURPOSE (BASE-2, ruling R10). Its assertions are untouched. With
+  // the fixture corrected, no owner consent record can authorize this write: the
+  // browser's tombstone holds `userId: 'vis-phone'` and the person's record holds
+  // the shopper id, while `src/services/SessionManager.ts:381-382` refuses any
+  // record whose userId differs from the single instruction subject. Measured:
+  // subject sh_… and subject vis-phone both raise SessionAccessError; with no
+  // instruction the write is refused and nothing lands. CW25 (document 35 §5 W04)
+  // still requires the post-link write to reach the person. Unit to declare:
+  // W05.BASE.01.
   it('the old cookie reads the person, and a write from the browser lands on the person without renaming it', async () => {
     await device('vis-phone', 's-phone', ['Tabby', 'Tabby', 'Tabby'], T0);
     const r = await sm.absorbIntoShopper({ shopperId: SH, from: await sm.readRaw('s-phone'), fromSessionId: 's-phone', config: cfg, now: T0 + 5000 });
@@ -167,14 +207,9 @@ describe('leaving', () => {
 describe('applyImport', () => {
   // Arithmetic-only service tests. The mounted W04.03/W05.09 fixtures exercise
   // the actual owner-issued preparation, grant, epoch and erasure protocol.
-  const held = (work: () => Promise<void>) => {
-    const now = Date.now(), consent = consentInstruction({ version: 1, tenant: 'coach', subject: SH, revision: 'explicit-unit-choice',
-      tracking: { value: true, chosenAt: now, expiresAt: now + CONSENT_LIFETIME_MS },
-      personalization: { value: true, chosenAt: now, expiresAt: now + CONSENT_LIFETIME_MS } });
-    return runOwnerOperation({}, (sm as unknown as { env: Env }).env, work, kv, undefined, async () => consent);
-  };
+  const asPerson = (work: () => Promise<void>) => held(SH, work);
   it('refuses a cold import and enriches an existing consenting person without claiming a visit', async () => {
-    await held(async () => {
+    await asPerson(async () => {
     const input = { userId: SH, rows: [{ action: 'purchase', at: T0, touches: [{ dim: 'line', value: 'Brooklyn' }] }], config: cfg, now: T0 };
     expect(await sm.applyImport(input)).toEqual({ applied: false, reason: 'profile_missing' });
     expect(kv.store.size).toBe(0);
@@ -192,7 +227,7 @@ describe('applyImport', () => {
   });
 
   it('requires the already resolved canonical person for a linked browser', async () => {
-    await held(async () => {
+    await asPerson(async () => {
     const person = await sm.createOrUpdateSession('s-person', SH, { identity: { shopperId: SH, linkedAt: T0 }, reflex: browse(['Tabby'], T0) });
     const linked = { sessionId: 's-person' };
     // Exact retained forwarding shape; constructing it is fixture setup, not
