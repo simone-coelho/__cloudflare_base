@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 71/72 · W closed 1/26 (W16–W41) · suite 1863/1942 · residual 79 in 9 files · typecheck GREEN
+Units 78/79 · W closed 1/26 (W16–W41) · suite 1871/1950 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -15,7 +15,7 @@ Units 71/72 · W closed 1/26 (W16–W41) · suite 1863/1942 · residual 79 in 9 
 | W06 | 2 | 1 | no | — | — |
 | W09 | 1 | 1 | no | — | — |
 | W11 | 1 | 1 | no | — | — |
-| W16 | 52 | 52 | no | — | — |
+| W16 | 59 | 59 | no | — | — |
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
 | W37 | 1 | 1 | no | — | — |
 
@@ -81,6 +81,13 @@ Units 71/72 · W closed 1/26 (W16–W41) · suite 1863/1942 · residual 79 in 9 
 | W16.C7.01 | green | 2 |
 | W16.C7.02 | green | 2 |
 | W16.C8.01 | green | 2 |
+| W16.C8.02 | green | 1 |
+| W16.C8.03 | green | 1 |
+| W16.C8.04 | green | 1 |
+| W16.C8.05 | green | 1 |
+| W16.C8.06 | green | 1 |
+| W16.C8.07 | green | 2 |
+| W16.C8.08 | green | 1 |
 | W17.L1.01 | green | 1 |
 | W17.L1.02 | green | 1 |
 | W17.L1.02b | green | 1 |
@@ -105,7 +112,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 585523f8f520b2089d709403ee88273a5ce14a504f8c715e8e99d5af35edd5ad |
+| units sha256 | 3e2181faaaa37da0bf92b57ed14a4cb57d04eaf58ea151e6506c72e3c6b9e328 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -117,6 +124,6 @@ _None._
 | Input | Value |
 |---|---|
 | vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | 645b345f2647505387ca88f17ef5fd5417ec363f3e6be1c078e8b1e4db33303b |
-| commit | 5e00266ec3fe7d91336ec54bbf73aa9d21960e57 |
-| generated | 2026-09-19T14:12:43.016Z |
+| vitest report sha256 | 5ae27b25bdf0142532e3b9bdd6dff2ab0ed74ed4e250526aff072398531156e9 |
+| commit | 00dc1c39a3dce716e6e121e3c114e44d00f61975 |
+| generated | 2026-09-19T14:49:10.835Z |
