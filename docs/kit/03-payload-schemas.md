@@ -24,9 +24,11 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `custom` | `event`, the real name, plus anything |
 
 An attribute value the tenant's published catalogue does not name, on a dimension that catalogue does
-name values for, places nothing: an event whose every value is outside the published vocabulary builds
-no affinity and is reported back in the answer's `signals` as unrecognized, with the product id named.
-A dimension the catalogue tags nothing on constrains nothing.
+name values for, builds no affinity — that value alone, whatever else the same event carries. A
+dimension the catalogue tags nothing on constrains nothing. The answer's `signals` reports the result:
+`recognized` when at least one value built affinity, and `unrecognized` listing every product the event
+referred to that could not be placed, the top-level `productId`/`product_id`/`sku` and each `items[]`
+product of an order, never an attribute value.
 
 ## The decision
 

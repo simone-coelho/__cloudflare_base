@@ -213,39 +213,36 @@ export interface CatalogVocabularySource {
   getAllProducts(): ReadonlyArray<Record<string, unknown>>;
 }
 
-/** Keyed by the two documents it is derived from, so a republished one recomputes. */
-interface VocabularyEntry { version: string; value: CatalogVocabulary }
+/**
+ * Keyed by the documents it is derived from and CHECKED against the tenant and
+ * the registry version it was built for (review finding F6): the sentinel that
+ * stands for "no readable content catalogue" is one shared object, so without
+ * the tenant on the entry two scopes could otherwise be served each other's
+ * vocabulary. A mismatch simply recomputes.
+ */
+interface VocabularyEntry { tenant: string; version: string; value: CatalogVocabulary }
 const NO_CONTENT_CATALOG = {};
 const NO_PRODUCT_CATALOG = {};
-// Keyed by object identity on both axes and held weakly, so a republished
-// document simply misses and the superseded entry is collected. No TTL and no
-// explicit invalidation can go stale against it.
+// Held weakly on both axes, so a republished document simply misses and the
+// superseded entry is collected. No TTL and no explicit invalidation can go
+// stale against it.
 const vocabularyCache = new WeakMap<object, WeakMap<object, VocabularyEntry>>();
 
 /**
  * The vocabulary the ingest hosts measure an event against.
  *
- * A tenant whose content catalogue cannot be read publishes no vocabulary here,
- * so nothing is called unrecognized and the engine behaves exactly as it did
- * before R47. A publication outage must not turn into refused traffic on the
- * ingest path; the decision path's own fail-closed authority over the same
- * document is untouched by this read.
+ * A tenant whose content catalogue is absent or unreadable publishes no
+ * vocabulary here, so nothing is called unrecognized and the engine behaves
+ * exactly as it did before R47: a publication outage must not turn into refused
+ * traffic on the ingest path, and the decision path's own fail-closed authority
+ * over the same document is untouched by this read. Only the publication
+ * authority's own typed failure is absorbed (review finding F2) — a typed owner
+ * or consent refusal raised inside the storage read is that request's own answer
+ * and propagates unchanged.
  */
 export async function tenantCatalogVocabulary(
   env: Env, tenant: string, config: ReflexConfig, products?: CatalogVocabularySource | null,
 ): Promise<CatalogVocabulary> {
-  let document: object = NO_CONTENT_CATALOG;
-  let pieces: ReadonlyArray<Pick<ContentPiece, 'tags' | 'featuredProductIds'>> = [];
-  try {
-    const revision = await readPublication(env, CONTENT_KIND, tenant, true);
-    if (revision?.value) { document = revision.value; pieces = revision.value.pieces; }
-  } catch { /* no readable catalogue names no vocabulary; see above */ }
-  const productKey: object = products ?? NO_PRODUCT_CATALOG;
-  let byProducts = vocabularyCache.get(document);
-  if (!byProducts) { byProducts = new WeakMap<object, VocabularyEntry>(); vocabularyCache.set(document, byProducts); }
-  const cached = byProducts.get(productKey);
-  if (cached && cached.version === config.version) return cached.value;
-
   const ids = new Set<string>();
   const values = new Map<string, Set<string>>();
   const name = (dim: string, value: string) => {
@@ -253,9 +250,26 @@ export async function tenantCatalogVocabulary(
     if (!set) { set = new Set<string>(); values.set(dim, set); }
     set.add(value);
   };
-  for (const piece of pieces) {
-    for (const [dim, tagged] of Object.entries(piece.tags ?? {})) for (const value of tagged) name(dim, value);
-    for (const id of piece.featuredProductIds ?? []) ids.add(id);
+  let document: object = NO_CONTENT_CATALOG;
+  const productKey: object = products ?? NO_PRODUCT_CATALOG;
+  let cacheable = true;
+  try {
+    const revision = await readPublication(env, CONTENT_KIND, tenant, true);
+    const catalog = revision?.value;
+    if (catalog) {
+      document = catalog;
+      const cached = vocabularyCache.get(document)?.get(productKey);
+      if (cached && cached.tenant === tenant && cached.version === config.version) return cached.value;
+      for (const piece of catalog.pieces as ReadonlyArray<Pick<ContentPiece, 'tags' | 'featuredProductIds'>>) {
+        for (const [dim, tagged] of Object.entries(piece.tags ?? {})) for (const value of tagged) name(dim, value);
+        for (const id of piece.featuredProductIds ?? []) ids.add(id);
+      }
+    }
+  } catch (error) {
+    if (!(error instanceof PublicationError)) throw error;
+    // The authority is absent or unreadable: this tenant names no vocabulary for
+    // as long as that lasts, and the outage is not cached past its own read.
+    cacheable = false;
   }
   for (const product of products?.getAllProducts() ?? []) {
     const id = product.id;
@@ -265,7 +279,11 @@ export async function tenantCatalogVocabulary(
     for (const touch of extractTouches(product, config)) name(touch.dim, touch.value);
   }
   const value: CatalogVocabulary = { ids, values };
-  byProducts.set(productKey, { version: config.version, value });
+  if (cacheable) {
+    let byProducts = vocabularyCache.get(document);
+    if (!byProducts) { byProducts = new WeakMap<object, VocabularyEntry>(); vocabularyCache.set(document, byProducts); }
+    byProducts.set(productKey, { tenant, version: config.version, value });
+  }
   return value;
 }
 

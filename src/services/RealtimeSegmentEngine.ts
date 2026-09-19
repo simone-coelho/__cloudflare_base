@@ -50,11 +50,10 @@ import {
   attributesFrom as reflexAttributes,
   extractTouches,
   needsCatalogVocabulary,
-  recognizeEvent,
-  touchesForEvent,
+  placeEvent,
   snapshot as reflexSnapshot,
   tick as tickReflex,
-  RECOGNIZED,
+  EMPTY_VOCABULARY,
   type RecognitionSignals,
   type ReflexResult,
 } from '@/reflex/core';
@@ -525,18 +524,22 @@ export class RealtimeSegmentEngine {
         const pid = data.productId ?? data.product_id ?? data.sku;
         const product = pid ? catalogService?.getProduct(String(pid)) : undefined;
         const action = actionOf(event);
-        // W16 C8.03 / R47: an event the tenant's own catalogue cannot place
-        // builds nothing, and the answer names the product it referred to. A
-        // content event is placed by the content catalogue one line above, so it
-        // never asks the product vocabulary about itself.
-        const vocabulary = contentEventTouches || !needsCatalogVocabulary(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig)
-          ? null
+        // W16 C8.03/C8.08 (R47, R64): each value the event carries answers for
+        // itself against the catalogue this tenant publishes, and the answer
+        // names every product reference the engine could not place. A content
+        // event is placed by the content catalogue one line above, so it never
+        // asks the product vocabulary about itself.
+        const eventData = data as Record<string, unknown>;
+        const heldProduct = product as unknown as Record<string, unknown> | undefined;
+        const vocabulary = contentEventTouches || !needsCatalogVocabulary(eventData, heldProduct, reflexConfig)
+          ? EMPTY_VOCABULARY
           : await tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null);
-        signals = vocabulary
-          ? recognizeEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig, vocabulary)
-          : { ...RECOGNIZED };
+        const placed = placeEvent(eventData, heldProduct, reflexConfig, vocabulary);
+        signals = contentEventTouches
+          ? { recognized: contentEventTouches.length > 0, unrecognized: [] }
+          : placed.signals;
         // Reuse precisely the personal scorer's touches for population counts.
-        const touches = contentEventTouches ?? touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig, vocabulary ?? undefined);
+        const touches = contentEventTouches ?? placed.touches;
         reflex = applyReflex(
           sessionData.reflex,
           {

@@ -82,12 +82,11 @@ import {
   emptyState,
   extractTouches,
   needsCatalogVocabulary,
-  recognizeEvent,
-  touchesForEvent,
+  placeEvent,
   nextCrossing,
   snapshot as reflexSnapshot,
   tick as tickReflex,
-  RECOGNIZED,
+  EMPTY_VOCABULARY,
   type RecognitionSignals,
   type ReflexConfig,
   type ReflexResult,
@@ -1121,22 +1120,25 @@ export class ShopperReflex {
     const data = event.data ?? {};
     const pid = data.productId ?? data.product_id ?? data.sku;
     const product = pid != null ? surfaceCatalog?.getProduct(String(pid)) : undefined;
-    // W16 C8.03 / R47: the vocabulary an input is measured against is the
-    // catalogue THIS tenant decides from, read once per event beside the config.
-    // A content event is placed by the content catalogue below and never asks
-    // the product vocabulary about itself.
-    const vocabulary = isContentAction(actionOf(event))
-      || !needsCatalogVocabulary(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, cfg) ? null
+    // W16 C8.03/C8.08 (R47, R64): the vocabulary an input is measured against is
+    // the catalogue THIS tenant decides from, read once per event beside the
+    // config. Each value answers for itself, and the answer names every product
+    // reference the engine could not place. A content event is placed by the
+    // content catalogue below and never asks the product vocabulary about itself.
+    const eventData = data as Record<string, unknown>;
+    const heldProduct = product as unknown as Record<string, unknown> | undefined;
+    const contentEvent = isContentAction(actionOf(event));
+    const vocabulary = contentEvent || !needsCatalogVocabulary(eventData, heldProduct, cfg)
+      ? EMPTY_VOCABULARY
       : await tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null);
-    const signals: RecognitionSignals = vocabulary
-      ? recognizeEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, cfg, vocabulary)
-      : { ...RECOGNIZED };
+    const placed = placeEvent(eventData, heldProduct, cfg, vocabulary);
+    let signals: RecognitionSignals = placed.signals;
     // CW24: where the scope scores event-carried attributes, an unknown id with
     // registry attributes on it is a customer's product, not an abuse attempt —
-    // unless the tenant's own catalogue can place none of those attributes, in
-    // which case the input stays unknown and builds nothing (HANDOFF §12).
-    const eventTouches = !product && cfg.eventAttributes === 'event-when-unknown'
-      ? touchesForEvent(data as Record<string, unknown>, undefined, cfg, vocabulary ?? undefined) : [];
+    // but a value on a dimension the tenant's own catalogue names, that the
+    // catalogue does not name, stays unknown and builds nothing (HANDOFF §12),
+    // so an event whose every value is refused reaches the drop below.
+    const eventTouches = !product && cfg.eventAttributes === 'event-when-unknown' ? placed.touches : [];
     if (pid != null && !product && eventTouches.length === 0) {
       this.dropped.unknownProduct++;
       return {
@@ -1157,8 +1159,12 @@ export class ShopperReflex {
 
     // Resolve before changing the audience owner or any aliased pipeline state.
     const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
-    const contentEventTouches = reflexOn && isContentAction(actionOf(event))
+    const contentEventTouches = reflexOn && contentEvent
       ? await resolvedContentTouches(this.env, tenant, data as Record<string, unknown>, cfg) : null;
+    // A content event is placed by the tenant's content catalogue, not by the
+    // product vocabulary, so its diagnostic answers from the touches that read
+    // produced — the same "at least one value built taste" rule (R64).
+    if (contentEventTouches) signals = { recognized: contentEventTouches.length > 0, unrecognized: [] };
     await this.ensureSeeded(surface, tenant);
     const connectors = getConnectors(this.env, tenant); // fresh per run — mirrors the per-request triad
 

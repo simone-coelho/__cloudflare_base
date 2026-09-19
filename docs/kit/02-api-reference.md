@@ -93,14 +93,26 @@ Response:
 `update` is absent when nothing changed. `400` with `error: "Invalid action event format"` and
 `details` names the offending field.
 
-`signals` is the input diagnostic, on both hosts. `recognized` is false when the engine could place
-nothing this event carried against the catalogue your tenant publishes — the values your published
-content catalogue tags carry, dimension by dimension, plus any product catalogue the tenant holds —
-and `unrecognized` then names the product id it could not place, so an operator can see which input
-was ignored rather than only that one was. An event the engine cannot place builds no affinity on any
-dimension; the served order stays the catalogue's. A value on a dimension your catalogue tags nothing
-on is never called unrecognized, and a tenant that publishes no catalogue data refuses nothing. The
-object host's existing `dropped: "unknown_product"` still accompanies the id it drops.
+`signals` is the input diagnostic, on both hosts, and it is measured against the catalogue your tenant
+publishes: the values your published content catalogue tags carry, dimension by dimension, plus the
+ids and attributes of any product catalogue the tenant holds.
+
+Each value the event carries answers for itself. On a dimension your catalogue names values for, a
+value it does not name builds no affinity, whatever else the same event carries; on a dimension your
+catalogue names nothing on it is authority over nothing, so every value there stands. An event whose
+every value is refused builds nothing at all and the served order stays the catalogue's, and a tenant
+that publishes no catalogue data refuses nothing.
+
+`recognized` is true when at least one value on the event built affinity, so an event we can place in
+part is reported for what it is rather than refused whole. `unrecognized` names **every product this
+event referred to that we could not place — the `productId`/`product_id`/`sku` on the event and each
+`items[]` product of an order — whatever else on the event was placed**, and nothing else: it never
+names an attribute value, only a product. So an operator reading one answer can tell which product
+went unrecognized rather than only that something did.
+
+Release note: the object host's `dropped: "unknown_product"` answer now also fires for an event whose
+product we do not hold and whose every attribute value your catalogue refuses, not only for an event
+that carried an unknown id and no attributes at all; it carries the same `signals` naming the id.
 
 ### `GET /realtime/ws?tenant=<tenant>`
 
