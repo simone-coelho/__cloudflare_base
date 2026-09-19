@@ -5719,6 +5719,13 @@ describe('W04.02 owned shopper lane', () => {
           if (condition instanceof Headers ? documents.has(key) : condition && condition.etagMatches !== documents.get(key)?.etag) return null;
           const etag = String(++version); documents.set(key, { text, etag }); return { key, etag, size: text.length };
         } } as unknown as R2Bucket;
+      // R38(c)/R54: this unit runs with durable owner recovery OFF, and the ruled capture path
+      // in that mode is the ledger's own delivery, so the fixture binds the queue a deployment
+      // must bind. `boundary()` binds none (:144-151) and this STORAGE double implements only
+      // get/put, so without it the canonical fallback cannot even list and the record would be
+      // served uncaptured. The queue is the smaller, more honest capture for this unit's intent.
+      const ledgerWire: unknown[] = [];
+      f.env.EVENT_QUEUE = { send: async (body: unknown) => { ledgerWire.push(structuredClone(body)); } } as unknown as Queue;
       await fixturePublication(f.env, 'meridian', [{ kind: CONTENT_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [] } } }]);
       // Consent is fail-closed: the owned lane's grant records an explicit positive
       // choice before any tracked effect (src/content/consent.ts:139-152).
@@ -5793,7 +5800,15 @@ describe('W04.02 owned shopper lane', () => {
         const data = await res.json() as any;
         if (path.includes('/personalization/') || path.includes('/analytics')) expect(data.sessionId).toBe(person.sessionId);
         if (path.includes('/segments/') || path.includes('/personalization/')) expect(data.userId).toBe(person.subject);
-        if (path === '/sort') expect(data.order).toEqual([]);
+        if (path === '/sort') {
+          expect(data.order).toEqual([]);
+          // Nothing is served uncaptured: the answer carries its own delivery receipt and it
+          // reports the capture (src/routes/sort.ts:33, :123-130; src/ledger/productSort.ts:18;
+          // delivery code 'accepted', src/ledger/enqueue.ts:22-25), so this leg can never pass
+          // on an uncaptured record.
+          expect(data.persistence).toMatchObject({ status: 'queued', delivery: { code: 'accepted' } });
+          expect(ledgerWire.length).toBeGreaterThan(0);
+        }
         // The snapshot payload carries exactly ok, tenant, brand, page, ts, arm, versions,
         // config_label, decisions and sources (src/routes/decisions.ts:476-480). `visitor_id`
         // and `session_id` are decision-record fields, and the route serves `records` only
