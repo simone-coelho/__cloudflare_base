@@ -10,6 +10,12 @@ import type { Env } from '@/types/env';
 import { issueSessionCapability, verifySessionCapability, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
 import { storedConsent } from '@/content/consent';
 import { setTimeout as settle } from 'node:timers/promises';
+import { initializePublicationSet, type PublicationBaseline } from '@/config/publication';
+import { REFLEX_KIND, reflexScopeForTenant } from './configStore';
+import { DEFAULT_REFLEX_CONFIG } from './core';
+import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
+import { configuredDestinations } from '@/connectors/config';
+import type { RetentionCategory, RetentionPolicy } from '@/retention';
 
 const TABBY_ID = 'COA-CH857';
 const t0 = 1_750_000_000_000;
@@ -50,6 +56,63 @@ class FakeKV {
   async list(o?: { prefix?: string }) { const p = o?.prefix ?? ''; return { keys: [...this.store.keys()].filter((k) => k.startsWith(p)).map((name) => ({ name })) }; }
 }
 
+/**
+ * R2 honouring the strengthened publication put/get contract: `get` reports
+ * etag/size/body, `put` returns key/etag/size and honours the conditional
+ * headers (src/config/publication.ts:225-237, :293-295). Same shape as the
+ * working double in src/routes/realtime.sdkContract.test.ts.
+ */
+class FixtureR2 {
+  data = new Map<string, string>();
+  versions = new Map<string, number>();
+  metadata = new Map<string, Record<string, string> | undefined>();
+  async get(key: string) {
+    const raw = this.data.get(key);
+    if (raw === undefined) return null;
+    return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length,
+      customMetadata: this.metadata.get(key), body: new Response(raw).body, text: async () => raw, json: async () => JSON.parse(raw) as unknown };
+  }
+  async put(key: string, raw: string, options?: { onlyIf?: { etagMatches?: string; etagDoesNotMatch?: string } | Headers; customMetadata?: Record<string, string> }) {
+    const old = this.data.has(key) ? 'v' + this.versions.get(key) : null, condition = options?.onlyIf;
+    const absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';
+    const match = condition instanceof Headers ? condition.get('If-Match') : condition?.etagMatches;
+    if (absent && old !== null || match != null && match !== old && match !== JSON.stringify(old)) return null;
+    this.data.set(key, raw); this.versions.set(key, (this.versions.get(key) ?? 0) + 1); this.metadata.set(key, { ...options?.customMetadata });
+    return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length };
+  }
+  async delete(key: string) { this.data.delete(key); }
+  async list(options: { prefix?: string; cursor?: string; limit?: number } = {}) {
+    const names = [...this.data.keys()].filter((k) => k.startsWith(options.prefix ?? '')).sort(), start = Number(options.cursor ?? 0), end = start + (options.limit ?? 1000);
+    return { objects: names.slice(start, end).map((key) => ({ key })), truncated: end < names.length, ...(end < names.length ? { cursor: String(end) } : {}) };
+  }
+}
+
+/**
+ * The configuration publication is the only configuration authority
+ * (src/config/publication.ts:19, :150-152, :204-206); the object resolves its
+ * Reflex config through it on every ingest, snapshot and alarm. This is the
+ * explicit test-authored W11 baseline, never a re-admitted KV fallback.
+ */
+const seedPublication = (target: Env, tenant: string) => {
+  const baseline = (kind: PublicationBaseline['kind'], value: unknown, scope = tenant): PublicationBaseline =>
+    ({ kind, scope, revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value } });
+  return initializePublicationSet(target, [
+    baseline(REFLEX_KIND, DEFAULT_REFLEX_CONFIG, reflexScopeForTenant(tenant)),
+    baseline(CONTENT_KIND, { pieces: [] }), baseline(SLOTS_KIND, { pages: {} }),
+    baseline(LEARN_KIND, { holdout: { share: 0, salt: 'fixture', arms: ['default'] } }),
+  ], '0:' + crypto.randomUUID());
+};
+
+/**
+ * A first record needs the retention policy registry before it may be born
+ * (src/retention.ts:39, :72-89; ShopperReflex.ts:1034). Explicit synthetic
+ * policies for the tenant's categories, including every configured external
+ * destination (the shape src/routes/realtime.sdkContract.test.ts:73-76 uses).
+ */
+const fixturePolicy: RetentionPolicy = { id: 'explicit-consent-fixture', revision: 1, durationMs: 30 * 86_400_000, basis: 'admitted', renewal: 'new-record-only' };
+const retentionRegistry = (tenant: string, extra: RetentionCategory[] = []) => JSON.stringify({ version: 1, tenants: { [tenant]:
+  Object.fromEntries([...['profile', 'identity', 'ledger', 'online', 'hourly', 'recovery', 'quarantine'], ...extra].map((category) => [category, fixturePolicy])) } });
+
 let storage: FakeStorage;
 let shopper: ShopperReflex;
 let env: Env;
@@ -63,9 +126,11 @@ beforeEach(async () => {
   storage = new FakeStorage();
   sockets = []; pending = [];
   const state = { id: subject, storage, acceptWebSocket: () => undefined, getWebSockets: () => sockets, waitUntil: (p: Promise<unknown>) => pending.push(p) } as unknown as DurableObjectState;
-  env = { DEPLOYMENT_PROFILE: 'demo', REFLEX_HOST: 'do', CACHE: new FakeKV(), SESSIONS: new FakeKV(), ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock', JWT_SECRET: 'w0502-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
+  env = { DEPLOYMENT_PROFILE: 'demo', REFLEX_HOST: 'do', CACHE: new FakeKV(), SESSIONS: new FakeKV(), STORAGE: new FixtureR2(), ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock', JWT_SECRET: 'w0502-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
+    TENANTS: JSON.stringify({ provisioned: ['coach'] }), RETENTION: retentionRegistry('coach'),
     SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: (request: Request) => shopper.fetch(request) }) },
   } as unknown as Env;
+  await seedPublication(env, 'coach');
   shopper = new ShopperReflex(state, env);
   await register();
 });
@@ -89,11 +154,15 @@ const get = async (path: string) => { const res = await shopper.fetch(new Reques
 const view = (extra: Record<string, unknown> = {}) => ({ type: 'product_view', userId: subject, sessionId: principal.sessionId, data: { productId: TABBY_ID, action: 'product_view', ...extra }, source: 'test' });
 
 describe('W05.02 shared reducer and timer boundaries', () => {
-  function destinations() {
+  async function destinations() {
     const calls: string[] = [];
     Object.assign(env, { ODP_API_HOST: 'https://odp.synthetic.invalid', ODP_PUBLIC_KEY: 'synthetic-only',
       REGION_TREND: { idFromName: (n: string) => n, get: () => ({ fetch: async () => { calls.push('region'); return Response.json({ ok: true }); } }) },
     });
+    // Each configured destination carries its own retention policy key
+    // (src/retention.ts:11-18, :72-89); without it the first external record
+    // is refused before the reducer is reached.
+    env.RETENTION = retentionRegistry('coach', (await configuredDestinations(env, 'coach', () => undefined)).map((d) => d.category));
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const path = new URL(String(input)).pathname; calls.push(path);
       return path.endsWith('/graphql') ? Response.json({ data: { customer: { audiences: { edges: [] } } } }) : new Response('{}', { status: 202 });
@@ -107,7 +176,7 @@ describe('W05.02 shared reducer and timer boundaries', () => {
     await settle(10);
   }
   it('gates actual reducer geo fan and configured ODP, preserving tracking-only storage and measurements', async () => {
-    const calls = destinations();
+    const calls = await destinations();
     for (const tracking of [false, true]) for (const personalization of [false, true]) {
       await post('/reset', {}); await post('/consent', { tracking, personalization });
       calls.length = 0; const before = storage.puts;
@@ -129,7 +198,7 @@ describe('W05.02 shared reducer and timer boundaries', () => {
   });
 
   it('honors withdrawal in serialized socket actions and pending alarms without skipping retention cleanup', async () => {
-    const calls = destinations();
+    const calls = await destinations();
     await post('/consent', { tracking: true, personalization: true });
     for (let i = 0; i < 4; i++) { vi.setSystemTime(t0 + i * 5000); await post('/ingest', { ...view(), userId: subject }); }
     await drain();
@@ -147,13 +216,23 @@ describe('W05.02 shared reducer and timer boundaries', () => {
       storage.alarm = null; await shopper.alarm(); await drain();
       expect([...storage.map]).toEqual(before); expect(storage.puts).toBe(puts);
       expect(calls).toEqual([]); expect(frames).toEqual([]);
-      const aff = storage.map.get('affinity') as { lastSeen: number };
-      expect(storage.alarm).toBe(aff.lastSeen + 30 * 86_400_000);
+      const aff = storage.map.get('affinity') as { lastSeen: number; retention: { expiresAt: number } };
+      // The idle expiry is the profile record's own retention expiry: the
+      // policy lifetime runs from the record's birth and never renews on
+      // activity or on a refusal (src/retention.ts:24-25, :88-92;
+      // ShopperReflex.ts:1399-1402, :1487).
+      expect(aff.retention.expiresAt).toBe(t0 + 30 * 86_400_000);
+      expect(storage.alarm).toBe(aff.retention.expiresAt);
     }
     // The refusal guard does not precede or extend the unchanged idle expiry.
     vi.setSystemTime(t0 + 31 * 86_400_000); sockets.length = 0;
     storage.alarm = null; await shopper.alarm(); expect(storage.map.has('affinity')).toBe(false); expect(storage.map.has('pipeline')).toBe(false);
-    expect(storage.map.get('grantAuthority')).toMatchObject({ grants: {} }); expect(storage.alarm).toBeNull();
+    // Same ruled outcome as unit:W06.BASE.02 in shopperReflex.test.ts: once the
+    // retained profile is deleted the object keeps no grant naming the subject
+    // or session. toMatchObject({ grants: {} }) admits any grants map, so the
+    // map itself is compared (ShopperReflex.ts:1469-1471; src/retention.ts:88-92).
+    expect((storage.map.get('grantAuthority') as { grants: Record<string, unknown> }).grants).toEqual({});
+    expect(storage.alarm).toBeNull();
   });
 });
 
