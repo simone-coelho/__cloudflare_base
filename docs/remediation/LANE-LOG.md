@@ -381,4 +381,4 @@ Plan: BASE-2 (L3) and BASE-1a (L4) run now in disjoint files. BASE-1b (shopperRe
 | `8c892a0` | Merge of `rem/w19-b3-build` (`16db5d5`): W19-B3, eight follow-up units (F3.01–.08). Reviewer PASS 8/8; lead validation green; units union 126 rows. |
 | `f1342cf` | `SCORE.md` and `baseline-failures.json` regenerated from the serial run on `1fe0bbf` (W19-B3 merged; quiet machine): `Units 124/126 · W closed 2/26 (W16–W41) · suite 1941/2020 · residual 79 in 9 files · typecheck GREEN` (`_evidence/integration/1fe0bbf/`). |
 | `de192bb` | Merge of `rem/w16-b9-build` (`7cc6deb`): W16-B9, the whole-W16 review's regression fixed (C5.08, C5.09). Reviewer PASS 2/2; lead validation green; units union 128 rows; W16 68 units. |
-| `2a0c537` | 2026-09-19 | SCORE.md and baseline-failures.json regenerated from the lead's serial quiet-machine run on `b496f72` (W16-B9 merged; W16 closed): `SCORE — remediation W16–W41` |
+| `2a0c537` | 2026-09-19 | SCORE.md and baseline-failures.json regenerated from the lead's serial quiet-machine run on `b496f72` (W16-B9 merged; W16 closed): `Units 126/128 · W closed 3/26 (W16–W41) · suite 1944/2023 · residual 79 in 9 files · typecheck GREEN` |
