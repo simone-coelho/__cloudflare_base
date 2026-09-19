@@ -28,7 +28,7 @@ import { assertPublicationBase, PublicationError, publicationMeta, publicationSt
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, PIECE_FIELDS, SLOTS_KIND } from '@/content/kinds';
 import { REFLEX_KIND } from '@/reflex/configStore';
 import { EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND } from '@/learn/priors';
-import { HttpJsonSource, assemble, candidatesFrom, csvColumnCaseVariants, FEED_FIELDS, parseCsv, recordsFromJson, type ImportMode } from '@/content/import';
+import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
 import type { ContentCatalog, ContentPiece, SlotCatalog } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
@@ -109,7 +109,17 @@ function submittedPieces(candidate: unknown): unknown[] {
   const pieces = (candidate as { pieces?: unknown } | null | undefined)?.pieces;
   return Array.isArray(pieces) ? pieces : [];
 }
-const publishedRequest = (candidate: unknown) => ({ records: submittedPieces(candidate), accepted: PIECE_FIELDS });
+/**
+ * The fields a direct publication's body carries BESIDE its catalogue: the
+ * `document` it wraps the catalogue in, the `note` the write is attributed with
+ * and the `publicationChanges` it publishes together. They are how the request
+ * is carried, so when a body IS its own document they are still envelope and are
+ * never named as keys the catalogue lost.
+ */
+const REQUEST_ENVELOPE_FIELDS = ['document', 'note', 'publicationChanges'] as const;
+const publishedRequest = (candidate: unknown, envelope: readonly string[] = []) =>
+  ({ records: submittedPieces(candidate), accepted: PIECE_FIELDS,
+    document: { value: candidate, accepted: catalogDocumentFields(...envelope) } });
 
 /**
  * The catalogue's authored version label, carried across a partial import so a
@@ -136,6 +146,20 @@ function changedPieces(before: ContentCatalog, after: ContentCatalog): number {
   let changed = 0;
   for (const piece of after.pieces) if (previous.get(piece.id) !== JSON.stringify(piece)) changed++;
   return changed;
+}
+
+/**
+ * How many stored pieces one write removed: the ids the catalogue held before
+ * and no longer holds. A replace that drops two of three pieces changed nothing
+ * about the third, so without this the answer would say nothing about the two
+ * that are gone. A merge is a partial upsert by id and removes none, and says so
+ * with a zero rather than with an absence.
+ */
+function removedPieces(before: ContentCatalog, after: ContentCatalog): number {
+  const kept = new Set(after.pieces.map((piece: ContentPiece) => piece.id));
+  let removed = 0;
+  for (const piece of before.pieces) if (!kept.has(piece.id)) removed++;
+  return removed;
 }
 
 function actorOf(c: { get: (k: 'auth') => AuthContext | undefined }): string {
@@ -274,7 +298,8 @@ contentRoutes.post('/:kind/validate', async (c) => {
   inputCollection(k.kind.name, candidate);
   const result = k.kind.validate(candidate);
   return result.ok ? c.json({ valid: true, document: result.value,
-    ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null, publishedRequest(candidate)) } : {}),
+    ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null,
+      publishedRequest(candidate, candidate === body ? REQUEST_ENVELOPE_FIELDS : [])) } : {}),
     ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.value, null) } : {}) }) : c.json({ valid: false, errors: result.errors }, 422);
 });
 
@@ -285,6 +310,9 @@ contentRoutes.put('/:kind', async (c) => {
   let candidate: unknown;
   let related: unknown;
   let note = '';
+  // The keys this body carried the document in, which belong to the request and
+  // not to the catalogue; none when the body wrapped its document in `document`.
+  let envelope: readonly string[] = [];
   if ((c.req.header('content-type') ?? '').toLowerCase().includes('text/csv')) {
     if (!k.fromCsv) return c.json({ error: `${c.req.param('kind')} does not accept CSV` }, 415);
     candidate = k.fromCsv(await readInputText(c.req.raw.body));
@@ -294,6 +322,7 @@ contentRoutes.put('/:kind', async (c) => {
     if (body === null) return c.json({ error: 'body must be JSON' }, 400);
     const { document, note: n } = body as { document?: unknown; note?: unknown };
     candidate = document ?? body;
+    if (candidate === body) envelope = REQUEST_ENVELOPE_FIELDS;
     related = (body as { publicationChanges?: unknown }).publicationChanges;
     note = noteOf(n);
   }
@@ -323,7 +352,7 @@ contentRoutes.put('/:kind', async (c) => {
   } else result = await write(c.env, k.kind, scope, candidate, { ...meta, note });
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '', document: result.revision.value,
-        ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision, publishedRequest(candidate)) } : {}),
+        ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision, publishedRequest(candidate, envelope)) } : {}),
         ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.revision.value, result.revision.revision) } : {}) })
     : c.json({ ok: false, errors: result.errors }, 422);
 });
@@ -344,7 +373,8 @@ contentRoutes.post('/:kind/rollback/:n', async (c) => {
 
 // ── The import adapter ───────────────────────────────────────────────────────
 
-async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode, note: string, source: object, meta: WriteMeta) {
+async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode, note: string, source: object, meta: WriteMeta,
+  document?: { value: unknown; accepted: ReadonlySet<string> }) {
   const scope = catalogScope(c);
   const incoming = candidatesFrom(records);
   if (incoming.length === 0) return c.json({ ok: false, errors: ['no records found in the import'] }, 422);
@@ -356,18 +386,32 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
   const result = await publish<ContentCatalog>(c.env, CONTENT_KIND, scope, { type: 'import', source, records, mode }, { ...meta, note },
     current => { base = current; return { ...(carriedVersion(current) ? { version: carriedVersion(current) } : {}), ...assemble(current, incoming, mode) }; });
   if (!result.ok) return c.json({ ok: false, errors: result.errors, received: records.length }, 422);
-  const before = base ?? await publishedOver(c.env, scope, meta.expectedRevision);
+  const before = base !== undefined ? { catalog: base, basis: 'stored' as const } : await publishedOver(c.env, scope, meta.expectedRevision);
+  const measured = before.basis === 'stored';
   return c.json({ ok: true, scope, mode, received: records.length, imported: incoming.length, pieces: result.revision.value.pieces.length,
-    changed: changedPieces(before, result.revision.value),
+    changed: measured ? changedPieces(before.catalog, result.revision.value) : null,
+    removed: measured ? removedPieces(before.catalog, result.revision.value) : null,
+    changedBasis: before.basis,
     revision: result.revision.revision, publication: result.revision.publication, version: result.revision.value.version ?? '',
-    diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision, { records, accepted: FEED_FIELDS }) });
+    diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision,
+      { records, accepted: FEED_FIELDS, ...(document ? { document } : {}) }) });
 }
 
-/** The catalogue at a declared base revision; an unreadable or absent base is the empty catalogue. */
-async function publishedOver(env: Env, scope: string, revision: number | undefined): Promise<ContentCatalog> {
-  if (revision === undefined || revision < 1) return EMPTY_CATALOG;
-  try { return (await readVersion<ContentCatalog>(env, CONTENT_KIND, scope, revision))?.value ?? EMPTY_CATALOG; }
-  catch { return EMPTY_CATALOG; }
+/**
+ * The catalogue at a declared base revision, and whether the store could read
+ * it. `changed` and `removed` are differences against that base, so a base
+ * nobody can read is said by name — `changedBasis: 'unavailable'`, and no count
+ * at all — instead of being treated as the empty catalogue, which would report
+ * every stored piece as created and every removal as none. A base revision of
+ * zero IS the empty catalogue and is a reading, not an outage.
+ */
+async function publishedOver(env: Env, scope: string, revision: number | undefined): Promise<{ catalog: ContentCatalog; basis: 'stored' | 'unavailable' }> {
+  if (revision === undefined) return { catalog: EMPTY_CATALOG, basis: 'unavailable' };
+  if (revision < 1) return { catalog: EMPTY_CATALOG, basis: 'stored' };
+  try {
+    const found = await readVersion<ContentCatalog>(env, CONTENT_KIND, scope, revision);
+    return found ? { catalog: found.value, basis: 'stored' } : { catalog: EMPTY_CATALOG, basis: 'unavailable' };
+  } catch { return { catalog: EMPTY_CATALOG, basis: 'unavailable' }; }
 }
 
 /**
@@ -381,23 +425,30 @@ contentRoutes.post('/catalog/import', async (c) => {
   const mode: ImportMode = c.req.query('mode') === 'merge' ? 'merge' : 'replace';
   const note = noteOf(c.req.query('note')) || `${format} import (${mode})`;
   let records: unknown[];
+  let document: { value: unknown; accepted: ReadonlySet<string> } | undefined;
   if (format === 'csv') {
     const text = await readInputText(c.req.raw.body);
     if (!text.trim()) return c.json({ error: 'body must be CSV text' }, 400);
-    records = parseCsv(text);
+    const table = parseCsvTable(text);
+    records = table.records;
     // A header that matches a documented column only when case is ignored is a
     // typo the boundary can recognise, and reading it as an unknown column
     // would land every row with that field empty (F27 §5.3). Refused, naming
-    // the column the feed sent and the spelling the contract publishes.
-    const variants = csvColumnCaseVariants(Object.keys(records[0] ?? {}));
+    // the column the feed sent and the spelling the contract publishes. The
+    // columns are the feed's own parsed HEADER, so a header-only export and one
+    // whose rows are all blank are refused by exactly the same words as an
+    // export with rows, rather than by reporting that no record was found.
+    const variants = csvColumnCaseVariants(table.columns);
     if (variants.length) return c.json({ ok: false, errors: variants.map(({ column, expected }) =>
       `column '${column.slice(0, 64)}': column names are matched exactly; the published contract spells this column '${expected}'`) }, 422);
   } else {
     const body = await readInputJson(c.req.raw.body);
     if (body === null) return c.json({ error: 'body must be JSON' }, 400);
-    records = recordsFromJson(body, c.req.query('path') ?? undefined);
+    const found = recordsInJson(body, c.req.query('path') ?? undefined);
+    records = found.records;
+    document = { value: body, accepted: catalogDocumentFields(found.carrier) };
   }
-  return importInto(c, records, mode, note, { format, path: c.req.query('path') ?? null }, meta);
+  return importInto(c, records, mode, note, { format, path: c.req.query('path') ?? null }, meta, document);
 });
 
 /**
@@ -411,16 +462,17 @@ contentRoutes.post('/catalog/pull', async (c) => {
   const body = await readInputJson(c.req.raw.body) as { url?: unknown; path?: unknown; mode?: unknown; note?: unknown } | null;
   const url = typeof body?.url === 'string' ? body.url.trim() : '';
   if (!/^https?:\/\//i.test(url)) return c.json({ error: 'url must be http(s)' }, 400);
-  let records: unknown[];
+  let pulled: PulledExport;
   try {
-    records = await new HttpJsonSource(url, typeof body?.path === 'string' ? body.path : undefined).pull();
+    pulled = await new HttpJsonSource(url, typeof body?.path === 'string' ? body.path : undefined).pullExport();
   } catch (e) {
     if (e instanceof InputError && e.status === 413) throw e;
     return c.json({ ok: false, errors: [`pull failed: ${e instanceof Error ? e.message : String(e)}`] }, 502);
   }
   const mode: ImportMode = body?.mode === 'merge' ? 'merge' : 'replace';
-  return importInto(c, records, mode, noteOf(body?.note) || `pull from ${new URL(url).host} (${mode})`,
-    { type: 'pull', url, path: typeof body?.path === 'string' ? body.path : null }, meta);
+  return importInto(c, pulled.records, mode, noteOf(body?.note) || `pull from ${new URL(url).host} (${mode})`,
+    { type: 'pull', url, path: typeof body?.path === 'string' ? body.path : null }, meta,
+    { value: pulled.document, accepted: catalogDocumentFields(pulled.carrier) });
 });
 
 function publicationTarget(c: Context<Ctx>) {
