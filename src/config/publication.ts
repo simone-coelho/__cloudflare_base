@@ -1,6 +1,7 @@
 // One conditional R2 head activates an immutable, coherent set. Pending intent
 // never expires or reallocates a revision; the previous committed set still serves.
 import type { Env } from '@/types/env';
+import { HTTPException } from 'hono/http-exception';
 import type { DocumentKind, IndexEntry, Revision, WriteMeta, WriteResult } from './versionedStore';
 
 export const PUBLICATION_MAX_BYTES = 2 * 1024 * 1024;
@@ -17,6 +18,26 @@ export class PublicationError extends Error {
     readonly code = 'publication_unavailable') { super(message); }
 }
 const unavailable = () => new PublicationError('Configuration publication authority unavailable');
+/**
+ * A typed owner/consent refusal raised INSIDE a publication storage read or
+ * write is that request's own answer, not a failure of the configuration
+ * authority. The owner serializer rechecks the grant, the choice and the
+ * retention stamp around every binding call, so its refusal arrives here as the
+ * rejection of `storage.get`/`storage.put`; rewriting it as `PublicationError`
+ * answered 500 on one host where the other answered 401 on the same body. It
+ * propagates unchanged; every other failure is still the authority being
+ * unavailable.
+ *
+ * Recognised by its base class and status rather than by importing
+ * `SessionAccessError` (`src/identity/sessionCapability.ts:26`, an
+ * `HTTPException(401)`): that module reaches the owner serializer and
+ * `node:async_hooks`, and this one is bundled for workerd on its own
+ * (`src/config/versionedStore.test.ts:410`).
+ */
+function storageFailure(error: unknown): PublicationError {
+  if (error instanceof HTTPException && error.status === 401) throw error;
+  return unavailable();
+}
 const conflict = () => new PublicationError('Publication conflicts with the retained operation or authored revision set', 409, 'publication_conflict');
 function required(condition: unknown): asserts condition { if (!condition) throw unavailable(); }
 function fields(v: unknown, keys: string[]): asserts v is Record<string, unknown> {
@@ -97,7 +118,7 @@ async function readObject(storage: R2Bucket, key: string): Promise<{ value: unkn
       raw += decoder.decode(); required(bytes === result.size);
     } catch (error) { void reader.cancel().catch(() => undefined); throw error; } finally { reader.releaseLock(); }
     return { value: JSON.parse(raw), etag: result.etag, bytes };
-  } catch { throw unavailable(); }
+  } catch (error) { throw storageFailure(error); }
 }
 async function sealed<T extends object>(value: T): Promise<T & { digest: string }> { return { ...value, digest: await digest(value) }; }
 async function validDigest(value: Record<string, unknown>): Promise<void> {
@@ -293,7 +314,7 @@ async function put(storage: R2Bucket, key: string, body: string, etag?: string):
     const result = await storage.put(key, body, { onlyIf: etag === undefined ? new Headers({ 'If-None-Match': '*' }) : { etagMatches: etag }, httpMetadata: { contentType: 'application/json' } });
     if (result === null) return false;
     required(result && result.key === key && text(result.etag, 256) && result.size === encoder.encode(body).byteLength); return true;
-  } catch { throw unavailable(); }
+  } catch (error) { throw storageFailure(error); }
 }
 async function createExact(storage: R2Bucket, key: string, value: unknown): Promise<void> {
   const body = serialized(value); if (await put(storage, key, body)) return;

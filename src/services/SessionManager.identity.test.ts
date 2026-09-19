@@ -136,7 +136,12 @@ describe('absorbIntoShopper: the first link', () => {
     const r = await sm.absorbIntoShopper({ shopperId: SH, from: await sm.readRaw('s-phone'), fromSessionId: 's-phone', config: cfg, now: T0 + 5000 });
     expect((await sm.getSession('s-phone'))?.userId).toBe(SH);
 
-    const written = await sm.createOrUpdateSession('s-phone', 'vis-phone', { attributes: { last_page_path: '/bags' } });
+    // Production runs a shopper write inside the owner operation that carries the
+    // linked person's own explicit choice (`runOwnerOperation`, the fixture's `held`).
+    // Outside one there is no instruction at all, consent is REFUSING and
+    // `src/services/SessionManager.ts:324-329` drops the write before it can reach
+    // the consent-scope check this unit declares (`:381-382`).
+    const written = await held(SH, () => sm.createOrUpdateSession('s-phone', 'vis-phone', { attributes: { last_page_path: '/bags' } }));
     expect(written.userId).toBe(SH);                         // the person's id survived the browser's write
     expect(written.attributes.last_page_path).toBe('/bags');
     const person = await sm.readRaw(r.sessionId);

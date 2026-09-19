@@ -9,7 +9,7 @@ import { assertSessionTarget, SessionAccessError, type SessionCapability } from 
 import { consentOf, consentFromCookies, intersectConsent, withConsent, REFUSING, type Consent } from '@/content/consent';
 import { isShopperId } from '@/identity/shopperId';
 import { applyProfileSnapshot, enrichmentInputs, mergeEnrichment, profileEnrichmentSchema, readEnrichment, type ImportOutcome, type ProfileEnrichment, type ProfileSnapshotRow } from '@/identity/profileEnrichment';
-import { retentionBirth, externalRetentionBirths, requireRetention, type ExternalRetention, type RetentionStamp } from '@/retention';
+import { retentionBirth, externalRetentionBirths, requireRetention, mergeRetention, mergeExternalRetention, type ExternalRetention, type RetentionStamp } from '@/retention';
 import { pinProfileRetention } from '@/identity/sessionAuthority';
 
 import {
@@ -396,10 +396,39 @@ export class SessionManager {
     }
     if (raw) {
       const consent = await currentOwnerConsent();
-      if (consent?.instruction && (consent.instruction.tenant !== this.tenant || consent.instruction.subject !== raw.userId)) throw new SessionAccessError();
+      if (consent?.instruction && !await this.instructionOwns(consent.instruction, raw)) throw new SessionAccessError();
       if (consent) withConsent(raw, consent);
     }
     return raw;
+  }
+
+  /**
+   * CW25. Whether an owner consent instruction is in scope for THIS record.
+   *
+   * A record is owned by its `userId`, and a person's record also by its
+   * `identity.shopperId`. A linked browser's record is a POINTER: it keeps the
+   * browser's own `userId`, while every read and write through it lands on the
+   * person it forwards to. Comparing the instruction's subject against `userId`
+   * alone therefore left no single subject that could reach both the browser's
+   * tombstone and the person, so a post-link write under the old cookie was
+   * refused whichever subject the owner held.
+   *
+   * One hop, the same hop `resolveRecord` follows, and the target's own
+   * forwarding is never followed. The tenant must still match, an unreadable or
+   * missing target refuses, and a subject that owns neither record is refused
+   * exactly as before.
+   */
+  private async instructionOwns(instruction: { tenant: string; subject: string }, raw: SessionData): Promise<boolean> {
+    if (instruction.tenant !== this.tenant) return false;
+    if (raw.userId === instruction.subject || raw.identity?.shopperId === instruction.subject) return true;
+    if (!raw.forwardTo) return false;
+    let target: SessionData;
+    try {
+      const stored = await this.kv.get(`session:${raw.forwardTo}`, 'json');
+      if (!stored) return false;
+      target = sessionDataSchema.parse(stored);
+    } catch { return false; }
+    return target.userId === instruction.subject || target.identity?.shopperId === instruction.subject;
   }
 
   /**
@@ -502,6 +531,34 @@ export class SessionManager {
     return await restrictOwnerConsent(consent) ?? consent;
   }
 
+  /**
+   * The retention the person's record carries out of a link: the EARLIEST live
+   * birth of the records being folded, never a new period for an existing cohort
+   * (`src/retention.ts` mergeRetention, "cumulative same-policy cohorts retain
+   * the earliest birth"). An expired, legacy, off-policy or mixed cohort carries
+   * nothing, so the person's next write fails closed rather than silently
+   * reviving it. Only a person's record that is being CREATED with nothing folded
+   * into it is a new record, and only that one may have a birth of its own.
+   */
+  private carriedRetention(base: SessionData | null, fold: SessionData | null, created: boolean): Pick<SessionData, 'retention' | 'externalRetention'> {
+    // Retention liveness is wall-clock, never the caller's link time.
+    const at = Date.now();
+    const live = (value: unknown): RetentionStamp | undefined => {
+      try { return value === undefined ? undefined : requireRetention(this.env, value, this.tenant, 'profile', at); } catch { return undefined; }
+    };
+    const a = live(base?.retention), b = live(fold?.retention);
+    let retention: RetentionStamp | undefined = a && b ? undefined : a ?? b;
+    if (a && b) { try { retention = mergeRetention(a, b, this.tenant, 'profile'); } catch { retention = undefined; } }
+    if (!retention && created && !fold) {
+      try { retention = retentionBirth(this.env, this.tenant, 'profile', at, at); } catch { retention = undefined; }
+    }
+    const external = base?.externalRetention === undefined ? fold?.externalRetention
+      : fold?.externalRetention === undefined ? base.externalRetention
+      : mergeExternalRetention(base.externalRetention, fold.externalRetention, this.tenant);
+    const births = !retention || !created || fold ? undefined : externalRetentionBirths(this.env, this.tenant, at, at);
+    return { ...(retention ? { retention } : {}), ...(external ?? births ? { externalRetention: external ?? births } : {}) };
+  }
+
   /** Request-local state already read by the owned action lane, never a caller payload. */
   private checkedSnapshot(sessionId: string, snapshot: { sessionId: string; data: SessionData | null }): SessionData | null {
     if (!this.principal || snapshot.sessionId !== sessionId) throw new SessionAccessError();
@@ -571,6 +628,11 @@ export class SessionManager {
     const odp = await mergeOdpState(this.env, this.tenant, base, fold);
     const oldOdp = new Set([...(base?.odpSeed ?? []), ...(fold?.odpSeed ?? [])]);
     const data: SessionData = {
+      // The person's record is the cumulative cohort of the records folded into
+      // it, so it KEEPS their retention birth instead of losing it. Dropping it
+      // left every linked person unstamped, and the next write to the person
+      // then failed closed on a missing birth.
+      ...this.carriedRetention(base, fold, created),
       userId: shopperId,
       anonymousId: base?.anonymousId ?? fold?.anonymousId,
       segments: [...new Set([...[
