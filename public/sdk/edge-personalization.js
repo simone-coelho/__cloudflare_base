@@ -201,6 +201,8 @@
     let expiresAt = 0;
     let bootstrapping = null;
     const capabilityKey = `opt_shopper_session:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
+    const continuityKey = `opt_shopper_continuity:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
+    const continuityOperationKey = `${continuityKey}:operation`;
     const refusalKey = `opt_shopper_refusal:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
     const refusalCookie = encodeURIComponent(refusalKey);
     const lifetime = 30 * 86400 * 1e3;
@@ -644,6 +646,35 @@
       if (wanted && !transitioning) connect();
       return true;
     }
+    function presentContinuity() {
+      if (cfg.sessionBroker) return null;
+      try {
+        const proof = host.storage.get(continuityKey) ?? "";
+        if (!proof) return null;
+        let operationId = host.storage.get(continuityOperationKey) ?? "";
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(operationId)) {
+          operationId = host.uuid();
+          host.storage.set(continuityOperationKey, operationId);
+        }
+        return { proof, operationId };
+      } catch {
+        return null;
+      }
+    }
+    function keepContinuity(value) {
+      if (cfg.sessionBroker) return;
+      const report = value;
+      try {
+        if (report?.enabled === true && report.mode === "direct" && typeof report.proof === "string" && report.proof) {
+          host.storage.set(continuityKey, report.proof);
+          host.storage.set(continuityOperationKey, "");
+        } else if (report?.enabled === false) {
+          host.storage.set(continuityKey, "");
+          host.storage.set(continuityOperationKey, "");
+        }
+      } catch {
+      }
+    }
     function ready(transition = false) {
       consent();
       if (transitioning && !transition) return Promise.resolve(false);
@@ -725,7 +756,15 @@
           } catch {
           }
           if (Object.keys(recovery).length) persisted = "";
-          const request = () => boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), { method: "POST", credentials: "include", headers: { ...headers({ "Content-Type": "application/json" }), ...persisted ? { "X-Shopper-Session": persisted } : {} }, body: JSON.stringify(Object.keys(active).length ? { consent: active } : {}) }, 16384);
+          const request = () => {
+            const returning = persisted ? null : presentContinuity();
+            return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), {
+              method: "POST",
+              credentials: "include",
+              headers: { ...headers({ "Content-Type": "application/json" }), ...persisted ? { "X-Shopper-Session": persisted } : {} },
+              body: JSON.stringify({ ...Object.keys(active).length ? { consent: active } : {}, ...returning ? { continuity: returning } : {} })
+            }, 16384);
+          };
           let res = await request();
           if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
             rememberUnknownConsent();
@@ -745,7 +784,9 @@
             }
             return false;
           }
-          return adoptSession(body.session, g, "logout");
+          const adopted = adoptSession(body.session, g, "logout");
+          if (adopted) keepContinuity(body.continuity);
+          return adopted;
         } catch {
           return refuseTransition();
         } finally {
