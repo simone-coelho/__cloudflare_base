@@ -871,8 +871,13 @@ describe('unit:W16.C3.06', () => {
     const plainRecord = recordFor(plain, 'tabby-in-motion-film'), seededRecord = recordFor(seeded, 'tabby-in-motion-film');
     expect(plainRecord.explain.score_base).toBe(0.15);
     expect(seededRecord.explain.score_base).toBe(0.45);
-    // The learned-influence field is identical: a seed is context, never evidence.
-    expect(seededRecord.explain.lift).toEqual(plainRecord.explain.lift);
+    // Every learned input is identical — a seed is context, never evidence — and
+    // the field differs ONLY in the delta the lift actually caused, which is
+    // measured on the base it multiplied (R30(4), the same arithmetic W16.C7.01
+    // pins): 0.15 × (1.5 − 1) = 0.075 plain, 0.45 × (1.5 − 1) = 0.225 seeded.
+    expect({ ...seededRecord.explain.lift, applied: undefined }).toEqual({ ...plainRecord.explain.lift, applied: undefined });
+    expect(liftAppliedOf(plainRecord)).toBe(0.075);
+    expect(liftAppliedOf(seededRecord)).toBe(0.225);
     expect(seededRecord.explain.lift?.lift).toBe(1.5);
     expect(seededRecord.explain.lift?.gamma).toBe(1);
     // ... and it is recorded separately from the contextual contribution.

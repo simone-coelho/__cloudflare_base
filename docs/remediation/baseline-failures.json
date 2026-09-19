@@ -1,9 +1,9 @@
 {
-  "generated": "2026-09-19T02:17:48.212Z",
-  "commit": "1522180ff08e08fec3f58c20b874a4d56ecd7303",
-  "vitest_sha256": "054b151c3dee962cf8412a67908b9509d65013bf9a34486dc08c4031031296cf",
-  "note": "serial run on integration head 740dc11 (BASE-1c and BASE-D1 merged), lead validation 2026-09-19",
-  "allow_grow_reason": "declared units W05.BASE.01, W11.BASE.01, W06.BASE.01, W09.BASE.02, W37.BASE.01 (R22): five existing red tests wrapped as units at 78b7e85; their five old names leave the list",
+  "generated": "2026-09-19T02:58:33.047Z",
+  "commit": "3fdb9cb5e71efcf260fb22f8cc7610025ceba721",
+  "vitest_sha256": "5bf32c4061dd04348df2dd29b4cad0a5ba8b1c5d49b5f0c6c2037f914a12b305",
+  "note": "parallel run (minWorkers=maxWorkers=4, ruling R35) on rem/w16-c3-build with the integration branch merged at 56fa842; W16-B2 build. Same 139 names as the previous baseline: no entry added, none removed.",
+  "allow_grow_reason": null,
   "failures": [
     " CW29: the snapshot says the stage reports the journey stage the object last derived, and null before any event",
     " CW31 consent on the content service W04.02 owned state honors a prior false hint without restoring legacy profile mirrors",
