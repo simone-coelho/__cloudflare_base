@@ -170,19 +170,23 @@ describe('CW34: the confidence level, and the other one beside it', () => {
 
 describe('CW34: the pre-set targets', () => {
   it("uses Tapestry's numbers by default and can be switched off", () => {
-    const r = compareArms({ n: 1000, s: 30 }, { n: 20000, s: 900 });
+    // R10/R108(1d): the arrangement passes the targets explicitly; `compareArms` no
+    // longer reads a compiled customer default (F25 §5.2). Every expected value below is unchanged.
+    const r = compareArms({ n: 1000, s: 30 }, { n: 20000, s: 900 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } });
     expect(r.targets?.targets).toEqual(TAPESTRY_TARGETS);
     expect(compareArms({ n: 10, s: 1 }, { n: 10, s: 2 }, { targets: null }).targets).toBeUndefined();
   });
 
   it('judges on the low end of the interval, not the point estimate', () => {
     // 3.0% vs 4.5%: +50% observed. Small arms: the low end is under the minimum, so on track, not reached.
-    const small = compareArms({ n: 200, s: 6 }, { n: 4000, s: 180 });
+    // R10/R108(1d): the arrangement passes the targets explicitly; `compareArms` no
+    // longer reads a compiled customer default (F25 §5.2). Every expected value below is unchanged.
+    const small = compareArms({ n: 200, s: 6 }, { n: 4000, s: 180 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } });
     expect(small.relative).toBeCloseTo(0.5, 2);
     expect(small.targets?.standing).toBe('on_track');
     expect(small.words).toContain('on track, the observed lift clears the minimum but the low end of the interval is');
     // Same rates, big arms: the low end clears the minimum, and not the target.
-    const big = compareArms({ n: 20000, s: 600 }, { n: 400000, s: 18000 });
+    const big = compareArms({ n: 20000, s: 600 }, { n: 400000, s: 18000 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } });   // R10/R108(1d): targets supplied explicitly
     // R10/R100(b), witness F25 §7.3 (the Katz log relative interval from RAW rates) and §5.5 (this exact
     // fixture: "shipped relative low 41.33 % … Katz low 38.46 % -> reached_minimum"). By hand at
     // z = 1.959963984540054: p_c = 600/20000 = 0.03, p_t = 18000/400000 = 0.045, ln(1.5) = 0.4054651081,
@@ -194,14 +198,18 @@ describe('CW34: the pre-set targets', () => {
   });
 
   it('reaches stretch, or the minimum only, or is below', () => {
-    expect(compareArms({ n: 20000, s: 400 }, { n: 400000, s: 16000 }).targets?.standing).toBe('reached_stretch');   // 2% → 4%: +100%
-    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 15000 }).targets?.standing).toBe('reached_minimum');   // 3% → 3.75%: +25%
-    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 12600 }).targets?.standing).toBe('below');             // 3% → 3.15%: +5%
-    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 12600 }).words).toContain('below the minimum');
+    // R10/R108(1d): the arrangement passes the targets explicitly; `compareArms` no
+    // longer reads a compiled customer default (F25 §5.2). Every expected value below is unchanged.
+    expect(compareArms({ n: 20000, s: 400 }, { n: 400000, s: 16000 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).targets?.standing).toBe('reached_stretch');   // 2% → 4%: +100%
+    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 15000 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).targets?.standing).toBe('reached_minimum');   // 3% → 3.75%: +25%
+    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 12600 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).targets?.standing).toBe('below');             // 3% → 3.15%: +5%
+    expect(compareArms({ n: 20000, s: 600 }, { n: 400000, s: 12600 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } }).words).toContain('below the minimum');
   });
 
   it('cannot be read against a control rate of zero, and says so', () => {
-    const r = compareArms({ n: 100, s: 0 }, { n: 100, s: 5 });
+    // R10/R108(1d): the arrangement passes the targets explicitly; `compareArms` no
+    // longer reads a compiled customer default (F25 §5.2). Every expected value below is unchanged.
+    const r = compareArms({ n: 100, s: 0 }, { n: 100, s: 5 }, { targets: { minimum: 0.10, target: 0.40, stretch: 0.60 } });
     expect(r.targets?.standing).toBe('undecided');
     expect(r.words).toContain('cannot be read against a control rate of zero');
     expect(readTargets({ p: 0.05, lo: 0.01, hi: 0.09 }, 0, TAPESTRY_TARGETS).relativeLow).toBeNull();
