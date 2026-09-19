@@ -1122,23 +1122,33 @@ function compileSlotConstraints(slot, extended = true) {
     }
     values.add(pair.value);
   }
+  const refuse = (piece, id = piece?.id) => {
+    if (offLimits) return { reason: "off_limits" };
+    if (id !== void 0 && ids.has(id)) return { reason: "excluded" };
+    if (!piece) return null;
+    if (types && !types.has(piece.type)) return { reason: "type_not_allowed" };
+    for (const dimension in piece.tags) {
+      if (!Object.hasOwn(piece.tags, dimension)) continue;
+      const values = tags.get(dimension), held = piece.tags[dimension];
+      if (!values || !Array.isArray(held)) continue;
+      const matched = held.find((value) => values.has(value));
+      if (matched !== void 0) return { reason: "excluded_tag", dimension, value: matched };
+    }
+    const formats = tags.get("contentType");
+    if (formats && !Object.hasOwn(piece.tags, "contentType")) {
+      const matched = contentTypeValues(piece)?.find((value) => formats.has(value));
+      if (matched !== void 0) return { reason: "excluded_tag", dimension: "contentType", value: matched };
+    }
+    return null;
+  };
   return {
     offLimits,
     active: offLimits || ids.size > 0 || types !== null || tags.size > 0,
     reason(piece, id = piece?.id) {
-      if (offLimits) return "off_limits";
-      if (id !== void 0 && ids.has(id)) return "excluded";
-      if (!piece) return null;
-      if (types && !types.has(piece.type)) return "type_not_allowed";
-      for (const dimension in piece.tags) {
-        if (!Object.hasOwn(piece.tags, dimension)) continue;
-        const values = tags.get(dimension), held = piece.tags[dimension];
-        if (values && Array.isArray(held) && held.some((value) => values.has(value))) return "excluded_tag";
-      }
-      const formats = tags.get("contentType");
-      if (formats && !Object.hasOwn(piece.tags, "contentType") && contentTypeValues(piece)?.some((value) => formats.has(value))) return "excluded_tag";
-      return null;
-    }
+      return refuse(piece, id)?.reason ?? null;
+    },
+    /** The same decision, with the published pair that made it when there is one. */
+    refusal: refuse
   };
 }
 

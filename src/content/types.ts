@@ -5,6 +5,7 @@
 // persists it, and neither side changes it without a row in plan 21 first.
 
 import type { ContentPieceLike, ContentDecision, SlotCandidate, PinDiagnostic } from '@/reflex/contentCompose';
+import type { SlotConstraintReason } from './slotConstraints';
 import type { ExternalKind, ExternalModelConfig } from '@/learn/external';
 import type { MerchandisingDriver, MerchandisingSignals, MerchandisingWeights } from '@/reflex/merchandising';
 
@@ -428,4 +429,44 @@ export interface ContentDecisionSet {
   pinDiagnostics?: PinDiagnostic[];
   /** A slot whose retained seed rule set the current contract refuses: ignored whole, never partially applied. */
   seedDiagnostics?: SeedDiagnostic[];
+  /**
+   * Advisory: the pieces a slot's published hard controls refused although the
+   * slot could otherwise have served them, and the published pair that refused
+   * each. Bounded and present only when there is something to name; never
+   * serving authority and never carried on a stored record.
+   */
+  constraintDiagnostics?: ConstraintDiagnostics;
+}
+
+/**
+ * One piece a slot's published hard controls refused, in the pattern of
+ * `pinDiagnostics` and `seedDiagnostics`: refused configuration named, never a
+ * fabricated delivery decision or ledger row. Only a piece that was OTHERWISE
+ * ELIGIBLE for that slot is named — live, inside its window, in stock, and
+ * naming the slot identifier in its own `slotTypes` — because a piece the slot
+ * could never have served was not refused by the constraint, and naming it
+ * would report the catalogue instead of the rule.
+ */
+export interface ConstraintDiagnostic {
+  slot: string;
+  contentId: string;
+  reason: SlotConstraintReason;
+  /** The published pair itself, for a refusal by an excluded tag. */
+  dimension?: string;
+  value?: string;
+}
+
+/**
+ * The bounded channel those refusals travel on, in the cap idiom both existing
+ * advisory channels already use (`catalogDiagnostics`, `slotDiagnostics`):
+ * every refused eligible piece is counted, at most the first
+ * `CONSTRAINT_WARNING_SAMPLE` are named — slot order, then catalogue order —
+ * and the remainder is reported as omitted, because a market rule over a real
+ * catalogue refuses thousands of pieces and an entry each would be an
+ * unbounded payload on every decision.
+ */
+export interface ConstraintDiagnostics {
+  warningCount: number;
+  omittedWarningCount: number;
+  warnings: ConstraintDiagnostic[];
 }

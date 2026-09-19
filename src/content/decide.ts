@@ -7,7 +7,7 @@
 
 import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, LiftApplied, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SlotStrategy,
+  Arm, Authority, Cell, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, LiftApplied, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SlotStrategy,
 } from './types';
 import { validateSeedRules } from './kinds';
 import { arrivedFromNetwork, type ChannelSignals } from '@/services/visit';
@@ -19,7 +19,7 @@ import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } 
 import { STAGE_WORDS } from '@/services/JourneyStage';
 import { isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { HISTORICAL_CONTENT_TYPES, withContentTypeAffinity } from './typeAffinity';
-import { rankedCapacity } from './slotConstraints';
+import { compileSlotConstraints, rankedCapacity } from './slotConstraints';
 
 export interface DecideInput {
   tenant: string;
@@ -76,6 +76,57 @@ export interface DecideInput {
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
+
+/** The sample bound both existing advisory channels carry; the count stays whole. */
+const CONSTRAINT_WARNING_SAMPLE = 50;
+
+/**
+ * What a page's published hard slot controls actually cost it: per slot, the
+ * pieces that slot could otherwise have served and the published pair that
+ * refused each. Today the composer computes the refusal and drops it on the
+ * floor for every piece that is not a pin, so a merchandiser cannot tell a
+ * market exclusion from a missing piece or an exhausted take.
+ *
+ * Pure, and read from the same compiled gates and the same eligible pieces the
+ * composer ranks, so it can never disagree with what was served. Advisory only:
+ * it changes no ranking, no eligibility, no record and nothing stored.
+ *
+ * DISCRIMINATED: only a piece that was otherwise eligible for that slot — live,
+ * inside its window and in stock, and naming the slot identifier in its own
+ * `slotTypes` — is named, because a piece the slot could never have served was
+ * not refused by the constraint. Only a slot the composer actually RANKS
+ * contributes at all: an off-limits slot and a slot whose take is a
+ * non-personalizable pin consider no candidate, so they refuse nobody however
+ * many exclusions they publish, and a dormant or refused pin already has its
+ * own home in `slot-pin-diagnostics/v1`. BOUNDED: every refused eligible piece
+ * is counted, at most the first `CONSTRAINT_WARNING_SAMPLE` are carried (slot
+ * order, then catalogue order) and the remainder is reported as omitted.
+ */
+function constraintDiagnosticsFor(eligible: readonly ContentPiece[], specs: readonly ContentSlotSpec[],
+  ranks: (spec: ContentSlotSpec) => boolean, historicalGovernance?: HistoricalGovernance): ConstraintDiagnostics | null {
+  // A retained receipt decided before the hard controls existed is replayed
+  // without them, so there is no refusal of theirs to name either.
+  if (historicalGovernance === HISTORICAL_GOVERNANCE) return null;
+  const warnings: ConstraintDiagnostic[] = [];
+  let warningCount = 0;
+  for (const spec of specs) {
+    if (!ranks(spec)) continue;
+    const gate = compileSlotConstraints(spec, historicalGovernance !== HISTORICAL_GOVERNANCE_V1);
+    if (!gate.active) continue;
+    for (const piece of eligible) {
+      if (!piece.slotTypes.includes(spec.slot)) continue;
+      const refusal = gate.refusal(piece);
+      if (!refusal) continue;
+      warningCount++;
+      if (warnings.length < CONSTRAINT_WARNING_SAMPLE) {
+        warnings.push({ slot: spec.slot, contentId: piece.id, reason: refusal.reason,
+          ...(refusal.dimension === undefined ? {} : { dimension: refusal.dimension }),
+          ...(refusal.value === undefined ? {} : { value: refusal.value }) });
+      }
+    }
+  }
+  return warningCount ? { warningCount, omittedWarningCount: warningCount - warnings.length, warnings } : null;
+}
 
 /** Three decimals, the grain every itemised delta on a receipt is recorded at. */
 const r3 = (n: number): number => { const v = Math.round(n * 1000) / 1000; return v === 0 ? 0 : v; };
@@ -297,6 +348,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   } : undefined;
   const { decisions, candidates, pinDiagnostics } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
   const refusedPrefixes = new Set(pinDiagnostics?.filter(d => d.pinIndex !== undefined).map(d => d.slot));
+  // The slots the composer ran a ranking for, by its own conditions: capacity
+  // left after off-limits and pins (`rankedCapacity`, the composer's `:227` and
+  // `:237-250`), a pinned prefix it did not refuse, and — on a replay — the
+  // bounded set of slots that re-executed.
+  const ranks = (spec: ContentSlotSpec) => rankedCapacity(spec) > 0 && !refusedPrefixes.has(spec.slot)
+    && (!i.replayRankingSlots || i.replayRankingSlots.has(spec.slot));
+  const constraintDiagnostics = constraintDiagnosticsFor(eligible, specs, ranks, historicalGovernance);
   const specOf = new Map(specs.map((s) => [s.slot, s]));
   // What the region contributed to this decision: Σ over the piece's tags of λ·share·w.
   const regionalOf = (d: { contentId: string; slot: string; strategy?: string }): (RegionalBlend & { contribution: number }) | null => {
@@ -409,5 +467,6 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     regional: i.regional && i.arm !== 'default' ? (({ share: _s, ...rest }) => rest)(i.regional) : null,
     decisions, records, ...(pinDiagnostics ? { pinDiagnostics } : {}),
     ...(seedDiagnostics.length ? { seedDiagnostics } : {}),
+    ...(constraintDiagnostics ? { constraintDiagnostics } : {}),
   };
 }
