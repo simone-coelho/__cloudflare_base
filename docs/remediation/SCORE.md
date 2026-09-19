@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 111/112 · W closed 2/26 (W16–W41) · suite 1924/2004 · residual 80 in 9 files · typecheck GREEN
+Units 116/118 · W closed 2/26 (W16–W41) · suite 1931/2010 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -18,7 +18,7 @@ Units 111/112 · W closed 2/26 (W16–W41) · suite 1924/2004 · residual 80 in 
 | W16 | 66 | 66 | no | — | — |
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
-| W19 | 8 | 8 | no | — | — |
+| W19 | 14 | 13 | no | — | — |
 | W20 | 9 | 9 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
@@ -126,6 +126,12 @@ Units 111/112 · W closed 2/26 (W16–W41) · suite 1924/2004 · residual 80 in 
 | W19.F2.01 | green | 2 |
 | W19.F2.02 | green | 2 |
 | W19.F2.03 | green | 1 |
+| W19.L1.01 | green | 1 |
+| W19.L1.02 | green | 2 |
+| W19.L1.03 | green | 1 |
+| W19.P1.01 | unspecified | 0 |
+| W19.S1.01 | green | 1 |
+| W19.S1.02 | green | 1 |
 | W19.T1.01 | green | 3 |
 | W19.T1.02 | green | 2 |
 | W20.G1.01 | green | 2 |
@@ -141,14 +147,14 @@ Units 111/112 · W closed 2/26 (W16–W41) · suite 1924/2004 · residual 80 in 
 
 ## Failing tests outside the baseline
 
--  W35.03 recoverable identity transfer W35.06 preserves intent registration and generation witnesses through checkpointed paged source erasure
+_None._
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 7a90a823b69037049c0adc61029524571049ffe267fe2122891da56d6228e941 |
+| units sha256 | 4a8183f3539905b37c174ff41c1d18cbbb9275f192c1e07c3ac92b07a19c86f9 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -159,7 +165,7 @@ Units 111/112 · W closed 2/26 (W16–W41) · suite 1924/2004 · residual 80 in 
 
 | Input | Value |
 |---|---|
-| vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | 6c2486b34c823f9ee2c0d343526116874e55e4ca1de19d487b1bf428228b43ae |
-| commit | 027b8bdd5a933711d4f2dc6b01a580bb1664f56d |
-| generated | 2026-09-19T18:39:57.985Z |
+| vitest report | vitest-serial.json (outside the checkout) |
+| vitest report sha256 | 5f755ae96966c6633aa6cab8fc8302d853125596e252e0a0d34852008fdd36d8 |
+| commit | e0904a1e34b9e6f918d6043b76228b733bffee19 |
+| generated | 2026-09-19T19:13:51.069Z |
