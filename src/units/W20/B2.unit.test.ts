@@ -44,9 +44,12 @@
 //     ruled separately, as the tenant-level signal, by unit W20.G2.04.
 //   · `GET /v1/:tenant/audit` (`decisions.ts:99`): minimized tenant READ-audit
 //     rows only — a log of who read what, not a serving counter.
-//   · `GET /v1/:tenant/learn/queue` (`decisions.ts:269`, `src/learn/queue.ts`):
-//     counts of what needs a person, but derived purely from the documents and
-//     the proposal list, with no runtime term and no per-slot horizon.
+//   · `GET /v1/:tenant/learn/queue` (`decisions.ts:269-286`, `src/learn/queue.ts`):
+//     what needs a person. It DOES join the same per-slot runtime evidence under
+//     the same 200-slot budget (`decisions.ts:279-283`) — the rejection is not
+//     that it lacks the join; it is that the queue answers tenant-wide COUNTS
+//     and two small slot lists (`src/learn/queue.ts:10-23`), not a row per slot,
+//     so it has nowhere to put a per-slot refusal with its reason and piece id.
 //   · `POST/GET /v1/:tenant/learn/report` and `/report/window`
 //     (`src/learn/report.ts`): the day's LEDGER under the learning policy —
 //     built from decision and outcome records, so a refused slot, which writes
@@ -74,10 +77,14 @@
 //      `excluded`, `type_not_allowed`, `excluded_tag`) — NOT the activation
 //      vocabulary of `slot-pin-diagnostics/v1`, because these count what the
 //      decision path refused, not what a publication check foresaw.
-//      `short_take` is ruled as the word for a pinned slot that could not fill
-//      `take`: the engine has no word of its own for it today (the nearest is
-//      `rankedCapacity`, `src/content/slotConstraints.ts:7`, which is capacity,
-//      not a shortfall), so R86(b)'s word stands.
+//      RATIFIED (R94(a)): the RUNTIME vocabulary is the right one here, against
+//      the brief's activation words, because these count what the decision path
+//      refused. WITHDRAWN (R94, correction 5): no `short_take` reason TOKEN is
+//      ruled. The engine has no word of its own for a pinned slot that could not
+//      fill `take` (`rankedCapacity`, `src/content/slotConstraints.ts:7`, is
+//      capacity, not a shortfall), and this specification does not invent one:
+//      the shortfall is carried by its own named members, `shortTakeCount` and
+//      `shortTakePositions`, which is one vocabulary across both surfaces.
 //   2. `DecisionRecord.explain.shortTake` (unit W20.G2.03), in the shape every
 //      other rule block on `explain` already has — numbers plus a `sentence`
 //      (`src/content/decide.ts:396-399` for merchandising, stage, freshness,
@@ -88,9 +95,18 @@
 //   3. `MonitorResult.governance` (unit W20.G2.04), carried by the safe
 //      projection `projectMonitor` (`src/ops/monitor.ts:209-223`) and answered
 //      by `POST /v1/:tenant/monitor`:
-//        governance: { since: number; refusedPins: number; shortTake: number }
-//      per tenant, read from the same counters the slots page reads, so it is
-//      never a synthetic-probe-only value.
+//        governance: { since: number; refusedPinCount: number; shortTakeCount: number }
+//      per tenant, in ONE vocabulary with the slots page (R94(c)): the same two
+//      count names, with the per-pin `refusedPins` detail on the slots page
+//      alone. Read from the same counters the slots page reads, so it is never a
+//      synthetic-probe-only value.
+//      AND NEVER THE MONITOR'S OWN PROBE (R94(b)): `runChecks` composes the same
+//      page as a synthetic visitor (`src/ops/monitor.ts:317-320`, `visitorId:
+//      monitor-…`, `channel: monitor`), so a counter written at the decision
+//      path would count the platform watching itself. The monitor's synthetic
+//      compose is nobody's occurrence, on either surface; W20.G2.04 asserts it
+//      on both. The exclusion mechanism is the implementer's to choose — the
+//      probe's own visitor/channel identity, or a caller flag — and to name.
 //   4. `refusedCount` and `omittedCount` beside `pinDiagnostics` on the snapshot
 //      answer (unit W20.G2.06), with the array capped at the 50 the advisory
 //      channel already caps its sample at (`src/content/slotDiagnostics.ts:41`,
@@ -121,7 +137,9 @@ import { Hono } from 'hono';
 import * as jose from 'jose';
 
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND, validateSlotCatalog } from '@/content/kinds';
-import type { ContentPiece, SlotCatalog } from '@/content/types';
+import type { ContentPiece, DecisionRecord, SlotCatalog } from '@/content/types';
+import type { SlotIndexEntry } from '@/learn/rows';
+import type { MonitorResult } from '@/ops/monitor';
 import type { PinDiagnostic } from '@/reflex/contentCompose';
 import { initializePublicationSet, invalidatePublicationCache, type PublicationBaseline } from '@/config/publication';
 import { invalidateCache } from '@/config/versionedStore';
@@ -442,25 +460,50 @@ interface SlotGovernance {
   shortTakeCount: number;
   shortTakePositions: number;
 }
-interface SlotsPageEntry { page: string; slot: string; take: number; governance?: SlotGovernance }
+/** What every governance block says apart from the horizon it counts from. */
+type GovernanceCounts = Omit<SlotGovernance, 'since'>;
+
+/**
+ * R21, made TYPECHECK-VISIBLE (R94(f)): the member is read off the engine's own
+ * `SlotIndexEntry` (`src/learn/rows.ts:140`), not off a shape declared here, so
+ * the compiler names it as missing until it exists. This is one of the three
+ * ruled-missing type errors this batch expects.
+ */
+const governanceMember = (entry: SlotIndexEntry): SlotGovernance | undefined => entry.governance;
 
 /** `GET /v1/:tenant/learn/slots?evidence=1`, the operator slots page, flattened by slot. */
-async function slotsPage(m: Mounted): Promise<{ status: number; bySlot: Record<string, SlotsPageEntry> }> {
+async function slotsPage(m: Mounted): Promise<{ status: number; bySlot: Record<string, SlotIndexEntry> }> {
   const read = await operatorGet(m, `/v1/${TENANT}/learn/slots?evidence=1`);
-  const bySlot: Record<string, SlotsPageEntry> = {};
-  for (const page of (read.body.pages as Array<{ page: string; slots: SlotsPageEntry[] }> | undefined) ?? []) {
+  const bySlot: Record<string, SlotIndexEntry> = {};
+  for (const page of (read.body.pages as Array<{ page: string; slots: SlotIndexEntry[] }> | undefined) ?? []) {
     for (const entry of page.slots) bySlot[entry.slot] = entry;
   }
   return { status: read.status, bySlot };
 }
 
 /** The governance block of one slot, or a sentence saying it is absent, so the failure names the missing member. */
-const governanceOf = (bySlot: Record<string, SlotsPageEntry>, slot: string): SlotGovernance | string =>
-  bySlot[slot]?.governance ?? `absent: the operator slots page carries no \`governance\` block for ${slot} (the entry is ${JSON.stringify(bySlot[slot] ?? null).slice(0, 200)})`;
+const governanceOf = (bySlot: Record<string, SlotIndexEntry>, slot: string): SlotGovernance | string => {
+  const entry = bySlot[slot];
+  return (entry && governanceMember(entry))
+    ?? `absent: the operator slots page carries no \`governance\` block for ${slot} (the entry is ${JSON.stringify(entry ?? null).slice(0, 200)})`;
+};
 
 /** Zero, reported as zero (R86(b)), for a slot that refused nothing and filled every position. */
-const noOccurrences = (since: number): SlotGovernance =>
-  ({ since, refusedPinCount: 0, refusedPins: [], shortTakeCount: 0, shortTakePositions: 0 });
+const NO_OCCURRENCES: GovernanceCounts = { refusedPinCount: 0, refusedPins: [], shortTakeCount: 0, shortTakePositions: 0 };
+
+/**
+ * Every governance assertion in this file goes through here, so that EVERY
+ * block — including a zero report — is judged on its counts AND on the horizon
+ * it states (R94(d)): `since` must be present and at or before the page load
+ * whose occurrences it reports.
+ */
+function expectGovernance(actual: SlotGovernance | string, expected: GovernanceCounts, at: number, label: string): void {
+  expect(typeof actual === 'string' ? actual
+    : { refusedPinCount: actual.refusedPinCount, refusedPins: actual.refusedPins,
+        shortTakeCount: actual.shortTakeCount, shortTakePositions: actual.shortTakePositions }, label).toEqual(expected);
+  expect(typeof actual === 'string' ? actual : Number.isSafeInteger(actual.since) && actual.since > 0 && actual.since <= at,
+    `${label} \u2014 and states the horizon it counts from, present and at or before this page load`).toBe(true);
+}
 
 // ---------------------------------------------------------------------------
 // A shopper on the mounted application.
@@ -611,10 +654,8 @@ describe('unit:W20.G2.01', () => {
           // rather than omitting the slot's counts (R86(b), "never silent").
           const before = await slotsPage(m);
           expect(before.status, `${host}/${armName}: the operator slots page answers`).toBe(200);
-          const sinceBefore = (before.bySlot.feature?.governance?.since ?? T0);
-          expect(governanceOf(before.bySlot, 'feature'),
-            `${host}/${armName}: W20.G2.01 — before anything is served the operator page reports zero occurrences for the pinned slot, with the horizon it counts from`)
-            .toEqual(noOccurrences(sinceBefore));
+          expectGovernance(governanceOf(before.bySlot, 'feature'), NO_OCCURRENCES, T0,
+            `${host}/${armName}: W20.G2.01 — before anything is served the operator page reports zero occurrences for the pinned slot`);
 
           // One real page load on the mounted route production serves.
           const shopper = await shopperOn(m);
@@ -631,24 +672,31 @@ describe('unit:W20.G2.01', () => {
           // THE UNIT: an operator reading the slots page now sees it.
           const after = await slotsPage(m);
           expect(after.status, `${host}/${armName}: the operator slots page answers`).toBe(200);
-          const governance = governanceOf(after.bySlot, 'feature');
-          expect(governance,
-            `${host}/${armName}: W20.G2.01 — the operator slots page must report the refusal for this tenant and slot, with the reason the composer recorded and the pinned piece id (ruled member: \`governance\` on the \`SlotIndexEntry\` of GET /v1/:tenant/learn/slots?evidence=1)`)
-            .toEqual({
-              since: typeof governance === 'string' ? T0 : governance.since,
-              refusedPinCount: 1,
-              refusedPins: [{ pinnedPieceId: 'cnt-sold-out', reason: 'missing_or_ineligible', count: 1 }],
-              shortTakeCount: 0,
-              shortTakePositions: 0,
-            });
-          expect(typeof governance === 'string' ? governance : Number.isSafeInteger(governance.since) && governance.since <= T0 + 60_000,
-            `${host}/${armName}: W20.G2.01 — and the counts state the horizon they are measured from, at or before the page load that produced them`).toBe(true);
+          expectGovernance(governanceOf(after.bySlot, 'feature'), {
+            refusedPinCount: 1,
+            refusedPins: [{ pinnedPieceId: 'cnt-sold-out', reason: 'missing_or_ineligible', count: 1 }],
+            shortTakeCount: 0,
+            shortTakePositions: 0,
+          }, T0 + 60_000,
+            `${host}/${armName}: W20.G2.01 — the operator slots page must report the refusal for this tenant and slot, with the reason the composer recorded and the pinned piece id (ruled member: \`governance\` on the \`SlotIndexEntry\` of GET /v1/:tenant/learn/slots?evidence=1)`);
 
           // The slot that refused nothing reports zero, not nothing.
-          const story = governanceOf(after.bySlot, 'story');
-          expect(story,
-            `${host}/${armName}: W20.G2.01 — a slot that refused nothing reports zero occurrences, never an omitted block`)
-            .toEqual(noOccurrences(typeof story === 'string' ? T0 : story.since));
+          expectGovernance(governanceOf(after.bySlot, 'story'), NO_OCCURRENCES, T0 + 60_000,
+            `${host}/${armName}: W20.G2.01 — a slot that refused nothing reports zero occurrences, never an omitted block`);
+
+          // R94(d): these are DISTINCT OCCURRENCES, not a flag. A second
+          // identical page load refuses the same pin again, and the count moves.
+          clock.set(T0 + 120_000);
+          const again = await shopper.snapshot();
+          expect(again.served, `${host}/${armName}: the second page load serves the same page`).toEqual(DEAD_PIN_SERVED);
+          const twice = await slotsPage(m);
+          expectGovernance(governanceOf(twice.bySlot, 'feature'), {
+            refusedPinCount: 2,
+            refusedPins: [{ pinnedPieceId: 'cnt-sold-out', reason: 'missing_or_ineligible', count: 2 }],
+            shortTakeCount: 0,
+            shortTakePositions: 0,
+          }, T0 + 120_000,
+            `${host}/${armName}: W20.G2.01 — a second identical page load is a second occurrence, so the counts move; a boolean or a last-seen marker cannot satisfy this`);
         } finally { clock.restore(); }
       }
     }
@@ -677,21 +725,20 @@ describe('unit:W20.G2.02', () => {
 
         const after = await slotsPage(m);
         expect(after.status, `${host}: the operator slots page answers`).toBe(200);
-        const promo = governanceOf(after.bySlot, 'promo');
-        expect(promo,
-          `${host}: W20.G2.02 — the operator slots page must report that this pinned slot could not fill its take, and how many positions were left empty (ruled member: \`governance.shortTakeCount\` / \`governance.shortTakePositions\`; the word for the occurrence is \`short_take\`, R86(b))`)
-          .toEqual({
-            since: typeof promo === 'string' ? T0 : promo.since,
-            refusedPinCount: 0,
-            refusedPins: [],
-            shortTakeCount: 1,
-            shortTakePositions: 1,
-          });
+        expectGovernance(governanceOf(after.bySlot, 'promo'),
+          { refusedPinCount: 0, refusedPins: [], shortTakeCount: 1, shortTakePositions: 1 }, T0 + 60_000,
+          `${host}: W20.G2.02 — the operator slots page must report that this pinned slot could not fill its take, and how many positions were left empty (ruled members: \`governance.shortTakeCount\` and \`governance.shortTakePositions\`)`);
 
-        const story = governanceOf(after.bySlot, 'story');
-        expect(story,
-          `${host}: W20.G2.02 — the slot that filled every position it takes reports zero, not an omitted block`)
-          .toEqual(noOccurrences(typeof story === 'string' ? T0 : story.since));
+        expectGovernance(governanceOf(after.bySlot, 'story'), NO_OCCURRENCES, T0 + 60_000,
+          `${host}: W20.G2.02 — the slot that filled every position it takes reports zero, not an omitted block`);
+
+        // R94(d): a second identical page load falls short again, and both the
+        // occurrence count and the empty-position count move.
+        clock.set(T0 + 120_000);
+        expect((await shopper.snapshot()).served, `${host}: the second page load serves the same page`).toEqual(SHORT_TAKE_SERVED);
+        expectGovernance(governanceOf((await slotsPage(m)).bySlot, 'promo'),
+          { refusedPinCount: 0, refusedPins: [], shortTakeCount: 2, shortTakePositions: 2 }, T0 + 120_000,
+          `${host}: W20.G2.02 — a second shortfall is a second occurrence, and the positions left empty accumulate with it`);
       } finally { clock.restore(); }
     }
   }, 120_000);
@@ -701,10 +748,19 @@ describe('unit:W20.G2.02', () => {
 // unit:W20.G2.03 — the receipt note, where a record exists
 // ===========================================================================
 
-/** RULED, ABSENT TODAY (R21): the shortfall block on the decision record's explain. */
+/**
+ * RULED, ABSENT TODAY (R21): the shortfall block on the decision record's
+ * explain, read off the engine's own `DecisionRecord` (`src/content/types.ts`),
+ * so the compiler names it as missing: the third of this batch's three ruled
+ * errors.
+ */
 interface ShortTakeBlock { take: number; served: number; empty: number; sentence: string }
+const shortTakeMember = (record: DecisionRecord): ShortTakeBlock | undefined => record.explain.shortTake;
 
 describe('unit:W20.G2.03', () => {
+  // Driven on the `do` host only: the record, the ring and the receipt are host
+  // independent (the ring is its own durable object, `src/learn/fan.ts:339`),
+  // and the session host is named as unmeasured in this unit's row.
   it('host: the receipt of a decision served by a pinned slot that fell short of its take names the shortfall, and the refused slot that wrote no record has no receipt at all', async () => {
     const clock = fixedClock();
     try {
@@ -738,11 +794,11 @@ describe('unit:W20.G2.03', () => {
       // The operator's own read of what this shopper was served.
       const recent = await operatorGet(m, `/v1/${TENANT}/visitors/${shopper.visitorId}/recent`);
       expect(recent.status, `the operator recent-decisions read answers: ${JSON.stringify(recent.body).slice(0, 300)}`).toBe(200);
-      const ring = (recent.body.ring as Array<{ slot: string; position: number; explain?: { shortTake?: ShortTakeBlock } }> | undefined) ?? [];
+      const ring = (recent.body.ring as DecisionRecord[] | undefined) ?? [];
       const promoRows = ring.filter(row => row.slot === 'promo').sort((a, b) => a.position - b.position);
       expect(promoRows.map(row => row.position),
         'the pinned slot wrote a record for each position it served').toEqual([0, 1]);
-      const block = promoRows[0]?.explain?.shortTake;
+      const block = promoRows[0] ? shortTakeMember(promoRows[0]) : undefined;
       expect(block ? { take: block.take, served: block.served, empty: block.empty } : block,
         'W20.G2.03 — the decision record of a slot that fell short of its take carries the shortfall (ruled member: `explain.shortTake`, in the shape every other rule block on `explain` has: numbers and a sentence)')
         .toEqual({ take: 3, served: 2, empty: 1 });
@@ -776,7 +832,7 @@ describe('unit:W20.G2.03', () => {
       await dead.drain();
       const deadRecent = await operatorGet(dead, `/v1/${TENANT}/visitors/${deadShopper.visitorId}/recent`);
       expect(deadRecent.status, 'the operator recent-decisions read answers').toBe(200);
-      expect(((deadRecent.body.ring as Array<{ slot: string }> | undefined) ?? []).map(row => row.slot),
+      expect(((deadRecent.body.ring as DecisionRecord[] | undefined) ?? []).map(row => row.slot),
         'W20.G2.03 — the refused slot wrote no record, so the only slot with a receipt is the one that served')
         .toEqual(['story']);
     } finally { clock.restore(); }
@@ -787,24 +843,44 @@ describe('unit:W20.G2.03', () => {
 // unit:W20.G2.04 — the ops monitor's own counter
 // ===========================================================================
 
-/** RULED, ABSENT TODAY (R21): the tenant-level governance counter on the monitor result. */
-interface MonitorGovernance { since: number; refusedPins: number; shortTake: number }
+/**
+ * RULED, ABSENT TODAY (R21): the tenant-level governance counters on the monitor
+ * result, in ONE vocabulary with the slots page (R94(c)) — the same two count
+ * names; only the slots page carries the per-pin `refusedPins` detail.
+ * Read off the engine's own `MonitorResult` (`src/ops/monitor.ts:175`), so the
+ * compiler names it as missing: the second of this batch's three ruled errors.
+ */
+interface MonitorGovernance { since: number; refusedPinCount: number; shortTakeCount: number }
+const monitorGovernanceMember = (result: MonitorResult): MonitorGovernance | undefined => result.governance;
 
 describe('unit:W20.G2.04', () => {
-  it('host: the ops monitor reports, per tenant, how many refused pins and short pinned slots the tenant served, non-zero after a page load that produced them and zero on a tenant that produced none', async () => {
+  it('host: the ops monitor reports, per tenant, how many refused pins and short pinned slots the tenant served, counts a second occurrence as a second occurrence, reads zero on a tenant that produced none, and never counts its own synthetic probe', async () => {
     const clock = fixedClock();
+    /** The monitor's counters, or a sentence naming the member as absent. */
+    const monitorGovernance = (body: Record<string, unknown>): MonitorGovernance | string =>
+      monitorGovernanceMember(body.result as MonitorResult)
+        ?? `absent: the monitor result carries no \`governance\` member (it carries ${Object.keys((body.result ?? {}) as object).join(', ')})`;
+    const expectMonitor = (actual: MonitorGovernance | string, counts: { refusedPinCount: number; shortTakeCount: number }, at: number, label: string) => {
+      expect(typeof actual === 'string' ? actual : { refusedPinCount: actual.refusedPinCount, shortTakeCount: actual.shortTakeCount }, label).toEqual(counts);
+      expect(typeof actual === 'string' ? actual : Number.isSafeInteger(actual.since) && actual.since > 0 && actual.since <= at,
+        `${label} \u2014 and states the horizon it counts from, present and at or before this run`).toBe(true);
+    };
     try {
-      // A tenant that has served nothing: the counter reads zero, not nothing.
+      // A tenant that has served nothing. Its monitor run STILL composes the
+      // same page as a synthetic visitor (`src/ops/monitor.ts:317-320`, a probe
+      // on `home` with `visitorId: monitor-…`), and this page's pinned slot
+      // falls short — so a counter written at the decision path would read one
+      // here. R94(b): the monitor's own synthetic compose is NEVER counted.
       const clean = await mount('session');
       await publishFixture(clean, SHORT_TAKE_PAGE);
       const quiet = await operatorPost(clean, `/v1/${TENANT}/monitor`);
       expect(quiet.status, `the monitor run answers: ${JSON.stringify(quiet.body).slice(0, 300)}`).toBe(200);
-      const quietGovernance = (quiet.body.result as { governance?: MonitorGovernance } | undefined)?.governance;
-      expect(quietGovernance,
-        'W20.G2.04 — the monitor result must carry the tenant’s governance counters (ruled member: `MonitorResult.governance`, carried by the safe projection `projectMonitor`), reading zero when nothing was refused')
-        .toEqual({ since: quietGovernance?.since ?? T0, refusedPins: 0, shortTake: 0 });
+      expectMonitor(monitorGovernance(quiet.body), { refusedPinCount: 0, shortTakeCount: 0 }, T0,
+        'W20.G2.04 — the monitor result must carry the tenant’s governance counters (ruled member: `MonitorResult.governance`, carried by the safe projection `projectMonitor`), reading zero on a tenant whose only compose was the monitor’s own probe');
+      expectGovernance(governanceOf((await slotsPage(clean)).bySlot, 'promo'), NO_OCCURRENCES, T0,
+        'W20.G2.04 — and the operator slots page is untouched by the probe too: the monitor’s synthetic compose is nobody’s occurrence');
 
-      // A tenant that served a refused pin and a short pinned slot.
+      // A tenant that served a refused pin through the real shopper path.
       const busy = await mount('session');
       await publishFixture(busy, DEAD_PIN_PAGE);
       const shopper = await shopperOn(busy);
@@ -812,10 +888,23 @@ describe('unit:W20.G2.04', () => {
       expect((await shopper.snapshot()).served, 'the refused band is handed to the site default').toEqual(DEAD_PIN_SERVED);
       const run = await operatorPost(busy, `/v1/${TENANT}/monitor`);
       expect(run.status, `the monitor run answers: ${JSON.stringify(run.body).slice(0, 300)}`).toBe(200);
-      const governance = (run.body.result as { governance?: MonitorGovernance } | undefined)?.governance;
-      expect(governance,
-        'W20.G2.04 — after a page load whose pinned slot was refused, the monitor reports it for the tenant, from the same counters the operator slots page reads and never from the synthetic probe alone')
-        .toEqual({ since: governance?.since ?? T0, refusedPins: 1, shortTake: 0 });
+      expectMonitor(monitorGovernance(run.body), { refusedPinCount: 1, shortTakeCount: 0 }, T0 + 60_000,
+        'W20.G2.04 — after a page load whose pinned slot was refused, the monitor reports exactly that one occurrence for the tenant: the probe it just ran on the same page is not counted beside it');
+      expectGovernance(governanceOf((await slotsPage(busy)).bySlot, 'feature'), {
+        refusedPinCount: 1,
+        refusedPins: [{ pinnedPieceId: 'cnt-sold-out', reason: 'missing_or_ineligible', count: 1 }],
+        shortTakeCount: 0, shortTakePositions: 0,
+      }, T0 + 60_000,
+        'W20.G2.04 — and the per-slot counts a monitor run leaves behind are the shopper’s one occurrence, not two');
+
+      // R94(d): a second real page load is a second occurrence, and a second
+      // monitor run still adds nothing of its own.
+      clock.set(T0 + 120_000);
+      expect((await shopper.snapshot()).served, 'the second page load serves the same page').toEqual(DEAD_PIN_SERVED);
+      const second = await operatorPost(busy, `/v1/${TENANT}/monitor`);
+      expect(second.status, `the second monitor run answers: ${JSON.stringify(second.body).slice(0, 300)}`).toBe(200);
+      expectMonitor(monitorGovernance(second.body), { refusedPinCount: 2, shortTakeCount: 0 }, T0 + 120_000,
+        'W20.G2.04 — two real page loads are two occurrences, and two monitor probes on the same page add nothing to them');
     } finally { clock.restore(); }
   }, 120_000);
 });
@@ -840,6 +929,9 @@ const RETAINED_EXCLUDED_PIN = retained({
 });
 
 describe('unit:W20.G2.05', () => {
+  // Driven on the `session` host only: this leg reads and writes DOCUMENTS
+  // through the content routes, which no shopper host takes part in; the `do`
+  // host is named as unmeasured in this unit's row.
   it('host: a retained revision carrying an active id-excluded pin is read back with the pin named under the existing `excluded` reason and is never refused, while the same document is refused by the write path', async () => {
     const m = await mount();
     await publishFixture(m, RETAINED_EXCLUDED_PIN, { retainedSlots: true });
@@ -969,6 +1061,9 @@ const DOC_PARAGRAPHS = ['docs/kit/02-api-reference.md', 'docs/api/01-rest-endpoi
 const doc = (file: string): string => readFileSync(new URL(`../../../${file}`, import.meta.url), 'utf8').replace(/\s+/g, ' ');
 
 describe('unit:W20.G2.07', () => {
+  // Driven on the `session` host only, and on the personalized arm: the refusal
+  // and its `ownerSlot` are governance, which W20.G1.08 measured to be
+  // arm-independent on both hosts; both are named as unmeasured in the row.
   it('host: a pin refused for a reason other than `duplicate_pin` still names the slot that already owns the piece, and both shipped paragraphs say so', async () => {
     const clock = fixedClock();
     try {
