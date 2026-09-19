@@ -62,12 +62,17 @@
 //   · the DOM port is rebuilt line for line from `host.ts:12-24` and the shipped
 //     lines are pinned on every run, as `L1.unit.test.ts` does; and
 //   · the client is composed exactly as `createClient` composes it
-//     (`index.ts:32-35`, pinned), and its `destroy` is not copied at all — the
-//     body of the shipped `destroy` is READ FROM `src/sdk/index.ts` and executed
-//     verbatim over the same four locals `createClient` builds. Unit .09 is
-//     therefore about the shipped teardown, not about a re-statement of it that
-//     could drift (the W17-B1 review's finding 4: the L1 harness rebuilt
-//     `destroy` as its pre-change shape, so nothing tested the shipped one).
+//     (`index.ts:32-35`, pinned); and
+//   · the teardown is not copied and not re-stated. Ruling R55: the teardown
+//     composition is a typecheck-visible product module, `src/sdk/teardown.ts`,
+//     exporting `destroyClient(core, listen, emit, identity)` with no DOM types,
+//     which `createClient`'s `destroy` delegates to. Unit .09 imports
+//     `destroyClient` by that name and runs it over the same four locals, and
+//     pins that the shipped `destroy` delegates to it. That module does not
+//     exist at specification: it is the ruled-missing export (R21), so .09 is
+//     RED on it until the build creates it. This answers the W17-B1 review's
+//     finding 4 — the L1 harness rebuilt `destroy` as its pre-change shape, so
+//     nothing tested the shipped teardown — without a copy that can drift.
 //
 // WHAT IS ASSERTED. Primary observable: the transport boundary — every `fetch`
 // the SDK makes, with the parsed `/realtime/action` envelopes. Secondary
@@ -78,17 +83,25 @@
 // read.
 
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, it, expect } from 'vitest';
 
-import { createCore, type Core } from '@/sdk/core';
-import { createEmit, type Emit } from '@/sdk/emit';
-import { createIdentity, type Identity } from '@/sdk/identify';
-import { createListen, type Listen, type ListenOptions } from '@/sdk/listen';
+import { createCore } from '@/sdk/core';
+import { createEmit } from '@/sdk/emit';
+import { createIdentity } from '@/sdk/identify';
+import { createListen, type ListenOptions } from '@/sdk/listen';
+// R55/R21 — the ruled-missing export. `src/sdk/teardown.ts` does not exist at
+// specification, so this is the one permitted app typecheck error (TS2307) and
+// the reason unit .09 is RED; the type import is erased by the bundler, so the
+// other two units in this file still run.
+import type { destroyClient as destroyClientSignature } from '@/sdk/teardown';
 import { offeredSet, testHost } from '@/sdk/testHost';
 import type { DomLike, ElementLike, RequestInitLike, ResponseLike } from '@/sdk/types';
+
+type DestroyClient = typeof destroyClientSignature;
+/** Held in a const so the bundler leaves the resolution to run time: see unit .09. */
+const TEARDOWN_MODULE = '@/sdk/teardown';
 
 // ---------------------------------------------------------------------------
 // The page. Real jsdom elements; the DOM typings are declared locally because
@@ -134,21 +147,19 @@ const liveObservers = (el: PageElement): number => PageIntersectionObserver.watc
 // the rebuild has to be re-ruled before any of them can mean anything again.
 // ---------------------------------------------------------------------------
 
-function shippedSource(file: string): string {
-  // Under jsdom the module URL is not a file URL, so both forms are tried
-  // before a pin is allowed to be silently unread.
-  const here = new URL(`../../sdk/${file}`, import.meta.url);
-  const candidates = [
-    here.protocol === 'file:' ? fileURLToPath(here) : decodeURIComponent(here.pathname).replace(/^\/@fs/, ''),
-    resolve(process.cwd(), `src/sdk/${file}`),
-  ];
-  for (const candidate of candidates) {
-    try { return readFileSync(candidate, 'utf8'); } catch { /* try the next */ }
-  }
-  throw new Error(`src/sdk/${file} is not readable: the shipped SDK cannot be pinned`);
+// `import.meta.url` is read through a const and the specifiers below are plain
+// literals: `new URL(<template literal>, import.meta.url)` is rewritten by the
+// bundler into an asset URL (`file:///src/sdk/index.ts`), which never exists, and
+// a `process.cwd()` fallback would then read whichever checkout the process was
+// started in — another lane's tree. There is no fallback: a miss throws, so a pin
+// can never be silently unread or read from the wrong tree.
+const metaUrl = import.meta.url;
+function readShipped(url: URL): string {
+  const path = url.protocol === 'file:' ? fileURLToPath(url) : decodeURIComponent(url.pathname).replace(/^\/@fs/, '');
+  return readFileSync(path, 'utf8');
 }
-const SHIPPED_PORT = shippedSource('host.ts');
-const SHIPPED_CLIENT = shippedSource('index.ts');
+const SHIPPED_PORT = readShipped(new URL('../../sdk/host.ts', metaUrl));
+const SHIPPED_CLIENT = readShipped(new URL('../../sdk/index.ts', metaUrl));
 const squash = (text: string): string => text.replace(/\s+/g, ' ').trim();
 
 /** The load-bearing lines of `domOf()` at `src/sdk/host.ts:12-24`. */
@@ -167,28 +178,29 @@ const SHIPPED_CLIENT_LINES = [
 ];
 
 /**
- * The body of `createClient`'s `destroy`, taken from the shipped file. It is
- * executed, not copied: whatever teardown `src/sdk/index.ts` performs is the
- * teardown unit .09 measures.
+ * The `destroy` property of the object `createClient` RETURNS — the client's
+ * own, not a decoy declared elsewhere in the file: the scan starts at the
+ * `return {` of `createClient` and refuses to read anything if that object
+ * declares more than one `destroy:`.
  */
-function shippedDestroyBody(): string {
-  const from = SHIPPED_CLIENT.indexOf('export function createClient');
-  const at = from < 0 ? -1 : SHIPPED_CLIENT.indexOf('destroy:', from);
-  const open = at < 0 ? -1 : SHIPPED_CLIENT.indexOf('{', at);
-  if (open < 0) throw new Error("src/sdk/index.ts: createClient's `destroy:` arrow was not found; unit W17.L1.09 must be re-ruled against the new shape");
+function shippedClientDestroy(): string {
+  const fn = SHIPPED_CLIENT.indexOf('export function createClient');
+  const returned = fn < 0 ? -1 : SHIPPED_CLIENT.indexOf('return {', fn);
+  const at = returned < 0 ? -1 : SHIPPED_CLIENT.indexOf('destroy:', returned);
+  if (at < 0) throw new Error("src/sdk/index.ts: the object createClient returns declares no `destroy:`; unit W17.L1.09 must be re-ruled against the new shape");
+  if (SHIPPED_CLIENT.indexOf('destroy:', at + 1) >= 0) throw new Error("src/sdk/index.ts: more than one `destroy:` follows createClient's `return {`; unit W17.L1.09 must be re-ruled against the new shape");
   let depth = 0;
-  for (let i = open; i < SHIPPED_CLIENT.length; i++) {
+  for (let i = at; i < SHIPPED_CLIENT.length; i++) {
     const ch = SHIPPED_CLIENT[i];
-    if (ch === '{') depth++;
-    else if (ch === '}' && --depth === 0) return SHIPPED_CLIENT.slice(open + 1, i);
+    if (ch === '(' || ch === '{' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth--;
+    else if (ch === '}') { if (depth === 0) return SHIPPED_CLIENT.slice(at, i); depth--; }
+    else if (ch === ',' && depth === 0) return SHIPPED_CLIENT.slice(at, i);
   }
-  throw new Error("src/sdk/index.ts: createClient's `destroy` body is unbalanced; unit W17.L1.09 must be re-ruled against the new shape");
+  throw new Error("src/sdk/index.ts: createClient's `destroy` property does not terminate; unit W17.L1.09 must be re-ruled against the new shape");
 }
-const DESTROY_BODY = shippedDestroyBody();
-/** The shipped teardown, run over the same four locals `createClient` closes over. */
-const runShippedDestroy = new Function('core', 'listen', 'emit', 'identity', DESTROY_BODY) as
-  (core: Core, listen: Listen, emit: Emit, identity: Identity) => void;
 
+/** True of every unit: the DOM port and the client composition this file rebuilds. */
 function pinShipped(): void {
   for (const line of SHIPPED_PORT_LINES) {
     expect(squash(SHIPPED_PORT), `src/sdk/host.ts:12-24 still builds the DOM port this file rebuilds: ${line}`).toContain(line);
@@ -196,7 +208,17 @@ function pinShipped(): void {
   for (const line of SHIPPED_CLIENT_LINES) {
     expect(squash(SHIPPED_CLIENT), `src/sdk/index.ts still composes the client this file rebuilds: ${line}`).toContain(line);
   }
-  expect(squash(DESTROY_BODY).length, "src/sdk/index.ts's createClient still defines a destroy body for this file to run").toBeGreaterThan(0);
+}
+
+/**
+ * Unit .09 only: what the page calls — `client.destroy()` — is the function
+ * this unit runs. R55: `createClient`'s `destroy` delegates to
+ * `destroyClient(core, listen, emit, identity)` from `src/sdk/teardown.ts`.
+ */
+function pinShippedDestroyDelegation(): void {
+  expect(squash(shippedClientDestroy()),
+    "src/sdk/index.ts: the `destroy` on the client createClient returns delegates to the teardown module this unit runs (R55)")
+    .toContain('destroyClient(core, listen, emit, identity)');
 }
 
 /** The DOM port `browserHost()` builds in production (src/sdk/host.ts:12-24), verbatim. */
@@ -298,13 +320,13 @@ function page() {
     return { type: envelope.type, source: envelope.source, data: envelope.data };
   });
   const urls = (): string[] => traffic.map((c) => c.url);
-  /** The client `createClient` builds, with the shipped `destroy` (see the header). */
+  /** The four locals `createClient` composes (src/sdk/index.ts:32-35, pinned). */
   const client = (source: string, options: ListenOptions = {}) => {
     const core = createCore({ tenant: 'coach', source }, f.host);
     const listen = createListen(core, options);
     const emit = createEmit(core, listen);
     const identity = createIdentity(core);
-    return { core, listen, emit, identity, destroy: () => runShippedDestroy(core, listen, emit, identity) };
+    return { core, listen, emit, identity };
   };
   return { f, hero, story, teaser, cta, layer, sent, urls, client };
 }
@@ -323,6 +345,15 @@ describe('unit:W17.L1.09', () => {
     // callback, and nothing reaches the transport afterwards." This unit is the
     // first half of that sentence, which W17-B1 never measured (review finding
     // 4): the page calls NO detach function at all, only `destroy()`.
+    //
+    // R55: what `client.destroy()` runs is `destroyClient(core, listen, emit,
+    // identity)` from `src/sdk/teardown.ts`, so that is what this unit runs, on
+    // the same four locals. The specifier at `@/sdk/teardown` is resolved at run
+    // time (the type import at the top of this file is the compile-time half),
+    // so the ruled-missing module reds THIS unit and leaves .10 and .11 alive.
+    const { destroyClient } = await import(TEARDOWN_MODULE) as { destroyClient: DestroyClient };
+    pinShippedDestroyDelegation();
+
     for (const moment of ['no dwell pending', 'a dwell pending'] as const) {
       const p = page();
       const pagePush: PagePush = p.layer.push;
@@ -364,7 +395,7 @@ describe('unit:W17.L1.09', () => {
       // dwell is being measured that has not been reported.
       if (moment === 'a dwell pending') { intersect(p.hero, true); await settle(); }
 
-      c.destroy();
+      destroyClient(c.core, c.listen, c.emit, c.identity);
 
       expect(liveClickListeners(p.hero), `click registrations left on the content element after destroy alone (${moment})`).toBe(0);
       expect(liveClickListeners(p.cta), `click registrations left on the commerce element after destroy alone (${moment})`).toBe(0);
@@ -548,10 +579,12 @@ describe('unit:W17.L1.11', () => {
       { contentId: 'cnt_tabby_lifestyle', slot: 'hero', contentType: 'editorial', decisionId: HERO_RECEIPT, ms: 2_000 },
     ]);
 
-    // Detach: neither path sends a dwell for the same cycle.
+    // Detach: the documented detach function, and neither path sends a dwell
+    // for the same cycle. (This unit is about the precedence between the two
+    // capture paths, so it uses only the detach function `declarative()`
+    // returns; `client.destroy()` is unit .09's subject.)
     bind();
-    c.destroy();
-    expect(liveObservers(p.hero), 'observers left watching the node after the page detached and destroyed the client').toBe(0);
+    expect(liveObservers(p.hero), 'observers left watching the node after the page ran the detach function').toBe(0);
     const quiet = p.urls().length;
     intersect(p.hero, true);
     p.f.tick(2_000);
@@ -576,6 +609,6 @@ describe('unit:W17.L1.11', () => {
     expect(p.sent().slice(mark).filter((e) => e.type === 'content_dwell').map((e) => [e.source, e.data.decisionId, e.data.ms]),
       'the remounted page sends one dwell again, from the mounted client').toEqual([['coach-web-route-b', HERO_RECEIPT, 2_000]]);
     rebind();
-    b.destroy();
+    expect(liveObservers(p.hero), 'observers left watching the node after the remounted page detached').toBe(0);
   });
 });
