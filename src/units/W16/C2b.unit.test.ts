@@ -6,7 +6,8 @@
 //
 // One `describe('unit:W16.C2.1N')` per unit, one `it` per ruled leg. Every
 // expected value comes from the W16-B3 ruling table in
-// `docs/remediation/LANE-LOG.md` (rulings R14, R18, R19, R20, R24), the admitted
+// `docs/remediation/LANE-LOG.md` (rulings R14, R18, R19, R20, R24, R25 and R27),
+// the admitted
 // C2 text in `docs/handover/HANDOFF-2026-09-18.md` §5, document 35 §5 W16 / §2
 // F13 and the customer's Cross-Channel Awareness row
 // (`docs/architecture/tapestry_requirements.txt`:157) — never from what the
@@ -346,15 +347,20 @@ describe('unit:W16.C2.11', () => {
         .toEqual({ visitCount: 3, lastVisitAt: ROLLOVER, entryChannel: undefined });
     }
 
-    // The contrast the ruling turns on: a RECOGNIZED network source is what
-    // makes a bare paid click attributable, and the two paid cells stay
-    // discriminated (the networks are the search and social tables of units
-    // W16.C2.01–.03; `google` names the same network as google.com).
+    // The contrast the ruling turns on (R27(b)): a RECOGNIZED network source is
+    // what makes a bare paid click attributable, and the two paid cells stay
+    // discriminated. A recognized SEARCH network name as the source token — the
+    // same networks as SEARCH_HOSTS — is paid search; a recognized social
+    // network or alias is paid social; no recognized network stays unknown.
     expect(projectVisit(PRIOR, T0, ROLLOVER, { utmMedium: 'paid', utmSource: 'facebook', siteHost: SITE }))
       .toEqual({ visitNumber: 3, entryChannel: 'paid_social' });
     expect(projectVisit(PRIOR, T0, ROLLOVER, { utmMedium: 'cpm', utmSource: 'instagram', siteHost: SITE }))
       .toEqual({ visitNumber: 3, entryChannel: 'paid_social' });
     expect(projectVisit(PRIOR, T0, ROLLOVER, { utmMedium: 'paid', utmSource: 'google', siteHost: SITE }))
+      .toEqual({ visitNumber: 3, entryChannel: 'paid_search' });
+    expect(projectVisit(PRIOR, T0, ROLLOVER, { utmMedium: 'paid', utmSource: 'bing', siteHost: SITE }))
+      .toEqual({ visitNumber: 3, entryChannel: 'paid_search' });
+    expect(projectVisit(PRIOR, T0, ROLLOVER, { utmMedium: 'cpm', utmSource: 'yandex', siteHost: SITE }))
       .toEqual({ visitNumber: 3, entryChannel: 'paid_search' });
     // A medium that declares paid SEARCH still names the cell it declares.
     expect(projectVisit(PRIOR, T0, ROLLOVER, { utmMedium: 'cpc', utmSource: 'google', siteHost: SITE }))
@@ -373,8 +379,9 @@ describe('unit:W16.C2.12', () => {
       }
     }
 
-    // The ruled token split: `_`, `-`, `.` and whitespace, on the trimmed,
-    // lower-cased source (the normalization W16.C2.03 already relies on).
+    // The ruled token split (R27(a)): `_`, `-` and whitespace, on the trimmed,
+    // lower-cased source (the normalization W16.C2.03 already relies on). `.` is
+    // NOT a token separator: a dotted source is host-form, below.
     for (const utmSource of ['Facebook Ads', 'TikTok-Ads', 'FB_Ads', ' meta ads ', 'pinterest ads']) {
       expect(classifyEntryChannel({ utmMedium: 'cpc', utmSource, siteHost: SITE }), utmSource).toBe('paid_social');
     }
@@ -384,10 +391,11 @@ describe('unit:W16.C2.12', () => {
     // bare network name in unit W16.C2.02.
     expect(classifyEntryChannel({ utmMedium: 'social', utmSource: 'fb_ads', siteHost: SITE })).toBe('paid_social');
 
-    // A HOST-form source is judged only by the host rule (exact or dot-boundary,
-    // unit W16.C2.02), never by its tokens: a stranger's host that merely
-    // contains a network token is not that network and stays out of the
-    // paid-social cell. With an explicitly paid-search medium it is paid search.
+    // R27(a): a dotted, HOST-form source is judged ONLY by the host rule (exact
+    // or dot-boundary, unit W16.C2.02), never by its tokens — a stranger's host
+    // that merely contains a network token is not that network and stays out of
+    // the paid-social cell. With an explicitly paid-search medium it is paid
+    // search.
     for (const utmSource of ['facebook.attacker.example', 'tiktok-ads.evil.example', 'instagram.com.evil.example']) {
       expect(classifyEntryChannel({ utmMedium: 'cpc', utmSource, siteHost: SITE }), utmSource).toBe('paid_search');
     }
@@ -526,19 +534,29 @@ describe('unit:W16.C2.15', () => {
       expect(reflexRow!, `the GET /realtime/reflex response shape must name the hydrate visit field ${field}`).toContain(field);
     }
 
-    // 2. Unit W16.C2.13: the site host is a hostname (with an optional port),
-    // never a URL, a path or free text.
+    // 2. Unit W16.C2.13: the site host is a hostname, in the hostname[:port]
+    // form the engine now accepts — never a URL, a path or free text.
     expect(rest, 'the entry paragraph must state the siteHost hostname requirement').toContain('siteHost must be a hostname');
+    expect(rest, 'the entry paragraph must state the hostname[:port] form unit W16.C2.13 ships').toContain('hostname[:port]');
 
     // 3. R14 and unit W16.C2.04: an empty or invalid site host carries no
-    // page-view evidence, so it is unknown rather than direct.
+    // page-view evidence, so it is unknown rather than direct. The sentence that
+    // speaks about observed empty strings is the one that must say so — pinning
+    // the line, not only the phrase, so a reworded false claim in the same
+    // sentence cannot survive beside a correct one elsewhere.
     expect(rest, 'the entry paragraph must state R14: an empty or invalid siteHost stays unknown, never direct')
       .toContain('stays unknown, never direct');
-    // The superseded claim at docs/api/01-rest-endpoints.md:32 is the one the
-    // engine contradicts; the ruled outcome is its removal, and the positive
-    // statement above is what this unit is satisfied by.
+    const emptyStrings = rest.split('\n').find(line => line.includes('empty strings'));
+    expect(typeof emptyStrings, 'docs/api/01-rest-endpoints.md must still state what an observed empty string does').toBe('string');
+    expect(emptyStrings!, 'the sentence about observed empty strings must be the R14 statement')
+      .toContain('stays unknown, never direct');
+    // The two superseded claims at docs/api/01-rest-endpoints.md:32 are the ones
+    // the engine contradicts; the ruled outcome is their removal, and the
+    // positive statements above are what this unit is satisfied by.
     expect(rest, 'the superseded "observed empty strings may classify as direct" claim must be gone')
       .not.toContain('may classify as direct');
+    expect(rest, 'the superseded "Existing classifier mappings are unchanged." claim must be gone: units W16.C2.10, .11 and .12 change them')
+      .not.toContain('Existing classifier mappings are unchanged');
 
     // 4. R18: `entrySessionId` is a public read-only observable on the SDK core
     // naming the browsing session that produced the cached entry signals, so the
