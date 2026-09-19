@@ -373,19 +373,174 @@ export function sanitizeEventAttributes(data: Record<string, unknown>, config: R
 }
 
 /**
- * The touches a product event contributes. A product this engine holds always
- * wins, because its attributes are ours to trust. Without one, the event's own
- * attributes count only where the scope has said so, and only through the
- * registry. Both hosts call this; neither decides it alone.
+ * The vocabulary a tenant's own published catalogue data names (W16 C8, R47).
+ *
+ * It is never a list written here. It is derived, per tenant, from the catalogue
+ * this engine actually decides from: the values the tenant's published content
+ * catalogue tags carry, dimension by dimension, plus the ids and registry-sourced
+ * attribute values of the product catalogue that tenant holds when it holds one.
+ * A tenant that publishes a different taxonomy gets a different vocabulary with
+ * no code change, which is the whole point.
+ */
+export interface CatalogVocabulary {
+  /** Product ids the tenant's published catalogue data names. */
+  ids: ReadonlySet<string>;
+  /** Registry dimension key → the values that catalogue data names on it. */
+  values: ReadonlyMap<string, ReadonlySet<string>>;
+}
+
+/**
+ * What the engine could and could not place in ONE event (W16 C8.03, R64).
+ *
+ * `recognized` is true when at least one value on the event built taste, so a
+ * partly placeable event is reported for what it is rather than refused whole.
+ * `unrecognized` names EVERY product this event referred to that the engine
+ * could not place — the primary reference and each `items[]` id of an order —
+ * whatever else on the event was placed, so an operator can tell WHICH input
+ * went unrecognized instead of reading a bare counter.
+ */
+export interface RecognitionSignals {
+  recognized: boolean;
+  unrecognized: string[];
+}
+
+/** Recognized, with nothing to report. */
+export const RECOGNIZED: RecognitionSignals = { recognized: true, unrecognized: [] };
+
+/** A tenant that has published no catalogue data names no vocabulary. */
+export const EMPTY_VOCABULARY: CatalogVocabulary = { ids: new Set<string>(), values: new Map() };
+
+const REFERENCE_KEYS = ['productId', 'product_id', 'sku'] as const;
+
+function referenceOf(raw: unknown): string | null {
+  if (typeof raw === 'string') { const trimmed = raw.trim(); return trimmed === '' ? null : trimmed; }
+  if (typeof raw === 'number' && Number.isFinite(raw)) return String(raw);
+  return null;
+}
+
+/** The product an event refers to first, under the three spellings both hosts accept. */
+export function productReferenceOf(data: Record<string, unknown>): string | null {
+  for (const key of REFERENCE_KEYS) {
+    const found = referenceOf(data[key]);
+    if (found !== null) return found;
+  }
+  return null;
+}
+
+/**
+ * EVERY product this event refers to, in the order it names them: the primary
+ * reference and, for an order, each line item's own. R64/F4: an order whose only
+ * reference lives in `items[]` must still be able to say which product the
+ * engine could not place.
+ */
+export function productReferencesOf(data: Record<string, unknown>): string[] {
+  const found: string[] = [];
+  const add = (value: string | null) => { if (value !== null && !found.includes(value)) found.push(value); };
+  add(productReferenceOf(data));
+  const items = data.items;
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      if (typeof item !== 'object' || item === null) continue;
+      const row = item as Record<string, unknown>;
+      for (const key of REFERENCE_KEYS) add(referenceOf(row[key]));
+    }
+  }
+  return found;
+}
+
+/**
+ * R64, per value: a dimension the tenant's catalogue NAMES values on is
+ * authority over that dimension, so a value outside it builds no taste whatever
+ * else the same event carries. A dimension the catalogue names nothing on is
+ * authority over nothing there, so every value on it stands — a tenant whose
+ * published data tags only a line cannot thereby refuse every category its
+ * shoppers browse.
+ */
+function admitted(touches: Touch[], vocabulary: CatalogVocabulary): Touch[] {
+  return touches.filter((touch) => {
+    const named = vocabulary.values.get(touch.dim);
+    return named === undefined || named.size === 0 || named.has(touch.value);
+  });
+}
+
+/** What one event builds and what it could not place, decided together. */
+export interface PlacedEvent {
+  /** The touches it may build: its own values, minus the ones this tenant refuses. */
+  touches: Touch[];
+  /** The diagnostic the answer carries. */
+  signals: RecognitionSignals;
+}
+
+/**
+ * Place ONE event against the tenant's own catalogue (W16 C8.03/C8.08, R47, R64).
+ *
+ * A product this engine holds always wins, because its attributes are ours to
+ * trust. Without one, the event's own attributes count only where the scope has
+ * said so (`event-when-unknown`), and only through the registry — and then each
+ * value answers for itself against the vocabulary above. The taste and the
+ * diagnostic are derived from the same pass, so the answer and the affinity can
+ * never tell two different stories about the same input.
+ */
+export function placeEvent(
+  data: Record<string, unknown>,
+  product: Record<string, unknown> | undefined,
+  config: ReflexConfig,
+  vocabulary: CatalogVocabulary,
+): PlacedEvent {
+  const touches = product
+    ? extractTouches(product, config)
+    : config.eventAttributes === 'event-when-unknown'
+      ? admitted(extractTouches(sanitizeEventAttributes(data, config), config), vocabulary)
+      : [];
+  const primary = productReferenceOf(data);
+  const unrecognized = productReferencesOf(data).filter((id) =>
+    !vocabulary.ids.has(id) && !(product !== undefined && id === primary));
+  return { touches, signals: { recognized: touches.length > 0, unrecognized } };
+}
+
+/**
+ * Whether placing this event needs the tenant's vocabulary READ at all. When it
+ * does not, the caller passes EMPTY_VOCABULARY and `placeEvent` answers exactly
+ * the same thing without a document read: a held product whose only reference is
+ * its own is placed by the catalogue that holds it, and an event that names no
+ * product and carries no registry value has nothing to place either way. Pure,
+ * so an ingest host can ask before it awaits.
+ */
+export function needsCatalogVocabulary(
+  data: Record<string, unknown>,
+  product: Record<string, unknown> | undefined,
+  config: ReflexConfig,
+): boolean {
+  const references = productReferencesOf(data);
+  if (references.length > (product === undefined ? 0 : 1)) return true;
+  if (references.length === 1 && product === undefined) return true;
+  if (product !== undefined) return false;
+  return config.eventAttributes === 'event-when-unknown'
+    && extractTouches(sanitizeEventAttributes(data, config), config).length > 0;
+}
+
+/** The diagnostic `POST /realtime/action` answers, on both hosts (W16 C8.03, R21). */
+export function recognizeEvent(
+  data: Record<string, unknown>,
+  product: Record<string, unknown> | undefined,
+  config: ReflexConfig,
+  vocabulary: CatalogVocabulary,
+): RecognitionSignals {
+  return placeEvent(data, product, config, vocabulary).signals;
+}
+
+/**
+ * The touches a product event contributes, for the callers that want only those.
+ * Without a vocabulary it is the pre-R47 behavior, unchanged; with one, R64's
+ * per-value rule applies.
  */
 export function touchesForEvent(
   data: Record<string, unknown>,
   product: Record<string, unknown> | undefined,
   config: ReflexConfig,
+  vocabulary?: CatalogVocabulary,
 ): Touch[] {
-  if (product) return extractTouches(product, config);
-  if (config.eventAttributes !== 'event-when-unknown') return [];
-  return extractTouches(sanitizeEventAttributes(data, config), config);
+  return placeEvent(data, product, config, vocabulary ?? EMPTY_VOCABULARY).touches;
 }
 
 /**
