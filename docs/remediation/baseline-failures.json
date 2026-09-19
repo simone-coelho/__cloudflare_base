@@ -1,7 +1,7 @@
 {
-  "generated": "2026-09-19T14:12:42.761Z",
-  "commit": "5e00266ec3fe7d91336ec54bbf73aa9d21960e57",
-  "vitest_sha256": "645b345f2647505387ca88f17ef5fd5417ec363f3e6be1c078e8b1e4db33303b",
+  "generated": "2026-09-19T14:49:10.442Z",
+  "commit": "00dc1c39a3dce716e6e121e3c114e44d00f61975",
+  "vitest_sha256": "5ae27b25bdf0142532e3b9bdd6dff2ab0ed74ed4e250526aff072398531156e9",
   "note": "serial run on integration head 3ba6aa8 (BASE-1b and W16-B3 merged), lead regeneration 2026-09-19",
   "allow_grow_reason": null,
   "failures": [
