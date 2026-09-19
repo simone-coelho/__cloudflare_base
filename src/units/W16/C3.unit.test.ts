@@ -35,12 +35,15 @@
 //   ChannelSignals.utmTerm?: string      (src/services/visit.ts) — the search
 //     keyword the customer requirement names; bounded like the other fields.
 //   DecisionRecord.explain.contextual?: {
-//     version: number;                   // the rule-set (slots) revision used
 //     applied: number;                   // the seeds' delta in the FINAL
 //                                        // pre-lift base AFTER merchandising
 //     drivers: Array<{ signal: string; value: string; dimension: string;
 //                      tag: string; weight: number; contribution: number }>;
 //   }
+//     R30(4): the field carries NO version of its own. The rule-set version a
+//     receipt names is the `slots` revision the decision already stamps on the
+//     record (`versions.slots`, src/content/decide.ts:306), which is also what
+//     the public snapshot payload carries.
 //   DecisionRecord.explain.lift.applied: number  — the score delta the learned
 //     lift actually caused, itemised the way every other term in this engine is
 //     ("each term is itemised as the delta it caused", src/content/decide.ts:118;
@@ -62,7 +65,28 @@
 //   · the learned lift then multiplies that base, so at γ = 0 the seeds are the
 //     only contextual influence there is, which is what F13 says is missing.
 // Every contribution is rounded to three decimals, as the engine's other
-// itemised deltas are.
+// itemised deltas are. The clause is pinned at both ends of the merchandising
+// multiplier: a boost of 0 records exactly 0, a boost of 0.5 records exactly
+// half (R30(2)).
+//
+// R30(1): `seeds` is NOT gated behind `governanceVersion`. It joins
+// merchandising, stage, freshness, fatigue and diversity, which are read on
+// every slot regardless of the marker (src/content/kinds.ts:218-259): retained
+// documents are interpreted by `validateStored` → `parseSlotCatalog` with the
+// governance the document itself declares, and the fixtures here publish none.
+//
+// R30(5): a `referrer_network` rule's `value` is a network's REGISTRABLE DOMAIN
+// (`instagram.com`), matched against the arrival with the dot-boundary rule the
+// classifier already uses (`matches`, src/services/visit.ts:233), so
+// `instagram.com.evil.example` is not Instagram (unit W16.C2.02). An
+// `entry_channel` rule's `value` is one of the six channel words. A value that
+// is neither is refused at publication and, if retained, ignored whole at
+// decision time.
+//
+// R30(3): `utmTerm` is a bounded arrival field like the others, 256 characters
+// as `utmSource` is (`ENTRY_LIMITS`, src/services/visit.ts:49). It is a seeding
+// signal and nothing else: it never changes the classified entry channel and it
+// is never persisted (unit W16.C3.09).
 //
 // The host legs drive the mounted route production serves (R19):
 // `GET /v1/:tenant/decisions/snapshot` behind `requireShopper`, on both hosts,
@@ -91,7 +115,7 @@ import { invalidateCache, rollback } from '@/config/versionedStore';
 import { invalidateLiftCache, serveContentDecisions } from '@/content/service';
 import { configuredDestinations } from '@/connectors/config';
 import type { RetentionCategory, RetentionPolicy } from '@/retention';
-import type { ChannelSignals } from '@/services/visit';
+import { ENTRY_QUERY_LIMIT, classifyEntryChannel, snapshotEntry, validEntry, type ChannelSignals } from '@/services/visit';
 import { decideContent } from '@/content/decide';
 import { receiptOf } from '@/learn/receipts';
 import type { Names } from '@/learn/rows';
@@ -174,6 +198,13 @@ const HERO: SlotStrategy = { slot: 'hero', take: 4, weights: { category: 0.5, li
  * `season: 1` is multiplied to exactly 0 after merchandising.
  */
 const HERO_ZEROING: SlotStrategy = { ...HERO, merchandising: { season: -1, minBoost: 0 } };
+/**
+ * R30(2): the same slot with a HALF merchandising multiplier — season at −0.5,
+ * the default floor of 0.5 — so a piece carrying `season: 1` is multiplied to
+ * exactly half. It pins "measured in the final pre-lift base after
+ * merchandising" between the two ends: boost 0 records 0, boost 0.5 records half.
+ */
+const HERO_HALVING: SlotStrategy = { ...HERO, merchandising: { season: -0.5 } };
 
 /**
  * The published rule set, version 1. Three rules, one per ruled context signal,
@@ -182,7 +213,10 @@ const HERO_ZEROING: SlotStrategy = { ...HERO, merchandising: { season: -1, minBo
 const SEEDS_V1: SeedRule[] = [
   { signal: 'entry_channel', value: 'paid_social', tags: [{ dimension: 'category', value: 'Handbags' }], weight: 0.6 },
   { signal: 'campaign_term', value: 'tabby handbag', tags: [{ dimension: 'line', value: 'Tabby' }], weight: 0.4 },
-  { signal: 'referrer_network', value: 'instagram', tags: [{ dimension: 'category', value: 'Small Leather Goods' }], weight: 0.5 },
+  // R30(5): the network is named by its registrable domain, matched with the
+  // classifier's own dot-boundary rule against the arrival's referrer host (or a
+  // `utm_source` that is itself a host).
+  { signal: 'referrer_network', value: 'instagram.com', tags: [{ dimension: 'category', value: 'Small Leather Goods' }], weight: 0.5 },
 ];
 /** Version 2: the merchandiser moves the paid-social seed to small leather goods. */
 const SEEDS_V2: SeedRule[] = [
@@ -195,6 +229,10 @@ const TABBY_CHANNEL = 0.3;    // 0.6 × 0.5, entry_channel → category Handbags
 const TABBY_TERM = 0.12;      // 0.4 × 0.3, campaign_term → line Tabby
 const WILLOW_NETWORK = 0.25;  // 0.5 × 0.5, referrer_network → category Small Leather Goods
 const WILLOW_V2 = 0.4;        // 0.8 × 0.5, version 2's entry_channel rule
+/** The same network contribution as it lands after a merchandising boost of 0.5. */
+const WILLOW_HALVED = 0.125;  // 0.25 × 0.5
+/** R30(3): `utmTerm` is bounded at 256, the bound `utmSource` already carries. */
+const TERM_LIMIT = 256;
 
 /** The paid-social arrival the customer's Cross-Channel Awareness row describes. */
 const ARRIVAL = arrival({ medium: 'cpc', source: 'instagram', referrer: 'l.instagram.com', siteHost: SITE });
@@ -209,13 +247,18 @@ const ORGANIC_CELL: Cell = { ...PAID_SOCIAL_CELL, channel: 'organic' };
 const NO_NAMES: Names = new Map();
 
 /**
- * A learned lift of 1.5 for the Tabby film, at the root pooling level, well over
- * `nMin`. Doc 22 §6: the estimate is the ratio, the trust dial γ is separate.
+ * Learned lift at the root pooling level, well over `nMin`, for BOTH candidates
+ * the zero-base units rank: 1.5 for the Tabby film and 1.2 for the Willow piece,
+ * so the candidate merchandising takes to zero genuinely has a learned lift to
+ * claim. Doc 22 §6: the estimate is the ratio, the trust dial γ is separate.
  */
-const LIFT_1_5: LiftSnapshot = {
+const LEARNED: LiftSnapshot = {
   tenant: TENANT, brand: TENANT, slot: 'hero', reward: 'click', objective: 'unit', measurementBasis: 'served-v1',
   tauLearnMs: 1_814_400_000, version: 7, publishedAt: T0, events: 1200, n0: 30, nMin: 30, liftMin: 0.5, liftMax: 2, priorVersion: 0,
-  items: { 'tabby-in-motion-film': { '*': { level: 0, key: '*', n: 120, s: 9, p0: 0.05, n0: 30, p_hat: 0.075, lift: 1.5 } } },
+  items: {
+    'tabby-in-motion-film': { '*': { level: 0, key: '*', n: 120, s: 9, p0: 0.05, n0: 30, p_hat: 0.075, lift: 1.5 } },
+    'willow-slg-editorial': { '*': { level: 0, key: '*', n: 80, s: 4.8, p0: 0.05, n0: 30, p_hat: 0.06, lift: 1.2 } },
+  },
   slotRates: { '*': { n: 2400, s: 120, rate: 0.05 } },
 };
 
@@ -432,6 +475,10 @@ interface HostFixture {
   publishSlots: (slots: unknown[], authorize?: () => Promise<void>) => Promise<{ ok: boolean; errors?: string[]; revision?: number }>;
   /** Roll the `slots` document back to an earlier revision through the real path. */
   rollbackSlots: (toRevision: number) => Promise<{ ok: boolean; revision?: number }>;
+  /** The hero slot inside the head's reserved-but-uncommitted `slots` document, if any. */
+  pendingSlot: () => Promise<SlotStrategy | undefined>;
+  /** Everything this host actually stored, as text, for the never-persisted clause. */
+  stored: () => string;
 }
 
 async function hostFixture(host: 'session' | 'do', slots: unknown[], pieces: ContentPiece[] = PIECES): Promise<HostFixture> {
@@ -495,7 +542,17 @@ async function hostFixture(host: 'session' | 'do', slots: unknown[], pieces: Con
     invalidateCache(); invalidateLiftCache();
     return result.ok ? { ok: true as const, revision: result.revision.revision } : { ok: false as const };
   };
-  return { f, grant, principal, snapshot, decide, action, publishSlots, rollbackSlots };
+  const pendingSlot = async () => {
+    const object = await f.env.STORAGE.get('config-publication/v2/' + TENANT + '/head.json');
+    const head = object === null ? null : await object.json() as
+      { pending?: { documents?: Array<{ kind: string; value: { pages: Record<string, SlotStrategy[]> } }> } | null };
+    return head?.pending?.documents?.find(d => d.kind === SLOTS_KIND.name)?.value.pages.home![0];
+  };
+  const stored = () => JSON.stringify([
+    [...f.objects].map(([name, object]) => [name, [...object.data]]),
+    [...f.sessions.data], [...f.cache.data],
+  ]);
+  return { f, grant, principal, snapshot, decide, action, publishSlots, rollbackSlots, pendingSlot, stored };
 }
 
 /** Establish the owned paid-social entry channel, exactly as a first page view does. */
@@ -537,14 +594,22 @@ describe('unit:W16.C3.01', () => {
     // A campaign term nobody published a rule for is not evidence for anything.
     expect(orderOf(runDecide({ slots: [slot], cell: ORGANIC_CELL,
       entry: arrival({ term: 'willow tote', referrer: 'www.google.com', siteHost: SITE }) }))).toEqual(coldCatalogueOrder());
-    // A lookalike of the seeded network is not that network (W16.C2.02's rule).
+    // A lookalike of the seeded network is not that network (W16.C2.02's rule,
+    // and R30(5)'s dot-boundary match on the registrable domain).
     expect(orderOf(runDecide({ slots: [slot], cell: ORGANIC_CELL,
       entry: arrival({ source: 'instagram.evil.example', referrer: 'instagram.com.evil.example', siteHost: SITE }) }))).toEqual(coldCatalogueOrder());
+    // Another known network is not this one.
+    expect(orderOf(runDecide({ slots: [slot], cell: ORGANIC_CELL,
+      entry: arrival({ referrer: 'www.pinterest.com', siteHost: SITE }) }))).toEqual(coldCatalogueOrder());
+    // A `utm_source` that is itself the network's host belongs to the network,
+    // with no referrer at all.
+    expect(orderOf(runDecide({ slots: [slot], cell: ORGANIC_CELL, entry: arrival({ source: 'instagram.com', siteHost: SITE }) })))
+      .toEqual([['willow-slg-editorial', WILLOW_NETWORK], ['signature-charms-editorial', 0],
+        ['fragrance-note-editorial', 0], ['tabby-in-motion-film', 0]]);
 
     // The itemization: one driver per rule that fired, naming the signal, the
     // canonical tag it seeded and the delta it caused.
     expect(contextualOf(recordFor(seeded, 'tabby-in-motion-film'))).toEqual({
-      version: 1,
       applied: TABBY_CHANNEL + TABBY_TERM,
       drivers: [
         { signal: 'entry_channel', value: 'paid_social', dimension: 'category', tag: 'Handbags', weight: 0.6, contribution: TABBY_CHANNEL },
@@ -552,13 +617,14 @@ describe('unit:W16.C3.01', () => {
       ],
     });
     expect(contextualOf(recordFor(seeded, 'willow-slg-editorial'))).toEqual({
-      version: 1,
       applied: WILLOW_NETWORK,
-      drivers: [{ signal: 'referrer_network', value: 'instagram', dimension: 'category', tag: 'Small Leather Goods', weight: 0.5, contribution: WILLOW_NETWORK }],
+      drivers: [{ signal: 'referrer_network', value: 'instagram.com', dimension: 'category', tag: 'Small Leather Goods', weight: 0.5, contribution: WILLOW_NETWORK }],
     });
-    // A rule set was in force for this slot, so every receipt from it names the
-    // version, and a candidate the rules never matched says so with zero.
-    expect(contextualOf(recordFor(seeded, 'fragrance-note-editorial'))).toEqual({ version: 1, applied: 0, drivers: [] });
+    // A candidate the rules never matched says so with zero rather than silence.
+    expect(contextualOf(recordFor(seeded, 'fragrance-note-editorial'))).toEqual({ applied: 0, drivers: [] });
+    // R30(4): the rule-set version a receipt names is the `slots` revision the
+    // decision already stamps, not a second number inside the contextual field.
+    for (const id of CATALOGUE_ORDER) expect(recordFor(seeded, id).versions.slots, id).toBe(1);
   });
 
   it('host: the mounted snapshot route ranks the seeded candidates first for a cold shopper on both hosts', async () => {
@@ -591,9 +657,10 @@ describe('unit:W16.C3.01', () => {
         ['fragrance-note-editorial', 0],
       ]);
       expect(contextualOf(recordFor(set, 'tabby-in-motion-film')), host).toEqual({
-        version: 1, applied: TABBY_CHANNEL,
+        applied: TABBY_CHANNEL,
         drivers: [{ signal: 'entry_channel', value: 'paid_social', dimension: 'category', tag: 'Handbags', weight: 0.6, contribution: TABBY_CHANNEL }],
       });
+      expect(recordFor(set, 'tabby-in-motion-film').versions.slots, host).toBe(1);
     }
   });
 });
@@ -673,6 +740,15 @@ describe('unit:W16.C3.04', () => {
       ['malformed tag', [{ signal: 'entry_channel', value: 'paid_social', tags: [{ dimension: 'category' }], weight: 0.6 }]],
       ['empty signal value', [{ signal: 'entry_channel', value: '', tags: [{ dimension: 'category', value: 'Handbags' }], weight: 0.6 }]],
       ['rules must be a list', { entry_channel: 'paid_social' }],
+      // R30(5): an entry-channel value outside the six-word vocabulary
+      // (src/services/visit.ts entryChannelOf) names a cell that cannot exist.
+      ['entry channel outside the vocabulary', [{ signal: 'entry_channel', value: 'social', tags: [{ dimension: 'category', value: 'Handbags' }], weight: 0.6 }]],
+      ['entry channel that is a network', [{ signal: 'entry_channel', value: 'instagram.com', tags: [{ dimension: 'category', value: 'Handbags' }], weight: 0.6 }]],
+      // R30(5): a referrer-network value is a KNOWN network's registrable
+      // domain; free text and a bare network name are neither.
+      ['referrer network nobody knows', [{ signal: 'referrer_network', value: 'notanetwork.example', tags: [{ dimension: 'category', value: 'Handbags' }], weight: 0.6 }]],
+      ['referrer network as a bare name', [{ signal: 'referrer_network', value: 'instagram', tags: [{ dimension: 'category', value: 'Handbags' }], weight: 0.6 }]],
+      ['referrer network as a subdomain', [{ signal: 'referrer_network', value: 'l.instagram.com', tags: [{ dimension: 'category', value: 'Handbags' }], weight: 0.6 }]],
     ];
     for (const [name, seeds] of refusals) {
       const result = validateSlotCatalog(document(seeds));
@@ -693,6 +769,30 @@ describe('unit:W16.C3.04', () => {
     expect(orderOf(mixed)).toEqual(coldCatalogueOrder());
     for (const id of CATALOGUE_ORDER) expect(contextualOf(recordFor(mixed, id)), id).toBeUndefined();
     expect(seedDiagnosticsOf(mixed)).toEqual([{ slot: 'hero', reason: 'invalid_rule_set' }]);
+
+    // The same, whole, for a retained rule whose VALUE the current contract
+    // refuses (R30(5)): an entry channel outside the six-word vocabulary.
+    const stale = runDecide({
+      slots: [withSeeds(HERO, [
+        SEEDS_V1[2]!,
+        { signal: 'entry_channel', value: 'social', tags: [{ dimension: 'category', value: 'Handbags' }], weight: 0.6 },
+      ])],
+      entry: ARRIVAL_TERM,
+    });
+    expect(orderOf(stale)).toEqual(coldCatalogueOrder());
+    expect(seedDiagnosticsOf(stale)).toEqual([{ slot: 'hero', reason: 'invalid_rule_set' }]);
+    // A page whose other slot has a sound rule set is not punished for it.
+    const oneBad = runDecide({
+      slots: [withSeeds(HERO, [{ signal: 'referrer_network', value: 'nonsense', tags: [{ dimension: 'category', value: 'Handbags' }], weight: 0.6 }]),
+        // The rail weights both dimensions SEEDS_V1 names, so its rule set is
+        // sound; only the hero's is refused.
+        withSeeds({ slot: 'rail', take: 1, weights: { category: 0.5, line: 0.3 } }, SEEDS_V1)],
+      pieces: [...PIECES, piece('tabby-rail-film', 'cms-1005', 'video', 'Tabby, rail', { category: ['Handbags'] }, ['rail'])],
+      entry: ARRIVAL_TERM,
+    });
+    expect(orderOf(oneBad, 'hero')).toEqual(coldCatalogueOrder());
+    expect(orderOf(oneBad, 'rail')).toEqual([['tabby-rail-film', TABBY_CHANNEL]]);
+    expect(seedDiagnosticsOf(oneBad)).toEqual([{ slot: 'hero', reason: 'invalid_rule_set' }]);
   });
 
   it('host: the real publication path refuses an invalid rule set and the route keeps serving the published ranking, on both hosts', async () => {
@@ -730,6 +830,13 @@ describe('unit:W16.C3.05', () => {
         if (++checks > 1) throw new Error('authority withdrawn before the commit');
       })).rejects.toThrow();
 
+      // The draft really is in the store, and it really does carry version 2's
+      // rule set: without this the unit could degrade into the absent-rule-set
+      // case and pass for the wrong reason.
+      const draft = await h.pendingSlot();
+      expect(draft?.take, `${host}: the drafted slots document must be reserved in the publication head`).toBe(4);
+      expect(seedsOf(draft!), `${host}: the reserved draft must carry the drafted rule set`).toEqual(SEEDS_V2);
+
       const seen = await h.snapshot(ARRIVAL);
       expect(seen.status, `${host}: a draft in flight must not stop the committed rule set from serving`).toBe(200);
       expect(seen.slotsRevision, host).toBe(1);
@@ -750,8 +857,8 @@ describe('unit:W16.C3.06', () => {
     // A shopper with a real, small learned interest in the Tabby line, and a
     // learned lift of 1.5 for that piece at trust 1.
     const affinity = { dims: { line: { Tabby: 0.5 } } };
-    const snapshots = { hero: LIFT_1_5 };
-    const before = structuredClone(LIFT_1_5);
+    const snapshots = { hero: LEARNED };
+    const before = structuredClone(LEARNED);
 
     const plain = runDecide({ slots: [HERO], affinity, entry: ARRIVAL, gamma: 1, snapshots });
     const seeded = runDecide({ slots: [withSeeds(HERO, SEEDS_V1)], affinity, entry: ARRIVAL, gamma: 1, snapshots });
@@ -770,9 +877,10 @@ describe('unit:W16.C3.06', () => {
     expect(seededRecord.explain.lift?.gamma).toBe(1);
     // ... and it is recorded separately from the contextual contribution.
     expect(contextualOf(seededRecord)).toEqual({
-      version: 1, applied: TABBY_CHANNEL,
+      applied: TABBY_CHANNEL,
       drivers: [{ signal: 'entry_channel', value: 'paid_social', dimension: 'category', tag: 'Handbags', weight: 0.6, contribution: TABBY_CHANNEL }],
     });
+    expect(seededRecord.versions.slots).toBe(1);
     // The seed is not smuggled into the shopper's interest vector, so the replay
     // inputs and the learned statistics are untouched.
     expect(seededRecord.inputs?.affinity).toEqual({ line: { Tabby: 0.5 } });
@@ -804,18 +912,40 @@ describe('unit:W16.C3.07', () => {
     // The contextual contribution is measured in that final pre-lift base, so
     // for this candidate the seeds contributed exactly nothing.
     expect(contextualOf(zeroed)).toEqual({
-      version: 1, applied: 0,
-      drivers: [{ signal: 'referrer_network', value: 'instagram', dimension: 'category', tag: 'Small Leather Goods', weight: 0.5, contribution: 0 }],
+      applied: 0,
+      drivers: [{ signal: 'referrer_network', value: 'instagram.com', dimension: 'category', tag: 'Small Leather Goods', weight: 0.5, contribution: 0 }],
     });
     // A candidate the rules never named is not floored either.
     const unnamed = recordFor(set, 'fragrance-note-editorial');
     expect(unnamed.explain.score_final).toBe(0);
-    expect(contextualOf(unnamed)).toEqual({ version: 1, applied: 0, drivers: [] });
+    expect(contextualOf(unnamed)).toEqual({ applied: 0, drivers: [] });
     // Raising every weight to the top of its range does not lift either of them.
     const loud = runDecide({ slots: [withSeeds(HERO_ZEROING, SEEDS_V1.map(rule => ({ ...rule, weight: 1 })))],
       pieces: PIECES_WITH_SEASON, entry: ARRIVAL_TERM });
     expect(recordFor(loud, 'willow-slg-editorial').explain.score_final).toBe(0);
     expect(recordFor(loud, 'fragrance-note-editorial').explain.score_final).toBe(0);
+
+    // R30(2), the other end of the same clause: a merchandising boost of 0.5
+    // halves the contextual contribution rather than zeroing or ignoring it, so
+    // "measured in the final pre-lift base after merchandising" is pinned
+    // between 0 and 1 and cannot be satisfied by a special case at zero.
+    const halved = runDecide({ slots: [withSeeds(HERO_HALVING, SEEDS_V1)], pieces: PIECES_WITH_SEASON, entry: ARRIVAL_TERM });
+    expect(orderOf(halved)).toEqual([
+      ['tabby-in-motion-film', TABBY_CHANNEL + TABBY_TERM],
+      ['willow-slg-editorial', WILLOW_HALVED],
+      ['signature-charms-editorial', 0],
+      ['fragrance-note-editorial', 0],
+    ]);
+    const half = recordFor(halved, 'willow-slg-editorial');
+    expect(half.explain.score_base).toBe(WILLOW_NETWORK);
+    expect(half.explain.merchandising?.boost).toBe(0.5);
+    expect(half.explain.score_final).toBe(WILLOW_HALVED);
+    expect(contextualOf(half)).toEqual({
+      applied: WILLOW_HALVED,
+      drivers: [{ signal: 'referrer_network', value: 'instagram.com', dimension: 'category', tag: 'Small Leather Goods', weight: 0.5, contribution: WILLOW_HALVED }],
+    });
+    // The candidate the season rule does not touch keeps its whole contribution.
+    expect(contextualOf(recordFor(halved, 'tabby-in-motion-film'))?.applied).toBe(TABBY_CHANNEL + TABBY_TERM);
   });
 });
 
@@ -865,22 +995,97 @@ describe('unit:W16.C3.08', () => {
   it('host-internal: every receipt names the rule-set version the decision used, across the new version and the rollback, on both hosts', async () => {
     for (const host of HOSTS) {
       const h = await arrived(host, [withSeeds(HERO, SEEDS_V1)]);
-      expect(contextualOf(recordFor(await h.decide(ARRIVAL), 'tabby-in-motion-film')), host).toEqual({
-        version: 1, applied: TABBY_CHANNEL,
+      // R30(4): the version a receipt names is the `slots` revision the decision
+      // stamps (src/content/decide.ts:306), beside the contribution it caused.
+      const one = recordFor(await h.decide(ARRIVAL), 'tabby-in-motion-film');
+      expect(contextualOf(one), host).toEqual({
+        applied: TABBY_CHANNEL,
         drivers: [{ signal: 'entry_channel', value: 'paid_social', dimension: 'category', tag: 'Handbags', weight: 0.6, contribution: TABBY_CHANNEL }],
       });
+      expect(one.versions.slots, host).toBe(1);
 
       expect((await h.publishSlots([withSeeds(HERO, SEEDS_V2)])).revision, host).toBe(2);
-      expect(contextualOf(recordFor(await h.decide(ARRIVAL), 'willow-slg-editorial')), host).toEqual({
-        version: 2, applied: WILLOW_V2,
+      const two = recordFor(await h.decide(ARRIVAL), 'willow-slg-editorial');
+      expect(contextualOf(two), host).toEqual({
+        applied: WILLOW_V2,
         drivers: [{ signal: 'entry_channel', value: 'paid_social', dimension: 'category', tag: 'Small Leather Goods', weight: 0.8, contribution: WILLOW_V2 }],
       });
+      expect(two.versions.slots, host).toBe(2);
 
       expect((await h.rollbackSlots(1)).revision, host).toBe(3);
-      expect(contextualOf(recordFor(await h.decide(ARRIVAL), 'tabby-in-motion-film')), host).toEqual({
-        version: 3, applied: TABBY_CHANNEL,
+      const three = recordFor(await h.decide(ARRIVAL), 'tabby-in-motion-film');
+      expect(contextualOf(three), host).toEqual({
+        applied: TABBY_CHANNEL,
         drivers: [{ signal: 'entry_channel', value: 'paid_social', dimension: 'category', tag: 'Handbags', weight: 0.6, contribution: TABBY_CHANNEL }],
       });
+      expect(three.versions.slots, host).toBe(3);
+    }
+  });
+});
+
+describe('unit:W16.C3.09', () => {
+  it('logic: the campaign term is a bounded arrival field, refused rather than truncated, and inert for classification', () => {
+    // R30(3): 256 characters, the bound `utmSource` already carries
+    // (ENTRY_LIMITS, src/services/visit.ts:49). At the bound it is carried; one
+    // character beyond it the whole arrival is refused, never trimmed into
+    // something that would seed a different rule.
+    expect(validEntry({ utmTerm: 'x'.repeat(TERM_LIMIT) })).toBe(true);
+    expect(validEntry({ utmTerm: 'x'.repeat(TERM_LIMIT + 1) })).toBe(false);
+    // It is not a host field, so the host-only boundary accepts it unchanged.
+    expect(validEntry({ utmTerm: 'tabby handbag', siteHost: SITE }, true)).toBe(true);
+    expect(validEntry({ utmTerm: 7 })).toBe(false);
+
+    // The bounded snapshot contract carries it verbatim.
+    const carried = snapshotEntry(ARRIVAL_TERM);
+    expect(carried).toBeDefined();
+    expect(carried!.length).toBeLessThanOrEqual(ENTRY_QUERY_LIMIT);
+    expect(JSON.parse(carried!)).toEqual({ utmMedium: 'cpc', utmSource: 'instagram', utmTerm: 'tabby handbag', referrer: 'l.instagram.com', siteHost: SITE });
+    expect(snapshotEntry(arrival({ term: 'x'.repeat(TERM_LIMIT + 1), siteHost: SITE }))).toBeUndefined();
+
+    // Inert beyond seeding: a search keyword is what the shopper typed, never
+    // evidence of a channel. Every arrival classifies identically with and
+    // without one, including terms that read like a channel or a network.
+    const arrivals: ChannelSignals[] = [
+      ARRIVAL, ARRIVAL_ORGANIC,
+      arrival({ referrer: '', siteHost: SITE }),
+      arrival({ medium: 'email', source: 'klaviyo', siteHost: SITE }),
+      arrival({ referrer: 'partner.example', siteHost: SITE }),
+      arrival({ medium: 'wombat-unrecognized', siteHost: SITE }),
+    ];
+    for (const signals of arrivals) {
+      const plain = classifyEntryChannel(signals);
+      for (const term of ['tabby handbag', 'facebook', 'paid_social', 'www.google.com', 'x'.repeat(TERM_LIMIT)]) {
+        expect(classifyEntryChannel({ ...signals, ...arrival({ term }) }), `${JSON.stringify(signals)} + ${term.slice(0, 16)}`).toBe(plain);
+      }
+    }
+  });
+
+  it('host: the route carries a term at the bound, refuses one beyond it, and the term is never persisted, on both hosts', async () => {
+    for (const host of HOSTS) {
+      const h = await arrived(host, [withSeeds(HERO, SEEDS_V1)]);
+      // A distinctive keyword, so finding it anywhere in stored state is proof.
+      const TERM = 'coach-tabby-keyword-w16b2';
+      expect(await h.action(arrival({ medium: 'cpc', source: 'instagram', term: TERM, referrer: 'l.instagram.com', siteHost: SITE })),
+        `${host}: a page view carrying the search keyword must be accepted`).toBe(200);
+
+      // The event really was ingested — otherwise "never persisted" is vacuous.
+      const set = await h.decide();
+      expect(set.cell.channel, host).toBe('paid_social');
+      expect(set.cell.visit_bucket, host).toBe('1');
+      // The term adds no dimension to the cell the statistics are pooled on
+      // (doc 22 §5.4; src/learn/stats.ts levelKeys reads exactly these five).
+      expect(Object.keys(recordFor(set, 'tabby-in-motion-film').cell).sort(), host)
+        .toEqual(['affinity', 'channel', 'region', 'stage', 'visit_bucket']);
+      // And it is in nothing this host stored. The ODP payload is projected from
+      // that same stored state (src/services/odpLoop.ts:426-443), so a keyword
+      // that is never stored cannot reach it; the live ODP call itself is the
+      // admitted K3 check, not this unit.
+      expect(h.stored().includes(TERM), `${host}: the keyword must not be persisted`).toBe(false);
+      expect(JSON.stringify(set.records).includes(TERM), `${host}: the keyword must not be written to the ledger record`).toBe(false);
+
+      // The bound, at the public boundary: carried at 256, refused beyond it.
+      expect((await h.snapshot(arrival({ term: 'x'.repeat(TERM_LIMIT), siteHost: SITE }))).status, host).toBe(200);
+      expect((await h.snapshot(arrival({ term: 'x'.repeat(TERM_LIMIT + 1), siteHost: SITE }))).status, host).toBe(401);
     }
   });
 });
@@ -888,7 +1093,7 @@ describe('unit:W16.C3.08', () => {
 describe('unit:W16.C7.01', () => {
   it('logic: contextual influence is computed from the final pre-lift base after merchandising, an exactly zero base stays zero, and the receipt records the delta the learned lift actually caused', () => {
     const set = runDecide({ slots: [withSeeds(HERO_ZEROING, SEEDS_V1)], pieces: PIECES_WITH_SEASON,
-      entry: ARRIVAL_TERM, gamma: 1, snapshots: { hero: LIFT_1_5 } });
+      entry: ARRIVAL_TERM, gamma: 1, snapshots: { hero: LEARNED } });
 
     // The candidate the lift really moved: base 0.42, merchandising boost 1,
     // lift 1.5 at trust 1 → 0.63, a delta of +0.21.
@@ -911,6 +1116,27 @@ describe('unit:W16.C7.01', () => {
     const receipt = receiptOf(zeroed, NO_NAMES);
     expect(receipt.score_base).toBe(WILLOW_NETWORK);
     expect(receipt.score_final).toBe(0);
+    // R30(4) and C7's central clause, in the words the shopper's receipt uses:
+    // the candidate the lift really moved says it was applied at the trust dial
+    // (src/learn/receipts.ts:63-68), and the candidate it could not move NEVER
+    // says so. A prose line that claims influence the ranking never had is the
+    // whole of N20.
+    const why = (record: DecisionRecord) => receiptOf(record, NO_NAMES).why.join(' ');
+    expect(why(moved)).toContain('applied at trust');
+    expect(why(zeroed)).not.toContain('applied at trust');
+
+    // R30(2): the same clause at a boost of 0.5. The learned lift is real here,
+    // so what it may claim is the delta it caused on the halved base and nothing
+    // more: 0.125 → 0.15, a delta of +0.025.
+    const halved = runDecide({ slots: [withSeeds(HERO_HALVING, SEEDS_V1)], pieces: PIECES_WITH_SEASON,
+      entry: ARRIVAL_TERM, gamma: 1, snapshots: { hero: LEARNED } });
+    const half = recordFor(halved, 'willow-slg-editorial');
+    expect(half.explain.merchandising?.boost).toBe(0.5);
+    expect(contextualOf(half)?.applied).toBe(WILLOW_HALVED);
+    expect(half.explain.lift?.lift).toBe(1.2);
+    expect(half.explain.score_final).toBe(0.15);
+    expect(liftAppliedOf(half)).toBe(0.025);
+    expect(why(half)).toContain('applied at trust');
   });
 
   it('host: the mounted snapshot route serves an exactly zero score for a candidate merchandised to zero, on both hosts', async () => {
@@ -929,17 +1155,32 @@ describe('unit:W16.C7.01', () => {
 });
 
 describe('unit:W16.C7.02', () => {
+  it('host: the mounted snapshot route serves the seeded ranking with a rule set and the base order without one, at gamma zero, on both hosts', async () => {
+    for (const host of HOSTS) {
+      const seeded = await arrived(host, [withSeeds(HERO, SEEDS_V1)]);
+      const withRules = await seeded.snapshot(ARRIVAL);
+      expect(withRules.status, host).toBe(200);
+      expect(withRules.order, host).toEqual(V1_ORDER);
+
+      const bare = await arrived(host, [HERO]);
+      const without = await bare.snapshot(ARRIVAL);
+      expect(without.status, host).toBe(200);
+      expect(without.order, host).toEqual(coldCatalogueOrder());
+    }
+  });
+
   it('host-internal: receipts record the contextual contribution and its rule-set version separately from the learned lift, and record neither when no rule set is published at gamma zero', async () => {
     for (const host of HOSTS) {
       // A published rule set at γ = 0: the contextual contribution is on the
-      // receipt with the version it came from, and the learned-lift field is
-      // null because nothing has been learned for this piece in this cell.
+      // receipt beside the `slots` revision it came from, and the learned-lift
+      // field is null because nothing has been learned for this piece here.
       const seeded = await arrived(host, [withSeeds(HERO, SEEDS_V1)]);
       const withRules = recordFor(await seeded.decide(ARRIVAL), 'tabby-in-motion-film');
       expect(contextualOf(withRules), host).toEqual({
-        version: 1, applied: TABBY_CHANNEL,
+        applied: TABBY_CHANNEL,
         drivers: [{ signal: 'entry_channel', value: 'paid_social', dimension: 'category', tag: 'Handbags', weight: 0.6, contribution: TABBY_CHANNEL }],
       });
+      expect(withRules.versions.slots, host).toBe(1);
       expect(withRules.explain.lift, host).toBeNull();
       expect(withRules.explain.score_final, host).toBe(TABBY_CHANNEL);
 
