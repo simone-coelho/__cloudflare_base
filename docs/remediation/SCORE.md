@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 87/88 · W closed 1/26 (W16–W41) · suite 1887/1966 · residual 79 in 9 files · typecheck GREEN
+Units 87/88 · W closed 2/26 (W16–W41) · suite 1887/1966 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -17,7 +17,7 @@ Units 87/88 · W closed 1/26 (W16–W41) · suite 1887/1966 · residual 79 in 9 
 | W11 | 1 | 1 | no | — | — |
 | W16 | 59 | 59 | no | — | — |
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
-| W18 | 9 | 9 | no | — | — |
+| W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -133,7 +133,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | b70a6ab05365ef5c0ea8bcc19ecf047c717ca1f4950a2154c14b084df538ded3 |
-| commit | bf1812a4c431b4e791703004346e51eb6f913dee |
-| generated | 2026-09-19T16:55:47.776Z |
+| vitest report | suite.json (outside the checkout) |
+| vitest report sha256 | 8706d58b4fadbff1fad86dd36d06a8bafd282f2b7ac2d1f60fd48caf6d6ecfc9 |
+| commit | 05001add8eb55cbd1dfdade879063d0f83ac65e3 |
+| generated | 2026-09-19T17:11:34.848Z |
