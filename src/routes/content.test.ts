@@ -461,9 +461,18 @@ describe('/content routes', () => {
     // class of defect (W19-B1 build review finding 1; unit W19.F3.02). Still one
     // whole-object equality; the value is this fixture's own three warnings
     // counted by code — one `unknown_dimension` and two
-    // `no_nonempty_registered_tags` — and every other member is unchanged.
+    // `no_nonempty_registered_tags` — and every other member, including
+    // W19-B2's `slots` below, is unchanged by this correction.
     expect(result.diagnostics).toEqual({ schema: 'catalog-registry-diagnostics/v1', advisory: true, status: 'available', catalogRevision: null,
-      registry: { scope: 'coach', source: 'stored', revision: 7, version: 'diagnostic-registry' }, warningCount: 3, omittedWarningCount: 0,
+      registry: { scope: 'coach', source: 'stored', revision: 7, version: 'diagnostic-registry' },
+      // W19-B2 (R82(a)): the channel also names the slots document it compared the
+      // pieces' slot types against, as it already names the registry. This fixture's
+      // publication set carries SLOTS_KIND at revision 1 with DEFAULT_SLOTS
+      // (`initializeCatalog` above), and a baseline value is stored as validated and
+      // never stamped (stamping belongs to the write path), so the version is
+      // DEFAULT_SLOTS' own.
+      slots: { source: 'stored', revision: 1, version: 'slots-default' },
+      warningCount: 3, omittedWarningCount: 0,
       counts: { unknown_dimension: 1, no_nonempty_registered_tags: 2 }, warnings: [
         { code: 'unknown_dimension', pieceIndex: 0, dimensionIndex: 0, dimension: 'Occasion', dimensionTruncated: false },
         { code: 'no_nonempty_registered_tags', pieceIndex: 2 }, { code: 'no_nonempty_registered_tags', pieceIndex: 3 },
