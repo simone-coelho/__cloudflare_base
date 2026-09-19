@@ -26,6 +26,7 @@ import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent
 import { decideContent } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
+import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
 import type { ContentDecisionSet, ContentPiece, SlotCatalog } from './types';
@@ -58,6 +59,15 @@ export interface ServeRequest {
   /** Verified public caller context; unsigned callers may request only state-free refused defaults. */
   principal?: SessionCapability;
   capability?: string;
+  /**
+   * W20 G2 (R94(1)): the platform composing this page to check ITSELF, not a
+   * shopper being served. The engine's own self-check composes the tenant's real
+   * page, so its refusals would otherwise land in the operator's governance
+   * counters and report the probe's configuration back as the tenant's serving.
+   * A caller declares it; the flag is general, names no visitor, channel or id,
+   * and changes nothing else about the decision. Ordinary callers never set it.
+   */
+  selfCheck?: boolean;
 }
 
 /** Where each input came from, so a reader can tell a tuned scope from a compiled default. */
@@ -457,11 +467,31 @@ export async function serveContentDecisions(
     : set.records.every(record => record.measurementBasis === 'served-v1') ? set.records : [];
   const servedCapture = !r.offer && captureRecords.length > 0;
   const captureSet = { ...set, records: captureRecords };
-  const afterResponse = consent.tracking && captureRecords.length > 0
+  const captured = consent.tracking && captureRecords.length > 0
     ? env.LEDGER_RECOVERY_ENABLED === 'true'
       ? recoverDecisions(env, captureSet, slotLearnConfigOf(learn)).then(result => { if (result.source.state !== 'recovered') reportLearningIncomplete('decisions', result.learning ?? null); })
       : fanDecisions(env, captureSet, slotLearnConfigOf(learn)).then(result => reportLearningIncomplete('decisions', result))
     : Promise.resolve();
+  // W20 G2 (R83, R86(a)/(b)): a refused pin has no decision and no ledger row,
+  // and a pinned slot that fell short writes only what it served, so neither
+  // reaches any operator surface by itself. The occurrences are counted for the
+  // tenant's slots here, after the answer is decided, fire and forget: the
+  // counter is never read on this path, its failures are swallowed inside
+  // `recordSlotGovernance`, and nothing about the shopper is written to it.
+  // Three conditions, each on its own ground: the shopper's tracking refusal
+  // means the engine writes nothing at all about this request (CW31); an
+  // isolated synthetic operation is the platform's own traffic; and a caller
+  // that declares `selfCheck` is the platform composing the page to check
+  // itself (R94(1)). Together they make the tenant-level signal the monitor
+  // answers with the tenant's own serving, never a synthetic-probe value.
+  const governance = {
+    refusedPins: (set.pinDiagnostics ?? []).map(d => ({ slot: d.slot, pinnedPieceId: d.pinnedPieceId, reason: d.reason })),
+    shortTakes: (set.shortTakes ?? []).map(s => ({ slot: s.slot, empty: s.empty })),
+  };
+  const counted = consent.tracking && !synthetic && !r.selfCheck && (governance.refusedPins.length > 0 || governance.shortTakes.length > 0)
+    ? recordSlotGovernance(env, scope, governance, now)
+    : Promise.resolve();
+  const afterResponse = Promise.all([captured, counted]).then(() => undefined);
 
   const decisions = await Promise.all(set.decisions.map(async (decision, index) => {
     const record = set.records[index]!;
