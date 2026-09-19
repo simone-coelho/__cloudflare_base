@@ -337,13 +337,17 @@ describe('the learning console, rendered', () => {
       expect(c.$('si-password').value).toBe('');
       expect(c.text()).not.toContain('Sign in at the top right');
       const heads = Array.from(c.w.document.querySelectorAll('#grid thead th')).map((th) => (th.firstChild?.textContent || '').trim());
-      expect(heads).toEqual(['Item', 'Cell', 'Shown', 'Succeeded', 'Rate', 'Baseline', 'Lift', 'Evidence', 'Controls']);
+      // Witness public/learning.js:327: the learning grid names the defined exposure unit and the weighted credit per exposure
+      // (document 35 §5 W26: "defined served/rendered/viewable unit").
+      expect(heads).toEqual(['Item', 'Cell', 'Exposures', 'Weighted credit', 'Credit / exposure', 'Baseline', 'Lift', 'Evidence', 'Controls']);
       const syms = Array.from(c.w.document.querySelectorAll('#grid thead th .sym')).map((s) => s.textContent);
       expect(syms).toEqual(['n', 's', 'p̂', 'p₀', 'p̂ / p₀', 'n / (n + n₀)']);
       const first = Array.from(c.w.document.querySelectorAll('#grid tbody tr'))[0]!;
       expect(first.textContent).toContain('CCH-001');
       expect(Array.from(first.querySelectorAll('td')).slice(2, 4).map((td) => td.textContent)).toEqual(['20.816', '1.977']);
-      expect(c.$('grid-count').textContent).toContain('2 rows · reward click');
+      // Witness public/learning.js:323: the caption states the snapshot's measurement
+      // basis before the reward (document 35 §5 W26: "defined served/rendered/viewable unit").
+      expect(c.$('grid-count').textContent).toContain('2 rows · basis served-v1 (rendered is client-reported) · reward click');
       expect(c.text()).not.toMatch(STRAY);
       // Signing out takes the grid away again and leaves nothing stray.
       c.$('sign-out').click(); await c.settle(); await c.settle();

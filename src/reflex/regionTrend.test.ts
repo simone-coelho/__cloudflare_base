@@ -181,6 +181,8 @@ describe('the region object', () => {
     const get = vi.spyOn(storage, 'get'), put = vi.spyOn(storage, 'put');
     const getAlarm = vi.spyOn(storage, 'getAlarm'), setAlarm = vi.spyOn(storage, 'setAlarm');
     const publish = vi.spyOn(kv, 'put');
+    /** Reads of the object's OWN state, excluding the synthetic boundary's marker read. */
+    const stateReads = () => get.mock.calls.filter(([key]) => key === REGION_STATE_KEY).length;
     const env = { CACHE: kv, REGION_TREND: { idFromName: (name: string) => name } } as unknown as Env;
     const make = (store: FakeStorage) => new RegionTrend({ id: objectName('coach', 'US-NY'), storage: store } as unknown as DurableObjectState, env);
     const base = { generation: REGION_GENERATION, tenant: 'coach', region: 'US-NY', touches: [{ dim: 'line', value: 'Drover' }], w: 1 };
@@ -196,7 +198,13 @@ describe('the region object', () => {
       const body = JSON.stringify({ ...base, ts: 0 }).replace('"ts":0', `"ts":${ts}`);
       expect((await obj.fetch(new Request('https://region-trend/ingest', { method: 'POST', body }))).status).toBe(400);
     }
-    for (const effect of [get, put, getAlarm, setAlarm, publish]) expect(effect).not.toHaveBeenCalled();
+    // Every invocation reads the synthetic-scope marker before it dispatches
+    // (src/ops/synthetic.ts:20, :311) — a read, not an effect. The refusal still
+    // reads no regional state and causes nothing: one marker read per request,
+    // no other key, no write, no alarm, no publication.
+    for (const effect of [put, getAlarm, setAlarm, publish]) expect(effect).not.toHaveBeenCalled();
+    expect(get.mock.calls.map(([key]) => key)).toEqual(new Array(12).fill('__monitor_authority_v1')); // ten invalid stamps, two nonfinite bodies
+    expect(stateReads()).toBe(0);
     expect([...storage.map]).toEqual([]); expect(storage.alarm).toBeNull(); expect(kv.store.size).toBe(0);
 
     const latest = T0 + REGION_TAU_MS;
@@ -214,7 +222,7 @@ describe('the region object', () => {
       expect(stored).toEqual({ ...fresh(), events: 2, updatedAt: latest, dims: { line: {
         Drover: { s: 1 + 2 * Math.exp(-1), t: latest }, Tabby: { s: 2, t: T0 },
       } } });
-      expect(get).toHaveBeenCalledTimes(1); expect(put).toHaveBeenCalledTimes(2);
+      expect(stateReads()).toBe(1); expect(put).toHaveBeenCalledTimes(2);
       expect(getAlarm).toHaveBeenCalledTimes(2); expect(setAlarm).toHaveBeenCalledTimes(1);
       expect(storage.alarm).toBe(latest + 30_000); expect(kv.store.size).toBe(0);
       // Recreate from independent persisted bytes, with no in-memory dirty flag.
@@ -227,7 +235,7 @@ describe('the region object', () => {
       expect(JSON.parse(kv.store.get(trendKey('coach', 'US-NY'))!)).toEqual(expected);
       expect(await (await obj.fetch(new Request('https://region-trend/snapshot'))).json()).toEqual({ ok: true, snapshot: expected });
       expect(storage.map.get(REGION_STATE_KEY)).toEqual(stored);
-      expect(get).toHaveBeenCalledTimes(2); expect(put).toHaveBeenCalledTimes(2); expect(publish).toHaveBeenCalledTimes(1);
+      expect(stateReads()).toBe(2); expect(put).toHaveBeenCalledTimes(2); expect(publish).toHaveBeenCalledTimes(1);
     } finally { clock.mockRestore(); }
   });
 

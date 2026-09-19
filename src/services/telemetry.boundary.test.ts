@@ -22,7 +22,9 @@ import { forwardEventToOdp, upsertOdpProfile, fetchOdpAudiences, vuidFor } from 
 import { cdpRoutes } from '@/routes/cdp';
 import realtimeRoutes from '@/routes/realtime';
 import type { TenantVariables } from '@/tenancy/tenant';
-import { read, write, invalidateCache, type DocumentKind } from '@/config/versionedStore';
+import { read, write, invalidateCache } from '@/config/versionedStore';
+import { initializePublication, readPublication } from '@/config/publication';
+import { CONTENT_KIND, EMPTY_CATALOG } from '@/content/kinds';
 import { LiveDecisionProvider } from '@/connectors/DecisionProvider';
 import { RateLimiter } from '@/durable-objects/RateLimiter';
 import { StateManager } from '@/durable-objects/StateManager';
@@ -523,34 +525,72 @@ describe('CDP/ODP/session/realtime log boundaries', () => {
     expect(response.status).toBe(200); expect(await response.json()).toMatchObject({ success: true, sessionId: 's-unit', consent: { tracking: true, personalization: true, instruction: { revision: 'unit-choice' } } });
     expect(prepare).toHaveBeenCalledOnce(); expect(fetch).toHaveBeenCalledOnce();
     expect(await fetch.mock.calls[0]![0].json()).toMatchObject(action);
-    expect(logs).toEqual([['CDP identify error'], ['Error processing action event'], ['captureDemoEvent failed (non-fatal)']]);
+    // The malformed action is refused by the object's own normalization and only
+    // counted (src/durable-objects/ShopperReflex.ts:875-878) — it never reaches the
+    // handler whose catch logs 'Error processing action event'
+    // (src/services/RealtimeSegmentEngine.ts:666), so the refusal writes no log line
+    // at all. The surviving lines still carry no payload detail.
+    expect(logs).toEqual([['CDP identify error'], ['captureDemoEvent failed (non-fatal)']]);
   });
 });
 
 describe('W07.04 remaining runtime logs and monitor telemetry', () => {
   it('preserves config failure retry, invalid-document fallback and successful versioned writes', async () => {
     invalidateCache();
-    const store = subjectStore(), fallback = { allowed: true, private: 'fallback' };
-    const kind: DocumentKind<{ allowed: boolean; private?: string }> = {
-      name: 'telemetry_fixture', validate(value: any) {
-        return value?.allowed ? { ok: true, value } : { ok: false, errors: [SUBJECT] };
-      },
-    };
-    store.get.mockRejectedValueOnce(new Error(ERROR)).mockRejectedValueOnce(new Error(ERROR));
-    const env = { CACHE: store } as unknown as Env;
-    expect(await read(env, kind, SUBJECT, fallback)).toBe(fallback);
-    expect(await read(env, kind, SUBJECT, fallback)).toBe(fallback);
-    expect(store.get).toHaveBeenCalledTimes(2); // Failed reads were not cached.
-    store.values.set('telemetry_fixture:config:' + SUBJECT + ':current', JSON.stringify({ value: {} }));
-    expect(await read(env, kind, SUBJECT, fallback)).toBe(fallback);
-    await expect(write(env, kind, SUBJECT, { allowed: true }, { actor: 'synthetic' })).rejects.toThrow('Stored configuration is unavailable');
-    expect(store.put).not.toHaveBeenCalled();
-    store.values.delete('telemetry_fixture:config:' + SUBJECT + ':current');
-    expect((await write(env, kind, SUBJECT, { allowed: true, private: SUBJECT }, { actor: 'synthetic' })).ok).toBe(true);
-    expect(store.put).toHaveBeenCalledTimes(3);
-    expect(await read(env, kind, SUBJECT, fallback)).toEqual({ allowed: true, private: SUBJECT });
-    expect(logs).toEqual([['[config] read failed, serving fallback'], ['[config] read failed, serving fallback'],
-      ['[config] stored document is invalid and was ignored']]);
+    // The coherent R2 publication is the only configuration authority
+    // (src/config/versionedStore.ts:92-98 delegates to src/config/publication.ts:204-206,
+    // :271-273): the legacy KV read with its compiled fallback is gone, and with it the
+    // two '[config]' lines this test used to expect — they exist nowhere in src any more.
+    // What survives is stronger and is what the runtime log boundary must show: a failed
+    // read is REFUSED and not cached, a stored document that does not verify is refused
+    // rather than ignored (publication.ts:247-252), an unauthored write is refused
+    // (publication.ts:66-73), an authored one succeeds and is read back — and none of it
+    // narrates anything, let alone a payload. Never a KV fallback.
+    class PublicationR2 {
+      objects = new Map<string, { text: string; etag: string }>();
+      count = 0; reads = 0; failures = 0;
+      async get(key: string) {
+        this.reads++;
+        if (this.failures > 0) { this.failures--; throw new Error(ERROR); }
+        const v = this.objects.get(key);
+        return v ? { key, etag: v.etag, size: new TextEncoder().encode(v.text).length, body: new Response(v.text).body } : null;
+      }
+      async put(key: string, text: string, options?: R2PutOptions) {
+        const condition = options?.onlyIf;
+        if (condition instanceof Headers ? this.objects.has(key) : condition && condition.etagMatches !== this.objects.get(key)?.etag) return null;
+        const etag = 'telemetry-' + (++this.count); this.objects.set(key, { text, etag });
+        return { key, etag, size: new TextEncoder().encode(text).length };
+      }
+    }
+    const storage = new PublicationR2(), env = { STORAGE: storage } as unknown as Env, scope = 'coach';
+    await initializePublication(env, CONTENT_KIND, scope,
+      { revision: 1, value: EMPTY_CATALOG, actor: 'synthetic', note: '', at: 1 }, '0:' + crypto.randomUUID());
+
+    storage.failures = 2; storage.reads = 0;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await expect(read(env, CONTENT_KIND, scope, EMPTY_CATALOG)).rejects.toMatchObject({ status: 503, code: 'publication_unavailable' });
+    }
+    expect(storage.reads).toBe(2);               // Each failed read reached storage again: no refusal was cached.
+    expect(await read(env, CONTENT_KIND, scope, EMPTY_CATALOG)).toEqual(EMPTY_CATALOG);
+
+    const revisionKey = 'config-publication/v1/' + scope + '/content/rev/1.json';
+    const authored = storage.objects.get(revisionKey)!;
+    storage.objects.set(revisionKey, { ...authored, text: JSON.stringify({ ...JSON.parse(authored.text), value: { pieces: 'not a catalog' } }) });
+    invalidateCache();
+    await expect(read(env, CONTENT_KIND, scope, EMPTY_CATALOG)).rejects.toMatchObject({ status: 503, code: 'publication_unavailable' });
+    storage.objects.set(revisionKey, authored); invalidateCache();
+    expect(await read(env, CONTENT_KIND, scope, EMPTY_CATALOG)).toEqual(EMPTY_CATALOG);
+
+    const piece = { id: 'p1', customerContentId: 'cms-p1', type: 'editorial', title: 'p1', tags: {}, slotTypes: ['hero'] };
+    await expect(write(env, CONTENT_KIND, scope, { pieces: [piece] }, { actor: 'synthetic' }))
+      .rejects.toMatchObject({ status: 428, code: 'precondition_required' });
+    const base = await readPublication(env, CONTENT_KIND, scope);
+    const saved = await write(env, CONTENT_KIND, scope, { pieces: [piece] }, { actor: 'synthetic', expectedRevision: base.revision,
+      expectedPublication: base.publication, operationId: base.revision + ':' + crypto.randomUUID() });
+    expect(saved.ok).toBe(true);
+    invalidateCache();
+    expect((await read(env, CONTENT_KIND, scope, EMPTY_CATALOG)).pieces.map(p => p.id)).toEqual(['p1']);
+    expect(logs).toEqual([]);
     invalidateCache();
   });
 

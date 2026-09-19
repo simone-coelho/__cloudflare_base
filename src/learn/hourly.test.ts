@@ -520,11 +520,16 @@ describe('the hourly fold', () => {
     expect(result).toEqual({ built: [], failed: [], pending: 92, reports: { published: dates.slice(1), failed: [], deferred: dates.slice(0, 1) } });
     expect(bounded.puts).toEqual(selectedKeys); expect(inputBytes(bounded)).toEqual(before);
     expect(reads.mock.calls.filter(([k]) => k.startsWith('reports/')).map(([k]) => k)).toEqual(selectedKeys);
-    expect(reads.mock.calls.filter(([k]) => k.startsWith('aggregates/')).map(([k]) => k)).toEqual([shardKey('coach', 0), ...dates.slice(1).map(date => hourKey('coach', date, 12))]);
+    // catchUp runs the erasure-cleanup pass over the shard state before it reads the
+    // coordinator for an interrupted hour (src/learn/hourly.ts:1156 then :1160; the pass
+    // itself reads shard 0 at :893), so the coordinator object is read twice per run and
+    // no other aggregate object is touched.
+    expect(reads.mock.calls.filter(([k]) => k.startsWith('aggregates/')).map(([k]) => k)).toEqual([shardKey('coach', 0), shardKey('coach', 0), ...dates.slice(1).map(date => hourKey('coach', date, 12))]);
     reads.mockClear(); bounded.puts.length = 0;
     expect((await catchUp(bounded, 'coach', learn, nextNow, { ...options, maxHours: 0, lookbackHours: 96 })).reports)
       .toEqual({ ...quiet, deferred: dates.slice(0, 1) });
-    expect(bounded.puts).toEqual([]); expect(reads.mock.calls.map(([k]) => k)).toEqual([shardKey('coach', 0), ...selectedKeys]); reads.mockRestore();
+    // Same two coordinator reads as above (hourly.ts:1156 cleanup, :1160 coordinator).
+    expect(bounded.puts).toEqual([]); expect(reads.mock.calls.map(([k]) => k)).toEqual([shardKey('coach', 0), shardKey('coach', 0), ...selectedKeys]); reads.mockRestore();
   });
 
   it('W22.02 preserves prior progress on incomplete hourly input and retries one pending hour after restoration', async () => {
@@ -659,12 +664,21 @@ describe('the hourly fold', () => {
     expect(raw.counts).toEqual({ decisions: 1, outcomes: 1, visitors: 1, truncated: false, duplicates: { decisions: 1, outcomes: 1 } });
     expect(report.counts).toEqual(raw.counts); expect(report.erasures!.rows_hidden).toBe(2); expect(raw.erasures!.rows_hidden).toBe(2);
     expect(r2.json<ShardState>(shardKey('coach', 0)).rings.v!.map(row => row.id)).toEqual([fresh.decision_id]);
-    expect(report.computation!.version).toBe(3); expect(diagnosticDayReport(report).counts).toEqual(report.counts);
+    // The recorded computation basis is version 4: it states each slot's measurement
+    // basis alongside reward/objective/tau (src/learn/report.ts:119, type at :71, :75;
+    // document 35 §5 W26 "defined served/rendered/viewable unit"). Versions 1-3 stay
+    // readable as history, which the loop below still proves.
+    expect(report.computation!.version).toBe(4); expect(diagnosticDayReport(report).counts).toEqual(report.counts);
     const canonical = canonicalReportJson(report); r2.objects.set(reportKey('coach', 'coach', ids.date), canonical);
     expect((JSON.parse(canonical) as { _summary: { counts: unknown } })._summary.counts).toEqual(report.counts);
     expect((await windowReport(r2, { tenant: 'coach', brand: 'coach', from: ids.date, to: ids.date })).slots.hero!.compatibility.status).toBe('compatible');
     for (const version of [1, 2] as const) {
-      const legacy = structuredClone(hour); legacy.brands.coach!.computation!.version = version; delete legacy.brands.coach!.duplicates;
+      // A retained v1-v3 record cannot carry a per-slot measurement basis: the key is
+      // admitted only at version 4 (src/learn/report.ts:104-108, :115), so an honest
+      // legacy fixture drops it rather than relabelling old accumulators.
+      const legacy = structuredClone(hour); legacy.brands.coach!.computation!.version = version;
+      legacy.brands.coach!.computation!.slots = legacy.brands.coach!.computation!.slots.map(slot => { const copy = { ...slot }; delete copy.measurementBasis; return copy; });
+      delete legacy.brands.coach!.duplicates;
       const bytes = JSON.stringify(legacy), historical = reportFromHours([legacy], ids, learn, NOW, options);
       expect(historical.computation!.version).toBe(version); expect(historical.counts.duplicates).toBeUndefined(); expect(JSON.stringify(legacy)).toBe(bytes);
       const newer = { ...hour, hour: 13, from: hour.from + H, to: hour.to + H };
@@ -698,7 +712,9 @@ describe('the hourly fold', () => {
       await buildHour(r2, 'coach', { date: ids.date, hour: 13 }, config, NOW)];
     const options = { pending: 0, missing: [] as number[] }, folded = reportFromHours(hours, ids, config, NOW, options);
     const raw = await runReport(r2, ids, config, null, NOW);
-    expect(raw.computation!.version).toBe(3); expect(folded.computation!.version).toBe(3);
+    // Version 4 records the per-slot measurement basis (src/learn/report.ts:119, :75;
+    // document 35 §5 W26), and the raw and folded paths must record the same one.
+    expect(raw.computation!.version).toBe(4); expect(folded.computation!.version).toBe(4);
     expect(folded.counts).toEqual(raw.counts); expect(raw.counts).toEqual({ decisions: 4, outcomes: 3, visitors: 2, truncated: false });
     expect(folded.policies).toEqual(raw.policies); expect(folded.grids).toEqual(raw.grids);
     expect(folded.holdout).toEqual(raw.holdout); expect(folded.exploration).toEqual(raw.exploration);
@@ -740,7 +756,11 @@ describe('the hourly fold', () => {
     ledger(oldStore, rows, legacyEvents);
     const oldHours = [await buildHour(oldStore, 'coach', { date: ids.date, hour: 12 }, config, NOW),
       await buildHour(oldStore, 'coach', { date: ids.date, hour: 13 }, config, NOW)];
-    for (const hour of oldHours) hour.brands.coach!.computation!.version = 1;
+    // As above: version 1 records carry no per-slot measurement basis (report.ts:104-108).
+    for (const hour of oldHours) {
+      hour.brands.coach!.computation!.version = 1;
+      hour.brands.coach!.computation!.slots = hour.brands.coach!.computation!.slots.map(slot => { const copy = { ...slot }; delete copy.measurementBasis; return copy; });
+    }
     const oldBytes = JSON.stringify(oldHours), old = reportFromHours(oldHours, ids, config, NOW, options);
     expect(old.computation!.version).toBe(1); expect(old.policies[0]!.credits).toBe(4);
     expect(JSON.stringify(oldHours)).toBe(oldBytes);

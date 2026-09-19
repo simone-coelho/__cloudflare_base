@@ -888,7 +888,9 @@ describe('the operator application, rendered', () => {
       // Words, and the design's symbol under each, per doc 28 §9.
       const words = c.all('#view thead th').map((th) => (th.firstChild?.textContent || '').trim());
       const syms = c.all('#view thead th .sym').map((x) => (x.textContent || '').trim());
-      expect(words).toEqual(['', 'Piece', 'Shown', 'Paid off', 'Rate', 'The slot’s rate', 'Lift ↓', 'Evidence', 'Held by a person']);
+      // Witness public/console/views.js:224-227: the grid names the defined exposure unit and the weighted credit per exposure
+      // (document 35 §5 W26: "defined served/rendered/viewable unit"; the served/rendered basis is per snapshot).
+      expect(words).toEqual(['', 'Piece', 'Exposures', 'Weighted credit', 'Credit / exposure', 'Slot credit / exposure', 'Lift ↓', 'Evidence', 'Held by a person']);
       expect(syms).toEqual(['n', 's', 'p̂', 'p₀', 'p̂ / p₀', 'n / (n + n₀)']);
       expect(c.all('#view tbody tr')).toHaveLength(3);
       expect(c.text()).toContain('312 pieces, showing 1 to 3');   // the page the server cut, not the page size
