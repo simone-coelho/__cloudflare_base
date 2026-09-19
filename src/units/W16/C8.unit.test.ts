@@ -161,19 +161,31 @@ const CROSS_CATEGORY_VISIT = [
 ];
 
 /**
- * The whole taste one view of COA-CW620 may build: exactly the attributes that
- * catalogue row carries, on the dimensions the published registry names
- * (`src/reflex/core.ts` DEFAULT_REFLEX_CONFIG: line, category, subcategory,
- * silhouette, occasion, priceBand; 575 USD falls in the `elevated` band, cuts
- * [150, 400]). Anything else in her reported taste after that single view was
- * invented from somewhere the shopper never was (W16.C8.04, R44).
+ * The whole taste one view of COA-CW620 may build (W16.C8.04, R44 for the upper
+ * bound, R64 for the per-value reading).
+ *
+ * R64: on a dimension the tenant's catalogue NAMES, a value that catalogue does
+ * not name builds no taste, whatever else the event carries; a dimension it
+ * names nothing on constrains nothing. So of the six registry dimensions this
+ * row touches:
+ *   · `line: 'Tabby'` and `category: 'Handbags'` — named by the published
+ *     catalogue, so they build taste;
+ *   · `occasion` — named `{festival, evening, date-night}`, so `evening` and
+ *     `date-night` build taste and `special-occasion`, which this tenant's
+ *     catalogue does not name, builds none;
+ *   · `subcategory`, `silhouette`, `priceBand` — the catalogue names nothing on
+ *     them, so it is authority over nothing there and the row's own values
+ *     stand (`Shoulder Bags`, `shoulder`, and the `elevated` band for 575 USD,
+ *     cuts [150, 400]).
+ * Anything else in her reported taste after that single view was invented from
+ * somewhere the shopper never was.
  */
 const TASTE_OF_COA_CW620: Record<string, string[]> = {
   line: ['Tabby'],
   category: ['Handbags'],
   subcategory: ['Shoulder Bags'],
   silhouette: ['shoulder'],
-  occasion: ['date-night', 'evening', 'special-occasion'],
+  occasion: ['date-night', 'evening'],
   priceBand: ['elevated'],
 };
 
@@ -204,6 +216,44 @@ const UNKNOWN_PRODUCT_ID = 'COA-NOT-A-PRODUCT';
 const VIEW_UNKNOWN_PRODUCT = productView({ productId: UNKNOWN_PRODUCT_ID });
 const UNKNOWN_CATEGORY_PRODUCT_ID = 'COA-NOT-A-PRODUCT-2';
 const VIEW_UNKNOWN_CATEGORY = productView({ productId: UNKNOWN_CATEGORY_PRODUCT_ID, category: 'Home Fragrance' });
+
+/**
+ * Mixed input (W16.C8.08, R64): one event that the engine can place in part and
+ * not in whole. Its product id is in no catalogue this tenant publishes; the
+ * `line` and the `occasion` it carries ARE values the published catalogue names;
+ * the `category` is not. Under R64 each value answers for itself, the product
+ * reference is named because the engine cannot place it, and the event is still
+ * recognized because something on it built taste.
+ */
+const MIXED_UNPLACEABLE_ID = 'COA-NOT-IN-CATALOGUE-08';
+const VIEW_MIXED_PLACED_AND_UNNAMED = productView({
+  productId: MIXED_UNPLACEABLE_ID, line: 'Tabby', category: 'Home Fragrance', occasion: ['evening'],
+});
+/** The taste that event may build: its two named values, and nothing else. */
+const TASTE_OF_MIXED_VIEW: Record<string, string[]> = { line: ['Tabby'], occasion: ['evening'] };
+
+/**
+ * An order whose ONLY product reference lives in `items[]` and is in no
+ * catalogue this tenant publishes (W16.C8.08, R64: `signals.unrecognized` names
+ * every product reference the engine cannot place, the primary one and each
+ * `items[]` id; build review finding F4).
+ */
+const ORDER_UNPLACEABLE_ITEM_ID = 'COA-NOT-IN-CATALOGUE-08-ORDER';
+const PURCHASE_UNPLACEABLE_ITEM = {
+  type: 'purchase',
+  data: {
+    orderId: 'coach-order-w16-b7-08', value: 250, currency: 'USD',
+    items: [{ productId: ORDER_UNPLACEABLE_ITEM_ID, quantity: 1, price: 250 }],
+  },
+};
+/** The same order for a product the published catalogue does name: the control. */
+const PURCHASE_NAMED_ITEM = {
+  type: 'purchase',
+  data: {
+    orderId: 'coach-order-w16-b7-08b', value: 575, currency: 'USD',
+    items: [{ productId: 'COA-CW620', quantity: 1, price: 575 }],
+  },
+};
 
 /**
  * A real Coach order for the quilted Tabby she has been looking at. Exactly the
@@ -250,17 +300,33 @@ const GUIDE_PAST_FIRST_STAGE_ORDER = ['guide-decide-editorial', 'guide-explore-e
 const STAGE_BONUS = 0.5;
 const NO_STAGE_BONUS = 0;
 
+/**
+ * The tenant's published catalogue, and therefore (R47, R64) the whole
+ * vocabulary this tenant's engine may place an input against:
+ *   · product ids — the `featuredProductIds` each piece publishes, which for a
+ *     content-only tenant is the only place its catalogue names products;
+ *   · values per dimension — `line {Rogue, Tabby}`, `category {Handbags,
+ *     Accessories}`, `occasion {festival, evening, date-night}`. The registry's
+ *     other dimensions (`subcategory`, `silhouette`, `priceBand`) are named
+ *     NOWHERE here, so under R64 this catalogue is authority over nothing there
+ *     and a value on them is never called unrecognized.
+ * Every id below is a verbatim row of `src/data/coach-catalog.json`.
+ */
 const FIXTURE_PIECES = [
   // hero: line taste. Rogue is first, so only a remembered Tabby interest moves Tabby up.
   { id: 'rogue-editorial', customerContentId: 'cms-rogue', type: 'editorial', title: 'The Rogue, Rebuilt',
-    tags: { line: ['Rogue'], category: ['Handbags'] }, slotTypes: ['hero'], lifecycle: { status: 'live' } },
+    tags: { line: ['Rogue'], category: ['Handbags'] }, slotTypes: ['hero'], lifecycle: { status: 'live' },
+    featuredProductIds: ['COA-CP133', 'COA-CCX23', 'COA-CCX21'] },
   { id: 'tabby-editorial', customerContentId: 'cms-tabby', type: 'editorial', title: 'Tabby, Every Way',
-    tags: { line: ['Tabby'], category: ['Handbags'] }, slotTypes: ['hero'], lifecycle: { status: 'live' } },
+    tags: { line: ['Tabby'], category: ['Handbags'] }, slotTypes: ['hero'], lifecycle: { status: 'live' },
+    featuredProductIds: ['COA-CW620', 'COA-CH857', 'COA-CY201', 'COA-CB925'] },
   // edit: the cross-category aesthetic, on Accessories she has never viewed.
   { id: 'festival-charms-editorial', customerContentId: 'cms-festival-charms', type: 'editorial', title: 'Festival Charms',
-    tags: { occasion: ['festival'], category: ['Accessories'] }, slotTypes: ['edit'], lifecycle: { status: 'live' } },
+    tags: { occasion: ['festival'], category: ['Accessories'] }, slotTypes: ['edit'], lifecycle: { status: 'live' },
+    featuredProductIds: ['COA-77840', 'COA-CB929'] },
   { id: 'evening-charms-editorial', customerContentId: 'cms-evening-charms', type: 'editorial', title: 'Charms For The Evening',
-    tags: { occasion: ['evening', 'date-night'], category: ['Accessories'] }, slotTypes: ['edit'], lifecycle: { status: 'live' } },
+    tags: { occasion: ['evening', 'date-night'], category: ['Accessories'] }, slotTypes: ['edit'], lifecycle: { status: 'live' },
+    featuredProductIds: ['COA-CCZ00', 'COA-CCD82'] },
   // guide: the journey stage, as an order. Only the two words both the persisted
   // grammar and the shared vocabulary agree on are used (R29: the middle word is
   // a W16 whole-item residual, so nothing here depends on it).
@@ -746,8 +812,10 @@ describe('unit:W16.C8.04', () => {
         //    taste is exactly the attributes COA-CW620 itself carries — the
         //    catalogue row quoted in the fixture — and no other line, category
         //    or aesthetic has appeared from anywhere else.
-        expect(valuesOf((await h.hydrate()).affinity?.dims),
-          `${host}: W16.C8.04 — one view builds exactly the attributes that product carries, and nothing else`)
+        // Soft, so one run measures this and the third-interaction half below on
+        // BOTH hosts; the test still fails.
+        expect.soft(valuesOf((await h.hydrate()).affinity?.dims),
+          `${host}: W16.C8.04 — one view builds exactly the values this tenant's catalogue names on the dimensions it names, and nothing else (R64)`)
           .toEqual(TASTE_OF_COA_CW620);
 
         // 3. Time to Relevance (tapestry line 147): BY the third interaction of
@@ -762,6 +830,97 @@ describe('unit:W16.C8.04', () => {
         expect(afterThree.ranking.hero,
           `${host}: W16.C8.04 — by the third interaction of the visit the page reflects the Tabby line she viewed`)
           .toEqual(['tabby-editorial', 'rogue-editorial']);
+      }
+    } finally { clock.mockRestore(); }
+  });
+});
+
+describe('unit:W16.C8.08', () => {
+  it('host: one event the engine can place only in part builds taste from its named values alone, is still recognized, names the product reference it cannot place, and the order names its unplaceable item, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        clock.mockReturnValue(T0);
+        const h = await hostFixture(host);
+        // R64 reads the admitted C8 text PER VALUE. This event carries, on one
+        // product view: an id in no catalogue this tenant publishes, a `line`
+        // and an `occasion` the published catalogue names, and a `category` it
+        // does not. The build measured by the W16-B7 review placed the WHOLE
+        // event on one named value and scored `Home Fragrance` beside them
+        // (finding F1, probe (a)); that rule is withdrawn.
+        clock.mockReturnValue(T0);
+        const mixed = await h.action(VIEW_MIXED_PLACED_AND_UNNAMED);
+        expect(mixed.status, `${host}: the mixed event is accepted — the shopper's traffic is not refused`).toBe(200);
+
+        // 1. Taste, per value: exactly the two values her tenant's catalogue
+        //    names, and no `category` at all. The `line` and `occasion` halves
+        //    of this same equality are the live control: placed values still
+        //    build taste beside the refused one.
+        expect.soft(valuesOf((await h.hydrate()).affinity?.dims),
+          `${host}: W16.C8.08 — the named values build taste and the category this tenant's catalogue does not name builds none`)
+          .toEqual(TASTE_OF_MIXED_VIEW);
+
+        // 2. The event is still RECOGNIZED: R64 makes that true when at least
+        //    one value built taste, so a partly placeable event is never
+        //    refused wholesale. Hard, because it is the control that keeps the
+        //    naming demand below from being satisfied by refusing everything.
+        expect(mixed.signals?.recognized,
+          `${host}: W16.C8.08 — at least one value built taste, so the event is recognized`).toBe(true);
+
+        // 3. …and the product reference it could not place is NAMED, whatever
+        //    else on the event was placed (R64; review finding F1).
+        expect.soft(mixed.signals?.unrecognized,
+          `${host}: W16.C8.08 — the product reference the engine cannot place is named even though other values placed`)
+          .toEqual([MIXED_UNPLACEABLE_ID]);
+
+        // 4. LIVE CONTROLS on the same shopper, from a product the published
+        //    catalogue names by id: the category dimension does build taste
+        //    when the value is one the catalogue names, and a placeable
+        //    reference is named nowhere. Without these two, an implementation
+        //    that dropped every category or echoed every id would pass.
+        clock.mockReturnValue(T0 + STEP_MS);
+        const named = await h.action(VIEW_TABBY_SHOULDER_26_HANDBAG);
+        expect(named.status, host).toBe(200);
+        // Containment, not equality: this shopper's category taste still holds
+        // whatever assertion 1 above measured, and the control's job is to show
+        // that a category value the catalogue NAMES does build taste.
+        expect(valuesOf((await h.hydrate()).affinity?.dims).category,
+          `${host}: W16.C8.08 control — a category value the catalogue names does build taste`).toContain('Handbags');
+        expect(named.signals?.unrecognized,
+          `${host}: W16.C8.08 control — a product id the published catalogue names is named nowhere as unrecognized`).toEqual([]);
+
+        // 5. The ranking still adapts to the line she viewed by the third
+        //    interaction (C8.04's half, R44): a partly placeable event is a real
+        //    interaction, not a discarded one.
+        clock.mockReturnValue(T0 + 2 * STEP_MS);
+        expect((await h.action(VIEW_TABBY_SHOULDER_20_HANDBAG)).status, host).toBe(200);
+        clock.mockReturnValue(T0 + 2 * STEP_MS);
+        const afterThree = await h.snapshot();
+        expect(afterThree, host).toMatchObject({ status: 200, ok: true, state: host });
+        expect(afterThree.ranking.hero,
+          `${host}: W16.C8.08 — by the third interaction the page reflects the line her mixed input named`)
+          .toEqual(['tabby-editorial', 'rogue-editorial']);
+
+        // 6. A purchase whose only product reference lives in `items[]` and is
+        //    in no catalogue this tenant publishes: that reference is named
+        //    (R64; review finding F4, which measured `recognized: true` with
+        //    nothing named).
+        clock.mockReturnValue(T0 + 3 * STEP_MS);
+        const order = await h.action(PURCHASE_UNPLACEABLE_ITEM);
+        expect(order.status, `${host}: the order is accepted`).toBe(200);
+        expect.soft(order.signals?.unrecognized,
+          `${host}: W16.C8.08 — the order's unplaceable items[] product reference is named`)
+          .toEqual([ORDER_UNPLACEABLE_ITEM_ID]);
+        expect.soft(order.signals?.recognized,
+          `${host}: W16.C8.08 — and nothing on that order built taste, so it is not reported as recognized`).toBe(false);
+
+        // 7. LIVE CONTROL beside 6: the same order shape for an item the
+        //    published catalogue does name reports no unplaceable reference.
+        clock.mockReturnValue(T0 + 4 * STEP_MS);
+        const namedOrder = await h.action(PURCHASE_NAMED_ITEM);
+        expect(namedOrder.status, host).toBe(200);
+        expect(namedOrder.signals?.unrecognized,
+          `${host}: W16.C8.08 control — an items[] product the published catalogue names is named nowhere as unrecognized`).toEqual([]);
       }
     } finally { clock.mockRestore(); }
   });
