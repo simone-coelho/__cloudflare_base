@@ -6,6 +6,10 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { actionEventSchema } from './realtime';
+// W16-B9 (R91, an R10 correction): the one mapping point between the reported
+// journey vocabulary and the persisted token, and the thresholds that decide
+// which word a shopper's visit has reached (src/services/JourneyStage.ts:124-186).
+import { PERSISTED_STAGE, DEFAULT_JOURNEY_THRESHOLDS } from '@/services/JourneyStage';
 import { createCore } from '../sdk/core';
 import { createEmit } from '../sdk/emit';
 import { createListen } from '../sdk/listen';
@@ -805,6 +809,21 @@ it('W06.12 propagates the original profile deadline into the actual delayed rela
     } }) } as unknown as DurableObjectNamespace;
     const action = { type: 'product_view', source: 'sdk', userId: g.subject, sessionId: g.sessionId, data: { line: 'Tabby' } };
     expect((await f.call('/realtime/action', g.capability, action)).status).toBe(200); await f.drain(); expect(sent).toHaveBeenCalled();
+    // W16-B9 (R85(b), R91): ARRANGEMENT ONLY — this test's claim (the original
+    // profile deadline propagates into the actual delayed relay send boundary) and
+    // every assertion of it are unchanged. It needs the delayed action to be one
+    // that broadcasts, and the broadcast it relied on came from the journey stage
+    // moving. Under one derivation the stage moves where the published thresholds
+    // say: no `journey` block is published here, so DEFAULT_JOURNEY_THRESHOLDS
+    // decides and `thinking` is reached at `interactions: 3`
+    // (src/services/JourneyStage.ts:181-186) — not at the second view, which is
+    // where the legacy cumulative rule moved `early → mid`
+    // (`stageFromCounters`, `product_views >= 2`, :44/:76-84). So the delayed
+    // action is her THIRD interaction of this visit, and the stage still moves
+    // exactly once.
+    expect(DEFAULT_JOURNEY_THRESHOLDS.stages.find(stage => stage.stage === 'thinking')?.anyOf?.interactions,
+      'the published default thresholds this arrangement is derived from').toBe(3);
+    expect((await f.call('/realtime/action', g.capability, action)).status).toBe(200); await f.drain();
     sent.mockClear(); delayed = true; const response = await f.call('/realtime/action', g.capability, action);
     expect(response.ok).toBe(false); expect(broadcasts).toBe(2); expect(sent).not.toHaveBeenCalled();
     expect(principal.exp * 1000).toBeGreaterThan(Date.now()); expect(storedConsent(f.objects.get(name)!.data.get('consent')).tracking).toBe(true);
@@ -3237,7 +3256,22 @@ describe('W14.05 typed source snapshots', () => {
           expect(profile(f, g).attributes).not.toHaveProperty('external.crm.tier');
           await warm(f, g);
           expect(profile(f, g).segments).toEqual([]);
-          expect(host === 'do' ? (profile(f, g) as PipelineRecord).journeyStage : (profile(f, g) as SessionData).metadata.journeyStage).toBe('early');
+          // W16-B9 (R85(b), R91): the persisted token is PERSISTED_STAGE of the word
+          // the journey engine reports for THIS arrangement, never a second
+          // derivation. `warm()` sends one `page_view` and has run three times for
+          // this shopper inside one visit (:3198, :3230, :3238); this fixture
+          // publishes no `journey` block (`fixturePublication` publishes
+          // `DEFAULT_REFLEX_CONFIG` as the reflex document), so
+          // DEFAULT_JOURNEY_THRESHOLDS decides — `thinking` at `interactions: 3`
+          // (src/services/JourneyStage.ts:181-186). Three interactions therefore
+          // report `thinking`, and the stored token is PERSISTED_STAGE.thinking.
+          // Composed through the mapping point, never copied as a literal, so the
+          // token and the mapping cannot drift apart. The clause this line belongs
+          // to — that an emptied enrichment leaves no membership and no stale
+          // stored profile — is unchanged.
+          expect(DEFAULT_JOURNEY_THRESHOLDS.stages.find(stage => stage.stage === 'thinking')?.anyOf?.interactions,
+            'the published default thresholds this expectation is derived from').toBe(3);
+          expect(host === 'do' ? (profile(f, g) as PipelineRecord).journeyStage : (profile(f, g) as SessionData).metadata.journeyStage).toBe(PERSISTED_STAGE.thinking);
         }
         await f.drain();
       }

@@ -34,7 +34,7 @@ import { enrichmentInputs } from '@/identity/profileEnrichment';
 import { consentOf, consentFromCookies, intersectConsent, refusalHints, personalizes, withConsent, type Consent } from '@/content/consent';
 import { FeatureVariableManager, type FeatureVariableResult } from './FeatureVariableManager';
 import { priceBandOf, type CatalogService, type Product } from './CatalogService';
-import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce } from './JourneyStage';
+import { advanceVisitJourney, FIRST_JOURNEY_STAGE, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, PERSISTED_STAGE, storedJourneyStage } from './JourneyStage';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
 import {
   getConnectors,
@@ -588,7 +588,13 @@ export class RealtimeSegmentEngine {
       // Demo surface filtering separates the two demos inside the default store.
       // Other tenants qualify their own authored audiences regardless of demo hints.
       if (this.tenant === DEFAULT_TENANT) ctx.surface = surface;
-      const journeyStage = deriveStage(ctx);
+      // W16 C5.09 (R85(b)): ONE derivation behind one name. The stage this host
+      // STORES is the stage the engine REPORTS for this visit, carried across to
+      // the persisted grammar through the one mapping point (R32(2)) — never the
+      // older cumulative rule, which counts her whole history and therefore
+      // still said `late` after the purchase that already closed her journey.
+      // The reported vocabulary is unchanged; only the grammar differs.
+      const journeyStage = PERSISTED_STAGE[journeyWord];
       ctx.attributes.journey_stage = journeyStage; // stage is itself an audience attribute
       // Reflex scores are computed FRESH into the context (never persisted — they
       // decay by construction), so store-published affinity audiences can gte them.
@@ -972,7 +978,11 @@ export class RealtimeSegmentEngine {
       segments
     );
     if (this.tenant === DEFAULT_TENANT) ctx.surface = surface;
-    ctx.attributes.journey_stage = deriveStage(ctx);
+    // W16 C5.09 (R85(b)): one derivation. This entry point holds no published
+    // configuration and may hold no session at all, so it qualifies against the
+    // stage this host last STORED — that value is the one derivation's own last
+    // word — and against the floor of the journey when there is none.
+    ctx.attributes.journey_stage = sessionData?.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE];
     return this.connectors.segments.fetchQualifiedSegments(userId, ctx);
   }
 
@@ -1000,7 +1010,11 @@ export class RealtimeSegmentEngine {
     if (!consent.personalization) return answer(current);
     requireConsentPurpose(consent, 'personalization');
     const interest = await bufferedInterest(this.env, this.tenant, event,
-      { ...current, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...current.attributes } }, this.connectors.segments, now);
+      { ...current, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...current.attributes },
+        // W16 C5.09 (R85(b)): a buffered delivery is never an interaction of the
+        // visit it arrives in, so it qualifies against the stage already stored.
+        journeyStage: current.metadata.journeyStage },
+      this.connectors.segments, now);
     if (!interest.applied) return answer(current, false, undefined, interest.signals);
     await this.sessionManager.writeBufferedSession(current, { preferences, reflex: interest.reflex, segments: interest.segments });
     return answer({ ...current, reflex: interest.reflex, segments: interest.segments }, true, undefined, interest.signals);
@@ -1017,7 +1031,9 @@ export class RealtimeSegmentEngine {
     const currentReflex = (this.env.REFLEX_ENABLED ?? 'true') !== 'false' && data.reflex ? tickReflex(data.reflex, now, cfg).state : undefined;
     const ctx = this.buildQualificationContext(data.userId, data.anonymousId, data.attributes, []);
     if (this.tenant === DEFAULT_TENANT) ctx.surface = surface;
-    ctx.attributes.journey_stage = deriveStage(ctx);
+    // W16 C5.09 (R85(b)): one derivation, read at `now` so this read crosses the
+    // visit boundary exactly as the hydrate and the projection do.
+    ctx.attributes.journey_stage = storedJourneyStage(data.journey, data.metadata.lastSeen, now, cfg);
     if (currentReflex) Object.assign(ctx.attributes, reflexAttributes(currentReflex, now, cfg));
     Object.assign(ctx.attributes, external.attributes);
     const local = await this.connectors.segments.fetchQualifiedSegments(data.userId, ctx);
@@ -1246,12 +1262,19 @@ export class RealtimeSegmentEngine {
     pinProfileRetention(this.env, sessionData, this.tenant);
     await this.ensureSeeded(resolveSurface({ surface: sessionData.surface }));
 
-    const odp = await projectOdpState(this.env, this.tenant, sessionData);
-    const rejectedSeed = sessionData.odpSeed?.some(s => !odp.odpSeed.includes(s));
+    // Read for the destination's retained-data authority it pins
+    // (`projectOdpState` → `pinRetention`), which the enriched segments below
+    // rely on; its projected seed no longer decides a stage here.
+    await projectOdpState(this.env, this.tenant, sessionData);
+    // W16 C5.09 (R85(b)). A rejected ODP seed used to recompute the stored stage,
+    // because the older cumulative rule let a segment PIN a stage ahead of the
+    // counts, so losing `ready_to_buy` could move it. The one derivation reads
+    // only the counters of the current visit against the published thresholds
+    // and no segment at all, so a seed this tenant no longer confirms cannot
+    // move her stage: recomputing here could only put the legacy value back.
     const current = sessionData.profileEnrichment === undefined && sessionData.odpSeed === undefined ? sessionData : {
       ...sessionData, segments: await this.enrichedSegments(sessionData, selectedConfig),
-      metadata: rejectedSeed ? { ...sessionData.metadata, journeyStage: deriveStage(this.buildQualificationContext(
-        sessionData.userId, sessionData.anonymousId, sessionData.attributes, projectedOdpSegments(sessionData.segments, sessionData, odp))) } : sessionData.metadata,
+      metadata: sessionData.metadata,
     };
     return this.getPersonalizationConfig(withConsent(current, consentOf(sessionData)), sessionId, selectedConfig);
   }

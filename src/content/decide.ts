@@ -356,6 +356,30 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     && (!i.replayRankingSlots || i.replayRankingSlots.has(spec.slot));
   const constraintDiagnostics = constraintDiagnosticsFor(eligible, specs, ranks, historicalGovernance);
   const specOf = new Map(specs.map((s) => [s.slot, s]));
+  // W20 G2 (R86(b), R86(c)): a PINNED slot that served and still could not fill
+  // its `take`. Measured from what the composer actually served
+  // against the take the document publishes, so it can never disagree with the
+  // page. A slot whose pin was refused serves nothing at all and belongs to
+  // `pinDiagnostics`, not here; an off-limits slot serves nothing on purpose; a
+  // slot a bounded replay did not re-execute never ranked; and a retained
+  // receipt decided under the former pin policy is replayed as it was written.
+  const shortTakeOf = new Map<string, { take: number; served: number; empty: number; sentence: string }>();
+  if (historicalPins !== HISTORICAL_PINS) {
+    const refusedSlots = new Set((pinDiagnostics ?? []).map((d) => d.slot));
+    const servedIn = new Map<string, number>();
+    for (const d of decisions) servedIn.set(d.slot, (servedIn.get(d.slot) ?? 0) + 1);
+    for (const spec of specs) {
+      const pins = (spec.pinnedPieceIds?.length ?? 0) + (spec.pinnedPieceId ? 1 : 0);
+      if (!pins || spec.offLimits || refusedSlots.has(spec.slot)) continue;
+      if (i.replayRankingSlots && !i.replayRankingSlots.has(spec.slot)) continue;
+      const take = spec.take, served = servedIn.get(spec.slot) ?? 0;
+      if (!Number.isSafeInteger(take) || take <= 0 || served >= take) continue;
+      const empty = take - served;
+      shortTakeOf.set(spec.slot, { take, served, empty,
+        sentence: `this pinned slot takes ${take} and served ${served}, so ${empty} position${empty === 1 ? ' was' : 's were'} left to the site's own default` });
+    }
+  }
+  const shortTakes = [...shortTakeOf].map(([slot, block]) => ({ slot, take: block.take, served: block.served, empty: block.empty }));
   // What the region contributed to this decision: Σ over the piece's tags of λ·share·w.
   const regionalOf = (d: { contentId: string; slot: string; strategy?: string }): (RegionalBlend & { contribution: number }) | null => {
     if (!historicalPins && d.strategy === 'tenant-pinned') return null;
@@ -456,6 +480,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(freshOf.has(key) ? { freshness: { ...freshOf.get(key)!, sentence: freshSentence(freshOf.get(key)!) } } : {}),
         ...(fatigueOf.has(key) ? { fatigue: { ...fatigueOf.get(key)!, sentence: fatigueSentence(fatigueOf.get(key)!) } } : {}),
         ...(d.explain.diversity ? { diversity: d.explain.diversity } : {}),
+        // W20 G2: the slot fell short of its take, on every record it did write.
+        ...(shortTakeOf.has(d.slot) ? { shortTake: { ...shortTakeOf.get(d.slot)! } } : {}),
       },
       inputs,
     };
@@ -466,6 +492,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     arm: i.arm, cell: i.cell, versions: { ...i.versions }, config_label: i.configLabel,
     regional: i.regional && i.arm !== 'default' ? (({ share: _s, ...rest }) => rest)(i.regional) : null,
     decisions, records, ...(pinDiagnostics ? { pinDiagnostics } : {}),
+    ...(shortTakes.length ? { shortTakes } : {}),
     ...(seedDiagnostics.length ? { seedDiagnostics } : {}),
     ...(constraintDiagnostics ? { constraintDiagnostics } : {}),
   };

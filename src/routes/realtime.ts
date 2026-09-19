@@ -17,7 +17,7 @@ import { storedConsent, consentOf, personalizes, type Consent } from '@/content/
 import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { validBufferedAction } from '@/reflex/bufferedAction';
 import { projectVisit, validEntry, type ChannelSignals } from '@/services/visit';
-import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, readTimeStageChange } from '@/services/JourneyStage';
+import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, persistedStageOf, readTimeStageChange } from '@/services/JourneyStage';
 import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { demoEventCaptureEnabled } from '@/services/demoEventCapture';
@@ -282,7 +282,13 @@ realtimeRoutes.post('/action', async (c) => {
             c.env,
             c.get('tenant'),
             { visitorId: actionEvent.userId, sessionId: result.sessionId },
-            aff, result.update?.data?.journeyStage,
+            // W16 C5.08 (R40(b), R85(a)): the update carries the REPORTED word,
+            // because that is what the SDK paints; the customer's own ODP
+            // profile has only ever spoken the persisted grammar, and the
+            // mirrored RTS audiences are keyed on it. Carried across by the one
+            // mapping point (R32(2)), never by a second literal here, so this
+            // host and the shopper's own object write one grammar.
+            aff, persistedStageOf(result.update?.data?.journeyStage) ?? undefined,
           )
         );
       }

@@ -1,0 +1,8 @@
+{
+  "w": "W16",
+  "verdict": "PASS",
+  "sha": "b496f72e31a06ee2d997deb3b70b1941fbbf39b7",
+  "date": "2026-09-19",
+  "reviewer_report": "/home/simonecoelho/rem/_evidence/W16/reviewer-whole/REPORT-DELTA.md",
+  "scope": "local scope of document 35 §5 row W16 (the journey stage C4 with one derivation and one persisted-token mapping point on both hosts, the consent-gated content C6, the continuity proof C5 with the unavailable retry and the bearer sentence, the per-value catalogue placement C8, the ODP wire grammar and the audience mirror); all 68 declared units W16.C4.*–C8.* green; whole-item review at 76a448c FAILED on one regression (the session host wrote the reported journey word onto ODP; a second derivation at sixteen legacy sites — R85), fixed by W16-B9 (de192bb) and PASSED by the same reviewer's delta at b496f72 with a clause-by-clause table against the W16 row (REPORT.md holds the first round, REPORT-DELTA.md the verdict); live acceptance C10, every ODP/deployed proof, the native/Miniflare leg and the customer's walkthrough stay OPEN and batched at the end; the owner items R81(b), R85(c), R85(d), R88(b) and the owed later units R96(b)/(c) (adoption dropping the visit journey, the deprecation of deriveStage/stageFromCounters, the literal floor at RealtimeSegmentEngine.ts:858) are recorded in LANE-LOG rulings R85, R88, R96 and R98"
+}

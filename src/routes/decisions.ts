@@ -36,6 +36,7 @@ import { WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
 import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
 import { receiptOf } from '@/learn/receipts';
+import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
 import { DEFAULT_EXPLORE } from '@/learn/explore';
 import type { ContentCatalog, SlotCatalog } from '@/content/types';
@@ -60,6 +61,13 @@ async function readConfig<T>(c: { env: Env }, kind: DocumentKind<T>, tenant: str
   return (await readPinnedPublication(c.env, kind, tenant, await pin)).value;
 }
 const TENANT = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+/**
+ * W20 G2 (R89(a), R94(4)): how many refused pins the served snapshot names, at
+ * most. The same sample bound the advisory pin channel already publishes
+ * (`src/content/slotDiagnostics.ts`), so both answers bound one operator-authored
+ * list the same way and the totals beside the sample say what was left out.
+ */
+const RUNTIME_PIN_SAMPLE = 50;
 const HISTORY_VISITOR = /^[A-Za-z0-9_.-]{1,200}$/;
 const HISTORY_UNAVAILABLE = 'Visitor history unavailable';
 
@@ -201,9 +209,17 @@ decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
   const [slots, catalog, learn] = await Promise.all([readConfig<SlotCatalog>(c, SLOTS_KIND, tenant), readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant)]);
   const index = slotsIndex(slots, catalog, learn, now, q);
   if (c.req.query('evidence') === '1') {
+    // W20 G2 (R83, R86(a)): beside what each slot has LEARNED, what the decision
+    // path REFUSED for it — the dead pins and the pinned slots that could not
+    // fill their take, per slot, since the horizon the block states. One read of
+    // one tenant document, joined under the same flag and the same budget as the
+    // evidence it sits next to, and never silent: a slot with nothing to report
+    // carries zeros, not an absent member.
+    const governance = await readSlotGovernance(c.env, tenant, now);
     let budget = 200;
     for (const page of index.pages) for (const s of page.slots) {
       if (budget-- <= 0) { s.evidence = null; continue; }
+      s.governance = governance.bySlot.get(s.slot) ?? emptySlotGovernance(governance.since);
       try {
         const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
         s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null;
@@ -487,6 +503,7 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
   const ledger = out.write && c.env.LEDGER_RECOVERY_ENABLED !== 'true' ? enqueueDecisions(c.env, out.records) : Promise.resolve();
   try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.afterResponse); } catch { void ledger; void out.afterResponse; }
   c.header('Cache-Control', 'no-store');
+  const refusedPins = out.pinDiagnostics ?? [];
   // Private replay inputs travel only inside authenticated encrypted offers.
   const payload = { ok: true, tenant, brand: out.brand, page: out.page, ts: out.ts, arm: out.arm,
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
@@ -494,8 +511,16 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
     // the refusal reaches nothing outside the worker: the slot silently falls back to
     // the site's own default. The decision set already names each refusal (slot, pinned
     // piece, position within the pin prefix, reason); the answer carries that array
-    // unchanged, and only when there is something to name.
-    ...(out.pinDiagnostics?.length ? { pinDiagnostics: out.pinDiagnostics } : {}),
+    // BOUNDED, and only when there is something to name.
+    //
+    // W20 G2 (R89(a)): the array is a sample of at most RUNTIME_PIN_SAMPLE entries in
+    // slot order, with the totals beside it — the count/omitted-count pattern the
+    // advisory pin channel already uses (`slotDiagnostics`). Every pin of every slot on
+    // a page is operator-authored and unbounded in number, so an unbounded member would
+    // let one published document push this answer past the size guard below and turn a
+    // served snapshot into a 503 for a shopper. Bounded here, before that guard.
+    ...(refusedPins.length ? { pinDiagnostics: refusedPins.slice(0, RUNTIME_PIN_SAMPLE),
+      refusedCount: refusedPins.length, omittedCount: Math.max(0, refusedPins.length - RUNTIME_PIN_SAMPLE) } : {}),
     ...(syntheticOperation()?.tenant === tenant && syntheticOperation()?.subject === principal.subject && syntheticOperation()?.sessionId === principal.sessionId ? { records: out.records } : {}),
     sources: out.sources, ...(context.pageInstance ? { pageInstance: context.pageInstance } : {}) };
   if (new TextEncoder().encode(JSON.stringify(payload)).byteLength > 2 * 1024 * 1024) return c.json({ ok: false, error: 'Snapshot unavailable' }, 503);
