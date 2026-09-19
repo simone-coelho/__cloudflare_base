@@ -1,9 +1,9 @@
 {
-  "generated": "2026-09-19T03:06:27.435Z",
-  "commit": "8eb6e084764ef1c876ae7c98bdb3d40456503b0a",
-  "vitest_sha256": "f1f9f6ca0662b460cac2f44192a07c40f44325d43e684b1fa5f46f386560e363",
-  "note": "serial run on integration head 3ba6aa8 (BASE-1b and W16-B3 merged), lead regeneration 2026-09-19",
-  "allow_grow_reason": "declared unit W06.BASE.02 (R22): the retention-expiry test wrapped as a unit at dbfcee2; its old name leaves the list",
+  "generated": "2026-09-19T04:47:14.991Z",
+  "commit": "a1ab2f9938dc22447fb5ca9f96c9920d20cf9fe7",
+  "vitest_sha256": "a943e7feca1f5f2dda6f945a7b415fa981077b12ac0348776a86af00643bbd08",
+  "note": "post-merge run on rem/w16-c4-build (W16-B4 build with spec fixes rounds 1-3), parallel workers 4",
+  "allow_grow_reason": null,
   "failures": [
     " CW31 consent on the content service W04.02 owned state honors a prior false hint without restoring legacy profile mirrors",
     " CW31 consent on the content service W06.05 checks erasure in the background and suppresses unavailable or pre-cutoff fan-out without blocking the decision response",

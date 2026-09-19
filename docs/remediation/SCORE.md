@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 16/22 · W closed 0/26 (W16–W41) · suite 1792/1877 · residual 85 in 10 files · typecheck GREEN
+Units 36/42 · W closed 0/26 (W16–W41) · suite 1824/1909 · residual 85 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -15,7 +15,7 @@ Units 16/22 · W closed 0/26 (W16–W41) · suite 1792/1877 · residual 85 in 10
 | W06 | 2 | 0 | no | — | — |
 | W09 | 1 | 0 | no | — | — |
 | W11 | 1 | 0 | no | — | — |
-| W16 | 15 | 15 | no | — | — |
+| W16 | 35 | 35 | no | — | — |
 | W37 | 1 | 0 | no | — | — |
 
 ## Units
@@ -43,6 +43,26 @@ Units 16/22 · W closed 0/26 (W16–W41) · suite 1792/1877 · residual 85 in 10
 | W16.C2.13 | green | 2 |
 | W16.C2.14 | green | 1 |
 | W16.C2.15 | green | 1 |
+| W16.C3.01 | green | 3 |
+| W16.C3.02 | green | 1 |
+| W16.C3.03 | green | 1 |
+| W16.C3.04 | green | 2 |
+| W16.C3.05 | green | 1 |
+| W16.C3.06 | green | 1 |
+| W16.C3.07 | green | 1 |
+| W16.C3.08 | green | 2 |
+| W16.C3.09 | green | 2 |
+| W16.C4.01 | green | 1 |
+| W16.C4.02 | green | 2 |
+| W16.C4.03 | green | 1 |
+| W16.C4.04 | green | 1 |
+| W16.C4.05 | green | 2 |
+| W16.C4.06 | green | 1 |
+| W16.C4.07 | green | 1 |
+| W16.C4.08 | green | 3 |
+| W16.C7.01 | green | 2 |
+| W16.C7.02 | green | 2 |
+| W16.C8.01 | green | 2 |
 | W37.BASE.01 | red | 1 |
 
 ## Failing tests outside the baseline
@@ -54,7 +74,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 4fecac5800319330f6102a490624cf4d9c687c17429bf228a47b25843177c6ce |
+| units sha256 | 39b96d79b84116fa389d6b2813cdccd681d7340d7209b8d5b03c15a6011aea03 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -65,7 +85,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | f1f9f6ca0662b460cac2f44192a07c40f44325d43e684b1fa5f46f386560e363 |
-| commit | 8eb6e084764ef1c876ae7c98bdb3d40456503b0a |
-| generated | 2026-09-19T03:06:27.551Z |
+| vitest report | suite.json (outside the checkout) |
+| vitest report sha256 | a943e7feca1f5f2dda6f945a7b415fa981077b12ac0348776a86af00643bbd08 |
+| commit | a1ab2f9938dc22447fb5ca9f96c9920d20cf9fe7 |
+| generated | 2026-09-19T04:47:15.115Z |
