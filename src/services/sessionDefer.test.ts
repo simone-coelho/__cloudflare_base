@@ -125,12 +125,17 @@ it('W04.02 a verified fresh SID survives deferred writes without restoring cooki
 describe('CW37: the session write leaves the decision path', () => {
   it('sends the record and its pointer together rather than one after the other', async () => {
     kv.delayMs = 40;
-    const started = Date.now();
+    // Ruling R65: "together, not one after the other" is a relation between the two sends, so
+    // it is asserted as one — each write starts while no write has finished — instead of an
+    // absolute wall clock. The old `toBeLessThan(75)` measured the machine (112-119 ms with
+    // four lanes running, ~80 ms idle) and failed while the property itself held. This form is
+    // strictly stronger: a sequential pair records [0, 1] and can never satisfy it.
+    const put = kv.put.bind(kv);
+    const finishedWhenStarted: number[] = [];
+    kv.put = async (key: string, value: string) => { finishedWhenStarted.push(kv.putsFinished); return put(key, value); };
     await held('v1', true, () => mgr.createOrUpdateSession('s1', 'v1', { segments: ['a'] }));
-    const took = Date.now() - started;
     expect(kv.putsFinished).toBe(2);
-    // Two 40 ms writes in sequence cannot finish in under 80 ms; together they can.
-    expect(took).toBeLessThan(75);
+    expect(finishedWhenStarted).toEqual([0, 0]);
   });
 
   it('returns before the writes finish when it is given somewhere to put them', async () => held('v1', true, async () => {
