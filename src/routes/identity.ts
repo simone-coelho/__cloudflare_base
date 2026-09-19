@@ -28,9 +28,13 @@ import { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';
 import { applyHistory, HistoryCsvError, historyRowSchema, parseHistoryCsv, MAX_ROWS } from '@/identity/history';
 import { eraseSubject, reconcileErasure, erasureReconciliationSchema, ErasureFailure } from '@/identity/erase';
 import type { AuthContext } from '@/middleware/auth';
-import { requireShopper, shopperPrincipal, capabilityToken, verifySessionCapability, issueSessionCapability, signSessionCapability, assertSessionTarget, SessionAccessError } from '@/identity/sessionCapability';
+import { requireShopper, shopperPrincipal, capabilityToken, verifySessionCapability, issueSessionCapability, signSessionCapability, assertSessionTarget, readContinuityProof, CONTINUITY_COOKIE, SHOPPER_HEADER, SessionAccessError, type ContinuityDescriptor } from '@/identity/sessionCapability';
 import { anonymousWithConsent, establishRefusal, ownedConsent, rotateObjectSession } from '@/identity/consentContinuity';
-import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
+import { consentFromCookies, intersectConsent, personalizes, refusalHints, storedConsent, type Consent } from '@/content/consent';
+import { publishedContinuity } from '@/reflex/configStore';
+import { resolveTenantReflexConfigRevision } from '@/demos/registry';
+import { shopperObject } from '@/tenancy/objects';
+import type { ContinuitySettings } from '@/reflex/core';
 import { tenantForRequest } from '@/tenancy/middleware';
 import { profileRowSchema } from '@/identity/profileEnrichment';
 import { auditedSubjectOperation } from '@/auth/subjectAudit';
@@ -73,6 +77,144 @@ function tenantOf(c: { req: { param(name: string): string | undefined } }): stri
   return TENANT.test(t) ? t : null;
 }
 
+// ── W16 C6: anonymous return continuity on the session route ────────────────
+//
+// The route the SDK already calls on every page load also answers ONE question
+// about return recognition, and the answer is always explicit:
+//
+//   { enabled: false, reason: 'unpublished' }  this tenant published no block
+//   { enabled: false, reason: 'incomplete'  }  it published one that is not a
+//                                              configuration yet
+//   { enabled: false, reason: 'consent'     }  it is configured, and THIS
+//                                              shopper has made no current
+//                                              explicit choice
+//   { enabled: true, mode, purpose, generation, expiresAt, revision, proof? }
+//
+// Activation stays absent: nothing here supplies a mode, a window or a covered
+// purpose, so an engine with nothing published recognizes nobody and a return
+// after the capability expires is a cold shopper. `proof` is present only in
+// direct mode; in broker mode the long proof leaves only as the first-party
+// `opt_shopper_continuity` cookie and the body carries none.
+
+interface ContinuityInForce { settings: ContinuitySettings; revision: number }
+type ContinuityDecision = ContinuityInForce | { reason: 'unpublished' | 'incomplete' };
+export type ContinuityReport =
+  | { enabled: false; reason: 'unpublished' | 'incomplete' | 'consent' }
+  | { enabled: true; mode: 'direct' | 'broker'; purpose: string; generation: number;
+    expiresAt: number; revision: number; proof?: string };
+
+const inForce = (decision: ContinuityDecision): decision is ContinuityInForce => 'settings' in decision;
+
+/** The published block and the revision a descriptor binds to. An unreadable
+ * configuration is not a reason to recognize anyone: it reports unpublished. */
+async function continuityInForce(env: Env, tenant: string): Promise<ContinuityDecision> {
+  try {
+    const resolved = await resolveTenantReflexConfigRevision(env, tenant);
+    const published = publishedContinuity(resolved.config);
+    return published.published ? { settings: published.settings, revision: resolved.revision } : { reason: published.reason };
+  } catch { return { reason: 'unpublished' }; }
+}
+
+/** The long proof never enters a body in broker mode, and never a cookie in
+ * direct mode. Bound to the first party, unreadable to script, and never
+ * outliving the chain it carries. */
+function continuityCookie(proof: string, expiresAt: number): string {
+  const maxAge = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+  return `${CONTINUITY_COOKIE}=${proof}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Lax`;
+}
+
+function cookieValueOf(header: string | null | undefined, name: string): string | undefined {
+  for (const part of (header ?? '').split(';')) {
+    const at = part.indexOf('=');
+    if (at > 0 && part.slice(0, at).trim() === name) return part.slice(at + 1).trim();
+  }
+  return undefined;
+}
+
+const descriptorReport = (d: ContinuityDescriptor, proof: string, setCookie: (value: string) => void): ContinuityReport => {
+  if (d.mode === 'broker') {
+    setCookie(continuityCookie(proof, d.expiresAt));
+    return { enabled: true, mode: 'broker', purpose: d.purpose, generation: d.generation, expiresAt: d.expiresAt, revision: d.revision };
+  }
+  return { enabled: true, mode: 'direct', purpose: d.purpose, generation: d.generation, expiresAt: d.expiresAt, revision: d.revision, proof };
+};
+
+/** The owner object's answer, read without trusting its shape. */
+function ownerDescriptor(value: unknown, tenant: string, subject: string): ContinuityDescriptor | null {
+  const d = value as Partial<ContinuityDescriptor> | null;
+  if (!d || d.tenant !== tenant || d.subject !== subject || (d.mode !== 'direct' && d.mode !== 'broker')
+    || typeof d.purpose !== 'string' || !Number.isSafeInteger(d.generation) || !Number.isSafeInteger(d.issuedAt)
+    || !Number.isSafeInteger(d.expiresAt) || !Number.isSafeInteger(d.revision) || typeof d.chain !== 'string') return null;
+  return d as ContinuityDescriptor;
+}
+
+/**
+ * Ask the shopper's own object for the chain her browser should carry. Only the
+ * object mints one, because only the object holds the generation, the digest
+ * and the authority this recognition belongs to. Anything short of an issued
+ * descriptor is reported as disabled — this never opens a session it could not
+ * prove, and never turns a failure into a recognition.
+ */
+async function reportContinuity(env: Env, tenant: string, decision: ContinuityDecision,
+  session: { subject: string; capability: string; consent?: Consent },
+  setCookie: (value: string) => void): Promise<ContinuityReport> {
+  if (!inForce(decision)) return { enabled: false, reason: decision.reason };
+  if (!personalizes(storedConsent(session.consent))) return { enabled: false, reason: 'consent' };
+  try {
+    const response = await shopperObject(env.SHOPPER_REFLEX, session.subject, tenant)
+      .fetch('https://shopper-reflex/identity/continuity/issue', {
+        method: 'POST', headers: { [SHOPPER_HEADER]: session.capability, 'X-Tenant': tenant, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: decision.settings.mode, windowMs: decision.settings.windowMs,
+          purpose: decision.settings.purpose, revision: decision.revision }),
+      });
+    if (!response.ok) return { enabled: false, reason: 'consent' };
+    const body = await response.json() as { ok?: unknown; enabled?: unknown; descriptor?: unknown; proof?: unknown };
+    if (body.ok !== true || body.enabled !== true || typeof body.proof !== 'string') return { enabled: false, reason: 'consent' };
+    const descriptor = ownerDescriptor(body.descriptor, tenant, session.subject);
+    return descriptor ? descriptorReport(descriptor, body.proof, setCookie) : { enabled: false, reason: 'consent' };
+  } catch { return { enabled: false, reason: 'consent' }; }
+}
+
+const OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * A return. The proof arrives by the published transport and only by it, is
+ * verified here for signature, tenant, transport, covered purpose, revision and
+ * its own fixed expiry, and is then consumed by the object that owns the
+ * subject. A proof this route cannot place answers `null`: the caller goes on
+ * to open a brand-new anonymous session, which is what a cold shopper is.
+ */
+async function consumeContinuity(env: Env, tenant: string, decision: ContinuityDecision, request: Request,
+  presented: unknown, hints: Consent, setCookie: (value: string) => void): Promise<{ grant: unknown; consent: unknown; report: ContinuityReport } | null> {
+  if (!inForce(decision)) return null;
+  // A browser that arrives withdrawing a switch is not asking to be recognized.
+  // Transition hints can only restrict, so a refusal is refused recognition.
+  if (!personalizes(hints)) return null;
+  const offered = presented as { proof?: unknown; operationId?: unknown } | undefined;
+  const proof = decision.settings.mode === 'broker'
+    ? cookieValueOf(request.headers.get('Cookie'), CONTINUITY_COOKIE)
+    : typeof offered?.proof === 'string' ? offered.proof : undefined;
+  const operationId = typeof offered?.operationId === 'string' ? offered.operationId : undefined;
+  if (!proof || !operationId || !OPERATION_ID.test(operationId)) return null;
+  const descriptor = await readContinuityProof(env, proof, tenant);
+  if (!descriptor || descriptor.mode !== decision.settings.mode || descriptor.revision !== decision.revision
+    || descriptor.purpose !== decision.settings.purpose || descriptor.expiresAt <= Date.now()) return null;
+  const response = await shopperObject(env.SHOPPER_REFLEX, descriptor.subject, tenant)
+    .fetch('https://shopper-reflex/identity/continuity/consume', {
+      method: 'POST', headers: { 'X-Reflex-Tenant': tenant, 'X-Reflex-Subject': descriptor.subject, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proof, operationId, settings: { mode: decision.settings.mode, windowMs: decision.settings.windowMs,
+        purpose: decision.settings.purpose, revision: decision.revision } }),
+    });
+  if (!response.ok) return null;
+  const body = await response.json() as { ok?: unknown; recognized?: unknown; grant?: unknown; consent?: unknown; descriptor?: unknown; proof?: unknown };
+  if (body.ok !== true || body.recognized !== true || typeof body.proof !== 'string' || body.consent === undefined) return null;
+  const rotated = ownerDescriptor(body.descriptor, tenant, descriptor.subject);
+  const grant = body.grant as { tenant?: unknown; subject?: unknown; kind?: unknown } | null;
+  if (!rotated || rotated.chain !== descriptor.chain || rotated.expiresAt !== descriptor.expiresAt
+    || !grant || grant.tenant !== tenant || grant.subject !== descriptor.subject || grant.kind !== 'anonymous') return null;
+  return { grant, consent: body.consent, report: descriptorReport(rotated, body.proof, setCookie) };
+}
+
 /**
  * The link. Returns the id the client carries from now on. On the session host
  * the response also sets the session cookie to the person's session, so every
@@ -86,19 +228,32 @@ identityRoutes.post('/:tenant/identity/session', async (c) => {
     const principal = await verifySessionCapability(c.env, incoming, tenant);
     if (!shopperRequestHeld(c.req.raw, principal)) return forwardShopperRequest(c.env, c.req.raw, principal);
   }
-  let body: { consent?: unknown } = {};
+  let body: { consent?: unknown; continuity?: unknown } = {};
   try { const text = await c.req.text(); if (text) body = JSON.parse(text); } catch { return c.json({ ok: false, error: 'invalid JSON body' }, 400); }
   const hints = intersectConsent(consentFromCookies(c.req.header('Cookie')), refusalHints(body?.consent));
   const token = capabilityToken(c.req.raw);
+  const setCookie = (value: string) => c.header('Set-Cookie', value, { append: true });
+  const decision = await continuityInForce(c.env, tenant);
   let session;
-  if (token === null) session = await anonymousWithConsent(c.env, tenant, hints);
-  else {
+  let continuity: ContinuityReport | undefined;
+  if (token === null) {
+    // W16 C6: a browser with no capability may still be a shopper this engine
+    // recognizes. The consume is atomic in her own object; anything else opens
+    // a brand-new anonymous session, which is exactly a cold shopper.
+    const returned = await consumeContinuity(c.env, tenant, decision, c.req.raw, body?.continuity, hints, setCookie);
+    if (returned) {
+      session = { ...await signSessionCapability(c.env, returned.grant as Parameters<typeof signSessionCapability>[1]),
+        consent: storedConsent(returned.consent) };
+      continuity = returned.report;
+    } else session = await anonymousWithConsent(c.env, tenant, hints);
+  } else {
     const principal = await verifySessionCapability(c.env, token, tenant);
     const consent = intersectConsent(await ownedConsent(c.env, principal, token), hints);
     session = { ...principal, capability: token, consent: await establishRefusal(c.env, principal, token, consent) };
   }
+  continuity ??= await reportContinuity(c.env, tenant, decision, session, setCookie);
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, session });
+  return c.json({ ok: true, session, continuity });
 });
 
 identityRoutes.post('/:tenant/identity/link', requireShopper({ forward: false }), async (c) => {

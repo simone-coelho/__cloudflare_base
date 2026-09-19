@@ -71,6 +71,112 @@ async function encodeSessionCapability(env: Env, principal: SessionCapability, v
   const signature = await crypto.subtle.sign('HMAC', key, message(cfg.issuer, cfg.audience, payload));
   return { capability: `${PREFIX}.${payload}.${encoded(new Uint8Array(signature))}`, ...principal };
 }
+// ── W16 C6: the anonymous return-recognition proof ──────────────────────────
+//
+// A SEPARATE credential from the session capability above, and deliberately not
+// a longer-lived one of them (HANDOFF-2026-09-18 §7, §12). The capability is a
+// bounded bearer for a browsing session; this is a purpose- and transport-bound
+// recognition proof for ONE physical subject on ONE device, whose whole life is
+// fixed at issue by the tenant's published window. The two are signed over
+// different context strings with different prefixes, so neither can ever be
+// presented as the other, and nothing here derives anything from the device: a
+// proof is recognized because the shopper's own browser still holds it.
+//
+// The token is DETERMINISTIC in its descriptor: rotating a chain to its next
+// generation re-derives the successor rather than minting a secret that would
+// then have to be stored. That is what lets the owner object keep only the
+// digest, the generation and the fixed expiry.
+const CONTINUITY_PREFIX = 'rc1';
+/** Ruled member: the broker-mode cookie that carries the long proof. */
+export const CONTINUITY_COOKIE = 'opt_shopper_continuity';
+const CONTINUITY_MAX_PURPOSE = 120;
+
+export interface ContinuityDescriptor {
+  tenant: string;
+  /** The physical subject the chain recognizes. Anonymous only: a recognized
+   * shopper is signed in, and linking retires the descriptor. */
+  subject: string;
+  /** The chain this descriptor belongs to. A new descriptor starts a new one. */
+  chain: string;
+  /** 1 for the first descriptor of a chain, one more per consume. */
+  generation: number;
+  /** When the chain was issued. */
+  issuedAt: number;
+  /** The chain's ORIGINAL FIXED expiry: issue time plus the published window.
+   * Rotation, browsing and renewal never move it. */
+  expiresAt: number;
+  /** The transport published when the chain was issued. */
+  mode: 'direct' | 'broker';
+  /** The covered purpose the credential is bound to. */
+  purpose: string;
+  /** The published reflex document revision the chain is bound to. */
+  revision: number;
+}
+
+function continuityMessage(issuer: string, audience: string, payload: string) {
+  // A different context string from the capability's: the same key can never
+  // make one credential verify as the other.
+  return bytes.encode(JSON.stringify(['shopper-continuity-proof/v1', issuer, audience, payload]));
+}
+
+/** One canonical member order, so the same descriptor always signs identically. */
+function canonicalDescriptor(d: ContinuityDescriptor): ContinuityDescriptor {
+  return { tenant: d.tenant, subject: d.subject, chain: d.chain, generation: d.generation,
+    issuedAt: d.issuedAt, expiresAt: d.expiresAt, mode: d.mode, purpose: d.purpose, revision: d.revision };
+}
+
+function validContinuityDescriptor(d: ContinuityDescriptor): boolean {
+  return !!d && typeof d === 'object' && !Array.isArray(d) && Object.keys(d).length === 9
+    && isValidTenantId(d.tenant)
+    && typeof d.subject === 'string' && /^vis-[0-9a-f-]{36}$/.test(d.subject)
+    && typeof d.chain === 'string' && /^[0-9a-f-]{36}$/.test(d.chain)
+    && Number.isSafeInteger(d.generation) && d.generation >= 1
+    && Number.isSafeInteger(d.issuedAt) && d.issuedAt >= 0
+    && Number.isSafeInteger(d.expiresAt) && d.expiresAt > d.issuedAt
+    && (d.mode === 'direct' || d.mode === 'broker')
+    && typeof d.purpose === 'string' && d.purpose.length > 0 && d.purpose.length <= CONTINUITY_MAX_PURPOSE
+    && Number.isSafeInteger(d.revision) && d.revision >= 0;
+}
+
+/** The signed proof for exactly this descriptor. Deterministic. */
+export async function issueContinuityProof(env: Env, descriptor: ContinuityDescriptor): Promise<string> {
+  const cfg = config(env);
+  const canonical = canonicalDescriptor(descriptor);
+  if (!validContinuityDescriptor(canonical)) throw new SessionAccessError();
+  const payload = encoded(bytes.encode(JSON.stringify(canonical)));
+  const key = await crypto.subtle.importKey('raw', cfg.key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', key, continuityMessage(cfg.issuer, cfg.audience, payload));
+  return `${CONTINUITY_PREFIX}.${payload}.${encoded(new Uint8Array(signature))}`;
+}
+
+/**
+ * The descriptor a presented proof carries, or null. Never throws and never
+ * refuses the request: an unknown, tampered, foreign or malformed proof is a
+ * shopper the engine does not recognize, which is a COLD shopper, not an error.
+ */
+export async function readContinuityProof(env: Env, proof: unknown, tenant: string): Promise<ContinuityDescriptor | null> {
+  try {
+    const cfg = config(env);
+    if (typeof proof !== 'string' || proof.length > 2048) return null;
+    const parts = proof.split('.');
+    if (parts.length !== 3 || parts[0] !== CONTINUITY_PREFIX) return null;
+    const signature = decoded(parts[2]!);
+    if (signature.length !== 32) return null;
+    const key = await crypto.subtle.importKey('raw', cfg.key, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+    if (!await crypto.subtle.verify('HMAC', key, signature, continuityMessage(cfg.issuer, cfg.audience, parts[1]!))) return null;
+    const descriptor = JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: false })
+      .decode(decoded(parts[1]!))) as ContinuityDescriptor;
+    if (!validContinuityDescriptor(descriptor) || descriptor.tenant !== tenant) return null;
+    return Object.freeze(canonicalDescriptor(descriptor));
+  } catch { return null; }
+}
+
+/** The digest form this codebase already keeps for stored proofs (`erase.ts`). */
+export async function continuityDigest(proof: string): Promise<string> {
+  const out = await crypto.subtle.digest('SHA-256', bytes.encode(proof));
+  return Array.from(new Uint8Array(out), b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function newAnonymousSession(env: Env, tenant: string) {
   return issueSessionCapability(env, { tenant, subject: `vis-${crypto.randomUUID()}`, sessionId: `s-${crypto.randomUUID()}`, kind: 'anonymous' });
 }

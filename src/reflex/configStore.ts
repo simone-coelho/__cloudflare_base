@@ -38,7 +38,7 @@
 // CACHE_TTL_MS below, and a write invalidates the writing isolate at once.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { DEFAULT_REFLEX_CONFIG, type DimensionSpec, type ReflexConfig } from '@/reflex/core';
+import { DEFAULT_REFLEX_CONFIG, type ContinuitySettings, type DimensionSpec, type ReflexConfig } from '@/reflex/core';
 import { validateJourneyThresholds } from '@/services/JourneyStage';
 import type { Env } from '@/types/env';
 import { readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
@@ -233,6 +233,65 @@ function validateDimension(errors: string[], d: unknown, i: number, seen: Set<st
   }
 }
 
+// ── W16 C6: the published return-continuity block (R32(1), R48(b)) ──────────
+//
+// The block rides this document, so it is validated by this validator and an
+// unknown member never becomes part of the set in force. Being INCOMPLETE is
+// deliberately NOT a publication error. Two reasons, both load bearing:
+//
+//   1. The block is one clause of a document that also carries the weights,
+//      the decay horizon, the thresholds and the journey ladder. Refusing the
+//      whole publication because a covered purpose has not been approved yet
+//      would take the engine's tuning down with it.
+//   2. An incomplete block must be OBSERVABLE as "continuity is off, and here
+//      is why" rather than invisible. `publishedContinuity` below is the single
+//      reader every caller uses, and it answers `incomplete` — the session
+//      route reports that, and nothing is issued. Fail closed, and say so.
+
+const CONTINUITY_MEMBERS = new Set(['mode', 'windowMs', 'purpose', 'retentionApproved']);
+/** The longest covered purpose a descriptor can be bound to; it travels in every proof. */
+const MAX_CONTINUITY_PURPOSE = 120;
+
+function validateContinuity(errors: string[], value: unknown): void {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    errors.push('continuity must be a JSON object'); return;
+  }
+  for (const key of Object.keys(value as Record<string, unknown>)) {
+    if (!CONTINUITY_MEMBERS.has(key)) {
+      errors.push(`continuity.${key} is not one of the continuity block's members (${[...CONTINUITY_MEMBERS].join(', ')})`);
+    }
+  }
+  const purpose = (value as { purpose?: unknown }).purpose;
+  if (typeof purpose === 'string' && purpose.length > MAX_CONTINUITY_PURPOSE) {
+    errors.push(`continuity.purpose must be at most ${MAX_CONTINUITY_PURPOSE} characters`);
+  }
+}
+
+/** What a published document says about continuity. The only reader; nobody
+ * else interprets the block, so "disabled" has exactly one definition. */
+export type PublishedContinuity =
+  | { published: false; reason: 'unpublished' | 'incomplete' }
+  | { published: true; settings: ContinuitySettings };
+
+/**
+ * COMPLETE means all four members, a transport inside the vocabulary, a finite
+ * positive window, a non-empty covered purpose and a retention approval that is
+ * exactly `true`. Anything else leaves continuity disabled, and the reason
+ * separates "this tenant has published nothing" from "this tenant published
+ * something that is not a configuration yet".
+ */
+export function publishedContinuity(config: { continuity?: unknown } | null | undefined): PublishedContinuity {
+  const block = config?.continuity;
+  if (block === undefined || block === null) return { published: false, reason: 'unpublished' };
+  if (typeof block !== 'object' || Array.isArray(block)) return { published: false, reason: 'incomplete' };
+  const { mode, windowMs, purpose, retentionApproved } = block as Partial<ContinuitySettings>;
+  if ((mode !== 'direct' && mode !== 'broker')
+    || typeof windowMs !== 'number' || !Number.isFinite(windowMs) || windowMs <= 0
+    || typeof purpose !== 'string' || purpose.trim() === '' || purpose.length > MAX_CONTINUITY_PURPOSE
+    || retentionApproved !== true) return { published: false, reason: 'incomplete' };
+  return { published: true, settings: { mode, windowMs, purpose, retentionApproved: true } };
+}
+
 /**
  * Total validation of an untrusted candidate. Returns every error, not the
  * first: a merchandiser fixing a form should see the whole list once.
@@ -266,6 +325,8 @@ export function validateReflexConfig(candidate: unknown): ValidationResult {
   // last published revision keeps deciding. Absent is valid: no thresholds are
   // published yet, and the engine reports the first stage with a diagnostic.
   if (c.journey !== undefined) errors.push(...validateJourneyThresholds(c.journey));
+  // W16 C6 (R32(1), R48(b)1): the continuity block rides this document too.
+  if (c.continuity !== undefined) validateContinuity(errors, c.continuity);
 
   if (!Array.isArray(c.dimensions)) {
     errors.push('dimensions must be an array');
@@ -481,6 +542,9 @@ export interface ReflexConfigPatch {
   eventAttributes?: 'catalog-only' | 'event-when-unknown';
   /** W16 C4: the whole journey block, replaced as a unit — a stage ladder is not merged by position. */
   journey?: ReflexConfig['journey'];
+  /** W16 C6: the whole continuity block, replaced as a unit — a half-merged
+   * transport/window/purpose/approval set is not a configuration. */
+  continuity?: ReflexConfig['continuity'];
   weights?: Record<string, number>;
   dimensions?: Array<Partial<DimensionSpec> & { key: string }>;
 }
@@ -497,7 +561,7 @@ export interface ReflexConfigPatch {
 export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): ReflexConfig {
   const next = structuredCopy(base) as ReflexConfig;
 
-  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey'] as const) {
+  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey', 'continuity'] as const) {
     if (patch[field] !== undefined) (next as unknown as Record<string, unknown>)[field] = patch[field];
   }
   if (patch.weights) next.weights = { ...next.weights, ...patch.weights };
