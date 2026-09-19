@@ -67,6 +67,14 @@ export interface SocketLike {
 export interface ElementLike {
   getAttribute(name: string): string | null;
   addEventListener(type: string, listener: (ev: unknown) => void): void;
+  /**
+   * The release half of `addEventListener`. Real lifecycle ownership needs it:
+   * a guard that merely ignores a second bind still leaves the first listener
+   * on a node whose attributes changed underneath it (F34 §3/§6). Optional
+   * only because a port may be read-only; where it is absent the SDK keeps the
+   * handler inert instead, and the node keeps a listener it can never fire.
+   */
+  removeEventListener?(type: string, listener: (ev: unknown) => void): void;
 }
 
 /** The slice of a document the declarative capture path needs. */
@@ -119,7 +127,13 @@ export type SdkEventType =
   | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete'
   | 'email_open' | 'form_submit' | 'button_click' | 'custom';
 
-export interface EntrySignals { utmMedium: string; utmSource: string; referrer: string; siteHost: string }
+/**
+ * `utmTerm` is the campaign's search keyword, present only when the page load
+ * carries one within its bound: a keyword is a seeding signal, never evidence of
+ * a channel, and an absent one is absent rather than empty so the arrival every
+ * other page load sends is unchanged.
+ */
+export interface EntrySignals { utmMedium: string; utmSource: string; utmTerm?: string; referrer: string; siteHost: string }
 
 /** The envelope POST /realtime/action validates. Field for field what the demo storefront sends. */
 export interface ActionEnvelope {

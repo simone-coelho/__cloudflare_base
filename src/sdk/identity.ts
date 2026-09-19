@@ -5,6 +5,7 @@
 // cookie as fallback, both written. The formats are the demo storefront's,
 // verbatim, so a visitor known to the demo is the same visitor to the SDK.
 
+import { ENTRY_TERM_LIMIT } from '../services/visit';
 import type { EntrySignals, Host } from './types';
 
 export const DEFAULT_VISITOR_KEY = 'opt_visitor_id';
@@ -68,11 +69,21 @@ export function rotateBrowsingSession(host: Host, key = DEFAULT_SESSION_KEY): vo
  * one that crosses a visit boundary. The server decides that.
  */
 export function entrySignals(host: Host): EntrySignals {
-  let utmMedium = '', utmSource = '';
+  let utmMedium = '', utmSource = '', utmTerm = '';
   try {
     const usp = new URLSearchParams(host.location?.search ?? '');
     utmMedium = usp.get('utm_medium') ?? '';
     utmSource = usp.get('utm_source') ?? '';
+    // The campaign's search keyword, for the slots that publish a contextual
+    // seed rule for it. Refused rather than trimmed at its own bound, the same
+    // one the server boundary enforces: a truncated keyword is a DIFFERENT
+    // keyword, and it could seed a rule this arrival is not evidence for. The
+    // rest of the arrival still travels, so an overlong term costs the term only.
+    utmTerm = usp.get('utm_term') ?? '';
+    if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = '';
   } catch { /* no search */ }
-  return { utmMedium, utmSource, referrer: host.referrer ?? '', siteHost: host.location?.hostname ?? '' };
+  // Absent stays absent: a page load with no keyword carries no keyword field,
+  // so the arrival every other page load sends is unchanged.
+  return { utmMedium, utmSource, ...(utmTerm ? { utmTerm } : {}),
+    referrer: host.referrer ?? '', siteHost: host.location?.hostname ?? '' };
 }

@@ -74,6 +74,44 @@ export const GA4_MAPPING: DataLayerMapping = {
   },
 };
 
+/**
+ * One wrapper per page tag layer, however many clients and attachments capture
+ * from it. The page's `push` is wrapped when the first attachment arrives and
+ * its own function is handed back only when the last one is released, so
+ * releasing one attachment can never remove another's — the defect
+ * HANDOFF-2026-09-16 §6 reproduced ("A's teardown restores an older `push`,
+ * removing B's still-active wrapper") and F34 §2G recorded. The layer is the
+ * page's, not a client's, so this registry is keyed by the array itself; it
+ * holds no page, tenant or customer state of its own.
+ */
+interface LayerAttachment { handle: (entry: unknown) => void; refs: number; live: boolean }
+interface LayerRegistry {
+  original: (...items: unknown[]) => number;
+  wrapper: (...items: unknown[]) => number;
+  attached: Map<object, LayerAttachment>;
+}
+const layerRegistries = new WeakMap<object, LayerRegistry>();
+
+function layerRegistryFor(layer: unknown[]): LayerRegistry {
+  const existing = layerRegistries.get(layer);
+  if (existing && layer.push === existing.wrapper) return existing;
+  // Either nothing has wrapped this layer yet, or something outside the SDK
+  // replaced `push` after we did; in both cases the function now on the layer
+  // is the one a release has to put back.
+  const original = layer.push as (...items: unknown[]) => number;
+  const registry: LayerRegistry = {
+    original, attached: existing?.attached ?? new Map<object, LayerAttachment>(),
+    wrapper: function (this: unknown[], ...args: unknown[]): number {
+      const result = original.apply(layer, args);
+      for (const entry of args) for (const attachment of [...registry.attached.values()]) attachment.handle(entry);
+      return result;
+    },
+  };
+  layer.push = registry.wrapper;
+  layerRegistries.set(layer, registry);
+  return registry;
+}
+
 export function createEmit(core: Core, listen: Listen): Emit {
   const host = core.host;
   const track = async (type: SdkEventType, input: Record<string, unknown> | (() => Record<string, unknown>) = {}): Promise<EngineUpdate | null> => {
@@ -91,15 +129,21 @@ export function createEmit(core: Core, listen: Listen): Emit {
   const withItem = (type: SdkEventType) => (productId: string, attrs: Record<string, unknown> = {}) => core.send(type, () => ({ productId, ...attrs }));
   const withContent = (type: SdkEventType) => (contentId: string, slot: string, attrs: Record<string, unknown> = {}) => track(type, () => ({ contentId, slot, ...attrs }));
 
-  function declarative(opts: DeclarativeOptions = {}): () => void {
-    if (core.config.listenOnly) return () => {};
-    const dom = opts.dom ?? host.dom;
-    if (!dom) return () => {};
-    const dwellMinMs = opts.dwellMinMs ?? 1_000;
-    const offs: Array<() => void> = [];
+  /**
+   * One declarative attachment per document this client scans. Binding the
+   * same document again — a route re-render, React StrictMode's double-invoked
+   * effect — joins the attachment already live instead of laying a second
+   * listener over every element, and the page's nodes come back only when the
+   * last hold is released (document 35 §5 W17; F34 §2A). Options are the first
+   * attachment's; a page that wants different ones detaches first.
+   */
+  const scans = new Map<DomLike, { refs: number; detach(): void }>();
+
+  function scan(dom: DomLike, dwellMinMs: number): { refs: number; detach(): void } {
+    const holds: Array<() => void> = [];
     const seen = new Set<string>();
     let detached = false, installed = false, binding = 0;
-    const stop = () => { binding++; installed = false; seen.clear(); for (const off of offs.splice(0)) off(); };
+    const stop = () => { binding++; installed = false; seen.clear(); for (const off of holds.splice(0)) off(); };
     const start = () => core.capture(() => {
       if (detached || installed) return;
       installed = true;
@@ -108,18 +152,27 @@ export function createEmit(core: Core, listen: Listen): Emit {
 
       for (const el of dom.querySelectorAll('[data-op-content]')) {
         if (!permitted()) return;
-        const contentId = el.getAttribute('data-op-content') ?? '';
-        const slot = el.getAttribute('data-op-slot') ?? 'unknown';
-        if (!contentId) continue;
+        if (!el.getAttribute('data-op-content')) continue;
+        // The receipt is the offer that was served for this node, not a claim
+        // the page can revise: it is read once, when the SDK binds (W26.02).
+        // What the node SHOWS is read at the moment the shopper acts, so a node
+        // re-rendered in place reports the piece it now carries and never the
+        // one it carried when it was bound (document 35 §5 W17; F34 §6).
         const decisionId = el.getAttribute('data-op-decision-id');
-        const attrs = { contentId, slot, ...(decisionId !== null ? { decisionId } : {}),
-          ...(el.getAttribute('data-op-type') ? { contentType: el.getAttribute('data-op-type') } : {}) };
+        const shown = (): Record<string, unknown> | null => {
+          const contentId = el.getAttribute('data-op-content') ?? '';
+          if (!contentId) return null;
+          const contentType = el.getAttribute('data-op-type');
+          return { contentId, slot: el.getAttribute('data-op-slot') ?? 'unknown',
+            ...(decisionId !== null ? { decisionId } : {}), ...(contentType ? { contentType } : {}) };
+        };
         let shownAt: number | null = null;
-        const off = dom.observe(el, (visible) => {
-          if (!permitted()) { shownAt = null; return; }
+        const off = core.bindings.addObserver(dom, el, (visible) => {
+          const attrs = shown();
+          if (!permitted() || !attrs) { shownAt = null; return; }
           if (visible) {
             if (shownAt === null) shownAt = host.now();
-            const key = `${slot}:${contentId}`;
+            const key = `${String(attrs.slot)}:${String(attrs.contentId)}`;
             if (!seen.has(key)) { seen.add(key); void track('content_impression', attrs); }
             return;
           }
@@ -128,57 +181,97 @@ export function createEmit(core: Core, listen: Listen): Emit {
           shownAt = null;
           if (ms >= dwellMinMs) void track('content_dwell', { ...attrs, ms });
         });
-        if (!permitted()) { off(); return; }
-        offs.push(off);
-        el.addEventListener('click', () => { if (permitted()) void track('content_click', attrs); });
+        if (!permitted()) { off?.(); return; }
+        if (off) holds.push(off);
+        holds.push(core.bindings.addListener(el, 'click', () => {
+          const attrs = permitted() ? shown() : null;
+          if (attrs) void track('content_click', attrs);
+        }));
       }
 
       for (const el of dom.querySelectorAll('[data-op-track]')) {
         if (!permitted()) return;
-        const type = el.getAttribute('data-op-track') ?? '';
-        if (!(type in WIRE)) continue;
-        const label = el.getAttribute('data-op-label');
-        const productId = el.getAttribute('data-op-product');
+        if (!(String(el.getAttribute('data-op-track') ?? '') in WIRE)) continue;
         const decisionId = el.getAttribute('data-op-decision-id');
-        el.addEventListener('click', () => {
+        holds.push(core.bindings.addListener(el, 'click', () => {
           if (!permitted()) return;
+          // Re-read for the same reason: a button re-rendered in place sells
+          // the product it now names, never the one it named when bound.
+          const type = el.getAttribute('data-op-track') ?? '';
+          if (!(type in WIRE)) return;
+          const label = el.getAttribute('data-op-label');
+          const productId = el.getAttribute('data-op-product');
           void track(type as SdkEventType, { ...(label ? { label } : {}), ...(productId ? { productId } : {}),
             ...(decisionId !== null ? { decisionId } : {}) });
-        });
+        }));
       }
     });
     const consentOff = core.onConsentChange(() => { if (core.trackingAllowed) start(); else stop(); });
     const generationOff = core.on('generation', stop);
     start();
-    return () => { detached = true; consentOff(); generationOff(); stop(); };
+    return { refs: 0, detach: () => { detached = true; consentOff(); generationOff(); stop(); } };
+  }
+
+  function declarative(opts: DeclarativeOptions = {}): () => void {
+    if (core.config.listenOnly) return () => {};
+    const dom = opts.dom ?? host.dom;
+    if (!dom) return () => {};
+    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1_000);
+    scans.set(dom, attachment);
+    attachment.refs++;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (--attachment.refs > 0) return;
+      if (scans.get(dom) === attachment) scans.delete(dom);
+      attachment.detach();
+    };
   }
 
   function dataLayer(opts: DataLayerOptions = {}): () => void {
     const layer = opts.layer ?? host.dataLayer;
     if (!layer) return () => {};
-    let detached = false;
-    const mapping: DataLayerMapping = { ...GA4_MAPPING, ...(opts.mapping ?? {}) };
-    const handle = (entry: unknown) => core.capture(() => {
-      if (detached) return;
-      if (!entry || typeof entry !== 'object') return;
-      const e = entry as Record<string, unknown>;
-      const name = typeof e.event === 'string' ? e.event : null;
-      if (!name) return;
-      const m = mapping[name];
-      if (!m) return;
-      let mapped: ReturnType<DataLayerMapper> = null;
-      try { mapped = m(e); } catch { mapped = null; }
-      if (mapped) void track(mapped.type, mapped.data);
-    });
-    const replayLength = opts.replay !== false && core.trackingAllowed ? layer.length : 0;
-    if (replayLength) core.capture(() => { if (!detached) for (let i = 0; i < replayLength; i++) handle(layer[i]); });
-    const original = layer.push;
-    layer.push = function (this: unknown[], ...args: unknown[]) {
-      const r = original.apply(layer, args);
-      for (const a of args) handle(a);
-      return r;
+    const registry = layerRegistryFor(layer);
+    // One capture per client per layer: a client that attaches twice reports
+    // the page's push once, and each live client reports it once (F34 §2G).
+    let attachment = registry.attached.get(core);
+    const fresh = attachment === undefined;
+    if (!attachment) {
+      const mapping: DataLayerMapping = { ...GA4_MAPPING, ...(opts.mapping ?? {}) };
+      const own: LayerAttachment = { refs: 0, live: true, handle: (entry) => core.capture(() => {
+        if (!own.live) return;
+        if (!entry || typeof entry !== 'object') return;
+        const e = entry as Record<string, unknown>;
+        const name = typeof e.event === 'string' ? e.event : null;
+        if (!name) return;
+        const m = mapping[name];
+        if (!m) return;
+        let mapped: ReturnType<DataLayerMapper> = null;
+        try { mapped = m(e); } catch { mapped = null; }
+        if (mapped) void track(mapped.type, mapped.data);
+      }) };
+      attachment = own;
+      registry.attached.set(core, own);
+    }
+    const held = attachment;
+    held.refs++;
+    if (fresh) {
+      const replayLength = opts.replay !== false && core.trackingAllowed ? layer.length : 0;
+      if (replayLength) core.capture(() => { if (held.live) for (let i = 0; i < replayLength; i++) held.handle(layer[i]); });
+    }
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (--held.refs > 0) return;
+      held.live = false;
+      if (registry.attached.get(core) === held) registry.attached.delete(core);
+      if (registry.attached.size) return;
+      // The last attachment hands the page its own function back, by identity.
+      if (layer.push === registry.wrapper) layer.push = registry.original;
+      if (layerRegistries.get(layer) === registry) layerRegistries.delete(layer);
     };
-    return () => { detached = true; layer.push = original; };
   }
 
   return {

@@ -5,10 +5,12 @@
 // the same input yields the same output, which is what makes replay (doc 22
 // §12.3) a proof rather than a hope.
 
-import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
+import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, LiftApplied, RegionalBlend, SlotStrategy,
+  Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, LiftApplied, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SlotStrategy,
 } from './types';
+import { validateSeedRules } from './kinds';
+import { arrivedFromNetwork, type ChannelSignals } from '@/services/visit';
 import { isEligibleAt } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { explorationPick, HISTORICAL_EXPLORATION, type ExploreConfig, type ExplorePick } from '@/learn/explore';
@@ -64,9 +66,19 @@ export interface DecideInput {
   external?: ExternalTerm | null;
   /** CW30: slot → item → times served to this visitor inside the slot's fatigue window, from the ring. Null when not read. */
   served?: Record<string, Record<string, number>> | null;
+  /**
+   * W16 C3: the arrival this page load reports, for the contextual seed rules
+   * that read the campaign term and the referrer network. The entry-channel
+   * signal is read from the cell, which already carries the established owned
+   * channel (R13). Observed context only: it is never stored by this decision.
+   */
+  entry?: ChannelSignals;
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
+
+/** Three decimals, the grain every itemised delta on a receipt is recorded at. */
+const r3 = (n: number): number => { const v = Math.round(n * 1000) / 1000; return v === 0 ? 0 : v; };
 
 const authorityOf = (strategy: string): Authority =>
   strategy === 'tenant-pinned' ? 'pin' : strategy === 'default' ? 'default' : 'engine';
@@ -145,12 +157,58 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const t = Date.parse(v);
     return Number.isFinite(t) ? t : null;
   };
-  const adjust: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage || hasFresh || hasFatigue ? (p, slot, base0) => {
+  // W16 C3 (document 35 §2 F13): the arrival's own evidence, before the shopper
+  // has shown any of her own. The rule set is published on the slot and revalidated
+  // here, because a RETAINED document the current contract refuses is ignored
+  // WHOLE — half a rule set is a ranking nobody authored — and the refusal is
+  // diagnosed rather than fabricated into an influence. Personalization, so never
+  // on the holdout's default arm.
+  const seedRules = new Map<string, SeedRule[]>();
+  const seedDiagnostics: SeedDiagnostic[] = [];
+  if (i.arm !== 'default') for (const s of i.slots) {
+    if (s.seeds === undefined) continue;
+    const checked = validateSeedRules(s.seeds, s.weights);
+    if (!checked.ok) { seedDiagnostics.push({ slot: s.slot, reason: 'invalid_rule_set' }); continue; }
+    // An empty rule set is the same as none: nothing to seed and nothing to claim.
+    if (checked.value.length) seedRules.set(s.slot, checked.value);
+  }
+  const term = (v: unknown) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
+  const arrivalTerm = term(i.entry?.utmTerm);
+  const fires = (rule: SeedRule): boolean =>
+    rule.signal === 'entry_channel' ? i.cell.channel === rule.value
+      : rule.signal === 'campaign_term' ? arrivalTerm !== '' && arrivalTerm === term(rule.value)
+        : arrivedFromNetwork(i.entry, rule.value);
+  const weightsOf = new Map(i.slots.map((s) => [s.slot, s.weights]));
+  /** The rules this arrival fired for this candidate, each at `rule.weight × the slot's weight for the tag's dimension`. */
+  const seedDriversFor = (p: ContentPieceLike, slot: string): SeedDriver[] => {
+    const rules = seedRules.get(slot), weights = weightsOf.get(slot);
+    if (!rules || !weights) return [];
+    const piece = byId.get(p.id) ?? (p as ContentPiece);
+    const drivers: SeedDriver[] = [];
+    for (const rule of rules) {
+      if (!fires(rule)) continue;
+      for (const tag of rule.tags) {
+        const w = weights[tag.dimension] ?? 0;
+        if (!w || !(piece.tags[tag.dimension] ?? []).includes(tag.value)) continue;
+        drivers.push({ signal: rule.signal, value: rule.value, dimension: tag.dimension, tag: tag.value, weight: rule.weight, contribution: r3(rule.weight * w) });
+      }
+    }
+    return drivers;
+  };
+  const seedOf = new Map<string, NonNullable<DecisionRecord['explain']['contextual']>>();
+  /**
+   * Everything between the tag sum and the learned lift, in the order the engine
+   * applies it. Run with `record` false it is a pure arithmetic probe: the same
+   * chain without the seeds, so what the seeds contributed can be measured where
+   * it lands — in the final pre-lift base, after merchandising — rather than
+   * asserted from where it entered.
+   */
+  const preLift = (p: ContentPieceLike, slot: string, base0: number, record: boolean): number => {
     const key = `${slot}:${p.id}`;
     let base = base0;
     if (ext && ext.status === 'ok') {
       const w = ext.weightOf(slot), s = ext.scores[p.id];
-      if (w > 0 && typeof s === 'number') { base += w * s; extOf.set(key, { score: s, weight: w, contribution: Math.round(w * s * 1000) / 1000 }); }
+      if (w > 0 && typeof s === 'number') { base += w * s; if (record) extOf.set(key, { score: s, weight: w, contribution: r3(w * s) }); }
     }
     if (hasStage) {
       const rule = stageRules.get(slot), fit = (byId.get(p.id) ?? (p as ContentPiece)).journeyStageFit;
@@ -158,8 +216,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         const inside = fit.includes(visitorStage!);
         const before = base;
         if (inside) base += rule.inStage ?? 0; else base *= rule.outOfStage ?? 1;
-        const applied = Math.round((base - before) * 1000) / 1000;
-        if (applied !== 0 || (!inside && (rule.outOfStage ?? 1) < 1)) stageOf.set(key, { visitor: visitorStage!, fit, applied, inside });
+        const applied = r3(base - before);
+        if (record && (applied !== 0 || (!inside && (rule.outOfStage ?? 1) < 1))) stageOf.set(key, { visitor: visitorStage!, fit, applied, inside });
       }
     }
     if (hasFresh) {
@@ -167,8 +225,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       if (rule && at !== null && i.nowMs >= at) {
         const ageDays = (i.nowMs - at) / 86_400_000;
         const decay = Math.pow(2, -ageDays / rule.halfLifeDays);
-        const applied = Math.round(rule.weight * decay * 1000) / 1000;
-        if (applied > 0) { base += applied; freshOf.set(key, { ageDays: Math.round(ageDays * 10) / 10, decay: Math.round(decay * 1000) / 1000, applied }); }
+        const applied = r3(rule.weight * decay);
+        if (applied > 0) { base += applied; if (record) freshOf.set(key, { ageDays: Math.round(ageDays * 10) / 10, decay: r3(decay), applied }); }
       }
     }
     if (hasFatigue) {
@@ -176,16 +234,35 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       if (rule && served > 0) {
         const penalty = rule.weight * Math.min(served, rule.cap) / rule.cap;
         const after = Math.max(0, base - penalty);
-        const applied = Math.round((after - base) * 1000) / 1000;
+        const applied = r3(after - base);
         base = after;
-        fatigueOf.set(key, { served, windowHours: rule.windowHours, applied });
+        if (record) fatigueOf.set(key, { served, windowHours: rule.windowHours, applied });
       }
     }
-    baseOf.set(key, base);
+    if (record) baseOf.set(key, base);
     if (hasMerch) {
       // A multiplier on nothing is nothing: a zero base (the default arm, or no signal) gets no block.
       const m = base > 0 ? merchDetailed(byId.get(p.id) ?? (p as ContentPiece), slot, base) : null;
-      if (m && m.drivers.length) { merchOf.set(key, m); base = m.scoreFinal; }
+      if (m && m.drivers.length) { if (record) merchOf.set(key, m); base = m.scoreFinal; }
+    }
+    return base;
+  };
+  const adjust: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage || hasFresh || hasFatigue || seedRules.size ? (p, slot, base0) => {
+    const key = `${slot}:${p.id}`;
+    // The seeds enter where the slot's own tag sum lands, before merchandising,
+    // because a seed supplies the missing interest for a canonical tag this
+    // arrival is evidence for; they are never a global floor.
+    const drivers = seedDriversFor(p, slot);
+    let seeded = 0;
+    for (const d of drivers) seeded += d.contribution;
+    const base = preLift(p, slot, base0 + seeded, true);
+    if (seedRules.has(slot)) {
+      // Measured where it lands: the same chain without the seeds, subtracted. A
+      // candidate merchandised to exactly zero records exactly zero, a boost of a
+      // half records half, and each driver keeps its share of what was applied.
+      const bare = seeded === 0 ? base : preLift(p, slot, base0, false);
+      const share = seeded === 0 ? 0 : (base - bare) / seeded;
+      seedOf.set(key, { applied: r3(base - bare), drivers: drivers.map((d) => ({ ...d, contribution: r3(d.contribution * share) })) });
     }
     if (!learning) return base;
     const control = learning.controlOf?.(slot, p.id) ?? null;
@@ -195,12 +272,17 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const gamma = learning.gammaOf(slot);
     if (control?.mode === 'freeze') {                                   // held at the value a person chose
       const metadata = learning.metadataOf?.(slot) ?? learning.snapshots[slot];
-      liftOf.set(key, { reward: metadata?.reward ?? 'click', objective: metadata?.objective ?? 'unit', measurementBasis: metadata?.measurementBasis ?? 'served-v1', level: look?.level ?? 0, level_words: 'frozen by a merchandiser', n: look?.n ?? 0, s: look?.s ?? 0, p0: look?.p0 ?? 0, n0: look?.n0 ?? 0, p_hat: look?.p_hat ?? 0, lift: control.lift ?? 1, gamma });
-      return base * Math.pow(control.lift ?? 1, gamma);
+      const lifted = base * Math.pow(control.lift ?? 1, gamma);
+      liftOf.set(key, { reward: metadata?.reward ?? 'click', objective: metadata?.objective ?? 'unit', measurementBasis: metadata?.measurementBasis ?? 'served-v1', level: look?.level ?? 0, level_words: 'frozen by a merchandiser', n: look?.n ?? 0, s: look?.s ?? 0, p0: look?.p0 ?? 0, n0: look?.n0 ?? 0, p_hat: look?.p_hat ?? 0, lift: control.lift ?? 1, gamma, applied: r3(lifted - base) });
+      return lifted;
     }
     if (!look) return base;
-    liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, ...(look.prior ? { prior: look.prior } : {}) });
-    return base * Math.pow(look.lift, gamma);
+    // N20: what the lift ACTUALLY caused, itemised like every other term. On an
+    // exactly zero base a multiplicative term causes nothing, and the receipt
+    // must be able to say so instead of claiming an influence there was not.
+    const lifted = base * Math.pow(look.lift, gamma);
+    liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied: r3(lifted - base), ...(look.prior ? { prior: look.prior } : {}) });
+    return lifted;
   } : undefined;
   const controlOf = new Map<string, 'reject' | 'freeze'>();
   // Exploration (doc 22 §7): decided per slot from the ranked candidates, deterministic in its inputs.
@@ -310,6 +392,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),
         ...(control ? { control } : {}),
         ...(!historicalPins && pinned ? {} : externalOf(d.slot, key)),
+        ...(seedOf.has(key) ? { contextual: seedOf.get(key)! } : {}),
         ...(merchOf.has(key) ? { merchandising: (({ boost, clamped, drivers }) => ({ boost, clamped, drivers, sentence: merchandisingSentence(merchOf.get(key)!) }))(merchOf.get(key)!) } : {}),
         ...(stageOf.has(key) ? { stage: (({ visitor, fit, applied }) => ({ visitor, fit, applied, sentence: stageSentence(stageOf.get(key)!) }))(stageOf.get(key)!) } : {}),
         ...(freshOf.has(key) ? { freshness: { ...freshOf.get(key)!, sentence: freshSentence(freshOf.get(key)!) } } : {}),
@@ -325,5 +408,6 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     arm: i.arm, cell: i.cell, versions: { ...i.versions }, config_label: i.configLabel,
     regional: i.regional && i.arm !== 'default' ? (({ share: _s, ...rest }) => rest)(i.regional) : null,
     decisions, records, ...(pinDiagnostics ? { pinDiagnostics } : {}),
+    ...(seedDiagnostics.length ? { seedDiagnostics } : {}),
   };
 }

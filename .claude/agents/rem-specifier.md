@@ -28,3 +28,5 @@ Rules:
 - Write no ledger, tracker, handoff or governance record. Your output is tests, fixtures, `units.json` rows and the report.
 
 Final message, facts only, in this order: the unit IDs specified; the file paths; the commit sha; per unit `unit:<id> — RED because <assertion or missing export>`; units left `no-witness` and why; the exact commands run with their log paths; anything you could not do. Never claim a unit is satisfiable by the current code unless you measured it green (then say GREEN-AT-SPEC and why).
+
+- Process lesson (2026-09-19): never wait on a process with `pgrep -f <pattern>` from a shell whose own command line contains the pattern; that loop never exits and cannot be killed by an agent. Run the command in the foreground, or have it write a marker file when it ends and wait on the file.
