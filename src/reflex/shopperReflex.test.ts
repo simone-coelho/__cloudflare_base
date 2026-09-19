@@ -491,7 +491,10 @@ describe('ingest — one reducer behind both doors', () => {
     const rec = h.storage.map.get('affinity') as AffinityRecord;
     const expected = computeNextAlarm(rec.reflex, rec.lastSeen, t0 + 10_000, CFG, RETENTION_30D);
     expect(h.storage.alarm).toBe(expected);
-    expect(expected).toBeLessThan(t0 + 10_000 + 120_000); // the demo's ~40s-idle exit, not a 30-day park
+    // The demo's ~40s-idle exit, not a 30-day park: both this expectation and
+    // the object's own alarm read the 60-second demo cadence CFG pins above
+    // (R42/R50(d)), never the shipped days/weeks horizon.
+    expect(expected).toBeLessThan(t0 + 10_000 + 120_000);
   });
 
   it('a no-change event persists state but returns (and pushes) no update — request-path parity', async () => {
