@@ -116,6 +116,12 @@
 //            the constraint, and naming it would flood the channel with the whole
 //            catalogue (the composer's `forbidden` map, `contentCompose.ts:172-179`,
 //            is computed over every live piece and is NOT this set);
+//          · only a slot the composer actually RANKS contributes entries
+//            (R82(b)): an off-limits slot (`contentCompose.ts:227`) and a slot
+//            whose whole take is one non-personalizable pin
+//            (`contentCompose.ts:237-248`) consider no candidate, so they refuse
+//            nobody however many exclusions they publish; a dormant or refused
+//            pin has its own public home in `slot-pin-diagnostics/v1`;
 //          · `warnings` holds at most the first 50, in slot order then catalogue
 //            order, `warningCount` counts every refused eligible piece and
 //            `omittedWarningCount` is the difference — the cap idiom this
@@ -764,7 +770,31 @@ describe('unit:W19.L1.02', () => {
     // a refusal where the published document refuses nothing.
     expect(openSet.constraintDiagnostics ?? NO_REFUSALS, 'W19.L1.02 — a slot that refuses nothing reports no refusal').toEqual(NO_REFUSALS);
 
-    // 4. THE RULED MISSING MEMBER (R21/R77(a), iii). A merchandiser who asks why
+    // 4. The page the ranked-slots clause below is measured on (R82(b)): one
+    //    slot that ranks and excludes the French market, one slot the
+    //    merchandiser handed to the site's own default (`offLimits`,
+    //    kit 03:174-177), and one slot whose whole take is a single
+    //    non-personalizable pin. All three publish the SAME exclusion, and only
+    //    the first of them ever considers a candidate: `contentCompose.ts:227`
+    //    skips the off-limits slot before anything else, and `:237-248` serves
+    //    the pin and continues without ranking. What each slot serves is
+    //    measured here, before the ruled member is asked for anything.
+    const mixed: SlotStrategy[] = [
+      { slot: 'market-hero', take: 5, weights: { line: 1 }, excludedTags: [{ dimension: 'locale', value: 'fr-FR' }] },
+      { slot: 'market-legal', take: 1, weights: {}, offLimits: true, excludedTags: [{ dimension: 'locale', value: 'fr-FR' }] },
+      { slot: 'market-rail', take: 1, weights: { line: 1 }, pinnedPieceId: LONDON.id, excludedTags: [{ dimension: 'locale', value: 'fr-FR' }] },
+    ];
+    const page = decideContent({ ...input, page: 'mixed', slots: mixed }) as RuledDecisionSet;
+    expect(page.decisions.map(decision => ({ slot: decision.slot, contentId: decision.contentId, strategy: decision.strategy })),
+      'W19.L1.02 — the off-limits slot serves nothing at all and the pinned slot serves exactly its pin, ranking never having run')
+      .toEqual([
+        { slot: 'market-hero', contentId: 'montreal-edit', strategy: 'affinity' },
+        { slot: 'market-hero', contentId: 'global-edit', strategy: 'affinity' },
+        { slot: 'market-hero', contentId: 'lowercase-edit', strategy: 'default' },
+        { slot: 'market-rail', contentId: 'london-edit', strategy: 'tenant-pinned' },
+      ]);
+
+    // 5. THE RULED MISSING MEMBER (R21/R77(a), iii). A merchandiser who asks why
     //    the Paris piece is not on the French page must be told the published
     //    pair that refused it, not left to guess between a market rule, a
     //    missing piece and a take that ran out. The composer already computes
@@ -786,7 +816,7 @@ describe('unit:W19.L1.02', () => {
       .toEqual({ warningCount: 1, omittedWarningCount: 0,
         warnings: [{ slot: 'market-hero', contentId: 'paris-edit', reason: 'excluded_tag', dimension: 'locale', value: 'fr-FR' }] });
 
-    // 5. BOUNDED (R77(a)). A market rule over a real catalogue refuses
+    // 6. BOUNDED (R77(a)). A market rule over a real catalogue refuses
     //    thousands of pieces; an answer that carried one entry each would be an
     //    unbounded payload on every decision. The channel carries the first 50
     //    in catalogue order and counts the rest, which is exactly what both
@@ -804,6 +834,18 @@ describe('unit:W19.L1.02', () => {
       'W19.L1.02 — and at most the first fifty are named, in catalogue order').toEqual(refusedIds.slice(0, 50));
     expect(bounded.constraintDiagnostics?.omittedWarningCount,
       'W19.L1.02 — with the remainder counted as omitted, as both existing advisory channels do').toBe(10);
+
+    // 7. RANKED SLOTS ONLY (R82(b)), on the page clause 4 measured. A refusal is
+    //    only a refusal where ranking would otherwise have chosen: the
+    //    off-limits slot and the wholly pinned slot publish the same exclusion
+    //    and consider no candidate at all, so naming every `fr-FR` piece under
+    //    them would be noise about slots that refused nobody — and a dormant or
+    //    refused pin already has its own public home in `slot-pin-diagnostics/v1`
+    //    (`slotDiagnostics.ts:8-17`).
+    expect(page.constraintDiagnostics,
+      'W19.L1.02 — only the slot that actually ranked reports a refusal, and the count counts only those')
+      .toEqual({ warningCount: 1, omittedWarningCount: 0,
+        warnings: [{ slot: 'market-hero', contentId: 'paris-edit', reason: 'excluded_tag', dimension: 'locale', value: 'fr-FR' }] });
   });
 
   it('host: the French-market piece is never served in the excluded slot to any shopper on either host, while the English piece is, and the same pieces rank by score where nothing is excluded', async () => {

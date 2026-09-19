@@ -457,7 +457,15 @@ describe('/content routes', () => {
     const result = await validate(pieces);
     expect(result.document.pieces.map(p => p.tags)).toEqual(pieces.map(p => p.tags));
     expect(result.diagnostics).toEqual({ schema: 'catalog-registry-diagnostics/v1', advisory: true, status: 'available', catalogRevision: null,
-      registry: { scope: 'coach', source: 'stored', revision: 7, version: 'diagnostic-registry' }, warningCount: 3, omittedWarningCount: 0, warnings: [
+      registry: { scope: 'coach', source: 'stored', revision: 7, version: 'diagnostic-registry' },
+      // W19-B2 (R82(a)): the channel also names the slots document it compared the
+      // pieces' slot types against, as it already names the registry. This fixture's
+      // publication set carries SLOTS_KIND at revision 1 with DEFAULT_SLOTS
+      // (`initializeCatalog` above), and a baseline value is stored as validated and
+      // never stamped (stamping belongs to the write path), so the version is
+      // DEFAULT_SLOTS' own.
+      slots: { source: 'stored', revision: 1, version: 'slots-default' },
+      warningCount: 3, omittedWarningCount: 0, warnings: [
         { code: 'unknown_dimension', pieceIndex: 0, dimensionIndex: 0, dimension: 'Occasion', dimensionTruncated: false },
         { code: 'no_nonempty_registered_tags', pieceIndex: 2 }, { code: 'no_nonempty_registered_tags', pieceIndex: 3 },
       ] });
