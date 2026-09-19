@@ -165,6 +165,8 @@ Units: `TOOLS.01` tsconfig include so plain `tsc --noEmit` is green; `TOOLS.02` 
 ### W16-B6 — C6 anonymous return continuity (units W16.C6.01–.12; the table is in `_evidence/W16-B6/specifier/BRIEF.md`)
 ### W16-B7 — C8 behavioral scenarios on the real taxonomy (units W16.C8.02–.07; the table is in `_evidence/W16-B7/specifier/BRIEF.md`)
 
+### W17-B1 — SDK lifecycle ownership and unbind (units W17.L1.01–.08; the table is in `_evidence/W17-B1/specifier/BRIEF.md`; leg `sdk` under jsdom per the leg ruling in the brief)
+
 ### BASE — the baseline residual
 Triage (L2, 2026-09-18) measured the 29 failing files serially on `5b0b0ae`: 238 of 786 tests fail, identical to the parallel set; **zero flaky**. Groups by shared cause (full table in `_evidence/BASE/triage/REPORT.md`):
 
