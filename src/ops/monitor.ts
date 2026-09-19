@@ -170,6 +170,7 @@ import { isValidTenantId } from '@/tenancy/tenant';
 import { IDENTITY_MATERIAL_UNAVAILABLE, requiresSafeIdentity, validateIdentityMaterial } from '@/identity/material.mjs';
 import { RETENTION_CATEGORIES, retentionPolicy, retentionBirth, requireRetention, type RetentionStamp } from '@/retention';
 import { configuredDestinations, configuredOperationalDestinations, type OperationalDestination } from '@/connectors/config';
+import { tenantSlotGovernance } from '@/learn/slotGovernance';
 
 export interface CheckResult { ok: boolean; ms: number; detail?: string }
 export interface MonitorResult {
@@ -187,6 +188,17 @@ export interface MonitorResult {
     /** sent means an HTTP success response, not confirmation that somebody was paged. */
     status: 'not-needed' | 'sent' | 'no-webhook' | 'cooling-down' | 'failed' | 'held';
   };
+  /**
+   * W20 G2 (R83, R86, R94(2)): the tenant's slot-governance counters since the
+   * horizon they state — how many pins the decision path refused and how many
+   * times a pinned slot could not fill its `take` — summed over the tenant's
+   * slots from the SAME counters the operator slots page reads per slot, in the
+   * same vocabulary. Never a value the synthetic probe produced: the probe's own
+   * compose is excluded where the counters are written. Absent on a legacy
+   * record that carries none, and on a run whose counter store could not be
+   * read, so no result states a zero it did not observe.
+   */
+  governance?: { since: number; refusedPinCount: number; shortTakeCount: number };
 }
 
 export interface Thresholds { decisionMs: number }
@@ -204,6 +216,16 @@ const safeChecks = (v: unknown): Record<string, CheckResult> => Object.fromEntri
   return [[name, { ok, ms: bounded(field(value, 'ms')), ...(ok ? {} : { detail: 'CHECK_FAILED' }) }]];
 }));
 
+/** The tenant counters a kept result carries, projected as safely as its checks:
+ * three plain numbers or nothing at all. A record written before W20 G2, or one
+ * whose counters were unreadable, carries none and keeps its former shape. */
+const safeGovernance = (value: unknown): MonitorResult['governance'] | undefined => {
+  const since = field(value, 'since'), refusedPinCount = field(value, 'refusedPinCount'), shortTakeCount = field(value, 'shortTakeCount');
+  if (typeof since !== 'number' || typeof refusedPinCount !== 'number' || typeof shortTakeCount !== 'number') return undefined;
+  return { since: bounded(since, 8_640_000_000_000_000), refusedPinCount: bounded(refusedPinCount, Number.MAX_SAFE_INTEGER),
+    shortTakeCount: bounded(shortTakeCount, Number.MAX_SAFE_INTEGER) };
+};
+
 /** One safe projection for origin, historical reads and alert construction.
  * Unknown keys, raw details and hostile accessors are never copied/coerced. */
 export function projectMonitor(value: unknown, tenant: string, environment: string): MonitorResult {
@@ -215,11 +237,13 @@ export function projectMonitor(value: unknown, tenant: string, environment: stri
   // threshold. Never recompute that policy with the projection's defaults.
   if (Array.isArray(originalProblems) && originalProblems.length <= CHECKS.length + 1
     && Array.from({ length: originalProblems.length }, (_, i) => field(originalProblems, String(i))).includes('decision: LATENCY_EXCEEDED')) problems.push('decision: LATENCY_EXCEEDED');
+  const governance = safeGovernance(field(value, 'governance'));
   return { at: bounded(field(value, 'at'), 8_640_000_000_000_000),
     tenant: isValidTenantId(tenant) ? tenant : 'unknown', environment: environmentOf(environment),
     ok: field(value, 'ok') === true, checks, problems,
     alert: { kind: kind === 'problem' || kind === 'recovery' ? kind : null,
-      status: ['not-needed', 'sent', 'no-webhook', 'cooling-down', 'failed', 'held'].includes(status as string) ? status as NonNullable<MonitorResult['alert']>['status'] : 'not-needed' } };
+      status: ['not-needed', 'sent', 'no-webhook', 'cooling-down', 'failed', 'held'].includes(status as string) ? status as NonNullable<MonitorResult['alert']>['status'] : 'not-needed' },
+    ...(governance ? { governance } : {}) };
 }
 type Admission = { destination: OperationalDestination; stamp: RetentionStamp };
 async function admit(env: Env, tenant: string, kind: OperationalDestination['kind'], at: number): Promise<Admission | null> {
@@ -316,7 +340,10 @@ export async function runChecks(env: Env, tenant: string, now = Date.now()): Pro
   });
   checks.decision = await timed(async () => {
     // Explicit refusal bypasses shopper state and customer measurement; monitor bookkeeping is separate.
-    const out = await serveContentDecisions(env, { tenant, page: 'home', visitorId: `monitor-${now.toString(36)}`, sessionId: `monitor-${now.toString(36)}`, channel: 'monitor', cf: null, cookieHeader: 'opt_tracking_consent=false; opt_personalization_enabled=false', stateTenant: tenant as never, nowMs: now });
+    // `selfCheck`: this compose is the platform testing itself on the tenant's
+    // real page, so its refused pins and short pinned slots are the probe's, not
+    // the tenant's serving, and the governance counters skip it (W20 G2, R94(1)).
+    const out = await serveContentDecisions(env, { tenant, page: 'home', visitorId: `monitor-${now.toString(36)}`, sessionId: `monitor-${now.toString(36)}`, channel: 'monitor', cf: null, cookieHeader: 'opt_tracking_consent=false; opt_personalization_enabled=false', stateTenant: tenant as never, nowMs: now, selfCheck: true });
     if (out.write) throw new Error('a monitor decision was going to be written');
     if (out.records.length === 0) throw new Error(`0 decisions from ${out.sources.catalog.pieces} pieces`);
     return `${out.records.length} decisions from ${out.sources.catalog.pieces} pieces`;
@@ -337,7 +364,12 @@ export async function runMonitor(env: Env, tenant: string, now = Date.now(), thr
   const [storageAdmission, analyticsAdmission, alertAdmission] = await Promise.all(['monitor', 'analytics', 'alert'].map(kind => admit(env, tenant, kind as OperationalDestination['kind'], now)));
   const checks = await runChecks(env, tenant, now);
   const problems = problemsOf(checks, thresholds);
-  const result: MonitorResult = { at: now, tenant, environment: environmentOf(env.ENVIRONMENT), ok: problems.length === 0, checks, problems, alert: { kind: null, status: 'not-needed' } };
+  // W20 G2: what this tenant's own serving refused since the counters' horizon,
+  // read here and not probed: the checks above are the platform testing itself,
+  // and their own compose is excluded from the counters (`selfCheck`).
+  const governance = await tenantSlotGovernance(env, tenant, now);
+  const result: MonitorResult = { at: now, tenant, environment: environmentOf(env.ENVIRONMENT), ok: problems.length === 0, checks, problems,
+    alert: { kind: null, status: 'not-needed' }, ...(governance ? { governance } : {}) };
   let previous: MonitorResult | null = null;
   let savedRecovery: unknown;
   try {

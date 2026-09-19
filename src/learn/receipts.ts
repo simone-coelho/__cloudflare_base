@@ -88,6 +88,10 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned lift held at zero.');
     if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
   }
+  // W20 G2 (R86(c)): the shortfall is a fact about the SLOT, not about the
+  // ranking of this piece, so it is read out for a pinned position exactly as
+  // for a ranked one — the way every other block on `explain` is read out.
+  if (e.shortTake) why.push(`Short take: ${e.shortTake.sentence}.`);
   const nm = names.get(r.item_id);
   return {
     measurementBasis: r.measurementBasis ?? 'served-v1', renderedAt: r.rendered?.at ?? null,

@@ -403,6 +403,14 @@ export interface DecisionRecord {
     fatigue?: { served: number; windowHours: number; applied: number; sentence: string };
     /** CW33: the slot's diversity rule touched this position: the pieces that yielded to it, or that it was served despite (`relaxed`). */
     diversity?: { dimension: string; max: number; skipped: string[]; relaxed: boolean; sentence: string };
+    /**
+     * W20 G2 (R86(c)): this position's slot is pinned, served what it could and
+     * still fell short of its `take`, leaving `empty` positions to the site's
+     * own default. Present on every record the slot did write, so the receipt
+     * can say it; a slot whose pin was REFUSED writes no record at all, and the
+     * operator's slot-governance counter is that occurrence's only home.
+     */
+    shortTake?: { take: number; served: number; empty: number; sentence: string };
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;
@@ -427,6 +435,13 @@ export interface ContentDecisionSet {
   records: DecisionRecord[];
   /** Refused pins have no delivery decision or ledger row. */
   pinDiagnostics?: PinDiagnostic[];
+  /**
+   * W20 G2: the pinned slots that served and still could not fill their `take`
+   * on this page load, with the positions left empty. Present only when there
+   * is something to name; the decision path counts them for the operator, and
+   * every record the slot wrote carries the same block on its `explain`.
+   */
+  shortTakes?: Array<{ slot: string; take: number; served: number; empty: number }>;
   /** A slot whose retained seed rule set the current contract refuses: ignored whole, never partially applied. */
   seedDiagnostics?: SeedDiagnostic[];
   /**

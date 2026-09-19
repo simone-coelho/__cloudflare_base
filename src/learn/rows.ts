@@ -10,6 +10,7 @@ import type { ItemControl, SlotCatalog, ContentCatalog, LearnConfig } from '@/co
 import { isEligibleAt } from '@/content/lifecycle';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
 import { LEVEL_WORDS, type LiftSnapshot, type Level } from './stats';
+import type { SlotGovernance } from './slotGovernance';
 
 export interface LiftRow {
   measurementBasis: 'served-v1' | 'rendered-v1';
@@ -163,6 +164,14 @@ export interface SlotIndexEntry {
   controls: number;
   /** Filled by the route when asked: what the slot has learned so far. */
   evidence?: { items: number; events: number; publishedAt: number } | null;
+  /**
+   * W20 G2 (R83, R86(a)): filled by the route beside `evidence`, under the same
+   * flag and the same budget — what the decision path REFUSED for this slot
+   * since the horizon the block states: the dead pins, with the reason the
+   * composer recorded, and the times the pinned slot could not fill its `take`.
+   * Zero is reported as zero; it reports configuration, never shopper state.
+   */
+  governance?: SlotGovernance;
 }
 
 /** Every slot on every page, grouped by page, with what is configured on it; `q` narrows by slot or page name. */
