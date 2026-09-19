@@ -26,16 +26,36 @@
 //     horizon those zeros are measured from, not as an absent member.
 //
 // The counts are a monotonic diagnostic within their horizon, not an accounting
-// ledger: the read-modify-write is last-write-wins, so two page loads that land
-// in the same instant may record one increment rather than two, and the counter
-// makes no claim beyond "this happened, at least this often, since `since`".
+// ledger: the read-modify-write is last-write-wins, so concurrent page loads may
+// collapse to one increment rather than one each — the counts are a FLOOR, never
+// an overcount — and the counter makes no claim beyond "this happened, at least
+// this often, since `since`".
 
 import type { Env } from '@/types/env';
+
+/**
+ * The scope the counters are kept at, stated on every block that carries them
+ * (R99(c)). One document per tenant (`slot-governance:v1:<tenant>`) is written
+ * by every page load of that tenant, whichever brand the load was for, and read
+ * back whole by every brand's operator surface — so the counts an operator sees
+ * beside one brand's learning evidence are the tenant's, counted across all of
+ * that tenant's brands.
+ *
+ * It is a platform constant rather than a binding or a stored value: this is the
+ * only scope these counters exist at, so the word is STATED on the answer and is
+ * never read out of the store. A document written before the member existed
+ * therefore reads as `tenant` without any re-interpretation of its counts, and a
+ * `scope` some other tooling wrote into the store can never reach an answer.
+ */
+export const SLOT_GOVERNANCE_SCOPE = 'tenant';
+export type SlotGovernanceScope = typeof SLOT_GOVERNANCE_SCOPE;
 
 /** The per-slot block the operator slots page carries. Zero is reported as zero. */
 export interface SlotGovernance {
   /** Epoch milliseconds: the horizon these counts start at. */
   since: number;
+  /** The scope these counts are kept at: one document per tenant, covering every brand of it. */
+  scope: SlotGovernanceScope;
   /** Occurrences of a refused pin for this slot since `since`. */
   refusedPinCount: number;
   /** The distinct pins refused, with the reason the composer recorded; bounded. */
@@ -59,7 +79,13 @@ export interface SlotGovernanceOccurrences {
  * carries these two counts per slot and adds its `refusedPins[]` detail; the
  * monitor carries them summed over the tenant's slots and adds nothing.
  */
-export interface TenantSlotGovernance { since: number; refusedPinCount: number; shortTakeCount: number }
+export interface TenantSlotGovernance {
+  since: number;
+  /** The same word for the same fact as the per-slot block: these counts are the tenant's. */
+  scope: SlotGovernanceScope;
+  refusedPinCount: number;
+  shortTakeCount: number;
+}
 
 /** One read of the document: per slot, plus the tenant totals the monitor reports. */
 export interface SlotGovernanceView extends TenantSlotGovernance {
@@ -88,7 +114,7 @@ export const slotGovernanceKey = (tenant: string): string => `slot-governance:v1
 
 /** A slot with nothing to report, at the horizon the answer states (R86(b)). */
 export const emptySlotGovernance = (since: number): SlotGovernance =>
-  ({ since, refusedPinCount: 0, refusedPins: [], shortTakeCount: 0, shortTakePositions: 0 });
+  ({ since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount: 0, refusedPins: [], shortTakeCount: 0, shortTakePositions: 0 });
 
 interface StoredSlot {
   refusedPinCount: number;
@@ -96,6 +122,13 @@ interface StoredSlot {
   shortTakeCount: number;
   shortTakePositions: number;
 }
+/**
+ * What is kept in the store: the horizon and the counts, and nothing that an
+ * answer states for itself. The scope is not one of these fields — it is the
+ * constant above, applied when the view is projected — so no stored byte can
+ * make a document claim a scope its counts were not kept at, and a document
+ * written before the member existed needs no migration to be read.
+ */
 interface StoredDocument { version: 1; since: number; slots: Record<string, StoredSlot> }
 
 const count = (value: unknown): number =>
@@ -163,12 +196,13 @@ function viewOf(document: StoredDocument | null, now: number): SlotGovernanceVie
   const bySlot = new Map<string, SlotGovernance>();
   let refusedPinCount = 0, shortTakeCount = 0;
   for (const [slot, entry] of Object.entries(document?.slots ?? {})) {
-    bySlot.set(slot, { since, refusedPinCount: entry.refusedPinCount, refusedPins: entry.refusedPins.map(pin => ({ ...pin })),
+    bySlot.set(slot, { since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount: entry.refusedPinCount,
+      refusedPins: entry.refusedPins.map(pin => ({ ...pin })),
       shortTakeCount: entry.shortTakeCount, shortTakePositions: entry.shortTakePositions });
     refusedPinCount += entry.refusedPinCount;
     shortTakeCount += entry.shortTakeCount;
   }
-  return { since, bySlot, refusedPinCount, shortTakeCount };
+  return { since, scope: SLOT_GOVERNANCE_SCOPE, bySlot, refusedPinCount, shortTakeCount };
 }
 
 /**
@@ -180,7 +214,7 @@ function viewOf(document: StoredDocument | null, now: number): SlotGovernanceVie
 export async function tenantSlotGovernance(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<TenantSlotGovernance | undefined> {
   try {
     const view = viewOf(await loadDocument(env, tenant, now), now);
-    return { since: view.since, refusedPinCount: view.refusedPinCount, shortTakeCount: view.shortTakeCount };
+    return { since: view.since, scope: view.scope, refusedPinCount: view.refusedPinCount, shortTakeCount: view.shortTakeCount };
   } catch { return undefined; }
 }
 
