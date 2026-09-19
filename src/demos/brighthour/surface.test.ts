@@ -41,6 +41,12 @@ import type { AudienceStore } from '@/connectors/AudienceStore';
 import { CatalogService } from '@/services/CatalogService';
 import { ensureAudiencesSeeded, RealtimeSegmentEngine } from '@/services/RealtimeSegmentEngine';
 import { ShopperReflex } from '@/durable-objects/ShopperReflex';
+import { initializePublicationSet } from '@/config/publication';
+import { CONSENT_LIFETIME_MS, consentInstruction } from '@/content/consent';
+import { runOwnerOperation } from '@/identity/sessionAuthority';
+import { shopperObjectName } from '@/tenancy/objects';
+import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import { REFLEX_KIND } from '@/reflex/configStore';
 import type { Env } from '@/types/env';
 
 // The brighthour modules are late-bound by design; probe them the same way.
@@ -100,6 +106,25 @@ class FakeStorage {
   async setAlarm(t: number | Date): Promise<void> {
     this.alarm = typeof t === 'number' ? t : t.getTime();
   }
+  // The object reads its own alarm before arming one against the retention
+  // deadline (ShopperReflex.ts:2914-2916) and writes profile state inside a
+  // storage transaction (:1803); the double implements both rather than
+  // shortening what the DO is allowed to do.
+  async getAlarm(): Promise<number | null> {
+    return this.alarm;
+  }
+  async delete(key: string): Promise<boolean> {
+    return this.map.delete(key);
+  }
+  async list<T>(options?: { prefix?: string; startAfter?: string; limit?: number; reverse?: boolean }): Promise<Map<string, T>> {
+    return structuredClone(new Map([...this.map]
+      .filter(([key]) => key.startsWith(options?.prefix ?? '') && (!options?.startAfter || key > options.startAfter))
+      .sort(([a], [b]) => (options?.reverse ? -1 : 1) * a.localeCompare(b))
+      .slice(0, options?.limit))) as Map<string, T>;
+  }
+  async transaction<T>(run: (txn: FakeStorage) => Promise<T>): Promise<T> {
+    return run(this);
+  }
 }
 
 function fakeEnv(overrides: Record<string, unknown> = {}): Env {
@@ -118,14 +143,82 @@ function fakeEnv(overrides: Record<string, unknown> = {}): Env {
   } as unknown as Env;
 }
 
-function makeDO(env: Env) {
+/**
+ * The demo's configuration authority. Since W11 the coherent R2 publication is
+ * the ONLY authority for a Reflex config (src/config/publication.ts:19, :225-240,
+ * :271-273; src/config/versionedStore.ts:92-94; src/reflex/configStore.ts:408-415):
+ * there is no KV fallback and an uninitialized scope fails closed. The demo
+ * therefore publishes its own compiled surface configuration as revision 1 —
+ * exactly the tuning it scored with before the split — under the one publication
+ * root both demo scopes share (publicationScope maps reflex/brighthour → coach).
+ */
+class FixtureR2 {
+  objects = new Map<string, { text: string; etag: string }>();
+  count = 0;
+  async get(key: string) {
+    const v = this.objects.get(key);
+    return v
+      ? { key, etag: v.etag, size: new TextEncoder().encode(v.text).length, body: new Response(v.text).body }
+      : null;
+  }
+  async put(key: string, text: string, options?: R2PutOptions) {
+    const condition = options?.onlyIf;
+    if (condition instanceof Headers ? this.objects.has(key) : condition && condition.etagMatches !== this.objects.get(key)?.etag) return null;
+    const etag = 'fixture-' + (++this.count);
+    this.objects.set(key, { text, etag });
+    return { key, etag, size: new TextEncoder().encode(text).length };
+  }
+}
+
+/** fakeEnv plus the published demo configuration head the engine now requires. */
+async function seededEnv(overrides: Record<string, unknown> = {}): Promise<Env> {
+  // A first record needs an explicit retention authority (src/retention.ts:39, :72-89;
+  // ShopperReflex.ts:1034): the demo names its own policy registry rather than
+  // relying on a default lifetime, which the parser deliberately does not have.
+  const retention = JSON.stringify({ version: 1, tenants: { [DEFAULT_TENANT]: Object.fromEntries(
+    ['profile', 'identity', 'ledger', 'online', 'hourly'].map((category) => [category,
+      { id: 'demo-fixture-' + category, revision: 1, durationMs: 30 * 86400_000, basis: 'admitted', renewal: 'new-record-only' }])) } });
+  const env = fakeEnv({ STORAGE: new FixtureR2(), TENANTS: JSON.stringify({ provisioned: [DEFAULT_TENANT] }), RETENTION: retention, ...overrides });
+  const at = Date.now();
+  const baselines = [
+    { kind: REFLEX_KIND, scope: 'coach', revision: { revision: 1, value: await reflexConfigFor('coach'), actor: 'demo-fixture', note: '', at } },
+    ...(BH_READY
+      ? [{ kind: REFLEX_KIND, scope: 'brighthour', revision: { revision: 1, value: await reflexConfigFor('brighthour'), actor: 'demo-fixture', note: '', at } }]
+      : []),
+  ];
+  await initializePublicationSet(env, baselines, '0:' + crypto.randomUUID());
+  return env;
+}
+
+/**
+ * `visitorId` gives the object the identity the ingest door checks: since W04/W35
+ * an unsigned write must come from the ACTUAL per-shopper object
+ * (ShopperReflex.ts:2871-2874 isActualObject, :693-701), so the fixture names the
+ * object the way production does (tenancy/objects.ts:43-54) instead of leaving it
+ * anonymous. Call sites that never reach that door keep the anonymous shape.
+ */
+function makeDO(env: Env, visitorId?: string) {
+  const idFromName = (name: string) => ({ toString: () => name });
+  const bound = visitorId === undefined ? env : ({ ...env, SHOPPER_REFLEX: { idFromName } } as unknown as Env);
   const storage = new FakeStorage();
   const state = {
     storage,
+    ...(visitorId === undefined ? {} : { id: idFromName(shopperObjectName(DEFAULT_TENANT, visitorId)) }),
     acceptWebSocket: () => {},
     getWebSockets: () => [],
   } as unknown as DurableObjectState;
-  return { shopper: new ShopperReflex(state, env), storage };
+  if (visitorId !== undefined) {
+    // Consent is fail-closed and a legacy preference grants nothing
+    // (src/content/consent.ts:139-152): without an explicit stored choice the
+    // event is answered "Action not tracked: shopper consent refused" and the
+    // trust gate below is never reached. The shopper this fixture describes said
+    // yes, in the stored instruction shape the product writes (consent.ts:32-46).
+    const chosenAt = Date.now();
+    storage.map.set('consent', { version: 1, tenant: DEFAULT_TENANT, subject: visitorId, revision: 'demo-explicit-choice',
+      tracking: { value: true, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS },
+      personalization: { value: true, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS } });
+  }
+  return { shopper: new ShopperReflex(state, bound), storage };
 }
 
 async function ingest(shopper: ShopperReflex, event: unknown): Promise<any> {
@@ -222,7 +315,7 @@ describe('coach resolution — the same objects and keys as before the split', (
   });
 
   it('generates the coach audience set unprefixed and untagged — stored bytes unchanged', async () => {
-    const env = fakeEnv();
+    const env = await seededEnv();
     const catalog = new CatalogService();
     await ensureAudiencesSeeded(env, catalog); // default surface arg — the pre-split call shape
     const expected = generateAffinityAudiences(
@@ -417,7 +510,7 @@ describe('ShopperReflex trust gate — surface-aware product lookup', () => {
   });
 
   it('drops a genuinely unknown product id on the coach surface', async () => {
-    const { shopper } = makeDO(fakeEnv());
+    const { shopper } = makeDO(await seededEnv(), 'vis-COACH');
     const body = await ingest(shopper, {
       type: 'product_view',
       userId: 'vis-COACH',
@@ -428,7 +521,7 @@ describe('ShopperReflex trust gate — surface-aware product lookup', () => {
   });
 
   it('accepts a real coach product id (regression: the retail gate still passes)', async () => {
-    const { shopper } = makeDO(fakeEnv());
+    const { shopper, storage } = makeDO(await seededEnv(), 'vis-COACH-2');
     const known = new CatalogService().getAllProducts()[0].id;
     const body = await ingest(shopper, {
       type: 'product_view',
@@ -438,6 +531,10 @@ describe('ShopperReflex trust gate — surface-aware product lookup', () => {
     });
     expect(body.dropped).toBeUndefined();
     expect(body.success).toBe(true);
+    // Passing the gate means the view was SCORED: the object now holds this
+    // shopper's vector. A refusal (consent or otherwise) also answers success
+    // with no `dropped`, so the stored state is what separates them.
+    expect((storage.map.get('affinity') as { shopperId?: string } | undefined)?.shopperId).toBe('vis-COACH-2');
   });
 });
 
@@ -592,7 +689,8 @@ describe.skipIf(!BH_READY)('brighthour surface — config, catalog, and the DO g
     const products = await catalogProductsFor('brighthour', t0);
     const bhId = products[0].id;
 
-    const accepted = await ingest(makeDO(fakeEnv()).shopper, {
+    const acceptedObject = makeDO(await seededEnv(), 'bh_vis-1');
+    const accepted = await ingest(acceptedObject.shopper, {
       type: 'product_view',
       userId: 'bh_vis-1',
       data: { productId: bhId, action: 'product_view' },
@@ -600,8 +698,10 @@ describe.skipIf(!BH_READY)('brighthour surface — config, catalog, and the DO g
     });
     expect(accepted.dropped).toBeUndefined();
     expect(accepted.success).toBe(true);
+    // Scored, not merely not-refused (see the coach case above).
+    expect((acceptedObject.storage.map.get('affinity') as { shopperId?: string } | undefined)?.shopperId).toBe('bh_vis-1');
 
-    const dropped = await ingest(makeDO(fakeEnv()).shopper, {
+    const dropped = await ingest(makeDO(await seededEnv(), 'bh_vis-2').shopper, {
       type: 'product_view',
       userId: 'bh_vis-2',
       data: { productId: 'BH-NOT-REAL', action: 'product_view' },
@@ -611,7 +711,7 @@ describe.skipIf(!BH_READY)('brighthour surface — config, catalog, and the DO g
 
     // And the surfaces do not lend each other legitimacy: a brighthour id posted
     // on the coach surface is still an unknown product there.
-    const crossed = await ingest(makeDO(fakeEnv()).shopper, {
+    const crossed = await ingest(makeDO(await seededEnv(), 'vis-COACH-3').shopper, {
       type: 'product_view',
       userId: 'vis-COACH-3',
       data: { productId: bhId, action: 'product_view' },
@@ -621,7 +721,7 @@ describe.skipIf(!BH_READY)('brighthour surface — config, catalog, and the DO g
   });
 
   it('REAL two-catalog seeding over ONE store: alternating passes keep both sets alive', async () => {
-    const env = fakeEnv();
+    const env = await seededEnv();
     const kv = env.CACHE as unknown as FakeKV;
     const coachCatalog = new CatalogService();
     const bhCatalog = await catalogServiceFor('brighthour', t0);
@@ -658,7 +758,7 @@ describe.skipIf(!BH_READY)('brighthour surface — config, catalog, and the DO g
   });
 
   it('a brighthour event carries its surface onto its session and its audience keys', async () => {
-    const env = fakeEnv();
+    const env = await seededEnv();
     const engine = new RealtimeSegmentEngine(env);
     const products = await catalogProductsFor('brighthour', t0);
     const cfg = await reflexConfigFor('brighthour');
@@ -666,10 +766,20 @@ describe.skipIf(!BH_READY)('brighthour surface — config, catalog, and the DO g
       (p) => extractTouches(p as unknown as Record<string, unknown>, cfg).length > 0
     )!;
 
+    // The shopper's explicit choice, carried by the owner operation the request
+    // path runs inside (src/identity/sessionAuthority.ts:457): consent is
+    // fail-closed and a missing record is OFF (src/content/consent.ts:139-152),
+    // so without it the engine answers untracked and broadcasts nothing.
+    const chosenAt = t0 - 1000;
+    const choice = consentInstruction({
+      version: 1, tenant: DEFAULT_TENANT, subject: 'bh_vis-3', revision: 'demo-explicit-choice',
+      tracking: { value: true, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS },
+      personalization: { value: true, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS },
+    });
     let update = null;
     for (let i = 0; i < 3; i++) {
       vi.setSystemTime(t0 + i * 5_000);
-      const res = await engine.processActionEventWithSession(
+      const res = await runOwnerOperation({}, env, () => engine.processActionEventWithSession(
         {
           type: 'product_view',
           userId: 'bh_vis-3',
@@ -678,7 +788,7 @@ describe.skipIf(!BH_READY)('brighthour surface — config, catalog, and the DO g
           timestamp: t0 + i * 5_000,
         },
         null
-      );
+      ), env.SESSIONS as never, undefined, async () => choice);
       update = res.update ?? update;
     }
     expect(update).not.toBeNull();
