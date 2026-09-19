@@ -338,9 +338,13 @@ the first stage is the floor a shopper starts in and carries no threshold of its
 named counter of the CURRENT VISIT reaches its whole-number threshold; the counters are `interactions`,
 `product_views`, `purchases`, `cart_adds`, `wishlist_adds` and `category_dwell_ms`. The block is validated
 with the rest of the document, so an invalid set is refused at publication and the last published revision
-keeps deciding; publish no block and the engine reports the first stage and says on the decision's
-`sources.journey.reason` that none is published. The version a decision and a receipt name is this
-document's own revision identity, because the thresholds are part of it.
+keeps deciding. Publish no block at all and the engine's own compiled default decides — `thinking` at the
+third interaction, `deciding` at the first purchase — reported as `sources.journey.version:
+"journey-default-v1"` at `revision: 0`, with `sources.journey.reason` naming the compiled default so you can
+tell it from your own revision. The version a decision and a receipt name is otherwise this document's own
+revision identity, because the thresholds are part of it. A block that was stored but can no longer be read
+is never silently replaced by the default: the engine falls closed to the first stage, claims no version and
+says so on `reason`.
 
 ## 5. Learning and transparency
 

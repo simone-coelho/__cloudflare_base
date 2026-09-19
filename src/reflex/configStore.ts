@@ -126,7 +126,12 @@ export type WriteResult =
 
 // ── Validation ───────────────────────────────────────────────────────────────
 
-const MAX_TAU_MS = 30 * 24 * 60 * 60 * 1000; // 30 days: a decay horizon, not a lease
+// A decay horizon, not a lease. Raised from thirty days with R42: the shipped
+// memory horizon is fourteen days and price posture rides 2.5× of it (R50(a),
+// thirty-five days), so a bound of thirty would refuse the engine's own
+// compiled default. Ninety days keeps a τ a horizon — a value a tenant could
+// argue for — while admitting the shipped default and an honest retune of it.
+const MAX_TAU_MS = 90 * 24 * 60 * 60 * 1000;
 const MAX_DIMENSIONS = 32;
 const MAX_WEIGHTS = 200;
 const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);

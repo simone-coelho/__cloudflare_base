@@ -34,7 +34,7 @@ import { enrichmentInputs } from '@/identity/profileEnrichment';
 import { consentOf, consentFromCookies, intersectConsent, refusalHints, personalizes, withConsent, type Consent } from '@/content/consent';
 import { FeatureVariableManager, type FeatureVariableResult } from './FeatureVariableManager';
 import { priceBandOf, type CatalogService, type Product } from './CatalogService';
-import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom } from './JourneyStage';
+import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce } from './JourneyStage';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
 import {
   getConnectors,
@@ -487,11 +487,12 @@ export class RealtimeSegmentEngine {
       // counts in its own decision closes the journey for the next one.
       const newJourney = advanceVisitJourney(sessionData.journey, stored?.metadata.lastSeen, now, event);
       // R29: the word the engine REPORTS, from the tenant's published thresholds.
-      const journeyWord = journeyStageFrom(newJourney.counters, reflexConfig.journey);
+      const journeyThresholds = journeyThresholdsInForce(reflexConfig);
+      const journeyWord = journeyStageFrom(newJourney.counters, journeyThresholds);
       // What the previous derivation reported, so a stage change is a trigger
       // exactly as a segment change is.
       const priorWord = journeyStageFrom(
-        journeyCountersNow(sessionData.journey, stored?.metadata.lastSeen, now), reflexConfig.journey);
+        journeyCountersNow(sessionData.journey, stored?.metadata.lastSeen, now), journeyThresholds);
 
       // 2.5 Edge Affinity Reflex (doc 16): decayed per-dimension affinity via the
       // pure core. State rides the session in P0 (relocates into the DO in P2).

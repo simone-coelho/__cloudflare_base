@@ -173,10 +173,11 @@ export const DEFAULT_REFLEX_CONFIG: ReflexConfig = {
     { key: 'silhouette', source: 'silhouette' },
     { key: 'occasion', source: 'occasion', multi: true },
     // Price bands match the existing cuts (CatalogService.priceBandOf): <150 / <400 / rest.
-    // Price POSTURE is a slower-moving trait than product interest: a longer τ lets it
-    // accumulate across human-paced browsing (~15s/view) and fade more slowly — the
-    // per-dimension tuning §4 was designed for.
-    { key: 'priceBand', source: 'price_usd', derive: 'band', cuts: [150, 400], labels: ['entry', 'core', 'elevated'], tauMs: 150_000 },
+    // Price POSTURE is a slower-moving trait than product interest, and that RELATION is
+    // the tuning, not the absolute number: this dimension's horizon is 2.5× the global one
+    // (R50(a)), so it still accumulates across human-paced browsing and still outlasts
+    // interest in any one product, whatever the global horizon is retuned to.
+    { key: 'priceBand', source: 'price_usd', derive: 'band', cuts: [150, 400], labels: ['entry', 'core', 'elevated'], tauMs: 35 * 24 * 60 * 60 * 1000 },
     // CW3. The content type a shopper engages with (video, editorial, on-model,
     // silo), read off content events. Mandeep named it by name: "content-type
     // affinity learnable, e.g. video affinity". Sourced from the SDK's
@@ -207,8 +208,21 @@ export const DEFAULT_REFLEX_CONFIG: ReflexConfig = {
     // Time-only re-evaluation (alarms / no-product events): no accumulation.
     tick: 0,
   },
-  // Demo cadence: 3 brisk views (~5s apart) cross θ_in (a ≈ 0.606); ~40s idle exits.
-  tauMs: 60_000,
+  // THE SHIPPED MEMORY HORIZON (W16 C8, ruling R42). Document 35 §5 W16 asks the
+  // product to remember across DAYS AND WEEKS — tapestry_requirements.txt line 152,
+  // Return Visit Recognition: "Picks up where you left off, remembers what you were
+  // considering". This constant is what an untuned tenant gets, so it IS the product's
+  // memory, and the engine's own definition of forgetting is the ε-prune in apply():
+  // an interest three views deep decays to nothing in minutes under a 60-second τ, so
+  // a shopper returning the next day was met as a stranger. Fourteen days is a
+  // documented ENGINEERING default, not a customer calibration — the production number
+  // is an open owner input (HANDOFF-2026-09-18 §8) and is set as published, versioned
+  // configuration on the reflex document, never here. Audience membership follows this
+  // same horizon: hysteresis has no τ of its own (R50(b)), so a shopper now leaves an
+  // affinity audience on the same days/weeks clock her interest fades on, instead of
+  // forty seconds after she stops clicking. The demo's own brisk cadence lives in the
+  // fixtures that script it (src/reflex/core.test.ts), not in the shipped default.
+  tauMs: 14 * 24 * 60 * 60 * 1000,
   K: 1.8,
   thetaIn: 0.6,
   thetaOut: 0.45,

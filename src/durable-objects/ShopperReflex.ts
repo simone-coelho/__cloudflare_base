@@ -90,7 +90,7 @@ import {
 } from '@/reflex/core';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
-import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, stageFromCounters, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
+import { advanceVisitJourney, deriveStage, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, stageFromCounters, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
 import {
   RETAIL_SIGNAL_DEFAULTS,
   applyEventToAttributes,
@@ -641,7 +641,7 @@ export class ShopperReflex {
             // W16 C4 / R29: the content decision reads the shared word here and
             // maps it to the persisted cell token through PERSISTED_STAGE; the
             // same derivation the SDK hydrate answers with.
-            journeyStage: journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, at), cfg.journey),
+            journeyStage: journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, at), journeyThresholdsInForce(cfg)),
             visit: this.pipeline ? { visitCount: this.pipeline.visitCount, lastVisitAt: this.pipeline.lastVisitAt,
               entryChannel: this.pipeline.entryChannel, lastSeen: this.affinity?.lastSeen } : null,
           });
@@ -1159,8 +1159,9 @@ export class ShopperReflex {
     // reads it below, and the purchase that counts in its own decision closes
     // the journey so the NEXT decision starts again from zero (R32(3)).
     const newJourney = advanceVisitJourney(pipe.journey, this.affinity?.lastSeen, now, event);
-    const journeyWord = journeyStageFrom(newJourney.counters, cfg.journey);
-    const priorWord = journeyStageFrom(journeyCountersNow(pipe.journey, this.affinity?.lastSeen, now), cfg.journey);
+    const journeyThresholds = journeyThresholdsInForce(cfg);
+    const journeyWord = journeyStageFrom(newJourney.counters, journeyThresholds);
+    const priorWord = journeyStageFrom(journeyCountersNow(pipe.journey, this.affinity?.lastSeen, now), journeyThresholds);
     // Reflex scores are computed FRESH into the context (they decay by construction —
     // never persisted), so store-published affinity audiences can gte them.
     if (reflex) Object.assign(ctxAttrs, reflexAttributes(reflex.state, now, cfg));
@@ -1379,7 +1380,7 @@ export class ShopperReflex {
         // names the stage that event reached; every other caller (a manual
         // segment change, an alarm, a snapshot) projects the visit at read time.
         journeyStage: candidate?.journeyWord
-          ?? journeyStageFrom(journeyCountersNow(pipe.journey, aff.lastSeen, now), cfg.journey),
+          ?? journeyStageFrom(journeyCountersNow(pipe.journey, aff.lastSeen, now), journeyThresholdsInForce(cfg)),
         // Live affinity payload for the Affinity Instrument: dims (original catalog
         // value names) + memberships + this event's EXPLAIN records (§12 glass box)
         // + the ODP-confirmed subset — the exact shape the request path pushes.
@@ -1634,7 +1635,7 @@ export class ShopperReflex {
       // The content decision maps it to the persisted cell token through the one
       // mapping point rather than recomputing it.
       journeyStage: allowed
-        ? journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, now), cfg.journey)
+        ? journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, now), journeyThresholdsInForce(cfg))
         : null,
       visit: allowed ? projectVisit(this.pipeline, this.affinity?.lastSeen, now) : null,
       // CW31: the switches the content decision and the outcome path honour.

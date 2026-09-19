@@ -162,13 +162,20 @@ export interface JourneyStageRule {
 export interface JourneyThresholds { stages: JourneyStageRule[] }
 
 /**
- * The compiled default threshold set: what a tenant that has published no
- * `journey` block of its own would be tuned to, and the engineering default the
- * validator accepts verbatim. The third interaction of a visit moves the stage
- * (tapestry_requirements.txt line 147, Time to Relevance: "3 clicks — site
- * adapts third interaction onwards") and a purchase is the deciding signal
- * (admitted criterion C4). Customer-neutral: counts of the shopper's own
- * actions, no tenant's taxonomy anywhere.
+ * THE COMPILED DEFAULT THRESHOLD SET (R49). It decides for a tenant that has
+ * never published a `journey` block, exactly as the rest of
+ * DEFAULT_REFLEX_CONFIG is the compiled default for a tenant that has never
+ * tuned the engine. Reporting the first stage forever instead would make every
+ * untuned tenant's cell permanently `early` and collapse the pooled learning
+ * key to `s=early`, which is a worse lie than a documented default.
+ *
+ * The third interaction of a visit moves the stage (tapestry_requirements.txt
+ * line 147, Time to Relevance: "3 clicks — site adapts third interaction
+ * onwards") and a purchase is the deciding signal (admitted criterion C4).
+ * Customer-neutral: counts of the shopper's own actions, no tenant's taxonomy
+ * anywhere. A tenant that publishes a block overrides it wholesale, and a
+ * published block that cannot be read is NOT replaced by this one — that fails
+ * closed, because a tenant who tuned the journey did not ask for ours.
  */
 export const DEFAULT_JOURNEY_THRESHOLDS: JourneyThresholds = {
   stages: [
@@ -176,6 +183,14 @@ export const DEFAULT_JOURNEY_THRESHOLDS: JourneyThresholds = {
     { stage: 'deciding', anyOf: { purchases: 1 } },
   ],
 };
+
+/**
+ * The compiled default's own version identity, which a decision and a receipt
+ * name at revision 0 so a reader can tell "the engine's default decided this"
+ * from "the tenant's revision 3 decided this". It is not a document version:
+ * nothing published carries it.
+ */
+export const DEFAULT_JOURNEY_THRESHOLDS_VERSION = 'journey-default-v1';
 
 /** A threshold nobody reaches is a tuning mistake, not a policy. */
 const MAX_JOURNEY_THRESHOLD = 1_000_000_000;
@@ -373,21 +388,53 @@ export interface ReportedJourney {
   reason: string | null;
 }
 
-/** The diagnostic a decision carries when no journey thresholds are in force. */
-export const NO_JOURNEY_THRESHOLDS =
-  'no journey thresholds are published for this tenant: the reflex document carries no valid journey block, so the first stage of the journey is reported and no threshold version was used';
+/** R49: the tenant published no block at all, so the engine's own default decided. */
+export const JOURNEY_COMPILED_DEFAULT =
+  `no journey thresholds are published for this tenant, so the engine's compiled default threshold set (${DEFAULT_JOURNEY_THRESHOLDS_VERSION}) decided this stage; publish a journey block on the reflex configuration document to tune it`;
+/** A stored block the validator cannot read: fail closed, never substitute another tenant's tuning. */
+export const JOURNEY_BLOCK_UNUSABLE =
+  'the journey block published on the reflex document cannot be read, so the engine failed closed to the first stage of the journey and used no threshold version';
+
+/**
+ * The threshold set actually in force for a reflex document, and the provenance
+ * a decision reports for it. ONE function, so no surface can drift:
+ *
+ *   • a valid published block  → that block, named by the document's own
+ *     revision identity (R32(1): the thresholds ARE part of that document);
+ *   • no block at all          → the compiled default at revision 0 (R49),
+ *     named by its own version, with a diagnostic that says so;
+ *   • a block that will not    → nothing. The stage falls closed to the first
+ *     validate                   of the journey and no version is claimed.
+ */
+export function journeySource(
+  document: { journey?: unknown; version?: string } | null | undefined,
+  revision: number,
+): { thresholds: JourneyThresholds | null; version: string | null; revision: number; reason: string | null } {
+  const block = document?.journey;
+  if (block === undefined || block === null) {
+    return { thresholds: DEFAULT_JOURNEY_THRESHOLDS, version: DEFAULT_JOURNEY_THRESHOLDS_VERSION, revision: 0, reason: JOURNEY_COMPILED_DEFAULT };
+  }
+  const published = journeyThresholdsOf(block);
+  return published
+    ? { thresholds: published, version: document?.version ?? null, revision, reason: null }
+    : { thresholds: null, version: null, revision: 0, reason: JOURNEY_BLOCK_UNUSABLE };
+}
+
+/** The set in force, for a caller that needs only the stage. */
+export function journeyThresholdsInForce(document: { journey?: unknown } | null | undefined): JourneyThresholds | null {
+  return journeySource(document, 0).thresholds;
+}
 
 /**
  * One derivation, used by every reporting surface so the hosts cannot drift:
- * the counters of the current visit read against the published set, with the
- * version a receipt names and the diagnostic when none was in force.
+ * the counters of the current visit read against the set in force, with the
+ * version a receipt names and the diagnostic when the tenant published none.
  */
 export function reportJourney(
   counters: unknown,
-  published: { journey?: unknown; version: string } | null | undefined,
+  document: { journey?: unknown; version?: string } | null | undefined,
   revision: number,
 ): ReportedJourney {
-  const set = journeyThresholdsOf(published?.journey);
-  if (!set) return { stage: FIRST_JOURNEY_STAGE, version: null, revision: 0, reason: NO_JOURNEY_THRESHOLDS };
-  return { stage: journeyStageFrom(counters, set), version: published!.version, revision, reason: null };
+  const source = journeySource(document, revision);
+  return { stage: journeyStageFrom(counters, source.thresholds), version: source.version, revision: source.revision, reason: source.reason };
 }

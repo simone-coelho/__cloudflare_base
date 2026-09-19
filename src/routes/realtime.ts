@@ -17,7 +17,7 @@ import { storedConsent, consentOf, personalizes, type Consent } from '@/content/
 import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { validBufferedAction } from '@/reflex/bufferedAction';
 import { projectVisit, validEntry, type ChannelSignals } from '@/services/visit';
-import { journeyCountersNow, journeyStageFrom } from '@/services/JourneyStage';
+import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce } from '@/services/JourneyStage';
 import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { demoEventCaptureEnabled } from '@/services/demoEventCapture';
@@ -446,7 +446,7 @@ realtimeRoutes.get('/reflex', async (c) => {
       // (ShopperReflex.handleSnapshot). A shopper who declined personalization
       // is told null, exactly as before.
       journeyStage: personalizes(consent)
-        ? journeyStageFrom(journeyCountersNow(sessionData.journey, sessionData.metadata.lastSeen, now), cfg.journey)
+        ? journeyStageFrom(journeyCountersNow(sessionData.journey, sessionData.metadata.lastSeen, now), journeyThresholdsInForce(cfg))
         : null,
       // R20 / unit W16.C2.07: the SDK-visible hydrate carries the shopper's
       // visit number and entry channel in the `projectVisit` shape, identically

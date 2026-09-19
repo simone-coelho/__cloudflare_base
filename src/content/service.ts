@@ -13,8 +13,8 @@ import { ReflexConfigUnavailableError } from '@/reflex/configStore';
 import { snapshot as reflexSnapshot, type AffinitySnapshot, type ReflexConfig } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
 import {
-  journeyCountersNow, journeyStageFrom, journeyThresholdsOf, journeyWordOf,
-  NO_JOURNEY_THRESHOLDS, PERSISTED_STAGE, type JourneyWord,
+  journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
+  journeyWordOf, PERSISTED_STAGE, type JourneyWord,
 } from '@/services/JourneyStage';
 import { projectVisit, validEntry, validVisitContext, entryChannelOf, type ChannelSignals, type VisitContext } from '@/services/visit';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
@@ -187,7 +187,7 @@ async function readShopper(
       // W16 C4: the same derivation the session host's own hydrate answers with
       // — this visit's counters against the published journey thresholds.
       stage: personalizes(consent) && cfg
-        ? journeyStageFrom(journeyCountersNow(sessionData?.journey, sessionData?.metadata.lastSeen, now), cfg.journey)
+        ? journeyStageFrom(journeyCountersNow(sessionData?.journey, sessionData?.metadata.lastSeen, now), journeyThresholdsInForce(cfg))
         : null,
       visit: personalizes(consent) ? sessionData?.metadata : null,
       lastSeen: personalizes(consent) ? sessionData?.metadata.lastSeen : null,
@@ -243,13 +243,13 @@ export async function serveContentDecisions(
   const learn = learnRev?.value ?? DEFAULT_LEARN;
   const cfg = cfgRev.config;
   const configRevision = cfgRev.revision;
-  // W16 C4 (R32(1)): the journey thresholds ride the reflex document, so the
-  // version a receipt names is that document's own revision identity. With no
-  // valid block published the engine uses no version at all and says why — it
-  // never invents a threshold.
-  const journeySource = journeyThresholdsOf(cfg.journey)
-    ? { version: cfg.version, revision: configRevision, reason: null }
-    : { version: null, revision: 0, reason: NO_JOURNEY_THRESHOLDS };
+  // W16 C4 (R32(1), R49): the journey thresholds ride the reflex document, so
+  // the version a receipt names is that document's own revision identity. A
+  // tenant that has published no block is decided by the engine's compiled
+  // default at revision 0, named and diagnosed as such; a block that will not
+  // validate fails closed to the first stage with no version at all.
+  const { version, revision, reason } = journeySourceOf(cfg, configRevision);
+  const journeySource = { version, revision, reason };
   lap('documents');
 
   const shopper: ShopperRead = r.principal
