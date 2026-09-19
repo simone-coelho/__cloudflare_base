@@ -62,14 +62,21 @@
 //   Read off the engine's own types below, so the app typecheck names it as
 //   missing: the two errors this batch expects.
 //
-// RULED SENTENCES (R21, verbatim), in the documents that ship the counters:
-//   · `SELF_CHECK_GUARANTORS` (W20.G2.08) — the kit must name BOTH guarantors of
-//     the probe exclusion, because today's sentence names neither and control A
-//     showed the batch would not have noticed the flag being removed.
+// RULED SENTENCES (R21, verbatim), in the documents that ship the counters —
+// `docs/kit/02-api-reference.md` and `docs/api/01-rest-endpoints.md`, both of
+// them wherever both carry the claim, because the two operator surfaces speak
+// one vocabulary (R94(c), R105(1); the precedent is W20.G2.07):
+//   · `SELF_CHECK_GUARANTORS` (W20.G2.08) — BOTH documents must name BOTH
+//     guarantors of the probe exclusion, because today's sentences name neither
+//     and control A showed the batch would not have noticed the flag being
+//     removed.
 //   · `FLOOR_SENTENCE` / `UNDERSTATED_SENTENCE` (W20.G2.09) — the shipped claim
 //     "two page loads in the same instant may record one increment" understates
-//     what probe A2 measured (5 → 1) and is replaced.
-//   · `TENANT_SCOPE_SENTENCE` (W20.G2.10) — the row sentence, in both documents.
+//     what probe A2 measured (5 → 1) and is replaced. Only the kit carries a
+//     concurrency sentence today, so only the kit is ruled here.
+//   · `TENANT_SCOPE_SENTENCE` and `EVIDENCE_BRAND_SENTENCE` (W20.G2.10) — the
+//     row sentence in both documents, and beside it the scope of the member the
+//     same row already carries (R105(2)).
 //
 // ONE REPRESENTATION, SHARED BY EVERY UNIT BELOW AND BY W20-B2:
 //   (i)   the occurrence is the same one W20-B2's units drive — Coach's `feature`
@@ -117,7 +124,7 @@ import { DecisionRing } from '@/durable-objects/DecisionRing';
 import { LearnStats } from '@/durable-objects/LearnStats';
 import { newAnonymousSession, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
-import { configuredDestinations } from '@/connectors/config';
+import { configuredDestinations, configuredOperationalDestinations } from '@/connectors/config';
 import type { Env } from '@/types/env';
 import { RETENTION_CATEGORIES, type RetentionCategory, type RetentionPolicy } from '@/retention';
 
@@ -306,6 +313,22 @@ const fixtureCategories = (tenants: string[]) => Object.fromEntries(tenants.map(
 const OPERATOR_SECRET = 'w20-b3-synthetic-operator-signing-material';
 const OPERATOR_ORIGIN = 'http://console.test';
 
+/**
+ * The tenant's own telemetry configuration, so that a monitor run is KEPT and
+ * can be read back later: `runMonitor` only writes its result when the tenant
+ * has an admitted operational `monitor` destination (`src/ops/monitor.ts:389`
+ * through `admit`/`eligible`), and `readMonitor` (:300) only answers with one
+ * under the same admission. Fixture data in the shape the platform's own
+ * registry schema requires (`telemetrySchema`, src/connectors/config.ts:27), not
+ * product code; only the unit that reads a stored result asks for it.
+ */
+const TELEMETRY_ENVIRONMENT = 'test';
+const telemetryRegistry = () => JSON.stringify({
+  version: 1,
+  tenants: { [TENANT]: { telemetry: { environment: TELEMETRY_ENVIRONMENT, schema: 'ops-v1',
+    monitor: { binding: 'CACHE', namespace: 'monitor', accessPolicy: 'w20-b3-ops' } } } },
+});
+
 interface Mounted {
   env: Env;
   cache: UnitKV;
@@ -316,7 +339,7 @@ interface Mounted {
   configureRetention: () => Promise<void>;
 }
 
-async function mount(host: 'session' | 'do' = 'session', options: { cacheLatencyMs?: number } = {}): Promise<Mounted> {
+async function mount(host: 'session' | 'do' = 'session', options: { cacheLatencyMs?: number; keepMonitorResult?: boolean } = {}): Promise<Mounted> {
   invalidateCache(); invalidateLiftCache(); invalidatePublicationCache();
   const cache = new UnitKV(options.cacheLatencyMs ?? 0), sessions = new UnitKV(options.cacheLatencyMs ?? 0);
   const pending: Promise<unknown>[] = [];
@@ -329,6 +352,7 @@ async function mount(host: 'session' | 'do' = 'session', options: { cacheLatency
     PERSONALIZATION_WEBSOCKET: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
     DB: { prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }) },
     EVENT_QUEUE: { send: async () => undefined },
+    ...(options.keepMonitorResult ? { ENVIRONMENT: TELEMETRY_ENVIRONMENT, TENANT_CONNECTORS: telemetryRegistry() } : {}),
   } as unknown as Env;
   let automaticRetention = JSON.stringify({ version: 1, tenants: fixtureCategories([TENANT]) });
   env.RETENTION = automaticRetention;
@@ -337,6 +361,9 @@ async function mount(host: 'session' | 'do' = 'session', options: { cacheLatency
     try {
       const tenants = JSON.parse(env.TENANTS!).provisioned as string[], policies = fixtureCategories(tenants);
       for (const tenant of tenants) for (const destination of await configuredDestinations(env, tenant, () => { /* no destination diagnostics in this fixture */ })) policies[tenant]![destination.category] = fixtureRetentionPolicy;
+      // The operational destinations carry their own per-destination policy key
+      // too, which is what lets a monitor run be admitted, kept and read back.
+      for (const tenant of tenants) for (const destination of await configuredOperationalDestinations(env, tenant)) policies[tenant]![destination.category] = fixtureRetentionPolicy;
       automaticRetention = JSON.stringify({ version: 1, tenants: policies }); env.RETENTION = automaticRetention;
     } catch { /* a malformed registry still reaches the production refusal */ }
   };
@@ -585,8 +612,11 @@ async function shopperOn(m: Mounted): Promise<Shopper> {
   const concurrentSnapshots = async (n: number): Promise<Snapshot[]> => {
     invalidatePublicationCache();
     await m.configureRetention();
-    // All `n` requests are started before any of them is awaited, so their
-    // counter read-modify-writes overlap inside the latent store.
+    // The `n` requests are issued together, before any of them is awaited.
+    // MEASURED (R105(3)): whether their counter read-modify-writes actually
+    // collide depends on the host — on both hosts here all five were counted —
+    // so this leg asserts the BOUND, and the collapse itself is measured in the
+    // logic leg, which does race (five occurrences, one increment).
     const responses = await Promise.all(Array.from({ length: n }, () => call(`/v1/${TENANT}/decisions/snapshot?page=home`)));
     const out: Snapshot[] = [];
     for (const response of responses) out.push(await parse(response));
@@ -633,10 +663,16 @@ const FLOOR_SENTENCE = 'concurrent page loads may collapse to one increment; the
 const UNDERSTATED_SENTENCE = 'two page loads in the same instant may record one increment';
 
 /**
- * W20.G2.10 (R99(c)): the row sentence, in both documents, for the scope the
- * counters are actually kept at.
+ * W20.G2.10 (R99(c), R105(2)): the row sentence, in both documents, for the
+ * scope the counters are actually kept at — and, beside it, the scope of the
+ * member the same row carries next to them. `evidence` is read per brand
+ * (`liftKey(tenant, brand, slot)`, src/routes/decisions.ts:227) while
+ * `governance` is per tenant, so a row that states one scope and not the other
+ * invites an operator to read both as tenant-wide by symmetry. No new member on
+ * `evidence` is ruled: the contrast is stated in the row sentence.
  */
 const TENANT_SCOPE_SENTENCE = 'counted across all of the tenant\'s brands';
+const EVIDENCE_BRAND_SENTENCE = '`evidence` beside it is kept per brand';
 
 // ===========================================================================
 // unit:W20.G2.08 — the probe exclusion is real on a counting path, and
@@ -711,10 +747,14 @@ describe('unit:W20.G2.08', () => {
       } finally { clock.restore(); }
     }
 
-    // (5) The kit names both guarantors of the exclusion, so that removing
-    // either one contradicts the shipped contract (R99(a), finding F1).
-    expect(doc(KIT).includes(sentence(SELF_CHECK_GUARANTORS)),
-      `W20.G2.08 — ${KIT} must name BOTH guarantors of the monitor's exclusion, because today it names neither and the flag could be removed without contradicting a word of it: "${SELF_CHECK_GUARANTORS}"`).toBe(true);
+    // (5) BOTH shipped documents name both guarantors of the exclusion, so that
+    // removing either one contradicts the shipped contract (R99(a), finding F1)
+    // and the two operator surfaces keep one vocabulary (R94(c), R105(1); the
+    // precedent is W20.G2.07, whose sentence is required in both files).
+    for (const file of [KIT, REST]) {
+      expect(doc(file).includes(sentence(SELF_CHECK_GUARANTORS)),
+        `W20.G2.08 — ${file} must name BOTH guarantors of the monitor's exclusion, because today it names neither and the flag could be removed without contradicting a word of it: "${SELF_CHECK_GUARANTORS}"`).toBe(true);
+    }
   }, 240_000);
 });
 
@@ -796,11 +836,14 @@ describe('unit:W20.G2.09', () => {
 // ===========================================================================
 
 describe('unit:W20.G2.10', () => {
-  it('host: every governance block on the slots page and on the monitor states `scope: "tenant"`, a two-brand tenant’s pages both report the counts merged across its brands, and both shipped documents say so, on both hosts', async () => {
+  it('host: every governance block on the slots page, on the monitor and on the operator’s read of the kept monitor result states `scope: "tenant"`, a two-brand tenant’s pages both report the counts merged across its brands, and both shipped documents say so, on both hosts', async () => {
     for (const host of HOSTS) {
       const clock = fixedClock();
       try {
-        const m = await mount(host);
+        // `keepMonitorResult`: the tenant's telemetry configuration, so the run
+        // below is admitted, kept and readable again — the historical read this
+        // unit ends on (R105(2)).
+        const m = await mount(host, { keepMonitorResult: true });
         await publishFixture(m, DEAD_PIN_PAGE);
         const shopper = await shopperOn(m);
 
@@ -839,13 +882,36 @@ describe('unit:W20.G2.10', () => {
           `${host}: W20.G2.10 — the monitor sums the same two brand-blind page loads for the tenant`).toBe(2);
         expect(typeof monitor === 'string' ? monitor : monitorScopeMember(monitor),
           `${host}: W20.G2.10 — and states the same scope in the same word as the slots page (ruled member: \`scope: 'tenant'\` on \`MonitorResult.governance\`)`).toBe('tenant');
+
+        // THE HISTORICAL READ (R105(2)). `GET /v1/:tenant/monitor` answers the
+        // kept result through `readMonitor` → `projectMonitor`, whose
+        // `safeGovernance` (`src/ops/monitor.ts:222`) REBUILDS the counters
+        // member by member: a `scope` it does not copy is lost on every read an
+        // operator makes after the run itself.
+        const historical = await operatorGet(m, `/v1/${TENANT}/monitor`);
+        expect(historical.status, `${host}: the operator's read of the platform's last self-check answers`).toBe(200);
+        const last = (historical.body.last ?? null) as MonitorResult | null;
+        // PRECONDITION, NOT THE UNIT'S OUTCOME: the run above must have been
+        // kept and read back with its counters at all. If this line is what
+        // fails, the batch has a harness gap (the tenant's telemetry admission),
+        // NOT the product gap this clause is about — see the unit's row.
+        expect(last?.governance?.refusedPinCount
+          ?? `absent: GET /v1/${TENANT}/monitor answered ${JSON.stringify(historical.body).slice(0, 200)}`,
+          `${host}: PRECONDITION — the run just made is read back through \`readMonitor\` with the tenant's counters on it`).toBe(2);
+        expect(last?.governance === undefined
+          ? 'absent: the kept monitor result was read back with no `governance` member at all'
+          : monitorScopeMember(last.governance),
+          `${host}: W20.G2.10 — the operator's later read of that kept result states the scope too, because \`projectMonitor\` rebuilds the counters explicitly and drops anything it does not copy`).toBe('tenant');
       } finally { clock.restore(); }
     }
 
-    // Both shipped documents carry the row sentence for the scope.
+    // Both shipped documents carry the row sentence for the scope, and say what
+    // the member beside it on the same row is scoped to.
     for (const file of [KIT, REST]) {
       expect(doc(file).includes(sentence(TENANT_SCOPE_SENTENCE)),
         `W20.G2.10 — ${file} must say on the counters' row that they are kept per tenant: "${TENANT_SCOPE_SENTENCE}"`).toBe(true);
+      expect(doc(file).includes(sentence(EVIDENCE_BRAND_SENTENCE)),
+        `W20.G2.10 — and ${file} must say what the member beside them on the same row is scoped to, so an operator does not read it as tenant-wide by symmetry: "${EVIDENCE_BRAND_SENTENCE}"`).toBe(true);
     }
   }, 240_000);
 });
