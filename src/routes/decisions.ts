@@ -490,6 +490,12 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
   // Private replay inputs travel only inside authenticated encrypted offers.
   const payload = { ok: true, tenant, brand: out.brand, page: out.page, ts: out.ts, arm: out.arm,
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
+    // A refused pin has no delivery decision and no ledger row, so without this member
+    // the refusal reaches nothing outside the worker: the slot silently falls back to
+    // the site's own default. The decision set already names each refusal (slot, pinned
+    // piece, position within the pin prefix, reason); the answer carries that array
+    // unchanged, and only when there is something to name.
+    ...(out.pinDiagnostics?.length ? { pinDiagnostics: out.pinDiagnostics } : {}),
     ...(syntheticOperation()?.tenant === tenant && syntheticOperation()?.subject === principal.subject && syntheticOperation()?.sessionId === principal.sessionId ? { records: out.records } : {}),
     sources: out.sources, ...(context.pageInstance ? { pageInstance: context.pageInstance } : {}) };
   if (new TextEncoder().encode(JSON.stringify(payload)).byteLength > 2 * 1024 * 1024) return c.json({ ok: false, error: 'Snapshot unavailable' }, 503);
