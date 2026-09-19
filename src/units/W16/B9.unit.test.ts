@@ -97,8 +97,7 @@ import { newAnonymousSession, verifySessionCapability, SHOPPER_HEADER, type Sess
 import { admitOwnerPrincipal, runOwnerOperation } from '@/identity/sessionAuthority';
 import { shopperObjectName } from '@/tenancy/objects';
 import { storedConsent, type ConsentInstruction } from '@/content/consent';
-import { snapshot as reflexSnapshot, apply as reflexApply, DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
-import { applyHistorical } from '@/reflex/identityMerge';
+import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { initializePublicationSet, type PublicationBaseline } from '@/config/publication';
 import { invalidateCache } from '@/config/versionedStore';
@@ -133,24 +132,9 @@ const THREE_INTERACTIONS = [
   pdpView('Tabby', 'Handbags', 'CH-TABBY-32', 450),
   pdpView('Wyn', 'Small Leather Goods', 'CH-WYN-WALLET', 150),
 ];
-/** A line nobody in the taxonomy recognises, in a third category. */
-const UNKNOWN_LINE_VIEW = pdpView('not-a-coach-line', 'Accessories', 'CH-UNKNOWN-1', 95);
-/** A live order, for the control shopper: the reward-bearing event. */
+/** Her order: the reward-bearing event, and the deciding signal of this visit. */
 const livePurchase = () =>
   ({ type: 'purchase', data: { orderId: 'coach-order-live-1', line: 'Tabby', category: 'Handbags', price_usd: 395, value: 395, currency: 'USD' } });
-/**
- * The order the shopper placed a week ago on a device that was offline, handed
- * to the platform late and explicitly marked buffered. Its line (Rogue) is one
- * she never touched live in this fixture, so its age-decayed contribution is
- * the engine's own closed form on a fresh entry and nothing else.
- */
-const LATE_ORDER_ID = 'coach-order-late-1';
-const lateRoguePurchase = () =>
-  ({ type: 'purchase', data: { orderId: LATE_ORDER_ID, line: 'Rogue', category: 'Handbags', price_usd: 595, value: 595, currency: 'USD' } });
-/** How late it was delivered (HANDOFF §7 "Late history": no age cutoff is inferred from delay). */
-const LATE_BY_MS = 7 * DAY_MS;
-/** The browsing session the late order belongs to, which is not the live one. */
-const LATE_BROWSING_SESSION = 'earlier-browsing-session';
 
 // ---------------------------------------------------------------------------
 // The published documents. R32(1): the journey threshold set is the `journey`
@@ -551,23 +535,6 @@ async function hostFixture(host: 'session' | 'do', options: { ledgerRecovery?: b
   return { f, grant, principal, action, hydrate, snapshot, decide, ownedStage, ownedRetention, ownedOdpRing, alarms, ownedRecoveryAdmissions };
 }
 
-/**
- * A second shopper on the same host, who sends one ordinary live order. She is
- * the positive control for the sinks the stage-only change must leave alone: if
- * the ledger, the ODP destination and the region object cannot be reached in
- * this fixture at all, an absence proves nothing.
- */
-async function controlShopper(f: ReturnType<typeof boundary>, at: number): Promise<{ subject: string }> {
-  const grant = await newAnonymousSession(f.env, TENANT);
-  await explicitChoice(f, grant);
-  const response = await f.call('/realtime/action', grant.capability, {
-    ...livePurchase(), source: 'sdk', userId: grant.subject, sessionId: grant.sessionId, timestamp: at, eventId: crypto.randomUUID(),
-  });
-  expect(response.status, await response.clone().text()).toBe(200);
-  await f.drain();
-  return { subject: grant.subject };
-}
-
 /** What `documentChanges` publishes for /home: one hero slot, take 1. */
 const HOME_DECISIONS = 1;
 
@@ -614,7 +581,7 @@ describe('unit:W16.C5.08', () => {
         // LIVE CONTROL: the destination is reachable and the configured action
         // mapping is on the wire, so every absence below is a property of the
         // grammar and not of a dead destination.
-        expect(odpSince(network.calls, hostMark).filter(call => call.path === '/v3/events').length,
+        expect.soft(odpSince(network.calls, hostMark).filter(call => call.path === '/v3/events').length,
           `${host}: her live views reach the tenant's ODP destination`).toBeGreaterThan(0);
 
         // ── THE PURCHASE ────────────────────────────────────────────────────
@@ -626,22 +593,22 @@ describe('unit:W16.C5.08', () => {
         const purchaseMark = network.calls.length;
         clock.mockReturnValue(T0 + 3 * STEP_MS);
         const ordered = await h.action(livePurchase());
-        expect(ordered.status, `${host}: her order is accepted`).toBe(200);
-        expect(ordered.update?.data?.journeyStage,
+        expect.soft(ordered.status, `${host}: her order is accepted`).toBe(200);
+        expect.soft(ordered.update?.data?.journeyStage,
           `${host}: and the engine reports her order as this visit's deciding signal`).toBe('deciding');
 
         const upserts = odpSince(network.calls, purchaseMark).filter(call => call.path === '/v3/profiles');
-        expect(upserts.length, `${host}: W16.C5.08 — the purchase writes her ODP profile exactly once`).toBe(1);
-        const attributes = attributesOf(upserts[0]!);
+        expect.soft(upserts.length, `${host}: W16.C5.08 — the purchase writes her ODP profile exactly once`).toBe(1);
+        const attributes = upserts.length === 1 ? attributesOf(upserts[0]!) : {} as Record<string, unknown>;
         expect.soft(attributes.journey_stage,
           `${host}: W16.C5.08 — and the journey_stage it writes is the PERSISTED token of that word, never the word itself (R40(b))`)
           .toBe(PERSISTED_STAGE.deciding);
         // "ODP agrees" is about the whole attribute set, not one field
         // (admitted C5): the configured profile mapping and nothing else.
-        expect(Object.keys(attributes).sort(), `${host}: W16.C5.08 — the configured profile mapping, and nothing else`)
+        expect.soft(Object.keys(attributes).sort(), `${host}: W16.C5.08 — the configured profile mapping, and nothing else`)
           .toEqual(ALLOWED_PROFILE_ATTRIBUTES);
-        expect(attributes.vuid, `${host}: the configured identity namespace names the shopper`).toBe(vuid);
-        expect(attributes.top_line, `${host}: the configured leading-line mapping, from her own memory`).toBe('Tabby');
+        expect.soft(attributes.vuid, `${host}: the configured identity namespace names the shopper`).toBe(vuid);
+        expect.soft(attributes.top_line, `${host}: the configured leading-line mapping, from her own memory`).toBe('Tabby');
         perHost[host] = { keys: Object.keys(attributes).sort(), journey_stage: attributes.journey_stage, top_line: attributes.top_line };
 
         // ── A STAGE-MOVING READ AFTERWARDS ──────────────────────────────────
@@ -653,15 +620,15 @@ describe('unit:W16.C5.08', () => {
         const nextVisit = T0 + 3 * STEP_MS + VISIT_GAP_MS + 1;
         for (const [index, event] of THREE_INTERACTIONS.entries()) {
           clock.mockReturnValue(nextVisit + index * STEP_MS);
-          expect((await h.action(event)).status, `${host}: her next visit's interaction ${index + 1}`).toBe(200);
+          expect.soft((await h.action(event)).status, `${host}: her next visit's interaction ${index + 1}`).toBe(200);
         }
         const readMark = network.calls.length;
         clock.mockReturnValue(nextVisit + 2 * STEP_MS + VISIT_GAP_MS + 1);
         const rolled = await h.hydrate();
-        expect(rolled.journeyStage, `${host}: the read past the boundary starts her at the vocabulary's first stage`).toBe('exploring');
+        expect.soft(rolled.journeyStage, `${host}: the read past the boundary starts her at the vocabulary's first stage`).toBe('exploring');
         const projected = odpSince(network.calls, readMark).filter(call => call.path === '/v3/profiles');
-        expect(projected.length, `${host}: the stage-moving read sends the one allowed stage projection`).toBe(1);
-        expect.soft(attributesOf(projected[0]!).journey_stage,
+        expect.soft(projected.length, `${host}: the stage-moving read sends the one allowed stage projection`).toBe(1);
+        expect.soft(projected.length === 1 ? attributesOf(projected[0]!).journey_stage : undefined,
           `${host}: W16.C5.08 — carrying the persisted token for the stage this read moved her to`)
           .toBe(PERSISTED_STAGE.exploring);
 
@@ -678,7 +645,8 @@ describe('unit:W16.C5.08', () => {
         }
       }
       // …and the two hosts said the same thing about the same shopper journey.
-      expect.soft(perHost.session,
+      // The final assertion, hard: by here both hosts have been measured.
+      expect(perHost.session,
         'W16.C5.08 — both hosts write one profile grammar for one purchase (the admitted C5 "agree" clause)').toEqual(perHost.do);
     } finally { network.restore(); clock.mockRestore(); }
   });
@@ -686,8 +654,29 @@ describe('unit:W16.C5.08', () => {
 
 // ===========================================================================
 
+/**
+ * The one arrangement both legs of W16.C5.09 measure, so the `host` leg and the
+ * `host-internal` leg are reading the same shopper's same journey: three
+ * interactions of one visit, her order, and then — past VISIT_GAP_MS — the
+ * first interaction of her next visit.
+ */
+async function purchaseThenNextVisit(h: HostFixture, clock: { mockReturnValue: (v: number) => unknown }, host: string, network: { calls: NetworkCall[] }) {
+  await threeLiveInteractions(h, clock, host);
+  clock.mockReturnValue(T0 + 3 * STEP_MS);
+  const purchaseMark = network.calls.length;
+  const ordered = await h.action(livePurchase());
+  expect.soft(ordered.status, `${host}: her order is accepted`).toBe(200);
+  const orderedWord = journeyWordOf(ordered.update?.data?.journeyStage);
+  const storedAtPurchase = h.ownedStage();
+  const orderUpserts = odpSince(network.calls, purchaseMark).filter(call => call.path === '/v3/profiles');
+  clock.mockReturnValue(T0 + 3 * STEP_MS + VISIT_GAP_MS + 1);
+  const returned = await h.action(pdpView('Tabby', 'Handbags', 'CH-TABBY-RETURN', 415));
+  expect.soft(returned.status, `${host}: her return interaction is accepted`).toBe(200);
+  return { orderedWord, storedAtPurchase, orderUpserts, rolled: await h.hydrate() };
+}
+
 describe('unit:W16.C5.09', () => {
-  it('host-internal: one derivation behind one name — at her purchase and again on her next visit, the reported word, the stored stage, the decision record, its cell, the ladder key and the ODP token all agree through PERSISTED_STAGE, on both hosts', async () => {
+  it('host: one derivation behind one name, on the public path — her order is reported as this visit\'s deciding signal and her ODP profile is given that word\'s persisted token, and after the post-purchase reset her next visit reports the first stage with her visit number and her cumulative taste intact, on both hosts', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
     const network = installNetwork();
     try {
@@ -695,31 +684,21 @@ describe('unit:W16.C5.09', () => {
         clock.mockReturnValue(T0);
         mappingPointExists('W16.C5.09: one derivation, reached through the one mapping point (R32(2))');
         const h = await hostFixture(host);
-        await threeLiveInteractions(h, clock, host);
+        const { orderedWord, orderUpserts, rolled } = await purchaseThenNextVisit(h, clock, host, network);
 
         // ── AT HER PURCHASE ─────────────────────────────────────────────────
         // The purchase is the deciding signal of this visit (admitted C4, and
-        // the published threshold block this fixture publishes). What the
-        // engine reports for that event and what the host stores for her are
-        // the same stage in two grammars, joined by the one mapping point.
-        clock.mockReturnValue(T0 + 3 * STEP_MS);
-        const purchaseMark = network.calls.length;
-        const ordered = await h.action(livePurchase());
-        expect(ordered.status, `${host}: her order is accepted`).toBe(200);
-        const orderedWord = journeyWordOf(ordered.update?.data?.journeyStage);
-        expect(orderedWord, `${host}: W16.C5.09 — her order is reported as this visit's deciding signal`).toBe('deciding');
-        expect.soft(h.ownedStage(),
-          `${host}: W16.C5.09 — and the stage ${host === 'do' ? 'ShopperReflex' : 'SessionManager'} stored for her is that same word's persisted token`)
-          .toBe(PERSISTED_STAGE[orderedWord!]);
-        // …and so is what the customer's own destination was told for that
-        // event: one derivation reaches the wire too (R85(b); the absolute
-        // value of this same token is unit W16.C5.08's subject, so the two
-        // units demand one representation and never two).
-        const orderUpserts = odpSince(network.calls, purchaseMark).filter(call => call.path === '/v3/profiles');
-        expect(orderUpserts.length, `${host}: her order wrote her ODP profile`).toBe(1);
-        expect.soft(attributesOf(orderUpserts[0]!).journey_stage,
+        // the published threshold block this fixture publishes), and what the
+        // customer's own destination is told for that event is the same stage
+        // in the persisted grammar — one derivation reaches the wire too
+        // (R85(b)). The absolute value of that token is unit W16.C5.08's
+        // subject, so this clause states the AGREEMENT and the two units demand
+        // one representation, never two.
+        expect.soft(orderedWord, `${host}: W16.C5.09 — her order is reported as this visit's deciding signal`).toBe('deciding');
+        expect.soft(orderUpserts.length, `${host}: her order wrote her ODP profile`).toBe(1);
+        expect.soft(orderUpserts.length === 1 ? attributesOf(orderUpserts[0]!).journey_stage : undefined,
           `${host}: W16.C5.09 — the ODP token for her order is the persisted token of the word the engine reported for it`)
-          .toBe(PERSISTED_STAGE[orderedWord!]);
+          .toBe(orderedWord === null ? PERSISTED_STAGE.deciding : PERSISTED_STAGE[orderedWord]);
 
         // ── HER NEXT VISIT ──────────────────────────────────────────────────
         // Past VISIT_GAP_MS the visit those counters belonged to has ended: the
@@ -727,22 +706,41 @@ describe('unit:W16.C5.09', () => {
         // decision/attribution; keep visit number and cumulative taste") and
         // every reporter moves together. Her taste is untouched, which is the
         // half this unit must never break.
-        const nextVisit = T0 + 3 * STEP_MS + VISIT_GAP_MS + 1;
-        clock.mockReturnValue(nextVisit);
-        const returned = await h.action(pdpView('Tabby', 'Handbags', 'CH-TABBY-RETURN', 415));
-        expect(returned.status, `${host}: her return interaction is accepted`).toBe(200);
-        const rolled = await h.hydrate();
-        expect(rolled.visit, `${host}: a real return, not a fabricated one`).toEqual({ visitNumber: 2, entryChannel: null });
-        expect(rolled.journeyStage, `${host}: reported the same way by the SDK-visible projection`).toBe('exploring');
-        expect(rolled.affinity?.dims?.line?.Tabby ?? 0,
+        expect.soft(rolled.visit, `${host}: a real return, not a fabricated one`).toEqual({ visitNumber: 2, entryChannel: null });
+        expect.soft(rolled.journeyStage,
+          `${host}: W16.C5.09 — the SDK-visible projection reports the vocabulary's first stage for her new visit`).toBe('exploring');
+        expect.soft(rolled.affinity?.dims?.line?.Tabby ?? 0,
           `${host}: with her cumulative taste intact across the boundary`).toBeGreaterThan(0);
+      }
+    } finally { network.restore(); clock.mockRestore(); }
+  });
 
-        // 1. WHAT THIS HOST PERSISTED. R19: no shopper-facing route exposes the
-        //    stored stage, so this clause is host-internal and the row names the
-        //    missing public observable. This is where the legacy cumulative rule
-        //    still speaks: `deriveStage` → `stageFromCounters`
-        //    (`src/services/JourneyStage.ts:92-94`), fed into
-        //    `metadata.journeyStage` (`RealtimeSegmentEngine.ts:591`) and
+  it('host-internal: one derivation behind one name, on the forms no public route exposes — after the post-purchase reset the stored stage, the decision record, its cell and the learning ladder key all carry the persisted token of the word the engine reports, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    const network = installNetwork();
+    try {
+      for (const host of ['session', 'do'] as const) {
+        clock.mockReturnValue(T0);
+        mappingPointExists('W16.C5.09: one derivation, reached through the one mapping point (R32(2))');
+        const h = await hostFixture(host);
+        const { orderedWord, storedAtPurchase } = await purchaseThenNextVisit(h, clock, host, network);
+
+        // GREEN CONTROL, at her purchase: the stage this host stored is the
+        // persisted token of the word it reported for that event. It passes
+        // today only because the two derivations COINCIDE there — the
+        // cumulative rule and the visit's own journey both say "deciding" right
+        // after an order — which is exactly why unit W16.C5.01's agreement was
+        // fixture-coincidental and why the clause below is the real one.
+        expect.soft(storedAtPurchase,
+          `${host}: W16.C5.09 — at her order the stage ${host === 'do' ? 'ShopperReflex' : 'SessionManager'} stored is that word's persisted token`)
+          .toBe(orderedWord === null ? PERSISTED_STAGE.deciding : PERSISTED_STAGE[orderedWord]);
+
+        // 1. WHAT THIS HOST PERSISTED AFTER THE RESET. R19: no shopper-facing
+        //    route exposes the stored stage, so this leg is host-internal and
+        //    the row names the missing public observable. This is where the
+        //    legacy cumulative rule still speaks: `deriveStage` →
+        //    `stageFromCounters` (`src/services/JourneyStage.ts:92-94`), fed
+        //    into `metadata.journeyStage` (`RealtimeSegmentEngine.ts:591`) and
         //    `pipeline.journeyStage` (`ShopperReflex.ts:1244`).
         expect.soft(h.ownedStage(),
           `${host}: W16.C5.09 — the stored stage is the persisted token of the word the engine now reports, from the one derivation`)
@@ -751,7 +749,7 @@ describe('unit:W16.C5.09', () => {
         // 2. WHAT THE CONTENT DECISION DECIDED IN: the record reports the
         //    shared word beside the persisted cell token (R29/R32(2)).
         const out = await h.decide();
-        expect(out.records.length, host).toBe(HOME_DECISIONS);
+        expect.soft(out.records.length, host).toBe(HOME_DECISIONS);
         const record = out.records[0]!;
         expect.soft(record.journey,
           `${host}: W16.C5.09 — the decision record names the stage it decided in`).toMatchObject({ stage: 'exploring' });
@@ -761,32 +759,39 @@ describe('unit:W16.C5.09', () => {
         // 3. WHAT THE LEARNING OBJECT WAS TOLD: the same cell, and the ladder
         //    key the statistics are pooled on (`src/learn/stats.ts:34`). Her
         //    second visit, with no entry signals observed (channel `unknown`,
-        //    W16.C2.04/R14).
+        //    W16.C2.04/R14). The stage part is composed from the one mapping
+        //    point, so the ladder key and `PERSISTED_STAGE` cannot drift apart.
         const delivered = h.f.learnStats.filter(entry => entry.name === statsName(TENANT, TENANT, 'hero'));
-        expect(delivered.length, `${host}: the served decision reached the slot's learning object`).toBeGreaterThan(0);
-        const exposures = delivered.at(-1)!.body.exposures as Array<{ item: string; cell: { stage?: unknown } }>;
-        expect(exposures.length, `${host}: one exposure for one served decision`).toBe(1);
-        expect.soft(exposures[0]!.cell.stage,
+        expect.soft(delivered.length, `${host}: the served decision reached the slot's learning object`).toBeGreaterThan(0);
+        const exposures = (delivered.at(-1)?.body.exposures ?? []) as Array<{ item: string; cell: { stage?: unknown } }>;
+        expect.soft(exposures.length, `${host}: one exposure for one served decision`).toBe(1);
+        expect.soft(exposures[0]?.cell.stage,
           `${host}: W16.C5.09 — the LearnStats cell carries the same persisted token`).toBe(PERSISTED_STAGE.exploring);
         expect.soft(levelKeys(record.cell)[3],
-          `${host}: W16.C5.09 — and the learning ladder key is that token, on her second visit`).toBe('c=unknown|v=2-3|s=early');
+          `${host}: W16.C5.09 — and the learning ladder key is that token, on her second visit`)
+          .toBe(`c=unknown|v=2-3|s=${PERSISTED_STAGE.exploring}`);
 
         // 4. THE LEGACY RULE SPEAKS NOWHERE. Once the journey engine has
         //    reported, every form of her stage above is that one derivation's;
         //    the cumulative `stageFromCounters` value — which counts her whole
         //    history and therefore still says `late` after she has bought — is
         //    not any of them. That is the whole of finding 2: two rules, one
-        //    name. It is stated here as the equality of the five reporters
-        //    above, not as a second computation, because a specification that
+        //    name. It is stated here as the equality of the reporters above,
+        //    not as a second computation, because a specification that
         //    recomputed the legacy value would be asserting the defect.
         //
-        //    THE OWNER-VISIBLE CONSEQUENCE, RECORDED AND NOT DECIDED (R85(c)):
-        //    under this rule her profile stops saying `late` once her purchase
-        //    has been attributed and her next visit has opened, so the mirrored
-        //    RTS audience `late_journey_ready_to_buy` (`odpLoop.ts:44-49`,
+        //    THE TWO OWNER-VISIBLE CONSEQUENCES, RECORDED AND DECIDED BY NOBODY
+        //    IN THIS FILE. (R85(c)) Her profile stops saying `late` once her
+        //    purchase has been attributed and her next visit has opened, so the
+        //    mirrored RTS audience `late_journey_ready_to_buy`
+        //    (`src/services/odpLoop.ts:44-49`,
         //    `docs/Coach-ODP-Wiring-Spec.md:91`) no longer keeps a shopper after
-        //    she has bought. That follows from the admitted C4 and C5 text; it
-        //    is named in both rows and decided by nobody in this file.
+        //    she has bought. (R88(b)) The LOCAL audience attribute
+        //    `journey_stage` (`RealtimeSegmentEngine.ts:592`,
+        //    `ShopperReflex.ts:1245`) changes from the cumulative rule to the
+        //    per-visit one, so a tenant audience condition keyed on it changes
+        //    meaning after a purchase. Both follow from the admitted C4 and C5
+        //    text; both are named in this unit's row and in W16.C5.08's.
       }
     } finally { network.restore(); clock.mockRestore(); }
   });
