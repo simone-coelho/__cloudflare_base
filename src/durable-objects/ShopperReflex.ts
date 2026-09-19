@@ -73,6 +73,7 @@ import { ACTION_EVENT_TYPE_SET } from '@/events/actionTypes';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
+import { PublicationError } from '@/config/publication';
 import { applyProfileSnapshot, enrichmentInputs, mergeEnrichment, readEnrichment, type ImportOutcome, type ProfileEnrichment, type ProfileSnapshotRow } from '@/identity/profileEnrichment';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
 import {
@@ -1509,9 +1510,14 @@ export class ShopperReflex {
       let cfg: ReflexConfig;
       try { cfg = await resolveTenantReflexConfig(this.env, owner.tenant, surface); }
       catch (error) {
-        if (!(error instanceof ReflexConfigUnavailableError)) throw error;
+        // A configuration refusal must not cost the shopper her retention
+        // guarantee. Re-arm exactly the deadline a successful alarm would have
+        // left, write nothing else, and let the typed refusal stand so the
+        // failure is visible instead of a quiet no-op: either class counts
+        // (ruling R28), and anything untyped was never this timer's to absorb.
+        if (!(error instanceof ReflexConfigUnavailableError) && !(error instanceof PublicationError)) throw error;
         await this.scheduleProjectionAlarm(Math.max(this.affinity.lastSeen + this.retentionMs(), now + MIN_ALARM_DELAY_MS));
-        return;
+        throw error;
       }
       const res = tickReflex(this.affinity.reflex, now, cfg);
       let affinity = { ...this.affinity, reflex: res.state, configVersion: cfg.version };

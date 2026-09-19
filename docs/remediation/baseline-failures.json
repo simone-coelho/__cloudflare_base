@@ -1,7 +1,7 @@
 {
-  "generated": "2026-09-19T04:17:58.436Z",
-  "commit": "920819f47df70b0f27ce1cfae38cc6624a1e23fa",
-  "vitest_sha256": "6d6989155fefe25df050cd4594e84280b936cd9178ec97f227d323373e9ef831",
+  "generated": "2026-09-19T04:57:41.060Z",
+  "commit": "85a0259129e19c9cdb8970326e0c0a97862c7cbe",
+  "vitest_sha256": "8f504ad907f2bcad82c3ec4335756e834e868312e86ff7829e7e89e8a28ba621",
   "note": "BASE-R1 build on rem/base-r1-refusals merged with BASE-R1s def4f38: W05.BASE.01 and W11.BASE.01 green; W06/W09/W37 declared clauses closed, tests blocked on stale expectations.",
   "allow_grow_reason": null,
   "failures": [
