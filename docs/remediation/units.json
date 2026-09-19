@@ -258,5 +258,108 @@
     "status": "specified",
     "batch": "W16-B3",
     "residual": "docs/kit/02-api-reference.md has no SDK Core member list today, so the unit asserts the two phrases file-wide rather than inside a member table; if the implementer adds a Core section the assertions still hold."
+  },
+  {
+    "id": "W17.L1.01",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Declarative click and commerce listeners are owned: binding twice to the same element leaves exactly one live listener; detach removes it; a click after detach emits zero events. Measured on real jsdom elements: one live click registration on the [data-op-content] element and on the [data-op-track] button after two declarative() binds, one content_click carrying the served receipt and one add_to_cart carrying the button's own attributes for one click each, zero registrations and zero live observers after the detach handles are released, and no transport call from a later click.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34; docs/architecture/35-verification-reports/F34.md §2A (mount→detach→mount gives content_click 2 and add_to_cart 2 for one click each; two listener sites, :109 and :117), §2C (the Map-backed fake element conceals it) and §3 (\"Register removable listener functions\" needs removeEventListener on ElementLike); docs/handover/HANDOFF-2026-09-18.md §6 row W17; the documented detach contract at src/sdk/emit.ts:40-41; fixture taxonomy docs/architecture/tapestry_requirements.txt lines 113-122 and 529-532",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: the transport clause 'a click after detach emits zero events' is already green (the inactive-callback guard in declarative()); the unit is RED on the live-registration count, which is the ownership document 35 requires and the guard does not give."
+  },
+  {
+    "id": "W17.L1.02",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "dataLayer wrapper ownership: the page's dataLayer push is wrapped once (one mapped push is one event, and the layer's existing history is replayed once however many attachments the page made); releasing one attachment while another is live keeps capture running; releasing the last attachment restores the page's original push function by identity; a push after that emits zero events and still reaches the page's own array with every entry.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34; docs/handover/HANDOFF-2026-09-16.md §6, the actual-module reproduction: \"before {A:1,B:1}, after detaching A and pushing again {A:1,B:1}; B should be 2. A's teardown restores an older push, removing B's still-active wrapper\"; docs/architecture/35-verification-reports/F34.md §2G (attaching twice double-captures and replays history a second time; after a full teardown the layer is left instrumented by a discarded client); the documented contract at src/sdk/emit.ts:42-43 (\"Returns a detach function that restores it\"), docs/kit/01-integration-guide.md §4 and src/sdk/README.md; GA4 payload shapes docs/kit/03-payload-schemas.md and src/sdk/emit.ts GA4_MAPPING",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: 'a push after the last release emits zero events' is already green through the inactive guard; RED on the replay count, the double capture, the lost capture after the first release and the push identity."
+  },
+  {
+    "id": "W17.L1.03",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Rendered observers are torn down on detach: one painted element observed through both documented paths (the declarative scan and the rendered(slot, contentId, element) renderer callback) is watched by exactly one live observer and one on-screen cycle is exactly one content_dwell carrying the served receipt and the measured ms; after detach no observer watches it and an intersection reaches no transport; a remount observes it once again, with one dwell per cycle attributed to the mounted client.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34; docs/architecture/35-verification-reports/F34.md §2A (observers_created 2 / observers_live 1), §2B (re-scan without detach duplicates impressions and leaks observers), §2D (listen.rendered()'s observer is never released) and §2E (a duplicated outcome moves the learned lift, so one observation per rendered element is a measurement requirement); docs/handover/HANDOFF-2026-09-18.md §6 row W17 (retain the existing observer teardown); src/sdk/listen.ts:270-288 and src/sdk/emit.ts:118-132 (the two observation sites); src/sdk/host.ts:12-24 (the observer port the page provides)",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: the post-detach clauses (no observer watching, no transport from an intersection) are green today; RED on the duplicate observation and the duplicate dwell, at the mount and again after the remount."
+  },
+  {
+    "id": "W17.L1.04",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Changed DOM attributes rebind: when a bound element's slot or piece attributes change in place (the hero node is re-rendered to carry the craft story; the call to action is re-rendered to sell another product), the next interaction emits the new identity — contentId cnt_craft_story, slot story and that piece's served receipt, and label pdp-cta with productId COACH-ROGUE-25 — and never the stale one. An element naming a piece the engine never chose still produces no content event.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34; docs/architecture/35-verification-reports/F34.md §6: \"A DOM node whose data-op-content changes in place keeps its first click listener and will keep reporting the old content id. Only a real removeEventListener fixes that\" — the reason the bind-once guard is named an emergency fix and not the end state; docs/handover/HANDOFF-2026-09-18.md §6 row W17 (changed-attribute rebinding); src/sdk/README.md:66 and docs/kit/01-integration-guide.md §4 (declarative attributes alone cannot mint an offer, so the unchosen piece stays unreportable); src/sdk/emit.ts:109-147 (attributes read once at bind time)",
+    "status": "specified",
+    "batch": "W17-B1"
+  },
+  {
+    "id": "W17.L1.05",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Either teardown order — the core torn down before the declarative and dataLayer handles, or the handles before the core — leaves no live click listener on any bound element, no live observer, and the page's own dataLayer push restored by identity; a click, a commerce push and the pending dwell of an element that was on screen at teardown produce no transport call afterwards.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34 (\"either teardown order\"); docs/architecture/35-verification-reports/F34.md §2G (order-dependent restore) and §2A; docs/handover/HANDOFF-2026-09-18.md §6 row W17; src/sdk/index.ts:42 (destroy() is listen.destroy() then core.disconnect()); src/sdk/listen.ts:340 and src/sdk/emit.ts:153,181 (the three teardown entry points)",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: in both orders the transport is already silent and the single wrapper is restored; RED in both orders on the click registrations the SDK leaves on the page's elements."
+  },
+  {
+    "id": "W17.L1.06",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Detach, remount and new clients: after the mounted client's handles are released and it is destroyed, a new client on the same page owns exactly one set of listeners and one wrapper — one click and one dataLayer push are one event each, both carrying the new client's source — the discarded client's pending dwell never emits, and when the new client detaches no registration and no wrapper is left on the page.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34 (detach/remount, new clients, pending callbacks); docs/architecture/35-verification-reports/F34.md §2A (\"a WeakMap at module scope, not per-Emit, so it also holds when an SPA builds a fresh client per mount\" — the guard document 35 refuses as closure) and §2G; docs/handover/HANDOFF-2026-09-16.md §6; docs/handover/HANDOFF-2026-09-18.md §6 row W17",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: attribution to the new client and the silence of the discarded client are already green; RED on the two live click registrations the remount leaves on each element and on the registrations left after the new client detaches."
+  },
+  {
+    "id": "W17.L1.07",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Tenant and identity switch: after the documented sign-in (identify() carrying the person's shopper id), a click and a dataLayer push are one event each and carry the person's id, from exactly one live listener per element; after the page tears the client down and mounts a client for another tenant on the same elements, every event carries the new tenant and that tenant's shopper, again from exactly one live listener, and none carries the old identity or tenant.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34 (identity/tenant switches); docs/handover/HANDOFF-2026-09-18.md §6 row W17; docs/kit/01-integration-guide.md §5 and src/sdk/README.md (\"on success the browser carries the person's shopper id as its visitor id from then on, every later event and decision is the person's\"); src/sdk/identify.ts:79-109 and src/sdk/core.ts:408-423 (the identity generation transition); src/sdk/emit.ts:150-152 (the current generation/consent handling of declarative bindings)",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: the transport identity and tenant clauses are already green — the consent notification at the end of the transition re-runs the declarative scan — but it re-binds without unbinding, so the unit is RED on the live-registration count after the sign-in and after the tenant switch."
+  },
+  {
+    "id": "W17.L1.08",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Zero events after full detach: on a page that mounted twice and released its handles in mount order, after the full detach no click registration, no live observer and no SDK wrapper remains (the page's own push is restored by identity), and clicks, commerce clicks, dataLayer pushes, observer intersections and the armed periodic refresh timer produce zero transport calls of any kind over a settled tick past that interval, while the page's own array still receives its own pushes.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34 (\"zero events after full detach\", \"pending callbacks\"); docs/architecture/35-verification-reports/F34.md §2G (\"after the integrator has fully torn everything down the layer is left instrumented, closed over a client the page has discarded, and still posting\"); docs/handover/HANDOFF-2026-09-16.md §6; src/sdk/listen.ts:339-340 (the periodic refresh timer and its clearInterval)",
+    "status": "specified",
+    "batch": "W17-B1",
+    "residual": "Measured at specification: the residual wrapper a discarded client leaves also makes a transport call after the full detach — the first post-detach dataLayer push drives POST /v1/coach/identity/session — so this unit is RED at the transport boundary as well as on the page's left-over state."
   }
 ]
