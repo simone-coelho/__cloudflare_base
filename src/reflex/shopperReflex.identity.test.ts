@@ -386,6 +386,17 @@ describe('CW29: the snapshot says the stage', () => {
     expect((await get(STAGE, '/snapshot')).body.journeyStage).toBeNull();
     await browseTabby(STAGE, 2);
     const snap = await get(STAGE, '/snapshot');
-    expect(['early', 'mid', 'late']).toContain(snap.body.journeyStage);
+    // R10 update, witness R29 + R32 (W16 C4). The snapshot IS the do-host SDK
+    // hydrate, so it reports the shared journey vocabulary
+    // `exploring | thinking | deciding` (docs/architecture/tapestry_requirements.txt
+    // line 148, "exploring (seeing) → thinking → deciding"), never the
+    // persisted cell token early | mid | late, which stays the stored grammar
+    // (JourneyStage.ts PERSISTED_STAGE, R32(2)). Which word is exact here is
+    // the tenant's data, not a constant: the thresholds ride the published
+    // reflex document as its `journey` block (R32(1)), and this fixture
+    // publishes DEFAULT_REFLEX_CONFIG, which carries none — so the engine
+    // reports the FIRST stage of the vocabulary and invents no threshold of its
+    // own (JourneyStage.ts journeyStageFrom / NO_JOURNEY_THRESHOLDS).
+    expect(snap.body.journeyStage).toBe('exploring');
   });
 });
