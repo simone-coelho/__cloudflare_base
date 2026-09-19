@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 95/96 · W closed 2/26 (W16–W41) · suite 1900/1979 · residual 79 in 9 files · typecheck GREEN
+Units 102/103 · W closed 2/26 (W16–W41) · suite 1910/1989 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -15,7 +15,7 @@ Units 95/96 · W closed 2/26 (W16–W41) · suite 1900/1979 · residual 79 in 9 
 | W06 | 2 | 1 | no | — | — |
 | W09 | 1 | 1 | no | — | — |
 | W11 | 1 | 1 | no | — | — |
-| W16 | 59 | 59 | no | — | — |
+| W16 | 66 | 66 | no | — | — |
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 8 | 8 | no | — | — |
@@ -46,6 +46,7 @@ Units 95/96 · W closed 2/26 (W16–W41) · suite 1900/1979 · residual 79 in 9 
 | W16.C2.13 | green | 2 |
 | W16.C2.14 | green | 1 |
 | W16.C2.15 | green | 1 |
+| W16.C2.16 | green | 1 |
 | W16.C3.01 | green | 3 |
 | W16.C3.02 | green | 1 |
 | W16.C3.03 | green | 1 |
@@ -68,6 +69,8 @@ Units 95/96 · W closed 2/26 (W16–W41) · suite 1900/1979 · residual 79 in 9 
 | W16.C5.03 | green | 1 |
 | W16.C5.04 | green | 1 |
 | W16.C5.05 | green | 1 |
+| W16.C5.06 | green | 1 |
+| W16.C5.07 | green | 1 |
 | W16.C6.01 | green | 1 |
 | W16.C6.02 | green | 2 |
 | W16.C6.03 | green | 1 |
@@ -80,6 +83,7 @@ Units 95/96 · W closed 2/26 (W16–W41) · suite 1900/1979 · residual 79 in 9 
 | W16.C6.10 | green | 2 |
 | W16.C6.11 | green | 1 |
 | W16.C6.12 | green | 1 |
+| W16.C6.13 | green | 3 |
 | W16.C7.01 | green | 2 |
 | W16.C7.02 | green | 2 |
 | W16.C8.01 | green | 2 |
@@ -90,6 +94,9 @@ Units 95/96 · W closed 2/26 (W16–W41) · suite 1900/1979 · residual 79 in 9 
 | W16.C8.06 | green | 1 |
 | W16.C8.07 | green | 2 |
 | W16.C8.08 | green | 1 |
+| W16.C8.09 | green | 1 |
+| W16.C8.10 | green | 1 |
+| W16.C8.11 | green | 2 |
 | W17.L1.01 | green | 1 |
 | W17.L1.02 | green | 1 |
 | W17.L1.02b | green | 1 |
@@ -131,7 +138,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 7596f216218bf6e1b2ab41f275b5bac04d0e7aa8739c91ce9278e5d9ef8d0a6f |
+| units sha256 | b864f2924b1c3091d50c58acf773cbb3deb7ff23dc51a03af69c52b55d818861 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -143,6 +150,6 @@ _None._
 | Input | Value |
 |---|---|
 | vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | 2c35aab1817ca4b0e55535f225b82ace4be7203d2ae9e009c601d7f3f808c22d |
-| commit | abb760a96dbf9e0e937ba57ec2653b00192fa6e0 |
-| generated | 2026-09-19T17:34:06.205Z |
+| vitest report sha256 | ace3488ed967974e479c3827f284ec098cfbe2cda1c95046e537832d42d18c11 |
+| commit | 80db2ed00ff83d4fe2aa168d420d59599e4cdc57 |
+| generated | 2026-09-19T18:05:12.879Z |
