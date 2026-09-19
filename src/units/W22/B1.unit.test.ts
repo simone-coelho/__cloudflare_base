@@ -1086,6 +1086,12 @@ describe('unit:W22.R1.02', () => {
       decision(v.env, 'u-unknown', T12 + HOUR_MS + 60_000, 'cnt-tabby-evening'),
       decision(v.env, 'v-charms', T12 + HOUR_MS + 120_000, 'cnt-charms-slg'),
     ];
+    // A fifth shopper of the current day, on the same shard, in an hour that is
+    // still OPEN while the repair runs: her hour is folded only afterwards, so
+    // it is the first fold to READ the `seen` state the repair left behind.
+    const lateVisitor = sameShard('v-late-tabby');
+    const laterHour = decision(v.env, lateVisitor, T12 + 2 * HOUR_MS + 60_000, 'cnt-charms-slg');   // 14:01
+    today.push(laterHour);
     await throughTheLedger(v, [...yesterday, ...today], []);
     const previousKey = [...v.storage.objects.keys()].find(key => key.startsWith(`${TENANT}/${PREVIOUS}/23/`))!;
     // UNREADABLE, not absent: the hour's own object throws on read, so the fold
@@ -1107,10 +1113,17 @@ describe('unit:W22.R1.02', () => {
     expect((previousDay.body as { report: DayReport }).report.counts.visitors,
       'W22.R1.02 — and the two visitors served only in that repaired hour are counted on their own day')
       .toBe(2);
+    // The hour that was still open during the repair is folded now, so the
+    // number the day reports is computed FROM the state the repair left: a fold
+    // that wiped the newer date's `seen` while folding the older hour can only
+    // count this last hour's own shopper, and the day comes out short.
+    expect((await fold(v, T12 + 4 * HOUR_MS)).built,
+      'the fixture folds the current day\'s last hour after the repair, so this hour is the first to read what the repair left behind')
+      .toContain(`${DATE} ${HOUR + 2}`);
     const currentDay = await operatorPost(v, `/v1/${TENANT}/learn/report`, { date: DATE, brand: BRAND });
     expect((currentDay.body as { report: DayReport }).report.counts.visitors,
-      'W22.R1.02 — and the repair of the older date does not cost the current day its own distinct visitors: `seen` is kept per date, so folding an older hour on a shard that has already seen a newer date never wipes what that shard counted (F17 P7 measured four visitors where eight were served; hourly.ts:316-318)')
-      .toBe(4);
+      'W22.R1.02 — and the repair of the older date does not cost the current day its own distinct visitors: five shoppers were served on this date, and the hour folded after the repair still knows about the four that came before it, because `seen` is kept per date instead of being wiped whenever a shard folds an hour of another date (F17 P7 measured four visitors where eight were served; hourly.ts:316-318, mergeBrand :175)')
+      .toBe(5);
   });
 });
 
