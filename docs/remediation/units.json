@@ -150,5 +150,131 @@
     "status": "specified",
     "batch": "BASE-D1",
     "declared_from": " W37.04 tenant-owned runtime configuration fails explicitly on missing/invalid/outage tenant config before behavior/link/import, preserving refusal and retention"
+  },
+  {
+    "id": "W16.C6.01",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Disabled by default and fail closed: with no `continuity` block on the published reflex document the session route answers continuity {enabled:false,reason:'unpublished'}, every incomplete block (no mode, no window, zero or non-finite window, no or empty purpose, no or withheld retentionApproved, a mode outside the vocabulary) answers {enabled:false,reason:'incomplete'}, and a return after the ss1 expired is a cold shopper: a fresh vis- subject served the catalogue's own order (rogue-editorial). Measured against a live control in the same test: a COMPLETE published configuration issues the descriptor at generation 1.",
+    "legs": ["host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6",
+    "residual": "Activation stays absent (HANDOFF §8): no shipped default mode, window, purpose or retention approval is specified here; the fixture publishes a synthetic customer-neutral configuration and says so in the file header."
+  },
+  {
+    "id": "W16.C6.02",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "With a complete published configuration ShopperReflex issues a separate signed rotating recognition descriptor: the route reports exactly {enabled:true,mode:'direct',purpose,generation:1,expiresAt:issuedAt+windowMs,revision:<published reflex revision>,proof}; the proof is refused as a session capability and a session capability is refused as a proof; it is refused for another tenant and when tampered; and only {generation,digest,expiresAt} is persisted under a `continuity…` key with digest = hex SHA-256 of the proof, while the raw proof and its signature segment appear in no object record, no ordinary envelope (hydrate, action, decisions snapshot, analytics) and no response header. Each absence is paired with a control source that does contain the needle, so the scan is proven to have teeth.",
+    "legs": ["host", "host-internal"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6",
+    "residual": "host-internal (R19): no public route exposes durable-object storage, so the persistence clause is measured in process against the real object the request path just used; the missing public observable is an owner-side continuity state read."
+  },
+  {
+    "id": "W16.C6.03",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Atomic consume and rotate: with the ss1 expired (refused 401 in the same test), presenting the valid descriptor answers 200 for the same physical subject, rotates to generation 2 on the same original expiry, and issues a fresh ordinary anonymous ss1 minted at this return (iat = now, exp-iat ≤ SHOPPER_MAX_AGE) that the ordinary routes accept; the predecessor is retired and its replay is a cold shopper, while the successor consumes once more at generation 3.",
+    "legs": ["host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6"
+  },
+  {
+    "id": "W16.C6.04",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "An expired ss1 is never extended: its own claims are unchanged and it stays refused, while continuity answers a NEW capability minted at the return on a new browsing session for the same subject. The descriptor's original fixed expiry never moves — not through browsing under the new capability, not through re-reading it on the session route, not on a later rotation — and past that fixed expiry the descriptor is over (measured on a ten-day published window so the shopper's 30-day explicit choice is still current and the refusal can only be the descriptor's own expiry).",
+    "legs": ["host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6"
+  },
+  {
+    "id": "W16.C6.05",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Exactly one deterministic lost-response successor receipt: the exact retry (same proof AND same operationId) answers the same subject, the identical successor descriptor and the identical session grant claims; a second exact retry is cold, and the same proof under a different operationId after a consume is a replay and is cold.",
+    "legs": ["host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6",
+    "residual": "The brief's literal reading is specified: the one receipt answers exactly one retry. If the owner later rules that a receipt must answer every identical retry until the descriptor expires, this unit's second-retry assertion is the line to revisit."
+  },
+  {
+    "id": "W16.C6.06",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Mode and revision binding: after the reflex document is republished at a new revision with the SAME mode, a descriptor issued under the previous revision is cold (with a live control in the same test: the same proof chain still recognizes a second shopper under the unchanged revision); a direct-mode descriptor presented once broker mode is published is cold, and a broker-mode cookie presented once direct mode is published is cold.",
+    "legs": ["host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6"
+  },
+  {
+    "id": "W16.C6.07",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Retirement: logout/detach (POST /v1/:tenant/identity/detach — this codebase's logout), session reset (POST /realtime/session/reset), link (POST /v1/:tenant/identity/link with a signed assertion) and erase (POST /v1/:tenant/identity/erase with an operator credential) each retire the descriptor, and presenting it afterwards yields a cold shopper; a fifth shopper who went through no transition is still recognized at the same moment, so the refusals are the transitions' doing.",
+    "legs": ["host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6"
+  },
+  {
+    "id": "W16.C6.08",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Concurrency and restart: two concurrent consumes of one proof yield exactly one recognition (at exactly one next generation) and exactly one cold shopper; after the object is reconstructed over the same durable storage the current generation still consumes exactly once and the same generation presented twice across the restart is cold.",
+    "legs": ["host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6"
+  },
+  {
+    "id": "W16.C6.09",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Consent binding: both shoppers hold a descriptor issued under a current explicit choice; after one withdraws, the session route reports {enabled:false,reason:'consent'} for her and the descriptor issued before the withdrawal is cold, while the consenting shopper returns at the next generation and her remembered taste still ranks — continuity never restores tracking without a current explicit choice.",
+    "legs": ["host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6"
+  },
+  {
+    "id": "W16.C6.10",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Transport: direct mode returns the proof in the answer body and sets no cookie carrying it; broker mode reports the descriptor with NO proof in the body (exact shape) and delivers the long proof only as the opt_shopper_continuity cookie with HttpOnly, Secure, SameSite and Path=/, the cookie alone brings her back while the same proof in the body is cold. The real src/sdk entry keeps a direct-mode proof in tenant-scoped storage under opt_shopper_continuity:<endpoint>:<tenant> and presents it as {continuity:{proof,operationId}} on the next cold start; with sessionBroker configured it sends credentials:'include' and never holds or sends the long proof, even when a broker answers with one.",
+    "legs": ["sdk", "host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6",
+    "residual": "When src/sdk changes, the shipped public/sdk bundles must be regenerated by the implementer (METHOD §6; R17). The sdk leg drives the real entry through memoryHost, as METHOD §3 rules for this repository's SDK leg."
+  },
+  {
+    "id": "W16.C6.11",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Alarm cleanup: the object holds an alarm at or before the descriptor's original expiry (measured on a two-day published window, so every other alarm this object schedules is later); running the alarm before the expiry keeps the live descriptor with its expiry untouched, and running it after the expiry leaves no `continuity…` record in storage while her retained taste and her unexpired explicit choice survive — and the removed descriptor is then cold. No lifetime is extended.",
+    "legs": ["host-internal"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6",
+    "residual": "host-internal (R19): no public route exposes the object's alarm schedule or its storage; the missing public observable is an owner-visible descriptor lifetime and cleanup report."
+  },
+  {
+    "id": "W16.C6.12",
+    "w": "W16",
+    "criterion": "C6",
+    "outcome": "Days and weeks return end to end: with a published window of at least fourteen days and consent current, a return after 7 and after 14 days is recognized as the same physical subject, rotates to the next generation on the unchanged original expiry, and the decisions snapshot still serves her remembered Tabby ahead of the catalogue-first Rogue on both hosts (the W16.C8.01 clause, same Coach taxonomy and event shapes).",
+    "legs": ["host"],
+    "witness": "docs/handover/HANDOFF-2026-09-18.md §5 point 6 (complete C6 text) and §7 \"W16 continuity\" settled decision; §8 (production mode/window/purpose approval absent — activation stays absent); §12 (ss1 capability vs long-lived proof; retention approval per purpose; the 30-day consent record authorizes no continuity credential); document 35 §5 W16 and §2 F13/F14; docs/architecture/tapestry_requirements.txt line 152 Return Visit Recognition (line 154 Cross-Device Continuity is out of scope); LANE-LOG R19, R21, R32(1), R34. Ruled wire/storage members of W16-B6: the `continuity` block on the published versioned reflex document (REFLEX_KIND, scope reflexScopeForTenant(tenant)) with {mode:'direct'|'broker', windowMs finite>0, purpose, retentionApproved:true}; the `continuity` report on POST /v1/:tenant/identity/session ({enabled:false,reason:'unpublished'|'incomplete'|'consent'} or {enabled:true,mode,purpose,generation,expiresAt,revision,proof? }); the request member `continuity:{proof,operationId}`; the broker cookie `opt_shopper_continuity` (HttpOnly, Secure, SameSite, Path=/); durable-object storage keys beginning `continuity` holding {generation,digest,expiresAt} with digest = lowercase hex SHA-256 of the exact proof; the SDK store key `opt_shopper_continuity:<endpoint>:<tenant>`.",
+    "status": "specified",
+    "batch": "W16-B6",
+    "residual": "The fixture's KV does not simulate expiration; in production the session host's record lives SESSION_TTL_SECONDS = 30 days (src/services/SessionManager.ts:89), which covers the fourteen days measured here. A window longer than that retention is an owner decision, not specified by this unit."
   }
 ]
