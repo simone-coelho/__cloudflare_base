@@ -1070,13 +1070,21 @@ describe.each(['session', 'do'])('W05.10 explicit timed authority on %s', host =
     // KV copy (src/config/publication.ts:19; src/reflex/configStore.ts:408-415):
     // hold the in-flight request at the actual configuration read.
     const storage = f.env.STORAGE as unknown as BoundaryR2, read = storage.get.bind(storage);
-    storage.get = async (key: string) => { if (key.startsWith('config-publication/')) { entered(); await held; } return read(key); };
+    let gated = false;
+    storage.get = async (key: string) => { if (!gated && key.startsWith('config-publication/')) { gated = true; entered(); await held; } return read(key); };
     const before = structuredClone(item.data), kvBefore = [...f.sessions.data];
     const pending = f.call('/realtime/action', grant.capability, { type: 'page_view', userId: grant.subject, sessionId: grant.sessionId, source: 'sdk', data: {} });
     await reached;
     const time = vi.spyOn(Date, 'now').mockReturnValue(deadline + 1);
-    try { release(); expect((await pending).ok).toBe(false); await f.drain().catch(() => undefined); }
-    finally { time.mockRestore(); }
+    try {
+      release(); const refused = await pending;
+      // An expired choice is not consent, so the post-config commit is refused
+      // (src/content/consent.ts:139-152). Both hosts owe the same owned-state
+      // refusal this file already pins for W05.05 and W05.07.
+      expect(refused.status, host).toBe(401);
+      expect(await refused.json()).toMatchObject({ ok: false, error: 'Shopper session unavailable' });
+      await f.drain().catch(() => undefined);
+    } finally { time.mockRestore(); }
     expect(item.data).toEqual(before); expect([...f.sessions.data]).toEqual(kvBefore);
   });
 });
@@ -2268,6 +2276,9 @@ describe('W35.02 visit context', () => {
       { kind: CONTENT_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [
         { id: 'a', customerContentId: 'cms-a', type: 'editorial', title: 'A', tags: {}, slotTypes: ['hero'], lifecycle: { status: 'live' } }] } } },
       { kind: SLOTS_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } } } }]);
+    // The demo default scope is published too: the engine resolves it through the
+    // same authority, with no KV fallback (src/reflex/configStore.ts:408-415).
+    await fixturePublication(f.env, 'coach');
     // Consent is fail-closed: an explicit stored choice precedes every tracked
     // effect (src/content/consent.ts:139-152).
     await positiveChoice(f, g);
@@ -2286,17 +2297,17 @@ describe('W35.02 visit context', () => {
     try {
       for (const host of ['session', 'do']) {
         const f = await fixture(host), before = f.state();
-        // Private replay inputs no longer travel on a shopper snapshot: `records`
-        // is served only inside a trusted synthetic operation
-        // (src/routes/decisions.ts:478; src/content/service.ts:314-318). The cell the
-        // engine actually used is read from the ledger fan-out the request performs.
-        const cell = async (entry?: unknown, extra = '') => { const queued = f.queued.length; const r = await f.snapshot(entry, extra); expect(r.status).toBe(200);
-          const out = await r.json() as { cell?: unknown; records?: unknown; decisions: unknown[] };
-          expect(out.records).toBeUndefined(); await f.drain();
-          expect(f.queued).toHaveLength(queued + 1);
-          const written = f.queued.at(-1)!.records!; expect(written).toHaveLength(1);
-          return written[0]!.cell as { channel: string; visit_bucket: string }; };
-        expect(await cell(paid)).toMatchObject({ channel: 'paid_social', visit_bucket: 'unknown' }); expect(f.state()).toBe(before);
+        // A public snapshot is an offer: "Only a subsequent authenticated render may
+        // capture them" (src/content/service.ts:35). The route always passes an offer
+        // (src/routes/decisions.ts:465), so it returns no private replay inputs
+        // (src/routes/decisions.ts:478) and captures nothing. Those three are what it
+        // can be held to here; the visit context the engine derived is read below
+        // through the real personalization path and its decision provider.
+        const offer = async (entry?: unknown, extra = '') => { const queued = f.queued.length, r = await f.snapshot(entry, extra);
+          expect(r.status).toBe(200);
+          expect((await r.json() as { records?: unknown }).records).toBeUndefined();
+          await f.drain(); expect(f.queued).toHaveLength(queued); return r; };
+        await offer(paid); expect(f.state()).toBe(before);
         const cold = await f.call(`/realtime/personalization/${f.g.subject}`, f.g.capability);
         expect(cold.status).toBe(200); expect(cold.headers.get('set-cookie')).toBeNull(); expect(f.state()).toBe(before);
         expect((await f.call('/realtime/action', f.g.capability, event(f.g, paid))).status).toBe(200); await f.drain();
@@ -2311,18 +2322,17 @@ describe('W35.02 visit context', () => {
           delete legacy.visitCount; delete legacy.lastVisitAt; delete legacy.entryChannel;
           item!.shopper = new ShopperReflex(item!.state, f.env);
         }
-        const legacyState = f.state(); expect(await cell()).toMatchObject({ channel: 'unknown', visit_bucket: 'unknown' }); expect(f.state()).toBe(legacyState);
+        const legacyState = f.state(); await offer(); expect(f.state()).toBe(legacyState);
         expect((await f.call('/realtime/action', f.g.capability, event(f.g, paid))).status).toBe(200); await f.drain();
-        const live = f.state(); expect(await cell(direct)).toMatchObject({ channel: 'paid_social', visit_bucket: '1' });
-        // HANDOFF-2026-09-18 §5 C2: an established owned visit entry channel takes
-        // precedence over a request-supplied fallback channel (src/content/service.ts:241).
-        expect(await cell(direct, '&channel=email')).toMatchObject({ channel: 'paid_social', visit_bucket: '1' }); expect(f.state()).toBe(live);
+        const live = f.state(); await offer(direct); await offer(direct, '&channel=email'); expect(f.state()).toBe(live);
         const legacyRead = await f.call(`/realtime/personalization/${f.g.subject}`, f.g.capability);
         expect(legacyRead.headers.get('set-cookie')).toBeNull(); expect(f.state()).toBe(live);
+        // HANDOFF-2026-09-18 §5 C2: an established owned visit entry channel takes
+        // precedence over a request-supplied fallback channel (src/content/service.ts:241),
+        // so neither a `direct` entry nor `&channel=email` above may relabel it.
         expect(decide.mock.calls.at(-1)?.[3]).toMatchObject({ visit_number: 1, visit_bucket: '1', entry_channel: 'paid_social' });
         clock.mockReturnValue(Date.now() + VISIT_GAP_MS);
-        expect(await cell()).toMatchObject({ channel: 'unknown', visit_bucket: '2-3' });
-        expect(await cell({ utmMedium: 'email' })).toMatchObject({ channel: 'email', visit_bucket: '2-3' }); expect(f.state()).toBe(live);
+        await offer(); await offer({ utmMedium: 'email' }); expect(f.state()).toBe(live);
         await f.call(`/realtime/personalization/${f.g.subject}`, f.g.capability);
         expect(decide.mock.calls.at(-1)?.[3]).toMatchObject({ visit_number: 2, visit_bucket: '2-3', entry_channel: 'unknown' });
         const activity = () => { const s = host === 'session' ? (JSON.parse(f.sessions.data.get(sessionKey)!) as SessionData).metadata : item!.data.get('pipeline') as PipelineRecord;
@@ -2331,9 +2341,11 @@ describe('W35.02 visit context', () => {
         const beforeManual = activity(); expect((await f.call(`/realtime/segments/${f.g.subject}`, f.g.capability, { segment: 'manual-after-gap' })).status).toBe(200);
         expect(activity()).toEqual(beforeManual);
         expect((await f.call('/realtime/action', f.g.capability, event(f.g))).status).toBe(200); await f.drain();
-        expect(await cell()).toMatchObject({ channel: 'unknown', visit_bucket: '2-3' });
+        await offer();
         expect((await f.call('/realtime/action', f.g.capability, event(f.g, direct))).status).toBe(200); await f.drain();
-        expect(await cell()).toMatchObject({ channel: 'direct', visit_bucket: '2-3' });
+        await offer();
+        await f.call(`/realtime/personalization/${f.g.subject}`, f.g.capability);
+        expect(decide.mock.calls.at(-1)?.[3]).toMatchObject({ visit_number: 2, visit_bucket: '2-3', entry_channel: 'direct' });
         const record = host === 'session' ? JSON.parse(f.state()!) as SessionData : f.objects.get(shopperObjectName('meridian', f.g.subject))!.data.get('pipeline') as PipelineRecord;
         expect('metadata' in record ? record.metadata.visitCount : record.visitCount).toBe(2);
         const saved = f.state();
@@ -2342,12 +2354,9 @@ describe('W35.02 visit context', () => {
           expect((await f.snapshot(entry)).status).toBe(400); expect(f.state()).toBe(saved);
         }
         expect((await f.snapshot({ referrer: 'https://private.invalid/path?secret=1' })).status).toBe(400);
-        const refused = await cell(paid, '&personalizationEnabled=false'); expect(refused).toMatchObject({ channel: 'paid_social', visit_bucket: 'unknown' });
-        // With tracking withheld the engine writes nothing about the request, so no
-        // cell is produced at all (src/content/service.ts:320-322 `write`).
-        const withheld = f.queued.length;
-        expect((await f.snapshot(paid, '&trackingConsent=false')).status).toBe(200); await f.drain();
-        expect(f.queued).toHaveLength(withheld);
+        const stateBeforeRefusals = f.state();
+        await offer(paid, '&personalizationEnabled=false'); await offer(paid, '&trackingConsent=false');
+        expect(f.state()).toBe(stateBeforeRefusals);
       }
     } finally { vi.restoreAllMocks(); }
   });
@@ -3838,10 +3847,16 @@ describe('W37.04 tenant-owned runtime configuration', () => {
       const g = await newAnonymousSession(f.env, 'meridian');
       expect((await f.call('/realtime/action', g.capability, event(g), g.tenant)).status).toBe(200); await f.drain();
       const sessionBefore = [...f.sessions.data], objectBefore = host === 'do' ? structuredClone([...f.objects.get(shopperObjectName(g.tenant, g.subject))!.data]) : null;
-      const key = `reflex:config:${reflexScopeForTenant(g.tenant)}:current`;
-      if (failure === 'missing') f.cache.data.delete(key);
-      else if (failure === 'invalid') f.cache.data.set(key, JSON.stringify({ value: { ...DEFAULT_REFLEX_CONFIG, K: -1 } }));
-      else f.cache.failRead = true;
+      // Configuration publication is the only authority: the outage must be injected
+      // there, never into the retained KV copy (src/config/publication.ts:19, :204-206;
+      // src/reflex/configStore.ts:408-415).
+      const storage = f.env.STORAGE as unknown as BoundaryR2, owner = publicationScope(REFLEX_KIND, reflexScopeForTenant(g.tenant));
+      const headKey = 'config-publication/v2/' + owner + '/head.json';
+      if (failure === 'missing') for (const key of [...storage.data.keys()]) { if (key.startsWith('config-publication/v2/' + owner + '/')) storage.data.delete(key); }
+      else if (failure === 'invalid') storage.data.set(headKey, JSON.stringify({ schema: 'configuration-head/v1', scope: owner,
+        committed: { revision: 1, digest: '0'.repeat(64) }, pending: null, digest: '0'.repeat(64) }));
+      else { const readHead = storage.get.bind(storage); storage.get = async (key: string) => {
+        if (key.startsWith('config-publication/')) throw new Error('synthetic configuration storage outage'); return readHead(key); }; }
       invalidateCache();
       const cold = await newAnonymousSession(f.env, g.tenant);
       expect((await f.call(`/realtime/personalization/${cold.subject}`, cold.capability, undefined, cold.tenant)).status).toBeGreaterThanOrEqual(400);
@@ -5620,7 +5635,10 @@ describe('W04.02 owned shopper lane', () => {
           if (condition instanceof Headers ? documents.has(key) : condition && condition.etagMatches !== documents.get(key)?.etag) return null;
           const etag = String(++version); documents.set(key, { text, etag }); return { key, etag, size: text.length };
         } } as unknown as R2Bucket;
-      await initializePublication(f.env, CONTENT_KIND, 'meridian', { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [] } }, '0:' + crypto.randomUUID());
+      await fixturePublication(f.env, 'meridian', [{ kind: CONTENT_KIND, scope: 'meridian', revision: { revision: 1, at: 1, actor: 'fixture', note: '', value: { pieces: [] } } }]);
+      // Consent is fail-closed: the owned lane's grant records an explicit positive
+      // choice before any tracked effect (src/content/consent.ts:139-152).
+      await positiveChoice(f, anon);
       if (host === 'do') {
         const cold = await newAnonymousSession(f.env, 'meridian');
         const refused = await f.call('/realtime/action', cold.capability, { userId: cold.subject, sessionId: cold.sessionId, type: 'page_view', data: {}, source: 'sdk' }, 'meridian', 'opt_tracking_consent=false; opt_personalization_enabled=false; opt_segments=private-stale; opt_session_id=victim');
@@ -5825,13 +5843,27 @@ describe('SDK ↔ /realtime/action contract', () => {
     }
   });
 
-  it('the conversion event and the content interactions travel under their own names, with no alias in the payload', () => {
-    for (const type of ['purchase', 'content_impression', 'content_click', 'content_dwell', 'video_complete'] as const) {
-      const env = core.envelope(type, { contentId: 'c1', slot: 'hero' });
-      expect(env.type).toBe(type);
-      expect(env.data).not.toHaveProperty('event');
-      expect(env.data).toMatchObject({ contentId: 'c1', slot: 'hero' });
-    }
+  it('the conversion event and the content interactions travel under their own names, with no alias in the payload', async () => {
+    // The SDK empties an unconsented payload (src/sdk/core.ts:569), so the wire
+    // table is read through a real consenting session on the real host path.
+    const f = boundary(), g = await newAnonymousSession(f.env, 'coach'); await positiveChoice(f, g);
+    const consenting = createCore({ tenant: 'coach', endpoint: 'https://synthetic.invalid', source: 'sdk', surface: 'coach' },
+      memoryHost({ acquireAuthorityLock: authorityLocks(), uuid: () => crypto.randomUUID(), now: () => Date.now(),
+        fetch: async (url, init) => {
+          const path = new URL(url).pathname, body = init?.body ? JSON.parse(init.body) as unknown : undefined;
+          const response = await f.call(path, init?.headers?.[SHOPPER_HEADER] ?? g.capability, body, 'coach');
+          return { ok: response.ok, status: response.status, json: () => response.json() };
+        } }));
+    try {
+      expect(await consenting.ready()).toBe(true);
+      expect(consenting.consent).toMatchObject({ tracking: true, personalization: true });
+      for (const type of ['purchase', 'content_impression', 'content_click', 'content_dwell', 'video_complete'] as const) {
+        const env = consenting.envelope(type, { contentId: 'c1', slot: 'hero' });
+        expect(env.type).toBe(type);
+        expect(env.data).not.toHaveProperty('event');
+        expect(env.data).toMatchObject({ contentId: 'c1', slot: 'hero' });
+      }
+    } finally { consenting.disconnect(); }
   });
 
   it('W26.02 refuses malformed decision references before either host and preserves explicit or absent outcome identity', async () => {
