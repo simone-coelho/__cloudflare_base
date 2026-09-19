@@ -152,6 +152,8 @@
 //      lead ruling, and the row for W21.C1.01 names it as owed work. Nothing in
 //      `src/` calls `readTargets`, so no report publishes the narrow interval.
 
+import { readFileSync } from 'node:fs';
+
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
 import * as jose from 'jose';
@@ -559,8 +561,14 @@ function outcomeRecord(input: { visitor: string; ts: number; type: string; item:
   };
 }
 
-/** Put a day of arm-tagged records into the ledger through the real queue consumer. */
-async function seedLedgerDay(m: Mounted, date: string, decisions: DecisionRecord[], outcomes: Array<ReturnType<typeof outcomeRecord>>): Promise<void> {
+/**
+ * Put a day of arm-tagged records into the ledger through the real queue
+ * consumer. A seeded decision may carry the RULED provenance block the serving
+ * path answered (representation (v)); it is declared here, in the
+ * specification's own type, because `DecisionRecord` does not carry it yet.
+ */
+type SeededDecision = DecisionRecord & { experiment?: SnapshotAnswer['experiment'] };
+async function seedLedgerDay(m: Mounted, date: string, decisions: SeededDecision[], outcomes: Array<ReturnType<typeof outcomeRecord>>): Promise<void> {
   const stamp = <T extends { ts: number }>(row: T) => ({ ...row, retention: captureRetention(m.env, TENANT, row.ts) });
   const bodies: unknown[] = [];
   if (decisions.length) bodies.push({ kind: 'ledger', type: 'decisions', version: 1, records: decisions.map(stamp) });
@@ -645,6 +653,19 @@ describe('unit:W21.C1.01', () => {
     expect(zero.relative, 'F25 §5.4 — against a control rate of zero the ratio is unreadable').toBeNull();
     expect(zero.low, 'F25 §5.4 — and so is its interval').toBeNull();
     expect(zero.high, 'F25 §5.4 — and so is its interval').toBeNull();
+
+    // R100(b) with F25 §7.3: the target reading a report would publish must be
+    // COMPUTED through that interval, not offered beside it. Same fixture as the
+    // corrected assertion at src/measure/holdout.test.ts:192 — control 20,000 @
+    // 3.0 % (s 600) against treatment 400,000 @ 4.5 % (s 18,000):
+    //   ln(1.5) = 0.4054651081081644, SE = sqrt(0.955/18000 + 0.97/600) = 0.04086223466995194,
+    //   z·SE = 0.08008850828092974, low = +0.3845519698419917, high = +0.625074427691418.
+    // F25 §5.5 prints the same low as 38.46 % against the shipped 41.33 %.
+    const reading = measureHoldout.compareArms({ n: 20_000, s: 600 }, { n: 400_000, s: 18_000 }).targets;
+    expect(reading?.relativeLow, 'F25 §5.5/§7.3 — the published target reading is the Katz low end, +38.46 %, not the divided interval\'s +41.33 %')
+      .toBeCloseTo(0.3845519698419917, 10);
+    expect(reading?.standing, 'F25 §5.5 — +38.46 % is under the +40 % target and over the +10 % minimum, so the rung is the minimum')
+      .toBe('reached_minimum');
 
     // The documented label the reports publish (F07 §7(a), position 8).
     expect(REPORT_MEASUREMENT.kind, 'document 35 :423 — the published label is an attribution diagnostic').toBe('attribution_diagnostic');
@@ -735,6 +756,20 @@ describe('unit:W21.C1.02', () => {
     expect(complete.status, JSON.stringify(complete.body)).toBe(200);
     expect(windowReportOf(complete.body).incomplete, 'F25 §1.2 — a day built from all 24 hours with untruncated counts is not incomplete').toEqual([]);
     expect(windowReportOf(complete.body).targets?.reasons, 'F25 §7.2 — with a complete source the only reason left is the withheld inference')
+      .toEqual(['inference_unavailable']);
+
+    // (e) The same suppression rule on a DAY answer, whose own counts are
+    // truncated (representation (ii)). F25 §3 records that this half of the
+    // finding "is not gated on long windows at all: it is reachable today in
+    // the nightly day report".
+    const truncatedDay = await operatorGet(m, `/v1/${TENANT}/learn/report?date=2026-03-02`);
+    expect(truncatedDay.status, JSON.stringify(truncatedDay.body)).toBe(200);
+    expect(dayReportOf(truncatedDay.body).counts.truncated, 'the fixture day was truncated at the record cap').toBe(true);
+    expect(dayReportOf(truncatedDay.body).targets?.reasons, 'F25 §7.2 — a day report built from a truncated source withholds the standing for that reason too')
+      .toEqual(['inference_unavailable', 'source_incomplete']);
+    const completeDay = await operatorGet(m, `/v1/${TENANT}/learn/report?date=2026-03-01`);
+    expect(completeDay.status, JSON.stringify(completeDay.body)).toBe(200);
+    expect(dayReportOf(completeDay.body).targets?.reasons, 'F25 §7.2 — and the complete day beside it does not carry the incompleteness reason')
       .toEqual(['inference_unavailable']);
   });
 });
@@ -874,6 +909,15 @@ const DECLINING_SHOPPER = 'vis-00000021-0b01-4000-8000-000000000004';
 const CONSENTING_SHOPPER = 'vis-00000021-0b01-4000-8000-00000000000c';
 /** Bucket 0.477877 under either published salt's control side. */
 const PROVENANCE_SHOPPER = 'vis-00000021-0b01-4000-8000-000000000002';
+/** The SAME person returning on another browser: bucket 0.821131, the treated side. */
+const RETURNING_ANON = 'vis-00000021-0b01-4000-8000-000000000008';
+/**
+ * Reading (d): the merge policy is PUBLISHED, not only implemented. This is the
+ * sentence this specification rules for the customer-facing kit; the row names
+ * it and the builder writes it into docs/kit/02-api-reference.md.
+ */
+const MERGE_POLICY_SENTENCE =
+  'Across an identity link the enrollment recorded first wins; the arm is never re-drawn from the new id.';
 /** Buckets 0.032036 (control) and 0.906276 (treated). */
 const OUTCOME_CONTROL = 'vis-00000021-0b01-4000-8000-00000000000b';
 const OUTCOME_TREATED = 'vis-00000021-0b01-4000-8000-000000000001';
@@ -923,6 +967,42 @@ describe('unit:W21.E1.01', () => {
       expect(afterLink.status, 'the recognised shopper is served').toBe(200);
       expect(afterLink.arm, 'tapestry_requirements :367 with F07 §2.2 — the arm enrolled before recognition persists after linking')
         .toBe('default');
+
+      // The same person returning on ANOTHER browser. That browser's own id
+      // draws the treated arm, and so would her recognised id, so only the
+      // enrollment recorded FIRST can answer `default` here — which is the
+      // published merge policy, not an accident of the session the first link
+      // happened to hand back.
+      expect(armFor(RETURNING_ANON, HOLDOUT), 'the returning browser\'s own id draws the treated arm').toBe('personalized');
+      const otherBrowser = await shopperOn(m, RETURNING_ANON, { tracking: true, personalization: true });
+      expect((await otherBrowser.snapshot()).arm, 'before recognition that browser is the arm its own id draws').toBe('personalized');
+      const secondExp = Math.floor(Date.now() / 1000) + 300;
+      const relink = await m.fetch(new Request(`https://synthetic.invalid/v1/${TENANT}/identity/link`, {
+        method: 'POST',
+        headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: otherBrowser.capability, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitorId: RETURNING_ANON, accountId: ENROLLED_ACCOUNT, exp: secondExp,
+          assertion: await signAssertion(IDENTITY_SECRET, TENANT, RETURNING_ANON, ENROLLED_ACCOUNT, secondExp) }),
+      }));
+      expect(relink.status, await relink.clone().text()).toBe(200);
+      const relinked = await relink.clone().json().catch(() => ({})) as {
+        shopperId?: string;
+        session?: { capability: string; subject: string; sessionId: string; grantId?: string; iat: number; exp: number };
+      };
+      expect(relinked.shopperId, 'the same account is the same person on either browser').toBe(ENROLLED_SHOPPER_ID);
+      await m.drain();
+      const handedAgain = relinked.session!;
+      const returning = await withCapability(m, ENROLLED_SHOPPER_ID, handedAgain.sessionId, handedAgain.capability,
+        { grantId: handedAgain.grantId!, iat: handedAgain.iat, exp: handedAgain.exp });
+      const afterReturn = await returning.snapshot();
+      expect(afterReturn.status, 'the returning shopper is served').toBe(200);
+      expect(afterReturn.arm, 'tapestry_requirements :367 — across a second link the enrollment recorded FIRST wins, on either browser')
+        .toBe('default');
+
+      // Reading (d): an explicit PUBLISHED merge policy, not an implementation
+      // detail a customer has to infer from behaviour.
+      const kit = readFileSync(new URL('../../../docs/kit/02-api-reference.md', import.meta.url), 'utf8');
+      expect(kit.includes(MERGE_POLICY_SENTENCE),
+        `reading (d) — docs/kit/02-api-reference.md must publish the merge policy in these words: "${MERGE_POLICY_SENTENCE}"`).toBe(true);
     });
   }
 });
@@ -1003,9 +1083,19 @@ describe('unit:W21.E1.03', () => {
     // The delivered records, on the ledger the export reads. A public snapshot
     // is an offer and captures no row of its own (`src/content/service.ts:456-458`),
     // so the day is seeded with the arm the live path just answered.
+    // THE RULE THIS FIXTURE ENCODES: a DECISION record carries the provenance
+    // the serving path answered, delivered unchanged — never re-derived at
+    // ingest or at read time, because today's published salt applied to a
+    // decision taken under an older one is F07 §5.7's own hazard and would
+    // contradict C1.03's "a report written before the field existed is never
+    // re-interpreted". An OUTCOME record carries the provenance of the
+    // visitor's persistent enrollment at the moment the outcome is recorded
+    // (a stored fact about her, not a fresh draw), which is why the seeded
+    // outcome below carries none and must come back carrying hers.
     const date = '2026-06-03';
     await seedLedgerDay(m, date, [
-      decisionRecord({ visitor: PROVENANCE_SHOPPER, arm: served.arm, ts: atUtc(date, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
+      { ...decisionRecord({ visitor: PROVENANCE_SHOPPER, arm: served.arm, ts: atUtc(date, 9), item: 'cnt-tabby-evening-edit', index: 0 }),
+        experiment: served.experiment },
     ], [
       outcomeRecord({ visitor: PROVENANCE_SHOPPER, ts: atUtc(date, 9, 5), type: 'click', item: 'cnt-tabby-evening-edit', index: 0 }),
     ]);
@@ -1021,18 +1111,34 @@ describe('unit:W21.E1.03', () => {
     expect(objects.every(o => o.date === date), 'and each entry names the day it belongs to').toBe(true);
     expect(claimsIn(listed.body), 'position 8 — the export states no lift').toEqual([]);
 
-    // One delivered record, read through the authenticated per-record route,
-    // carries the same provenance as the served answer.
+    // The delivered DECISION record, read through the authenticated per-record
+    // route: the provenance the serving path answered, unchanged.
     const decisionKey = keys.find(key => key.includes('/decision/'))!;
     const line = (m.storage.objects.get(decisionKey) ?? '').split('\n').filter(Boolean)[0]!;
     const record = JSON.parse(line) as { decision_id: string; arm: string; experiment?: SnapshotAnswer['experiment'] };
     const fetched = await operatorGet(m, `/v1/${TENANT}/ledger/${encodeURIComponent(record.decision_id)}`);
     expect(fetched.status, JSON.stringify(fetched.body)).toBe(200);
     const delivered = (fetched.body.record ?? {}) as { arm?: string; experiment?: SnapshotAnswer['experiment'] };
-    expect(delivered.experiment?.id, 'position 8 — the delivered decision record names its experiment').toBe(`${TENANT}:${TENANT}:${SALT_A}`);
-    expect(delivered.experiment?.saltVersion, 'position 8 — and the salt version it was enrolled under').toBe(1);
-    expect(delivered.experiment?.arm, 'position 8 — and the arm, beside the record\'s own arm field').toBe(delivered.arm);
-    expect(delivered.experiment?.anchorGeneration, 'F07 §7(b) — and the generation of the anchor it was enrolled against').toBe(1);
+    expect(delivered.experiment?.id, 'position 8 — the delivered decision record names the experiment it was decided under')
+      .toBe(`${TENANT}:${TENANT}:${SALT_A}`);
+    expect(delivered.experiment, 'position 8 — and the export delivers that answered provenance unchanged, never re-derived from today\'s published salt')
+      .toEqual(served.experiment);
+    expect(delivered.experiment?.arm, 'position 8 — and it is the arm the record itself carries').toBe(delivered.arm);
+
+    // The delivered OUTCOME record: the same four members, resolved from the
+    // visitor's persistent enrollment at the time the outcome was recorded.
+    const outcomeKey = keys.find(key => key.includes('/outcome/'))!;
+    const outcomeLine = (m.storage.objects.get(outcomeKey) ?? '').split('\n').filter(Boolean)[0]!;
+    const outcomeRow = JSON.parse(outcomeLine) as { outcome_id: string };
+    const fetchedOutcome = await operatorGet(m, `/v1/${TENANT}/ledger/${encodeURIComponent(outcomeRow.outcome_id)}?stream=outcome`);
+    expect(fetchedOutcome.status, JSON.stringify(fetchedOutcome.body)).toBe(200);
+    const deliveredOutcome = (fetchedOutcome.body.record ?? {}) as { experiment?: SnapshotAnswer['experiment'] };
+    expect(deliveredOutcome.experiment?.id, 'position 8 — the delivered outcome record names the experiment its visitor is enrolled in')
+      .toBe(`${TENANT}:${TENANT}:${SALT_A}`);
+    expect(deliveredOutcome.experiment?.saltVersion, 'position 8 — under the salt version her enrollment was written with').toBe(1);
+    expect(deliveredOutcome.experiment?.arm, 'position 8 — and her enrolled arm, so the comparison can be computed on the customer\'s side')
+      .toBe(served.experiment?.arm);
+    expect(deliveredOutcome.experiment?.anchorGeneration, 'F07 §7(b) — and the generation of the anchor she is enrolled against').toBe(1);
 
     // A published salt change is a NEW experiment, never a silent re-randomisation
     // of the old one (F07 §5.7: editing the salt re-randomises ~9.7 % of visitors
