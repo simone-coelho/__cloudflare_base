@@ -172,9 +172,13 @@ is read from its attributes when the shopper acts, so a changed `data-op-slot` o
 the piece the node now shows (the served receipt in `data-op-decision-id` is read once, when the SDK binds).
 The tag layer is the page's: `push` is wrapped once however many clients capture from it, each live client
 sees a push once, and your own `push` function comes back only when the last attachment is released, so
-releasing one never removes another's. `client.destroy()` releases whatever the client still holds, so
-`destroy()` before the detach functions and the detach functions before `destroy()` both leave the page
-with no live listener, wrapper, observer or pending callback and nothing reaching the platform afterwards.
+releasing one never removes another's. A consent tool or tag manager that wraps `push` after the SDK did
+and calls through to what it found keeps working and sees each push once; one push is still exactly one
+event for each live client, and the last release hands back the chain you put on the page. `client.destroy()`
+releases whatever the client still holds — its listeners, its observations, its declarative scans and its
+tag-layer capture — so `destroy()` before the detach functions and the detach functions before `destroy()`
+both leave the page with no live listener, wrapper, observer or pending callback and nothing reaching the
+platform afterwards, even if you kept none of the detach functions.
 After a sign-in or a switch to another tenant, the element carries one listener again and later events
 carry only the new identity.
 

@@ -1419,12 +1419,15 @@
   function layerRegistryFor(layer) {
     const existing = layerRegistries.get(layer);
     if (existing && layer.push === existing.wrapper) return existing;
+    if (existing) existing.superseded = true;
     const original = layer.push;
     const registry = {
       original,
+      superseded: false,
       attached: existing?.attached ?? /* @__PURE__ */ new Map(),
       wrapper: function(...args) {
         const result = original.apply(layer, args);
+        if (registry.superseded) return result;
         for (const entry of args) for (const attachment of [...registry.attached.values()]) attachment.handle(entry);
         return result;
       }
@@ -1432,6 +1435,18 @@
     layer.push = registry.wrapper;
     layerRegistries.set(layer, registry);
     return registry;
+  }
+  function releaseLayerAttachment(layer, attached, owner, held) {
+    held.live = false;
+    held.refs = 0;
+    if (attached.get(owner) !== held) return;
+    attached.delete(owner);
+    if (attached.size) return;
+    const registry = layerRegistries.get(layer);
+    if (!registry || registry.attached !== attached) return;
+    registry.superseded = true;
+    if (layer.push === registry.wrapper) layer.push = registry.original;
+    layerRegistries.delete(layer);
   }
   function createEmit(core, listen) {
     const host = core.host;
@@ -1562,12 +1577,20 @@
         attachment.detach();
       };
     }
+    const layerHolds = /* @__PURE__ */ new Map();
+    function releaseLayer(layer) {
+      const entry = layerHolds.get(layer);
+      if (!entry) return;
+      layerHolds.delete(layer);
+      entry.hold();
+    }
     function dataLayer(opts = {}) {
       const layer = opts.layer ?? host.dataLayer;
       if (!layer) return () => {
       };
       const registry = layerRegistryFor(layer);
-      let attachment = registry.attached.get(core);
+      const attached = registry.attached;
+      let attachment = attached.get(core);
       const fresh = attachment === void 0;
       if (!attachment) {
         const mapping = { ...GA4_MAPPING, ...opts.mapping ?? {} };
@@ -1588,10 +1611,12 @@
           if (mapped) void track(mapped.type, mapped.data);
         }) };
         attachment = own;
-        registry.attached.set(core, own);
+        attached.set(core, own);
       }
       const held = attachment;
       held.refs++;
+      const hold = () => releaseLayerAttachment(layer, attached, core, held);
+      layerHolds.set(layer, { held, hold });
       if (fresh) {
         const replayLength = opts.replay !== false && core.trackingAllowed ? layer.length : 0;
         if (replayLength) core.capture(() => {
@@ -1602,13 +1627,19 @@
       return () => {
         if (released) return;
         released = true;
-        if (--held.refs > 0) return;
-        held.live = false;
-        if (registry.attached.get(core) === held) registry.attached.delete(core);
-        if (registry.attached.size) return;
-        if (layer.push === registry.wrapper) layer.push = registry.original;
-        if (layerRegistries.get(layer) === registry) layerRegistries.delete(layer);
+        if (held.refs > 0) held.refs--;
+        if (held.refs > 0) return;
+        if (layerHolds.get(layer)?.held === held) layerHolds.delete(layer);
+        hold();
       };
+    }
+    function release() {
+      for (const [dom, attachment] of [...scans]) {
+        if (scans.get(dom) === attachment) scans.delete(dom);
+        attachment.refs = 0;
+        attachment.detach();
+      }
+      for (const layer of [...layerHolds.keys()]) releaseLayer(layer);
     }
     return {
       track,
@@ -1624,6 +1655,7 @@
       custom: (name, data = {}) => track("custom", () => ({ event: name, ...data })),
       declarative,
       dataLayer,
+      release,
       rendered: (slot, contentId, el, decisionId) => listen.rendered(slot, contentId, el, decisionId)
     };
   }
@@ -2242,6 +2274,15 @@
     };
   }
 
+  // src/sdk/teardown.ts
+  function destroyClient(core, listen, emit, identity) {
+    void identity;
+    listen.destroy();
+    emit.release();
+    core.disconnect();
+    core.bindings.release();
+  }
+
   // src/sdk/version.ts
   var VERSION = "0.2.0";
 
@@ -2267,12 +2308,9 @@
       connect: () => core.connect(),
       disconnect: () => core.disconnect(),
       // Whichever order a page tears down in, nothing of the SDK is left on it:
-      // the listeners and observations this client owns go back too (W17).
-      destroy: () => {
-        listen.destroy();
-        core.disconnect();
-        core.bindings.release();
-      },
+      // the attachments, listeners and observations this client owns go back too,
+      // whether or not the page kept the detach functions (W17, src/sdk/teardown.ts).
+      destroy: () => destroyClient(core, listen, emit, identity),
       on: (event, fn) => core.on(event, fn)
     };
   }

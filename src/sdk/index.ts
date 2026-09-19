@@ -7,6 +7,7 @@ import { createEmit, GA4_MAPPING, type Emit } from './emit';
 import { createListen, type Listen, type ListenOptions } from './listen';
 import { createIdentity, type Identity, type IdentifyOptions, type IdentifyResult, type LogoutResult } from './identify';
 import { browserHost, memoryHost } from './host';
+import { destroyClient } from './teardown';
 import { VERSION } from './version';
 import type { ClientConfig, CoreEvents, Host } from './types';
 
@@ -40,8 +41,9 @@ export function createClient(config: ClientConfig, host: Host = browserHost(), o
     connect: () => core.connect(),
     disconnect: () => core.disconnect(),
     // Whichever order a page tears down in, nothing of the SDK is left on it:
-    // the listeners and observations this client owns go back too (W17).
-    destroy: () => { listen.destroy(); core.disconnect(); core.bindings.release(); },
+    // the attachments, listeners and observations this client owns go back too,
+    // whether or not the page kept the detach functions (W17, src/sdk/teardown.ts).
+    destroy: () => destroyClient(core, listen, emit, identity),
     on: (event, fn) => core.on(event, fn),
   };
 }
