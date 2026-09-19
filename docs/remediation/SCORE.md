@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 109/111 · W closed 2/26 (W16–W41) · suite 1916/1998 · residual 82 in 9 files · typecheck GREEN
+Units 109/111 · W closed 2/26 (W16–W41) · suite 1919/1998 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -139,16 +139,14 @@ Units 109/111 · W closed 2/26 (W16–W41) · suite 1916/1998 · residual 82 in 
 
 ## Failing tests outside the baseline
 
--  W06.12 propagates the original profile deadline into the actual delayed relay send boundary
--  W12.02 real native source delivery, both hosts and tenants preserve customer namespaces
--  W14.05 typed source snapshots W14.05 consumes current typed and precomputed membership on both tenant hosts through reads, live events and restarted alarms without raw-value decision egress
+_None._
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | ecb69cebae05962d5123fcba025dae090c64a346ebb4363b55744b66c8f36840 |
+| units sha256 | 9e5837bf50b89b5d5200d679380c13a613ef3c93584ecce9261ea2710b01cb80 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -159,7 +157,7 @@ Units 109/111 · W closed 2/26 (W16–W41) · suite 1916/1998 · residual 82 in 
 
 | Input | Value |
 |---|---|
-| vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | 0e5599eb64cd6c583267a3688c3b2ea0f702124e9ec60efb74afbb2b41c4eef6 |
-| commit | 2e4d386332256eb882a9cb9761f1288e1e9572d8 |
-| generated | 2026-09-19T19:07:21.097Z |
+| vitest report | vitest-2.json (outside the checkout) |
+| vitest report sha256 | d4f6ed147afe78eb2ae7b2e7b610a7469409001838326e7cd804c991b409ca22 |
+| commit | 13b534077291b803111f6724249174f27f1dc352 |
+| generated | 2026-09-19T19:27:28.841Z |
