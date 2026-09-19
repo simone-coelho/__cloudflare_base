@@ -39,6 +39,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DEFAULT_REFLEX_CONFIG, type DimensionSpec, type ReflexConfig } from '@/reflex/core';
+import { validateJourneyThresholds } from '@/services/JourneyStage';
 import type { Env } from '@/types/env';
 import { readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
 import * as store from '@/config/versionedStore';
@@ -125,7 +126,12 @@ export type WriteResult =
 
 // ── Validation ───────────────────────────────────────────────────────────────
 
-const MAX_TAU_MS = 30 * 24 * 60 * 60 * 1000; // 30 days: a decay horizon, not a lease
+// A decay horizon, not a lease. Raised from thirty days with R42: the shipped
+// memory horizon is fourteen days and price posture rides 2.5× of it (R50(a),
+// thirty-five days), so a bound of thirty would refuse the engine's own
+// compiled default. Ninety days keeps a τ a horizon — a value a tenant could
+// argue for — while admitting the shipped default and an honest retune of it.
+const MAX_TAU_MS = 90 * 24 * 60 * 60 * 1000;
 const MAX_DIMENSIONS = 32;
 const MAX_WEIGHTS = 200;
 const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -255,6 +261,11 @@ export function validateReflexConfig(candidate: unknown): ValidationResult {
   if (c.eventAttributes !== undefined && c.eventAttributes !== 'catalog-only' && c.eventAttributes !== 'event-when-unknown') {
     errors.push("eventAttributes must be 'catalog-only' or 'event-when-unknown'");
   }
+  // W16 C4 (R32(1)): the journey threshold set rides this document, so it is
+  // validated here and an invalid block never becomes the set in force — the
+  // last published revision keeps deciding. Absent is valid: no thresholds are
+  // published yet, and the engine reports the first stage with a diagnostic.
+  if (c.journey !== undefined) errors.push(...validateJourneyThresholds(c.journey));
 
   if (!Array.isArray(c.dimensions)) {
     errors.push('dimensions must be an array');
@@ -468,6 +479,8 @@ export interface ReflexConfigPatch {
   epsilon?: number;
   maxValuesPerDim?: number;
   eventAttributes?: 'catalog-only' | 'event-when-unknown';
+  /** W16 C4: the whole journey block, replaced as a unit — a stage ladder is not merged by position. */
+  journey?: ReflexConfig['journey'];
   weights?: Record<string, number>;
   dimensions?: Array<Partial<DimensionSpec> & { key: string }>;
 }
@@ -484,7 +497,7 @@ export interface ReflexConfigPatch {
 export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): ReflexConfig {
   const next = structuredCopy(base) as ReflexConfig;
 
-  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes'] as const) {
+  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey'] as const) {
     if (patch[field] !== undefined) (next as unknown as Record<string, unknown>)[field] = patch[field];
   }
   if (patch.weights) next.weights = { ...next.weights, ...patch.weights };

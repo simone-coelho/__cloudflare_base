@@ -56,7 +56,8 @@ One per admitted position, available through authenticated operator/ledger readb
 | `page`, `slot`, `position` | Where it was served, and the rank inside the slot |
 | `item_id`, `customer_item_id` | What was served, both ids |
 | `candidates[]` | `{ contentId, score }` for the top candidates considered |
-| `cell` | The shopper's context: `channel`, `visit_bucket` (`1`, `2-3`, `4+`, `unknown`), `region`, `affinity` (the leading interest as `dim:value`, or null) |
+| `cell` | The shopper's context: `channel`, `visit_bucket` (`1`, `2-3`, `4+`, `unknown`), `region`, `affinity` (the leading interest as `dim:value`, or null), `stage` (`early`, `mid`, `late`, `unknown`: the stored token the learning statistics pool on) |
+| `journey` | The journey stage this decision was made in, in the reported vocabulary — `{ stage, version }` with `stage` one of `exploring`, `thinking`, `deciding` — where `version` names the published threshold revision that derived it, the compiled default configuration's own version at `revision: 0` when your tenant has published no `journey` block and the engine's compiled default decided, or null when a stored block could not be read and the engine fell closed to the first stage. Absent when the engine did not personalize. `cell.stage` carries the same stage in the persisted grammar (`exploring`→`early`, `thinking`→`mid`, `deciding`→`late`), which is what the learning key `s=` pools on. The shopper's own receipt carries the same block |
 | `arm` | `personalized`, or the holdout's `default` or `no_learning` |
 | `explored` | True when exploration served it on purpose |
 | `authority` | `engine`, `pin` or `default` |
@@ -401,7 +402,7 @@ in it. Current `computation.version` is4 with per-slot measurement basis; retain
 | Frame | Body |
 |---|---|
 | `connected` | `{ connectionId, userId, timestamp }` |
-| `personalization_update` | `{ userId, timestamp, data: { segments[], decisions{}, featureVariables{}, recommendations[], sortOrder[], journeyStage, affinity: { dims, audiences, changed[], odpConfirmed[] } } }` |
+| `personalization_update` | `{ userId, timestamp, data: { segments[], decisions{}, featureVariables{}, recommendations[], sortOrder[], journeyStage, affinity: { dims, audiences, changed[], odpConfirmed[] } } }`. `journeyStage` is one of `exploring`, `thinking`, `deciding`: the stage of the shopper's CURRENT VISIT, derived from the visit's own counters against the `journey` thresholds published on your reflex configuration document. It starts again at `exploring` in a new visit and after the purchase that reached `deciding`. With no `journey` block published the engine's compiled default decides (`thinking` at the third interaction of the visit, `deciding` at the first purchase), so the stage still moves and the pooled learning key still spreads across `s=early`, `s=mid` and `s=late` rather than collapsing onto `s=early`; `sources.journey` on a decision names that default and its `revision: 0`. |
 | `segment_update` | The same shape, on a membership change alone |
 | `content_decisions` | Client-compatible only, no production sender promised. A decision set: `{ page, arm, versions, config_label, decisions[], ts }` |
 | `audience_published` | `{ userId, data: { timestamp, source, audienceWentLive: { key, name } } }` |

@@ -12,7 +12,10 @@ import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
 import { snapshot as reflexSnapshot, type AffinitySnapshot, type ReflexConfig } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
-import { projectedOdpStage } from '@/services/odpLoop';
+import {
+  journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
+  journeyWordOf, PERSISTED_STAGE, type JourneyWord,
+} from '@/services/JourneyStage';
 import { projectVisit, validEntry, validVisitContext, entryChannelOf, type ChannelSignals, type VisitContext } from '@/services/visit';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
@@ -104,6 +107,13 @@ export interface DecisionSources {
   slots: { version: string | null; revision: number; count: number };
   learn: { version: string | null; revision: number };
   config: { label: string; revision: number };
+  /**
+   * W16 C4 (R32(1)): the journey threshold set this decision derived its stage
+   * from. The version IS the reflex document's own revision identity, because
+   * the thresholds ride that document; `reason` says why none was in force when
+   * the engine fell closed to the first stage of the journey.
+   */
+  journey: { version: string | null; revision: number; reason: string | null };
   /** Phase 3 (doc 22 §9): their model's answer for this page, when a slot on it weights one. */
   external: { kind: string; ref: string; ok: boolean; ms: number; version: string | null; reason: string | null } | null;
   state: 'do' | 'session' | 'none';
@@ -118,8 +128,13 @@ interface ShopperRead {
   sessionId: string | null;
   isNewSession: boolean | null;
   state: DecisionSources['state'];
-  /** CW29: the journey stage the engine last derived for this shopper, from whichever host holds it; null when none. */
-  stage: string | null;
+  /**
+   * W16 C4 (R29): the journey stage of the shopper's CURRENT VISIT in the shared
+   * vocabulary, as whichever host holds the counters reports it; null when the
+   * shopper is not personalized. The persisted cell token is derived from it at
+   * the one mapping point, never stored a second way.
+   */
+  stage: JourneyWord | null;
   /** CW31: the shopper's two consent switches, from whichever host holds them; a host that says nothing is consenting. */
   consent: Consent;
   visit?: VisitContext | null;
@@ -152,7 +167,7 @@ async function readShopper(
         && (typeof body.visit.lastSeen !== 'number' || !Number.isFinite(body.visit.lastSeen) || body.visit.lastSeen < 0)))) throw new SessionAccessError();
       const consent = intersectConsent(storedConsent(body.consent), hints);
       return { affinity: personalizes(consent) ? body.affinity ?? null : null, sessionId: principal.sessionId, isNewSession: null, state: 'do',
-        stage: personalizes(consent) ? body.journeyStage ?? null : null, consent,
+        stage: personalizes(consent) ? journeyWordOf(body.journeyStage) : null, consent,
         visit: personalizes(consent) ? body.visit : null, lastSeen: personalizes(consent) ? body.visit?.lastSeen : null };
     } catch {
       throw new SessionAccessError();
@@ -169,8 +184,11 @@ async function readShopper(
     return {
       affinity: personalizes(consent) && sessionData?.reflex && cfg ? reflexSnapshot(sessionData.reflex, now, cfg) : null,
       sessionId, isNewSession: null, state: 'session',
-      stage: personalizes(consent) ? await projectedOdpStage(env, tenant, sessionData, sessionData?.segments ?? [],
-        sessionData?.attributes ?? {}, sessionData?.metadata.journeyStage ?? null) : null,
+      // W16 C4: the same derivation the session host's own hydrate answers with
+      // — this visit's counters against the published journey thresholds.
+      stage: personalizes(consent) && cfg
+        ? journeyStageFrom(journeyCountersNow(sessionData?.journey, sessionData?.metadata.lastSeen, now), journeyThresholdsInForce(cfg))
+        : null,
       visit: personalizes(consent) ? sessionData?.metadata : null,
       lastSeen: personalizes(consent) ? sessionData?.metadata.lastSeen : null,
       consent,
@@ -225,6 +243,13 @@ export async function serveContentDecisions(
   const learn = learnRev?.value ?? DEFAULT_LEARN;
   const cfg = cfgRev.config;
   const configRevision = cfgRev.revision;
+  // W16 C4 (R32(1), R49): the journey thresholds ride the reflex document, so
+  // the version a receipt names is that document's own revision identity. A
+  // tenant that has published no block is decided by the engine's compiled
+  // default at revision 0, named and diagnosed as such; a block that will not
+  // validate fails closed to the first stage with no version at all.
+  const { version, revision, reason } = journeySourceOf(cfg, configRevision);
+  const journeySource = { version, revision, reason };
   lap('documents');
 
   const shopper: ShopperRead = r.principal
@@ -240,8 +265,11 @@ export async function serveContentDecisions(
     // channel is only a bounded fallback when owned state has no entry yet.
     channel: consent.tracking ? visit.entryChannel ?? entryChannelOf(r.channel) : null,
     visitNumber: personalizes(consent) ? visit.visitNumber : null,
-    // CW29: the stage the host last derived; `cellFor` records anything else as unknown.
-    stage: personalizes(consent) ? shopper.stage : null,
+    // R32(2): the ONE mapping point from the reported vocabulary to the
+    // persisted cell token, so the ladder key and every learning statistic keyed
+    // on `s=mid` are exactly what they were before C4. `cellFor` records
+    // anything it does not recognise as unknown.
+    stage: personalizes(consent) && shopper.stage ? PERSISTED_STAGE[shopper.stage] : null,
   });
   // CW31: either consent switch off means the site's own defaults, whatever the holdout hash says.
   const arm = armUnder(consent, armFor(r.visitorId, { ...learn.holdout, salt: learn.holdout.salt || brand }));
@@ -310,6 +338,13 @@ export async function serveContentDecisions(
   lap('decide');
   if (consent.tracking) for (const record of set.records) record.retention = captureRetention(env, r.tenant, record.ts, now);
   for (const record of set.records) record.measurementBasis = configOf(record.slot).measurementBasis ?? 'served-v1';
+  // W16 C4: every record — and so every receipt read off it — names the stage it
+  // was decided in and the threshold version that derived it. Omitted where the
+  // engine did not personalize, because there is no derived stage to claim.
+  if (personalizes(consent) && shopper.stage) {
+    const journey = { stage: shopper.stage, version: journeySource.version };
+    for (const record of set.records) record.journey = journey;
+  }
   // CW31: a shopper who declined personalization sees why on every receipt.
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = `the site's defaults: ${!consent.tracking && !consent.personalization ? 'tracking and personalization are' : !consent.tracking ? 'tracking is' : 'personalization is'} off by the shopper's choice`;
   // The owner drains actual private I/O. In durable mode the shared admission
@@ -347,6 +382,7 @@ export async function serveContentDecisions(
       slots: { version: slotsDoc.version ?? null, revision: slotsRev?.revision ?? 0, count: slots.length },
       learn: { version: learn.version ?? null, revision: learnRev?.revision ?? 0 },
       config: { label: cfg.version, revision: configRevision },
+      journey: journeySource,
       external: external ? { kind: external.kind, ref: external.ref, ok: false, ms: 0, version: null, reason: external.reason } : null,
       state: shopper.state,
       consent: { ...consent, personalized: personalizes(consent) },
