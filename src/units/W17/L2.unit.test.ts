@@ -612,3 +612,89 @@ describe('unit:W17.L1.11', () => {
     expect(liveObservers(p.hero), 'observers left watching the node after the remounted page detached').toBe(0);
   });
 });
+
+describe('unit:W17.L1.12', () => {
+  it('sdk: a detach function releases only the attachment it was returned for — a stale one, from before `destroy()`, changes nothing on the page, and the live attachment’s own detach still hands the page its push back', async () => {
+    // src/sdk/README.md, "Binding and unbinding": "Each call returns its own
+    // detach function and the page's elements come back when the last one has
+    // run", "Releasing one attachment never removes another's capture" and
+    // "Detaching twice is a no-op". A single-page app that mounts, tears the
+    // client down and mounts again on the same client keeps the detach function
+    // of the mount that is gone; running it late — a cleanup effect that fires
+    // after a re-render — must not silently disconnect the live capture. Ruling
+    // R60, from the W17-B2 build review's probe D.
+    const { destroyClient } = await import(TEARDOWN_MODULE) as { destroyClient: DestroyClient };
+    const p = page();
+    const pagePush: PagePush = p.layer.push;
+    const c = p.client('coach-web');
+    expect(await c.core.ready()).toBe(true);
+
+    // The first mount, with both documented capture paths and their detach
+    // functions kept.
+    const staleDeclarative = c.emit.declarative();
+    const staleLayer = c.emit.dataLayer();
+
+    // Live control: while the first mount is up, a click and a push are events.
+    let mark = p.sent().length;
+    p.cta.click();
+    p.layer.push(ga4('add_to_cart', 'COACH-TABBY-26'));
+    await settle();
+    expect(p.sent().slice(mark).map((e) => e.type).sort(), 'the first mount reports its own click and push')
+      .toEqual(['add_to_cart', 'add_to_cart']);
+
+    // The route unmounts: the page tears the client down without running either
+    // detach function, and gets its own push back (unit .09's outcome).
+    destroyClient(c.core, c.listen, c.emit, c.identity);
+    expect(p.layer.push, "the page's own push function after destroy").toBe(pagePush);
+
+    // The route mounts again on the same client, and the page holds the detach
+    // functions of the mount that is live now.
+    const liveLayer = c.emit.dataLayer({ replay: false });
+    const liveDeclarative = c.emit.declarative();
+    const pushWhileAttached: PagePush = p.layer.push;
+
+    mark = p.sent().length;
+    p.layer.push(ga4('view_item', 'COACH-ROGUE-25'));
+    await settle();
+    expect(p.sent().slice(mark).map((e) => [e.type, e.source, e.data.productId]), 'the live attachment captures the page push once')
+      .toEqual([['product_view', 'coach-web', 'COACH-ROGUE-25']]);
+
+    // The page now runs the detach function it was given for the mount that is
+    // gone. It names an attachment that was already released, so the page is
+    // left exactly as it was: the live attachment is still the page's push and
+    // still captures.
+    staleLayer();
+    expect(p.layer.push, "the page's push function after a stale data-layer detach ran").toBe(pushWhileAttached);
+    mark = p.sent().length;
+    p.layer.push(ga4('add_to_cart', 'COACH-WILLOW-24'));
+    await settle();
+    expect(p.sent().slice(mark).map((e) => [e.type, e.source, e.data.productId]),
+      'the live attachment still captures the next push after the stale detach ran')
+      .toEqual([['add_to_cart', 'coach-web', 'COACH-WILLOW-24']]);
+
+    // A stale declarative detach is inert in the same way: the live scan keeps
+    // its one listener on the element and keeps reporting.
+    expect(liveClickListeners(p.cta), 'the live declarative attachment holds one registration on the commerce element').toBe(1);
+    staleDeclarative();
+    expect(liveClickListeners(p.cta), 'registrations on the commerce element after a stale declarative detach ran').toBe(1);
+    mark = p.sent().length;
+    p.cta.click();
+    await settle();
+    expect(p.sent().slice(mark).map((e) => [e.type, e.source]), 'the live declarative attachment still reports the click')
+      .toEqual([['add_to_cart', 'coach-web']]);
+
+    // The detach functions of the live mount still do their work.
+    liveLayer();
+    expect(p.layer.push, "the page's own push function after the live attachment's own detach ran").toBe(pagePush);
+    liveDeclarative();
+    expect(liveClickListeners(p.cta), 'registrations left on the commerce element after the live declarative detach ran').toBe(0);
+
+    const quiet = p.urls().length;
+    p.cta.click();
+    p.layer.push(ga4('view_item', 'COACH-WILLOW-24'));
+    await settle();
+    expect(p.urls().slice(quiet), 'transport calls the page makes once both live detach functions have run').toEqual([]);
+    expect(eventNames(p.layer), "the page's array holds one entry per push, in order")
+      .toEqual(['add_to_cart', 'view_item', 'add_to_cart', 'view_item']);
+  });
+});
