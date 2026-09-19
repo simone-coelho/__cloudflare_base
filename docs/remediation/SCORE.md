@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 116/118 · W closed 2/26 (W16–W41) · suite 1931/2010 · residual 79 in 9 files · typecheck GREEN
+Units 123/125 · W closed 2/26 (W16–W41) · suite 1938/2017 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -19,7 +19,7 @@ Units 116/118 · W closed 2/26 (W16–W41) · suite 1931/2010 · residual 79 in 
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
 | W19 | 14 | 13 | no | — | — |
-| W20 | 9 | 9 | no | — | — |
+| W20 | 16 | 16 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -143,6 +143,13 @@ Units 116/118 · W closed 2/26 (W16–W41) · suite 1931/2010 · residual 79 in 
 | W20.G1.07 | green | 2 |
 | W20.G1.08 | green | 2 |
 | W20.G1.09 | green | 2 |
+| W20.G2.01 | green | 1 |
+| W20.G2.02 | green | 1 |
+| W20.G2.03 | green | 1 |
+| W20.G2.04 | green | 1 |
+| W20.G2.05 | green | 1 |
+| W20.G2.06 | green | 1 |
+| W20.G2.07 | green | 1 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
@@ -154,7 +161,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 4a8183f3539905b37c174ff41c1d18cbbb9275f192c1e07c3ac92b07a19c86f9 |
+| units sha256 | 37d8c2c7989e52610c86bf624c72e42b05e78187f615fbf8671f4618b5610476 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -165,7 +172,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest-serial.json (outside the checkout) |
-| vitest report sha256 | 5f755ae96966c6633aa6cab8fc8302d853125596e252e0a0d34852008fdd36d8 |
-| commit | e0904a1e34b9e6f918d6043b76228b733bffee19 |
-| generated | 2026-09-19T19:13:51.069Z |
+| vitest report | vitest.json (outside the checkout) |
+| vitest report sha256 | e3ab3bac2f24639e63c4c8b09267f13a03679b9aae7b513eb19b3ea15932c60d |
+| commit | 896ee0a75d6c95e54d9656685dc75a21837bf164 |
+| generated | 2026-09-19T19:52:11.647Z |
