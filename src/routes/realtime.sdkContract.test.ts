@@ -2371,10 +2371,15 @@ describe('W35.02 visit context', () => {
         // other record — affinity, pipeline, grantAuthority, audienceOwner and the session
         // projection's non-consent fields — stays byte-identical, and the instruction itself
         // now reads both switches off. `offer` already proves neither read queued anything.
-        const withoutConsent = (state: string | undefined) => host === 'session'
-          ? JSON.stringify(Object.fromEntries(Object.entries((JSON.parse(state ?? 'null') ?? {}) as Record<string, unknown>)
-            .filter(([key]) => key !== 'preferences' && key !== 'consent')))
-          : JSON.stringify((JSON.parse(state ?? '[]') as Array<[string, unknown]>).filter(([key]) => key !== 'consent'));
+        // Only the two consent switches and the stored instruction are exempt: every other
+        // preference field, `cookieConsent` included, stays inside the comparison.
+        const withoutConsent = (state: string | undefined) => {
+          if (host !== 'session') return JSON.stringify((JSON.parse(state ?? '[]') as Array<[string, unknown]>).filter(([key]) => key !== 'consent'));
+          const { consent: _instruction, preferences, ...rest } = (JSON.parse(state ?? 'null') ?? {}) as Record<string, unknown> & { preferences?: Record<string, unknown> };
+          void _instruction;
+          return JSON.stringify({ ...rest, ...(preferences === undefined ? {} : { preferences: Object.fromEntries(Object.entries(preferences)
+            .filter(([key]) => !CONSENT_SWITCHES.some(sw => key === (sw === 'tracking' ? 'trackingConsent' : 'personalizationEnabled')))) }) });
+        };
         expect(withoutConsent(f.state())).toBe(withoutConsent(stateBeforeRefusals));
         // This shopper chose positively and then withdrew, so the withdrawn instruction is
         // still stored and the projection carries it (src/content/consent.ts:69-73): both
@@ -3868,7 +3873,7 @@ describe('W37.04 tenant-owned runtime configuration', () => {
     } finally { clock.mockRestore(); }
   });
 
-  describe('unit:W37.BASE.01 with the configuration publication authority absent, invalid or unreadable, every shopper route including /realtime/personalization/:subject and /realtime/action answers a 4xx/5xx refusal; none serves', () => {
+  describe('unit:W37.BASE.01 with the configuration publication authority absent, invalid or unreadable, every shopper route that processes behavior or serves decisions refuses (4xx/5xx) before any behavioral effect for a tracking-on shopper, including /realtime/personalization/:subject and /realtime/action; a tracking-refused action still answers 200 with no effect (ruling R38)', () => {
   it('fails explicitly on missing/invalid/outage tenant config before behavior/link/import, preserving refusal and retention', async () => {
     for (const host of ['session', 'do']) for (const failure of ['missing', 'invalid', 'outage']) {
       invalidateCache(); const f = boundary(host); await configured(f);
@@ -5798,6 +5803,11 @@ describe('W04.02 owned shopper lane', () => {
         // capture leg (the render-offer path this file's W15 fixture drives).
         if (path.includes('/decisions/snapshot')) {
           expect(Object.keys(data).sort()).toEqual(['arm', 'brand', 'config_label', 'decisions', 'ok', 'page', 'sources', 'tenant', 'ts', 'versions']);
+          // The empty decision list is stated positively by the catalog this fixture published:
+          // zero pieces, so zero decisions. RESIDUAL for unit W09.BASE.02: the browsing-session
+          // attribution (`visitor_id`/`session_id` on the decision record) still has no leg here
+          // and is owed a capture fixture — the render-offer path this file's W15 fixture drives.
+          expect(data.sources.catalog.pieces).toBe(0);
           expect(data).toMatchObject({ ok: true, tenant: 'meridian', decisions: [] });
         }
       }
