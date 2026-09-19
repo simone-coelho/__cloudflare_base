@@ -827,7 +827,7 @@ describe('unit:W19.F2.02', () => {
 // ===========================================================================
 
 describe('unit:W19.F2.03', () => {
-  it('host: a case-variant CSV header is refused naming the column, a tag-less feed is accepted with the named empty-taxonomy warning, merge leaves known tags untouched, and the answer distinguishes accepted-with-warnings from accepted-clean', async () => {
+  it('host: a case-variant CSV header is refused naming the column, a tag-less feed is accepted with the named empty-taxonomy warning where the taxonomy is genuinely empty and clean where the render type mirrors into a registered dimension, merge leaves known tags untouched, and the answer distinguishes accepted-with-warnings from accepted-clean', async () => {
     // 1. A clean import is reported as clean: no warnings at all.
     const clean = await feedFixture();
     const cleanAnswer = await clean.importJson([KIT_PIECE, KIT_PIECE_TWO]);
@@ -837,10 +837,87 @@ describe('unit:W19.F2.03', () => {
       'W19.F2.03 — a feed with a usable taxonomy is reported as accepted clean').toBe(0);
     expect(warningsOf(cleanAnswer.diagnostics), 'and it names no warning').toEqual([]);
 
-    // 2. The case-sensitive CSV header F27 §5.3 reproduced: `Tags` instead of
+    // 2. A feed with no tags at all is ACCEPTED — legitimately absent taxonomy is
+    //    not a refusal — with the empty-taxonomy warning named per piece, WHERE
+    //    THE TAXONOMY IS GENUINELY EMPTY (F27 §5.2; kit 02 :368
+    //    `no_nonempty_registered_tags`).
+    //
+    //    "Genuinely empty" is the merged rule's own meaning, not a new one. A
+    //    piece with no own `contentType` tag still has a usable registered tag
+    //    when the registry names a NON-DERIVED `contentType` dimension, because
+    //    the safe render type mirrors into it — the mirror-if-missing rule of
+    //    R69(e), `src/content/catalogDiagnostics.ts:78` (line 42 on this base),
+    //    which unit W19.T1.01 proves on both hosts and which
+    //    `src/routes/content.test.ts:459` fixes with `toEqual` on the whole
+    //    diagnostics object (its `pieces[1]`, `{ type: 'film', tags: {} }`,
+    //    deliberately draws NO warning). `:466` fixes the other half: the same
+    //    piece does warn once that dimension is `derive`d, "A derived key cannot
+    //    supply an implicit render-type tag."
+    //
+    //    So this clause publishes the registry `:465` publishes — a DERIVED
+    //    `contentType` — under which a tag-less piece has nothing registered at
+    //    all, and the feed must be told so, once per piece.
+    const derivedRegistry = {
+      ...DEFAULT_REFLEX_CONFIG,
+      version: 'w19-b1-derived-content-type',
+      dimensions: [
+        ...DEFAULT_REFLEX_CONFIG.dimensions.filter(dimension => dimension.key !== 'contentType'),
+        { key: 'contentType', source: 'numeric', derive: 'band' as const, cuts: [1], labels: ['a', 'b'] },
+      ],
+    };
+    const rows = [
+      { id: 'cnt-bare-one', customerContentId: 'CMS-BARE-1', type: 'editorial', title: 'Bare One', slotTypes: ['story'] },
+      { id: 'cnt-bare-two', customerContentId: 'CMS-BARE-2', type: 'editorial', title: 'Bare Two', slotTypes: ['story'] },
+    ];
+    const tagless = await feedFixture(EMPTY_CATALOG, derivedRegistry);
+    const taglessAnswer = await tagless.importJson(rows);
+    expect(taglessAnswer.status, 'the tag-less feed is accepted').toBe(200);
+    expect((await tagless.read()).document.pieces.map(stored => stored.tags),
+      'W19.F2.03 — the tag-less pieces are stored with the empty taxonomy the feed carried').toEqual([{}, {}]);
+    expect(taglessAnswer.diagnostics?.warningCount,
+      'W19.F2.03 — a genuinely empty taxonomy is reported as accepted WITH warnings, one per piece').toBe(2);
+    expect(warningsOf(taglessAnswer.diagnostics),
+      'W19.F2.03 — and each piece with no usable taxonomy is named')
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: 'no_nonempty_registered_tags', pieceIndex: 0 }),
+        expect.objectContaining({ code: 'no_nonempty_registered_tags', pieceIndex: 1 }),
+      ]));
+
+    // 3. The other half of the same merged rule, stated positively so the two
+    //     halves can never drift: under a registry that names a NON-DERIVED
+    //     `contentType` — the tenant registry of clauses 1, 2 and 4 — the same
+    //     tag-less rows carry a usable registered tag through their safe render
+    //     type, so that feed is accepted CLEAN. This is the same mirror
+    //     W19.T1.01 ranks on, seen from the authoring side
+    //     (`src/routes/content.test.ts:459`, `catalogDiagnostics.ts:78`).
+    const mirrored = await feedFixture();
+    const mirroredAnswer = await mirrored.importJson(rows);
+    expect(mirroredAnswer.status, 'the same tag-less feed is accepted').toBe(200);
+    expect((await mirrored.read()).document.pieces.map(stored => stored.tags),
+      'W19.F2.03 — the stored taxonomy is the same empty one: the mirror is a reading, never a rewrite').toEqual([{}, {}]);
+    expect(mirroredAnswer.diagnostics?.warningCount,
+      'W19.F2.03 — a piece whose safe render type mirrors into a registered non-derived contentType dimension has a usable tag, so that feed is accepted clean').toBe(0);
+    expect(warningsOf(mirroredAnswer.diagnostics),
+      'W19.F2.03 — and no empty-taxonomy warning is named for it').toEqual([]);
+
+    // 4. In merge mode a feed that says nothing about tags leaves the stored
+    //    taxonomy of a known id untouched (kit 03 :141-:144).
+    const merge = await feedFixture();
+    expect((await merge.put([KIT_PIECE])).status, 'the tagged piece is published').toBe(200);
+    const taglessMerge = await merge.importJson([{ id: KIT_PIECE.id, title: 'The Tabby, After Dark (v2)' }], 'merge');
+    expect(taglessMerge.status, 'the tag-less merge refresh is accepted').toBe(200);
+    expect((await merge.read()).document.pieces[0],
+      'W19.F2.03 — a feed with no tags leaves the stored tags of a known id exactly as they were')
+      .toEqual({ ...KIT_PIECE, title: 'The Tabby, After Dark (v2)' });
+    expect(taglessMerge.diagnostics?.warningCount,
+      'W19.F2.03 — and because the stored taxonomy is still usable, that answer is clean').toBe(0);
+
+    // 5. The case-sensitive CSV header F27 §5.3 reproduced: `Tags` instead of
     //    `tags` today yields `tags: {}` on every piece and `ok: true`. A column
     //    that matches a known column only case-insensitively is a defect that can
     //    be detected AS a defect, so it is refused, naming the column (R69(d)).
+    //    Asserted last so every clause above is measured on a base where this
+    //    refusal does not exist yet.
     const header = await feedFixture();
     const wrongCase = csvOf(CSV_HEADER.map(column => column === 'tags' ? 'Tags' : column), [csvRowOf(KIT_PIECE)]);
     const refused = await header.importCsv(wrongCase);
@@ -851,37 +928,6 @@ describe('unit:W19.F2.03', () => {
     expect(message, 'W19.F2.03 — and the known column it only matches case-insensitively').toContain('tags');
     expect((await header.read()).document.pieces,
       'W19.F2.03 — and nothing is stored from the refused feed').toEqual([]);
-
-    // 3. A feed with no tags at all is ACCEPTED — legitimately absent taxonomy is
-    //    not a refusal — with the empty-taxonomy warning named per piece
-    //    (F27 §5.2; kit 02 :368 `no_nonempty_registered_tags`).
-    const tagless = await feedFixture();
-    const rows = [
-      { id: 'cnt-bare-one', customerContentId: 'CMS-BARE-1', type: 'editorial', title: 'Bare One', slotTypes: ['story'] },
-      { id: 'cnt-bare-two', customerContentId: 'CMS-BARE-2', type: 'editorial', title: 'Bare Two', slotTypes: ['story'] },
-    ];
-    const taglessAnswer = await tagless.importJson(rows);
-    expect(taglessAnswer.status, 'the tag-less feed is accepted').toBe(200);
-    expect(taglessAnswer.diagnostics?.warningCount,
-      'W19.F2.03 — an empty taxonomy is reported as accepted WITH warnings, one per piece').toBe(2);
-    expect(warningsOf(taglessAnswer.diagnostics),
-      'W19.F2.03 — and each piece with no usable taxonomy is named')
-      .toEqual(expect.arrayContaining([
-        expect.objectContaining({ code: 'no_nonempty_registered_tags', pieceIndex: 0 }),
-        expect.objectContaining({ code: 'no_nonempty_registered_tags', pieceIndex: 1 }),
-      ]));
-
-    // 4. In merge mode a feed that says nothing about tags leaves the stored
-    //    taxonomy of a known id untouched (kit 03 :131-:134).
-    const merge = await feedFixture();
-    expect((await merge.put([KIT_PIECE])).status, 'the tagged piece is published').toBe(200);
-    const taglessMerge = await merge.importJson([{ id: KIT_PIECE.id, title: 'The Tabby, After Dark (v2)' }], 'merge');
-    expect(taglessMerge.status, 'the tag-less merge refresh is accepted').toBe(200);
-    expect((await merge.read()).document.pieces[0],
-      'W19.F2.03 — a feed with no tags leaves the stored tags of a known id exactly as they were')
-      .toEqual({ ...KIT_PIECE, title: 'The Tabby, After Dark (v2)' });
-    expect(taglessMerge.diagnostics?.warningCount,
-      'W19.F2.03 — and because the stored taxonomy is still usable, that answer is clean').toBe(0);
   });
 });
 
