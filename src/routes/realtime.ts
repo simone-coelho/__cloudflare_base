@@ -10,14 +10,14 @@ import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegm
 import { getConnectors } from '@/connectors';
 import { snapshot as reflexSnapshot } from '@/reflex/core';
 import { resolveTenantReflexConfig, resolveSurface } from '@/demos/registry';
-import { forwardEventToOdp, projectOdpState, mapActionToOdp, odpEnabled, upsertOdpProfile } from '@/services/odpLoop';
+import { forwardEventToOdp, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile } from '@/services/odpLoop';
 import { isDecisionReference, outcomeFromAction } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
 import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
 import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { validBufferedAction } from '@/reflex/bufferedAction';
 import { projectVisit, validEntry, type ChannelSignals } from '@/services/visit';
-import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce } from '@/services/JourneyStage';
+import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, readTimeStageChange } from '@/services/JourneyStage';
 import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { demoEventCaptureEnabled } from '@/services/demoEventCapture';
@@ -27,8 +27,8 @@ import { requireShopper, shopperPrincipal, assertSessionTarget, privateShopperHe
 import { anonymousWithConsent, ownedConsent, rotateObjectSession } from '@/identity/consentContinuity';
 import { capabilityToken } from '@/identity/sessionCapability';
 import { SessionManager } from '@/services/SessionManager';
-import { assertShopperSelectors, parseShopperContext, currentOwnerConsent, ownerRelay } from '@/identity/sessionAuthority';
-import { captureRetention } from '@/retention';
+import { assertShopperSelectors, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
+import { captureRetention, RetentionUnavailable } from '@/retention';
 import { captureBehavior } from '@/ledger/behavior';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import { redeemRenderOffer } from '@/content/renderOffer';
@@ -406,7 +406,7 @@ realtimeRoutes.get('/reflex', async (c) => {
     }
 
     const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env, c.get('tenant')), { tenant: c.get('tenant'), principal: shopperPrincipal(c.req.raw) });
-    const { sessionData, reflexConfig } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
+    const { sessionId, sessionData, reflexConfig } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
     const consent = consentOf(sessionData);
     // Surface-aware tuning (@/demos/registry): an explicit ?surface= wins, else
     // the session remembers which demo it belongs to, else DEFAULT_SURFACE.
@@ -420,6 +420,37 @@ realtimeRoutes.get('/reflex', async (c) => {
     );
     const now = Date.now();
     assertSessionTarget(shopperPrincipal(c.req.raw), userId);
+    const live = personalizes(consent) && sessionData.reflex ? reflexSnapshot(sessionData.reflex, now, cfg) : null;
+
+    // W16 C5: this read may have moved her stage on its own — the visit those
+    // counters belonged to ended while she was away. That is a stage-only
+    // change: it fabricates no event, writes nothing and renews no retained
+    // lifetime, and the single thing it is allowed to do is tell the tenant's
+    // configured destination the stage, off the response path. The object host
+    // does the identical thing in ShopperReflex.handleSnapshot.
+    const moved = live ? readTimeStageChange(sessionData.journey, sessionData.metadata.lastSeen, now, journeyThresholdsInForce(cfg)) : null;
+    if (moved) {
+      let deferred: { waitUntil(p: Promise<unknown>): void } | undefined;
+      try { deferred = c.executionCtx; } catch { deferred = undefined; /* no execCtx (e.g. tests) */ }
+      try {
+        // The projection is an external copy of her profile, so it needs the
+        // retained-data authority her record was born with. No stamp, no
+        // projection: the read still answers, and nothing leaves the platform.
+        pinProfileRetention(c.env, sessionData, c.get('tenant'));
+        const projection = deferred
+          ? stageOnlyOdpProjection(c.env, c.get('tenant'), { visitorId: userId, sessionId }, live!, moved)
+          : null;
+        if (projection) deferred!.waitUntil(projection);
+      } catch (error) {
+        // Only an unusable retained-data stamp is answered by skipping the
+        // projection. Everything else — an owner or consent refusal above all —
+        // is the caller's to see, and propagates.
+        if (!(error instanceof RetentionUnavailable)) throw error;
+        // Coded and non-identifying, like every other ODP diagnostic.
+        console.warn('[odp] stage projection skipped: profile retention unavailable');
+      }
+    }
+
     return c.json({
       ok: true,
       now,
@@ -437,8 +468,8 @@ realtimeRoutes.get('/reflex', async (c) => {
             .map((d) => [d.key, { tauMs: d.tauMs, K: d.K, thetaIn: d.thetaIn, thetaOut: d.thetaOut }])
         ),
       },
-      affinity: personalizes(consent) && sessionData.reflex
-        ? { ...reflexSnapshot(sessionData.reflex, now, cfg), odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed }
+      affinity: live
+        ? { ...live, odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed }
         : null,
       // W16 C4 / R29: the SDK-visible journey stage, in the shared vocabulary,
       // derived from THIS VISIT's counters against the tenant's published

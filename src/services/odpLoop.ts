@@ -36,6 +36,7 @@ import { destinationRetentionCategory, type ExternalRetention } from '@/retentio
 import { CatalogService, priceBandOf, type Product } from './CatalogService';
 import type { ActionEvent } from './RealtimeSegmentEngine';
 import { connectorConfiguration, connectorDigest, connectorIdentity, connectorSecret, legacyConnectors, type OdpConfiguration } from '@/connectors/config';
+import { PERSISTED_STAGE, type JourneyWord } from '@/services/JourneyStage';
 
 /** The audiences the ODP team mirrored 1:1 with our edge keys (handoff 2026-07-03).
     GraphQL subset queries MUST enumerate names — unknown names risk validation
@@ -438,6 +439,42 @@ export async function upsertOdpProfile(
   } catch (e) {
     console.warn('[odp] profile upsert failed');
   }
+}
+
+/**
+ * CRITERION C5 — THE ONE THING A STAGE-ONLY CHANGE MAY SAY.
+ *
+ * A read can move a shopper's journey stage without her doing anything: the
+ * visit those counters belonged to ends while she is away, so the next read
+ * reports the first stage of a new visit (`readTimeStageChange`). The platform
+ * is allowed to tell the tenant's configured destination the stage that moved
+ * — the exact allowed stage projection, through the same profile upsert a live
+ * membership change uses — and it is allowed to say NOTHING else: no
+ * behavioral event is forwarded, no ring entry is written, no seed is read, no
+ * outcome, exposure or regional count is produced, and no retained-data
+ * lifetime is renewed. Fabricating an event to carry a stage the shopper never
+ * produced is the failure this criterion exists to prevent.
+ *
+ * The wire value is the PERSISTED grammar, reached through the single mapping
+ * point `PERSISTED_STAGE` (R32(2), R40(b)): `journey_stage` on an ODP profile
+ * is an external published grammar the tenant's own audience conditions are
+ * written against, so the reported vocabulary is projected onto it here rather
+ * than leaking the shared word onto a wire nobody mirrored it to.
+ *
+ * Returns the dispatched work so the caller can keep it off the response path
+ * (`waitUntil` / `retainOwnerWork`), or null when the read said nothing. Both
+ * hosts call this one function, so they cannot drift about what a stage-only
+ * change is worth telling anybody.
+ */
+export function stageOnlyOdpProjection(
+  env: Env,
+  tenant: TenantId,
+  identity: OdpIdentity,
+  affinity: { dims?: Record<string, Record<string, number>>; audiences?: string[] },
+  change: { to: JourneyWord } | null,
+): Promise<void> | null {
+  if (!change || !odpEnabled(env, tenant)) return null;
+  return upsertOdpProfile(env, tenant, identity, affinity, PERSISTED_STAGE[change.to]);
 }
 
 /**
