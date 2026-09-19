@@ -7,7 +7,7 @@ import type { SlotLearnConfig, LearningReceipt } from '@/learn/fan';
 import type { AttributionPolicy } from '@/learn/policy';
 import type { PreparedMessage, LedgerDeliveryReceipt } from './enqueue';
 import type { CaptureReceipt } from './delivery';
-import { admitOwnedRecovery } from '@/identity/sessionAuthority';
+import { admitOwnedRecovery, durableRecoveryEnabled, RecoveryUnavailableError } from '@/identity/sessionAuthority';
 
 /** A generation is captured before durable admission, never refreshed on retry. */
 export interface LearningGeneration { whole: number; item: number }
@@ -125,7 +125,7 @@ async function armRecovery(storage: DurableObjectStorage, deadline: number): Pro
  * owner's current exact grant/epoch and consent check, not a stored bearer. */
 export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, input: RecoveryInput,
   principal: SessionCapability, consentUntil: number, guard: (principal: SessionCapability, until: number) => Promise<void>): Promise<RecoveryReceipt> {
-  if (env.LEDGER_RECOVERY_ENABLED !== 'true') throw new Error('Durable recovery disabled');
+  if (!durableRecoveryEnabled(env)) throw new RecoveryUnavailableError();
   input = JSON.parse(recoveryJSON(input)) as RecoveryInput;
   const { isCapturedMessage } = await import('./writer'), { logicalIdentity } = await import('./delivery');
   const rows = rowsOf(input), stream = input.kind === 'decisions' ? 'decision' : input.kind;
@@ -296,7 +296,7 @@ export async function disposeOwnerRecovery(storage: DurableObjectStorage, env: E
 }
 
 export async function recoverDecisions(env: Env, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, config: (slot: string) => SlotLearnConfig, firstAdmissionUntil?: number): Promise<RecoveryReceipt> {
-  if (env.LEDGER_RECOVERY_ENABLED !== 'true') throw new Error('Recovery admission disabled');
+  if (!durableRecoveryEnabled(env)) throw new RecoveryUnavailableError('Recovery admission disabled');
   // Register the owner-held I/O before yielding; a dynamic import here could
   // otherwise resume only after the caller's owner invocation has drained.
   return admitOwnedRecovery({ kind: 'decisions', tenant: set.tenant, subject: set.visitor_id, brand: set.brand,

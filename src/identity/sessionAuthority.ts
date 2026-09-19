@@ -350,10 +350,25 @@ export function currentOwnerIdentity(): { tenant: string; subject: string } | un
   if (!identities.length || identities.some(value => value.tenant !== identities[0]!.tenant || value.subject !== identities[0]!.subject)) return undefined;
   return identities[0];
 }
+/**
+ * Durable recovery that the deployment has not enabled is REFUSED BY NAME here,
+ * before any effect is registered. An admitted effect is retained by the owner
+ * serializer, so a capture that was admitted and then rejected for being
+ * disabled failed the whole owner operation — an untyped 500 on read paths that
+ * only wanted an optional capture and had already handled its own failure.
+ * Never an owner/consent refusal: the shopper is not the reason.
+ */
+export class RecoveryUnavailableError extends Error {
+  constructor(message = 'Durable recovery disabled') { super(message); this.name = 'RecoveryUnavailableError'; }
+}
+export function durableRecoveryEnabled(env: Pick<Env, 'LEDGER_RECOVERY_ENABLED'>): boolean {
+  return env.LEDGER_RECOVERY_ENABLED === 'true';
+}
 /** No token crosses this boundary or enters durable recovery storage. */
 export async function admitOwnedRecovery(input: RecoveryInput): Promise<RecoveryReceipt> {
   const held = invocation.getStore();
   if (!held?.recovery) throw new SessionAccessError();
+  if (!durableRecoveryEnabled(held.env)) throw new RecoveryUnavailableError();
   recheckOwnerInvocation(held.owner);
   const principals = [...held.principals.values()].filter(p => p.tenant === input.tenant && p.subject === input.subject);
   if (principals.length !== 1) throw new SessionAccessError();

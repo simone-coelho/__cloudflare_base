@@ -549,6 +549,14 @@ export class ShopperReflex {
         }
         const consent = await this.consentNow();
         assertSessionTarget(p);
+        let tenant: TenantId;
+        try { tenant = this.audienceTenant(p); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }
+        // An owned read is an answer from THIS tenant's configured runtime, so
+        // the configuration authority is required before any answer is served,
+        // including the necessary refusal below: an absent, invalid or
+        // unreadable publication refuses here with its own typed error rather
+        // than serving a default. A demo scope keeps its compiled identity.
+        await resolveTenantReflexConfig(this.env, tenant, this.surface());
         if (!personalizes(consent)) {
           if (url.pathname === '/segments') return request.method === 'POST'
             ? json({ ok: false, error: 'Shopper consent refused segment assignment' }, 403)
@@ -557,8 +565,6 @@ export class ShopperReflex {
             config: { segments: [], featureVariables: {}, featureFlags: {}, experiments: {} }, cookiesSet: false, timestamp: now });
         }
         requireConsentPurpose(consent, 'personalization');
-        let tenant: TenantId;
-        try { tenant = this.audienceTenant(p); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }
         const connectors = getConnectors(this.env, tenant);
         if (url.pathname === '/segments') {
           if (request.method === 'POST') {

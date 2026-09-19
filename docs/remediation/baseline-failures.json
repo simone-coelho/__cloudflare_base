@@ -1,9 +1,9 @@
 {
-  "generated": "2026-09-19T02:17:48.212Z",
-  "commit": "1522180ff08e08fec3f58c20b874a4d56ecd7303",
-  "vitest_sha256": "054b151c3dee962cf8412a67908b9509d65013bf9a34486dc08c4031031296cf",
-  "note": "serial run on integration head 740dc11 (BASE-1c and BASE-D1 merged), lead validation 2026-09-19",
-  "allow_grow_reason": "declared units W05.BASE.01, W11.BASE.01, W06.BASE.01, W09.BASE.02, W37.BASE.01 (R22): five existing red tests wrapped as units at 78b7e85; their five old names leave the list",
+  "generated": "2026-09-19T03:06:34.751Z",
+  "commit": "c70c29ed847538975a287153e8ddaef5e342a688",
+  "vitest_sha256": "3abda9eb85d42f433199acc83011fb9fe8e0243ac55ecd159a419eb4e1f62411",
+  "note": "BASE-R1 build on rem/base-r1-refusals: W11.BASE.01 green (typed owner refusal propagates out of a publication storage read); the other four BASE-D1 units remain owed.",
+  "allow_grow_reason": null,
   "failures": [
     " CW29: the snapshot says the stage reports the journey stage the object last derived, and null before any event",
     " CW31 consent on the content service W04.02 owned state honors a prior false hint without restoring legacy profile mirrors",
@@ -58,7 +58,6 @@
     " W05.07 owned Optimizely ingress denies capability/subject/schema and strict owned-state failures before Optimizely effects",
     " W05.07 owned Optimizely ingress honors all switches before actual service/cache/dispatcher work, preserving tracking-only delivery and safe own-key defaults",
     " W05.07 owned Optimizely ingress persists body/cookie refusal, permits deliberate preferences, and preserves necessary-only anonymous absence",
-    " W05.10 explicit timed authority on do unit:W11.BASE.01 a typed owner or consent refusal raised inside a publication storage read propagates as the 401 refusal on both hosts; it is never rewritten into a configuration-authority error rechecks the choice at the actual post-config behavioral commit",
     " W06.01 durable local erasure retry W05.09 reads current import state and preserves erasure and acknowledgment barriers",
     " W06.01 durable local erasure retry W05.09 requires existing explicit stored consent before historical effects on both hosts",
     " W06.01 durable local erasure retry W05.09 resolves consistent tenant subjects and preserves allowed historical arithmetic",
