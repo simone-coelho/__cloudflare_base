@@ -456,8 +456,15 @@ describe('/content routes', () => {
     ];
     const result = await validate(pieces);
     expect(result.document.pieces.map(p => p.tags)).toEqual(pieces.map(p => p.tags));
+    // W19-B3 (R10, R84(a)): the channel gains `counts`, the exact occurrence
+    // count per code present, so the 50-warning sample can never hide a whole
+    // class of defect (W19-B1 build review finding 1; unit W19.F3.02). Still one
+    // whole-object equality; the value is this fixture's own three warnings
+    // counted by code — one `unknown_dimension` and two
+    // `no_nonempty_registered_tags` — and every other member is unchanged.
     expect(result.diagnostics).toEqual({ schema: 'catalog-registry-diagnostics/v1', advisory: true, status: 'available', catalogRevision: null,
-      registry: { scope: 'coach', source: 'stored', revision: 7, version: 'diagnostic-registry' }, warningCount: 3, omittedWarningCount: 0, warnings: [
+      registry: { scope: 'coach', source: 'stored', revision: 7, version: 'diagnostic-registry' }, warningCount: 3, omittedWarningCount: 0,
+      counts: { unknown_dimension: 1, no_nonempty_registered_tags: 2 }, warnings: [
         { code: 'unknown_dimension', pieceIndex: 0, dimensionIndex: 0, dimension: 'Occasion', dimensionTruncated: false },
         { code: 'no_nonempty_registered_tags', pieceIndex: 2 }, { code: 'no_nonempty_registered_tags', pieceIndex: 3 },
       ] });
