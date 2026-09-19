@@ -3922,7 +3922,13 @@ describe('W37.04 tenant-owned runtime configuration', () => {
         const item = f.objects.get(shopperObjectName(tracked.tenant, tracked.subject))!;
         expect([...item.data]).toEqual(trackedBefore); item.shopper = new ShopperReflex(item.state, f.env);
         const qualified = vi.spyOn(MockSegmentProvider.prototype, 'fetchQualifiedSegments');
-        await item.shopper.alarm(); expect(qualified).not.toHaveBeenCalled(); qualified.mockRestore();
+        // Ruling R28: the owner's alarm is a consuming path, so with the authority
+        // uninitialized or unavailable it owes the same typed refusal the two calls above
+        // already pin — PublicationError (src/config/publication.ts:15, :19, :205) or
+        // ReflexConfigUnavailableError (src/reflex/configStore.ts:67) naming the
+        // unavailable or uninitialized authority — and it must write nothing.
+        await expect(item.shopper.alarm()).rejects.toSatisfy((error: unknown) => (error instanceof ReflexConfigUnavailableError || error instanceof PublicationError) && /unavailable|uninitialized/i.test(error.message), `${host}:${failure}:alarm`);
+        expect(qualified).not.toHaveBeenCalled(); qualified.mockRestore();
         expect([...item.data]).toEqual(trackedBefore);
         expect(item.alarms.at(-1)).toBe((item.data.get('affinity') as AffinityRecord).lastSeen + 30 * 86400000);
       }
