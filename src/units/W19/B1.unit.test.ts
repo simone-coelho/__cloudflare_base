@@ -26,18 +26,21 @@
 //     (case-variant values survive both paths with no warning), probe 6 (a
 //     duplicated value tripled a score and took the hero).
 //   · the customer-facing contract docs/kit/03-payload-schemas.md "The content
-//     piece" (:102-:130, every field of the fixture below), :131-:152 (merge is
-//     a partial upsert by id; CSV uses `status`, `windowFrom`, `windowTo`;
-//     supplied arrays/tags/merchandising replace the whole field), :155 ("Current
-//     catalog validation refuses duplicate exact tag values; import deduplicates
+//     piece" (:119, the section; :121 "One item of the content catalog. JSON, or
+//     a CSV row with the same names as columns"; :123-139 the field table, every
+//     field of the fixture below; :136 the `journeyStageFit` row), :141-159 (the
+//     merge paragraph: a partial upsert by id; CSV uses `status`, `windowFrom`,
+//     `windowTo`; blank CSV cells mean omitted, not cleared; supplied
+//     arrays/tags/merchandising replace the whole field), :155 ("Current catalog
+//     validation refuses duplicate exact tag values; import deduplicates
 //     supplied tags"), :158 ("Existing revision preconditions and exact-request
-//     retries still apply"), :259-:266 (Content format affinity: `type: "film"`
-//     with `tags.contentType: ["video"]` "therefore learns and ranks on
-//     `video`"; an absent own tag uses the safe `type`; explicit tags win),
+//     retries still apply"), :255-:262 (Content format affinity: `type: "film"`
+//     with `tags.contentType: ["video"]` at :257-:259 "therefore learns and ranks
+//     on `video`"; an absent own tag uses the safe `type`; explicit tags win),
 //     :276 (new receipts carry `inputs.replay.contentTypes: "catalog-tags-v1"`).
-//   · docs/PS-Implementation-Delivery-Guide.md :113 (`journey_stage_fit`:
-//     "Their words are accepted as written; `early`/`mid`/`late` also accepted")
-//     and :107 (kit 03 is the authoritative field list).
+//   · docs/PS-Implementation-Delivery-Guide.md :119 (`journey_stage_fit`:
+//     "Their words are accepted as written; `early` / `mid` / `late` also
+//     accepted") and :107 (kit 03 is the authoritative field list).
 //   · docs/architecture/tapestry_requirements.txt A.3.6 (the customer's own
 //     metadata table: `journey_stage_fit [explore, consider] or [decide]`,
 //     `occasion_tags`, `featured_product_ids`, `content_format`,
@@ -86,7 +89,20 @@
 //      F27 §5.4). Today the two codes are `unknown_dimension` and
 //      `no_nonempty_registered_tags` (`catalogDiagnostics.ts:7-8`) and the
 //      normalizer drops an unlisted field with no word at all
-//      (`import.ts:58-95`, positively asserted at `import.test.ts:22`).
+//      (`import.ts:58-95`, positively asserted at `import.test.ts:22`); the
+//      direct-PUT validator drops it the same way, by re-emitting a closed field
+//      set (`kinds.ts:111-125`), and answers `warningCount: 0`.
+//      SHAPE, RULED HERE SO BOTH LEGS AGREE: `ignored_field` is derived from the
+//      REQUEST, while the channel today is a pure function of (stored catalogue,
+//      tenant registry) — `catalogDiagnostics(env, tenant, catalog,
+//      catalogRevision)` has no raw-record parameter and is recomputed on
+//      `GET /content/catalog` (`routes/content.ts:209`), on rollback (`:301`)
+//      and on enrichment publication (`:196`). So the code appears on the WRITE
+//      answers that carry a request (import, pull, direct PUT, and the
+//      authenticated `POST /content/catalog/validate` dry run, which answers
+//      diagnostics at `routes/content.ts:238`) and NEVER on a read, whose
+//      warnings stay the stored-catalogue codes; the `catalogDiagnostics` seam
+//      has to widen to carry the request for that to be true.
 //   2. The import / pull answer gains `changed: number` — how many stored pieces
 //      this import created or altered, so a byte-identical re-import reports
 //      `changed: 0` (unit W19.F1.03). Today the answer carries only `received`,
@@ -231,12 +247,12 @@ interface ReadAnswer {
 
 const feedKinds = [CONTENT_KIND, SLOTS_KIND, LEARN_KIND, REFLEX_KIND, PRIORS_KIND, PROPOSALS_KIND];
 
-async function feedFixture(initial = EMPTY_CATALOG) {
+async function feedFixture(initial = EMPTY_CATALOG, registry: unknown = DEFAULT_REFLEX_CONFIG) {
   invalidateCache();
   const storage = new UnitR2();
   const env = { CACHE: new UnitKV(), STORAGE: storage, JWT_SECRET: FEED_SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
     TENANTS: JSON.stringify({ provisioned: [FEED_TENANT], operatorGrants: { ops: [FEED_TENANT] } }) } as unknown as Env;
-  const values: unknown[] = [initial, DEFAULT_SLOTS, DEFAULT_LEARN, DEFAULT_REFLEX_CONFIG, EMPTY_PRIORS, EMPTY_PROPOSALS];
+  const values: unknown[] = [initial, DEFAULT_SLOTS, DEFAULT_LEARN, registry, EMPTY_PRIORS, EMPTY_PROPOSALS];
   await initializePublicationSet(env, feedKinds.map((kind, i): PublicationBaseline => ({
     kind, scope: kind.name === 'reflex' ? reflexScopeForTenant(FEED_TENANT) : FEED_TENANT,
     revision: { revision: 1, value: values[i], actor: 'w19-b1-fixture', note: '', at: 1 },
@@ -369,6 +385,25 @@ function csvRowOf(piece: Record<string, unknown>): Record<string, string> {
 
 const warningsOf = (diagnostics?: UnitDiagnostics): UnitWarning[] => diagnostics?.warnings ?? [];
 
+/**
+ * A tenant registry that is NOT the compiled default, published as this tenant's
+ * reflex document (R47/R67: the admissible vocabulary is what the tenant
+ * PUBLISHED, never a list bundled with the repository). It adds `styleWorld`
+ * — the dimension docs/PS-Implementation-Delivery-Guide.md §7.1 maps Tapestry's
+ * A.3.6 `style_cluster` onto — and removes `silhouette`, which
+ * `DEFAULT_REFLEX_CONFIG` does hold (src/reflex/core.ts:203-219). Unit
+ * W19.F2.02 reads both directions, so a diagnostic computed from the bundled
+ * default rather than from this document answers the opposite pair.
+ */
+const TENANT_REGISTRY = {
+  ...DEFAULT_REFLEX_CONFIG,
+  version: 'w19-b1-tenant-registry',
+  dimensions: [
+    ...DEFAULT_REFLEX_CONFIG.dimensions.filter(dimension => dimension.key !== 'silhouette'),
+    { key: 'styleWorld', source: 'styleWorld' },
+  ],
+};
+
 // ===========================================================================
 // W19.F1.01 — the lossless field set on every path
 // ===========================================================================
@@ -383,7 +418,7 @@ describe('unit:W19.F1.01', () => {
     expect((await json.read()).document.pieces,
       'W19.F1.01 — JSON import must store every field of kit 03 "The content piece" with its supplied value').toEqual(expected);
 
-    // 2. CSV import (replace), the documented column names (kit 03 :102: "a CSV
+    // 2. CSV import (replace), the documented column names (kit 03 :121: "a CSV
     //    row with the same names as columns"; :151 CSV uses status/windowFrom/windowTo).
     const csv = await feedFixture();
     expect((await csv.importCsv(csvOf(CSV_HEADER, [csvRowOf(KIT_PIECE)]))).status, 'the documented CSV row is accepted').toBe(200);
@@ -423,6 +458,52 @@ describe('unit:W19.F1.01', () => {
     expect(warningsOf(csvAnswer.diagnostics),
       'W19.F1.01 — the CSV import answer must name the ignored column `vertical`')
       .toEqual(expect.arrayContaining([expect.objectContaining({ code: 'ignored_field', field: 'vertical' })]));
+
+    // 6. The pull seam carries a record the same way a JSON export does, so its
+    //    answer names the same ignored field.
+    const extraPull = await feedFixture();
+    const pullAnswer = await extraPull.pull([{ ...KIT_PIECE, vertical: 'menswear' }]);
+    expect(pullAnswer.status, 'a pulled record carrying an unlisted field is still accepted').toBe(200);
+    expect((await extraPull.read()).document.pieces,
+      'W19.F1.01 — the pulled unlisted field is not stored on the piece').toEqual(expected);
+    expect(warningsOf(pullAnswer.diagnostics),
+      'W19.F1.01 — the pull answer must name the unlisted field `vertical` it ignored')
+      .toEqual(expect.arrayContaining([expect.objectContaining({ code: 'ignored_field', field: 'vertical' })]));
+
+    // 7. Direct PUT loses the same field just as silently — the validator
+    //    re-emits a closed field set (`kinds.ts:111-125`) — so the write path
+    //    that bypasses the normalizer owes the same word. The piece here also
+    //    carries a dimension the tenant's published registry does not name, so
+    //    the same answer must carry BOTH a request-derived code and a
+    //    stored-catalogue code.
+    const extraPut = await feedFixture();
+    const unlistedAndUnregistered = {
+      ...KIT_PIECE, vertical: 'menswear',
+      tags: { ...KIT_PIECE.tags, occassion: ['evening'] },
+    };
+    const storedAfterPut = [{ ...KIT_PIECE, tags: { ...KIT_PIECE.tags, occassion: ['evening'] } }];
+    const putAnswer = await extraPut.put([unlistedAndUnregistered]);
+    expect(putAnswer.status, 'a direct PUT carrying an unlisted field is still accepted').toBe(200);
+    expect((await extraPut.read()).document.pieces,
+      'W19.F1.01 — direct PUT stores neither the unlisted field nor a rewritten tag').toEqual(storedAfterPut);
+    expect(warningsOf(putAnswer.diagnostics),
+      'W19.F1.01 — the direct-PUT answer must name the unlisted field `vertical` it ignored, exactly as the feed paths do')
+      .toEqual(expect.arrayContaining([expect.objectContaining({ code: 'ignored_field', field: 'vertical' })]));
+    expect(warningsOf(putAnswer.diagnostics),
+      'W19.F1.01 — and the same answer still carries the stored-catalogue code for the unregistered dimension')
+      .toEqual(expect.arrayContaining([expect.objectContaining({ code: 'unknown_dimension', dimension: 'occassion' })]));
+
+    // 8. `ignored_field` is derived from the REQUEST, so it belongs to a write
+    //    answer and to nothing else: a later read of the same catalogue reports
+    //    the stored-catalogue codes and no request-derived one, because the
+    //    record that carried `vertical` is not part of the stored document.
+    const afterWrite = await extraPut.read();
+    expect(warningsOf(afterWrite.diagnostics).map(warning => warning.code).sort(),
+      'W19.F1.01 — a read reports exactly the stored-catalogue codes: the unregistered dimension, and no request-derived `ignored_field`')
+      .toEqual(['unknown_dimension']);
+    expect(warningsOf(afterWrite.diagnostics),
+      'W19.F1.01 — and that read still names the unregistered dimension it found in the stored catalogue')
+      .toEqual([expect.objectContaining({ code: 'unknown_dimension', dimension: 'occassion', pieceIndex: 0 })]);
   });
 });
 
@@ -447,7 +528,7 @@ describe('unit:W19.F1.02', () => {
     expect((await f.put([retired, KIT_PIECE_TWO])).status, 'the retired campaign and its rival are published').toBe(200);
 
     // 1. A merge refresh naming only the id and the title: everything the feed
-    //    omits is preserved (kit 03 :131-:134, "merge is a partial upsert by id:
+    //    omits is preserved (kit 03 :141-:144, "merge is a partial upsert by id:
     //    omitted supported fields preserve the existing item").
     const refresh = await f.importJson([{ id: retired.id, title: 'Festival Charms, Revisited' }], 'merge');
     expect(refresh.status, 'the merge refresh is accepted').toBe(200);
@@ -471,14 +552,28 @@ describe('unit:W19.F1.02', () => {
     expect((afterCsv as { window: unknown }).window,
       'W19.F1.02 — the closed window, including the stop date, survives the refresh').toEqual(retired.window);
 
-    // 4. A field the feed STATES replaces the stored one, as a whole field
+    // 4. The CSV case an operator actually exports: a FULL-WIDTH row — every
+    //    documented column present — whose `status`, `windowTo` and
+    //    `merchandising` cells are BLANK. Kit 03 :151: "CSV blank cells mean
+    //    omitted, not cleared"; ":150: blank window cells cannot clear a gate."
+    //    A blank cell is a different code path from an absent column
+    //    (`src/content/import.ts:61`, the `supplied()` guard), so the retired
+    //    campaign's lifecycle, its stop date and its promotion must all survive
+    //    a row that mentions them and says nothing.
+    const fullWidth = { ...csvRowOf(afterCsv), title: 'Festival Charms, Full Width', status: '', windowTo: '', merchandising: '' };
+    expect((await f.importCsv(csvOf(CSV_HEADER, [fullWidth]), 'merge')).status, 'the full-width CSV merge is accepted').toBe(200);
+    expect((await f.read()).document.pieces[0],
+      'W19.F1.02 — a full-width CSV row with blank status, windowTo and merchandising cells keeps the stored lifecycle, the stop date and the promotion; only the stated title replaces')
+      .toEqual({ ...retired, title: 'Festival Charms, Full Width' });
+
+    // 5. A field the feed STATES replaces the stored one, as a whole field
     //    (kit 03 :148: "Supplied arrays, tags and merchandising replace that whole field").
     expect((await f.importJson([{ id: retired.id, merchandising: { promotion: 0.25 } }], 'merge')).status).toBe(200);
     expect((await f.read()).document.pieces[0],
       'W19.F1.02 — a stated merchandising block replaces the stored one entirely')
-      .toEqual({ ...retired, title: 'Festival Charms CSV', merchandising: { promotion: 0.25 } });
+      .toEqual({ ...retired, title: 'Festival Charms, Full Width', merchandising: { promotion: 0.25 } });
 
-    // 5. Replace mode replaces the whole catalogue.
+    // 6. Replace mode replaces the whole catalogue.
     expect((await f.importJson([KIT_PIECE], 'replace')).status).toBe(200);
     expect((await f.read()).document.pieces,
       'W19.F1.02 — a replace import replaces the catalogue with exactly the feed it carried').toEqual([KIT_PIECE]);
@@ -554,7 +649,7 @@ describe('unit:W19.F1.03', () => {
 // W19.F2.01 — the stage vocabulary on every path
 // ===========================================================================
 
-/** The three vocabularies kit 03 :137 and the PS guide :113 accept, in order. */
+/** The three vocabularies kit 03 :136 and the PS guide :119 accept, in order. */
 const STAGE_FEEDS = [
   { name: "the customer's own words (A.3.6)", words: ['explore', 'consider', 'decide'] },
   { name: 'the engine\'s words', words: ['exploring', 'considering', 'deciding'] },
@@ -582,11 +677,14 @@ describe('unit:W19.F2.01', () => {
       }
     }
 
-    // An unknown stage word is refused, and the refusal names the piece AND the
-    // word, so a content team can fix the row it came from.
+    // An unknown stage word is refused on EVERY path that accepts the three
+    // vocabularies, and the refusal names the piece AND the word, so a content
+    // team can fix the row it came from. One representation, four paths.
     const unknown = { ...KIT_PIECE, journeyStageFit: ['awareness'] };
     for (const [label, answer] of [
       ['JSON import', await (await feedFixture()).importJson([unknown])],
+      ['CSV import', await (await feedFixture()).importCsv(csvOf(CSV_HEADER, [csvRowOf(unknown)]))],
+      ['pull', await (await feedFixture()).pull([unknown])],
       ['direct PUT', await (await feedFixture()).put([unknown])],
     ] as const) {
       expect(answer.status, `${label}: an unknown stage word refuses the write`).toBe(422);
@@ -660,25 +758,39 @@ describe('unit:W19.F2.02', () => {
     // (3) A case-variant value and a dimension the tenant's published registry
     //     does not name are NAMED on the answer of every write path, and neither
     //     is dropped or rewritten (F27 §5.8 and probe 5; R69(d)).
+    //
+    //     The registry published below DIFFERS from the compiled default in both
+    //     directions (R47/R67: the vocabulary is the tenant's PUBLISHED registry,
+    //     never a bundled list): it ADDS `styleWorld` — the dimension the PS
+    //     guide §7.1 maps Tapestry's `style_cluster` onto — and REMOVES
+    //     `silhouette`, which the compiled default does hold. So the piece's
+    //     `styleWorld` tag must NOT be warned about, while its `silhouette` tag
+    //     MUST be, exactly as the never-registered `occassion` misspelling is.
+    //     Code that consulted `DEFAULT_REFLEX_CONFIG` instead of the published
+    //     document would answer the opposite pair.
     const messy = {
       ...KIT_PIECE, id: 'cnt-messy-taxonomy', customerContentId: 'CMS-MESSY',
-      tags: { line: ['Tabby', 'tabby'], occassion: ['evening'], contentType: ['video'] },
+      tags: {
+        line: ['Tabby', 'tabby'], styleWorld: ['minimalist'], silhouette: ['shoulder'],
+        occassion: ['evening'], contentType: ['video'],
+      },
     };
     const named = async (label: string, answer: WriteAnswer, read: () => Promise<ReadAnswer>) => {
       expect(answer.status, `${label}: the messy taxonomy is accepted, not refused`).toBe(200);
       expect((await read()).document.pieces[0],
-        `W19.F2.02 — ${label}: neither spelling is rewritten and the unregistered dimension is kept as authored`)
-        .toMatchObject({ tags: { line: ['Tabby', 'tabby'], occassion: ['evening'] } });
-      expect(warningsOf(answer.diagnostics),
-        `W19.F2.02 — ${label}: the answer names the dimension the tenant's published registry does not hold`)
-        .toEqual(expect.arrayContaining([expect.objectContaining({ code: 'unknown_dimension', dimension: 'occassion' })]));
+        `W19.F2.02 — ${label}: the stored piece is exactly what was authored — neither spelling is rewritten, the unregistered dimension is kept, and no other field moved`)
+        .toEqual(messy);
+      expect(warningsOf(answer.diagnostics).filter(warning => warning.code === 'unknown_dimension')
+        .map(warning => warning.dimension).sort(),
+        `W19.F2.02 — ${label}: the answer names exactly the dimensions THIS TENANT'S published registry does not hold — the misspelling and the dimension the tenant removed — and says nothing about the one the tenant added`)
+        .toEqual(['occassion', 'silhouette']);
       expect(warningsOf(answer.diagnostics),
         `W19.F2.02 — ${label}: the answer names the two spellings of one value that differ only by case (ruled diagnostics code \`case_variant_value\`, its \`values\` sorted)`)
         .toEqual(expect.arrayContaining([expect.objectContaining({ code: 'case_variant_value', dimension: 'line', values: ['Tabby', 'tabby'] })]));
     };
-    const viaImport = await feedFixture(); await named('JSON import', await viaImport.importJson([messy]), viaImport.read);
-    const viaPull = await feedFixture(); await named('pull', await viaPull.pull([messy]), viaPull.read);
-    const viaPut = await feedFixture(); await named('direct PUT', await viaPut.put([messy]), viaPut.read);
+    const viaImport = await feedFixture(EMPTY_CATALOG, TENANT_REGISTRY); await named('JSON import', await viaImport.importJson([messy]), viaImport.read);
+    const viaPull = await feedFixture(EMPTY_CATALOG, TENANT_REGISTRY); await named('pull', await viaPull.pull([messy]), viaPull.read);
+    const viaPut = await feedFixture(EMPTY_CATALOG, TENANT_REGISTRY); await named('direct PUT', await viaPut.put([messy]), viaPut.read);
   });
 
   it('logic: a feed row carrying a duplicated value scores exactly as the clean row does, so no repeat can inflate a ranking (F27 probe 6)', async () => {
