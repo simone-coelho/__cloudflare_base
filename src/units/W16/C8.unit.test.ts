@@ -48,22 +48,34 @@
 //   (a) A shopper's ESTABLISHED cumulative taste always ranks — across a visit
 //       boundary (C8.05), across a purchase (C8.06) and across days (C8.07);
 //       that is the return-memory promise of tapestry line 152.
-//   (b) A COLD shopper's newly forming taste does not re-rank the page on its
-//       first sparse signal: absent a published contextual seed rule (C3), the
-//       first view leaves the served order exactly as the catalogue lists it,
-//       and the visit's THIRD interaction is where the site adapts (C8.04,
-//       tapestry line 147).
+//   (b) Time to relevance is an UPPER BOUND, not a delay (ruling R44, which
+//       withdrew this file's earlier "a cold shopper's first sparse signal
+//       moves nothing" rule): after one view the engine invents no taste beyond
+//       the attributes the viewed product itself carries and serves a valid
+//       page, and BY the visit's third interaction the served order reflects
+//       the line she viewed (C8.04, tapestry line 147). Adapting earlier than
+//       the third interaction is permitted, and is what the engine does.
 //   (c) The journey stage is visit-local and restarts on a new visit and after a
 //       purchase's attribution is captured, while (a) is untouched.
-//   (d) Input the engine cannot place creates no taste on the dimensions the
-//       page ranks on, is diagnosed, and leaves the base order standing (C8.03).
+//   (d) Input outside the tenant's published catalogue vocabulary builds no
+//       taste at all, is diagnosed by name, and leaves the base order standing
+//       (C8.03, ruling R47).
 //
 // RULED MISSING MEMBER (R21), asserted by the name this specification rules and
 // RED until it exists:
 //   the answer to `POST /realtime/action` carries `signals`
 //   `{ recognized: boolean; unrecognized: string[] }` — the diagnostic that
-//   names an input the engine could not place (unit W16.C8.03). No public
-//   observable reports an unrecognized input today; `pinDiagnostics`,
+//   names an input the engine could not place (unit W16.C8.03), on both hosts.
+//   The nearest thing today is the object host's drop counter: with no product
+//   and no scored attribute `ShopperReflex.ts:1050-1064` answers
+//   `{ success: true, message: 'Action ignored: unknown productId',
+//   dropped: 'unknown_product' }` and `routes/realtime.ts:230-235` passes it
+//   through. It is insufficient on three counts: the session host emits nothing
+//   at all, it names no input (an operator cannot tell WHICH id was dropped),
+//   and it never fires for a value outside the tenant's catalogue vocabulary
+//   that the registry still scores (`sanitizeEventAttributes`,
+//   `src/reflex/core.ts:299-314`), which is exactly the case R47 rules
+//   unrecognized. `pinDiagnostics` (`src/reflex/contentCompose.ts:96`),
 //   `catalogDiagnostics` and `slotDiagnostics` are the repository's idiom for
 //   the same honesty on the authoring side.
 
@@ -139,13 +151,35 @@ const VIEW_TABBY_SHOULDER_20_HANDBAG = productView({
  * Three interactions of one visit across TWO categories: a Handbag and two
  * Small Leather Goods. The aesthetic they share — `evening` and `date-night` —
  * is the taste tapestry line 150 says must work "across all categories"; the
- * three categories themselves are Coach's own (`src/services/CatalogIntent.ts`).
+ * categories are the ones the brand's own catalogue rows carry
+ * (`src/data/coach-catalog.json`), which is the vocabulary R47 rules admissible.
  */
 const CROSS_CATEGORY_VISIT = [
   VIEW_TABBY_QUILTED_HANDBAG,
   VIEW_TABBY_CHAIN_WALLET_SLG,
   VIEW_ESSENTIAL_ZIP_WALLET_SLG,
 ];
+
+/**
+ * The whole taste one view of COA-CW620 may build: exactly the attributes that
+ * catalogue row carries, on the dimensions the published registry names
+ * (`src/reflex/core.ts` DEFAULT_REFLEX_CONFIG: line, category, subcategory,
+ * silhouette, occasion, priceBand; 575 USD falls in the `elevated` band, cuts
+ * [150, 400]). Anything else in her reported taste after that single view was
+ * invented from somewhere the shopper never was (W16.C8.04, R44).
+ */
+const TASTE_OF_COA_CW620: Record<string, string[]> = {
+  line: ['Tabby'],
+  category: ['Handbags'],
+  subcategory: ['Shoulder Bags'],
+  silhouette: ['shoulder'],
+  occasion: ['date-night', 'evening', 'special-occasion'],
+  priceBand: ['elevated'],
+};
+
+/** The values a reported affinity view names per dimension, order-independent. */
+const valuesOf = (dims: Record<string, Record<string, number>> | undefined | null): Record<string, string[]> =>
+  Object.fromEntries(Object.entries(dims ?? {}).map(([dim, values]) => [dim, Object.keys(values).sort()]));
 
 /** Three views of one line, so the shopper has one unambiguous leading interest. */
 const THREE_TABBY_VIEWS = [
@@ -155,25 +189,35 @@ const THREE_TABBY_VIEWS = [
 ];
 
 /**
- * Input the engine cannot place: a product id no Coach catalogue holds, and one
- * whose category is outside Coach's three-category taxonomy. Unknown input is
- * part of the fixture, not an afterthought (document 35 §5 W16).
+ * Input outside the tenant's admissible vocabulary. Ruling R47: what is
+ * recognized is the catalogue THIS tenant's engine decides from — the published
+ * documents this fixture publishes below (the content catalogue's tagged values:
+ * lines Rogue and Tabby, categories Handbags and Accessories, occasions
+ * festival, evening and date-night) and the products the brand's own catalogue
+ * holds (`src/data/coach-catalog.json`, every fixture event above a verbatim
+ * row of it) — never a separate hard-coded list. `COA-NOT-A-PRODUCT` is in no
+ * catalogue; `Home Fragrance` is a category no published document of this
+ * tenant names. Unknown input is part of the fixture, not an afterthought
+ * (document 35 §5 W16).
  */
 const UNKNOWN_PRODUCT_ID = 'COA-NOT-A-PRODUCT';
 const VIEW_UNKNOWN_PRODUCT = productView({ productId: UNKNOWN_PRODUCT_ID });
 const UNKNOWN_CATEGORY_PRODUCT_ID = 'COA-NOT-A-PRODUCT-2';
 const VIEW_UNKNOWN_CATEGORY = productView({ productId: UNKNOWN_CATEGORY_PRODUCT_ID, category: 'Home Fragrance' });
 
-/** A real Coach order for the quilted Tabby she has been looking at (payload schemas:20). */
+/**
+ * A real Coach order for the quilted Tabby she has been looking at. Exactly the
+ * fields `docs/kit/03-payload-schemas.md:20` lists for a `purchase` — `orderId`,
+ * `value`, `currency` and `items[]` of `{ productId, quantity, price }` — and
+ * nothing else: the registry attributes that document lists (line 19) belong to
+ * `product_view`, `add_to_cart` and `wishlist_add`, and the three views before
+ * this order have already built the taste these units measure.
+ */
 const PURCHASE_TABBY_QUILTED = {
   type: 'purchase',
   data: {
     orderId: 'coach-order-w16-b7', value: 575, currency: 'USD',
     items: [{ productId: 'COA-CW620', quantity: 1, price: 575 }],
-    // The registry attributes the brand sends with the order, as the kit allows,
-    // so the purchase grows the same interest her views built.
-    productId: 'COA-CW620', line: 'Tabby', category: 'Handbags', subcategory: 'Shoulder Bags',
-    silhouette: 'shoulder', occasion: ['evening', 'date-night', 'special-occasion'], price_usd: 575,
   },
 };
 
@@ -194,6 +238,17 @@ const EDIT_BASE_ORDER = ['festival-charms-editorial', 'evening-charms-editorial'
 const GUIDE_FIRST_STAGE_ORDER = ['guide-explore-editorial', 'guide-decide-editorial'];
 /** The guide slot when she is past it (thinking, or deciding on her order). */
 const GUIDE_PAST_FIRST_STAGE_ORDER = ['guide-decide-editorial', 'guide-explore-editorial'];
+/**
+ * The bonus the slot's stage rule adds to a piece made for the shopper's current
+ * stage (`inStage: 0.5`, applied at `src/content/decide.ts`). It is the POSITIVE
+ * witness that the rule actually fired: the served score carries it. Its absence
+ * on both guide pieces is what "she is past the first stage" looks like, since
+ * neither piece is made for the middle stage — so the pair (bonus present at the
+ * first interaction, gone by the third) is the proof that the journey advanced,
+ * which the document order alone could not give.
+ */
+const STAGE_BONUS = 0.5;
+const NO_STAGE_BONUS = 0;
 
 const FIXTURE_PIECES = [
   // hero: line taste. Rogue is first, so only a remembered Tabby interest moves Tabby up.
@@ -437,6 +492,8 @@ interface SnapshotAnswer {
   ranking: Record<string, string[]>;
   /** slot → the drivers the first served piece was ranked by. */
   firstDrivers: Record<string, Array<{ dim: string; value: string }>>;
+  /** slot → content id → the score the decision served it with. */
+  scores: Record<string, Record<string, number>>;
 }
 
 interface HostFixture {
@@ -454,7 +511,7 @@ interface HostFixture {
    * reaches in production. Used only where no public route can admit the
    * request at all (W16.C8.07's day-7 and day-14 return; R19, R34).
    */
-  decide: () => Promise<{ ranking: Record<string, string[]>; visitBucket: string }>;
+  decide: () => Promise<{ ranking: Record<string, string[]>; scores: Record<string, Record<string, number>>; visitBucket: string }>;
   /**
    * The same shopper returning days later. A shopper capability lives at most
    * SHOPPER_MAX_AGE (24 h), so a return always presents a freshly minted one;
@@ -491,16 +548,18 @@ async function hostFixture(host: 'session' | 'do'): Promise<HostFixture> {
     const response = await f.call(`/v1/${TENANT}/decisions/snapshot?page=home`, current.capability);
     const body = await response.clone().json().catch(() => ({})) as {
       ok?: unknown; sources?: { state?: unknown };
-      decisions?: Array<{ slot?: string; contentId?: string; explain?: { drivers?: Array<{ dim: string; value: string }> } }>;
+      decisions?: Array<{ slot?: string; contentId?: string; score?: number; explain?: { drivers?: Array<{ dim: string; value: string }> } }>;
     };
     await f.drain();
     const ranking: Record<string, string[]> = {}, firstDrivers: Record<string, Array<{ dim: string; value: string }>> = {};
+    const scores: Record<string, Record<string, number>> = {};
     for (const decision of body.decisions ?? []) {
       const slot = decision.slot ?? 'unknown-slot';
       (ranking[slot] ??= []).push(decision.contentId ?? 'unknown-content');
+      (scores[slot] ??= {})[decision.contentId ?? 'unknown-content'] = decision.score ?? Number.NaN;
       if (ranking[slot]!.length === 1) firstDrivers[slot] = (decision.explain?.drivers ?? []).map(d => ({ dim: d.dim, value: d.value }));
     }
-    return { status: response.status, ok: body.ok, state: body.sources?.state, ranking, firstDrivers };
+    return { status: response.status, ok: body.ok, state: body.sources?.state, ranking, firstDrivers, scores };
   };
   const decide = async () => {
     const owner = {};
@@ -515,9 +574,12 @@ async function hostFixture(host: 'session' | 'do'): Promise<HostFixture> {
     undefined,
     (async () => f.objects.get(shopperObjectName(TENANT, current.subject))?.data.get('consent')) as unknown as Parameters<typeof runOwnerOperation>[5]);
     await f.drain();
-    const ranking: Record<string, string[]> = {};
-    for (const decision of out.decisions) (ranking[decision.slot] ??= []).push(decision.contentId);
-    return { ranking, visitBucket: out.cell.visit_bucket };
+    const ranking: Record<string, string[]> = {}, scores: Record<string, Record<string, number>> = {};
+    for (const decision of out.decisions) {
+      (ranking[decision.slot] ??= []).push(decision.contentId);
+      (scores[decision.slot] ??= {})[decision.contentId] = decision.score;
+    }
+    return { ranking, scores, visitBucket: out.cell.visit_bucket };
   };
   const returnAfterDays = async () => {
     current = await issueSessionCapability(f.env, { tenant: TENANT, subject: grant.subject, sessionId: grant.sessionId, kind: 'anonymous' });
@@ -578,22 +640,23 @@ describe('unit:W16.C8.02', () => {
 });
 
 describe('unit:W16.C8.03', () => {
-  it('host: an unknown product id and an out-of-taxonomy category create no taste, are diagnosed, and leave the base order standing, on both hosts', async () => {
+  it('host: a product id and a category outside the tenant\'s published catalogue vocabulary create no taste, are diagnosed by name, and leave the base order standing, on both hosts', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
     try {
       for (const host of HOSTS) {
         clock.mockReturnValue(T0);
         const h = await hostFixture(host);
-        // The shopper's only signals are two the engine cannot place: a product
-        // id no Coach catalogue holds, and a category outside Coach's own three
-        // (`src/services/CatalogIntent.ts`: Handbags, Small Leather Goods,
-        // Accessories). Both are accepted — her traffic is not refused.
+        // The shopper's only signals are two the engine cannot place against the
+        // catalogue THIS tenant decides from (R47: the published documents and
+        // the brand's own catalogue rows, never a hard-coded list): a product id
+        // no catalogue holds, and a category no published document of this
+        // tenant names. Both are accepted — her traffic is not refused.
         clock.mockReturnValue(T0);
         const first = await h.action(VIEW_UNKNOWN_PRODUCT);
         expect(first.status, `${host}: the unknown product view is accepted`).toBe(200);
         clock.mockReturnValue(T0 + STEP_MS);
         const second = await h.action(VIEW_UNKNOWN_CATEGORY);
-        expect(second.status, `${host}: the out-of-taxonomy category view is accepted`).toBe(200);
+        expect(second.status, `${host}: the out-of-vocabulary category view is accepted`).toBe(200);
 
         // 1. Nothing is invented: the page is served in exactly the order the
         //    catalogue lists it, on every slot that ranks on a dimension.
@@ -603,34 +666,49 @@ describe('unit:W16.C8.03', () => {
         expect(answer.ranking.hero, `${host}: W16.C8.03 — an input the engine cannot place leaves the base order standing`).toEqual(HERO_BASE_ORDER);
         expect(answer.ranking.edit, `${host}: W16.C8.03 — and the same on the aesthetic slot`).toEqual(EDIT_BASE_ORDER);
 
-        // 2. It creates no taste on the dimensions the page ranks on: her
-        //    reported interest is exactly what her recognized input justifies,
-        //    which here is nothing at all (HANDOFF §12: unknown stays unknown).
+        // 2. It creates NO taste at all — the whole affinity view, not only the
+        //    dimensions this page ranks on. R47: an input outside the tenant's
+        //    admissible vocabulary is unrecognized and builds nothing. Today
+        //    `sanitizeEventAttributes` (src/reflex/core.ts:299-314) admits any
+        //    string the registry names a source for, so `Home Fragrance` is
+        //    scored as a category; that is the invention this unit refuses
+        //    (HANDOFF §12: unknown stays unknown).
         const dims = (await h.hydrate()).affinity?.dims ?? {};
-        expect(dims.line ?? {}, `${host}: W16.C8.03 — no line interest is invented from an unrecognized product`).toEqual({});
-        expect(dims.occasion ?? {}, `${host}: W16.C8.03 — and no aesthetic interest either`).toEqual({});
+        // `expect.soft` on the two INDEPENDENT ruled demands of this unit (the
+        // taste one and the diagnostic one) so a run measures and reports both,
+        // instead of hiding the second behind the first. Soft does not weaken:
+        // the test still fails, and every other assertion here is hard.
+        expect.soft(dims, `${host}: W16.C8.03 — an input outside the tenant's catalogue vocabulary builds no taste on any dimension`).toEqual({});
 
         // 3. The control that keeps 2. honest: the same fixture, the same
         //    shopper, one RECOGNIZED view — her visit's third interaction — and
         //    the page moves. An empty taste above is a property of the
         //    unrecognized input, not of a dead harness.
         clock.mockReturnValue(T0 + 2 * STEP_MS);
-        expect((await h.action(VIEW_TABBY_QUILTED_HANDBAG)).status, host).toBe(200);
+        const recognizedAnswer = await h.action(VIEW_TABBY_QUILTED_HANDBAG);
+        expect(recognizedAnswer.status, host).toBe(200);
         const recognized = await h.snapshot();
         expect(recognized.ranking.hero,
           `${host}: W16.C8.03 control — a recognized Coach product on the visit's third interaction does move the page`)
           .toEqual(['tabby-editorial', 'rogue-editorial']);
         expect(Object.keys((await h.hydrate()).affinity?.dims?.line ?? {}),
           `${host}: W16.C8.03 control — and the taste it built names exactly the line she viewed`).toEqual(['Tabby']);
+        // …and the same diagnostic says so: a product the tenant's catalogue
+        // holds is RECOGNIZED and nothing is named unrecognized. Without this
+        // control an implementation could answer `unrecognized: [productId]` for
+        // every event and pass the assertions below.
+        expect.soft(recognizedAnswer.signals,
+          `${host}: W16.C8.03 control — a recognized Coach product is diagnosed as recognized, with nothing named unrecognized`)
+          .toEqual({ recognized: true, unrecognized: [] });
 
         // 4. The unknown input is DIAGNOSED rather than silently dropped: the
         //    host that accepted the event names the input it could not place
         //    (ruled member, R21).
-        expect(first.signals,
+        expect.soft(first.signals,
           `${host}: W16.C8.03 — the answer must diagnose the unrecognized input by naming the product id the engine could not place`)
           .toEqual({ recognized: false, unrecognized: [UNKNOWN_PRODUCT_ID] });
-        expect(second.signals,
-          `${host}: W16.C8.03 — and the same for a category outside the brand's taxonomy`)
+        expect.soft(second.signals,
+          `${host}: W16.C8.03 — and the same for a value outside the vocabulary the tenant's published catalogue names (R47)`)
           .toEqual({ recognized: false, unrecognized: [UNKNOWN_CATEGORY_PRODUCT_ID] });
       }
     } finally { clock.mockRestore(); }
@@ -638,58 +716,51 @@ describe('unit:W16.C8.03', () => {
 });
 
 describe('unit:W16.C8.04', () => {
-  it('host: one sparse view moves nothing without a published seed rule, and the visit\'s third interaction adapts the page to the line she viewed, on both hosts', async () => {
+  it('host: one sparse view invents no taste beyond the product she viewed and still serves a valid page, and by the visit\'s third interaction the page reflects the line she viewed, on both hosts', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
     try {
       for (const host of HOSTS) {
-        // LIVE CONTROL FIRST, on its own shopper: Time to Relevance
-        // (tapestry_requirements.txt line 147) — by the THIRD interaction of the
-        // visit the page adapts to the line she has been viewing. This is the
-        // half of the outcome the engine must keep, measured before the half it
-        // lacks, so the unit can never be satisfied by refusing to personalize.
-        clock.mockReturnValue(T0);
-        const control = await hostFixture(host);
-        for (const [index, event] of THREE_TABBY_VIEWS.entries()) {
-          clock.mockReturnValue(T0 + index * STEP_MS);
-          expect((await control.action(event)).status, host).toBe(200);
-        }
-        clock.mockReturnValue(T0 + 2 * STEP_MS);
-        const controlAnswer = await control.snapshot();
-        expect(controlAnswer, host).toMatchObject({ status: 200, ok: true, state: host });
-        expect(controlAnswer.ranking.hero,
-          `${host}: W16.C8.04 control — from the third interaction of the visit the page adapts to the Tabby line she viewed`)
-          .toEqual(['tabby-editorial', 'rogue-editorial']);
-
         clock.mockReturnValue(T0);
         const h = await hostFixture(host);
-        // This tenant publishes NO contextual seed rule set (the "if any" branch
-        // of the ruled outcome; seeds themselves are criterion C3, units
-        // W16.C3.01-.09). So after the FIRST sparse signal of a cold shopper
-        // there is nothing that may move the page: a single view is not yet a
-        // taste, and inventing one is what document 35 §2 F13 calls out.
+        // R44: "3 clicks — site adapts third interaction onwards" (tapestry
+        // line 147) and the admitted "first/third sparse interactions" set an
+        // UPPER BOUND on time to relevance, not a prohibition on adapting
+        // sooner. So the sparse first interaction is measured for what it may
+        // not do — invent — rather than for standing still. This tenant
+        // publishes no contextual seed rule set (seeds are criterion C3, units
+        // W16.C3.01-.09), so the only thing the engine may know after one view
+        // is what that one product carries.
         clock.mockReturnValue(T0);
         expect((await h.action(VIEW_TABBY_QUILTED_HANDBAG)).status, host).toBe(200);
         clock.mockReturnValue(T0);
         const afterOne = await h.snapshot();
+        // 1. The page is still a valid page: served, whole, and inside its take.
         expect(afterOne, host).toMatchObject({ status: 200, ok: true, state: host });
-        expect(afterOne.ranking.hero,
-          `${host}: W16.C8.04 — after one view, with no published seed rule, the served order is still the catalogue's`)
-          .toEqual(HERO_BASE_ORDER);
-        expect(afterOne.ranking.edit,
-          `${host}: W16.C8.04 — and the aesthetic slot is unmoved by one view as well`)
-          .toEqual(EDIT_BASE_ORDER);
+        expect([...afterOne.ranking.hero!].sort(),
+          `${host}: W16.C8.04 — after one view the hero slot still serves exactly its two pieces`)
+          .toEqual([...HERO_BASE_ORDER].sort());
+        expect(afterOne.ranking.hero!.length, `${host}: W16.C8.04 — and honours the slot's take of 2`).toBe(2);
+        expect(afterOne.ranking.edit!.length, `${host}: W16.C8.04 — as does the aesthetic slot`).toBe(2);
 
-        // Time to Relevance (tapestry_requirements.txt line 147): "3 clicks —
-        // site adapts third interaction onwards". The third interaction of the
-        // visit is where the page must adapt to the line she has been viewing.
+        // 2. Nothing is invented from one sparse signal: her whole reported
+        //    taste is exactly the attributes COA-CW620 itself carries — the
+        //    catalogue row quoted in the fixture — and no other line, category
+        //    or aesthetic has appeared from anywhere else.
+        expect(valuesOf((await h.hydrate()).affinity?.dims),
+          `${host}: W16.C8.04 — one view builds exactly the attributes that product carries, and nothing else`)
+          .toEqual(TASTE_OF_COA_CW620);
+
+        // 3. Time to Relevance (tapestry line 147): BY the third interaction of
+        //    the visit the served order reflects the line she has been viewing.
         clock.mockReturnValue(T0 + STEP_MS);
         expect((await h.action(VIEW_TABBY_SHOULDER_26_HANDBAG)).status, host).toBe(200);
         clock.mockReturnValue(T0 + 2 * STEP_MS);
         expect((await h.action(VIEW_TABBY_SHOULDER_20_HANDBAG)).status, host).toBe(200);
         clock.mockReturnValue(T0 + 2 * STEP_MS);
         const afterThree = await h.snapshot();
+        expect(afterThree, host).toMatchObject({ status: 200, ok: true, state: host });
         expect(afterThree.ranking.hero,
-          `${host}: W16.C8.04 — from the third interaction of the visit the page adapts to the Tabby line she viewed`)
+          `${host}: W16.C8.04 — by the third interaction of the visit the page reflects the Tabby line she viewed`)
           .toEqual(['tabby-editorial', 'rogue-editorial']);
       }
     } finally { clock.mockRestore(); }
@@ -713,6 +784,8 @@ describe('unit:W16.C8.05', () => {
         expect(firstStep, host).toMatchObject({ status: 200, ok: true, state: host });
         expect(firstStep.ranking.guide,
           `${host}: W16.C8.05 control — one interaction into the visit the stage rule serves the first-stage guide`).toEqual(GUIDE_FIRST_STAGE_ORDER);
+        expect(firstStep.scores.guide?.['guide-explore-editorial'],
+          `${host}: W16.C8.05 control — and the stage rule actually fired: the first-stage piece carries its inStage bonus`).toBe(STAGE_BONUS);
         for (const [index, event] of THREE_TABBY_VIEWS.slice(1).entries()) {
           clock.mockReturnValue(T0 + (index + 1) * STEP_MS);
           expect((await h.action(event)).status, host).toBe(200);
@@ -725,6 +798,8 @@ describe('unit:W16.C8.05', () => {
         // guide slot leads with the piece made for the later stage — the second
         // live control, proving the order above moves with the journey.
         expect(inVisit.ranking.guide, `${host}: three interactions of this visit are past the first stage`).toEqual(GUIDE_PAST_FIRST_STAGE_ORDER);
+        expect(inVisit.scores.guide?.['guide-explore-editorial'],
+          `${host}: the first-stage bonus measured one interaction ago is gone, so the journey has advanced`).toBe(NO_STAGE_BONUS);
         expect((await h.hydrate()).visit, host).toEqual({ visitNumber: 1, entryChannel: null });
 
         // The read crosses the visit boundary (the read-time rollover of
@@ -736,8 +811,10 @@ describe('unit:W16.C8.05', () => {
         expect(nextVisit.ranking.hero,
           `${host}: W16.C8.05 — her cumulative taste still ranks the page across the visit boundary`)
           .toEqual(['tabby-editorial', 'rogue-editorial']);
-        expect(nextVisit.ranking.guide,
+        expect.soft(nextVisit.ranking.guide,
           `${host}: W16.C8.05 — a new visit restarts the journey, so the first-stage guide leads again`).toEqual(GUIDE_FIRST_STAGE_ORDER);
+        expect.soft(nextVisit.scores.guide?.['guide-explore-editorial'],
+          `${host}: W16.C8.05 — and the first-stage bonus is applied again, as it was at the first interaction`).toBe(STAGE_BONUS);
         expect((await h.hydrate()).visit, `${host}: the visit number advanced`).toEqual({ visitNumber: 2, entryChannel: null });
 
         // The new visit's own journey starts from zero: one interaction into it
@@ -745,7 +822,7 @@ describe('unit:W16.C8.05', () => {
         clock.mockReturnValue(T0 + 2 * STEP_MS + VISIT_GAP_MS + STEP_MS);
         expect((await h.action(VIEW_TABBY_SHOULDER_26_HANDBAG)).status, host).toBe(200);
         const afterOne = await h.snapshot();
-        expect(afterOne.ranking.guide,
+        expect.soft(afterOne.ranking.guide,
           `${host}: W16.C8.05 — one interaction into the new visit is still the first stage`).toEqual(GUIDE_FIRST_STAGE_ORDER);
         expect(afterOne.ranking.hero,
           `${host}: W16.C8.05 — her taste is untouched by the restart`).toEqual(['tabby-editorial', 'rogue-editorial']);
@@ -771,6 +848,8 @@ describe('unit:W16.C8.06', () => {
         expect(firstStep, host).toMatchObject({ status: 200, ok: true, state: host });
         expect(firstStep.ranking.guide,
           `${host}: W16.C8.06 control — one interaction into the visit the stage rule serves the first-stage guide`).toEqual(GUIDE_FIRST_STAGE_ORDER);
+        expect(firstStep.scores.guide?.['guide-explore-editorial'],
+          `${host}: W16.C8.06 control — and the stage rule actually fired: the first-stage piece carries its inStage bonus`).toBe(STAGE_BONUS);
         for (const [index, event] of THREE_TABBY_VIEWS.slice(1).entries()) {
           clock.mockReturnValue(T0 + (index + 1) * STEP_MS);
           expect((await h.action(event)).status, host).toBe(200);
@@ -780,6 +859,8 @@ describe('unit:W16.C8.06', () => {
         expect(before, host).toMatchObject({ status: 200, ok: true, state: host });
         expect(before.ranking.hero, `${host}: her Tabby interest before the order`).toEqual(['tabby-editorial', 'rogue-editorial']);
         expect(before.ranking.guide, `${host}: she is past the first stage before the order`).toEqual(GUIDE_PAST_FIRST_STAGE_ORDER);
+        expect(before.scores.guide?.['guide-explore-editorial'],
+          `${host}: the first-stage bonus measured one interaction ago is gone, so the journey has advanced`).toBe(NO_STAGE_BONUS);
 
         // She buys the quilted Tabby she has been looking at: a real order, in
         // the kit's own purchase shape.
@@ -793,8 +874,10 @@ describe('unit:W16.C8.06', () => {
         const after = await h.snapshot();
         expect(after.ranking.hero,
           `${host}: W16.C8.06 — the taste she bought on is preserved, still ranking Tabby first`).toEqual(['tabby-editorial', 'rogue-editorial']);
-        expect(after.ranking.guide,
+        expect.soft(after.ranking.guide,
           `${host}: W16.C8.06 — after the order the journey restarts, so the first-stage guide leads`).toEqual(GUIDE_FIRST_STAGE_ORDER);
+        expect.soft(after.scores.guide?.['guide-explore-editorial'],
+          `${host}: W16.C8.06 — and the first-stage bonus is applied again, as it was at the first interaction`).toBe(STAGE_BONUS);
         expect((await h.hydrate()).visit, `${host}: W16.C8.06 — a purchase reset is not a new visit`).toEqual({ visitNumber: 1, entryChannel: null });
 
         // The purchase is not fabricated as a fresh browsing interaction: after
@@ -805,7 +888,7 @@ describe('unit:W16.C8.06', () => {
         clock.mockReturnValue(T0 + 5 * STEP_MS);
         expect((await h.action(VIEW_TABBY_SHOULDER_26_HANDBAG)).status, host).toBe(200);
         const afterOne = await h.snapshot();
-        expect(afterOne.ranking.guide,
+        expect.soft(afterOne.ranking.guide,
           `${host}: W16.C8.06 — one view after the order is one interaction of the new journey, not a continuation of the old one`)
           .toEqual(GUIDE_FIRST_STAGE_ORDER);
         expect(afterOne.ranking.hero,
@@ -831,6 +914,8 @@ describe('unit:W16.C8.07', () => {
         expect(firstStep, host).toMatchObject({ status: 200, ok: true, state: host });
         expect(firstStep.ranking.guide,
           `${host}: W16.C8.07 control — one interaction into the visit the stage rule serves the first-stage guide`).toEqual(GUIDE_FIRST_STAGE_ORDER);
+        expect(firstStep.scores.guide?.['guide-explore-editorial'],
+          `${host}: W16.C8.07 control — and the stage rule actually fired: the first-stage piece carries its inStage bonus`).toBe(STAGE_BONUS);
         for (const [index, event] of THREE_TABBY_VIEWS.slice(1).entries()) {
           clock.mockReturnValue(T0 + (index + 1) * STEP_MS);
           expect((await h.action(event)).status, host).toBe(200);
@@ -840,6 +925,8 @@ describe('unit:W16.C8.07', () => {
         expect(inVisit, host).toMatchObject({ status: 200, ok: true, state: host });
         expect(inVisit.ranking.hero, `${host}: the taste her three views built ranks the page`).toEqual(['tabby-editorial', 'rogue-editorial']);
         expect(inVisit.ranking.guide, `${host}: and three interactions have moved her past the first stage`).toEqual(GUIDE_PAST_FIRST_STAGE_ORDER);
+        expect(inVisit.scores.guide?.['guide-explore-editorial'],
+          `${host}: the first-stage bonus measured one interaction ago is gone, so the journey has advanced`).toBe(NO_STAGE_BONUS);
         const retention = h.ownedRetention();
         expect(retention, `${host}: the owner stored a retention stamp for this shopper`).toBeTruthy();
 
@@ -853,8 +940,10 @@ describe('unit:W16.C8.07', () => {
         expect(nextDay.ranking.hero,
           `${host}: W16.C8.07 — a day later the ranking still reflects the taste that drove her last decision (tapestry line 152)`)
           .toEqual(['tabby-editorial', 'rogue-editorial']);
-        expect(nextDay.ranking.guide,
+        expect.soft(nextDay.ranking.guide,
           `${host}: W16.C8.07 — and the day restarts the journey at the first stage`).toEqual(GUIDE_FIRST_STAGE_ORDER);
+        expect.soft(nextDay.scores.guide?.['guide-explore-editorial'],
+          `${host}: W16.C8.07 — with the first-stage bonus applied again`).toBe(STAGE_BONUS);
         expect((await h.hydrate()).visit?.visitNumber, `${host}: W16.C8.07 — the next-day return is a new visit`).toBe(2);
         // The return READ renews nothing: the retained-data stamp is still the
         // one her record was born with (HANDOFF §12; this fixture's published
@@ -887,6 +976,8 @@ describe('unit:W16.C8.07', () => {
       const firstStep = await h.decide();
       expect(firstStep.ranking.guide,
         'W16.C8.07 control — one interaction into the visit the stage rule serves the first-stage guide').toEqual(GUIDE_FIRST_STAGE_ORDER);
+      expect(firstStep.scores.guide?.['guide-explore-editorial'],
+        'W16.C8.07 control — and the stage rule actually fired: the first-stage piece carries its inStage bonus').toBe(STAGE_BONUS);
       for (const [index, event] of THREE_TABBY_VIEWS.slice(1).entries()) {
         clock.mockReturnValue(T0 + (index + 1) * STEP_MS);
         expect((await h.action(event)).status, host).toBe(200);
@@ -909,8 +1000,10 @@ describe('unit:W16.C8.07', () => {
           .toEqual(['tabby-editorial', 'rogue-editorial']);
         // The day, and then the week, restart the journey: the visit-local
         // journey is not carried across the gap, while the taste above is.
-        expect(returned.ranking.guide,
+        expect.soft(returned.ranking.guide,
           `W16.C8.07 — the day-${days} return restarts the journey at the first stage`).toEqual(GUIDE_FIRST_STAGE_ORDER);
+        expect.soft(returned.scores.guide?.['guide-explore-editorial'],
+          `W16.C8.07 — with the first-stage bonus applied again on the day-${days} return`).toBe(STAGE_BONUS);
         expect(returned.visitBucket, `W16.C8.07 — the day-${days} return is a later visit, and the decision is made in that cell`).toBe('2-3');
         expect(h.ownedRetention(), `W16.C8.07 — the day-${days} return read renews no retention`).toEqual(retention);
       }
