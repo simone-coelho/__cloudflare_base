@@ -6,12 +6,64 @@
 import type { Env } from '@/types/env';
 import { expandLedgerMessage, persistDeliveries, writeBatches, type R2Like } from './writer';
 import type { CapturedMessage } from './records';
+import type { HoldoutConfig } from '@/content/types';
+import type { TenantId } from '@/tenancy/tenant';
 import { hidden, loadTombstones, type R2Readable } from './erasure';
 import { hasDelivery, readDelivery, captureReceipt, deliveryClaimSubset, validCaptureReceipt, validDeliveryCaptureReceipt, type CaptureReceipt, type Delivery } from './delivery';
 import { tenantConfig } from '@/tenancy/middleware';
 import { requireRetention } from '@/retention';
 import type { QuarantineCase } from './quarantine';
 import { ledgerOperationHeld, ledgerOperationOwners, ledgerUnderOwners, prepareLedgerDeliveries, LEDGER_OWNER_LIMIT, LEDGER_OPERATION_BYTES, ledgerOperationBytes, pinRetention, currentOwnerEnvironment, type LedgerOwnerOperation } from '@/identity/sessionAuthority';
+
+/**
+ * W21 E1.03 (ruling R101): the experiment provenance an OUTCOME record carries.
+ *
+ * A DECISION record carries the provenance the decision path answered, written
+ * by the producer and stored and exported unchanged — nothing here re-derives
+ * it, because today's published salt applied to a decision taken under an older
+ * one would silently restate which experiment that decision belonged to
+ * (F07 §5.7). An outcome is different: it is not a decision, and what a reader
+ * needs from it is which experiment its VISITOR is enrolled in, resolved from
+ * her persistent anchor at the time the outcome is recorded. That is a stored
+ * fact about her, not a fresh draw: the same anchor and the same published salt
+ * answer the same arm on every retry.
+ *
+ * It is an annotation, never a condition of the write: a tenant whose learn
+ * document cannot be read, or a visitor whose anchor cannot be resolved, simply
+ * produces a record without the block. A record is never lost over it.
+ *
+ * WHAT THIS CANNOT SEE, and what the kit says beside it: consent is owned state
+ * the queue does not hold, so an outcome recorded for a visitor who has since
+ * withdrawn personalization carries the enrollment her anchor still resolves to
+ * rather than `ineligible`. The consumer does not invent a consent read; the
+ * eligibility of a population is read from the arm-tagged DECISION records,
+ * which carry what she was actually served under.
+ */
+async function stampOutcomeEnrollment(env: Env, messages: readonly CapturedMessage[]): Promise<void> {
+  const pending = messages.filter(m => m.type === 'outcome'
+    && (m.record as { experiment?: unknown }).experiment === undefined);
+  if (!pending.length) return;
+  const { LEARN_KIND } = await import('@/content/kinds');
+  const { readPublication } = await import('@/config/publication');
+  const { enrollmentAnchorOf, enrollmentFor } = await import('@/content/holdout');
+  const published = new Map<string, { holdout: HoldoutConfig; revision: number } | null>();
+  for (const message of pending) {
+    const record = message.record as unknown as { tenant: string; brand: string; visitor_id: string; experiment?: unknown };
+    try {
+      if (!published.has(record.tenant)) {
+        // Never the serving cache: this read is a queue-time annotation and must
+        // not install a publication snapshot that a later decision would serve from.
+        const revision = await readPublication(env, LEARN_KIND, record.tenant);
+        published.set(record.tenant, revision?.value?.holdout ? { holdout: revision.value.holdout, revision: revision.revision } : null);
+      }
+      const learn = published.get(record.tenant);
+      if (!learn) continue;
+      const anchor = await enrollmentAnchorOf(env, record.tenant as TenantId, record.visitor_id);
+      record.experiment = enrollmentFor({ tenant: record.tenant, brand: record.brand, holdout: learn.holdout,
+        saltVersion: learn.revision, ...anchor }).provenance;
+    } catch { /* provenance is an annotation; a record is never lost over it */ }
+  }
+}
 
 export type LedgerDisposition = 'ack' | 'retry';
 export interface ConsumeResult {
@@ -98,6 +150,9 @@ export async function consumeLedger(env: Pick<Env, 'STORAGE' | 'TENANTS' | 'DEPL
     } catch { skipped++; }
   }
   if (!legacyIndices.length && !managedIndices.length) return { written: 0, objects: 0, skipped, suppressed: 0, ok: bodies.length === 0, dispositions };
+  // Before any claim, cohort or owner dispatch, so every later view of these
+  // records — the claim digest, the retry, the stored object — sees one record.
+  await stampOutcomeEnrollment(env as Env, [...messages, ...deliveries.flatMap(delivery => delivery.messages)]);
   let ownerDispatched = false;
   try {
     // JSON cannot preserve own undefined fields or sparse arrays. An envelope

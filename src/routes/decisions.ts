@@ -32,7 +32,7 @@ import { pinPublication, readPinnedPublication, publicationMeta, PublicationErro
 import { replayDecision } from '@/learn/replay';
 import { readReportView, reportPayloadJson, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy } from '@/learn/report';
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
-import { WindowRangeError, windowReport } from '@/measure/window';
+import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
 import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
 import { receiptOf } from '@/learn/receipts';
@@ -506,6 +506,11 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
   const refusedPins = out.pinDiagnostics ?? [];
   // Private replay inputs travel only inside authenticated encrypted offers.
   const payload = { ok: true, tenant, brand: out.brand, page: out.page, ts: out.ts, arm: out.arm,
+    // W21 E1.03: the experiment this answer belongs to — `arm` above is the
+    // experience served, `experiment.arm` the experimental assignment — so a
+    // customer can join their own outcome data to the population we served her
+    // in. Absent for an unsigned caller, which is no shopper.
+    ...(out.experiment ? { experiment: out.experiment } : {}),
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
     // A refused pin has no delivery decision and no ledger row, so without this member
     // the refusal reaches nothing outside the worker: the slot silently falls back to
@@ -536,22 +541,47 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
 decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const date = (c.req.query('date') ?? '').trim();
-  if (!TENANT.test(tenant) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD' }, 400);
+  // W21 E1.03 (position 8): the comparison is computed on the customer's side,
+  // from records this export delivers, so the export takes the WINDOW they are
+  // comparing over instead of making them walk it one date at a time.
+  // `date=` remains exactly what it was: one day, the same answer as before.
+  const from = (c.req.query('from') ?? '').trim(), to = (c.req.query('to') ?? '').trim();
+  const day = /^\d{4}-\d{2}-\d{2}$/;
+  const windowed = from !== '' || to !== '';
+  if (!TENANT.test(tenant) || (windowed ? date !== '' || !day.test(from) || !day.test(to) : !day.test(date))) {
+    return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD, or from=YYYY-MM-DD and to=YYYY-MM-DD' }, 400);
+  }
+  let dates: string[];
+  try { dates = windowed ? datesBetween(from, to) : [date]; }
+  catch (error) { return c.json({ ok: false, error: error instanceof WindowRangeError ? error.message : 'Invalid window' }, 400); }
   const selected = c.req.query('stream');
   if (selected && !['decision', 'outcome', 'product-sort', 'behavior'].includes(selected)) return c.json({ ok: false, error: 'Invalid stream' }, 400);
   const stream = selected as LedgerStream | undefined;
   const cursor = (c.req.query('cursor') ?? '').trim() || undefined;
+  // A cursor continues one day's listing; it cannot be read across a window,
+  // because the days are listed in order and a cursor names a position in one.
+  if (cursor && dates.length !== 1) return c.json({ ok: false, error: 'cursor continues a single date' }, 400);
   return auditedSubjectRead(c, tenant, 'batches', undefined, async () => {
-  const [listed, tombs] = await Promise.all([
-    c.env.STORAGE.list({ prefix: `${tenant}/${date}/`, ...(cursor ? { cursor } : {}), limit: 1000 }),
-    loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant),
-  ]);
-  const objects = listed.objects
-    .filter((o) => stream ? o.key.split('/')[3] === stream : isLearningKey(o.key))
-    .map((o) => ({ key: o.key, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) }));
+  const tombs = await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant);
+  const objects: Array<{ key: string; date: string; size: number; uploaded: string }> = [];
+  let truncated = false, nextCursor: string | undefined, listedDays = 0;
+  for (const listedDate of dates) {
+    // The object budget the single-day listing already applied, applied to the
+    // window as a whole: a window answers what it read and says it stopped.
+    if (objects.length >= REPORT_LIMITS.objects) { truncated = true; break; }
+    const listed = await c.env.STORAGE.list({ prefix: `${tenant}/${listedDate}/`, ...(cursor ? { cursor } : {}), limit: 1000 });
+    listedDays++;
+    for (const o of listed.objects) {
+      if (!(stream ? o.key.split('/')[3] === stream : isLearningKey(o.key))) continue;
+      objects.push({ key: o.key, date: listedDate, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) });
+    }
+    if (listed.truncated) { truncated = true; nextCursor = listed.cursor; break; }
+  }
   c.header('Cache-Control', 'no-store');
   // CW28: a warehouse job applies the pending erasures to what it loads; the nightly rewrite makes the objects themselves clean.
-  return c.json({ ok: true, tenant, date, stream: stream ?? 'both', objects, truncated: listed.truncated, ...(listed.truncated ? { cursor: listed.cursor } : {}), erasures: { pending: tombs.size, list: `/v1/${tenant}/ledger/erasures` } });
+  return c.json({ ok: true, tenant, ...(windowed ? { from, to, days: dates.slice(0, listedDays) } : { date }),
+    stream: stream ?? 'both', objects, truncated, ...(nextCursor ? { cursor: nextCursor } : {}),
+    erasures: { pending: tombs.size, list: `/v1/${tenant}/ledger/erasures` } });
   });
 });
 

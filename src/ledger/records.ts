@@ -142,6 +142,13 @@ export interface OutcomeRecord {
   /** CW32: the products the outcome names (`data.items[].id`, `productId`, `sku`), so a purchase can credit the content that featured one of them. Null when none. */
   products: string[] | null;
   arm: string | null;
+  /**
+   * W21 E1.03: the experiment the visitor is enrolled in, resolved from her
+   * persistent enrollment anchor when this outcome was recorded. Absent on
+   * records written before enrollment was persistent, on a visitor the platform
+   * could not resolve, and on one who is not eligible for the experiment.
+   */
+  experiment?: import('@/content/types').EnrollmentProvenance;
 }
 
 export type LedgerMessage =

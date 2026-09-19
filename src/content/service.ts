@@ -20,7 +20,7 @@ import { projectVisit, validEntry, validVisitContext, entryChannelOf, type Chann
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
-import { armFor } from './holdout';
+import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
@@ -29,7 +29,7 @@ import { currentLiftWitness, fanDecisions, liftKey, readRing, reportLearningInco
 import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
-import type { ContentDecisionSet, ContentPiece, SlotCatalog } from './types';
+import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, SlotCatalog } from './types';
 import { captureRetention } from '@/retention';
 import { recoverDecisions } from '@/ledger/recovery';
 import { createRenderOffer } from './renderOffer';
@@ -382,8 +382,25 @@ export async function serveContentDecisions(
     // anything it does not recognise as unknown.
     stage: personalizes(consent) && shopper.stage ? PERSISTED_STAGE[shopper.stage] : null,
   });
-  // CW31: either consent switch off means the site's own defaults, whatever the holdout hash says.
-  const arm = armUnder(consent, armFor(r.visitorId, { ...learn.holdout, salt: learn.holdout.salt || brand }));
+  // W21 E1 (F07 §1.4, §7(b)): consent first, then enrollment. A shopper without
+  // personalization consent is not drawn into the experiment at all; a
+  // consenting shopper is enrolled against her PERSISTENT anchor and the
+  // published salt, so the same draw answers on every later decision and
+  // survives recognition. (`armUnder` labels the refusing shopper `default`
+  // today and the ruled `ineligible` waits on the assertions named there.)
+  const holdoutInForce: HoldoutConfig = { ...learn.holdout, salt: learn.holdout.salt || brand };
+  const enrolled = personalizes(consent)
+    ? enrollmentFor({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion: learnRev?.revision ?? 0,
+      ...(await enrollmentAnchorOf(env, r.stateTenant ?? DEFAULT_TENANT, r.visitorId)) })
+    : null;
+  // W21 E1.02 (R108): she is served the site's own defaults either way — the
+  // EXPERIENCE is unchanged — and the provenance says which population she is
+  // in. A shopper who has not consented to personalization is `ineligible`: not
+  // drawn, so no anchor is consulted for her and no bucket is taken, and a
+  // report can never pool her with the randomised control.
+  const enrollment: EnrollmentProvenance | null = enrolled?.provenance
+    ?? (r.principal ? ineligibleEnrollment({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion: learnRev?.revision ?? 0 }) : null);
+  const arm = armUnder(consent, enrolled?.arm ?? 'default');
   const slots = slotsDoc.pages[r.page] ?? [];
   const activeSlots = slots.filter(slot => !slot.offLimits);
 
@@ -449,6 +466,10 @@ export async function serveContentDecisions(
   lap('decide');
   if (consent.tracking) for (const record of set.records) record.retention = captureRetention(env, r.tenant, record.ts, now);
   for (const record of set.records) record.measurementBasis = configOf(record.slot).measurementBasis ?? 'served-v1';
+  // W21 E1.03 (position 8): every arm-tagged record names the experiment it was
+  // decided under, as the decision path answered it. The producer writes it so
+  // that nothing downstream has to reconstruct it from a later configuration.
+  if (enrollment) for (const record of set.records) record.experiment = enrollment;
   // W16 C4: every record — and so every receipt read off it — names the stage it
   // was decided in and the threshold version that derived it. Omitted where the
   // engine did not personalize, because there is no derived stage to claim.
@@ -505,6 +526,7 @@ export async function serveContentDecisions(
   }));
   return {
     ...set,
+    ...(enrollment ? { experiment: enrollment } : {}),
     decisions,
     afterResponse,
     write: consent.tracking && servedCapture,

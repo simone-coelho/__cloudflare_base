@@ -1,10 +1,16 @@
 // src/content/holdout.ts
-// Doc 22 §10. The arm is a hash of the visitor id and a salt: deterministic,
-// sticky, and needing no storage. It is assigned at DECISION time because it is
-// the one setting that cannot be applied retroactively — traffic served without
-// an arm can never be given one afterwards.
+// Doc 22 §10. The arm is a hash of an identifier and a salt: deterministic,
+// sticky, and needing no storage of its own. W21 E1.01 (F07 §1.2, §7(b)) fixes
+// WHICH identifier: the shopper's persistent enrollment anchor, not whatever id
+// the browser is carrying at this moment. Hashing the current id made signing
+// in move a shopper between arms and emptied the control population of exactly
+// the people who came back.
 
-import type { Arm, HoldoutConfig } from './types';
+import type { Env } from '@/types/env';
+import { IdentityStore } from '@/identity/store';
+import { isShopperId } from '@/identity/shopperId';
+import type { TenantId } from '@/tenancy/tenant';
+import type { Arm, EnrollmentProvenance, HoldoutConfig } from './types';
 
 /** FNV-1a, 32-bit. Small, fast, and the same everywhere it is used in this repo. */
 export function fnv1a(s: string): number {
@@ -32,6 +38,92 @@ export const hash32 = (s: string): number => mix32(fnv1a(s));
 /** A visitor's position in [0, 1), stable for a given salt. */
 export function bucketOf(visitorId: string, salt: string): number {
   return hash32(`${salt}:${visitorId}`) / 4294967296;
+}
+
+/**
+ * W21 E1 (F07 §5.7): the experiment an arm belongs to. The published salt is
+ * part of the name, so rotating the salt starts a NEW experiment rather than
+ * silently re-randomising the running one; a reader of any record can tell
+ * which experiment it belongs to without consulting today's configuration.
+ */
+export const experimentIdFor = (tenant: string, brand: string, salt: string): string => `${tenant}:${brand}:${salt}`;
+
+/**
+ * W21 E1.01 (F07 §7(b)): the enrollment of a shopper, drawn ONCE against her
+ * persistent enrollment anchor rather than against whatever id the browser is
+ * carrying at this moment. The anchor is resolved from state that outlives the
+ * browser (`enrollmentAnchorOf`, below), so the draw is the
+ * same draw on every later decision and across recognition; this function is
+ * pure, and given the same anchor and the same published salt it can only
+ * answer the same arm.
+ */
+export function enrollmentFor(input: {
+  tenant: string; brand: string; holdout: HoldoutConfig; saltVersion: number;
+  anchor: string; anchorGeneration: number;
+}): { arm: Arm; provenance: EnrollmentProvenance } {
+  const salt = input.holdout.salt || input.brand;
+  const arm = armFor(input.anchor, { ...input.holdout, salt });
+  return {
+    arm,
+    provenance: {
+      id: experimentIdFor(input.tenant, input.brand, salt),
+      saltVersion: input.saltVersion,
+      arm,
+      anchorGeneration: input.anchorGeneration,
+    },
+  };
+}
+
+/**
+ * W21 E1.02 (F07 §1.4, ruling R108): the provenance of a shopper who is NOT in
+ * the experiment. She is served exactly what the control arm is served, and her
+ * records say `ineligible` rather than `default`, so consent traffic is never
+ * counted as a randomised control. No anchor is resolved and no bucket is
+ * drawn, because she is not randomised at all; `anchorGeneration` is the only
+ * generation the platform mints.
+ */
+export function ineligibleEnrollment(input: { tenant: string; brand: string; holdout: HoldoutConfig; saltVersion: number }): EnrollmentProvenance {
+  return {
+    id: experimentIdFor(input.tenant, input.brand, input.holdout.salt || input.brand),
+    saltVersion: input.saltVersion,
+    arm: 'ineligible',
+    anchorGeneration: 1,
+  };
+}
+
+/**
+ * W21 E1.01 (F07 §1.2, §2.2, §7(b)): the shopper's PERSISTENT enrollment anchor.
+ *
+ * The arm used to be recomputed on every request from whatever id the browser
+ * was carrying at that moment, so signing in moved a shopper between arms and
+ * emptied the control population of exactly the people who came back. The
+ * anchor fixes that without storing a second copy of the assignment: it is the
+ * identity the platform already keeps for her, and the arm is a pure function
+ * of the anchor and the published salt, so it is the same arm on every later
+ * decision and after recognition.
+ *
+ * THE PUBLISHED MERGE POLICY, applied here and stated in the kit: across an
+ * identity link the enrollment recorded FIRST wins — the anchor of a recognised
+ * shopper is the earliest browser linked to her, on whichever browser she
+ * returns with, and her recognised id never redraws it. `anchorGeneration` is
+ * the generation of that anchor; nothing replaces an anchor today, and
+ * recognition explicitly does not, so it is 1.
+ *
+ * The record is read from the identity projection both hosts already write
+ * (`identity:shopper:<id>`), so no new per-shopper state is created and the
+ * existing erasure of that projection erases the anchor with it.
+ */
+export async function enrollmentAnchorOf(env: Env, tenant: TenantId, subject: string): Promise<{ anchor: string; anchorGeneration: number }> {
+  if (!isShopperId(subject)) return { anchor: subject, anchorGeneration: 1 };
+  const record = await new IdentityStore(env.SESSIONS as never, tenant).shopper(subject);
+  let earliest: { visitorId: string; linkedAt: number } | null = null;
+  // Ties keep the earlier ROW: the registry appends members in link order, so
+  // two links inside one millisecond still resolve to the one recorded first.
+  for (const member of record?.visitors ?? []) {
+    if (typeof member?.visitorId !== 'string' || !member.visitorId || !Number.isFinite(member.linkedAt)) continue;
+    if (!earliest || member.linkedAt < earliest.linkedAt) earliest = member;
+  }
+  return { anchor: earliest?.visitorId ?? subject, anchorGeneration: 1 };
 }
 
 export function armFor(visitorId: string, h: HoldoutConfig): Arm {
