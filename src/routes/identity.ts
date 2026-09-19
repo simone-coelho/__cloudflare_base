@@ -88,6 +88,16 @@ function tenantOf(c: { req: { param(name: string): string | undefined } }): stri
 //   { enabled: false, reason: 'consent'     }  it is configured, and THIS
 //                                              shopper has made no current
 //                                              explicit choice
+//   { enabled: false, reason: 'unavailable' }  the engine could not reach the
+//                                              shopper's own object, or could
+//                                              not read what it answered. W16
+//                                              C6.13 / R62: a failure of the
+//                                              CALL is not a decision about the
+//                                              shopper, so it is never reported
+//                                              as `consent` — the browser's
+//                                              still-valid proof is not the
+//                                              engine's to destroy over an
+//                                              outage, and the SDK keeps it.
 //   { enabled: true, mode, purpose, generation, expiresAt, revision, proof? }
 //
 // Activation stays absent: nothing here supplies a mode, a window or a covered
@@ -99,9 +109,18 @@ function tenantOf(c: { req: { param(name: string): string | undefined } }): stri
 interface ContinuityInForce { settings: ContinuitySettings; revision: number }
 type ContinuityDecision = ContinuityInForce | { reason: 'unpublished' | 'incomplete' };
 export type ContinuityReport =
-  | { enabled: false; reason: 'unpublished' | 'incomplete' | 'consent' }
+  | { enabled: false; reason: 'unpublished' | 'incomplete' | 'consent' | 'unavailable' }
   | { enabled: true; mode: 'direct' | 'broker'; purpose: string; generation: number;
     expiresAt: number; revision: number; proof?: string };
+
+/**
+ * W16 C6.13 (R62, R68). The call to the shopper's own object failed, or its
+ * answer could not be read as the acknowledgment this call's contract defines.
+ * Nothing was decided about the shopper and nothing about her stored state
+ * changed, so the reason is its own — reporting `consent` would state a choice
+ * she never made and would make the browser destroy a proof that is still good.
+ */
+const UNAVAILABLE: ContinuityReport = { enabled: false, reason: 'unavailable' };
 
 const inForce = (decision: ContinuityDecision): decision is ContinuityInForce => 'settings' in decision;
 
@@ -154,12 +173,29 @@ function ownerDescriptor(value: unknown, tenant: string, subject: string): Conti
  * and the authority this recognition belongs to. Anything short of an issued
  * descriptor is reported as disabled — this never opens a session it could not
  * prove, and never turns a failure into a recognition.
+ *
+ * W16 C6.13 (R62): two different things are reported apart. A DECISION about
+ * this shopper — she has made no current explicit choice, here or in the
+ * object's own answer — is `consent`. A failure of the CALL — the transport
+ * threw, the object answered a non-200, or its answer is not the acknowledgment
+ * this contract defines — is `unavailable`, because nothing was decided and the
+ * browser must keep what it holds.
+ *
+ * Answers `undefined` — no statement at all — for a session this credential
+ * cannot describe. W16 C6 is ANONYMOUS return recognition: the descriptor is
+ * bound to an anonymous browser subject and `issueContinuityProof` signs nothing
+ * else, so asking a signed-in shopper's own object to mint one is a question the
+ * contract has no answer to. Making it cost her the session refresh itself would
+ * be worse than saying nothing: she is signed in, she has no anonymous return to
+ * recognize, and the engine simply reports nothing about one.
  */
 async function reportContinuity(env: Env, tenant: string, decision: ContinuityDecision,
-  session: { subject: string; capability: string; consent?: Consent },
-  setCookie: (value: string) => void): Promise<ContinuityReport> {
+  session: { subject: string; capability: string; kind?: unknown; consent?: Consent },
+  setCookie: (value: string) => void): Promise<ContinuityReport | undefined> {
+  if (session.kind !== 'anonymous') return undefined;
   if (!inForce(decision)) return { enabled: false, reason: decision.reason };
   if (!personalizes(storedConsent(session.consent))) return { enabled: false, reason: 'consent' };
+  let body: { ok?: unknown; enabled?: unknown; descriptor?: unknown; proof?: unknown };
   try {
     const response = await shopperObject(env.SHOPPER_REFLEX, session.subject, tenant)
       .fetch('https://shopper-reflex/identity/continuity/issue', {
@@ -167,12 +203,14 @@ async function reportContinuity(env: Env, tenant: string, decision: ContinuityDe
         body: JSON.stringify({ mode: decision.settings.mode, windowMs: decision.settings.windowMs,
           purpose: decision.settings.purpose, revision: decision.revision }),
       });
-    if (!response.ok) return { enabled: false, reason: 'consent' };
-    const body = await response.json() as { ok?: unknown; enabled?: unknown; descriptor?: unknown; proof?: unknown };
-    if (body.ok !== true || body.enabled !== true || typeof body.proof !== 'string') return { enabled: false, reason: 'consent' };
-    const descriptor = ownerDescriptor(body.descriptor, tenant, session.subject);
-    return descriptor ? descriptorReport(descriptor, body.proof, setCookie) : { enabled: false, reason: 'consent' };
-  } catch { return { enabled: false, reason: 'consent' }; }
+    if (!response.ok) return UNAVAILABLE;
+    body = await response.json() as typeof body;
+  } catch (error) { if (error instanceof SessionAccessError) throw error; return UNAVAILABLE; }
+  // The object acknowledged and said no: that IS the answer about this shopper.
+  if (body.ok === true && body.enabled === false) return { enabled: false, reason: 'consent' };
+  if (body.ok !== true || body.enabled !== true || typeof body.proof !== 'string') return UNAVAILABLE;
+  const descriptor = ownerDescriptor(body.descriptor, tenant, session.subject);
+  return descriptor ? descriptorReport(descriptor, body.proof, setCookie) : UNAVAILABLE;
 }
 
 const OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -183,9 +221,16 @@ const OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * its own fixed expiry, and is then consumed by the object that owns the
  * subject. A proof this route cannot place answers `null`: the caller goes on
  * to open a brand-new anonymous session, which is what a cold shopper is.
+ *
+ * W16 C6.13 (R62): `'unavailable'` is the third answer, and it is not `null`.
+ * The object could not be reached, answered a non-200, or answered something
+ * this contract cannot read as its acknowledgment — so this route knows nothing
+ * about the shopper, the presented proof was not consumed, and the caller must
+ * report the outage by its own name instead of the cold-shopper reason.
  */
+type ConsumedContinuity = { grant: unknown; consent: unknown; report: ContinuityReport };
 async function consumeContinuity(env: Env, tenant: string, decision: ContinuityDecision, request: Request,
-  presented: unknown, hints: Consent, setCookie: (value: string) => void): Promise<{ grant: unknown; consent: unknown; report: ContinuityReport } | null> {
+  presented: unknown, hints: Consent, setCookie: (value: string) => void): Promise<ConsumedContinuity | 'unavailable' | null> {
   if (!inForce(decision)) return null;
   // A browser that arrives withdrawing a switch is not asking to be recognized.
   // Transition hints can only restrict, so a refusal is refused recognition.
@@ -199,19 +244,26 @@ async function consumeContinuity(env: Env, tenant: string, decision: ContinuityD
   const descriptor = await readContinuityProof(env, proof, tenant);
   if (!descriptor || descriptor.mode !== decision.settings.mode || descriptor.revision !== decision.revision
     || descriptor.purpose !== decision.settings.purpose || descriptor.expiresAt <= Date.now()) return null;
-  const response = await shopperObject(env.SHOPPER_REFLEX, descriptor.subject, tenant)
-    .fetch('https://shopper-reflex/identity/continuity/consume', {
-      method: 'POST', headers: { 'X-Reflex-Tenant': tenant, 'X-Reflex-Subject': descriptor.subject, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ proof, operationId, settings: { mode: decision.settings.mode, windowMs: decision.settings.windowMs,
-        purpose: decision.settings.purpose, revision: decision.revision } }),
-    });
-  if (!response.ok) return null;
-  const body = await response.json() as { ok?: unknown; recognized?: unknown; grant?: unknown; consent?: unknown; descriptor?: unknown; proof?: unknown };
-  if (body.ok !== true || body.recognized !== true || typeof body.proof !== 'string' || body.consent === undefined) return null;
+  let body: { ok?: unknown; recognized?: unknown; grant?: unknown; consent?: unknown; descriptor?: unknown; proof?: unknown };
+  try {
+    const response = await shopperObject(env.SHOPPER_REFLEX, descriptor.subject, tenant)
+      .fetch('https://shopper-reflex/identity/continuity/consume', {
+        method: 'POST', headers: { 'X-Reflex-Tenant': tenant, 'X-Reflex-Subject': descriptor.subject, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proof, operationId, settings: { mode: decision.settings.mode, windowMs: decision.settings.windowMs,
+          purpose: decision.settings.purpose, revision: decision.revision } }),
+      });
+    if (!response.ok) return 'unavailable';
+    body = await response.json() as typeof body;
+  } catch (error) { if (error instanceof SessionAccessError) throw error; return 'unavailable'; }
+  // The object acknowledged and placed nobody: a cold shopper, decided.
+  if (body.ok === true && body.recognized === false) return null;
+  // Anything else is an answer this contract cannot read as the acknowledgment,
+  // so it says nothing about the shopper and the proof stays hers.
+  if (body.ok !== true || body.recognized !== true || typeof body.proof !== 'string' || body.consent === undefined) return 'unavailable';
   const rotated = ownerDescriptor(body.descriptor, tenant, descriptor.subject);
   const grant = body.grant as { tenant?: unknown; subject?: unknown; kind?: unknown } | null;
   if (!rotated || rotated.chain !== descriptor.chain || rotated.expiresAt !== descriptor.expiresAt
-    || !grant || grant.tenant !== tenant || grant.subject !== descriptor.subject || grant.kind !== 'anonymous') return null;
+    || !grant || grant.tenant !== tenant || grant.subject !== descriptor.subject || grant.kind !== 'anonymous') return 'unavailable';
   return { grant, consent: body.consent, report: descriptorReport(rotated, body.proof, setCookie) };
 }
 
@@ -241,19 +293,51 @@ identityRoutes.post('/:tenant/identity/session', async (c) => {
     // recognizes. The consume is atomic in her own object; anything else opens
     // a brand-new anonymous session, which is exactly a cold shopper.
     const returned = await consumeContinuity(c.env, tenant, decision, c.req.raw, body?.continuity, hints, setCookie);
-    if (returned) {
+    if (returned === 'unavailable') {
+      // W16 C6.13 (R62): the engine could not ask her own object, so it knows
+      // nothing about her. She is still SERVED — a failure to recognize is never
+      // a failure to answer — on a brand-new anonymous session, and the outage is
+      // reported by its own name so the browser keeps the proof it still holds
+      // and presents the same consume again.
+      session = await anonymousWithConsent(c.env, tenant, hints);
+      continuity = UNAVAILABLE;
+    } else if (returned) {
       session = { ...await signSessionCapability(c.env, returned.grant as Parameters<typeof signSessionCapability>[1]),
         consent: storedConsent(returned.consent) };
       continuity = returned.report;
     } else session = await anonymousWithConsent(c.env, tenant, hints);
   } else {
     const principal = await verifySessionCapability(c.env, token, tenant);
-    const consent = intersectConsent(await ownedConsent(c.env, principal, token), hints);
-    session = { ...principal, capability: token, consent: await establishRefusal(c.env, principal, token, consent) };
+    // W16 C6.13 (R62, R72). A browser carrying BOTH a capability and a
+    // recognition proof is a browser whose return this engine could not finish:
+    // the `unavailable` answer served it a PROVISIONAL anonymous session in
+    // place of the recognition, and a return carries no capability by contract,
+    // so without this the same consume would never be offered again and she
+    // would be lost for good. Two things bound it. It is attempted only when the
+    // session she already holds is itself ANONYMOUS, so a presented proof can
+    // never take over a session that belongs to an identified shopper; and it
+    // is the ordinary consume, atomic in her own object, so the chain keeps its
+    // single use, its one rotation and its one deterministic retry. Nothing of
+    // the provisional subject is carried across: it is not merged, not read and
+    // not renewed — it is simply left behind to its own retention.
+    const returned = principal.kind === 'anonymous' && body?.continuity !== undefined
+      ? await consumeContinuity(c.env, tenant, decision, c.req.raw, body.continuity, hints, setCookie)
+      : null;
+    if (returned !== null && returned !== 'unavailable') {
+      session = { ...await signSessionCapability(c.env, returned.grant as Parameters<typeof signSessionCapability>[1]),
+        consent: storedConsent(returned.consent) };
+      continuity = returned.report;
+    } else {
+      if (returned === 'unavailable') continuity = UNAVAILABLE;
+      const consent = intersectConsent(await ownedConsent(c.env, principal, token), hints);
+      session = { ...principal, capability: token, consent: await establishRefusal(c.env, principal, token, consent) };
+    }
   }
   continuity ??= await reportContinuity(c.env, tenant, decision, session, setCookie);
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, session, continuity });
+  // `continuity` is absent when the engine makes no statement about anonymous
+  // return recognition for this session (an identified shopper has none).
+  return c.json({ ok: true, session, ...(continuity === undefined ? {} : { continuity }) });
 });
 
 identityRoutes.post('/:tenant/identity/link', requireShopper({ forward: false }), async (c) => {

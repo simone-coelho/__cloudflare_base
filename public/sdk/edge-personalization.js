@@ -191,6 +191,7 @@
   function contentInteraction(type, data) {
     return [data.action, data.eventName, data.event, type].map((name) => typeof name === "string" ? name.trim() : "").find((name) => ["content_impression", "content_click", "content_dwell", "video_complete"].includes(name));
   }
+  var CONTINUITY_OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   function createPageBindings() {
     const listeners = /* @__PURE__ */ new Set();
     const observed = /* @__PURE__ */ new Map();
@@ -695,11 +696,21 @@
         const proof = host.storage.get(continuityKey) ?? "";
         if (!proof) return null;
         let operationId = host.storage.get(continuityOperationKey) ?? "";
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(operationId)) {
+        if (!CONTINUITY_OPERATION_ID.test(operationId)) {
           operationId = host.uuid();
           host.storage.set(continuityOperationKey, operationId);
         }
         return { proof, operationId };
+      } catch {
+        return null;
+      }
+    }
+    function pendingContinuity() {
+      if (cfg.sessionBroker) return null;
+      try {
+        const proof = host.storage.get(continuityKey) ?? "";
+        const operationId = host.storage.get(continuityOperationKey) ?? "";
+        return proof && CONTINUITY_OPERATION_ID.test(operationId) ? { proof, operationId } : null;
       } catch {
         return null;
       }
@@ -711,7 +722,7 @@
         if (report?.enabled === true && report.mode === "direct" && typeof report.proof === "string" && report.proof) {
           host.storage.set(continuityKey, report.proof);
           host.storage.set(continuityOperationKey, "");
-        } else if (report?.enabled === false) {
+        } else if (report?.enabled === false && report.reason !== "unavailable") {
           host.storage.set(continuityKey, "");
           host.storage.set(continuityOperationKey, "");
         }
@@ -800,7 +811,7 @@
           }
           if (Object.keys(recovery).length) persisted = "";
           const request = () => {
-            const returning = persisted ? null : presentContinuity();
+            const returning = persisted ? pendingContinuity() : presentContinuity();
             return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), {
               method: "POST",
               credentials: "include",

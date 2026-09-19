@@ -58,7 +58,7 @@ import { z } from 'zod';
 import { historicalReflexSchema, sessionDataSchema, SessionManager, SESSION_TTL_SECONDS, type SessionData } from '@/services/SessionManager';
 import { assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwardLedgerOperation, LEDGER_OPERATION_HARD_BYTES, type LedgerOwnerOperation } from '@/identity/sessionAuthority';
-import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, type RetentionStamp, type ExternalRetention } from '@/retention';
+import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
 import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, stripExpiredOwnerRecovery, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type OwnerRecovery, type RecoveryInput } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
@@ -115,6 +115,7 @@ import {
   stageOnlyOdpProjection,
   updateOdpRing,
   upsertOdpProfile,
+  warnStageProjectionSkipped,
 } from '@/services/odpLoop';
 import {
   DEFAULT_SURFACE,
@@ -1018,9 +1019,12 @@ export class ShopperReflex {
       const pipeline = stored.get('pipeline') as PipelineRecord | undefined;
       const currentConsent = storedConsent(stored.get('consent'));
       const consent = intersectConsent(currentConsent, consentFromCookies(request.headers.get('Cookie')), refusalHints(event.data?.consent));
-      const answer = (interestApplied: boolean, dropped?: string): IngestOutcome => ({ status: 200, update: null,
+      // W16 C8.09 (R21): the buffered answer carries the same input diagnostic
+      // the live answer carries, naming every product reference the engine could
+      // not place. Absent until the event has actually been placed.
+      const answer = (interestApplied: boolean, dropped?: string, signals?: RecognitionSignals): IngestOutcome => ({ status: 200, update: null,
         body: { success: true, processing: 'buffered', interestApplied, sessionId: principal.sessionId, cookiesUpdated: false, consent,
-          ...(dropped ? { dropped } : {}) } });
+          ...(dropped ? { dropped } : {}), ...(signals ? { signals } : {}) } });
       if (affinity === undefined || pipeline === undefined) return answer(false, 'profile_missing');
       try {
         z.object({ shopperId: z.literal(principal.subject), reflex: historicalReflexSchema,
@@ -1052,7 +1056,7 @@ export class ShopperReflex {
         attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...pipeline.attributes }, odpSeed: affinity.odpSeed, odpContext: affinity.odpContext,
         ...{ externalRetention: affinity.externalRetention } }, getConnectors(this.env, tenant).segments, now);
       assertSessionTarget(principal, event.userId);
-      if (!interest.applied) return answer(false);
+      if (!interest.applied) return answer(false, undefined, interest.signals);
       const nextAffinity = { ...affinity, reflex: interest.reflex!, configVersion: interest.reflex!.configVersion };
       const nextPipeline = { ...pipeline, segments: interest.segments };
       // Do not write/bless audienceOwner or extend the retained lifetime.
@@ -1060,7 +1064,7 @@ export class ShopperReflex {
       const wake = computeNextAlarm(nextAffinity.reflex, nextAffinity.lastSeen, now, interest.config!, this.retentionMs());
       const pending = await this.state.storage.getAlarm();
       if (pending === null || wake < pending) await this.state.storage.setAlarm(wake);
-      return answer(true);
+      return answer(true, undefined, interest.signals);
     } catch (error) {
       return { status: error instanceof SessionAccessError ? 401 : 503, update: null,
         body: { success: false, error: 'Buffered action unavailable' } };
@@ -1120,17 +1124,19 @@ export class ShopperReflex {
     const data = event.data ?? {};
     const pid = data.productId ?? data.product_id ?? data.sku;
     const product = pid != null ? surfaceCatalog?.getProduct(String(pid)) : undefined;
-    // W16 C8.03/C8.08 (R47, R64): the vocabulary an input is measured against is
-    // the catalogue THIS tenant decides from, read once per event beside the
-    // config. Each value answers for itself, and the answer names every product
-    // reference the engine could not place. A content event is placed by the
-    // content catalogue below and never asks the product vocabulary about itself.
+    // W16 C8.03/C8.08/C8.10 (R47, R64, R67): the vocabulary an input is measured
+    // against is the catalogue THIS tenant decides from, read once per event
+    // beside the config. Each value answers for itself, and the answer names
+    // every product reference the engine could not place. A content interaction
+    // carries its own attributes into the registry exactly as a product event
+    // does, so it answers to the same vocabulary; only an event with nothing for
+    // the vocabulary to answer about skips the read.
     const eventData = data as Record<string, unknown>;
     const heldProduct = product as unknown as Record<string, unknown> | undefined;
     const contentEvent = isContentAction(actionOf(event));
-    const vocabulary = contentEvent || !needsCatalogVocabulary(eventData, heldProduct, cfg)
-      ? EMPTY_VOCABULARY
-      : await tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null);
+    const vocabulary = contentEvent || needsCatalogVocabulary(eventData, heldProduct, cfg)
+      ? await tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null)
+      : EMPTY_VOCABULARY;
     const placed = placeEvent(eventData, heldProduct, cfg, vocabulary);
     let signals: RecognitionSignals = placed.signals;
     // CW24: where the scope scores event-carried attributes, an unknown id with
@@ -1160,9 +1166,9 @@ export class ShopperReflex {
     // Resolve before changing the audience owner or any aliased pipeline state.
     const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
     const contentEventTouches = reflexOn && contentEvent
-      ? await resolvedContentTouches(this.env, tenant, data as Record<string, unknown>, cfg) : null;
-    // A content event is placed by the tenant's content catalogue, not by the
-    // product vocabulary, so its diagnostic answers from the touches that read
+      ? await resolvedContentTouches(this.env, tenant, eventData, cfg, vocabulary) : null;
+    // A content event is placed by the tenant's content catalogue against the
+    // same vocabulary, so its diagnostic answers from the touches that read
     // produced — the same "at least one value built taste" rule (R64).
     if (contentEventTouches) signals = { recognized: contentEventTouches.length > 0, unrecognized: [] };
     await this.ensureSeeded(surface, tenant);
@@ -1701,7 +1707,24 @@ export class ShopperReflex {
     const consent = await this.consentNow();
     const allowed = personalizes(consent);
     if (allowed) requireConsentPurpose(consent, 'personalization');
-    if (allowed && this.affinity) pinProfileRetention(this.env, this.affinity, tenant);
+    // W16 C5.06 (R63). Exactly one retained-data authority is pinned here — the
+    // shopper's own PROFILE stamp. When the authority it was born under is no
+    // longer in force, nothing of that record may be read out, projected or
+    // sent; but refusing to SERVE her page is not a retention remedy. The read
+    // then answers with no retained profile at all, and the skip is reported
+    // once, in coded words that name nobody and are the same words the session
+    // host uses. Nothing else is absorbed: any other failure propagates, and the
+    // destination's own retained-data policy is pinned inside the projection.
+    let profileRetained = true;
+    if (allowed && this.affinity) {
+      try { pinProfileRetention(this.env, this.affinity, tenant); }
+      catch (error) {
+        if (!(error instanceof RetentionUnavailable)) throw error;
+        profileRetained = false;
+        warnStageProjectionSkipped();
+      }
+    }
+    const usable = allowed && profileRetained;
     const cfg = await resolveTenantReflexConfig(this.env, tenant, this.surface());
     const now = Date.now();
     if (principal) assertSessionTarget(principal);
@@ -1712,7 +1735,7 @@ export class ShopperReflex {
     // lifetime, and the single thing it is allowed to do is tell the tenant's
     // configured destination the stage, off the response path. The session
     // host does the identical thing in GET /realtime/reflex.
-    if (allowed && this.affinity && this.pipeline) {
+    if (usable && this.affinity && this.pipeline) {
       const projection = stageOnlyOdpProjection(this.env, tenant,
         { visitorId: this.pipeline.visitorId, sessionId: this.pipeline.sessionId },
         reflexSnapshot(this.affinity.reflex, now, cfg),
@@ -1737,7 +1760,7 @@ export class ShopperReflex {
             .map((d) => [d.key, { tauMs: d.tauMs, K: d.K, thetaIn: d.thetaIn, thetaOut: d.thetaOut }])
         ),
       },
-      affinity: allowed && this.affinity
+      affinity: usable && this.affinity
         ? {
             ...reflexSnapshot(this.affinity.reflex, now, cfg),
             odpConfirmed: (await projectOdpState(this.env, tenant, this.affinity)).odpSeed,
@@ -1748,10 +1771,10 @@ export class ShopperReflex {
       // — identically on the session host (src/routes/realtime.ts, GET /reflex).
       // The content decision maps it to the persisted cell token through the one
       // mapping point rather than recomputing it.
-      journeyStage: allowed
+      journeyStage: usable
         ? journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, now), journeyThresholdsInForce(cfg))
         : null,
-      visit: allowed ? projectVisit(this.pipeline, this.affinity?.lastSeen, now) : null,
+      visit: usable ? projectVisit(this.pipeline, this.affinity?.lastSeen, now) : null,
       // CW31: the switches the content decision and the outcome path honour.
       consent,
       sessionId: this.pipeline?.sessionId ?? null,
