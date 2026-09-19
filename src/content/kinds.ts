@@ -5,7 +5,8 @@
 // authority: missing initialization or corrupt publication fails closed.
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
-import type { ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf } from '@/services/visit';
+import type { ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, SeedRule, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
@@ -155,6 +156,57 @@ export const CONTENT_KIND: DocumentKind<ContentCatalog> = {
 
 // ── slots ───────────────────────────────────────────────────────────────────
 
+/** W16 C3: the three arrival signals a seed rule may read. */
+const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network']);
+/** Bounded like every other authored list in this document. */
+const SEED_RULES_MAX = 100, SEED_TAGS_MAX = 50;
+
+/**
+ * W16 C3 / R30: one slot's contextual seed rule set, against the dimensions that
+ * slot actually weights. Errors are returned as suffixes of the slot's own
+ * address, so a refusal names the rule that caused it.
+ *
+ * The same function validates a published candidate and a RETAINED document at
+ * decision time: a rule set the current contract refuses is ignored whole rather
+ * than partially applied, because half a rule set is a ranking nobody authored.
+ */
+export function validateSeedRules(candidate: unknown, weights: Readonly<Record<string, number>>): ValidationResult<SeedRule[]> {
+  if (!Array.isArray(candidate)) return { ok: false, errors: [': must be an array of seed rules'] };
+  const errors: string[] = [];
+  if (candidate.length > SEED_RULES_MAX) errors.push(`: at most ${SEED_RULES_MAX} rules`);
+  const rules: SeedRule[] = [];
+  candidate.forEach((raw, index) => {
+    const at = `[${index}]`;
+    if (!isRecord(raw)) { errors.push(`${at}: must be an object`); return; }
+    const before = errors.length;
+    const signal = raw.signal, value = raw.value, weight = raw.weight;
+    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network`);
+    if (!isStr(value) || value.length > ENTRY_TERM_LIMIT) errors.push(`${at}.value: required string of 1..${ENTRY_TERM_LIMIT} characters`);
+    // A signal value outside its own vocabulary names a context that cannot
+    // occur, so it could only ever be dead configuration or a typo for a live one.
+    else if (signal === 'entry_channel' && entryChannelOf(value) !== value) errors.push(`${at}.value: entry_channel names one of the six channel words, exactly`);
+    else if (signal === 'referrer_network' && entryNetworkOf(value) !== value) errors.push(`${at}.value: referrer_network names a known network's registrable domain, exactly`);
+    if (!isNum(weight) || weight < 0 || weight > 1) errors.push(`${at}.weight: number 0..1`);
+    const tags: SeedRule['tags'] = [];
+    if (!Array.isArray(raw.tags) || raw.tags.length < 1 || raw.tags.length > SEED_TAGS_MAX) errors.push(`${at}.tags: 1..${SEED_TAGS_MAX} canonical tags`);
+    else {
+      const pairs = new Set<string>();
+      for (const tag of raw.tags as unknown[]) {
+        if (!isRecord(tag) || !isStr(tag.dimension) || !isStr(tag.value)) { errors.push(`${at}.tags: each tag is { dimension, value }, both non-empty strings`); continue; }
+        // A dimension this slot does not weight can never reach the score, so a
+        // rule naming one is refused where it is authored, not silently inert.
+        if (!Object.hasOwn(weights, tag.dimension)) { errors.push(`${at}.tags: '${tag.dimension}' is not a dimension this slot weights`); continue; }
+        const pair = `${tag.dimension}\u0000${tag.value}`;
+        if (pairs.has(pair)) { errors.push(`${at}.tags: duplicate exact pair`); continue; }
+        pairs.add(pair);
+        tags.push({ dimension: tag.dimension, value: tag.value });
+      }
+    }
+    if (errors.length === before) rules.push({ signal: signal as SeedRule['signal'], value: value as string, tags, weight: weight as number });
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: rules };
+}
+
 function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, errors: string[], governance: 0 | 1 | 2 | 3): SlotStrategy | null {
   const at = `pages.${page}[${i}]`;
   if (!isRecord(s)) { errors.push(`${at}: must be an object`); return null; }
@@ -258,12 +310,23 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (!isRecord(d) || !isStr(d.dimension) || !isNum(d.max) || !Number.isInteger(d.max) || d.max < 1) errors.push(`${at}.diversity: { dimension: a tag dimension, max: integer ≥ 1 }`);
     else diversity = { dimension: d.dimension.trim(), max: d.max };
   }
+  // W16 C3 / R30(1): the seed rule set is read on every slot regardless of the
+  // governance marker, as merchandising, stage, freshness, fatigue and diversity
+  // are: a retained document is interpreted with the governance it declares, and
+  // the rules are scored against the weights that stand beside them.
+  let seeds: SeedRule[] | undefined;
+  if (s.seeds !== undefined) {
+    const checked = validateSeedRules(s.seeds, weights);
+    if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.seeds${error}`);
+    else seeds = checked.value;
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
     ...(governance && typeof s.offLimits === 'boolean' ? { offLimits: s.offLimits } : {}), ...(excludedPieceIds ? { excludedPieceIds } : {}),
     ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
+    ...(seeds ? { seeds } : {}),
   };
 }
 
