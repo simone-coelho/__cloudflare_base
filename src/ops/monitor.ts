@@ -170,7 +170,7 @@ import { isValidTenantId } from '@/tenancy/tenant';
 import { IDENTITY_MATERIAL_UNAVAILABLE, requiresSafeIdentity, validateIdentityMaterial } from '@/identity/material.mjs';
 import { RETENTION_CATEGORIES, retentionPolicy, retentionBirth, requireRetention, type RetentionStamp } from '@/retention';
 import { configuredDestinations, configuredOperationalDestinations, type OperationalDestination } from '@/connectors/config';
-import { tenantSlotGovernance } from '@/learn/slotGovernance';
+import { SLOT_GOVERNANCE_SCOPE, tenantSlotGovernance, type TenantSlotGovernance } from '@/learn/slotGovernance';
 
 export interface CheckResult { ok: boolean; ms: number; detail?: string }
 export interface MonitorResult {
@@ -196,9 +196,11 @@ export interface MonitorResult {
    * same vocabulary. Never a value the synthetic probe produced: the probe's own
    * compose is excluded where the counters are written. Absent on a legacy
    * record that carries none, and on a run whose counter store could not be
-   * read, so no result states a zero it did not observe.
+   * read, so no result states a zero it did not observe. It states the scope it
+   * is kept at in the same word the slots page uses (`scope: 'tenant'`, R99(c)):
+   * these are the tenant's counts, across every brand of it.
    */
-  governance?: { since: number; refusedPinCount: number; shortTakeCount: number };
+  governance?: TenantSlotGovernance;
 }
 
 export interface Thresholds { decisionMs: number }
@@ -217,12 +219,16 @@ const safeChecks = (v: unknown): Record<string, CheckResult> => Object.fromEntri
 }));
 
 /** The tenant counters a kept result carries, projected as safely as its checks:
- * three plain numbers or nothing at all. A record written before W20 G2, or one
- * whose counters were unreadable, carries none and keeps its former shape. */
+ * three plain numbers, with the one scope those counters exist at stated beside
+ * them, or nothing at all. A record written before W20 G2, or one whose counters
+ * were unreadable, carries none and keeps its former shape; a record written
+ * before the scope was stated reads as `tenant` — the projection states the word
+ * rather than copying one through, so no stored value can relabel the counts. */
 const safeGovernance = (value: unknown): MonitorResult['governance'] | undefined => {
   const since = field(value, 'since'), refusedPinCount = field(value, 'refusedPinCount'), shortTakeCount = field(value, 'shortTakeCount');
   if (typeof since !== 'number' || typeof refusedPinCount !== 'number' || typeof shortTakeCount !== 'number') return undefined;
-  return { since: bounded(since, 8_640_000_000_000_000), refusedPinCount: bounded(refusedPinCount, Number.MAX_SAFE_INTEGER),
+  return { since: bounded(since, 8_640_000_000_000_000), scope: SLOT_GOVERNANCE_SCOPE,
+    refusedPinCount: bounded(refusedPinCount, Number.MAX_SAFE_INTEGER),
     shortTakeCount: bounded(shortTakeCount, Number.MAX_SAFE_INTEGER) };
 };
 
