@@ -21,14 +21,13 @@
 // record, the shopper object's pipeline and the learning ladder key `s=mid`) is
 // unchanged and is reached through the one mapping point `PERSISTED_STAGE`.
 //
-// TWO READINGS THIS SPECIFICATION TAKES, both named in the specifier's report
-// so the specification pass can rule on them:
+// TWO READINGS, RULED BY THE LEAD AS R40 after the specification pass:
 //   (a) THE STAGE-ONLY CHANGE is the read-time visit boundary: after
 //       VISIT_GAP_MS of inactivity the next SDK read is a new visit whose
 //       visit-local counters start from zero (W16.C4.02), so the stage moves
 //       from `thinking` to `exploring` with NO new behavioral event. That read
 //       is the "stage-only change" of units .02, .03 and .04.
-//   (b) THE ODP WIRE VOCABULARY is the persisted grammar, reached through
+//   (b) THE ODP WIRE VOCABULARY stays the persisted grammar, reached through
 //       PERSISTED_STAGE: `journey_stage` on the ODP profile is an external
 //       published grammar mirrored 1:1 with the customer's RTS conditions
 //       (`ODP_MIRRORED_AUDIENCES` carries `late_journey_ready_to_buy`;
@@ -205,7 +204,7 @@ const attributesOf = (call: NetworkCall) => (call.body as Array<{ attributes: Re
 
 const fixtureRetentionPolicy: RetentionPolicy = { id: 'w16-b5-fixture-policy', revision: 1, durationMs: 365 * DAY_MS, basis: 'admitted', renewal: 'new-record-only' };
 const fixtureCategories = (tenants: string[]) => Object.fromEntries(tenants.map(tenant => [tenant,
-  Object.fromEntries(['profile', 'identity', 'ledger', 'online', 'hourly'].map(category => [category, fixtureRetentionPolicy])) as Record<RetentionCategory, RetentionPolicy>]));
+  Object.fromEntries(['profile', 'identity', 'ledger', 'online', 'hourly', 'recovery', 'quarantine'].map(category => [category, fixtureRetentionPolicy])) as Record<RetentionCategory, RetentionPolicy>]));
 
 class UnitKV {
   data = new Map<string, string>();
@@ -264,7 +263,7 @@ async function fixturePublication(env: Env, tenant: string) {
     '0:' + crypto.randomUUID());
 }
 
-function boundary(host: string) {
+function boundary(host: string, options: { ledgerRecovery?: boolean } = {}) {
   const cache = new UnitKV(), sessions = new UnitKV();
   const pending: Promise<unknown>[] = [];
   /** Every ledger message the real producer path actually sent. */
@@ -286,6 +285,10 @@ function boundary(host: string) {
   });
   const env = { DEPLOYMENT_PROFILE: 'demo', CACHE: cache, SESSIONS: sessions, CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', REFLEX_HOST: host,
     STORAGE: new UnitR2(),
+    // Durable ledger recovery, where asked for: without it the demo profile
+    // writes no behavior record at all (src/ledger/behavior.ts:21), so the
+    // "no action record" clause of W16.C5.03 would have nothing to measure.
+    ...(options.ledgerRecovery ? { LEDGER_RECOVERY_ENABLED: 'true' } : {}),
     JWT_SECRET: 'w16-b5-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', IDENTITY_SECRETS: 'meridian:backend-proof',
     TENANTS: JSON.stringify({ provisioned: ['coach', 'meridian'] }),
     // The customer's authored ODP destination (src/connectors/config.ts registry).
@@ -399,6 +402,8 @@ interface ActionAnswer {
   status: number;
   interestApplied?: unknown;
   dropped?: unknown;
+  /** What the mounted route says it durably captured about this action. */
+  behavior?: { status?: unknown; recordId?: unknown };
   update?: { data?: { journeyStage?: unknown } } | null;
 }
 /** What the mounted decisions snapshot exposes about its inputs and its answer. */
@@ -431,11 +436,13 @@ interface HostFixture {
   ownedOdpRing: () => unknown[] | null;
   /** Every alarm this host armed, in order (the object host owns the alarms). */
   alarms: () => number[];
+  /** Every durable recovery admission the shopper's owner actually stored. */
+  ownedRecoveryAdmissions: () => string[];
 }
 
-async function hostFixture(host: 'session' | 'do'): Promise<HostFixture> {
+async function hostFixture(host: 'session' | 'do', options: { ledgerRecovery?: boolean } = {}): Promise<HostFixture> {
   invalidateCache(); invalidateLiftCache();
-  const f = boundary(host);
+  const f = boundary(host, options);
   // Every configured destination has a retained-data policy BEFORE the first
   // record is born, so its external copy carries its own original stamp.
   await f.configureRetention();
@@ -452,9 +459,10 @@ async function hostFixture(host: 'session' | 'do'): Promise<HostFixture> {
       ...(options.buffered ? { processing: 'buffered', browsingSessionId: options.buffered.browsingSessionId } : {}),
     });
     const body = await response.clone().json().catch(() => ({})) as
-      { interestApplied?: unknown; dropped?: unknown; update?: { data?: { journeyStage?: unknown } } | null };
+      { interestApplied?: unknown; dropped?: unknown; behavior?: { status?: unknown; recordId?: unknown }; update?: { data?: { journeyStage?: unknown } } | null };
     await f.drain();
-    return { status: response.status, interestApplied: body.interestApplied, dropped: body.dropped, update: body.update ?? null };
+    return { status: response.status, interestApplied: body.interestApplied, dropped: body.dropped,
+      behavior: body.behavior, update: body.update ?? null };
   };
   const hydrate = async () => {
     const response = await f.call('/realtime/reflex', grant.capability);
@@ -507,7 +515,9 @@ async function hostFixture(host: 'session' | 'do'): Promise<HostFixture> {
     ? ((f.objects.get(objectName)?.data.get('affinity') as { odpRecentEvents?: unknown[] } | undefined)?.odpRecentEvents ?? null)
     : ((ownedSession()?.odpRecentEvents as unknown[] | undefined) ?? null);
   const alarms = () => [...(f.objects.get(objectName)?.alarms ?? [])];
-  return { f, grant, principal, action, hydrate, snapshot, decide, ownedStage, ownedRetention, ownedOdpRing, alarms };
+  /** src/ledger/recovery.ts:76-77 — the keys a durable owner admission writes. */
+  const ownedRecoveryAdmissions = () => [...(f.objects.get(objectName)?.data.keys() ?? [])].filter(key => key.startsWith('recovery')).sort();
+  return { f, grant, principal, action, hydrate, snapshot, decide, ownedStage, ownedRetention, ownedOdpRing, alarms, ownedRecoveryAdmissions };
 }
 
 /**
@@ -620,8 +630,10 @@ describe('unit:W16.C5.01', () => {
         const exposures = delivered[0]!.body.exposures as Array<{ item: string; cell: { stage?: unknown } }>;
         expect(exposures.length, `${host}: one exposure for one served decision`).toBe(1);
         expect(exposures[0]!.cell.stage, `${host}: the LearnStats cell stage is the same persisted token`).toBe(PERSISTED_STAGE.thinking);
-        expect(levelKeys(record.cell)[3], `${host}: the learning ladder key is unchanged`)
-          .toBe(`c=${record.cell.channel}|v=${record.cell.visit_bucket}|s=mid`);
+        // The fixture's own cell: no entry signals were observed, so the channel
+        // is `unknown` (W16.C2.04/R14), and this is her first visit.
+        expect(levelKeys(record.cell)[3], `${host}: the learning ladder key is unchanged (src/learn/stats.ts:34)`)
+          .toBe('c=unknown|v=1|s=mid');
 
         // 4. And the SDK-visible projection reports the shared word for the
         //    same shopper at the same moment: one stage, five reporters.
@@ -638,6 +650,10 @@ describe('unit:W16.C5.02', () => {
     try {
       for (const host of ['session', 'do'] as const) {
         clock.mockReturnValue(T0);
+        // The recorder spans the whole test, so every window is measured from
+        // where THIS host's own traffic starts; the other host's shopper is a
+        // different subject with a different vuid.
+        const hostMark = network.calls.length;
         const h = await hostFixture(host);
         await threeLiveInteractions(h, clock, host);
 
@@ -646,7 +662,7 @@ describe('unit:W16.C5.02', () => {
         // identified by the configured identity namespace. This is the control
         // that gives the stage-only measurement below its teeth.
         const vuid = await connectorIdentity(TENANT, ODP_NAMESPACE, h.grant.subject);
-        const forwarded = odpSince(network.calls, 0).filter(call => call.path === '/v3/events');
+        const forwarded = odpSince(network.calls, hostMark).filter(call => call.path === '/v3/events');
         expect(forwarded.length, `${host}: a behavioral event reaches the tenant's ODP destination`).toBeGreaterThan(0);
         expect(forwarded[0]!.body, `${host}: the exact ODP payload of a real product view, through the configured mapping`)
           .toEqual({ type: 'product', action: 'detail', data: { product_id: 'CH-TABBY-26', product_line: 'Tabby' }, identifiers: { vuid } });
@@ -691,6 +707,8 @@ describe('unit:W16.C5.03', () => {
     try {
       for (const host of ['session', 'do'] as const) {
         clock.mockReturnValue(T0);
+        // Each host's own window of the shared network recorder.
+        const hostMark = network.calls.length;
         const h = await hostFixture(host);
         await threeLiveInteractions(h, clock, host);
 
@@ -698,7 +716,7 @@ describe('unit:W16.C5.03', () => {
         // region object and the ODP destination, and a real order does reach
         // the ledger producer. An absence below is therefore a measurement.
         expect(h.f.regionIngests.length, `${host}: a live event fans its touches into the shopper's region`).toBeGreaterThan(0);
-        expect(odpSince(network.calls, 0).filter(call => call.path === '/v3/events').length,
+        expect(odpSince(network.calls, hostMark).filter(call => call.path === '/v3/events').length,
           `${host}: a live event reaches the ODP destination`).toBeGreaterThan(0);
         clock.mockReturnValue(T0 + 2 * STEP_MS);
         await controlShopper(h.f, T0 + 2 * STEP_MS);
@@ -726,6 +744,31 @@ describe('unit:W16.C5.03', () => {
         // order count, the same memory, no invented interaction.
         expect(h.f.queued.filter(message => (message.record as { visitor_id?: unknown } | undefined)?.visitor_id === h.grant.subject),
           `${host}: this shopper placed no order, so the ledger holds none for her`).toEqual([]);
+      }
+
+      // THE ACTION RECORD. Under the demo profile without durable ledger
+      // recovery the platform writes no behavior record at all
+      // (src/ledger/behavior.ts:21), so that clause is measured here in a
+      // fixture where the record is real: every live interaction is durably
+      // admitted by the shopper's owner, and the stage-only change admits
+      // nothing.
+      for (const host of ['session', 'do'] as const) {
+        clock.mockReturnValue(T0);
+        const h = await hostFixture(host, { ledgerRecovery: true });
+        for (const [index, event] of THREE_INTERACTIONS.entries()) {
+          clock.mockReturnValue(T0 + index * STEP_MS);
+          const answer = await h.action(event);
+          expect(answer.status, host).toBe(200);
+          expect(answer.behavior?.status, `${host}: a real interaction is captured as a behavior record`).toBe('durable');
+        }
+        const admitted = h.ownedRecoveryAdmissions();
+        expect(admitted.length, `${host}: those records were durably admitted by the shopper's owner`).toBeGreaterThan(0);
+
+        clock.mockReturnValue(T0 + 2 * STEP_MS + VISIT_GAP_MS + 1);
+        expect((await h.hydrate()).journeyStage,
+          `${host}: W16.C5.03 — the read that crosses the visit boundary must report the new visit's first stage; that stage change, with no new behavioral event, is the change this unit measures`)
+          .toBe('exploring');
+        expect(h.ownedRecoveryAdmissions(), `${host}: a stage change writes no action record`).toEqual(admitted);
       }
     } finally { network.restore(); clock.mockRestore(); }
   });
@@ -781,6 +824,8 @@ describe('unit:W16.C5.05', () => {
     try {
       for (const host of ['session', 'do'] as const) {
         clock.mockReturnValue(T0);
+        // Each host's own window of the shared network recorder.
+        const hostMark = network.calls.length;
         const h = await hostFixture(host);
         await threeLiveInteractions(h, clock, host);
         const live = await h.hydrate();
@@ -790,7 +835,7 @@ describe('unit:W16.C5.05', () => {
 
         // Controls for the two absences: live events do reach the ODP
         // destination and the region object in this fixture.
-        const odpBefore = odpSince(network.calls, 0).length, regionBefore = h.f.regionIngests.length;
+        const odpBefore = odpSince(network.calls, hostMark).length, regionBefore = h.f.regionIngests.length;
         expect(odpBefore, `${host}: live events reach the ODP destination`).toBeGreaterThan(0);
         expect(regionBefore, `${host}: live events fan into the region object`).toBeGreaterThan(0);
         const mark = network.calls.length, queuedBefore = h.f.queued.length;
