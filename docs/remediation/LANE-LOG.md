@@ -90,6 +90,20 @@ Units: `TOOLS.01` tsconfig include so plain `tsc --noEmit` is green; `TOOLS.02` 
 | W16.C2.08 | SDK: the cached entry is cleared on consent transition, identity-generation change and browsing-session rollover before entry signals are recomputed; `entrySessionId` names the session that produced the entry. | sdk |
 | W16.C2.09 | Vocabulary validation: `validEntry`/`entryChannelOf` reject values outside the six-value channel vocabulary and hosts that are not valid hostnames; oversize query strings beyond `ENTRY_QUERY_LIMIT` are refused, not truncated into a wrong channel. | logic |
 
+### W16-B2 — C3 contextual seeds at gamma zero and C7 zero-base honesty (witness: document 35 §5 W16, §2 F13, §3 N20; HANDOFF-2026-09-18 §5 C3/C7; tapestry_requirements.txt 145–160 Cross-Channel Awareness; docs 18 and 22)
+| Unit | Ruled outcome | Legs |
+|---|---|---|
+| W16.C3.01 | A published, versioned, per-slot seed rule set maps a context signal (entry channel, campaign term, referrer network) to canonical customer-neutral tags with a weight; for a cold shopper at gamma zero the decision ranks candidates carrying the seeded tags above equal-base candidates without them. | logic, host |
+| W16.C3.02 | Seeds apply only to the slot they are published for; a slot with no rule set is unaffected by another slot's rules. | logic |
+| W16.C3.03 | Absent rule set: no contextual influence, the base order stands; nothing is invented. | logic |
+| W16.C3.04 | Invalid rule (unknown canonical tag, malformed or out-of-range weight, unknown signal): refused at publication; a rule set that became invalid after publication is ignored whole at decision time with a diagnostic, never partially applied. | logic, host |
+| W16.C3.05 | A draft or unpublished rule set never influences a decision. | host |
+| W16.C3.06 | Seeds are distinct from learned weighting: with gamma above zero the learned lift still applies on top of the seeded base, and seeds never change learned statistics or a receipt's learned-influence field. | logic |
+| W16.C3.07 | Seeds are not a global floor: a candidate whose final pre-lift base after merchandising is exactly zero stays exactly zero whatever the seeds. | logic |
+| W16.C3.08 | Versioning: a new rule-set version takes effect for subsequent decisions, each receipt names the version it used, and rollback restores the previous ranking. | host |
+| W16.C7.01 | Contextual influence is computed from the final pre-lift base after merchandising; exactly zero base stays zero; the receipt for such a candidate never claims multiplicative learned influence. | logic, host |
+| W16.C7.02 | Receipts record the contextual contribution and its rule-set version separately from learned lift; a decision with no seed rule and gamma zero records both as absent. | host |
+
 ### BASE — the baseline residual
 Triage (L2, 2026-09-18) measured the 29 failing files serially on `5b0b0ae`: 238 of 786 tests fail, identical to the parallel set; **zero flaky**. Groups by shared cause (full table in `_evidence/BASE/triage/REPORT.md`):
 
