@@ -93,5 +93,67 @@
     "witness": "docs/remediation/LANE-LOG.md W16-B1 row 09 and ruling R14 (the siteHost hostname contract); docs/architecture/35-verification-reports/F13.md §5.E (the channel is unvalidated free text and becomes a statistics key); docs/handover/HANDOFF-2026-09-18.md §5 C2 (\"validate vocabulary and host\"); src/services/visit.ts ENTRY_LIMITS/ENTRY_QUERY_LIMIT",
     "status": "specified",
     "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C2.10",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Known networks on country-code and multi-label public suffixes classify by an explicit per-network pattern list, never a generic suffix rule: www.google.co.uk, google.com.co, google.de, search.yahoo.co.jp, yandex.ru classify as `organic`; google.com.co.evil.example, evilgoogle.co.uk and google.co.uk.attacker.example stay `referral`, and so does any other host on the same public suffix.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 10 and ruling R24 (search and social networks reached on country-code domains classify by an explicit per-network second-level pattern list, and google.com.co-style lookalikes stay referral); the W16-B1 build report residual 1 and the build review's logic probe (_evidence/W16-B1/reviewer-build/logs/probe-logic.log section A: www.google.co.uk, search.yahoo.co.jp and yandex.ru answer referral today); src/services/visit.ts SEARCH_HOSTS and matches() (exact or dot-boundary suffix); docs/architecture/tapestry_requirements.txt:157 Cross-Channel Awareness",
+    "status": "specified",
+    "batch": "W16-B3"
+  },
+  {
+    "id": "W16.C2.11",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "A bare `paid` or `cpm` medium with no recognized network source, or with no source at all, stays unknown (projectVisit entryChannel null, liveVisit entryChannel undefined — the W16.C2.04 representation); it never defaults to `paid_search`. A recognized network source still names its cell: paid+facebook and cpm+instagram are paid_social, paid+google and cpc+google are paid_search.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 11 and ruling R24 (a bare paid or cpm medium with no recognized network source stays unknown rather than defaulting to paid_search); the W16-B1 build report residual 2 (\"utm_medium=paid with no social source -> paid_search (documented judgement; could be ruled unknown)\") and the build review's logic probe section B; unit W16.C2.04 and ruling R14 for the unknown representation; src/services/visit.ts PAID_MEDIUMS/PAID_SOCIAL_MEDIUMS",
+    "status": "specified",
+    "batch": "W16-B3"
+  },
+  {
+    "id": "W16.C2.12",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Token-form source aliases identify the network: facebook_ads, fb_ads, fb, ig, instagram_stories, meta_ads, tiktok_ads, pinterest_ads (tokens split on `_`, `-`, `.` and whitespace; a token equal to a network name or a listed alias is that network) with a paid medium classify as `paid_social`; a host-form source such as facebook.attacker.example is judged only by the host rule and is not social, while facebook.com and l.facebook.com still are.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 12; the W16-B1 build review's logic probe (_evidence/W16-B1/reviewer-build/logs/probe-logic.log section B: facebook_ads, fb_ads and ig with cpc answer paid_search today) and the build report's paid-order note; docs/architecture/35-verification-reports/F13.md §5.H (a campaign builder's own source spelling must not poison the paid-search cell); src/services/visit.ts SOCIAL_SOURCES/declaresSocial; unit W16.C2.02 (the dot-boundary host rule the lookalike sources keep)",
+    "status": "specified",
+    "batch": "W16-B3",
+    "residual": "The ruled `.` token split is asserted only through the resolution the table itself gives it — a dotted source is a host-form source, judged by the host rule (facebook.attacker.example, tiktok-ads.evil.example, instagram.com.evil.example are not social, as unit W16.C2.02 already requires). The table does not determine a value for a dotted source that is not a valid host, so none is asserted."
+  },
+  {
+    "id": "W16.C2.13",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "The public boundary accepts a `siteHost` of the form hostname[:port] and an internationalized hostname (normalized to its ASCII form by URL parsing); the port is not part of the site's identity for the same-site comparison; a URL with scheme, path or query, free text and anything outside the hostname[:port] form remain refused. POST /realtime/action and GET /v1/:tenant/decisions/snapshot answer 200 for shop.coach.com:8080 and for a unicode IDN host on both hosts, and the R20 hydrate shows the same-site page view as `direct`.",
+    "legs": ["logic", "host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 13; the W16-B1 build report residual 3 (\"validEntry refuses a siteHost with a port; the SDK and storefront send location.hostname, a non-SDK integrator posting location.host is refused\") and the build review's probes (logs/probe-logic.log section D, logs/probe-route.log: snapshot 401 and action 400 for a ported site host, logs/probe-route-idn.log: unicode IDN 400, punycode 200); ruling R14 (`direct` needs a present valid siteHost with an empty or same-site referrer), R19 (the mounted public routes) and R20 (the hydrate visit shape); src/routes/decisions.ts:403 and src/routes/realtime.ts:122",
+    "status": "specified",
+    "batch": "W16-B3"
+  },
+  {
+    "id": "W16.C2.14",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Trailing-dot fully-qualified hosts (www.google.com., shop.coach.com.) are normalized by stripping the root label before matching, for referrer and site hosts, on the classifier, the storing path and the bounded snapshot round trip; the dot-boundary rule is unchanged, so google.com.evil.example. and evilgoogle.com. stay `referral`.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 14; the W16-B1 build review's probes (logs/probe-logic.log section C: referrer host www.google.com. answers referral, section F: snapshotEntry carries the trailing dot through unchanged; logs/probe-route.log trailing-dot site host answers 200); src/services/visit.ts hostOf()/matches() and the same-site comparison; ruling R14",
+    "status": "specified",
+    "batch": "W16-B3"
+  },
+  {
+    "id": "W16.C2.15",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Documentation is current. docs/api/01-rest-endpoints.md: the GET /realtime/reflex row names the hydrate visit fields `visitNumber` and `entryChannel`; the entry paragraph contains the phrase \"siteHost must be a hostname\" and the phrase \"stays unknown, never direct\", and no longer contains \"may classify as direct\". docs/kit/02-api-reference.md contains `entrySessionId` and the phrase \"browsing session that produced the cached entry\". Phrases are matched with inline code ticks removed, so markup style is not asserted.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B3 table row 15 and ruling R24 (documentation of the hydrate visit field and entrySessionId, and the correction of docs/api/01-rest-endpoints.md:32, are W16 residuals; that file is in the W16 grant); ruling R20 (the hydrate carries visit { visitNumber, entryChannel }), ruling R18 (entrySessionId names the browsing session that produced the cached entry signals and is documented in docs/kit/02-api-reference.md) and ruling R14 (an empty or invalid siteHost is unknown, never direct); the W16-B1 build report residual 5; the superseded sentence at docs/api/01-rest-endpoints.md:32",
+    "status": "specified",
+    "batch": "W16-B3",
+    "residual": "docs/kit/02-api-reference.md has no SDK Core member list today, so the unit asserts the two phrases file-wide rather than inside a member table; if the implementer adds a Core section the assertions still hold."
   }
 ]
