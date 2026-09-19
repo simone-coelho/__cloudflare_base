@@ -169,14 +169,29 @@ corrected. Existing revision preconditions and exact-request retries still apply
 not normalize registry/case/type aliases, locale, empty-taxonomy policy or product-attribute inheritance.
 
 Nothing above is silently dropped. A field or CSV column the table does not list is not stored, and
-the write answer names it as an `ignored_field` warning on the advisory `diagnostics` channel; two
-spellings of one tag value that differ only by case are named as `case_variant_value` with the exact
-spellings, and neither is rewritten. A CSV header that matches a listed column only when case is
-ignored — `Tags` for `tags` — is refused 422 naming both spellings, because reading it as an unknown
-column would land every row with that field empty. An unusable `journeyStageFit` word is refused
-naming the piece and the words the feed sent, beside the accepted vocabulary. An accepted import or
-pull also answers `changed`: how many stored pieces it created or altered, counted from the stored
-values, so re-importing what the catalog returned answers `changed: 0`.
+the write answer names it as an `ignored_field` warning on the advisory `diagnostics` channel, with
+`recordIndex`, that record's position in the request — not the position of the stored piece a merge
+refreshed, which is a different number. The catalog document itself lists only its `pieces` and an
+optional authored `version` label; a key beside those is named as `ignored_document_field`, which
+carries no position because it belongs to no record. How the request carried the catalog is never
+named: a PUT body's `document`, `note` and `publicationChanges`, and a feed export's records key
+(`pieces`, `content`, `items`, `data`, or the key `?path=` names), are the envelope, not the catalog.
+Two spellings of one tag value that differ only by case are named as `case_variant_value` with the
+exact spellings, and neither is rewritten. A slot type no page of your slots document defines is
+named as `unknown_slot_type`: the piece is stored whole, it is simply eligible for no slot you
+publish. The channel also answers `counts`, the exact number of occurrences of each code present, so
+the bounded 50-warning sample can never hide a whole class of defect, and the sample always shows at
+least one warning of every code that occurred. A CSV header that matches a listed column only when
+case is ignored — `Tags` for `tags` — is refused 422 naming both spellings, because reading it as an
+unknown column would land every row with that field empty; the columns are read from the header
+itself, so a header-only export and one whose data rows are all blank are refused with the same words
+as one with rows. An unusable `journeyStageFit` word is refused naming the piece and the words the
+feed sent, beside the accepted vocabulary. An accepted import or pull also answers `changed`: how
+many stored pieces it created or altered, counted from the stored values, so re-importing what the
+catalog returned answers `changed: 0`; `removed`, how many stored pieces it dropped, so a replace
+that empties the catalog is never silent and a merge answers `removed: 0`; and `changedBasis`,
+`stored` when both were measured against the stored base revision, or `unavailable` — with `changed`
+and `removed` `null` — when that revision could not be read.
 
 ### Hard slot controls
 

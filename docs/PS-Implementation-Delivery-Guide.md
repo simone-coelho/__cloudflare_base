@@ -141,12 +141,20 @@ Registry vocabulary, locale, inheritance and end-to-end customer feed acceptance
 
 A feed answer is never silent about what it could not use. An accepted import or pull says how many
 stored pieces it created or altered (`changed`, counted from the stored values, so a re-import of the
-same export answers zero), and its advisory `diagnostics` name every field or column the contract
-does not list, every tag value whose spellings differ only by case, and every dimension the tenant's
-published registry does not hold — named, never rewritten. A CSV header that matches a documented
-column only when case is ignored is refused rather than imported into an empty taxonomy, as is a
-journey-stage word outside the accepted vocabulary, and both refusals name what the feed sent. This
-is feedback on one submitted feed, not registry vocabulary, case or locale normalization.
+same export answers zero), how many it dropped (`removed`, so a replace that empties the catalog says
+so instead of reporting no change), and what both were measured against (`changedBasis`: `stored`, or
+`unavailable` with null counts when the base revision cannot be read, rather than counting every
+stored piece as created). Its advisory `diagnostics` name every field or column the contract does not
+list, every key the submitted catalog document itself carries beside its pieces and version label,
+every tag value whose spellings differ only by case, every slot type the tenant's slots document does
+not define, and every dimension the tenant's published registry does not hold — named, never
+rewritten — beside the slots document they were compared against. The channel counts each code
+exactly (`counts`) and always shows at least one warning of every code that occurred, so its
+50-warning sample can never hide a whole class of defect. A CSV header that matches a documented
+column only when case is ignored is refused rather than imported into an empty taxonomy — including a
+header-only or all-blank export, because the columns are read from the header — as is a journey-stage
+word outside the accepted vocabulary, and both refusals name what the feed sent. This is feedback on
+one submitted feed, not registry vocabulary, case or locale normalization.
 
 ## 8. Customer prerequisites checklist (the qualification list)
 

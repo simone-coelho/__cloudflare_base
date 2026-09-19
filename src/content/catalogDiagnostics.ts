@@ -6,10 +6,22 @@ import { contentTypeValues } from './typeAffinity';
 import { ignoredFieldsOf } from './import';
 import { DEFAULT_SLOTS, SLOTS_KIND } from './kinds';
 
+/**
+ * Two positions, never the same number and never spelled the same way:
+ * `pieceIndex` is a position in the STORED catalogue, which every code computed
+ * from the stored document carries; `recordIndex` is a position in the REQUEST,
+ * which the request-derived code carries. On a merge the record a feed sent is
+ * at one position and the piece it refreshed is at another, so an answer that
+ * called them both `pieceIndex` would be saying something untrue.
+ */
 type Warning = { code: 'no_nonempty_registered_tags'; pieceIndex: number }
   | { code: 'unknown_dimension'; pieceIndex: number; dimensionIndex: number; dimension: string; dimensionTruncated: boolean }
   | { code: 'case_variant_value'; pieceIndex: number; dimensionIndex: number; dimension: string; dimensionTruncated: boolean; values: string[]; valuesTruncated: boolean }
-  | { code: 'ignored_field'; pieceIndex: number; field: string; fieldTruncated: boolean }
+  | { code: 'ignored_field'; recordIndex: number; field: string; fieldTruncated: boolean }
+  // A key the contract does not list on the submitted catalogue DOCUMENT, beside
+  // its pieces and its optional authored version label. It belongs to no record,
+  // so it carries no position at all — neither a stored one nor a request one.
+  | { code: 'ignored_document_field'; field: string; fieldTruncated: boolean }
   // A slot type no page of the tenant's own slots document defines. Advisory:
   // the piece is stored whole and refused by nothing; it is simply eligible for
   // no slot this tenant publishes, so nothing will ever serve it.
@@ -32,6 +44,13 @@ export interface CatalogDiagnostics {
   slots: { source: 'stored' | 'compiled-default' | 'unavailable'; revision: number | null; version: string | null };
   warningCount: number | null;
   omittedWarningCount: number | null;
+  /**
+   * The exact number of occurrences of every code present, beside the two counts
+   * that already exist. The sample is bounded; these are not, so an operator
+   * learns how much of each defect the catalogue and the request carried even
+   * when the cap cannot show it. A code that did not occur has no key.
+   */
+  counts: Record<string, number> | null;
   warnings: Warning[] | null;
 }
 
@@ -43,13 +62,56 @@ export interface CatalogDiagnostics {
  * carries one and no caller passes this on a read.
  */
 export interface DiagnosedRequest {
-  /** The submitted records, in the order the request listed them; `pieceIndex` is that position. */
+  /** The submitted records, in the order the request listed them; `recordIndex` is that position. */
   records: readonly unknown[];
   /** The field spellings THIS path accepts: the feed adapter's aliases, or the validator's own closed set for a direct publication. */
   accepted: ReadonlySet<string>;
+  /**
+   * The catalogue DOCUMENT this write submitted, and the document keys THIS path
+   * lists on it: the catalogue's own `pieces` and optional authored `version`,
+   * plus the envelope key that carried the records on a feed. The envelope is
+   * never the document — how a request carries its catalogue is not a field of
+   * the catalogue — so a path with no submitted document passes none.
+   */
+  document?: { value: unknown; accepted: ReadonlySet<string> };
 }
 
-const BOUND = 64, VALUES_BOUND = 20;
+const BOUND = 64, VALUES_BOUND = 20, SAMPLE_BOUND = 50;
+
+/** One warning and where it happened in the whole run, so a sample can be reordered back into occurrence order. */
+interface Occurrence { order: number; warning: Warning }
+
+/**
+ * The bounded sample: the first `SAMPLE_BOUND` occurrences, in the order they
+ * happened — and when the cap would hide a whole code, one slot reserved for it.
+ * A code absent from the prefix takes the place of the latest occurrence of the
+ * most-represented code, which still keeps every code it had. An answer whose
+ * warnings fit under the cap, and one whose prefix already shows every code, are
+ * returned exactly as they were counted: the reservation costs a slot only where
+ * silence would otherwise cost a whole class of defect.
+ */
+function sampledWarnings(prefix: readonly Occurrence[], first: ReadonlyMap<string, Occurrence>): Warning[] {
+  const sample = [...prefix];
+  for (const [code, occurrence] of first) {
+    if (sample.some(entry => entry.warning.code === code)) continue;
+    const held = new Map<string, number>(), latest = new Map<string, Occurrence>();
+    for (const entry of sample) {
+      held.set(entry.warning.code, (held.get(entry.warning.code) ?? 0) + 1);
+      latest.set(entry.warning.code, entry);
+    }
+    let evicted: Occurrence | undefined;
+    for (const [crowded, entry] of latest) {
+      const size = held.get(crowded)!, best = evicted ? held.get(evicted.warning.code)! : 0;
+      // Never take a code's only representative: that would trade one silence for another.
+      if (size < 2 || size < best || (size === best && entry.order <= evicted!.order)) continue;
+      evicted = entry;
+    }
+    if (!evicted) break;
+    sample.splice(sample.indexOf(evicted), 1);
+    sample.push(occurrence);
+  }
+  return sample.sort((left, right) => left.order - right.order).map(entry => entry.warning);
+}
 
 /**
  * The slot-type vocabulary this tenant's engine decides from, and which
@@ -74,7 +136,7 @@ export async function catalogDiagnostics(env: Env, tenant: string, catalog: Cont
   request?: DiagnosedRequest): Promise<CatalogDiagnostics> {
   const unavailable: CatalogDiagnostics = { schema: 'catalog-registry-diagnostics/v1', advisory: true, status: 'unavailable', catalogRevision,
     registry: { scope: null, source: 'unavailable', revision: null, version: null },
-    slots: { source: 'unavailable', revision: null, version: null }, warningCount: null, omittedWarningCount: null, warnings: null };
+    slots: { source: 'unavailable', revision: null, version: null }, warningCount: null, omittedWarningCount: null, counts: null, warnings: null };
   // The tenant's own slot-type vocabulary, read in its own container: an
   // unreadable slots document names itself `unavailable` and raises no warning,
   // and it never turns the registry's own answer into an outage.
@@ -89,8 +151,14 @@ export async function catalogDiagnostics(env: Env, tenant: string, catalog: Cont
     const config = stored ? stored.value : await compiledDefaultFor(scope);
     const registered = new Set(config.dimensions.map(dimension => dimension.key));
     const implicitType = config.dimensions.some(dimension => dimension.key === 'contentType' && !dimension.derive);
-    const warnings: Warning[] = []; let warningCount = 0;
-    const add = (warning: Warning) => { warningCount++; if (warnings.length < 50) warnings.push(warning); };
+    const counts: Record<string, number> = {}, prefix: Occurrence[] = [], first = new Map<string, Occurrence>();
+    let warningCount = 0;
+    const add = (warning: Warning) => {
+      const occurrence: Occurrence = { order: warningCount++, warning };
+      counts[warning.code] = (counts[warning.code] ?? 0) + 1;
+      if (!first.has(warning.code)) first.set(warning.code, occurrence);
+      if (prefix.length < SAMPLE_BOUND) prefix.push(occurrence);
+    };
     catalog.pieces.forEach((piece, pieceIndex) => {
       let nonempty = false;
       Object.entries(piece.tags).forEach(([dimension, values], dimensionIndex) => {
@@ -127,13 +195,20 @@ export async function catalogDiagnostics(env: Env, tenant: string, catalog: Cont
       }
     });
     // What the request carried and no stored piece can hold. Appended after the
-    // catalogue's own warnings so the bounded list keeps the same shape it had.
-    request?.records.forEach((raw, pieceIndex) => {
+    // catalogue's own warnings so the bounded list keeps the same shape it had:
+    // the document's own unlisted keys, then each record's.
+    if (request?.document) {
+      for (const field of ignoredFieldsOf(request.document.value, request.document.accepted)) {
+        add({ code: 'ignored_document_field', field: field.slice(0, BOUND), fieldTruncated: field.length > BOUND });
+      }
+    }
+    request?.records.forEach((raw, recordIndex) => {
       for (const field of ignoredFieldsOf(raw, request.accepted)) {
-        add({ code: 'ignored_field', pieceIndex, field: field.slice(0, BOUND), fieldTruncated: field.length > BOUND });
+        add({ code: 'ignored_field', recordIndex, field: field.slice(0, BOUND), fieldTruncated: field.length > BOUND });
       }
     });
+    const warnings = sampledWarnings(prefix, first);
     return { ...unavailable, status: 'available', registry: { scope, source: stored ? 'stored' : 'compiled-default', revision: stored?.revision ?? 0, version: config.version },
-      warningCount, omittedWarningCount: warningCount - warnings.length, warnings };
+      warningCount, omittedWarningCount: warningCount - warnings.length, counts, warnings };
   } catch { return unavailable; }
 }

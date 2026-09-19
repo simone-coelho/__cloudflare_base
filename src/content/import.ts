@@ -6,7 +6,7 @@
 // the route does that, so the same functions serve a file, a paste, or a pull.
 
 import type { ContentCatalog, ContentPiece } from './types';
-import { PIECE_FIELDS } from './kinds';
+import { CATALOG_DOCUMENT_FIELDS, PIECE_FIELDS } from './kinds';
 import { inputLimit, inputRecords, inputTextBytes, INPUT_MAX_RECORDS, readInputText } from '@/config/input';
 
 // ── Normalization: many export shapes, one catalog shape ────────────────────
@@ -90,6 +90,19 @@ export function ignoredFieldsOf(raw: unknown, accepted: ReadonlySet<string>): st
 }
 
 /**
+ * The document keys ONE request may carry: the catalogue's own closed set, plus
+ * the envelope keys that path uses to carry the catalogue — a feed export's
+ * records key, or the fields a direct publication's body holds beside its
+ * document. The envelope is how the catalogue arrived, never a field of it, so
+ * each path names its own and nothing else is accepted.
+ */
+export function catalogDocumentFields(...envelope: readonly (string | null | undefined)[]): ReadonlySet<string> {
+  const accepted = new Set(CATALOG_DOCUMENT_FIELDS);
+  for (const key of envelope) if (key) accepted.add(key);
+  return accepted;
+}
+
+/**
  * A CSV header the contract does not list, but which matches a documented
  * column when case is ignored. Column names are matched exactly, so `Tags`
  * reads as an unknown column and every row lands with an empty taxonomy
@@ -151,23 +164,47 @@ export function normalizePiece(raw: unknown): Record<string, unknown> | null {
   return out;
 }
 
+/** The keys a JSON export may hold its records under when the request names no path. */
+export const JSON_RECORD_KEYS = ['pieces', 'content', 'items', 'data'] as const;
+
+/**
+ * The array of records inside a JSON export AND the top-level key that carried
+ * them — the body itself (no key), `pieces`, `content`, `items`, `data`, or the
+ * first segment of a dotted path. The carrier is how the export delivers its
+ * records, so a caller can tell it from a document key the contract does not
+ * list; it is `null` when the body is the array itself and there is no document.
+ */
+export function recordsInJson(body: unknown, path?: string): { records: unknown[]; carrier: string | null } {
+  const selected = (value: unknown, carrier: string | null) => {
+    inputRecords(value); return { records: Array.isArray(value) ? value : [], carrier };
+  };
+  if (path) {
+    const segments = path.split('.').filter(Boolean);
+    let cur: unknown = body;
+    for (const seg of segments) cur = isRecord(cur) ? cur[seg] : undefined;
+    return selected(cur, segments[0] ?? null);
+  }
+  if (Array.isArray(body)) return selected(body, null);
+  if (isRecord(body)) for (const k of JSON_RECORD_KEYS) if (Array.isArray(body[k])) return selected(body[k], k);
+  return { records: [], carrier: null };
+}
+
 /** The array of records inside a JSON export: the body itself, `pieces`, `content`, `items`, or a dotted path. */
 export function recordsFromJson(body: unknown, path?: string): unknown[] {
-  const selected = (value: unknown): unknown[] => { inputRecords(value); return Array.isArray(value) ? value : []; };
-  if (path) {
-    let cur: unknown = body;
-    for (const seg of path.split('.').filter(Boolean)) cur = isRecord(cur) ? cur[seg] : undefined;
-    return selected(cur);
-  }
-  if (Array.isArray(body)) return selected(body);
-  if (isRecord(body)) for (const k of ['pieces', 'content', 'items', 'data']) if (Array.isArray(body[k])) return selected(body[k]);
-  return [];
+  return recordsInJson(body, path).records;
 }
 
 // ── CSV ─────────────────────────────────────────────────────────────────────
 
-/** RFC 4180-style: quoted fields may hold commas, newlines and doubled quotes. */
-export function parseCsv(text: string): Record<string, string>[] {
+/**
+ * RFC 4180-style: quoted fields may hold commas, newlines and doubled quotes.
+ * The parsed HEADER is returned beside the records, because it is the header
+ * that declares the feed's columns: a header-only export, and one whose every
+ * data cell is blank, carry no record to read the columns off, and a boundary
+ * that read the columns from a first record would have nothing to say about
+ * either (F27 §5.3).
+ */
+export function parseCsvTable(text: string): { columns: string[]; records: Record<string, string>[] } {
   inputTextBytes(text);
   const rows: string[][] = [];
   let row: string[] = [], field = '', quoted = false;
@@ -204,12 +241,17 @@ export function parseCsv(text: string): Record<string, string>[] {
   }
   pushField(); pushRow();
   const [header, ...body] = rows;
-  if (!header) return [];
+  if (!header) return { columns: [], records: [] };
   const names = header.map((h) => h.trim());
-  return body.map((r) => {
+  return { columns: names, records: body.map((r) => {
     const record = Object.fromEntries(names.map((n, i) => [n, (r[i] ?? '').trim()]));
     csvRows.add(record); return record;
-  });
+  }) };
+}
+
+/** The records of a CSV export; the header is `parseCsvTable`'s `columns`. */
+export function parseCsv(text: string): Record<string, string>[] {
+  return parseCsvTable(text).records;
 }
 
 export const CSV_COLUMNS = [
@@ -248,9 +290,21 @@ export function assemble(current: ContentCatalog, incoming: Record<string, unkno
 
 // ── The provider seam ───────────────────────────────────────────────────────
 
+/** What one pull brought back: the records, and the export document they came out of. */
+export interface PulledExport {
+  /** The raw records, however the source holds them. */
+  records: unknown[];
+  /** The export document itself, when the source answers one; an array is records, not a document. */
+  document: unknown;
+  /** The key of that document that carried the records — the envelope, never a field of the catalogue. */
+  carrier: string | null;
+}
+
 export interface ContentSource {
   /** The raw records, however the source holds them. */
   pull(): Promise<unknown[]>;
+  /** The whole export beside its records, for a source whose records arrive inside a document. */
+  pullExport?(): Promise<PulledExport>;
 }
 
 /**
@@ -265,9 +319,13 @@ export class HttpJsonSource implements ContentSource {
   ) {
     if (!/^https?:\/\//i.test(url)) throw new Error('source url must be http(s)');
   }
-  async pull(): Promise<unknown[]> {
+  async pullExport(): Promise<PulledExport> {
     const res = await this.fetchImpl(this.url, { headers: { Accept: 'application/json' } });
     if (!res.ok) throw new Error(`source responded ${res.status}`);
-    return recordsFromJson(JSON.parse(await readInputText(res.body)), this.path);
+    const document: unknown = JSON.parse(await readInputText(res.body));
+    return { document, ...recordsInJson(document, this.path) };
+  }
+  async pull(): Promise<unknown[]> {
+    return (await this.pullExport()).records;
   }
 }

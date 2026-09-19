@@ -35,6 +35,17 @@ export const PIECE_FIELDS: ReadonlySet<string> = new Set(['id', 'customerContent
   'featuredProductIds', 'inStock']);
 
 /**
+ * Every key `contentCatalog` below reads on the catalogue DOCUMENT itself: its
+ * `pieces` and its optional authored `version` label. The same rule as
+ * `PIECE_FIELDS`, one level up — a key beside these reaches no stored document,
+ * so a write answer names it rather than dropping it without a word (F27 §5.4).
+ * How a request CARRIES its catalogue (a body's `document`, a feed export's
+ * records key) is the envelope, not a field of the catalogue, and is listed by
+ * the path that reads it, never here.
+ */
+export const CATALOG_DOCUMENT_FIELDS: ReadonlySet<string> = new Set(['pieces', 'version']);
+
+/**
  * One offending value a refusal names, so a content team can find the row it
  * came from and not only read the accepted vocabulary back. Bounded and
  * printable, like every other authored value this document reports.
