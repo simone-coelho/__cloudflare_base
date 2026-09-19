@@ -983,6 +983,7 @@ export async function loadDay<T>(r2: R2Like, tenant: string, date: string, strea
 }
 
 export const reportKey = (tenant: string, brand: string, date: string) => `reports/${tenant}/${brand}/${date}.json`;
+export const reportPrefix = (tenant: string) => `reports/${tenant}/`;
 export const REPORT_CAP = REPORT_LIMITS.records;
 /** A Worker may open only so many storage objects in one request; past this many ledger objects a day is built by the nightly job, not on demand. */
 export const REPORT_MAX_OBJECTS = REPORT_LIMITS.objects;
@@ -1003,6 +1004,76 @@ export async function countDayObjects(r2: R2Like, tenant: string, date: string, 
     if (Number.isFinite(stopAfter) && cursor) cursors.add(cursor);
   } while (cursor);
   return n;
+}
+
+/**
+ * W22 R1.05 (document 35 §5 row W22, "durable online/R2/fold/export
+ * reconciliation"; F16 §4.4): what the day's export partition actually holds,
+ * beside what the platform published for the same day.
+ *
+ * `rows` is the physical count a warehouse job would load if it read every
+ * listed object line by line. `distinct` applies exactly the reader's own
+ * dedup — `ReportRowIdentity`, through `loadDay` — and then the erasures the
+ * listing already tells the consumer to apply, so it is the number the report
+ * counted from the same objects. `report` is the tenant's own saved day
+ * report(s) for that date, summed over the brands the tenant published, which
+ * is the scope this listing is at. `agrees` is false whenever the two cannot be
+ * shown to match, including when the day exceeded the read budget: it never
+ * claims agreement it did not observe.
+ *
+ * The comparison is over the ledger's own logical ids, which every exported row
+ * already carries; nothing here re-derives a record's provenance.
+ */
+export interface ExportReconciliation {
+  rows: { decisions: number; outcomes: number };
+  distinct: { decisions: number; outcomes: number };
+  report: { decisions: number; outcomes: number };
+  agrees: boolean;
+}
+/** Brands of one tenant this reconciliation will open a saved report for. */
+const RECONCILED_BRANDS = 64;
+
+export async function exportReconciliation(
+  r2: R2Like, tenant: string, date: string,
+  tombs: ReadonlyMap<string, Pick<import('@/ledger/erasure').Tombstone, 'erased_at'>>,
+): Promise<ExportReconciliation | null> {
+  try {
+    validateReportIds({ tenant, brand: tenant, date });
+    const d = await loadDay<DecisionRecord>(r2, tenant, date, 'decision', REPORT_CAP);
+    const o = await loadDay<OutcomeRecord>(r2, tenant, date, 'outcome', REPORT_CAP);
+    const repeats = (list?: DuplicateWitness[]) => (list ?? []).reduce((n, row) => n + row.count, 0);
+    const rows = { decisions: d.records.length + repeats(d.duplicates), outcomes: o.records.length + repeats(o.duplicates) };
+    const distinct = { decisions: withoutErased(d.records, tombs).length, outcomes: withoutErased(o.records, tombs).length };
+    const prefix = reportPrefix(tenant), suffix = `/${date}.json`;
+    const brands: string[] = [];
+    let cursor: string | undefined;
+    const cursors = new Set<string>();
+    do {
+      const page = await r2.list({ prefix, cursor, limit: 1000 });
+      for (const object of page.objects) {
+        if (!object.key.startsWith(prefix) || !object.key.endsWith(suffix)) continue;
+        const brand = object.key.slice(prefix.length, -suffix.length);
+        if (!brand || brand.includes('/') || brands.length >= RECONCILED_BRANDS) continue;
+        brands.push(brand);
+      }
+      if (page.truncated && (!page.cursor || cursors.has(page.cursor))) throw new ReportInputError();
+      cursor = page.truncated ? page.cursor : undefined;
+      if (cursor) cursors.add(cursor);
+    } while (cursor);
+    const budget: ReportReadBudget = { bytes: 0, cells: 0 };
+    const report = { decisions: 0, outcomes: 0 };
+    let published = false;
+    for (const brand of brands.sort()) {
+      const saved = await readWindowSummary(r2 as unknown as SavedReportReader, { tenant, brand, date }, budget);
+      if (!saved?.counts) continue;
+      published = true;
+      report.decisions += finite(saved.counts.decisions) ? saved.counts.decisions : 0;
+      report.outcomes += finite(saved.counts.outcomes) ? saved.counts.outcomes : 0;
+    }
+    const agrees = published && !d.truncated && !o.truncated
+      && distinct.decisions === report.decisions && distinct.outcomes === report.outcomes;
+    return { rows, distinct, report, agrees };
+  } catch { return null; }
 }
 
 export async function runReport(

@@ -30,7 +30,7 @@ import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
 import { pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
 import { replayDecision } from '@/learn/replay';
-import { readReportView, reportPayloadJson, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy } from '@/learn/report';
+import { exportReconciliation, readReportView, reportPayloadJson, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy } from '@/learn/report';
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
@@ -578,9 +578,18 @@ decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
     if (listed.truncated) { truncated = true; nextCursor = listed.cursor; break; }
   }
   c.header('Cache-Control', 'no-store');
+  // W22 R1.05: a single-date listing reconciles itself with the day the platform
+  // published — the rows the objects hold, the distinct rows after the reader's
+  // own dedup, and the saved report's own counts — so a warehouse loading the
+  // partition and an operator reading the report cannot disagree in silence.
+  // A window lists several days and a cursor lists part of one, so neither can
+  // state a whole day's reconciliation and neither carries the member.
+  const counts = windowed || cursor ? null
+    : await exportReconciliation(c.env.STORAGE as unknown as Parameters<typeof exportReconciliation>[0], tenant, date, tombs);
   // CW28: a warehouse job applies the pending erasures to what it loads; the nightly rewrite makes the objects themselves clean.
   return c.json({ ok: true, tenant, ...(windowed ? { from, to, days: dates.slice(0, listedDays) } : { date }),
     stream: stream ?? 'both', objects, truncated, ...(nextCursor ? { cursor: nextCursor } : {}),
+    ...(counts ? { counts } : {}),
     erasures: { pending: tombs.size, list: `/v1/${tenant}/ledger/erasures` } });
   });
 });
