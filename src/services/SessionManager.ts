@@ -379,10 +379,39 @@ export class SessionManager {
     }
     if (raw) {
       const consent = await currentOwnerConsent();
-      if (consent?.instruction && (consent.instruction.tenant !== this.tenant || consent.instruction.subject !== raw.userId)) throw new SessionAccessError();
+      if (consent?.instruction && !await this.instructionOwns(consent.instruction, raw)) throw new SessionAccessError();
       if (consent) withConsent(raw, consent);
     }
     return raw;
+  }
+
+  /**
+   * CW25. Whether an owner consent instruction is in scope for THIS record.
+   *
+   * A record is owned by its `userId`, and a person's record also by its
+   * `identity.shopperId`. A linked browser's record is a POINTER: it keeps the
+   * browser's own `userId`, while every read and write through it lands on the
+   * person it forwards to. Comparing the instruction's subject against `userId`
+   * alone therefore left no single subject that could reach both the browser's
+   * tombstone and the person, so a post-link write under the old cookie was
+   * refused whichever subject the owner held.
+   *
+   * One hop, the same hop `resolveRecord` follows, and the target's own
+   * forwarding is never followed. The tenant must still match, an unreadable or
+   * missing target refuses, and a subject that owns neither record is refused
+   * exactly as before.
+   */
+  private async instructionOwns(instruction: { tenant: string; subject: string }, raw: SessionData): Promise<boolean> {
+    if (instruction.tenant !== this.tenant) return false;
+    if (raw.userId === instruction.subject || raw.identity?.shopperId === instruction.subject) return true;
+    if (!raw.forwardTo) return false;
+    let target: SessionData;
+    try {
+      const stored = await this.kv.get(`session:${raw.forwardTo}`, 'json');
+      if (!stored) return false;
+      target = sessionDataSchema.parse(stored);
+    } catch { return false; }
+    return target.userId === instruction.subject || target.identity?.shopperId === instruction.subject;
   }
 
   /**

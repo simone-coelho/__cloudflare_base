@@ -452,9 +452,20 @@ export class RealtimeSegmentEngine {
         sessionData = { ...sessionData, preferences: { ...sessionData.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization } };
       }
       const answer = (update: PersonalizationUpdate | null) => ({ update, sessionId: currentSessionId, sessionData, consent });
+      // A refused or consent-less action is answered from its own necessary
+      // record and has no behavioral effect, so it never needs the tenant's
+      // configuration and is served whatever state that authority is in.
       if (!consent.tracking) return answer(null);
       requireConsentPurpose(consent, 'tracking');
       if (personalizes(consent)) requireConsentPurpose(consent, 'personalization');
+      // With tracking ON every step below is a behavioral effect, and each one is
+      // governed by THIS tenant's configured runtime. Resolve that authority first
+      // so an absent, invalid or unreadable configuration publication refuses
+      // before the retention birth, the pin and the scoring, rather than scoring
+      // against a compiled default. A demo scope keeps its compiled identity, so
+      // the demo surfaces are unchanged.
+      const surface = this.surfaceOf(event);
+      const reflexConfig = await resolveTenantReflexConfig(this.env, this.tenant, surface);
       if (!stored) {
         const born = Date.now();
         sessionData.retention = retentionBirth(this.env, this.tenant, 'profile', born, born);
@@ -465,10 +476,9 @@ export class RealtimeSegmentEngine {
       // refusal. This is not transactional authority across concurrent requests.
       const ownedSnapshot = this.principal ? { sessionId: currentSessionId, data: stored ? sessionData : null } : undefined;
       // Demo hints select a catalog only inside the default tenant. Customer
-      // event attributes remain governed by the tenant's authored Reflex config.
-      const surface = this.surfaceOf(event);
+      // event attributes remain governed by the tenant's authored Reflex config,
+      // resolved above before the first behavioral effect.
       const catalogService = await this.catalogFor(surface);
-      const reflexConfig = await resolveTenantReflexConfig(this.env, this.tenant, surface);
       const audiencePrefix = tenantAudienceKeyPrefix(this.tenant, surface);
       const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
       const contentEventTouches = reflexOn && isContentAction(actionOf(event))
