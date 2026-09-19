@@ -33,7 +33,11 @@
 //     per user based on the agreed dimensions, with weight configurability".
 //   · docs/architecture/18-content-affinity-engine.md:67 — the weighted affinity
 //     arithmetic: "score(item) = Σ_tag a[dim][tag] · w_tag".
-//   · docs/kit/03-payload-schemas.md:129 (`inStage` is a bonus, 0 to 1) and
+//   · docs/kit/03-payload-schemas.md:357 (the slot document: "`stage` is
+//     `{ outOfStage, inStage }`, a multiplier (0 to 1) on a piece made for
+//     another journey stage and a bonus (0 to 1) for one made for the
+//     shopper's"), :358-360 (freshness `weight × 2^(−age / halfLifeDays)`,
+//     fatigue `weight × min(served, cap) / cap`) and
 //     docs/architecture/22-outcome-learning-design.md:303 ("`outOfStage`
 //     multiplies a piece made for another stage (0 sorts it last), `inStage` is
 //     added to a piece made for this one").
@@ -59,6 +63,24 @@
 //       navigation and no `location.reload`, and the serving side reads the new
 //       slots revision within the documented 30-second serving cache, with no
 //       worker restart and no republication of anything else.
+//       MEASURED, and NOT proven by this batch: the serving-cache half. The
+//       serving path does ask for the bounded cache — `src/content/service.ts:325`
+//       is `pinPublication(env, scope, true)` and `:329` reads the SLOT document
+//       through that pin, on the public route `src/routes/decisions.ts:434`
+//       (calling the service at `:477`) — but it cannot hit it across requests: a
+//       shopper request crosses the owner boundary
+//       (`src/identity/sessionCapability.ts:281`), and inside it every binding is
+//       wrapped per invocation (`ownerEnvironment`,
+//       `src/identity/sessionAuthority.ts:568-596`), so `storageOf(env)`
+//       (`src/config/publication.ts:61-63`) yields a NEW object per request while
+//       the cache is keyed by that object (`:238`, `:246-262`).
+//       `ownerBindingIdentity` (`src/identity/sessionAuthority.ts:617`) exists
+//       for exactly this and is applied to `env.CACHE` and `env.LEARN_STATS`
+//       (`src/content/service.ts:76`, `src/reflex/regionTrend.ts:177`) but never
+//       to `env.STORAGE`. Serving therefore reads the committed slots revision on
+//       the FIRST request after the write, which is why every unit below asserts
+//       what is actually promised — the new revision, named, in force — and none
+//       of them turns on a cache window that no public path can cross today.
 //   (c) `outOfStage: 0` is a SCORE TERM, never an exclusion: later terms still
 //       apply and the piece stays eligible.
 //   (d) the customer walkthrough itself is live acceptance and is batched at the
@@ -525,7 +547,13 @@ interface ConsoleBrowser extends Record<string, unknown> {
 interface ConsoleHarness {
   w: ConsoleBrowser;
   requests: Array<{ method: string; path: string; body: string | undefined }>;
+  /** Every answer the mounted platform gave the screen, in order. */
+  answers: Array<{ method: string; path: string; status: number; body: Record<string, unknown> }>;
   puts: () => Array<{ path: string; document: SlotCatalog; note: string }>;
+  /** What the mounted platform answered the console's last slots PUT. */
+  lastSlotsPut: () => Record<string, unknown>;
+  /** The label the SHIPPED screen renders for a control, read from the rendered DOM. */
+  labelFor: (focusKey: string) => string;
   $: (id: string) => El;
   all: (sel: string) => El[];
   text: () => string;
@@ -542,13 +570,17 @@ async function openConsole(m: Mounted, hash = `#/rules?scope=${TENANT}&slot=hero
   const dom = new JSDOM(pub('console/index.html'), { url: `${OPERATOR_ORIGIN}/console/${hash}`, pretendToBeVisual: true, runScripts: 'outside-only' });
   const w = dom.window as unknown as ConsoleBrowser;
   const requests: Array<{ method: string; path: string; body: string | undefined }> = [];
+  const answers: Array<{ method: string; path: string; status: number; body: Record<string, unknown> }> = [];
   const intervals: Array<() => void> = [];
   w.fetch = async (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => {
     const target = new URL(url, `${OPERATOR_ORIGIN}/console/`);
-    requests.push({ method: (init?.method ?? 'GET').toUpperCase(), path: target.pathname + target.search, body: init?.body });
-    return m.fetch(new Request(OPERATOR_ORIGIN + target.pathname + target.search, {
+    const method = (init?.method ?? 'GET').toUpperCase(), path = target.pathname + target.search;
+    requests.push({ method, path, body: init?.body });
+    const response = await m.fetch(new Request(OPERATOR_ORIGIN + path, {
       method: init?.method ?? 'GET', headers: init?.headers ?? {}, ...(init?.body === undefined ? {} : { body: init.body }),
     }));
+    answers.push({ method, path, status: response.status, body: await response.clone().json().catch(() => ({})) as Record<string, unknown> });
+    return response;
   };
   w.TextEncoder = TextEncoder;
   w.setInterval = (callback: () => void) => { intervals.push(callback); return intervals.length; };
@@ -585,16 +617,32 @@ async function openConsole(m: Mounted, hash = `#/rules?scope=${TENANT}&slot=hero
   const save = async () => { await settleChecked(); $('save').click(); await settle(); await settle(); };
   const puts = () => requests.filter(r => r.method === 'PUT' && r.path.startsWith('/content/slots'))
     .map(r => { const parsed = JSON.parse(r.body ?? '{}') as { document: SlotCatalog; note?: string }; return { path: r.path, document: parsed.document, note: parsed.note ?? '' }; });
-  return { w, requests, puts, $, all, text, settle, settleChecked, goTo, input, toggleRule, save, close: () => w.close() };
+  const lastSlotsPut = () => {
+    const answer = answers.filter(a => a.method === 'PUT' && a.path.startsWith('/content/slots')).at(-1);
+    expect(answer, 'the console made a slots PUT the platform answered').toBeTruthy();
+    return answer!.body;
+  };
+  /**
+   * The words the SHIPPED screen puts on a control, taken from the rendered
+   * dial that owns the control's focus key (`trow`,
+   * public/console/views-config.js:40-58, renders `o.name` into `.name`).
+   * Never a literal in this file: a refusal has to name what the merchandiser
+   * is actually looking at, whatever the screen calls it today.
+   */
+  const labelFor = (focusKey: string): string => {
+    const dial = all('#view .dial').find(el => el.querySelector(`[data-focus-key="${focusKey}"]`));
+    expect(dial, `the shipped screen renders a control for ${focusKey}`).toBeTruthy();
+    const name = (dial!.querySelector('.name')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    expect(name.length, `the shipped screen names the control for ${focusKey} in words`).toBeGreaterThan(0);
+    return name;
+  };
+  return { w, requests, answers, puts, lastSlotsPut, labelFor, $, all, text, settle, settleChecked, goTo, input, toggleRule, save, close: () => w.close() };
 }
-
-/** The on-screen name of the control a merchandiser was editing when it was refused. */
-const IN_STAGE_LABEL = 'A piece for her stage gets a bonus of';
 
 // ===========================================================================
 // Pure-decision fixtures for the `logic` legs. Here the affinity is supplied,
 // so every expected number below is computed from the documented formulas
-// (doc 18:67, kit 03:129, doc 22:303) and never read off the engine.
+// (doc 18:67, kit 03:357-360, doc 22:303) and never read off the engine.
 // ===========================================================================
 
 const LOGIC_NOW = Date.parse('2026-09-19T12:00:00.000Z');
@@ -738,7 +786,25 @@ describe('unit:W18.O1.01', () => {
         .toEqual({ mode: 'rotation', share: 0.1, floor: 50 });
       await c.goTo(`#/rules?scope=${TENANT}&slot=hero`);
 
-      // The control. `inStage` is a bonus 0 to 1 (kit 03:129): 1.2 cannot be saved.
+      // The control. `inStage` is a bonus 0 to 1 (kit 03:357): 1.2 cannot be saved.
+      //
+      // F26 §2.2 recorded what a merchandiser is given today: "a raw
+      // developer-worded error naming a JSON path, and no way to save". The
+      // screen's own rule (`public/console/views-config.js:13-16`: "every
+      // symbol is named in words … because the person tuning this is a
+      // merchandiser") makes the refusal name the control the operator was
+      // editing, in the words the SHIPPED screen puts on that control, and the
+      // value it will not take. Both labels below are read from the rendered
+      // screen, never written here, and TWO different controls are refused in
+      // turn: a refusal sentence that names one control for every refusal is
+      // not a refusal a merchandiser can act on.
+      const banner = () => c.all('#view .msg.err').map(el => (el.textContent ?? '').replace(/\s+/g, ' ')).join(' ');
+      const stageLabel = c.labelFor('stage.in');
+      const registry = DEFAULT_REFLEX_CONFIG.dimensions.map(d => d.key);
+      const weightKey = `weight:${registry.indexOf('line')}`;
+      const weightLabel = c.labelFor(weightKey);
+      expect(weightLabel, 'the shipped screen names the weight row after its dimension').toContain('line');
+
       const putsBefore = c.puts().length;
       c.input('stage.in', '1.2');
       await c.settleChecked();
@@ -747,16 +813,22 @@ describe('unit:W18.O1.01', () => {
       await c.settle();
       expect(c.puts(), 'a refused draft sends no PUT at all').toHaveLength(putsBefore);
       expect(c.text(), 'the refusal is on the screen').toContain('This change cannot be saved');
-      // F26 §2.2 recorded what a merchandiser is given today: "a raw
-      // developer-worded error naming a JSON path". The screen's own rule
-      // (`public/console/views-config.js:13-16`: "every symbol is named in
-      // words … because the person tuning this is a merchandiser") makes the
-      // refusal name the control the operator was editing, in the words the
-      // screen uses for that control, and the value it will not take.
-      const refusal = c.all('#view .msg.err').map(el => (el.textContent ?? '').replace(/\s+/g, ' ')).join(' ');
-      expect(refusal, 'the refusal banner exists').toContain('This change cannot be saved');
-      expect(refusal, `the refusal names the control the merchandiser was editing, in the screen's own words for it ("${IN_STAGE_LABEL}")`).toContain(IN_STAGE_LABEL);
-      expect(refusal, 'and the value it will not take').toContain('1.2');
+      expect(banner(), 'the refusal banner exists').toContain('This change cannot be saved');
+      expect(banner(), `the refusal names the control the merchandiser was editing, in the screen's own words for it ("${stageLabel}")`).toContain(stageLabel);
+      expect(banner(), 'and the value it will not take').toContain('1.2');
+
+      // A different control, refused on the same screen: a weight outside 0..1.
+      c.input('stage.in', '0.2');
+      await c.settleChecked();
+      c.input(weightKey, '1.01');
+      await c.settleChecked();
+      expect(c.$('save').disabled, 'the second refused draft disables the save too').toBe(true);
+      c.$('save').click();
+      await c.settle();
+      expect(c.puts(), 'and sends no PUT either').toHaveLength(putsBefore);
+      expect(banner(), `the second refusal names ITS own control in the screen's words ("${weightLabel}")`).toContain(weightLabel);
+      expect(banner(), 'and the value that control will not take').toContain('1.01');
+      expect(banner(), `a refusal about the ${weightLabel} row does not name the ${stageLabel} row: the sentence is about what was refused`).not.toContain(stageLabel);
     } finally { c.close(); }
   }, 60_000);
 });
@@ -819,7 +891,7 @@ describe('unit:W18.O1.02', () => {
     const live = authorable({ slot: 'hero', take: 2, weights: { line: 0.5, occasion: 0.25 }, stage: { outOfStage: 0.5, inStage: 0.2 } });
     const withLive = decideContent(decisionFor([live], pieces));
     expect(withLive.records.find(r => r.item_id === 'made-for-her-stage')!.explain.stage!.applied,
-      'the same form, switched on, adds the bonus it promises (kit 03:129: inStage is added)').toBe(0.2);
+      'the same form, switched on, adds the bonus it promises (kit 03:357: a bonus 0 to 1)').toBe(0.2);
   });
 });
 
@@ -906,8 +978,15 @@ describe('unit:W18.O2.01', () => {
       // The feedback a business user needs: what was saved AND what is now
       // serving. The reflex save already gives both words
       // (`public/console/views-config.js:137`); the slots save must reach parity.
-      const publishedVersion = (stored.document as unknown as { version?: string }).version ?? '';
-      expect(publishedVersion.length, 'the platform stamped a published version on the saved document').toBeGreaterThan(0);
+      // The version the PLATFORM answered this very PUT with, taken from the
+      // answer the console itself received (src/routes/content.ts:286), so a
+      // label the screen re-derives for itself cannot satisfy this.
+      const answer = c.lastSlotsPut();
+      const publishedVersion = String(answer.version ?? '');
+      expect(publishedVersion.length, 'the PUT answer carries the published version').toBeGreaterThan(0);
+      expect(answer.publication, 'and the publication identity the serving side reads')
+        .toMatchObject({ digest: expect.stringMatching(/^[0-9a-f]{64}$/) as unknown as string });
+      expect(answer.revision, 'for the revision the console just created').toBe(stored.revision);
       const feedback = c.text();
       expect(feedback, 'the save feedback names the revision the platform created').toContain(`revision ${stored.revision}`);
       expect(feedback, `the save feedback names the published version the serving side will read (${publishedVersion})`).toContain(`Published as ${publishedVersion}`);
@@ -1035,18 +1114,20 @@ describe('unit:W18.O3.01', () => {
         const newRevision = saved.body.revision as number;
         expect(newRevision).toBe(loaded.revision + 1);
 
-        // Inside the window a serving read may still hold the committed set it
-        // pinned; whatever revision it names, the ranking is that revision's
-        // (kit 02:364, "one serving operation pins the same committed set").
+        // The worker that took the change serves it at once: "All configuration
+        // administration bypasses the serving cache … mutation and recovery
+        // invalidate in-flight admissions" (kit 02:364). So this worker's next
+        // serving read already names the new revision and serves its order —
+        // no window to wait out, and nothing incoherent in between.
         clockValue.now += 1_000;
         const inside = await shopper.snapshot();
         expect(inside.status).toBe(200);
-        expect([loaded.revision, newRevision], `${host}: a serving read names a committed slots revision`).toContain(inside.versions.slots);
-        expect(inside.ranking.hero, `${host}: the order served is the order the revision it names produces`)
-          .toEqual(inside.versions.slots === newRevision ? ORDER_B : ORDER_A);
+        expect(inside.versions.slots, `${host}: the worker that took the write serves the revision it wrote`).toBe(newRevision);
+        expect(inside.ranking.hero, `${host}: and the order that revision's weights produce`).toEqual(ORDER_B);
 
-        // After the documented window, with no worker restart and nothing else
-        // republished, the change is in force.
+        // Past the documented window too (an upper bound, not a delay: see the
+        // serving-cache note in the header), with no worker restart and nothing
+        // else republished, the change is in force.
         clockValue.now += PUBLICATION_CACHE_MS + 1_000;
         const after = await shopper.snapshot();
         expect(after.status).toBe(200);
@@ -1116,7 +1197,6 @@ describe('unit:W18.O3.02', () => {
         // The page's own renderer: it paints what the slot subscriber hands it,
         // and its default markup when there is nothing.
         const heroElement = win.document.getElementById('hero')!;
-        const documentBefore = win.document;
         const mastheadBefore = win.document.getElementById('masthead')!.innerHTML;
         const paints: string[][] = [];
         listen.subscribe('hero', list => {
@@ -1141,6 +1221,9 @@ describe('unit:W18.O3.02', () => {
         expect(firstSet?.decisions.length ?? 0, 'the supported coalesced refresh delivered a set').toBeGreaterThan(0);
         const painted = () => Array.from(heroElement.querySelectorAll('article')).map(a => a.getAttribute('data-cms') ?? '');
         expect(painted(), 'the page paints order A').toEqual(ORDER_A.map(id => `CMS-${id.replace('hero-', '').toUpperCase()}`));
+        // Who the page is, at the moment order A is on the screen.
+        const identityBefore = { visitorId: core.visitorId, sessionId: core.sessionId, bootstraps: traffic.filter(t => t.url.endsWith('/identity/session')).length };
+        expect(identityBefore.bootstraps, 'one identity bootstrap so far').toBe(1);
 
         // The business user changes one weight, through the console's own PUT.
         const loaded = await loadSlots(m);
@@ -1156,13 +1239,16 @@ describe('unit:W18.O3.02', () => {
         expect(secondSet?.decisions.length ?? 0, 'the refresh delivered the new set').toBeGreaterThan(0);
         expect(painted(), 'the same slot on the same page now paints order B')
           .toEqual(ORDER_B.map(id => `CMS-${id.replace('hero-', '').toUpperCase()}`));
-        // No reload and no navigation: `location.reload` is non-configurable in
-        // jsdom, so the claim is carried by what a reload or a navigation would
-        // necessarily destroy — the document, the very DOM node the first paint
-        // wrote into, and the URL.
+        // No reload and no re-bootstrap. `location.reload` is non-configurable in
+        // jsdom, so the claim is carried by what a reload would necessarily
+        // destroy: the very DOM node the first paint wrote into, and the
+        // client's own identity — a reloaded page mints a new client, which
+        // bootstraps a session again (src/sdk/core.ts:640-660).
         expect(win.document.getElementById('hero'), 'the repaint went into the same live node the first paint used').toBe(heroElement);
-        expect(win.document, 'the document was never replaced').toBe(documentBefore);
-        expect(win.location.href, 'and the page never navigated').toBe('https://shop.coach.test/home');
+        expect(core.visitorId, 'the same client instance, still naming the same shopper').toBe(identityBefore.visitorId);
+        expect(core.sessionId, 'in the same browsing session').toBe(identityBefore.sessionId);
+        expect(traffic.filter(t => t.url.endsWith('/identity/session')).length,
+          'the page never bootstrapped a second session across the repaint: a reload would').toBe(identityBefore.bootstraps);
         expect(win.document.getElementById('masthead')!.innerHTML, 'nothing else on the page was repainted').toBe(mastheadBefore);
         expect(paints.length, 'the slot repainted for the change, on one client instance').toBeGreaterThanOrEqual(2);
         expect(secondSet!.versions?.slots, 'the set the page is holding names the revision the business user created').toBe(newRevision);
@@ -1289,7 +1375,7 @@ describe('unit:W18.O4.02', () => {
     // season 0.4 at weight 0.5 → ×1.2 → 1.14; the seed's 0.1 became 0.12 after
     // that multiplier, which is what the receipt records.
     const served = result.records.find(r => r.item_id === inside.id)!;
-    expect(served.explain.stage!.applied, 'inStage is ADDED, never multiplied (kit 03:129, doc 22:303)').toBe(0.2);
+    expect(served.explain.stage!.applied, 'inStage is ADDED, never multiplied (kit 03:357, doc 22:303)').toBe(0.2);
     expect(served.explain.freshness!.applied).toBe(0.15);
     expect(served.explain.fatigue, 'a piece she has not been served carries no fatigue term').toBeUndefined();
     expect(served.explain.score_base).toBe(0.95);
