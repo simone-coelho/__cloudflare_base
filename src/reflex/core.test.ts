@@ -23,7 +23,19 @@ import {
   type ReflexState,
 } from './core';
 
-const CFG: ReflexConfig = DEFAULT_REFLEX_CONFIG; // τ=60s · K=1.8 · θ 0.6/0.45
+// R10 update, witness R42 (2026-09-19): the golden timeline is the 60-second
+// demo script; the shipped default is the days/weeks memory horizon (R42). The
+// cadence these tests replay is therefore stated here, in the file that scripts
+// it, instead of being read off `DEFAULT_REFLEX_CONFIG.tauMs` — the demo τ (60s
+// product interest) and the demo's slower price-posture τ (150s, which beat 3
+// needs to outlast product interest and beat 4 measures 12× of). Every other
+// tuning value still comes from the shipped default, so a retune of K or the
+// thresholds still reaches this suite.
+const CFG: ReflexConfig = {
+  ...DEFAULT_REFLEX_CONFIG,
+  tauMs: 60_000,
+  dimensions: DEFAULT_REFLEX_CONFIG.dimensions.map((d) => (d.key === 'priceBand' ? { ...d, tauMs: 150_000 } : d)),
+}; // τ=60s · K=1.8 · θ 0.6/0.45
 
 // Product fixtures (ProductLike — the core is catalog-agnostic).
 const TABBY = {

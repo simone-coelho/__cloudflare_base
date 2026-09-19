@@ -22,6 +22,13 @@ export interface Receipt {
   authority: string;
   /** The shopper's context as words: channel, visit, stage, region, the leading interest. */
   context: string;
+  /**
+   * W16 C4: the journey stage this decision was made in and the published
+   * threshold version that derived it, exactly as the record carries them.
+   * Absent when the record carries none, so no receipt claims a stage the
+   * counters it decided on do not support.
+   */
+  journey?: DecisionRecord['journey'];
   score_base: number;
   score_final: number;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
@@ -88,6 +95,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     item: r.item_id, customer_item_id: nm?.customerContentId ?? r.customer_item_id ?? null, title: nm?.title ?? null,
     arm: r.arm, explored: r.explored, authority: r.authority,
     context: contextOf(r.cell),
+    ...(r.journey ? { journey: r.journey } : {}),
     score_base: r3(e.score_base), score_final: r3(e.score_final),
     why,
   };

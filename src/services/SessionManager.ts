@@ -1,7 +1,7 @@
 import type { Env } from '@/types/env';
 import { importUnderOwner, ownerOperationActive, sessionAuthorityKV, currentOwnerConsent, restrictOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { mergeOdpState, projectOdpState, projectedOdpSegments } from './odpLoop';
-import { deriveStage } from './JourneyStage';
+import { deriveStage, type VisitJourney } from './JourneyStage';
 import { tick, type ReflexChanges, type ReflexConfig, type ReflexState, type Touch } from '@/reflex/core';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { z } from 'zod';
@@ -55,6 +55,13 @@ export interface SessionData {
    * ODP vuid and the identity anchor would flap between devices.
    */
   identity?: { shopperId: string; linkedAt: number };
+  /**
+   * W16 C4: the counters of the CURRENT VISIT the journey stage is derived
+   * from. Deliberately not in `metadata` and deliberately not in `attributes`:
+   * `attributes` are the shopper's cumulative retail signals and survive a
+   * visit, while these are the visit's own and start again in the next one.
+   */
+  journey?: VisitJourney;
   metadata: {
     firstSeen: number;
     lastSeen: number;
@@ -129,6 +136,15 @@ export const sessionDataSchema = z.object({
   // CW25. Declared or .parse() silently STRIPS them, same trap as reflex.
   forwardTo: z.string().optional(),
   identity: z.object({ shopperId: z.string(), linkedAt: z.number() }).optional(),
+  // W16 C4: the visit-local journey counters. Declared or .parse() strips them,
+  // and .catch keeps a record written before this field from failing the parse.
+  journey: z.object({
+    counters: z.object({
+      interactions: z.number(), product_views: z.number(), purchases: z.number(),
+      cart_adds: z.number(), wishlist_adds: z.number(), category_dwell_ms: z.number(),
+    }),
+    closed: z.boolean().optional(),
+  }).optional().catch(undefined),
   metadata: z.object({
     firstSeen: z.number(),
     lastSeen: z.number(),
@@ -279,6 +295,7 @@ export class SessionManager {
         odpSeedAt: data.odpSeedAt ?? existingSession?.odpSeedAt,
         odpRecentEvents: data.odpRecentEvents ?? existingSession?.odpRecentEvents,
         identity: data.identity ?? existingSession?.identity,
+        journey: data.journey ?? existingSession?.journey,
         metadata: {
           firstSeen: existingSession?.metadata.firstSeen || now,
           lastSeen: observedLive ? now : existingSession?.metadata.lastSeen ?? now,
