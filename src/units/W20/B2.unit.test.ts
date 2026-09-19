@@ -140,7 +140,7 @@ import { shopperObjectName } from '@/tenancy/objects';
 import { storedConsent } from '@/content/consent';
 import { configuredDestinations } from '@/connectors/config';
 import type { Env } from '@/types/env';
-import type { RetentionCategory, RetentionPolicy } from '@/retention';
+import { RETENTION_CATEGORIES, type RetentionCategory, type RetentionPolicy } from '@/retention';
 
 // ===========================================================================
 // The customer's fixture: Coach's own dimensions and values
@@ -269,8 +269,16 @@ class UnitR2 {
 }
 
 const fixtureRetentionPolicy: RetentionPolicy = { id: 'w20-b2-fixture-policy', revision: 1, durationMs: 365 * DAY_MS, basis: 'admitted', renewal: 'new-record-only' };
+/**
+ * EVERY retention category the platform names (`RETENTION_CATEGORIES`,
+ * src/retention.ts:5), not a hand-picked subset: the durable admission of a
+ * rendered decision commits under `recovery` and `quarantine` as well as the
+ * five a plain page load needs, and a tenant with no policy for one of them
+ * refuses the acknowledgement. The merged SDK-contract fixture adds the same two
+ * (`src/routes/realtime.sdkContract.test.ts:297-299`).
+ */
 const fixtureCategories = (tenants: string[]) => Object.fromEntries(tenants.map(tenant => [tenant,
-  Object.fromEntries(['profile', 'identity', 'ledger', 'online', 'hourly'].map(category => [category, fixtureRetentionPolicy])) as Record<RetentionCategory, RetentionPolicy>]));
+  Object.fromEntries(RETENTION_CATEGORIES.map(category => [category, fixtureRetentionPolicy])) as Record<RetentionCategory, RetentionPolicy>]));
 
 const OPERATOR_SECRET = 'w20-b2-synthetic-operator-signing-material';
 const OPERATOR_ORIGIN = 'http://console.test';
@@ -284,7 +292,16 @@ interface Mounted {
   configureRetention: () => Promise<void>;
 }
 
-async function mount(host: 'session' | 'do' = 'session'): Promise<Mounted> {
+/**
+ * `renderAdmission` binds `LEDGER_RECOVERY_ENABLED`, which the durable admission
+ * of a RENDERED decision requires: without it the impression that redeems a
+ * render offer is refused with "Recovery admission disabled"
+ * (`src/routes/realtime.ts`, the recovery path). The merged SDK-contract fixture
+ * sets exactly this before acknowledging a render
+ * (`src/routes/realtime.sdkContract.test.ts:296`). Only the unit that renders
+ * asks for it, so no other unit's capture path is perturbed.
+ */
+async function mount(host: 'session' | 'do' = 'session', options: { renderAdmission?: boolean } = {}): Promise<Mounted> {
   invalidateCache(); invalidateLiftCache(); invalidatePublicationCache();
   const cache = new UnitKV(), sessions = new UnitKV();
   const pending: Promise<unknown>[] = [];
@@ -297,6 +314,7 @@ async function mount(host: 'session' | 'do' = 'session'): Promise<Mounted> {
     PERSONALIZATION_WEBSOCKET: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
     DB: { prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }) },
     EVENT_QUEUE: { send: async () => undefined },
+    ...(options.renderAdmission ? { LEDGER_RECOVERY_ENABLED: 'true' } : {}),
   } as unknown as Env;
   let automaticRetention = JSON.stringify({ version: 1, tenants: fixtureCategories([TENANT]) });
   env.RETENTION = automaticRetention;
@@ -474,7 +492,7 @@ interface Shopper {
    */
   renderedPage: () => Promise<{ status: number; pageInstance: string; decisions: ServedDecision[] }>;
   /** The impression the SDK sends back, which is what captures the decision record. */
-  acknowledge: (pageInstance: string, decision: ServedDecision, position: number) => Promise<number>;
+  acknowledge: (pageInstance: string, decision: ServedDecision, position: number) => Promise<{ status: number; text: string }>;
 }
 
 async function shopperOn(m: Mounted): Promise<Shopper> {
@@ -528,8 +546,9 @@ async function shopperOn(m: Mounted): Promise<Shopper> {
       data: { contentId: decision.contentId, decisionId: decision.decisionId, renderOffer: decision.renderOffer,
         page: 'home', pageInstance, slot: decision.slot, position },
     });
+    const text = await response.clone().text().catch(() => '');
     await m.drain();
-    return response.status;
+    return { status: response.status, text };
   };
   return { visitorId: grant.subject, action, snapshot, renderedPage, acknowledge };
 }
@@ -693,7 +712,7 @@ describe('unit:W20.G2.03', () => {
       // acknowledgement is what captures the decision record and fills the
       // shopper's ring — the path a receipt exists on at all
       // (`src/content/service.ts:456-472`, `src/routes/realtime.ts:178-183`).
-      const m = await mount('do');
+      const m = await mount('do', { renderAdmission: true });
       await publishFixture(m, SHORT_TAKE_PAGE, { learnSlots: { promo: { measurementBasis: 'rendered-v1' } } });
       const shopper = await shopperOn(m);
       clock.set(T0 + 60_000);
@@ -710,8 +729,9 @@ describe('unit:W20.G2.03', () => {
         // get an impression accepted before there is any receipt to judge. If
         // this line is what fails, the batch has a harness gap, NOT the product
         // gap this unit is about — see the unit's row in units.json.
-        expect(await shopper.acknowledge(page.pageInstance, decision, position),
-          `PRECONDITION: the browser's acknowledgement of position ${position} must be accepted before a receipt exists to carry the shortfall`).toBe(200);
+        const ack = await shopper.acknowledge(page.pageInstance, decision, position);
+        expect(ack.status,
+          `PRECONDITION: the browser's acknowledgement of position ${position} must be accepted before a receipt exists to carry the shortfall \u2014 ${ack.text.slice(0, 400)}`).toBe(200);
       }
       await m.drain();
 
@@ -743,14 +763,14 @@ describe('unit:W20.G2.03', () => {
       // The other half of R86(c): a refused slot writes no record, so it has no
       // receipt, and the operator signal of W20.G2.01 is its only home. Driven
       // the same way, so the comparison is like for like.
-      const dead = await mount('do');
+      const dead = await mount('do', { renderAdmission: true });
       await publishFixture(dead, DEAD_PIN_PAGE, { learnSlots: { feature: { measurementBasis: 'rendered-v1' }, story: { measurementBasis: 'rendered-v1' } } });
       const deadShopper = await shopperOn(dead);
       clock.set(T0 + 120_000);
       const deadPage = await deadShopper.renderedPage();
       expect(deadPage.decisions.map(d => `${d.slot}:${d.contentId}`), 'the refused band serves nothing').toEqual(DEAD_PIN_SERVED);
       for (const [position, decision] of deadPage.decisions.entries()) {
-        expect(await deadShopper.acknowledge(deadPage.pageInstance, decision, position),
+        expect((await deadShopper.acknowledge(deadPage.pageInstance, decision, position)).status,
           'the browser acknowledges what it actually painted').toBe(200);
       }
       await dead.drain();
