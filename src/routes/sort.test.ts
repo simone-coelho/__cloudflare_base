@@ -5,8 +5,8 @@
 // refusals.
 
 import { describe, it, expect, vi } from 'vitest';
-import { sortRoutes } from '@/routes/sort';
-import { newAnonymousSession, SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { affinityFor, sortRoutes } from '@/routes/sort';
+import { newAnonymousSession, requireShopper, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import type { Env } from '@/types/env';
 import { Hono } from 'hono';
 import realtimeRoutes from './realtime';
@@ -14,7 +14,7 @@ import { searchRoutes } from './search';
 import { tenantMiddleware } from '@/tenancy/middleware';
 import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import { shopperObjectName } from '@/tenancy/objects';
-import { storedConsent } from '@/content/consent';
+import { chooseConsent, CONSENTING, storedConsent } from '@/content/consent';
 import { initializePublication, invalidatePublicationCache } from '@/config/publication';
 import { DEFAULT_REFLEX_CONFIG, type ReflexConfig } from '@/reflex/core';
 import { invalidateConfigCache, reflexScopeForTenant, REFLEX_KIND } from '@/reflex/configStore';
@@ -73,13 +73,98 @@ const FEED = [
   { id: 'P3', line: 'Tabby', price_usd: 350 },
 ];
 
-async function post(body: unknown, e = env()) {
+/**
+ * POST /sort is owner-dispatched: requireShopper verifies the capability and
+ * forwards the request to the shopper's own object, and ownedRequestPath only
+ * recognizes the mounted path `/sort` (src/identity/sessionCapability.ts:141-176;
+ * src/identity/sessionAuthority.ts:478-490, :525-537). So the fixture mounts the
+ * real app and binds a real ShopperReflex namespace; `snapshot` may still answer
+ * the object's own projection read for the cases that probe it.
+ */
+function sortHost(overrides: Record<string, unknown> = {}, snapshot?: (url: string, init?: RequestInit) => Response) {
+  const asked: Array<{ url: string; headers: Headers }> = [];
+  const names: string[] = [];
+  const pending: Promise<unknown>[] = [];
+  const policy = { id: 'explicit-sort-route-fixture', revision: 1, durationMs: 365 * 86400_000, basis: 'admitted', renewal: 'new-record-only' };
+  const e = env({
+    STORAGE: new SortR2(), DEPLOYMENT_PROFILE: 'demo', LEDGER_RECOVERY_ENABLED: 'true',
+    TENANTS: JSON.stringify({ provisioned: ['coach'] }),
+    // A first record needs the retention registry (src/retention.ts:39, :72-89).
+    RETENTION: JSON.stringify({ version: 1, tenants: { coach: Object.fromEntries(['profile', 'identity', 'ledger', 'online', 'hourly', 'recovery', 'quarantine'].map((category) => [category, policy])) } }),
+    PERSONALIZATION_WEBSOCKET: { idFromName: (name: string) => name, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
+    ...overrides,
+  }) as unknown as Env;
+  const objects = new Map<string, { data: Map<string, unknown>; shopper: ShopperReflex }>();
+  if (!('SHOPPER_REFLEX' in overrides)) e.SHOPPER_REFLEX = { idFromName: (name: string) => { names.push(name); return name; }, get: (name: string) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input instanceof Request ? input.url : input));
+    if (url.pathname !== '/authority/request') { asked.push({ url: String(input), headers: new Headers(init?.headers) }); if (snapshot) return snapshot(String(input), init); }
+    let item = objects.get(name);
+    if (!item) {
+      const data = new Map<string, unknown>();
+      let alarm: number | null = null;
+      const storage = {
+        get: async (key: string | string[]) => structuredClone(Array.isArray(key) ? new Map(key.map(k => [k, data.get(k)])) : data.get(key)),
+        put: async (key: string | Record<string, unknown>, value?: unknown) => { if (typeof key === 'string') data.set(key, structuredClone(value)); else for (const [k, v] of Object.entries(key)) data.set(k, structuredClone(v)); },
+        delete: async (key: string | string[]) => { const list = typeof key === 'string' ? [key] : key; for (const k of list) data.delete(k); return list.length; },
+        deleteAll: async () => data.clear(),
+        list: async (options?: { prefix?: string; startAfter?: string; limit?: number; reverse?: boolean }) => structuredClone(new Map([...data]
+          .filter(([key]) => key.startsWith(options?.prefix ?? '') && (!options?.startAfter || key > options.startAfter))
+          .sort(([a], [b]) => (options?.reverse ? -1 : 1) * a.localeCompare(b)).slice(0, options?.limit))),
+        getAlarm: async () => alarm, setAlarm: async (at: number) => { alarm = at; }, deleteAlarm: async () => { alarm = null; },
+        transaction: async (run: (tx: DurableObjectTransaction) => Promise<unknown>) => {
+          const candidate = structuredClone(data);
+          const result = await run({ list: async () => structuredClone(candidate), get: async (key: string) => structuredClone(candidate.get(key)),
+            delete: async (keys: string | string[]) => { const list = typeof keys === 'string' ? [keys] : keys; for (const key of list) candidate.delete(key); return list.length; },
+            put: async (values: string | Record<string, unknown>, value?: unknown) => { if (typeof values === 'string') candidate.set(values, structuredClone(value)); else for (const [key, item] of Object.entries(values)) candidate.set(key, structuredClone(item)); },
+            deleteAlarm: async () => { alarm = null; }, setAlarm: async (at: number) => { alarm = at; } } as unknown as DurableObjectTransaction);
+          data.clear(); for (const [key, value] of candidate) data.set(key, value); return result;
+        },
+      };
+      const state = { id: name, storage, getWebSockets: () => [], waitUntil: (promise: Promise<unknown>) => pending.push(promise) } as unknown as DurableObjectState;
+      item = { data, shopper: new ShopperReflex(state, e) };
+      objects.set(name, item);
+    }
+    return item.shopper.fetch(new Request(input, init));
+  } }) } as unknown as DurableObjectNamespace;
+  const app = new Hono<{ Bindings: Env }>();
+  // The mounted app as src/index.ts serves it: the shopper's own doors live
+  // under /realtime, which is where an owned consent choice is made.
+  app.use('*', tenantMiddleware()); app.route('/sort', sortRoutes); app.route('/realtime', realtimeRoutes);
+  return { env: e, app, asked, names, objects, pending };
+}
+
+/**
+ * RETAINED probe driver for the two cases that inject the object's own snapshot
+ * projection. On the real owner path the object serves its own projection:
+ * dispatchOwnedRequest rewires SHOPPER_REFLEX.get(this object) to a local fetch
+ * (src/identity/sessionAuthority.ts:616-626), so a namespace-level double is
+ * unreachable and those two cases still drive the sub-router directly.
+ */
+async function postDirect(body: unknown, e: Record<string, unknown>) {
   const session = await newAnonymousSession(e as unknown as Env, 'coach');
   const input = body as { userId?: string };
   const target = input.userId && !input.userId.startsWith('t:') ? { ...input, userId: session.subject } : input;
   const res = await sortRoutes.request('/', {
     method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: session.capability }, body: JSON.stringify(target),
   }, e);
+  return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+}
+
+async function post(body: unknown, host = sortHost()) {
+  // Configuration publication is the only configuration authority
+  // (src/config/publication.ts:19, :150-152, :204-206). Explicit authored
+  // baseline, never a KV fallback.
+  invalidatePublicationCache();
+  if (!(host.env.STORAGE as unknown as SortR2).store.has('config-publication/v2/coach/head.json')) {
+    await initializePublication(host.env, REFLEX_KIND, reflexScopeForTenant('coach'),
+      { revision: 1, value: DEFAULT_REFLEX_CONFIG, actor: 'synthetic-fixture', note: '', at: 1 }, '0:' + crypto.randomUUID());
+  }
+  const session = await newAnonymousSession(host.env, 'coach');
+  const input = body as { userId?: string };
+  const target = input.userId && !input.userId.startsWith('t:') ? { ...input, userId: session.subject } : input;
+  const res = await host.app.request('https://sort.invalid/sort', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: session.capability }, body: JSON.stringify(target),
+  }, host.env);
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
 }
 
@@ -109,16 +194,112 @@ describe('POST /sort', () => {
     }
   });
 
-  it('W05.03 validates the DO consent envelope before returning a ranked receipt', async () => {
-    for (const reply of [
-      { status: 503, body: { ok: false } }, { status: 200, body: { ok: false } },
-      { status: 200, body: { ok: true } }, { status: 200, body: { ok: true, consent: null } },
-      { status: 200, body: { ok: true, consent: {} } }, { status: 200, body: { ok: true, consent: { tracking: 'false', personalization: true } } },
-    ]) {
-      const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json(reply.body, { status: reply.status }) }) } });
-      const out = await post({ userId: 'v', candidates: FEED }, e);
-      expect(out.status).toBeGreaterThanOrEqual(400); expect(out.body).not.toHaveProperty('items'); expect(out.body).not.toHaveProperty('order');
+  /**
+   * unit:W05.BASE.05 — the sort route validates the Durable Object consent
+   * envelope before it returns a ranked receipt: a reply that is not ok, or that
+   * carries no consent, or a consent that is not two real booleans, refuses the
+   * request; and a real object whose stored choice is absent or refuses never
+   * contributes a vector to the receipt (src/routes/sort.ts:79-88;
+   * src/content/consent.ts:139-152, :176).
+   */
+  describe('unit:W05.BASE.05 the sort route validates the Durable Object consent envelope before returning a ranked receipt', () => {
+    /** A raw request the real requireShopper has admitted, so the exported
+     * validator runs with a genuine owned principal, as the route gives it. */
+    async function ownedRequest(e: Record<string, unknown>) {
+      const session = await newAnonymousSession(e as unknown as Env, 'coach');
+      let raw: Request | undefined;
+      const app = new Hono<{ Bindings: Env }>();
+      app.use('*', tenantMiddleware());
+      app.get('/sort', requireShopper({ forward: false }), (c) => { raw = c.req.raw; return c.json({ ok: true }); });
+      const answer = await app.request('https://sort.invalid/sort', { headers: { [SHOPPER_HEADER]: session.capability } }, e);
+      expect(answer.status).toBe(200);
+      return { raw: raw!, subject: session.subject, session };
     }
+
+    it('logic: every malformed envelope the object could answer is refused before a receipt', async () => {
+      // Each case stands on a published configuration, so the only thing that can
+      // refuse is the envelope itself: the refusal is named, never a bare throw.
+      for (const reply of [
+        { status: 503, body: { ok: false }, error: 'Shopper session unavailable' },
+        { status: 200, body: { ok: false }, error: 'Sort consent unavailable' },
+        { status: 200, body: { ok: true }, error: 'Sort consent unavailable' },
+        { status: 200, body: { ok: true, consent: null }, error: 'Consent state unavailable' },
+        { status: 200, body: { ok: true, consent: {} }, error: 'Consent state unavailable' },
+        { status: 200, body: { ok: true, consent: { tracking: 'false', personalization: true } }, error: 'Consent state unavailable' },
+      ]) {
+        const e = env({ REFLEX_HOST: 'do', STORAGE: new SortR2(), SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json(reply.body, { status: reply.status }) }) } });
+        invalidatePublicationCache();
+        await initializePublication(e as unknown as Env, REFLEX_KIND, reflexScopeForTenant('coach'),
+          { revision: 1, value: DEFAULT_REFLEX_CONFIG, actor: 'synthetic-fixture', note: '', at: 1 }, '0:' + crypto.randomUUID());
+        const owned = await ownedRequest(e);
+        const context = { env: e as unknown as Env, get: () => 'coach', req: { raw: owned.raw, header: (name: string) => owned.raw.headers.get(name) ?? undefined } };
+        await expect(affinityFor(context, owned.subject, undefined, { ...CONSENTING })).rejects.toThrow(reply.error);
+      }
+      // Positive control: the envelope a real object answers — an explicit
+      // stored choice, built by the product's own constructor
+      // (src/content/consent.ts:92-113) — is accepted and yields its vector.
+      const answered: { consent?: unknown } = {};
+      invalidatePublicationCache();
+      const valid = env({ REFLEX_HOST: 'do', STORAGE: new SortR2(), SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async () =>
+        Response.json({ ok: true, consent: answered.consent, affinity: { dims: { line: { Tabby: 0.8 } } } }) }) } });
+      await initializePublication(valid as unknown as Env, REFLEX_KIND, reflexScopeForTenant('coach'),
+        { revision: 1, value: DEFAULT_REFLEX_CONFIG, actor: 'synthetic-fixture', note: '', at: 1 }, '0:' + crypto.randomUUID());
+      const owned = await ownedRequest(valid);
+      answered.consent = chooseConsent(undefined, { tracking: true, personalization: true },
+        { id: crypto.randomUUID(), expectedRevision: null, grantId: owned.session.grantId!, iat: owned.session.iat, exp: owned.session.exp },
+        { tenant: 'coach', subject: owned.subject, grantId: owned.session.grantId, authorityEpoch: owned.session.authorityEpoch, iat: owned.session.iat, exp: owned.session.exp });
+      const accepted = await affinityFor({ env: valid as unknown as Env, get: () => 'coach',
+        req: { raw: owned.raw, header: (name: string) => owned.raw.headers.get(name) ?? undefined } }, owned.subject, undefined, { ...CONSENTING });
+      expect(accepted.dims).toEqual({ line: { Tabby: 0.8 } });
+      expect(accepted.consent).toMatchObject({ tracking: true, personalization: true });
+    });
+
+    it('host: a real object whose stored choice is absent or refusing never contributes a vector', async () => {
+      const host = sortHost({ REFLEX_HOST: 'do' });
+      invalidatePublicationCache();
+      await initializePublication(host.env, REFLEX_KIND, reflexScopeForTenant('coach'),
+        { revision: 1, value: DEFAULT_REFLEX_CONFIG, actor: 'synthetic-fixture', note: '', at: 1 }, '0:' + crypto.randomUUID());
+      const grant = await newAnonymousSession(host.env, 'coach');
+      const ask = (path: string, body?: unknown) => host.app.request('https://sort.invalid' + path, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant': 'coach', [SHOPPER_HEADER]: grant.capability },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }) }, host.env);
+      const stored = () => host.objects.get(shopperObjectName('coach', grant.subject))?.data.get('consent');
+      const choose = (tracking: boolean, personalization: boolean) => ask('/realtime/session/' + grant.sessionId + '/preferences',
+        { trackingConsent: tracking, personalizationEnabled: personalization, choice: { id: crypto.randomUUID(),
+          expectedRevision: storedConsent(stored()).instruction?.revision ?? null, grantId: grant.grantId, iat: grant.iat, exp: grant.exp } });
+      const sorted = () => ask('/sort', { userId: grant.subject, sessionId: grant.sessionId, candidates: FEED });
+
+      // No stored choice at all: the object answers a refusing envelope and the
+      // receipt carries no vector (src/content/consent.ts:139-140).
+      const cold = await sorted();
+      expect(cold.status).toBe(200);
+      const coldBody = await cold.json() as { order: string[]; items: Array<{ score: number; drivers: unknown[] }> };
+      expect(coldBody.order).toEqual(['P1', 'P2', 'P3']);
+      expect(coldBody.items.every((item) => item.score === 0 && item.drivers.length === 0)).toBe(true);
+
+      // Positive control: with an explicit consenting choice and a real vector
+      // the same feed IS reordered, so the neutral receipts above are not vacuous.
+      expect((await choose(true, true)).status).toBe(200);
+      for (let n = 0; n < 3; n++) expect((await ask('/realtime/action', { type: 'product_view', source: 'sdk', eventId: crypto.randomUUID(),
+        timestamp: Date.now(), userId: grant.subject, sessionId: grant.sessionId, data: { productId: 'COA-CH857', action: 'product_view' } })).status).toBe(200);
+      const warm = await sorted();
+      expect(warm.status).toBe(200);
+      const warmBody = await warm.json() as { order: string[]; items: Array<{ score: number; drivers: unknown[] }> };
+      // The vector contributes: every candidate now carries a positive affinity
+      // score and its explain drivers, where the neutral receipts carried none.
+      expect(warmBody.items.every((item) => item.score > 0 && item.drivers.length > 0)).toBe(true);
+      expect(warmBody.order).toEqual(['P1', 'P2', 'P3']);
+
+      // The shopper then refuses personalization: the same object, the same
+      // vector, and a receipt that is neutral again.
+      expect((await choose(true, false)).status).toBe(200);
+      const refused = await sorted();
+      expect(refused.status).toBe(200);
+      const refusedBody = await refused.json() as { order: string[]; items: Array<{ score: number; drivers: unknown[] }> };
+      expect(refusedBody.order).toEqual(['P1', 'P2', 'P3']);
+      expect(refusedBody.items.every((item) => item.score === 0 && item.drivers.length === 0)).toBe(true);
+    });
   });
 
   it('W05.03 uses the existing signed snapshot projection and never lets a zero dial substitute for an empty refused vector', async () => {
@@ -128,7 +309,7 @@ describe('POST /sort', () => {
       return Response.json({ ok: true, consent: { tracking: false, personalization: true }, affinity: { dims: { line: { Tabby: 0.8 } } } });
     } }) } });
     for (const affinity of [0, 4]) {
-      const { status, body } = await post({ userId: 'v', candidates: [...FEED, { id: ' P2 ', line: 'Rogue' }, { id: ' ' }], consent: { personalization: false }, weights: { affinity } }, e);
+      const { status, body } = await postDirect({ userId: 'v', candidates: [...FEED, { id: ' P2 ', line: 'Rogue' }, { id: ' ' }], consent: { personalization: false }, weights: { affinity } }, e);
       expect(status).toBe(200); expect(body.order).toEqual(['P1', 'P2', 'P3']); expect(body.dropped).toBe(2); expect(body.affinityWeight).toBe(affinity);
       expect((body.items as any[]).every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);
     }
@@ -147,17 +328,10 @@ describe('POST /sort', () => {
   });
 
   it('refuses a visitor id that addresses another brand, on the DO host', async () => {
-    const asked: string[] = [];
-    const e = env({
-      REFLEX_HOST: 'do',
-      SHOPPER_REFLEX: {
-        idFromName: (n: string) => { asked.push(n); return n; },
-        get: () => ({ fetch: async () => new Response(JSON.stringify({ affinity: { dims: {} } })) }),
-      },
-    });
-    const { status } = await post({ userId: 't:kate-spade:vis-victim', candidates: FEED }, e);
+    const host = sortHost({ REFLEX_HOST: 'do' }, () => new Response(JSON.stringify({ affinity: { dims: {} } })));
+    const { status } = await post({ userId: 't:kate-spade:vis-victim', candidates: FEED }, host);
     expect(status).toBe(401);
-    expect(asked).toEqual([]);
+    expect(host.names).toEqual([]);
   });
 });
 

@@ -36,7 +36,6 @@ import { destinationRetentionCategory, type ExternalRetention } from '@/retentio
 import { CatalogService, priceBandOf, type Product } from './CatalogService';
 import type { ActionEvent } from './RealtimeSegmentEngine';
 import { connectorConfiguration, connectorDigest, connectorIdentity, connectorSecret, legacyConnectors, type OdpConfiguration } from '@/connectors/config';
-import { stageFromCounters } from './JourneyStage';
 
 /** The audiences the ODP team mirrored 1:1 with our edge keys (handoff 2026-07-03).
     GraphQL subset queries MUST enumerate names — unknown names risk validation
@@ -77,13 +76,6 @@ export interface OdpState { odpContext?: string; odpSeed?: string[]; odpSeedAt?:
 /** Remove the previous source's contributions before adopting a current pin. No network. */
 export function projectedOdpSegments(segments: string[], previous: OdpState | null | undefined, current: OdpState): string[] {
   return [...new Set([...segments.filter(s => !previous?.odpSeed?.includes(s)), ...(current.odpSeed ?? [])])];
-}
-/** Correct derived stage only when an old provider contribution is rejected. */
-export async function projectedOdpStage(env: Env, tenant: string, state: OdpState | null | undefined,
-  segments: string[], attributes: Record<string, unknown>, stage: string | null): Promise<string | null> {
-  const current = await projectOdpState(env, tenant, state);
-  return state?.odpSeed?.some(s => !current.odpSeed.includes(s))
-    ? stageFromCounters(attributes, projectedOdpSegments(segments, state, current)) : stage;
 }
 /** Every retained source must prove its own current mapping; another source's pin is not authority. */
 export async function projectOdpState(env: Env, tenant: string, state: (OdpState & { externalRetention?: ExternalRetention }) | null | undefined): Promise<Required<OdpState>> {

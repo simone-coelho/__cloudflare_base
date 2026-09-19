@@ -78,7 +78,7 @@ Keep every checkout busy: while one batch is in review, the next is building and
 - **Git recipe.** Commit by path: `git -C $WT add -- <paths>` then `git -C $WT commit -m "<title>" -m "<the Co-Authored-By line your own harness supplies, naming the model that authored the commit>"`. Refresh on a clean tree: `git -C $WT merge --no-edit feature/real-time-personalization`. Push only when the brief grants it: `git -C $WT push origin HEAD:refs/heads/<branch>`. The integration branch is `feature/real-time-personalization`.
 - **The gate**, all before any push, each logged to the evidence directory:
   1. `node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false` and `node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit`
-  2. `node node_modules/vitest/vitest.mjs run src --maxWorkers=1 --minWorkers=1 --reporter=default --reporter=json --outputFile=<evidence>/vitest.json`
+  2. `node node_modules/vitest/vitest.mjs run src --minWorkers=4 --maxWorkers=4 --reporter=default --reporter=json --outputFile=<evidence>/vitest.json` (the whole suite once per batch with parallel workers, ruling R35; both bounds must be set or vitest refuses with `minThreads and maxThreads must not conflict`; unit files run with `--minWorkers=1 --maxWorkers=1`)
   3. `node scripts/remediation/score.mjs --from <evidence>/vitest.json --check-ratchet`
   4. `node scripts/build-sdk.mjs --check` and `node scripts/build-meridian.mjs --check`
   5. `node node_modules/eslint/bin/eslint.js <changed .ts and .js files>` with zero new diagnostics versus the base commit (the repository tolerates 582 legacy warnings; do not add one).

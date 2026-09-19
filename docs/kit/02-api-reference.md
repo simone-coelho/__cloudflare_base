@@ -69,8 +69,10 @@ One event. Site key.
 | `data` | yes | The event's payload, by type: see the [payload schemas](./03-payload-schemas.md#event-payloads-by-type) |
 | `source` | yes | Names the caller |
 | `eventId` | no | Logical event nonce:1–128 ASCII letters/digits/`_`/`-`. When supplied, an explicit timestamp is required; invalid values are refused, never downgraded |
-| `entry` | no | How this page load arrived; captured once per load, sent with every event, used only when a new visit opens |
+| `entry` | no | How this page load arrived: optional `utmMedium` (128), `utmSource` (256), `utmTerm` (256), `referrer` (2048) and `siteHost` (253) strings, captured once per load, sent with every event, used only when a new visit opens. Anything longer, or any other key, is refused rather than trimmed. `siteHost` is a hostname in the `hostname[:port]` form, never a URL, a path or free text. `utmTerm` is the campaign's search keyword: it may seed contextual content rules for the slots that publish them, it never changes the classified entry channel, and it is never stored on the shopper record, the decision cell or a connector payload |
 | `timestamp` | no | Nonnegative safe integer milliseconds representable as a Date; zero is valid with `eventId`. Without a nonce, absent/zero uses server time. The engine still uses its own processing clock |
+
+The SDK core exposes the arrival it captured as read-only observables. `core.entry` is the cached entry for this page load, and `core.entrySessionId` names the browsing session that produced the cached entry signals — empty while tracking is not allowed, and deliberately not the current browsing session: after an idle rollover it still names the session the cached entry belongs to, until the next entry read recomputes from the current document. Reading either never rolls a session over, recomputes the entry or writes anything. The cached entry is cleared, before any recomputation, on a consent transition, an identity-generation change and a browsing-session rollover.
 
 The SDK mints one `eventId` per tracking-approved envelope from its opaque Host token plus a nonwrapping core-local sequence; existing non-UUID fallbacks remain supported, without a cryptographic/global uniqueness guarantee. Keep the original nonce, timestamp, subject and scope together when retaining an envelope; a new `send` is a new event. Reward records retain `event_id` and `event_id_source` (`provided`, or `request` for a consent-approved legacy request fallback). The latter cannot identify repeated HTTP requests. Content service requests similarly supply `request_id` to the pure decision and exact replay. New IDs append `:n1:<nonce>` after the historical tail, preserving tenant/time/visitor lookup and erasure prefixes; old absent-nonce records retain their IDs. Invalid explicit identity/time and inconsistent replay carriers are refused. Neither identity adds sink deduplication, retries, payload-conflict detection or business-order uniqueness; transport `delivery_id` remains separate. No nonce is minted on tracking-refused SDK envelopes or service/outcome emission.
 
@@ -80,7 +82,7 @@ Response:
 {
   "success": true,
   "message": "Action processed and personalization updated",
-  "update": { "type": "personalization_update", "userId": "vis-2f1c…", "data": { "segments": ["line_tabby_affinity"], "decisions": { "hero_module": { "enabled": true, "variationKey": "affinity_hero", "variables": {} } }, "affinity": { "dims": { "line": { "Tabby": 0.71 } } }, "journeyStage": "mid" } },
+  "update": { "type": "personalization_update", "userId": "vis-2f1c…", "data": { "segments": ["line_tabby_affinity"], "decisions": { "hero_module": { "enabled": true, "variationKey": "affinity_hero", "variables": {} } }, "affinity": { "dims": { "line": { "Tabby": 0.71 } } }, "journeyStage": "thinking" } },
   "sessionId": "9cb1810f-…",
   "cookiesUpdated": true,
   "odp": { "receiptId": "r-…", "type": "product", "action": "detail" }
@@ -328,6 +330,22 @@ The reflex configuration, the registry of dimensions and the engine's constants 
 shape under `/config/reflex` (`GET`, `PUT`, `PATCH`, `history`, `revisions/{n}`, `validate`,
 `rollback/{n}`); every route requires the operator access token, including merged-patch validation. The tuning page and the learning console are clients of these routes; there is no
 other way to change what the engine does.
+
+That document also carries the optional `journey` block, the thresholds the reported journey stage is
+derived from: `{ "stages": [ { "stage": "thinking", "anyOf": { "interactions": 3 } }, { "stage": "deciding",
+"anyOf": { "purchases": 1 } } ] }`. The stages are named in the order `exploring` → `thinking` → `deciding`;
+the first stage is the floor a shopper starts in and carries no threshold of its own. A rule is met when ANY
+named counter of the CURRENT VISIT reaches its whole-number threshold; the counters are `interactions`,
+`product_views`, `purchases`, `cart_adds`, `wishlist_adds` and `category_dwell_ms`. The block is validated
+with the rest of the document, so an invalid set is refused at publication and the last published revision
+keeps deciding. Publish no block at all and the engine's own compiled default decides — `thinking` at the
+third interaction, `deciding` at the first purchase — reported at `sources.journey.revision: 0` with
+`sources.journey.version` naming the compiled default CONFIGURATION the set travels with, never your own
+document's version, and `sources.journey.reason` saying so, so you can always tell the engine's default
+from one of your revisions. The version a decision and a receipt name is otherwise this document's own
+revision identity, because the thresholds are part of it. A block that was stored but can no longer be read
+is never silently replaced by the default: the engine falls closed to the first stage, claims no version and
+says so on `reason`.
 
 ## 5. Learning and transparency
 

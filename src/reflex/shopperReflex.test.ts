@@ -27,13 +27,34 @@ import {
 } from '@/reflex/core';
 import type { Env } from '@/types/env';
 import { shopperObjectName } from '@/tenancy/objects';
-import { issueSessionCapability } from '@/identity/sessionCapability';
+import { issueSessionCapability, verifySessionCapability, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
+import { initializePublicationSet, pinPublication, type PublicationBaseline } from '@/config/publication';
+import { REFLEX_KIND, reflexScopeForTenant } from './configStore';
+import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
+import { storedConsent } from '@/content/consent';
+import { DEFAULT_JOURNEY_THRESHOLDS } from '@/services/JourneyStage';
+import type { RetentionPolicy } from '@/retention';
 
-const CFG = DEFAULT_REFLEX_CONFIG; // τ=60s · K=1.8 · θ 0.6/0.45 · priceBand τ=150s
+// R10 update, witness R42 as amended by R50(d) (2026-09-19): this suite scripts
+// the 60-second DEMO cadence — the ~40s-idle exit, the crossing the alarm fires
+// at, the horizon the hydrate answers with — while the shipped default is the
+// days/weeks memory horizon (R42) whose per-dimension overrides scale with it
+// (R50(a)). The cadence is therefore stated here, in the file that scripts it,
+// and published verbatim in `seedPublication` below, so the DO under test and
+// this file's own expectations read ONE horizon. Every other tuning value (K,
+// the thresholds, ε, the dimension registry) still comes from the shipped
+// default, so a retune of those still reaches this suite.
+const CFG = {
+  ...DEFAULT_REFLEX_CONFIG,
+  tauMs: 60_000,
+  dimensions: DEFAULT_REFLEX_CONFIG.dimensions.map((d) => (d.key === 'priceBand' ? { ...d, tauMs: 150_000 } : d)),
+}; // τ=60s · K=1.8 · θ 0.6/0.45 · priceBand τ=150s
 const DAY = 24 * 60 * 60 * 1000;
 const RETENTION_30D = 30 * DAY;
 const TABBY_ID = 'COA-CH857'; // real catalog product: line Tabby · elevated band
 const t0 = 1_750_000_000_000;
+// A capability subject is a validated shape (src/identity/sessionCapability.ts:37-47).
+const SUBJECT = 'vis-00000000-0000-4000-8000-000000000108';
 
 // ── Fakes ─────────────────────────────────────────────────────────────────────
 
@@ -52,11 +73,34 @@ class FakeStorage {
     if (typeof a === 'string') this.map.set(a, structuredClone(b));
     else for (const [k, v] of Object.entries(a)) this.map.set(k, structuredClone(v));
   }
-  async delete(k: string): Promise<boolean> {
+  async delete(k: string | string[]): Promise<boolean | number> {
+    if (Array.isArray(k)) { let n = 0; for (const key of k) if (this.map.delete(key)) n++; return n; }
     return this.map.delete(k);
   }
-  async list(): Promise<Map<string, unknown>> {
-    return structuredClone(this.map);
+  async list(options?: { prefix?: string; startAfter?: string; limit?: number; reverse?: boolean }): Promise<Map<string, unknown>> {
+    return structuredClone(new Map([...this.map]
+      .filter(([key]) => key.startsWith(options?.prefix ?? '') && (!options?.startAfter || key > options.startAfter))
+      .sort(([a], [b]) => (options?.reverse ? -1 : 1) * a.localeCompare(b)).slice(0, options?.limit)));
+  }
+  async deleteAlarm(): Promise<void> {
+    this.alarm = null;
+  }
+  /** The object erases and re-arms inside one transaction (ShopperReflex.ts:1803, :1470). */
+  async transaction(run: (tx: unknown) => Promise<unknown>): Promise<unknown> {
+    const candidate = structuredClone(this.map);
+    let alarm = this.alarm;
+    const result = await run({
+      list: async () => structuredClone(candidate),
+      get: async (key: string) => structuredClone(candidate.get(key)),
+      put: async (values: string | Record<string, unknown>, value?: unknown) => {
+        if (typeof values === 'string') candidate.set(values, structuredClone(value));
+        else for (const [key, item] of Object.entries(values)) candidate.set(key, structuredClone(item));
+      },
+      delete: async (keys: string | string[]) => { const list = typeof keys === 'string' ? [keys] : keys; for (const key of list) candidate.delete(key); return list.length; },
+      deleteAlarm: async () => { alarm = null; },
+      setAlarm: async (at: number) => { alarm = at; },
+    });
+    this.map = candidate; this.alarm = alarm; return result;
   }
   async deleteAll(): Promise<void> {
     this.map.clear();
@@ -73,8 +117,13 @@ class FakeStorage {
 class FakeSocket {
   sent: string[] = [];
   attachment: unknown = null;
+  closed: Array<{ code: number; reason: string }> = [];
   send(m: string): void {
     this.sent.push(m);
+  }
+  /** The object closes a socket whose authority is gone (ShopperReflex.ts:810, :817). */
+  close(code = 1000, reason = ''): void {
+    this.closed.push({ code, reason });
   }
   serializeAttachment(a: unknown): void {
     this.attachment = a;
@@ -114,21 +163,92 @@ interface Harness {
   storage: FakeStorage;
   sockets: FakeSocket[];
   env: Env;
+  subject: string;
+  capability?: string;
+  principal?: SessionCapability;
 }
 
-function makeDO(envOverrides: Record<string, unknown> = {}, opts: { sharedEnv?: Env; sharedStorage?: FakeStorage; withSocket?: boolean; subject?: string } = {}): Harness {
+/**
+ * R2 honouring the strengthened publication put/get contract
+ * (src/config/publication.ts:225-237, :293-295), the shape the working double in
+ * src/routes/realtime.sdkContract.test.ts uses.
+ */
+class FixtureR2 {
+  data = new Map<string, string>();
+  versions = new Map<string, number>();
+  metadata = new Map<string, Record<string, string> | undefined>();
+  async get(key: string) {
+    const raw = this.data.get(key);
+    if (raw === undefined) return null;
+    return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length,
+      customMetadata: this.metadata.get(key), body: new Response(raw).body, text: async () => raw, json: async () => JSON.parse(raw) as unknown };
+  }
+  async put(key: string, raw: string, options?: { onlyIf?: { etagMatches?: string; etagDoesNotMatch?: string } | Headers; customMetadata?: Record<string, string> }) {
+    const old = this.data.has(key) ? 'v' + this.versions.get(key) : null, condition = options?.onlyIf;
+    const absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';
+    const match = condition instanceof Headers ? condition.get('If-Match') : condition?.etagMatches;
+    if (absent && old !== null || match != null && match !== old && match !== JSON.stringify(old)) return null;
+    this.data.set(key, raw); this.versions.set(key, (this.versions.get(key) ?? 0) + 1); this.metadata.set(key, { ...options?.customMetadata });
+    return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length };
+  }
+  async delete(key: string) { this.data.delete(key); }
+  async list(options: { prefix?: string; cursor?: string; limit?: number } = {}) {
+    const names = [...this.data.keys()].filter((k) => k.startsWith(options.prefix ?? '')).sort(), start = Number(options.cursor ?? 0), end = start + (options.limit ?? 1000);
+    return { objects: names.slice(start, end).map((key) => ({ key })), truncated: end < names.length, ...(end < names.length ? { cursor: String(end) } : {}) };
+  }
+}
+
+/**
+ * Configuration publication is the only configuration authority
+ * (src/config/publication.ts:19, :150-152, :204-206): the object resolves its
+ * Reflex config through it on every ingest, snapshot and alarm. Explicit
+ * test-authored W11 baseline, never a re-admitted KV fallback.
+ */
+const seedPublication = (env: Env, tenant: string) => {
+  const baseline = (kind: PublicationBaseline['kind'], value: unknown, scope = tenant): PublicationBaseline =>
+    ({ kind, scope, revision: { revision: 1, at: 1, actor: 'synthetic-fixture', note: '', value } });
+  return initializePublicationSet(env, [
+    // R10 update, witness R32(1) (W16 C4): the journey thresholds are DATA on
+    // this very document — its `journey` block — not a constant in the engine,
+    // and an unpublished block derives the first stage and nothing else. A
+    // fixture that expects a stage to MOVE must therefore publish a set, so
+    // this baseline publishes the engineering default verbatim
+    // (src/services/JourneyStage.ts DEFAULT_JOURNEY_THRESHOLDS: `thinking` at 3
+    // interactions — docs/architecture/tapestry_requirements.txt line 147,
+    // "3 clicks—site adapts third interaction onwards"; `deciding` at the first
+    // purchase — admitted criterion C4). Customer-neutral: counts of the
+    // shopper's own actions, no tenant taxonomy.
+    // The document the DO resolves is the demo cadence this file scripts (CFG
+    // above, R42/R50(d)) — one horizon for the object under test and for the
+    // expectations here — carrying the journey block below.
+    baseline(REFLEX_KIND, { ...CFG, journey: DEFAULT_JOURNEY_THRESHOLDS }, reflexScopeForTenant(tenant)),
+    baseline(CONTENT_KIND, { pieces: [] }), baseline(SLOTS_KIND, { pages: {} }),
+    baseline(LEARN_KIND, { holdout: { share: 0, salt: 'fixture', arms: ['default'] } }),
+  ], '0:' + crypto.randomUUID());
+};
+
+/** A first record needs the retention registry (src/retention.ts:39, :72-89; ShopperReflex.ts:1034). */
+const fixturePolicy: RetentionPolicy = { id: 'explicit-reflex-fixture', revision: 1, durationMs: 30 * 86_400_000, basis: 'admitted', renewal: 'new-record-only' };
+const RETENTION_REGISTRY = JSON.stringify({ version: 1, tenants: { coach:
+  Object.fromEntries(['profile', 'identity', 'ledger', 'online', 'hourly', 'recovery', 'quarantine'].map((category) => [category, fixturePolicy])) } });
+
+const SIGNING = { JWT_SECRET: 'w0108-synthetic-demo-signing-material', JWT_ISSUER: 'w0108', JWT_AUDIENCE: 'w0108' };
+
+async function makeDO(envOverrides: Record<string, unknown> = {}, opts: { sharedEnv?: Env; sharedStorage?: FakeStorage; withSocket?: boolean; subject?: string; capability?: string; principal?: SessionCapability } = {}): Promise<Harness> {
   const storage = opts.sharedStorage ?? new FakeStorage();
   const sockets: FakeSocket[] = [];
+  const subject = opts.subject ?? SUBJECT;
   if (opts.withSocket ?? true) {
     const ws = new FakeSocket();
-    ws.serializeAttachment({ shopperId: 'vis-TEST' });
+    ws.serializeAttachment({ shopperId: subject, ...(opts.principal ? { principal: opts.principal } : {}) });
     sockets.push(ws);
   }
   const state = {
-    id: shopperObjectName('coach', opts.subject ?? 'vis-TEST'),
+    id: shopperObjectName('coach', subject),
     storage,
     acceptWebSocket: (ws: unknown) => sockets.push(ws as FakeSocket),
     getWebSockets: () => sockets,
+    waitUntil: (promise: Promise<unknown>) => void promise,
   } as unknown as DurableObjectState;
   const env =
     opts.sharedEnv ??
@@ -137,17 +257,47 @@ function makeDO(envOverrides: Record<string, unknown> = {}, opts: { sharedEnv?: 
       SHOPPER_REFLEX: { idFromName: (name: string) => name },
       CACHE: new FakeKV(),
       SESSIONS: new FakeKV(),
+      STORAGE: new FixtureR2(),
+      TENANTS: JSON.stringify({ provisioned: ['coach'] }),
+      RETENTION: RETENTION_REGISTRY,
       ENVIRONMENT: 'test',
       CONNECTOR_MODE: 'mock',
+      ...SIGNING,
       ...envOverrides,
     } as unknown as Env);
-  return { shopper: new ShopperReflex(state, env), storage, sockets, env };
+  if (!opts.sharedEnv) await seedPublication(env, 'coach');
+  return { shopper: new ShopperReflex(state, env), storage, sockets, env, subject, capability: opts.capability, principal: opts.principal };
+}
+
+/**
+ * Nothing is kept without an explicit stored choice: absence is OFF
+ * (src/content/consent.ts:139-163; ShopperReflex.ts:1019-1024; D06-W05). The
+ * choice is made through the object's own door by the owner of the grant the
+ * first signed request adopts (ShopperReflex.ts:694-716, :1756-1767).
+ */
+async function consenting(h: Harness, tracking = true, personalization = true): Promise<Harness> {
+  const issued = await issueSessionCapability(h.env, { tenant: 'coach', subject: h.subject, sessionId: 'w0108-' + crypto.randomUUID(), kind: 'anonymous' });
+  const principal = await verifySessionCapability(h.env, issued.capability, 'coach');
+  const res = await h.shopper.fetch(new Request('https://do/consent', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: issued.capability, 'X-Tenant': 'coach' },
+    body: JSON.stringify({ tracking, personalization, choice: { id: crypto.randomUUID(),
+      expectedRevision: storedConsent(h.storage.map.get('consent')).instruction?.revision ?? null,
+      grantId: principal.grantId, iat: principal.iat, exp: principal.exp } }) }));
+  expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
+  h.capability = issued.capability; h.principal = principal;
+  if (h.sockets[0]) h.sockets[0].serializeAttachment({ shopperId: h.subject, principal });
+  return h;
+}
+
+/** A consenting owned object: the shape every kept-state case starts from. */
+async function ownedDO(envOverrides: Record<string, unknown> = {}, opts: Parameters<typeof makeDO>[1] = {}): Promise<Harness> {
+  return consenting(await makeDO(envOverrides, opts));
 }
 
 function viewEvent(pid: string, overrides: Record<string, unknown> = {}) {
   return {
     type: 'product_view',
-    userId: 'vis-TEST',
+    userId: SUBJECT,
     data: { productId: pid, action: 'product_view' },
     source: 'test',
     timestamp: 1, // deliberately bogus — the DO must stamp its OWN arrival time
@@ -168,12 +318,13 @@ async function post(shopper: ShopperReflex, event: unknown, capability?: string)
 
 /** Three brisk Tabby views 5s apart — the golden entry sequence from core.test. */
 async function driveToMembership(h: Harness): Promise<any> {
+  const event = () => viewEvent(TABBY_ID, { userId: h.subject, ...(h.principal ? { sessionId: h.principal.sessionId } : {}) });
   vi.setSystemTime(t0);
-  await post(h.shopper, viewEvent(TABBY_ID));
+  await post(h.shopper, event(), h.capability);
   vi.setSystemTime(t0 + 5_000);
-  await post(h.shopper, viewEvent(TABBY_ID));
+  await post(h.shopper, event(), h.capability);
   vi.setSystemTime(t0 + 10_000);
-  return post(h.shopper, viewEvent(TABBY_ID));
+  return post(h.shopper, event(), h.capability);
 }
 
 beforeEach(() => {
@@ -245,20 +396,28 @@ describe('computeNextAlarm — closed-form crossing vs retention horizon', () =>
 
 describe("the 'affinity' record — spec shape + serialization round-trip", () => {
   it('holds exactly the doc-16 §6 fields and survives a JSON storage round-trip', async () => {
-    const h = makeDO();
+    const h = await ownedDO();
     await driveToMembership(h);
 
     const rec = h.storage.map.get('affinity') as AffinityRecord;
+    // The record also carries the retention stamp its own policy gave it at
+    // birth, the external-copy retention map and the ODP context
+    // (src/durable-objects/ShopperReflex.ts:127-138; src/retention.ts:32-41, :88-92).
     expect(Object.keys(rec).sort()).toEqual([
       'configVersion',
+      'externalRetention',
       'lastSeen',
+      'odpContext',
       'odpRecentEvents',
       'odpSeed',
       'odpSeedAt',
       'reflex',
+      'retention',
       'shopperId',
     ]);
-    expect(rec.shopperId).toBe('vis-TEST');
+    expect(rec.retention).toMatchObject({ version: 1, tenant: 'coach', category: 'profile', policyId: 'explicit-reflex-fixture', basis: 'admitted' });
+    expect(rec.retention!.expiresAt).toBe(rec.retention!.bornAt + 30 * DAY);
+    expect(rec.shopperId).toBe(SUBJECT);
     expect(rec.lastSeen).toBe(t0 + 10_000); // DO-stamped — the bogus client ts (1) never leaks in
     expect(rec.configVersion).toBe(CFG.version);
 
@@ -275,15 +434,11 @@ describe("the 'affinity' record — spec shape + serialization round-trip", () =
 
 describe('ingest — one reducer behind both doors', () => {
   it('three brisk views enter the affinity audiences and push the full envelope over the DO’s own socket', async () => {
-    const signing = { JWT_SECRET: 'w0108-synthetic-demo-signing-material', JWT_ISSUER: 'w0108', JWT_AUDIENCE: 'w0108' };
-    const grant = await issueSessionCapability(signing as Env, { tenant: 'coach',
-      subject: 'vis-00000000-0000-4000-8000-000000000108', sessionId: 'w0108-demo-session', kind: 'anonymous' });
-    const h = makeDO(signing, { subject: grant.subject });
-    const { capability, ...principal } = grant;
-    h.sockets[0]!.serializeAttachment({ shopperId: grant.subject, principal });
     // Current native pushes require the same durable grant as ingest. The
     // first genuine signed request adopts it; no authority verdict is mocked.
-    const event = () => viewEvent(TABBY_ID, { userId: grant.subject, sessionId: grant.sessionId });
+    const h = await ownedDO();
+    const capability = h.capability!;
+    const event = () => viewEvent(TABBY_ID, { userId: h.subject, sessionId: h.principal!.sessionId });
     expect((await post(h.shopper, event(), capability)).status).toBe(200);
     vi.setSystemTime(t0 + 5_000);
     expect((await post(h.shopper, event(), capability)).status).toBe(200);
@@ -297,7 +452,7 @@ describe('ingest — one reducer behind both doors', () => {
     expect(r3.body.cookiesUpdated).toBe(false);
     const update = r3.body.update;
     expect(update.type).toBe('personalization_update');
-    expect(update.userId).toBe(grant.subject);
+    expect(update.userId).toBe(h.subject);
 
     // Membership + explain records (the glass box) in the affinity payload.
     const aff = update.data.affinity;
@@ -316,7 +471,14 @@ describe('ingest — one reducer behind both doors', () => {
     expect(update.data.segments).toContain('high_intent_tabby_browser'); // counter-based seed audience qualified too
     expect(Array.isArray(update.data.recommendations)).toBe(true);
     expect(Array.isArray(update.data.sortOrder)).toBe(true);
-    expect(update.data.journeyStage).toBe('mid');
+    // R10 update, witness R29 (W16 C4): the pushed envelope carries the stage
+    // in the shared vocabulary `exploring | thinking | deciding` (tapestry
+    // requirements line 148), not the persisted cell token. Three brisk views
+    // are three interactions of this visit, which meets the `thinking`
+    // threshold this fixture publishes on the reflex document, so the frame
+    // says the second stage of the journey. The stored grammar is unchanged:
+    // PERSISTED_STAGE maps this word back to `mid` (R32(2)).
+    expect(update.data.journeyStage).toBe('thinking');
 
     // Pushed over the DO's OWN socket with the same server timestamp (client dedupe key).
     const pushes = h.sockets[0].frames().filter((f) => f.type === 'personalization_update');
@@ -329,16 +491,19 @@ describe('ingest — one reducer behind both doors', () => {
     const rec = h.storage.map.get('affinity') as AffinityRecord;
     const expected = computeNextAlarm(rec.reflex, rec.lastSeen, t0 + 10_000, CFG, RETENTION_30D);
     expect(h.storage.alarm).toBe(expected);
-    expect(expected).toBeLessThan(t0 + 10_000 + 120_000); // the demo's ~40s-idle exit, not a 30-day park
+    // The demo's ~40s-idle exit, not a 30-day park: both this expectation and
+    // the object's own alarm read the 60-second demo cadence CFG pins above
+    // (R42/R50(d)), never the shipped days/weeks horizon.
+    expect(expected).toBeLessThan(t0 + 10_000 + 120_000);
   });
 
   it('a no-change event persists state but returns (and pushes) no update — request-path parity', async () => {
-    const h = makeDO();
+    const h = await ownedDO();
     await driveToMembership(h);
     const pushesBefore = h.sockets[0].sent.length;
 
     vi.setSystemTime(t0 + 15_000);
-    const r4 = await post(h.shopper, viewEvent(TABBY_ID));
+    const r4 = await post(h.shopper, viewEvent(TABBY_ID, { sessionId: h.principal!.sessionId }), h.capability);
     expect(r4.body.success).toBe(true);
     expect(r4.body.update).toBeUndefined();
     expect(r4.body.message).toMatch(/no personalization changes/);
@@ -348,16 +513,22 @@ describe('ingest — one reducer behind both doors', () => {
   });
 
   it('drops events referencing unknown productIds (catalog-index validation) without creating state', async () => {
-    const h = makeDO();
-    const r = await post(h.shopper, viewEvent('NOT-A-REAL-SKU'));
+    const h = await ownedDO();
+    // The explicit choice itself arms the consent-expiry alarm before any event,
+    // at the choice's own deadline (ShopperReflex.ts:708, :1679-1685;
+    // CONSENT_LIFETIME_MS = 30 days). A dropped event writes no state, so the
+    // alarm is still that deadline and never a crossing or retention horizon.
+    const consentDeadline = t0 + 30 * DAY;
+    expect(h.storage.alarm).toBe(consentDeadline);
+    const r = await post(h.shopper, viewEvent('NOT-A-REAL-SKU', { sessionId: h.principal!.sessionId }), h.capability);
     expect(r.status).toBe(200);
     expect(r.body.dropped).toBe('unknown_product');
     expect(h.storage.map.has('affinity')).toBe(false);
-    expect(h.storage.alarm).toBeNull();
+    expect(h.storage.alarm).toBe(consentDeadline);
   });
 
   it('rate-limits per minute in-object (429), then admits again in the next window', async () => {
-    const h = makeDO({ REFLEX_RATE_LIMIT_PER_MIN: '2' });
+    const h = await makeDO({ REFLEX_RATE_LIMIT_PER_MIN: '2' });
     expect((await post(h.shopper, viewEvent(TABBY_ID))).status).toBe(200);
     vi.setSystemTime(t0 + 1_000);
     expect((await post(h.shopper, viewEvent(TABBY_ID))).status).toBe(200);
@@ -370,9 +541,11 @@ describe('ingest — one reducer behind both doors', () => {
   });
 
   it('the WS door drives the SAME reducer; identity falls back to the socket attachment', async () => {
-    const h = makeDO();
+    const h = await ownedDO();
     const ws = new FakeSocket();
-    ws.serializeAttachment({ shopperId: 'vis-WS-ONLY' }); // ONLY {shopperId} rides the attachment
+    // The attachment carries the shopper and the grant the socket was accepted
+    // under; a socket without live authority is closed (ShopperReflex.ts:810-824).
+    ws.serializeAttachment({ shopperId: h.subject, principal: h.principal });
     h.sockets.length = 0;
     h.sockets.push(ws);
 
@@ -392,7 +565,7 @@ describe('ingest — one reducer behind both doors', () => {
     );
 
     const rec = h.storage.map.get('affinity') as AffinityRecord;
-    expect(rec.shopperId).toBe('vis-WS-ONLY');
+    expect(rec.shopperId).toBe(h.subject);
     expect(rec.reflex.dims.line.Tabby.s).toBeGreaterThan(1); // both frames scored
     // Heartbeat frames answer without touching state.
     await h.shopper.webSocketMessage(ws as unknown as WebSocket, JSON.stringify({ type: 'heartbeat' }));
@@ -400,9 +573,9 @@ describe('ingest — one reducer behind both doors', () => {
   });
 
   it('GET /snapshot returns the GET /realtime/reflex shape', async () => {
-    const h = makeDO();
+    const h = await ownedDO();
     await driveToMembership(h);
-    const res = await h.shopper.fetch(new Request('https://do/snapshot'));
+    const res = await h.shopper.fetch(new Request('https://do/snapshot', { headers: { [SHOPPER_HEADER]: h.capability!, 'X-Tenant': 'coach' } }));
     const body = (await res.json()) as any;
     expect(body.ok).toBe(true);
     expect(body.config).toMatchObject({ tauMs: 60_000, K: 1.8, thetaIn: 0.6, thetaOut: 0.45 });
@@ -417,14 +590,17 @@ describe('ingest — one reducer behind both doors', () => {
 
 describe('alarm — lazy re-evaluation, exits pushed, retention deleteAll', () => {
   it('fires at the crossing, pushes the exit envelope (hero reverts), re-arms for the slower dimension', async () => {
-    const h = makeDO();
+    const h = await ownedDO();
     await driveToMembership(h);
     const armedAt = h.storage.alarm!;
     expect(armedAt).toBeGreaterThan(t0 + 10_000);
 
     // Wake just past the scheduled crossing: the 60s-τ dims are below θ_out;
-    // priceBand (τ=150s) still holds — hysteresis is per-dimension.
+    // priceBand (τ=150s) still holds — hysteresis is per-dimension. The runtime
+    // clears a delivered alarm before the handler runs, and the object then
+    // re-arms at the minimum of the live deadlines (ShopperReflex.ts:3187-3201).
     vi.setSystemTime(armedAt + 1_000);
+    h.storage.alarm = null;
     await h.shopper.alarm();
 
     const rec = h.storage.map.get('affinity') as AffinityRecord;
@@ -450,11 +626,11 @@ describe('alarm — lazy re-evaluation, exits pushed, retention deleteAll', () =
   });
 
   it('a fresh instance rehydrates from storage (hibernation wake) and still exits on alarm', async () => {
-    const h = makeDO();
+    const h = await ownedDO();
     await driveToMembership(h);
 
     // Simulate eviction: a brand-new object instance over the SAME storage.
-    const woken = makeDO({}, { sharedStorage: h.storage, sharedEnv: h.env, withSocket: true });
+    const woken = await makeDO({}, { sharedStorage: h.storage, sharedEnv: h.env, withSocket: true, capability: h.capability, principal: h.principal });
     vi.setSystemTime(t0 + 10_000 + 300_000); // long past every crossing
     await woken.shopper.alarm();
     const rec = woken.storage.map.get('affinity') as AffinityRecord;
@@ -463,23 +639,43 @@ describe('alarm — lazy re-evaluation, exits pushed, retention deleteAll', () =
     expect(push).toBeDefined();
   });
 
+  /**
+   * unit:W06.BASE.02 — after a profile's retention expiry the shopper object
+   * retains no grant naming the subject or session. The retention branch deletes
+   * only affinity, pipeline and audienceOwner (ShopperReflex.ts:1469-1471); it
+   * never runs eraseWithBarrier, so the grant authority survives with a live
+   * grant naming the subject and its session (reviewer probe P5, BASE-1b).
+   */
+  describe('unit:W06.BASE.02 the retention expiry leaves no grant naming the subject or session', () => {
   it('retention: idle past N days with no sockets → storage.deleteAll()', async () => {
-    const h = makeDO({ REFLEX_RETENTION_DAYS: '30' });
+    const h = await ownedDO({ REFLEX_RETENTION_DAYS: '30' });
     await driveToMembership(h);
     expect(h.storage.map.size).toBeGreaterThan(0);
 
-    const idle = makeDO({}, { sharedStorage: h.storage, sharedEnv: h.env, withSocket: false });
+    const idle = await makeDO({}, { sharedStorage: h.storage, sharedEnv: h.env, withSocket: false, capability: h.capability, principal: h.principal });
     vi.setSystemTime(t0 + 10_000 + RETENTION_30D + 1);
+    idle.storage.alarm = null;
     await idle.shopper.alarm();
-    expect(idle.storage.map.size).toBe(0);
+    // Everything the shopper owned is gone; the grant-authority record is the
+    // only key left (ShopperReflex.ts:1469-1471 deletes affinity, pipeline and
+    // audienceOwner and nothing else).
+    expect([...idle.storage.map.keys()]).toEqual(['grantAuthority']);
     expect(idle.storage.alarm).toBeNull();
 
     // And a live socket DEFERS the wipe (the shopper is not idle).
-    const h2 = makeDO();
+    const h2 = await ownedDO();
     await driveToMembership(h2);
     vi.setSystemTime(t0 + 10_000 + RETENTION_30D + 1);
     await h2.shopper.alarm(); // socket present in this harness
     expect(h2.storage.map.size).toBeGreaterThan(0);
+
+    // The ruled outcome: the expired profile leaves no usable grant behind. The
+    // authority record may remain as the barrier that keeps a legacy writer out
+    // (ShopperReflex.ts:1692-1694), but it must name no subject or session once
+    // the retained data it authorized has been deleted (src/retention.ts:24-25,
+    // :88-92; ShopperReflex.ts:1469-1471).
+    expect((idle.storage.map.get('grantAuthority') as { grants: Record<string, unknown> }).grants).toEqual({});
+  });
   });
 });
 
@@ -487,7 +683,7 @@ describe('alarm — lazy re-evaluation, exits pushed, retention deleteAll', () =
 
 describe('hosting invariant — the DO state equals a pure-core replay of the same stream', () => {
   it('storage reflex state === ReflexCore.apply replay with the DO’s stamped times', async () => {
-    const h = makeDO();
+    const h = await ownedDO();
     await driveToMembership(h);
     const rec = h.storage.map.get('affinity') as AffinityRecord;
 
@@ -511,29 +707,36 @@ import { invalidateCache } from '@/config/versionedStore';
 import { DEFAULT_REFLEX_CONFIG as BASE_CFG } from './core';
 
 describe('event-carried attributes (CW24)', () => {
-  const theirs = (userId: string) => new Request('https://do/ingest', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'product_view', userId, source: 'coach-storefront', timestamp: Date.now(),
+  const theirs = (h: Harness) => new Request('https://do/ingest', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: h.capability!, 'X-Tenant': 'coach' },
+    body: JSON.stringify({ type: 'product_view', userId: h.subject, sessionId: h.principal!.sessionId, source: 'coach-storefront', timestamp: Date.now(),
       data: { productId: 'their-sku-9', line: 'Drover', category: 'Outerwear', occasion: ['everyday'], price_usd: 420 } }),
   });
 
   it('is dropped as unknown while the scope is catalog-only, exactly as before', async () => {
     invalidateCache();
-    const h = makeDO();
-    const res = await h.shopper.fetch(theirs('vis-CW24-A'));
+    const h = await ownedDO();
+    const res = await h.shopper.fetch(theirs(h));
     expect(((await res.json()) as { dropped?: string }).dropped).toBe('unknown_product');
   });
 
   it('scores the event once the scope says event-when-unknown', async () => {
     invalidateCache();
-    const h = makeDO();
-    const w = await writeReflexConfig(h.env, 'coach', { ...BASE_CFG, eventAttributes: 'event-when-unknown' }, { actor: 'test', note: 'cw24' });
+    const h = await ownedDO();
+    // A configuration write carries the authored document revision and the
+    // coherent publication identity (src/config/publication.ts:66-73, :76-88);
+    // without them the write is refused with 428 precondition_required.
+    const pin = await pinPublication(h.env, 'coach');
+    const revision = pin.refs['reflex:' + reflexScopeForTenant('coach')]!.revision;
+    const w = await writeReflexConfig(h.env, 'coach', { ...BASE_CFG, eventAttributes: 'event-when-unknown' },
+      { actor: 'test', note: 'cw24', expectedRevision: revision, expectedPublication: { revision: pin.revision, digest: pin.digest },
+        operationId: revision + ':' + crypto.randomUUID() });
     expect(w.ok).toBe(true);
     for (let i = 0; i < 3; i++) {
-      const res = await h.shopper.fetch(theirs('vis-CW24-B'));
+      const res = await h.shopper.fetch(theirs(h));
       expect(((await res.json()) as { dropped?: string }).dropped).toBeUndefined();
     }
-    const snap = (await (await h.shopper.fetch(new Request('https://do/snapshot'))).json()) as { affinity: { dims: Record<string, Record<string, number>> } };
+    const snap = (await (await h.shopper.fetch(new Request('https://do/snapshot', { headers: { [SHOPPER_HEADER]: h.capability!, 'X-Tenant': 'coach' } }))).json()) as { affinity: { dims: Record<string, Record<string, number>> } };
     expect(snap.affinity.dims.line?.Drover).toBeGreaterThan(0);
     expect(snap.affinity.dims.priceBand?.elevated).toBeGreaterThan(0);
     invalidateCache();

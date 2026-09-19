@@ -17,6 +17,7 @@ import { storedConsent, consentOf, personalizes, type Consent } from '@/content/
 import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { validBufferedAction } from '@/reflex/bufferedAction';
 import { projectVisit, validEntry, type ChannelSignals } from '@/services/visit';
+import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce } from '@/services/JourneyStage';
 import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { demoEventCaptureEnabled } from '@/services/demoEventCapture';
@@ -439,7 +440,14 @@ realtimeRoutes.get('/reflex', async (c) => {
       affinity: personalizes(consent) && sessionData.reflex
         ? { ...reflexSnapshot(sessionData.reflex, now, cfg), odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed }
         : null,
-      ...(!personalizes(consent) ? { journeyStage: null } : {}),
+      // W16 C4 / R29: the SDK-visible journey stage, in the shared vocabulary,
+      // derived from THIS VISIT's counters against the tenant's published
+      // journey thresholds — identically on the object host
+      // (ShopperReflex.handleSnapshot). A shopper who declined personalization
+      // is told null, exactly as before.
+      journeyStage: personalizes(consent)
+        ? journeyStageFrom(journeyCountersNow(sessionData.journey, sessionData.metadata.lastSeen, now), journeyThresholdsInForce(cfg))
+        : null,
       // R20 / unit W16.C2.07: the SDK-visible hydrate carries the shopper's
       // visit number and entry channel in the `projectVisit` shape, identically
       // on both hosts (the DO host answers from ShopperReflex.handleSnapshot).

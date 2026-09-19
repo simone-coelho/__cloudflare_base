@@ -105,18 +105,42 @@ scored from that copy instead.
 ```
 
 ```js
-client.emit.declarative();   // content capture still requires a current offer and rendered ACK
+const detach = client.emit.declarative();   // content capture still requires a current offer and rendered ACK
 ```
 
 **dataLayer adapter**, the cheap path wherever a tag layer already exists. GA4 event names are mapped by
 default (`view_item`, `add_to_cart`, `add_to_wishlist`, `purchase`, `page_view`); override any of them.
 
 ```js
-client.emit.dataLayer();                           // wraps window.dataLayer.push, replays what is already there
+const release = client.emit.dataLayer();           // wraps window.dataLayer.push, replays what is already there
 client.emit.dataLayer({ mapping: { my_event: (e) => ({ type: 'custom', data: { event: 'my_event', id: e.id } }) } });
 ```
 
 **Renderer callback:** `rendered(slot, contentId, element, decisionId)` admits the exact painted choice, then observes dwell. Listen-only suppresses this admission; ordinary commerce/page events remain separate, but content outcomes cannot bypass the missing ACK.
+
+### Binding and unbinding
+
+Both capture paths return a detach function, and the SDK owns what it put on the page until you call it:
+
+- **Binding twice is one binding.** Calling `declarative()` again for the same document — a route
+  re-render, React StrictMode's double-invoked effect — joins the attachment already live; the element
+  carries one listener and is observed once, and the first call's options stand. Each call returns its own
+  detach function and the page's elements come back when the last one has run.
+- **Detach removes, it does not merely mute.** Every listener the scan added is removed from the element
+  with `removeEventListener` and every observer is disconnected, so nothing of the SDK is left on a node
+  the page reuses. A node re-rendered in place needs no rebinding: what it reports is read from its
+  attributes at the moment the shopper acts, so a changed `data-op-slot` or `data-op-content` reports the
+  piece the node now shows. The served receipt in `data-op-decision-id` is read once, when the SDK binds.
+- **The tag layer is the page's, not the client's.** `dataLayer()` wraps `push` once however many clients
+  and attachments capture from it, each live client sees the page's push once, and the page's own `push`
+  function is restored — by identity — only when the last attachment has been released. Releasing one
+  attachment never removes another's capture. A client that attaches twice replays the layer's history once.
+- **Either teardown order is clean.** `client.destroy()` releases the listeners and observations the
+  client still holds, so `destroy()` before the detach functions and the detach functions before
+  `destroy()` both leave the page with no live listener, wrapper, observer or pending callback, and
+  nothing reaches the transport afterwards. Detaching twice is a no-op.
+- **An identity or tenant change rebinds.** After a sign-in, a sign-out or a new client for another
+  tenant, the element carries one listener again and later events carry only the new identity.
 
 ## Signing in and out
 

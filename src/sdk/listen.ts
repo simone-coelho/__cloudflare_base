@@ -267,7 +267,10 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     }
     const ack = paint.ack ?? await paint.pending ?? null;
     if (!ack || !active()) return null;
-    if (el && host.dom && !paint.observed) {
+    // One observation per element per client: when the declarative scan already
+    // watches this node, the page is not observed twice and the dwell is not
+    // counted twice (document 35 §5 W17; F34 §2B/§2D).
+    if (el && host.dom && !paint.observed && !core.bindings.observes(el)) {
         paint.observed = true;
         const { renderOffer: _offer, ...data } = paint.envelope.data;
         void _offer; // Intentionally exclude the admission capability from dwell.
@@ -275,7 +278,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
         let off: () => void = () => undefined; let stopped = false;
         const stop = () => { if (stopped) return; stopped = true; shownAt = null; off(); observers.delete(stop); };
         observers.add(stop);
-        off = host.dom.observe(el, (visible) => {
+        const release = core.bindings.addObserver(host.dom, el, (visible) => {
           if (stopped || !active()) { stop(); return; }
           if (visible) { if (shownAt === null) shownAt = host.now(); return; }
           if (shownAt === null) return;
@@ -284,6 +287,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
           if (ms >= dwellMinMs) void outcome('content_dwell', contentId, slot, { ...data, ms });
           stop();
         });
+        if (release) off = release;
         if (stopped) off();
     }
     return ack;
