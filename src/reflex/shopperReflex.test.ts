@@ -35,7 +35,20 @@ import { storedConsent } from '@/content/consent';
 import { DEFAULT_JOURNEY_THRESHOLDS } from '@/services/JourneyStage';
 import type { RetentionPolicy } from '@/retention';
 
-const CFG = DEFAULT_REFLEX_CONFIG; // τ=60s · K=1.8 · θ 0.6/0.45 · priceBand τ=150s
+// R10 update, witness R42 as amended by R50(d) (2026-09-19): this suite scripts
+// the 60-second DEMO cadence — the ~40s-idle exit, the crossing the alarm fires
+// at, the horizon the hydrate answers with — while the shipped default is the
+// days/weeks memory horizon (R42) whose per-dimension overrides scale with it
+// (R50(a)). The cadence is therefore stated here, in the file that scripts it,
+// and published verbatim in `seedPublication` below, so the DO under test and
+// this file's own expectations read ONE horizon. Every other tuning value (K,
+// the thresholds, ε, the dimension registry) still comes from the shipped
+// default, so a retune of those still reaches this suite.
+const CFG = {
+  ...DEFAULT_REFLEX_CONFIG,
+  tauMs: 60_000,
+  dimensions: DEFAULT_REFLEX_CONFIG.dimensions.map((d) => (d.key === 'priceBand' ? { ...d, tauMs: 150_000 } : d)),
+}; // τ=60s · K=1.8 · θ 0.6/0.45 · priceBand τ=150s
 const DAY = 24 * 60 * 60 * 1000;
 const RETENTION_30D = 30 * DAY;
 const TABBY_ID = 'COA-CH857'; // real catalog product: line Tabby · elevated band
@@ -205,7 +218,10 @@ const seedPublication = (env: Env, tenant: string) => {
     // "3 clicks—site adapts third interaction onwards"; `deciding` at the first
     // purchase — admitted criterion C4). Customer-neutral: counts of the
     // shopper's own actions, no tenant taxonomy.
-    baseline(REFLEX_KIND, { ...DEFAULT_REFLEX_CONFIG, journey: DEFAULT_JOURNEY_THRESHOLDS }, reflexScopeForTenant(tenant)),
+    // The document the DO resolves is the demo cadence this file scripts (CFG
+    // above, R42/R50(d)) — one horizon for the object under test and for the
+    // expectations here — carrying the journey block below.
+    baseline(REFLEX_KIND, { ...CFG, journey: DEFAULT_JOURNEY_THRESHOLDS }, reflexScopeForTenant(tenant)),
     baseline(CONTENT_KIND, { pieces: [] }), baseline(SLOTS_KIND, { pages: {} }),
     baseline(LEARN_KIND, { holdout: { share: 0, salt: 'fixture', arms: ['default'] } }),
   ], '0:' + crypto.randomUUID());
@@ -475,7 +491,10 @@ describe('ingest — one reducer behind both doors', () => {
     const rec = h.storage.map.get('affinity') as AffinityRecord;
     const expected = computeNextAlarm(rec.reflex, rec.lastSeen, t0 + 10_000, CFG, RETENTION_30D);
     expect(h.storage.alarm).toBe(expected);
-    expect(expected).toBeLessThan(t0 + 10_000 + 120_000); // the demo's ~40s-idle exit, not a 30-day park
+    // The demo's ~40s-idle exit, not a 30-day park: both this expectation and
+    // the object's own alarm read the 60-second demo cadence CFG pins above
+    // (R42/R50(d)), never the shipped days/weeks horizon.
+    expect(expected).toBeLessThan(t0 + 10_000 + 120_000);
   });
 
   it('a no-change event persists state but returns (and pushes) no update — request-path parity', async () => {

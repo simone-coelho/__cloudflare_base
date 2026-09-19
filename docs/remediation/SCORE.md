@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 46/54 · W closed 0/26 (W16–W41) · suite 1829/1923 · residual 94 in 13 files · typecheck GREEN
+Units 36/42 · W closed 0/26 (W16–W41) · suite 1819/1904 · residual 85 in 10 files · typecheck GREEN
 
 ## W items
 
@@ -15,7 +15,8 @@ Units 46/54 · W closed 0/26 (W16–W41) · suite 1829/1923 · residual 94 in 13
 | W06 | 2 | 0 | no | — | — |
 | W09 | 1 | 0 | no | — | — |
 | W11 | 1 | 0 | no | — | — |
-| W16 | 47 | 45 | no | — | — |
+| W16 | 26 | 26 | no | — | — |
+| W17 | 9 | 9 | no | — | — |
 | W37 | 1 | 0 | no | — | — |
 
 ## Units
@@ -52,49 +53,29 @@ Units 46/54 · W closed 0/26 (W16–W41) · suite 1829/1923 · residual 94 in 13
 | W16.C3.07 | green | 1 |
 | W16.C3.08 | green | 2 |
 | W16.C3.09 | green | 2 |
-| W16.C4.01 | green | 1 |
-| W16.C4.02 | green | 2 |
-| W16.C4.03 | green | 1 |
-| W16.C4.04 | green | 1 |
-| W16.C4.05 | red | 2 |
-| W16.C4.06 | green | 1 |
-| W16.C4.07 | green | 1 |
-| W16.C4.08 | green | 3 |
-| W16.C6.01 | green | 1 |
-| W16.C6.02 | green | 2 |
-| W16.C6.03 | green | 1 |
-| W16.C6.04 | green | 1 |
-| W16.C6.05 | green | 1 |
-| W16.C6.06 | green | 1 |
-| W16.C6.07 | green | 1 |
-| W16.C6.08 | green | 1 |
-| W16.C6.09 | green | 1 |
-| W16.C6.10 | red | 2 |
-| W16.C6.11 | green | 1 |
-| W16.C6.12 | green | 1 |
 | W16.C7.01 | green | 2 |
 | W16.C7.02 | green | 2 |
-| W16.C8.01 | green | 2 |
+| W17.L1.01 | green | 1 |
+| W17.L1.02 | green | 1 |
+| W17.L1.02b | green | 1 |
+| W17.L1.03 | green | 1 |
+| W17.L1.04 | green | 1 |
+| W17.L1.05 | green | 1 |
+| W17.L1.06 | green | 1 |
+| W17.L1.07 | green | 1 |
+| W17.L1.08 | green | 1 |
 | W37.BASE.01 | red | 1 |
 
 ## Failing tests outside the baseline
 
--  alarm — lazy re-evaluation, exits pushed, retention deleteAll a fresh instance rehydrates from storage (hibernation wake) and still exits on alarm
--  alarm — lazy re-evaluation, exits pushed, retention deleteAll fires at the crossing, pushes the exit envelope (hero reverts), re-arms for the slower dimension
--  applyHistorical: an action arriving late a row older than the last touch is discounted and never moves t backwards
--  computeNextAlarm — closed-form crossing vs retention horizon per-dimension τ overrides are respected (priceBand crosses later than line)
--  ingest — one reducer behind both doors GET /snapshot returns the GET /realtime/reflex shape
--  ingest — one reducer behind both doors three brisk views enter the affinity audiences and push the full envelope over the DO’s own socket
--  mergeReflexStates: the sum of what each device knew respects a per-dimension horizon
--  unit:W16.C4.05 host: a new threshold version applies to subsequent decisions, an invalid set is refused, and nothing published fails closed to the first stage, on both hosts
--  unit:W16.C6.10 sdk: the real SDK entry keeps a direct-mode proof in tenant-scoped storage and presents it on the next cold start, and in broker mode never holds one
+_None._
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 2ee8c5ccd28234e5bcb623c16d718106bffb9e6f45c93423f7a6751380e0e720 |
+| units sha256 | 3ccb1c662ac9f0953828254728fbd15f8f5f28f38ec80c6e776b82211eff4623 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -105,7 +86,7 @@ Units 46/54 · W closed 0/26 (W16–W41) · suite 1829/1923 · residual 94 in 13
 
 | Input | Value |
 |---|---|
-| vitest report | suite.json (outside the checkout) |
-| vitest report sha256 | fb46df9e13b642be8c3be3828faaba8ff49f88c31239f7e1b45431f005af38a9 |
-| commit | 14180b51747efb07f120001424655d13c6aa1fb0 |
-| generated | 2026-09-19T05:12:52.794Z |
+| vitest report | vitest-serial.json (outside the checkout) |
+| vitest report sha256 | 03ec2ba49a82d288560e5c9bf741b6fd780d2df98d277e628fa35b6471118a7e |
+| commit | 36a3ae82ccaec2925d01fee75777e223a54b8239 |
+| generated | 2026-09-19T05:36:20.954Z |

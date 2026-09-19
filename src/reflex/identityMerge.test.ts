@@ -15,7 +15,20 @@ import {
 } from '@/reflex/core';
 import { applyHistorical, mergeEntries, mergeReflexStates } from '@/reflex/identityMerge';
 
-const cfg: ReflexConfig = DEFAULT_REFLEX_CONFIG;
+// R10 update, witness R42 as amended by R50(a)/(d) (2026-09-19): every number
+// in this file is a hand-checked closed form over the 60-SECOND DEMO cadence —
+// "a full τ before the touch" is 60_000 at :168, and the per-dimension horizon
+// property at :117 is priceBand's 150_000 against it — while the shipped
+// default is the days/weeks memory horizon whose per-dimension overrides scale
+// with it. The cadence is therefore stated here, in the file that scripts it,
+// so the closed forms stay exactly as written; K, the thresholds, ε and the
+// dimension registry still come from the shipped default, so a retune of those
+// still reaches this suite.
+const cfg: ReflexConfig = {
+  ...DEFAULT_REFLEX_CONFIG,
+  tauMs: 60_000,
+  dimensions: DEFAULT_REFLEX_CONFIG.dimensions.map((d) => (d.key === 'priceBand' ? { ...d, tauMs: 150_000 } : d)),
+};
 const T0 = 1_700_000_000_000;
 const TABBY = audienceKey('line', 'Tabby');
 const view = (value: string, dim = 'line') => ({ action: 'product_view', touches: [{ dim, value }] });

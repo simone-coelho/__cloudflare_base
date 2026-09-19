@@ -67,6 +67,14 @@ export interface SocketLike {
 export interface ElementLike {
   getAttribute(name: string): string | null;
   addEventListener(type: string, listener: (ev: unknown) => void): void;
+  /**
+   * The release half of `addEventListener`. Real lifecycle ownership needs it:
+   * a guard that merely ignores a second bind still leaves the first listener
+   * on a node whose attributes changed underneath it (F34 §3/§6). Optional
+   * only because a port may be read-only; where it is absent the SDK keeps the
+   * handler inert instead, and the node keeps a listener it can never fire.
+   */
+  removeEventListener?(type: string, listener: (ev: unknown) => void): void;
 }
 
 /** The slice of a document the declarative capture path needs. */
