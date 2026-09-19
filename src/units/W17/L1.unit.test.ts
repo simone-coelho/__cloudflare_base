@@ -62,7 +62,11 @@
 // the element, how many live observers watch it, and whether `dataLayer.push`
 // is the page's own function again. No internal SDK flag is read.
 
-import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { describe, it, expect } from 'vitest';
 
 import { createCore } from '@/sdk/core';
 import { createEmit } from '@/sdk/emit';
@@ -108,6 +112,41 @@ class PageIntersectionObserver {
 }
 const intersect = (el: PageElement, visible: boolean): void => PageIntersectionObserver.deliver(el, visible);
 const liveObservers = (el: PageElement): number => PageIntersectionObserver.watching(el);
+
+/**
+ * The copy below is only worth what its fidelity to the shipped port is worth,
+ * so the shipped port is pinned: these are the load-bearing lines of `domOf()`
+ * at `src/sdk/host.ts:12-24`. If the remedy changes that port — a different
+ * detacher, another visibility rule, another element mapping — this pin fails
+ * for every unit in the file by design, and the copy here has to be re-ruled
+ * before any of these units can mean anything.
+ */
+function shippedPortSource(): string {
+  // Under jsdom the module URL is not a file URL, so both forms are tried
+  // before the pin is allowed to be silently unread.
+  const here = new URL('../../sdk/host.ts', import.meta.url);
+  const candidates = [
+    here.protocol === 'file:' ? fileURLToPath(here) : decodeURIComponent(here.pathname).replace(/^\/@fs/, ''),
+    resolve(process.cwd(), 'src/sdk/host.ts'),
+  ];
+  for (const candidate of candidates) {
+    try { return readFileSync(candidate, 'utf8'); } catch { /* try the next */ }
+  }
+  throw new Error('src/sdk/host.ts is not readable: the shipped DOM port cannot be pinned');
+}
+const SHIPPED_PORT = shippedPortSource();
+const squash = (text: string): string => text.replace(/\s+/g, ' ').trim();
+const SHIPPED_PORT_LINES = [
+  'querySelectorAll: (sel) => Array.from(doc.querySelectorAll(sel)) as unknown as ArrayLike<ElementLike> & Iterable<ElementLike>,',
+  "observe: (el, cb) => { if (typeof win.IntersectionObserver !== 'function') { cb(true); return () => {}; }",
+  'const io = new win.IntersectionObserver((entries) => { for (const e of entries) cb(e.intersectionRatio >= 0.5); }, { threshold: [0, 0.5] });',
+  'io.observe(el as unknown as Element); return () => io.disconnect();',
+];
+function pinShippedPort(): void {
+  for (const line of SHIPPED_PORT_LINES) {
+    expect(squash(SHIPPED_PORT), `src/sdk/host.ts:12-24 still builds the DOM port this file rebuilds: ${line}`).toContain(line);
+  }
+}
 
 /** The DOM port `browserHost()` builds in production (src/sdk/host.ts:12-24), verbatim. */
 function pageDom(): DomLike {
@@ -186,6 +225,7 @@ const ga4 = (event: string, itemId: string) => ({ event, ecommerce: { items: [{ 
 interface Posted { type: string; source: string; userId: string; tenant: string | undefined; data: Record<string, unknown> }
 
 function page() {
+  pinShippedPort();
   (globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = PageIntersectionObserver;
   PageIntersectionObserver.live.clear();
   registries.clear();
@@ -203,11 +243,19 @@ function page() {
   // A sign-in is linked within the tenant it happened in; another brand's
   // tenant keeps naming its own shopper.
   const linked = new Set<string>();
+  // The grant-recovery path the repository's own host takes
+  // (src/sdk/testHost.ts:95-99): a capability that is still held is returned as
+  // it stands, so two clients on one page recover one grant and both stay
+  // current. Minting a fresh session per call instead would fence them and
+  // manufacture a defect this batch is not about.
+  const grants = new Map<string, ReturnType<typeof syntheticSession>>();
   f.host.fetch = async (url: string, init?: RequestInitLike): Promise<ResponseLike> => {
     traffic.push({ url, init });
     const tenant = init?.headers?.['X-Tenant'] ?? 'coach';
     if (url.endsWith('/identity/session')) {
-      const session = syntheticSession(f.host.now(), linked.has(tenant) ? SHOPPER : SUBJECT[tenant], tenant);
+      const token = init?.headers?.['X-Shopper-Session'];
+      const session = (token && grants.get(token)) || syntheticSession(f.host.now(), linked.has(tenant) ? SHOPPER : SUBJECT[tenant], tenant);
+      grants.set(session.capability, session);
       return { ok: true, status: 200, json: async () => ({ ok: true, session }) };
     }
     if (url.endsWith('/identity/link')) {
@@ -215,6 +263,7 @@ function page() {
       // docs/kit/01-integration-guide.md §5).
       linked.add(tenant);
       const session = syntheticSession(f.host.now(), SHOPPER, tenant);
+      grants.set(session.capability, session);
       return { ok: true, status: 200, json: async () => ({ ok: true, carry: SHOPPER, outcome: 'linked', session }) };
     }
     return base(url, init);
@@ -253,7 +302,10 @@ describe('unit:W17.L1.01', () => {
     const secondBind = c.emit.declarative();
 
     intersect(p.hero, true);
-    await vi.waitFor(() => expect(p.sent().filter((e) => e.type === 'content_impression')).toHaveLength(1));
+    await settle();
+    // Settled, not polled: a late second impression cannot slip past a poll
+    // that stopped at the first one.
+    expect(p.sent().map((e) => e.type), 'the painted hero reports one impression').toEqual(['content_impression']);
 
     // Ownership: the element carries the SDK's listener once, however many
     // times the page bound it (document 35 §5 W17; F34 §2A/§3).
@@ -335,6 +387,56 @@ describe('unit:W17.L1.02', () => {
   });
 });
 
+describe('unit:W17.L1.02b', () => {
+  it("sdk: two live clients share the page's dataLayer — each captures the page's push once, the one still attached keeps capturing after the other detaches, and the page's own push comes back only with the last release", async () => {
+    // docs/handover/HANDOFF-2026-09-16.md §6, reproduced with real clients on
+    // the repository's own session path: "before {A:1,B:1}, after detaching A
+    // and pushing again {A:1,B:1}; B should be 2. A's teardown restores an
+    // older push, removing B's still-active wrapper."
+    const p = page();
+    const pagePush = p.layer.push;
+    const a = p.client('coach-web-route-a');
+    const b = p.client('coach-web-route-b');
+    expect(await a.core.ready()).toBe(true);
+    expect(await b.core.ready()).toBe(true);
+    const offA = a.emit.dataLayer({ replay: false });
+    const offB = b.emit.dataLayer({ replay: false });
+
+    // Both attached: the page's one push is one event for each client, and
+    // neither is doubled — one wrapper per client, not one per attach.
+    let mark = p.sent().length;
+    p.layer.push(ga4('add_to_cart', 'COACH-TABBY-26'));
+    await settle();
+    expect(p.sent().slice(mark).map((e) => [e.type, e.source, e.data.productId]).sort(),
+      "one push reaches each live client once").toEqual([
+      ['add_to_cart', 'coach-web-route-a', 'COACH-TABBY-26'], ['add_to_cart', 'coach-web-route-b', 'COACH-TABBY-26'],
+    ]);
+
+    // A detaches. B never asked to stop, so the page's next push is still B's
+    // event — one, and only B's.
+    offA();
+    mark = p.sent().length;
+    p.layer.push(ga4('add_to_cart', 'COACH-ROGUE-25'));
+    await settle();
+    expect(p.sent().slice(mark).map((e) => [e.type, e.source, e.data.productId]),
+      'the client still attached keeps capturing after the other detaches').toEqual([
+      ['add_to_cart', 'coach-web-route-b', 'COACH-ROGUE-25'],
+    ]);
+
+    // Only the last release gives the page its own push back.
+    offB();
+    expect(p.layer.push, "the page's own push function after the last client releases it").toBe(pagePush);
+    const quiet = p.urls().length;
+    p.layer.push(ga4('view_item', 'COACH-ROGUE-25'));
+    await settle();
+    expect(p.urls().slice(quiet), 'transport calls a push makes after both clients released the layer').toEqual([]);
+    expect(p.layer.map((e) => (e as { event: string }).event), "the page's array keeps every entry it was pushed")
+      .toEqual(['add_to_cart', 'add_to_cart', 'view_item']);
+    a.destroy();
+    b.destroy();
+  });
+});
+
 describe('unit:W17.L1.03', () => {
   it('sdk: one rendered element is observed once, its observers are gone after detach, and a remount observes it once again', async () => {
     const p = page();
@@ -402,7 +504,9 @@ describe('unit:W17.L1.04', () => {
     // Both chosen pieces are painted and acknowledged.
     intersect(p.hero, true);
     intersect(p.story, true);
-    await vi.waitFor(() => expect(p.sent().filter((e) => e.type === 'content_impression')).toHaveLength(2));
+    await settle();
+    expect(p.sent().map((e) => e.type), 'each painted piece reports one impression')
+      .toEqual(['content_impression', 'content_impression']);
 
     // The route re-renders in place: the hero node now carries the craft story,
     // and the button now sells the Rogue. The nodes themselves are the same.
@@ -465,6 +569,10 @@ describe('unit:W17.L1.05', () => {
       await settle();
       expect(p.sent().slice(live).map((e) => e.type).sort(), `the mounted page reports its own click and push (${order})`)
         .toEqual(['add_to_cart', 'add_to_cart']);
+      // ...and those clicks come from registrations this counter can see, so the
+      // zeros below are a removal and not an element it never watched.
+      expect(liveClickListeners(p.hero), `click registrations on the content element while mounted (${order})`).toBe(1);
+      expect(liveClickListeners(p.cta), `click registrations on the commerce element while mounted (${order})`).toBe(1);
 
       if (order === 'core-before-listeners') { c.destroy(); bind(); wrap(); } else { bind(); wrap(); c.destroy(); }
 
@@ -497,7 +605,10 @@ describe('unit:W17.L1.06', () => {
     expect(await a.emit.rendered('hero', 'cnt_tabby_lifestyle', p.hero), 'the painted hero is admitted').toMatchObject({ version: 1, status: 'durable', decisionId: HERO_RECEIPT });
     intersect(p.hero, true); // a dwell is pending on the client the page is about to discard
     p.cta.click();
-    await vi.waitFor(() => expect(p.sent().filter((e) => e.type === 'add_to_cart')).toHaveLength(1));
+    await settle();
+    expect(p.sent().map((e) => [e.type, e.source]).sort(), 'the mounted client reports its impression and its click').toEqual([
+      ['add_to_cart', 'coach-web-route-a'], ['content_impression', 'coach-web-route-a'],
+    ]);
 
     // The route unmounts and the page builds a fresh client, as an SPA does.
     bindA();
@@ -540,8 +651,9 @@ describe('unit:W17.L1.07', () => {
     const bind = c.emit.declarative();
     const wrap = c.emit.dataLayer();
     p.cta.click();
-    await vi.waitFor(() => expect(p.sent()).toHaveLength(1));
-    expect(p.sent()[0]!.userId, 'before the sign-in the browser is the anonymous shopper').toBe(SUBJECT.coach);
+    await settle();
+    expect(p.sent().map((e) => [e.type, e.userId]), 'before the sign-in the browser is the anonymous shopper')
+      .toEqual([['add_to_cart', SUBJECT.coach]]);
 
     // The site signs the person in (CW25; docs/kit/01-integration-guide.md §5).
     const result = await c.identity.identify('ACCT-1043988', {
@@ -610,6 +722,10 @@ describe('unit:W17.L1.08', () => {
     await settle();
     expect(p.sent().slice(live).map((e) => e.type).sort(), 'the mounted page reports its own click and push')
       .toEqual(['add_to_cart', 'product_view']);
+    // ...and those clicks come from registrations this counter can see, so the
+    // zeros below are a removal and not an element it never watched.
+    expect(liveClickListeners(p.hero), 'click registrations on the content element while mounted').toBe(1);
+    expect(liveClickListeners(p.cta), 'click registrations on the commerce element while mounted').toBe(1);
 
     const b = p.client('coach-web-route-b', 'coach', 1_000);
     expect(await b.core.ready()).toBe(true);

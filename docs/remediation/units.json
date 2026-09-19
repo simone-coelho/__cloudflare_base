@@ -283,7 +283,19 @@
     "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34; docs/handover/HANDOFF-2026-09-16.md §6, the actual-module reproduction: \"before {A:1,B:1}, after detaching A and pushing again {A:1,B:1}; B should be 2. A's teardown restores an older push, removing B's still-active wrapper\"; docs/architecture/35-verification-reports/F34.md §2G (attaching twice double-captures and replays history a second time; after a full teardown the layer is left instrumented by a discarded client); the documented contract at src/sdk/emit.ts:42-43 (\"Returns a detach function that restores it\"), docs/kit/01-integration-guide.md §4 and src/sdk/README.md; GA4 payload shapes docs/kit/03-payload-schemas.md and src/sdk/emit.ts GA4_MAPPING",
     "status": "specified",
     "batch": "W17-B1",
-    "residual": "Measured at specification: 'a push after the last release emits zero events' is already green through the inactive guard; RED on the replay count, the double capture, the lost capture after the first release and the push identity."
+    "residual": "Measured at specification: 'a push after the last release emits zero events' is already green through the inactive guard; RED on the replay count, the double capture, the lost capture after the first release and the push identity. The HANDOFF-2026-09-16 §6 shape with two LIVE clients on one page layer is unit W17.L1.02b: this unit's single client with two attachments does not by itself stop an implementation reading \"wrapped once\" as one handler per layer."
+  },
+  {
+    "id": "W17.L1.02b",
+    "w": "W17",
+    "criterion": "L1",
+    "outcome": "Two live clients on one page share the page's dataLayer without taking it from each other: while both are attached one push is one event for each client (HANDOFF-2026-09-16 §6 \"{A:1,B:1}\"); after one client releases its attachment the other, which never asked to stop, still captures the next push exactly once and only under its own source (§6 \"B should be 2\"); the page's own push function comes back by identity only when the last attachment is released, and a push after that emits zero transport calls while still reaching the page's array.",
+    "legs": [
+      "sdk"
+    ],
+    "witness": "docs/handover/HANDOFF-2026-09-16.md §6, the actual-module reproduction run against the real modules: \"Observed SDK result: before {A:1,B:1}, after detaching A and pushing again {A:1,B:1}; B should be 2. A's teardown restores an older push, removing B's still-active wrapper. This is the actual W17 shared-lifecycle failure, not merely a missing test\"; docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 and §2 F34; docs/architecture/35-verification-reports/F34.md §2G; src/sdk/emit.ts:175-181 (the captured-original restore); src/sdk/testHost.ts:95-99 (the grant-recovery session path on which both clients stay current, measured by the W17-B1 specification pass, probes P1-P3)",
+    "status": "specified",
+    "batch": "W17-B1"
   },
   {
     "id": "W17.L1.03",
@@ -360,6 +372,6 @@
     "witness": "docs/architecture/35-audit-verification-and-source-of-truth.md §5 row W17 · G2 (real lifecycle ownership/unbind for declarative click/commerce, dataLayer wrappers and rendered observers; detach/remount, changed DOM attributes, new clients, either teardown order, identity/tenant switches, pending callbacks and zero events after full detach in a real DOM/browser; do not close on the proposed bind-once WeakMap guard) and §2 F12/F34 (\"zero events after full detach\", \"pending callbacks\"); docs/architecture/35-verification-reports/F34.md §2G (\"after the integrator has fully torn everything down the layer is left instrumented, closed over a client the page has discarded, and still posting\"); docs/handover/HANDOFF-2026-09-16.md §6; src/sdk/listen.ts:339-340 (the periodic refresh timer and its clearInterval)",
     "status": "specified",
     "batch": "W17-B1",
-    "residual": "Measured at specification: the residual wrapper a discarded client leaves also makes a transport call after the full detach — the first post-detach dataLayer push drives POST /v1/coach/identity/session — so this unit is RED at the transport boundary as well as on the page's left-over state."
+    "residual": "Measured at specification (corrected after the specification pass, probe P6): the post-detach transport clause is GREEN today — the wrapper a discarded client leaves on the page produces zero transport calls because the inactive-callback guard at src/sdk/emit.ts:162 fires — so the RED is the two click registrations left on the page's elements and the leftover wrapper (the page's own push is not restored). The earlier claim that the first post-detach push drives POST /identity/session was a fixture artifact of a session override that minted a fresh grant per call; that override is gone (corrections C1/C2)."
   }
 ]
