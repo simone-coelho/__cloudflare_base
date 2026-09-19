@@ -122,6 +122,8 @@ import { configuredDestinations, connectorIdentity } from '@/connectors/config';
 import { VISIT_GAP_MS } from '@/services/visit';
 import { ENTRY_TERM_LIMIT } from '@/services/visit';
 import { memoryStore } from '@/auth/store';
+import { signAssertion } from '@/identity/assertion';
+import { createIdentity } from '@/sdk/identify';
 import { createCore, DEFAULT_PATHS } from '@/sdk/core';
 import { memoryHost } from '@/sdk/memoryHost';
 import { authorityLocks } from '@/sdk/testHost';
@@ -204,6 +206,34 @@ const CONTENT_CLICK_NAMED_CATEGORY = { type: 'content_click', data: { category: 
 const IMPORT_UNNAMED_LINE = 'Willow';
 /** …and one it does. */
 const IMPORT_NAMED_LINE = 'Rogue';
+
+// --- W16.C8.11 · why a row was skipped -------------------------------------
+/**
+ * RULED MEMBER (R21, R72(e)): the skip reason an import row gets when the
+ * tenant's published catalogue vocabulary is what refused it.
+ *
+ * ONE REPRESENTATION, chosen and stated here: a CODED token on the report's
+ * existing `skipped[].reason`, in the form that field already carries for the
+ * reasons the shopper's own object returns (`profile_missing`,
+ * `consent_missing`, `consent_refused`, `stale_profile`, `replayed_profile` all
+ * travel through `report.skipped` verbatim, `src/identity/history.ts:226` and
+ * the outcome loop below it). Coded rather than prose because an operator's
+ * import report is read by machines first, and because the audited path already
+ * needs every reason to land in the closed set `historySkipReasonSchema`
+ * (`src/auth/store.ts:74-75`), which this token must join.
+ *
+ * Today `src/identity/history.ts:146-149` cannot tell the two apart and reports
+ * BOTH as the prose below, which is untrue of a row that carried a perfectly
+ * good registry attribute the catalogue simply does not name (the W16-B8 build
+ * review, finding 6 and its probe 3(b)).
+ */
+const IMPORT_VOCABULARY_REASON = 'out_of_vocabulary';
+/** The reason a row that really carries no registry attribute keeps (unchanged). */
+const IMPORT_NO_TOUCH_REASON = 'no registry attribute on the row';
+/** A value on a dimension the catalogue names, that it does not name. */
+const IMPORT_UNNAMED_CATEGORY = 'Home Fragrance';
+/** An attribute the registry names no dimension for at all. */
+const IMPORT_NON_REGISTRY_ATTRIBUTE = { warehouse_bin: 'AISLE-7' };
 
 // ---------------------------------------------------------------------------
 // The published documents. Byte-equal to the set `src/units/W16/C8.unit.test.ts`
@@ -448,6 +478,23 @@ function boundary(host: 'session' | 'do', options: { odp?: boolean } = {}) {
     return { changed: Object.keys(after).filter(category => !same(category)).sort(),
       carried: Object.keys(after).filter(same).sort() };
   };
+  /**
+   * W16.C5.07: the tenant has NO published profile-retention policy at all —
+   * not a stale one, none. Every other category it holds is carried forward
+   * exactly as it stands (above all the destination's own
+   * `external.odp.<digest>` policy), so this too is one fault and not two.
+   */
+  const withdrawProfileRetentionPolicy = () => {
+    const current = JSON.parse(env.RETENTION!) as { version: 1; tenants: Record<string, Record<string, RetentionPolicy>> };
+    const next: { version: 1; tenants: Record<string, Record<string, RetentionPolicy>> } = { version: 1, tenants: Object.fromEntries(
+      Object.entries(current.tenants).map(([tenant, categories]) => {
+        const { profile: _withdrawn, ...rest } = categories; void _withdrawn;
+        return [tenant, rest];
+      })) };
+    env.RETENTION = JSON.stringify(next);
+    const before = Object.keys(current.tenants[TENANT] ?? {}), after = Object.keys(next.tenants[TENANT] ?? {});
+    return { removed: before.filter(category => !after.includes(category)).sort(), carried: after.sort() };
+  };
   const construct = (name: string) => {
     const data = new Map<string, unknown>();
     const alarms: number[] = [], sockets: WebSocket[] = [];
@@ -517,7 +564,7 @@ function boundary(host: 'session' | 'do', options: { odp?: boolean } = {}) {
   };
   const drain = async () => { while (pending.length) await Promise.all(pending.splice(0)); await new Promise(r => setTimeout(r, 10)); };
   return { env, app, cache, sessions, objects, queued, call, drain, configureRetention,
-    publishNextProfileRetentionRevision, setFault: (next: ObjectFault) => { fault = next; } };
+    publishNextProfileRetentionRevision, withdrawProfileRetentionPolicy, setFault: (next: ObjectFault) => { fault = next; } };
 }
 
 async function fixturePublication(env: Env, tenant: string, continuity: unknown | null) {
@@ -680,6 +727,98 @@ async function hostFixture(host: 'session' | 'do', options: { odp?: boolean; con
 
 /** Both hosts answer the same page, so every assertion names the host it measured. */
 const HOSTS = ['session', 'do'] as const;
+
+/** The engine this browser talks to: the same origin the mounted fixture answers on. */
+const SDK_ENDPOINT = 'https://synthetic.invalid';
+
+/**
+ * ONE REAL BROWSER in front of the mounted engine (W16.C6.13's joined leg).
+ *
+ * The shipped `src/sdk` entry drives every load. Its storage is this browser's
+ * storage and survives a load, its `Set-Cookie`s go into a jar and come back on
+ * the next request with `credentials: 'include'`, and the ONLY session
+ * capability that ever reaches the engine is the one the browser itself holds —
+ * there is no fixture fallback, so a load that is not recognized cannot be
+ * rescued by the harness. Everything crosses the fetch boundary the way
+ * `src/units/W16/C6.unit.test.ts:1156` and `src/routes/realtime.sdkContract.test.ts:500`
+ * cross it.
+ */
+function sdkBrowser(h: Awaited<ReturnType<typeof hostFixture>>) {
+  const store = new Map<string, string>(), jar = new Map<string, string>();
+  const calls: Array<{ path: string; status: number; presented: unknown; continuity: unknown; subject: string }> = [];
+  let capability = '', subject = '', sessionId = '';
+  const cookieHeader = () => [...jar].map(([name, value]) => `${name}=${value}`).join('; ');
+  const browser = () => memoryHost({
+    acquireAuthorityLock: authorityLocks(),
+    now: () => Date.now(), uuid: () => crypto.randomUUID(),
+    storage: { get: key => store.get(key) ?? null, set: (key, value) => { store.set(key, value); } },
+    location: { href: 'https://shop.example/home', host: 'shop.example', hostname: 'shop.example', protocol: 'https:', search: '' },
+    referrer: '',
+    fetch: async (url, init) => {
+      const raw = init?.body ?? '';
+      const parsed = (() => { try { return raw ? JSON.parse(raw) as Record<string, unknown> : undefined; } catch { return undefined; } })();
+      const target = new URL(url);
+      const bearer = (init?.headers as Record<string, string> | undefined)?.[SHOPPER_HEADER];
+      const response = await h.f.call(target.pathname + target.search, {
+        method: init?.method ?? 'GET', body: parsed,
+        ...(bearer ? { capability: bearer } : {}),
+        ...(jar.size ? { headers: { Cookie: cookieHeader() } } : {}),
+      });
+      for (const cookie of setCookies(response)) {
+        const pair = cookie.split(';')[0] ?? '', at = pair.indexOf('=');
+        if (at <= 0) continue;
+        const name = pair.slice(0, at).trim(), value = pair.slice(at + 1).trim();
+        if (value === '' || /Max-Age=0/i.test(cookie)) jar.delete(name); else jar.set(name, value);
+      }
+      const text = await response.clone().text();
+      const json = (() => { try { return JSON.parse(text) as Record<string, unknown>; } catch { return null; } })();
+      const session = (json?.session ?? {}) as { capability?: unknown; subject?: unknown; sessionId?: unknown; kind?: unknown };
+      if (typeof session.capability === 'string' && session.capability) {
+        capability = session.capability;
+        subject = String(session.subject ?? subject); sessionId = String(session.sessionId ?? sessionId);
+      }
+      calls.push({ path: target.pathname, status: response.status,
+        presented: (parsed as { continuity?: unknown } | undefined)?.continuity ?? null,
+        continuity: (json as { continuity?: unknown } | null)?.continuity ?? null,
+        subject: String(session.subject ?? '') });
+      return { ok: response.ok, status: response.status, json: async () => json };
+    },
+  });
+  const key = sdkContinuityKey(SDK_ENDPOINT, TENANT), operationKey = sdkContinuityOperationKey(SDK_ENDPOINT, TENANT);
+  return {
+    store, jar, calls, key, operationKey,
+    /** One page load of the real SDK entry over this browser's own storage. */
+    load: async () => {
+      const core = createCore({ tenant: TENANT, endpoint: SDK_ENDPOINT, source: 'sdk' }, browser());
+      return { core, adopted: await core.ready() };
+    },
+    /** The last session answers this browser received, newest last. */
+    sessionCalls: (from = 0) => calls.slice(from).filter(call => call.path.endsWith('/identity/session')),
+    held: () => ({ proof: store.get(key) ?? '', operationId: store.get(operationKey) ?? '' }),
+    capability: () => capability, subject: () => subject, sessionId: () => sessionId,
+    /**
+     * A week away: the short session capability this browser held is gone
+     * (expiry or eviction), which is the state a returning shopper is in. Her
+     * long recognition proof is untouched — that is the whole point of it.
+     */
+    forgetCapability: () => {
+      for (const name of [...store.keys()]) if (name.startsWith('opt_shopper_session:')) store.delete(name);
+      capability = '';
+    },
+    /** Her explicit choice — or her withdrawal — through the route the kit documents. */
+    choose: async (on = true) => {
+      const claims = claimsOf(capability);
+      const stored = h.f.objects.get(shopperObjectName(TENANT, subject))?.data.get('consent');
+      const response = await h.f.call(`/realtime/session/${sessionId}/preferences`, { capability,
+        ...(jar.size ? { headers: { Cookie: cookieHeader() } } : {}),
+        body: { trackingConsent: on, personalizationEnabled: on,
+          choice: { id: crypto.randomUUID(), expectedRevision: storedConsent(stored).instruction?.revision ?? null,
+            grantId: claims.grantId, iat: claims.iat, exp: claims.exp } } });
+      expect(response.status, `the fixture's own choice must be accepted: ${await response.clone().text()}`).toBe(200);
+      await h.f.drain();
+    },
+  };
+}
 
 // ===========================================================================
 
@@ -848,6 +987,190 @@ describe('unit:W16.C6.13', () => {
       expect(decided.store.get(operationKey) ?? '', `W16.C6.13 control — and so is the operation id (reason ${reason})`).toBe('');
     }
   });
+
+  it('sdk: joined — after an outage on her return, the very next load driven only by the real SDK recognizes her own subject, ranks her own taste, spends the kept proof exactly once and leaves her browser holding the rotated proof for HER subject', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      // R72: the two halves of W16.C6.13 are worth nothing apart. The route may
+      // report `unavailable` and the SDK may keep the proof, and the shopper can
+      // still be lost forever — which is what the W16-B8 build review measured
+      // (its Finding 1 and probe 1). This leg joins them: ONE browser, the
+      // shipped `src/sdk` entry on every load, the mounted engine behind it, and
+      // the outcome the shopper actually gets.
+      //
+      // OUTCOMES ONLY, NEVER THE MECHANISM (R72(c)): nothing below says whether
+      // the route must consume a proof presented beside a capability, or whether
+      // the browser must stop carrying the interim capability the outage minted.
+      // Either repair satisfies every assertion here; a repair that loses her
+      // satisfies none.
+      const h = await hostFixture('session', { continuity: CONTINUITY_DIRECT });
+      const her = sdkBrowser(h);
+
+      // LOAD 1 — she meets the engine and makes her explicit choice.
+      expect((await her.load()).adopted, 'load 1 establishes her session').toBe(true);
+      await her.choose();
+      // LOAD 2 — the ordinary page load that issues her recognition descriptor.
+      const second = await her.load();
+      expect(second.adopted, 'load 2 refreshes her session').toBe(true);
+      const heldProof = her.held().proof;
+      expect(heldProof.length, 'the fixture must leave a real direct-mode proof in her browser').toBeGreaterThan(32);
+      const herSubject = her.subject();
+
+      // She browses, through the SDK's own send path, so the taste that must
+      // come back is taste the real client built.
+      for (const [index, view] of THREE_TABBY_VIEWS.entries()) {
+        clock.mockReturnValue(T0 + index * STEP_MS);
+        await second.core.send('product_view', view.data);
+      }
+      await h.f.drain();
+      clock.mockReturnValue(T0 + 2 * STEP_MS);
+      expect((await h.snapshot(her.capability())).ranking.hero,
+        'before she leaves, her own taste ranks her page — the control the recognition below is measured against')
+        .toEqual([TABBY, ROGUE]);
+
+      // A week away. Her short session capability is gone from the browser; her
+      // long recognition proof is not.
+      clock.mockReturnValue(T0 + 7 * DAY_MS);
+      her.forgetCapability();
+
+      // LOAD 3 — THE OUTAGE. Her own object cannot be reached for the consume.
+      h.f.setFault({ match: '/identity/continuity/consume', kind: '5xx' });
+      const outageMark = her.calls.length;
+      expect((await her.load()).adopted, 'the outage load still serves her a session').toBe(true);
+      h.f.setFault(null);
+      const outageCall = her.sessionCalls(outageMark).at(-1);
+      expect.soft(outageCall?.continuity,
+        'W16.C6.13 joined — the outage is reported by its own name').toEqual({ enabled: false, reason: 'unavailable' });
+      const afterOutage = her.held();
+      expect.soft(afterOutage.proof, 'W16.C6.13 joined — and her browser still holds the proof').toBe(heldProof);
+      expect.soft(afterOutage.operationId, 'W16.C6.13 joined — and the operation id the same consume is keyed by').toMatch(UUID);
+
+      // LOAD 4 — HER NEXT LOAD, engine healthy, driven only by the SDK with
+      // whatever the browser now holds (including the interim capability the
+      // outage answer minted). This is the clause the build review found false.
+      const recoveryMark = her.calls.length;
+      expect((await her.load()).adopted, 'the next load serves her a session').toBe(true);
+      const recovery = her.sessionCalls(recoveryMark).at(-1);
+      expect.soft(recovery?.subject,
+        'W16.C6.13 joined — on her next load after the outage the engine recognizes HER subject, not the interim anonymous one')
+        .toBe(herSubject);
+      expect.soft(her.subject(), 'W16.C6.13 joined — and that is the subject her browser now carries').toBe(herSubject);
+      expect.soft((recovery?.continuity as ContinuityReport | null)?.enabled,
+        'W16.C6.13 joined — with a live descriptor of her own chain').toBe(true);
+      expect.soft((recovery?.continuity as ContinuityReport | null)?.generation,
+        'W16.C6.13 joined — rotated exactly once, by the one consume that reached her object').toBe(2);
+      // Her page, asked with what the SDK holds after that load.
+      expect.soft((await h.snapshot(her.capability())).ranking.hero,
+        'W16.C6.13 joined — and her own remembered taste ranks her page, not the catalogue order')
+        .toEqual([TABBY, ROGUE]);
+
+      // SPENT EXACTLY ONCE (R48(a), the one deterministic successor receipt of
+      // W16.C6.05). The same consume replayed is answered from that receipt…
+      const replay = await h.identitySession({ proof: heldProof, operationId: afterOutage.operationId });
+      expect.soft(replay.subject, 'W16.C6.13 joined — an exact replay of the same consume is idempotent, still hers').toBe(herSubject);
+      expect.soft((replay.continuity ?? {}).generation, 'W16.C6.13 joined — at the same generation, burning nothing further').toBe(2);
+      // …and the spent proof under a DIFFERENT operation id is a cold shopper.
+      const reused = await h.identitySession({ proof: heldProof, operationId: crypto.randomUUID() });
+      expect.soft(reused.continuity, 'W16.C6.13 joined — the spent proof under a new operation id is refused')
+        .toEqual({ enabled: false, reason: 'consent' });
+      expect.soft((await h.snapshot(reused.capability)).ranking.hero,
+        'W16.C6.13 joined — and that caller is served the catalogue order, with nobody\'s taste').toEqual(HERO_BASE_ORDER);
+
+      // AND WHAT SHE HOLDS NOW IS HERS. The rotated proof her browser kept is a
+      // proof for HER subject — proved by spending it — and never one minted for
+      // the interim anonymous subject the outage created.
+      const rotatedHeld = her.held().proof;
+      expect.soft(rotatedHeld.length, 'W16.C6.13 joined — her browser ends holding a recognition proof').toBeGreaterThan(32);
+      const spendRotated = await h.identitySession({ proof: rotatedHeld, operationId: crypto.randomUUID() });
+      expect.soft(spendRotated.subject,
+        'W16.C6.13 joined — and the proof it holds recognizes HER, never the interim anonymous subject').toBe(herSubject);
+
+      // CONTROL A — a genuine decision about the shopper still clears what she
+      // holds. A second browser, a real withdrawal through the documented
+      // preferences route, and her return: the engine places nobody, and the
+      // proof this engine will not recognize is a token nobody keeps.
+      clock.mockReturnValue(T0 + 8 * DAY_MS);
+      const withdrawn = sdkBrowser(h);
+      expect((await withdrawn.load()).adopted, 'control A load 1').toBe(true);
+      await withdrawn.choose(true);
+      expect((await withdrawn.load()).adopted, 'control A load 2').toBe(true);
+      const withdrawnProof = withdrawn.held().proof;
+      expect(withdrawnProof.length, 'control A holds a real proof before she withdraws').toBeGreaterThan(32);
+      await withdrawn.choose(false);
+      clock.mockReturnValue(T0 + 9 * DAY_MS);
+      withdrawn.forgetCapability();
+      const refusedMark = withdrawn.calls.length;
+      expect((await withdrawn.load()).adopted, 'control A: she is still served a session').toBe(true);
+      const refused = withdrawn.sessionCalls(refusedMark).at(-1);
+      expect((refused?.continuity as ContinuityReport | null)?.reason,
+        'W16.C6.13 control A — a withdrawal is a decision about the shopper, reported as such').toBe('consent');
+      expect(withdrawn.held().proof,
+        'W16.C6.13 control A — so her browser clears the proof it held').toBe('');
+      expect((await h.snapshot(withdrawn.capability())).ranking.hero,
+        'W16.C6.13 control A — and she is served the catalogue order').toEqual(HERO_BASE_ORDER);
+
+      // CONTROL B — a presented proof never takes over a session that belongs
+      // to an identified shopper. This browser is signed in as a known account
+      // and is holding someone else's live recognition proof; the known
+      // shopper's session must be untouched and the stranger's proof unspent.
+      clock.mockReturnValue(T0 + 10 * DAY_MS);
+      const stranger = sdkBrowser(h);
+      expect((await stranger.load()).adopted, 'control B: the stranger establishes').toBe(true);
+      await stranger.choose(true);
+      expect((await stranger.load()).adopted, 'control B: the stranger is issued a proof').toBe(true);
+      const strangersProof = stranger.held().proof;
+      expect(strangersProof.length, 'control B: the stranger really holds a proof').toBeGreaterThan(32);
+      const strangersSubject = stranger.subject();
+
+      const known = sdkBrowser(h);
+      const knownLoad = await known.load();
+      expect(knownLoad.adopted, 'control B: the known shopper establishes').toBe(true);
+      await known.choose(true);
+      // She signs in through the shipped client surface (`createIdentity(...).identify`),
+      // so the browser holds exactly what a signed-in browser holds.
+      const exp = Math.floor(Date.now() / 1000) + 300;
+      const assertion = await signAssertion('backend-proof', TENANT, knownLoad.core.visitorId, 'coach-account-w16-b8', exp);
+      const signedIn = await createIdentity(knownLoad.core).identify('coach-account-w16-b8', { assertion, exp, source: 'login' });
+      expect(signedIn, `control B: the fixture's own sign-in must succeed: ${JSON.stringify(signedIn)}`)
+        .toMatchObject({ ok: true });
+      const knownSubject = (signedIn as { shopperId: string }).shopperId;
+      expect(knownSubject, 'control B: and it really is an identified shopper').toMatch(/^sh_/);
+
+      // Her browser holds the stranger's proof while signed in as herself. Her
+      // own owned read still works with the capability she holds — the control
+      // that she really is signed in on this engine right now.
+      expect((await h.f.call('/realtime/reflex', { capability: known.capability() })).status,
+        'control B: the signed-in browser really holds a live capability of her own').toBe(200);
+      known.store.set(known.key, strangersProof);
+      known.store.set(known.operationKey, crypto.randomUUID());
+
+      const takeoverMark = known.calls.length;
+      expect((await known.load()).adopted, 'control B: the signed-in load is served').toBe(true);
+      // Her own page load leaves her signed in as herself: a proof her browser
+      // happens to be carrying is not an instruction to become somebody else,
+      // and losing her identified session is not an acceptable way to answer
+      // her. (Measured on this base: `POST /v1/:tenant/identity/session` answers
+      // 401 for a recognized capability while `GET /realtime/reflex` answers 200
+      // for the very same one, so the client clears what she holds and starts
+      // over anonymously — and then has a proof in hand. That chain is what this
+      // assertion closes; whether it is closed in the route or in the client is
+      // the builder's choice, R72(c).)
+      expect.soft(known.subject(),
+        'W16.C6.13 control B — her own page load leaves an identified shopper signed in as herself')
+        .toBe(knownSubject);
+
+      // …and the stranger's proof was not spent: it still recognizes him. This
+      // is the half that no repair may break — a browser that already holds a
+      // session of its own must never spend somebody else's recognition.
+      clock.mockReturnValue(T0 + 11 * DAY_MS);
+      const strangerReturns = await h.identitySession({ proof: strangersProof, operationId: crypto.randomUUID() });
+      expect.soft(strangerReturns.subject,
+        'W16.C6.13 control B — and the proof it carried was never consumed, so its owner still returns on it')
+        .toBe(strangersSubject);
+      expect.soft((await h.snapshot(strangerReturns.capability)).ranking.hero,
+        'W16.C6.13 control B — on his own session').toEqual(HERO_BASE_ORDER);
+    } finally { clock.mockRestore(); }
+  });
 });
 
 // ===========================================================================
@@ -913,6 +1236,77 @@ describe('unit:W16.C5.06', () => {
           const sources = [...warned.map((text, index) => ({ name: `warn ${index}`, text })), { name: 'control', text: secret }];
           expect.soft(sources.filter(source => source.text.includes(secret)).map(source => source.name),
             `${host}: W16.C5.06 — the diagnostic names no ${what}`).toEqual(['control']);
+        }
+      }
+    } finally { warn.mockRestore(); network.restore(); clock.mockRestore(); }
+  });
+});
+
+// ===========================================================================
+
+describe('unit:W16.C5.07', () => {
+  it('host: a tenant with no published profile-retention policy at all is answered — the read carries no retained profile, sends nothing to the destination and emits the coded warn once — while the same tenant with the policy published is answered her affinity, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    const network = installNetwork();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => { /* captured, never printed */ });
+    try {
+      for (const host of HOSTS) {
+        clock.mockReturnValue(T0);
+        const h = await hostFixture(host, { odp: true });
+        const her = await h.newShopper({ clock });
+        const vuid = await connectorIdentity(TENANT, ODP_NAMESPACE, her.subject);
+
+        // 1. LIVE CONTROL, first, on the same shopper and the same read: while
+        //    the tenant publishes a profile-retention policy, the stage-moving
+        //    read answers her own retained profile. Everything absent below is
+        //    a property of the withdrawn policy and not of a dead fixture.
+        clock.mockReturnValue(T0 + 2 * STEP_MS + VISIT_GAP_MS + 1);
+        const control = await h.rawHydrate(her.capability);
+        expect(control.status, `${host}: the stage-moving read with a published policy answers`).toBe(200);
+        expect(Object.keys(control.body.affinity?.dims?.line ?? {}),
+          `${host}: W16.C5.07 control — with the policy published the read carries her own affinity`).toEqual(['Tabby']);
+        const ordinaryKeys = Object.keys(control.body as object).sort();
+
+        // 2. The tenant publishes NO profile-retention policy at all. Its other
+        //    categories, including the destination's own, are untouched: one
+        //    fault, proved rather than assumed.
+        const withdrawn = h.f.withdrawProfileRetentionPolicy();
+        expect(withdrawn.removed, `${host}: exactly the profile retention policy is withdrawn`).toEqual(['profile']);
+        expect(withdrawn.carried.filter(category => category.startsWith('external.odp.')),
+          `${host}: and the tenant's ODP destination keeps the retained-data authority it was configured with`).toHaveLength(1);
+
+        const mark = network.calls.length;
+        warn.mockClear();
+        clock.mockReturnValue(T0 + 2 * STEP_MS + 2 * VISIT_GAP_MS + 2);
+        const answered = await h.rawHydrate(her.capability);
+
+        // 3. She is ANSWERED. `docs/api/01-rest-endpoints.md` (the
+        //    `GET /realtime/reflex` row) documents `affinity{…}|null` and
+        //    `visit{…}|null` and documents no failure for retention at all: a
+        //    tenant that has not published a policy has no retained profile to
+        //    answer with, which is not the same thing as having no answer.
+        expect.soft(answered.status,
+          `${host}: W16.C5.07 — a tenant with no profile-retention policy still ANSWERS the read: ${answered.text.slice(0, 200)}`).toBe(200);
+        expect.soft(answered.body.ok, `${host}: W16.C5.07 — with the read's own answer`).toBe(true);
+        expect.soft({ affinity: answered.body.affinity ?? null, journeyStage: answered.body.journeyStage ?? null, visit: answered.body.visit ?? null },
+          `${host}: W16.C5.07 — carrying no retained profile, in the documented shape`)
+          .toEqual({ affinity: null, journeyStage: null, visit: null });
+        expect.soft(Object.keys(answered.body as object).sort(),
+          `${host}: W16.C5.07 — and the ordinary key set of this host's answer, so no client has to learn a second shape`)
+          .toEqual(ordinaryKeys);
+
+        // 4. Nothing leaves the platform for a profile it has no authority to
+        //    hold, and the skip is reported once, coded, naming nobody.
+        expect.soft(odpSince(network.calls, mark).map(call => `${call.method} ${call.path}`),
+          `${host}: W16.C5.07 — and nothing at all is said to the destination`).toEqual([]);
+        const warned = warn.mock.calls.map(args => args.map(String).join(' '));
+        expect.soft(warned.filter(text => text === RETENTION_SKIP_WARNING),
+          `${host}: W16.C5.07 — the skip is reported once, in the coded words R63 rules (saw: ${JSON.stringify(warned)})`)
+          .toEqual([RETENTION_SKIP_WARNING]);
+        for (const [what, secret] of [['shopper', her.subject], ['session', her.sessionId], ['destination id', vuid]] as const) {
+          const sources = [...warned.map((text, index) => ({ name: `warn ${index}`, text })), { name: 'control', text: secret }];
+          expect.soft(sources.filter(source => source.text.includes(secret)).map(source => source.name),
+            `${host}: W16.C5.07 — the diagnostic names no ${what}`).toEqual(['control']);
         }
       }
     } finally { warn.mockRestore(); network.restore(); clock.mockRestore(); }
@@ -1059,6 +1453,61 @@ describe('unit:W16.C8.10', () => {
         // own positive number.
         expect.soft(afterImport.line?.includes(IMPORT_NAMED_LINE),
           `${host}: W16.C8.10 control — the imported row the catalogue names did reach her profile`).toBe(true);
+      }
+    } finally { clock.mockRestore(); }
+  });
+});
+
+// ===========================================================================
+
+describe('unit:W16.C8.11', () => {
+  it('host: an import row the catalogue vocabulary refused is reported under its own coded reason, a row that truly carries no registry attribute keeps the reason it has, and a placed row is applied, on both hosts', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    try {
+      for (const host of HOSTS) {
+        clock.mockReturnValue(T0);
+        const h = await hostFixture(host);
+        const her = await h.newShopper({ clock, events: [VIEW_TABBY_QUILTED_HANDBAG] });
+        const start = valuesOf((await h.hydrate(her.capability)).affinity?.dims);
+        expect(start.category, `${host}: her live view built the category her catalogue names`).toEqual(['Handbags']);
+        expect(start.line, `${host}: and the line it names`).toEqual(['Tabby']);
+
+        // THREE warehouse rows for the same browser, in ONE request, differing
+        // only in what they carry, so the report has to tell them apart:
+        //   0  a real registry attribute whose value this tenant's catalogue
+        //      does not name — refused BY THE VOCABULARY;
+        //   1  an attribute the registry names no dimension for at all —
+        //      nothing to score, which is a different thing entirely;
+        //   2  a value the catalogue does name — applied.
+        // R19: the public route the warehouse posts to.
+        clock.mockReturnValue(T0 + STEP_MS);
+        const imported = await h.importRows([
+          { visitorId: her.subject, action: 'purchase', at: T0 - 2 * DAY_MS, product: { category: IMPORT_UNNAMED_CATEGORY } },
+          { visitorId: her.subject, action: 'purchase', at: T0 - 2 * DAY_MS, product: { ...IMPORT_NON_REGISTRY_ATTRIBUTE } },
+          { visitorId: her.subject, action: 'purchase', at: T0 - 2 * DAY_MS, product: { line: IMPORT_NAMED_LINE } },
+        ]);
+        expect(imported.status, `${host}: the fixture's own import must be accepted: ${imported.text.slice(0, 300)}`).toBe(200);
+        expect(imported.body.ok, `${host}: with a well-formed report`).toBe(true);
+
+        // 1. THE REPORT TELLS THE OPERATOR THE TRUTH about each row. Both
+        //    entries are stated in one equality so neither can be satisfied by
+        //    collapsing the two cases back together.
+        expect.soft(imported.body.skipped,
+          `${host}: W16.C8.11 — the row the catalogue vocabulary refused is reported under its own coded reason, and the row that carried no registry attribute keeps the reason it has`)
+          .toEqual([{ index: 0, reason: IMPORT_VOCABULARY_REASON }, { index: 1, reason: IMPORT_NO_TOUCH_REASON }]);
+
+        // 2. LIVE CONTROL: the third row was applied, so the report is not
+        //    simply refusing everything.
+        expect.soft(imported.body.applied, `${host}: W16.C8.11 control — the row the catalogue names is applied`).toBe(1);
+
+        // 3. …and what the report says matches what her profile holds: the
+        //    placed line is there, and the refused category built nothing (the
+        //    same rule unit W16.C8.10 states, measured here on the same request).
+        const after = valuesOf((await h.hydrate(her.capability)).affinity?.dims);
+        expect.soft(after.line,
+          `${host}: W16.C8.11 control — the applied row really reached her profile`).toEqual([IMPORT_NAMED_LINE, 'Tabby'].sort());
+        expect.soft(after.category,
+          `${host}: W16.C8.11 — and the row the vocabulary refused built no taste on the dimension it named`).toEqual(['Handbags']);
       }
     } finally { clock.mockRestore(); }
   });
