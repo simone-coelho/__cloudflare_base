@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 99/102 · W closed 2/26 (W16–W41) · suite 1904/1985 · residual 81 in 10 files · typecheck GREEN
+Units 100/102 · W closed 2/26 (W16–W41) · suite 1906/1985 · residual 79 in 9 files · typecheck GREEN
 
 ## W items
 
@@ -18,7 +18,7 @@ Units 99/102 · W closed 2/26 (W16–W41) · suite 1904/1985 · residual 81 in 1
 | W16 | 59 | 59 | no | — | — |
 | W17 | 13 | 13 | yes | PASS | 4e2ba2d412602738cfa125d603b9ed29ceb1013d |
 | W18 | 9 | 9 | yes | PASS | d78b8140f28386b07a8027da72629bd560c6d947 |
-| W19 | 14 | 12 | no | — | — |
+| W19 | 14 | 13 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -122,7 +122,7 @@ Units 99/102 · W closed 2/26 (W16–W41) · suite 1904/1985 · residual 81 in 1
 | W19.L1.02 | green | 2 |
 | W19.L1.03 | green | 1 |
 | W19.P1.01 | unspecified | 0 |
-| W19.S1.01 | red | 1 |
+| W19.S1.01 | green | 1 |
 | W19.S1.02 | green | 1 |
 | W19.T1.01 | green | 3 |
 | W19.T1.02 | green | 2 |
@@ -130,15 +130,14 @@ Units 99/102 · W closed 2/26 (W16–W41) · suite 1904/1985 · residual 81 in 1
 
 ## Failing tests outside the baseline
 
--  W07.05 W04.03 W05.10 native shopper socket capability boundary (retained W04.02 oracles) owns bootstrap, frames and post-upgrade private delivery on session
--  unit:W19.S1.01 host: a stored piece naming a slot type no page of the tenant's slots document defines is named in the diagnostics of every write answer and of the catalogue read, counted, and compared against the slots document the answer names
+_None._
 
 ## Derivation inputs
 
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | b6340dc54b9d951d2e4d823e6f8d9256edf654bd7bbe4c01d246aa940e743ad6 |
+| units sha256 | 355f43984bc1c9f3950d34dcebc90285b86fb4c2e4aee0dace2f0e31fdab8c3e |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -149,7 +148,7 @@ Units 99/102 · W closed 2/26 (W16–W41) · suite 1904/1985 · residual 81 in 1
 
 | Input | Value |
 |---|---|
-| vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | f304e554295688353984068687bf6fff1552f2e3ba3872c514810d09c140fad1 |
-| commit | 2e4dfad43390a702b0b7ed20213fe9fdf453afa5 |
-| generated | 2026-09-19T17:50:05.190Z |
+| vitest report | vitest-2.json (outside the checkout) |
+| vitest report sha256 | 89d235f10a070371a6f4b6d60ac3a77b099802bf2d6a164408b0c9abfadb7e02 |
+| commit | ec4574c2c726283001cf8132812ad4d014fc9c6e |
+| generated | 2026-09-19T18:15:59.369Z |

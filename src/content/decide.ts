@@ -94,18 +94,23 @@ const CONSTRAINT_WARNING_SAMPLE = 50;
  * DISCRIMINATED: only a piece that was otherwise eligible for that slot — live,
  * inside its window and in stock, and naming the slot identifier in its own
  * `slotTypes` — is named, because a piece the slot could never have served was
- * not refused by the constraint. BOUNDED: every refused eligible piece is
- * counted, at most the first `CONSTRAINT_WARNING_SAMPLE` are carried (slot
+ * not refused by the constraint. Only a slot the composer actually RANKS
+ * contributes at all: an off-limits slot and a slot whose take is a
+ * non-personalizable pin consider no candidate, so they refuse nobody however
+ * many exclusions they publish, and a dormant or refused pin already has its
+ * own home in `slot-pin-diagnostics/v1`. BOUNDED: every refused eligible piece
+ * is counted, at most the first `CONSTRAINT_WARNING_SAMPLE` are carried (slot
  * order, then catalogue order) and the remainder is reported as omitted.
  */
 function constraintDiagnosticsFor(eligible: readonly ContentPiece[], specs: readonly ContentSlotSpec[],
-  historicalGovernance?: HistoricalGovernance): ConstraintDiagnostics | null {
+  ranks: (spec: ContentSlotSpec) => boolean, historicalGovernance?: HistoricalGovernance): ConstraintDiagnostics | null {
   // A retained receipt decided before the hard controls existed is replayed
   // without them, so there is no refusal of theirs to name either.
   if (historicalGovernance === HISTORICAL_GOVERNANCE) return null;
   const warnings: ConstraintDiagnostic[] = [];
   let warningCount = 0;
   for (const spec of specs) {
+    if (!ranks(spec)) continue;
     const gate = compileSlotConstraints(spec, historicalGovernance !== HISTORICAL_GOVERNANCE_V1);
     if (!gate.active) continue;
     for (const piece of eligible) {
@@ -342,8 +347,14 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
   } : undefined;
   const { decisions, candidates, pinDiagnostics } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
-  const constraintDiagnostics = constraintDiagnosticsFor(eligible, specs, historicalGovernance);
   const refusedPrefixes = new Set(pinDiagnostics?.filter(d => d.pinIndex !== undefined).map(d => d.slot));
+  // The slots the composer ran a ranking for, by its own conditions: capacity
+  // left after off-limits and pins (`rankedCapacity`, the composer's `:227` and
+  // `:237-250`), a pinned prefix it did not refuse, and — on a replay — the
+  // bounded set of slots that re-executed.
+  const ranks = (spec: ContentSlotSpec) => rankedCapacity(spec) > 0 && !refusedPrefixes.has(spec.slot)
+    && (!i.replayRankingSlots || i.replayRankingSlots.has(spec.slot));
+  const constraintDiagnostics = constraintDiagnosticsFor(eligible, specs, ranks, historicalGovernance);
   const specOf = new Map(specs.map((s) => [s.slot, s]));
   // What the region contributed to this decision: Σ over the piece's tags of λ·share·w.
   const regionalOf = (d: { contentId: string; slot: string; strategy?: string }): (RegionalBlend & { contribution: number }) | null => {
